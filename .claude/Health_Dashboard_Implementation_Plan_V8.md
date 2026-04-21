@@ -66,7 +66,7 @@ This document serves as the primary technical specification for building the And
   - $TRIMP = \sum_{i=1}^{5} (D_i 	imes W_i)$
   - Weights ($W_i$): Z1=1, Z2=2, Z3=3, Z4=4, Z5=5.
 - **2. Strain Ratio (SR / ACWR):**
-  - $SR = rac{	ext{7-day average TRIMP}}{	ext{42-day average TRIMP}}$
+  - $SR = \frac{\text{7-day average TRIMP}}{\text{42-day average TRIMP}}$
 - **3. Readiness / Load Score ($S_{load}$):**
   - Optimal ($0.8 \le SR \le 1.2$): 100
   - Fatigued ($1.2 < SR \le 1.5$): $100 - (SR - 1.2) 	imes 200$
