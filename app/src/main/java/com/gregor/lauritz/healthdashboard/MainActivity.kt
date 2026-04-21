@@ -4,49 +4,40 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.LaunchedEffect
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
+import com.gregor.lauritz.healthdashboard.ui.navigation.AppNavHost
+import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var hcRepo: HealthConnectRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             FitDashboardTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding),
-                    )
+                val viewModel: SyncViewModel = hiltViewModel()
+
+                // Trigger permission check every time the activity comes to the foreground,
+                // not just on first composition — handles the case where the user grants
+                // permissions in HC settings and then returns to the app.
+                LaunchedEffect(Unit) {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        viewModel.onAppForeground()
+                    }
                 }
+
+                AppNavHost(viewModel = viewModel, hcRepo = hcRepo)
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(
-    name: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier,
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    FitDashboardTheme {
-        Greeting("Android")
     }
 }

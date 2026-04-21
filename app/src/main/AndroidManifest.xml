@@ -2,6 +2,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+
+    <!-- For backward compatibility with Android 13 and below -->
+    <uses-permission android:name="com.google.android.apps.healthdata.permission.READ_SLEEP" />
+    <uses-permission android:name="com.google.android.apps.healthdata.permission.READ_HEART_RATE" />
+    <uses-permission android:name="com.google.android.apps.healthdata.permission.READ_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="com.google.android.apps.healthdata.permission.READ_EXERCISE" />
+
+    <!-- Required on Android 11+ so the HC package is visible to our app -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent>
+    </queries>
+
     <application
         android:name=".HealthDashboardApplication"
         android:allowBackup="true"
@@ -23,6 +42,24 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".ui.onboarding.PrivacyRationaleActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE"
+            android:targetActivity=".ui.onboarding.PrivacyRationaleActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
     </application>
 
 </manifest>

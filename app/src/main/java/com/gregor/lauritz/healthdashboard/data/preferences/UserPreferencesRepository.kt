@@ -29,6 +29,7 @@ class UserPreferencesRepository
             val SYNC_PREFERENCE = stringPreferencesKey("sync_preference")
             val SYNC_INTERVAL_HOURS = intPreferencesKey("sync_interval_hours")
             val LAST_SYNC_TIMESTAMP = longPreferencesKey("last_sync_timestamp")
+            val MAX_HEART_RATE = intPreferencesKey("max_heart_rate")
         }
 
         val userPreferences: Flow<UserPreferences> =
@@ -56,6 +57,7 @@ class UserPreferencesRepository
                                 ?: SyncPreference.BY_TIME,
                         syncIntervalHours = prefs[Keys.SYNC_INTERVAL_HOURS] ?: 1,
                         lastSyncTimestamp = prefs[Keys.LAST_SYNC_TIMESTAMP] ?: 0L,
+                        maxHeartRate = prefs[Keys.MAX_HEART_RATE] ?: 190,
                     )
                 }
 
@@ -97,5 +99,9 @@ class UserPreferencesRepository
 
         suspend fun updateLastSyncTimestamp(timestampMs: Long) {
             dataStore.edit { it[Keys.LAST_SYNC_TIMESTAMP] = timestampMs }
+        }
+
+        suspend fun updateMaxHeartRate(bpm: Int) {
+            dataStore.edit { it[Keys.MAX_HEART_RATE] = bpm.coerceIn(150, 220) }
         }
     }

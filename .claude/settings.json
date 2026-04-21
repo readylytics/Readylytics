@@ -5,7 +5,8 @@
       "Bash(./gradlew ktlintFormat)",
       "Bash(./gradlew lint *)",
       "Bash(./gradlew assembleDebug)",
-      "Bash(./gradlew assembleDebug --info)"
+      "Bash(./gradlew assembleDebug --info)",
+      "Bash(./gradlew ktlintCheck assembleDebug)"
     ]
   }
 }
