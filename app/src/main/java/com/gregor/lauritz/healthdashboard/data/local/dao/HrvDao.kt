@@ -18,6 +18,11 @@ interface HrvDao {
     )
     suspend fun getSleepRmssdValues(fromMs: Long): List<Float>
 
+    @Query(
+        "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId = :sessionId",
+    )
+    suspend fun getSleepRmssdForSession(sessionId: String): List<Float>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(records: List<HrvRecordEntity>)
 }

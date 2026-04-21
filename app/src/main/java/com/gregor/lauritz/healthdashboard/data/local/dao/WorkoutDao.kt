@@ -20,6 +20,14 @@ interface WorkoutDao {
         toMs: Long,
     ): Float?
 
+    @Query(
+        "SELECT SUM(trimp) FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs",
+    )
+    suspend fun getTotalTrimp(
+        fromMs: Long,
+        toMs: Long,
+    ): Float?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(records: List<WorkoutRecordEntity>)
 }

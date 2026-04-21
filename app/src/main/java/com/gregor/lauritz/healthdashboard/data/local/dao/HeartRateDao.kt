@@ -21,6 +21,13 @@ interface HeartRateDao {
     )
     suspend fun getMinSleepHr(sessionId: String): Int?
 
+    @Query(
+        "SELECT MIN(beatsPerMinute) FROM heart_rate_records " +
+            "WHERE recordType = 'SLEEP' AND sessionId IS NOT NULL AND timestampMs >= :fromMs " +
+            "GROUP BY sessionId",
+    )
+    suspend fun getMinSleepHrPerSession(fromMs: Long): List<Int>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(records: List<HeartRateRecordEntity>)
 }

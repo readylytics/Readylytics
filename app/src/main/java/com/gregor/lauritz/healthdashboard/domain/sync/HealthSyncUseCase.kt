@@ -10,6 +10,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -26,6 +27,7 @@ class HealthSyncUseCase
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
         private val prefsRepo: UserPreferencesRepository,
+        private val scoringRepository: ScoringRepository,
     ) {
         suspend fun sync(windowDays: Int = 7): Result<Unit> =
             runCatching {
@@ -36,6 +38,8 @@ class HealthSyncUseCase
                 val workoutEntities = syncWorkouts(from, to)
                 syncHeartRate(from, to, sleepEntities, workoutEntities)
                 syncHrv(from, to, sleepEntities)
+
+                scoringRepository.computeAndPersistDailySummary()
 
                 prefsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
             }
