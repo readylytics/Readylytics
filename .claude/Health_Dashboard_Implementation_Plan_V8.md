@@ -69,7 +69,7 @@ This document serves as the primary technical specification for building the And
   - $SR = \frac{\text{7-day average TRIMP}}{\text{42-day average TRIMP}}$
 - **3. Readiness / Load Score ($S_{load}$):**
   - Optimal ($0.8 \le SR \le 1.2$): 100
-  - Fatigued ($1.2 < SR \le 1.5$): $100 - (SR - 1.2) 	imes 200$
+  - Fatigued ($1.2 < SR \le 1.5$): $100 - (SR - 1.2) \times 200$
   - Over-reached ($SR > 1.5$): 40
   - Under-trained ($SR < 0.8$): 80
 - **4. Sleep Score ($SS$):**
