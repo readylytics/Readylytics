@@ -1,0 +1,337 @@
+package com.gregor.lauritz.healthdashboard.ui.settings
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
+import kotlin.math.roundToInt
+
+@Composable
+fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    SettingsScreen(uiState = uiState, onEvent = viewModel::onEvent)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(
+    uiState: SettingsUiState,
+    onEvent: (SettingsEvent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var sliderValue by rememberSaveable(uiState.goalSleepHours) {
+        mutableFloatStateOf(uiState.goalSleepHours)
+    }
+    var hrvText by rememberSaveable(uiState.hrvBaselineOverride) {
+        mutableStateOf(uiState.hrvBaselineOverride?.let { "%.1f".format(it) } ?: "")
+    }
+    var rhrText by rememberSaveable(uiState.rhrBaselineOverride) {
+        mutableStateOf(uiState.rhrBaselineOverride?.let { "%.1f".format(it) } ?: "")
+    }
+    var maxHrText by rememberSaveable(uiState.maxHeartRate) {
+        mutableStateOf(uiState.maxHeartRate.toString())
+    }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(vertical = 8.dp),
+    ) {
+        // Goals
+        item { SectionHeader("Goals") }
+        item {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Sleep Goal", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = sliderValue.toSleepHoursText(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Slider(
+                    value = sliderValue,
+                    onValueChange = { sliderValue = it },
+                    onValueChangeFinished = {
+                        onEvent(SettingsEvent.GoalSleepHoursChanged(sliderValue))
+                    },
+                    valueRange = 4f..12f,
+                    steps = 15,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+
+        // Baselines
+        item { HorizontalDivider(modifier = Modifier.padding(top = 4.dp)) }
+        item { SectionHeader("Baselines") }
+        item {
+            OutlinedTextField(
+                value = hrvText,
+                onValueChange =
+                    { value ->
+                        hrvText = value
+                        onEvent(SettingsEvent.HrvBaselineChanged(value))
+                    },
+                label = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("HRV Baseline Override (ms)")
+                        MetricTooltip(
+                            description =
+                                "RMSSD in ms. Overrides the 30-day rolling median " +
+                                    "used in sleep restoration scoring.",
+                        )
+                    }
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                trailingIcon =
+                    {
+                        if (hrvText.isNotEmpty()) {
+                            IconButton(onClick = { onEvent(SettingsEvent.HrvBaselineCleared) }) {
+                                Icon(Icons.Filled.Clear, contentDescription = "Clear HRV baseline")
+                            }
+                        }
+                    },
+                singleLine = true,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+            )
+        }
+        item { Spacer(modifier = Modifier.height(12.dp)) }
+        item {
+            OutlinedTextField(
+                value = rhrText,
+                onValueChange =
+                    { value ->
+                        rhrText = value
+                        onEvent(SettingsEvent.RhrBaselineChanged(value))
+                    },
+                label = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("RHR Baseline Override (bpm)")
+                        MetricTooltip(
+                            description =
+                                "Resting heart rate in bpm. Overrides the 30-day " +
+                                    "rolling median used in sleep restoration scoring.",
+                        )
+                    }
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                trailingIcon =
+                    {
+                        if (rhrText.isNotEmpty()) {
+                            IconButton(onClick = { onEvent(SettingsEvent.RhrBaselineCleared) }) {
+                                Icon(Icons.Filled.Clear, contentDescription = "Clear RHR baseline")
+                            }
+                        }
+                    },
+                singleLine = true,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+            )
+        }
+
+        // Sync
+        item { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
+        item { SectionHeader("Sync") }
+        item { SyncPreferenceItem(uiState = uiState, onEvent = onEvent) }
+        item {
+            AnimatedVisibility(visible = uiState.syncPreference == SyncPreference.BY_TIME) {
+                SyncIntervalItem(uiState = uiState, onEvent = onEvent)
+            }
+        }
+
+        // Advanced
+        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        item { SectionHeader("Advanced") }
+        item {
+            OutlinedTextField(
+                value = maxHrText,
+                onValueChange =
+                    { value ->
+                        maxHrText = value
+                        onEvent(SettingsEvent.MaxHeartRateChanged(value))
+                    },
+                label = { Text("Max Heart Rate") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                supportingText = { Text("150–220 bpm") },
+                singleLine = true,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+            )
+        }
+
+        // Backup
+        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        item { SectionHeader("Backup") }
+        item {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Google Drive Backup", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Coming in Phase 9",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                TextButton(onClick = {}, enabled = false) {
+                    Text("Back Up Now")
+                }
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(16.dp)) }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SyncPreferenceItem(
+    uiState: SettingsUiState,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        OutlinedTextField(
+            value = uiState.syncPreference.displayName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Foreground Sync") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier =
+                Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            SyncPreference.entries.forEach { pref ->
+                DropdownMenuItem(
+                    text = { Text(pref.displayName) },
+                    onClick =
+                        {
+                            onEvent(SettingsEvent.SyncPreferenceChanged(pref))
+                            expanded = false
+                        },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SyncIntervalItem(
+    uiState: SettingsUiState,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        OutlinedTextField(
+            value = "${uiState.syncIntervalHours}h",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Sync Interval") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier =
+                Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            (1..24).forEach { hours ->
+                DropdownMenuItem(
+                    text = { Text("${hours}h") },
+                    onClick =
+                        {
+                            onEvent(SettingsEvent.SyncIntervalChanged(hours))
+                            expanded = false
+                        },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    )
+}
+
+private fun Float.toSleepHoursText(): String {
+    val totalMinutes = (this * 60).roundToInt()
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return if (minutes == 0) "${hours}h" else "${hours}h ${minutes}m"
+}
+
+private val SyncPreference.displayName: String
+    get() =
+        when (this) {
+            SyncPreference.NEVER -> "Never"
+            SyncPreference.ALWAYS -> "Always"
+            SyncPreference.BY_TIME -> "By Time"
+        }

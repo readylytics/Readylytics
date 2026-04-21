@@ -17,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.ui.onboarding.OnboardingRoute
+import com.gregor.lauritz.healthdashboard.ui.scaffold.MainScaffold
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncUiState
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
 
@@ -32,14 +33,14 @@ fun AppNavHost(
         when (uiState) {
             SyncUiState.NeedsPermissions ->
                 navController.navigate(AppDestination.Onboarding) {
-                    popUpTo(AppDestination.Dashboard) { inclusive = true }
+                    popUpTo(AppDestination.MainShell) { inclusive = true }
                 }
             SyncUiState.Unavailable ->
                 navController.navigate(AppDestination.Unavailable) {
-                    popUpTo(AppDestination.Dashboard) { inclusive = true }
+                    popUpTo(AppDestination.MainShell) { inclusive = true }
                 }
             SyncUiState.PermissionsGranted ->
-                navController.navigate(AppDestination.Dashboard) {
+                navController.navigate(AppDestination.MainShell) {
                     popUpTo(AppDestination.Onboarding) { inclusive = true }
                 }
             else -> Unit
@@ -48,13 +49,10 @@ fun AppNavHost(
 
     NavHost(
         navController = navController,
-        startDestination = AppDestination.Dashboard,
+        startDestination = AppDestination.MainShell,
     ) {
-        composable<AppDestination.Dashboard> {
-            // Placeholder — Phase 5 & 6 fill this with the real Dashboard
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Dashboard coming in Phase 5", style = MaterialTheme.typography.bodyLarge)
-            }
+        composable<AppDestination.MainShell> {
+            MainScaffold()
         }
 
         composable<AppDestination.Onboarding> {

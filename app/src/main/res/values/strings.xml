@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Fit Dashboard</string>
+    <string name="tab_dashboard">Dashboard</string>
+    <string name="tab_sleep">Sleep</string>
+    <string name="tab_workouts">Workouts</string>
+    <string name="tab_settings">Settings</string>
 </resources>

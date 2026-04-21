@@ -10,5 +10,5 @@ sealed interface AppDestination {
     data object Unavailable : AppDestination
 
     @Serializable
-    data object Dashboard : AppDestination
+    data object MainShell : AppDestination
 }
