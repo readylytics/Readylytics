@@ -1897,6 +1897,8 @@ class TaskRepositoryImpl @Inject constructor(
 
     private suspend fun syncUpdate(task: TaskEntity): SyncItemResult = try {
         retryStrategy.retry {
+    private suspend fun syncUpdate(task: TaskEntity): SyncItemResult = try {
+        retryStrategy.retry {
             val response = taskApi.updateTask(task.serverId!!, task.toApiModel())
             
             if (response.version <= task.serverVersion) {
@@ -1907,8 +1909,8 @@ class TaskRepositoryImpl @Inject constructor(
                 syncStatus = SyncStatus.SYNCED,
                 serverVersion = response.version
             ))
+            SyncItemResult.Success(task.id)
         }
-        SyncItemResult.Success(task.id)
     } catch (e: Exception) {
         handleSyncError(task, e)
     }
