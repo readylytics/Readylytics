@@ -73,7 +73,7 @@ This document serves as the primary technical specification for building the And
   - Over-reached ($SR > 1.5$): 40
   - Under-trained ($SR < 0.8$): 80
 - **4. Sleep Score ($SS$):**
-  - $SS = (0.50 	imes S'_{dur}) + (0.25 	imes S'_{arch}) + (0.25 	imes S'_{rest})$
+  - $SS = (0.50 \times S'_{dur}) + (0.25 \times S'_{arch}) + (0.25 \times S'_{rest})$
   - $S'_{dur}$ = Total Sleep Time vs Goal and Efficiency.
   - $S'_{arch}$ = REM/Deep % vs 20% benchmarks.
   - $S'_{rest}$ = HRV Z-Score and RHR Ratio (Current Sleep RHR / 30-day Median Sleep RHR).
