@@ -68,11 +68,11 @@ class ScoringRepository
             if (session != null) {
                 val baselineFrom = todayMidnight.minus(BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
                 val hrvValues = hrvDao.getSleepRmssdValues(baselineFrom)
-                val rhrValues = heartRateDao.getMinSleepHrPerSession(baselineFrom)
+                val rhrValues = heartRateDao.getAvgSleepHrPerSession(baselineFrom)
                 val sessionHrvSamples = hrvDao.getSleepRmssdForSession(session.id)
                 val currentHrvMean =
                     if (sessionHrvSamples.isNotEmpty()) sessionHrvSamples.average().toFloat() else 0f
-                val currentNocturnalRhr = heartRateDao.getMinSleepHr(session.id)?.toFloat()
+                val currentNocturnalRhr = heartRateDao.getAvgSleepHr(session.id)?.toFloat()
 
                 nocturnalRhr = currentNocturnalRhr
                 nocturnalHrv = currentHrvMean.takeIf { sessionHrvSamples.isNotEmpty() }

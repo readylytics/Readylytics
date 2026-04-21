@@ -16,17 +16,17 @@ interface HeartRateDao {
     fun observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordEntity>>
 
     @Query(
-        "SELECT MIN(beatsPerMinute) FROM heart_rate_records " +
+        "SELECT CAST(ROUND(AVG(beatsPerMinute)) AS INTEGER) FROM heart_rate_records " +
             "WHERE recordType = 'SLEEP' AND sessionId = :sessionId",
     )
-    suspend fun getMinSleepHr(sessionId: String): Int?
+    suspend fun getAvgSleepHr(sessionId: String): Int?
 
     @Query(
-        "SELECT MIN(beatsPerMinute) FROM heart_rate_records " +
+        "SELECT CAST(ROUND(AVG(beatsPerMinute)) AS INTEGER) FROM heart_rate_records " +
             "WHERE recordType = 'SLEEP' AND sessionId IS NOT NULL AND timestampMs >= :fromMs " +
             "GROUP BY sessionId",
     )
-    suspend fun getMinSleepHrPerSession(fromMs: Long): List<Int>
+    suspend fun getAvgSleepHrPerSession(fromMs: Long): List<Int>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(records: List<HeartRateRecordEntity>)
