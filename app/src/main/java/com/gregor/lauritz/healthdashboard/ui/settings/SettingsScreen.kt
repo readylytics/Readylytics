@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.settings
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
