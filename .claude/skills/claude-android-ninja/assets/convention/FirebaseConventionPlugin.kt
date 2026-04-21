@@ -4,6 +4,7 @@
  * Applies to: App module when using Firebase
  */
 
+import com.android.build.api.dsl.ApplicationExtension
 import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -25,12 +26,16 @@ class FirebaseConventionPlugin : Plugin<Project> {
             }
 
             extensions.configure<CrashlyticsExtension> {
-                // Enable collection of native symbols for NDK crashes
                 nativeSymbolUploadEnabled = true
-                
-                // Disable Crashlytics collection in debug builds
-                if (project.gradle.startParameter.taskNames.any { it.contains("Debug") }) {
-                    mappingFileUploadEnabled = false
+            }
+
+            extensions.configure<ApplicationExtension> {
+                buildTypes {
+                    getByName("debug") {
+                        configure<CrashlyticsExtension> {
+                            mappingFileUploadEnabled = false
+                        }
+                    }
                 }
             }
         }

@@ -3,7 +3,7 @@
  * Configures: Room 3 plugin, KSP, schema directory, bundled SQLite driver
  */
 
-import androidx.room3.gradle.RoomExtension
+import androidx.room.gradle.RoomExtension
 import com.google.devtools.ksp.gradle.KspExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -14,14 +14,14 @@ import org.gradle.kotlin.dsl.dependencies
 class AndroidRoomConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
-            apply(plugin = "androidx.room3")
+            apply(plugin = "androidx.room")
             apply(plugin = "com.google.devtools.ksp")
 
             extensions.configure<KspExtension> {
                 arg("room.generateKotlin", "true")
             }
 
-            extensions.configure<RoomExtension>("room3") {
+            extensions.configure<RoomExtension>("room") {
                 // Schema directory for Room auto migrations
                 // See https://developer.android.com/reference/kotlin/androidx/room3/AutoMigration
                 schemaDirectory("$projectDir/schemas")

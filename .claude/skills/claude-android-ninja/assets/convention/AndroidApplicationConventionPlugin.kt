@@ -21,7 +21,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                 configureKotlinAndroid(this)
                 
                 defaultConfig {
-                    targetSdk = libs.findVersion("targetSdk").get().toString().toInt()
+                    targetSdk = libs.findVersion("targetSdk").get().requiredVersion.toInt()
                     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
                 }
                 

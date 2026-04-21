@@ -23,10 +23,6 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                 
                 defaultConfig {
                     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-                    
-                    // Version catalog entries for targetSdk
-                    testOptions.targetSdk = libs.findVersion("targetSdk").get().toString().toInt()
-                    lint.targetSdk = libs.findVersion("targetSdk").get().toString().toInt()
                 }
                 
                 testOptions {
