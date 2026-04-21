@@ -62,6 +62,8 @@ class ScoringRepository
             var nocturnalHrv: Float? = null
             var deepSleepPercent: Float? = null
             var remSleepPercent: Float? = null
+            var rhrRatio: Float? = null
+            var hrvZScore: Float? = null
 
             if (session != null) {
                 val baselineFrom = todayMidnight.minus(BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
@@ -81,6 +83,8 @@ class ScoringRepository
                 }
 
                 if (currentNocturnalRhr != null) {
+                    val baselineRhr = prefs.rhrBaselineOverride ?: medianInt(rhrValues)
+                    rhrRatio = currentNocturnalRhr / (baselineRhr + 0.001f)
                     sleepScore =
                         computeSleepScore(
                             durationMinutes = session.durationMinutes,
@@ -96,6 +100,12 @@ class ScoringRepository
                             hrvBaselineOverride = prefs.hrvBaselineOverride,
                         )
                 }
+
+                if (sessionHrvSamples.isNotEmpty()) {
+                    val baselineHrv = prefs.hrvBaselineOverride ?: median(hrvValues)
+                    val stdHrv = if (prefs.hrvBaselineOverride != null) 1f else stdev(hrvValues)
+                    hrvZScore = (currentHrvMean - baselineHrv) / (stdHrv + 0.001f)
+                }
             }
 
             val existing = dailySummaryDao.getByDate(todayMidnightMs)
@@ -110,6 +120,8 @@ class ScoringRepository
                     deepSleepPercent = deepSleepPercent,
                     remSleepPercent = remSleepPercent,
                     totalTrimp = todayTrimp,
+                    rhrRatio = rhrRatio,
+                    hrvZScore = hrvZScore,
                 )
             dailySummaryDao.upsert(updated)
         }

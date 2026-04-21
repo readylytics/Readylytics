@@ -5,7 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardScreen
+import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardRoute
 import com.gregor.lauritz.healthdashboard.ui.navigation.TabDestination
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsRoute
 import com.gregor.lauritz.healthdashboard.ui.sleep.SleepScreen
@@ -21,7 +21,12 @@ fun MainNavHost(
         startDestination = TabDestination.Dashboard,
         modifier = modifier,
     ) {
-        composable<TabDestination.Dashboard> { DashboardScreen() }
+        composable<TabDestination.Dashboard> {
+            DashboardRoute(
+                onNavigateToSleep = { navController.navigate(TabDestination.Sleep) },
+                onNavigateToWorkouts = { navController.navigate(TabDestination.Workouts) },
+            )
+        }
         composable<TabDestination.Sleep> { SleepScreen() }
         composable<TabDestination.Workouts> { WorkoutsScreen() }
         composable<TabDestination.Settings> { SettingsRoute() }

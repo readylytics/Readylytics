@@ -8,7 +8,27 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+
+data class ExtendedColors(
+    val success: Color,
+    val onSuccess: Color,
+    val successContainer: Color,
+    val onSuccessContainer: Color,
+)
+
+val LocalExtendedColors =
+    staticCompositionLocalOf {
+        ExtendedColors(
+            success = SuccessGreenDark,
+            onSuccess = OnSuccessGreenDark,
+            successContainer = SuccessGreenContainerDark,
+            onSuccessContainer = OnSuccessGreenContainerDark,
+        )
+    }
 
 private val DarkColorScheme =
     darkColorScheme(
@@ -51,9 +71,28 @@ fun FitDashboardTheme(
             else -> LightColorScheme
         }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content,
-    )
+    val extendedColors =
+        if (darkTheme) {
+            ExtendedColors(
+                success = SuccessGreenDark,
+                onSuccess = OnSuccessGreenDark,
+                successContainer = SuccessGreenContainerDark,
+                onSuccessContainer = OnSuccessGreenContainerDark,
+            )
+        } else {
+            ExtendedColors(
+                success = SuccessGreenLight,
+                onSuccess = OnSuccessGreenLight,
+                successContainer = SuccessGreenContainerLight,
+                onSuccessContainer = OnSuccessGreenContainerLight,
+            )
+        }
+
+    CompositionLocalProvider(LocalExtendedColors provides extendedColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content,
+        )
+    }
 }

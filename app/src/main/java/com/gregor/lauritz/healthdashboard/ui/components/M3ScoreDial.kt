@@ -1,0 +1,117 @@
+package com.gregor.lauritz.healthdashboard.ui.components
+
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun M3ScoreDial(
+    score: Float?,
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+) {
+    val status =
+        when {
+            score == null -> MetricStatus.CALIBRATING
+            score >= 80f -> MetricStatus.OPTIMAL
+            score >= 60f -> MetricStatus.WARNING
+            else -> MetricStatus.POOR
+        }
+
+    val progressColor = status.containerColor()
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant
+    val textColor = status.onContainerColor()
+
+    val animatedProgress by animateFloatAsState(
+        targetValue = (score ?: 0f) / 100f,
+        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+        label = "dial_progress_$label",
+    )
+
+    val scoreText = score?.toInt()?.toString() ?: "—"
+    val semanticDesc = "$label: $scoreText"
+
+    Box(
+        modifier =
+            modifier
+                .size(140.dp)
+                .semantics { contentDescription = semanticDesc }
+                .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        DialArc(
+            progress = animatedProgress,
+            progressColor = progressColor,
+            trackColor = trackColor,
+        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = scoreText,
+                style = MaterialTheme.typography.displaySmall,
+                color = if (score != null) textColor else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DialArc(
+    progress: Float,
+    progressColor: Color,
+    trackColor: Color,
+) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val strokeWidth = 14.dp.toPx()
+        val halfStroke = strokeWidth / 2f
+        val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
+        val arcTopLeft = Offset(halfStroke, halfStroke)
+
+        drawArc(
+            color = trackColor,
+            startAngle = 135f,
+            sweepAngle = 270f,
+            useCenter = false,
+            topLeft = arcTopLeft,
+            size = arcSize,
+            style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+        )
+
+        if (progress > 0f) {
+            drawArc(
+                color = progressColor,
+                startAngle = 135f,
+                sweepAngle = 270f * progress,
+                useCenter = false,
+                topLeft = arcTopLeft,
+                size = arcSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+            )
+        }
+    }
+}

@@ -29,6 +29,7 @@ object DatabaseModule {
             .databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
+            .addMigrations(HealthDatabase.MIGRATION_1_2)
             .build()
 
     @Provides

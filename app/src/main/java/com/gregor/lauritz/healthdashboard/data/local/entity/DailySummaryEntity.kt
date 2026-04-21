@@ -15,4 +15,6 @@ data class DailySummaryEntity(
     val deepSleepPercent: Float? = null,
     val remSleepPercent: Float? = null,
     val totalTrimp: Float? = null,
+    val rhrRatio: Float? = null,
+    val hrvZScore: Float? = null,
 )
