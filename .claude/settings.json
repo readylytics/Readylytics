@@ -3,7 +3,9 @@
     "allow": [
       "Bash(./gradlew ktlintCheck)",
       "Bash(./gradlew ktlintFormat)",
-      "Bash(./gradlew lint *)"
+      "Bash(./gradlew lint *)",
+      "Bash(./gradlew assembleDebug)",
+      "Bash(./gradlew assembleDebug --info)"
     ]
   }
 }
