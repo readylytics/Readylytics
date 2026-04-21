@@ -20,7 +20,7 @@ class AndroidTestConventionPlugin : Plugin<Project> {
                 configureKotlinAndroid(this)
                 
                 defaultConfig {
-                    targetSdk = libs.findVersion("targetSdk").get().toString().toInt()
+                    targetSdk = libs.findVersion("targetSdk").get().requiredVersion.toInt()
                 }
                 
                 configureGradleManagedDevices(this)
