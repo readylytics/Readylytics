@@ -115,7 +115,7 @@ fun SettingsScreen(
                         Text("HRV Baseline Override (ms)")
                         MetricTooltip(
                             description =
-                                "RMSSD in ms. Overrides the 30-day rolling median " +
+                                "HRV in ms. Overrides the 30-day rolling median " +
                                     "used in sleep restoration scoring.",
                         )
                     }
