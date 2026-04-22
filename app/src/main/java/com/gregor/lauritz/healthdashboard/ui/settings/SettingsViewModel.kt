@@ -24,6 +24,8 @@ data class SettingsUiState(
     val hrvWarningThreshold: Float = 0.90f,
     val rhrOptimalThreshold: Float = 0.95f,
     val rhrWarningThreshold: Float = 1.05f,
+    val restingHrBeforeMinutes: Int = 5,
+    val restingHrAfterMinutes: Int = 15,
     val isLoading: Boolean = true,
 )
 
@@ -71,6 +73,14 @@ sealed interface SettingsEvent {
     data class RhrWarningThresholdChanged(
         val value: Float,
     ) : SettingsEvent
+
+    data class RestingHrBeforeMinutesChanged(
+        val minutes: Int,
+    ) : SettingsEvent
+
+    data class RestingHrAfterMinutesChanged(
+        val minutes: Int,
+    ) : SettingsEvent
 }
 
 @HiltViewModel
@@ -98,6 +108,8 @@ class SettingsViewModel
                             hrvWarningThreshold = prefs.hrvWarningThreshold,
                             rhrOptimalThreshold = prefs.rhrOptimalThreshold,
                             rhrWarningThreshold = prefs.rhrWarningThreshold,
+                            restingHrBeforeMinutes = prefs.restingHrBeforeMinutes,
+                            restingHrAfterMinutes = prefs.restingHrAfterMinutes,
                             isLoading = false,
                         )
                     }
@@ -169,6 +181,16 @@ class SettingsViewModel
                 is SettingsEvent.RhrWarningThresholdChanged ->
                     viewModelScope.launch {
                         prefsRepo.updateRhrWarningThreshold(event.value)
+                    }
+                is SettingsEvent.RestingHrBeforeMinutesChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateRestingHrBeforeMinutes(event.minutes)
+                        scoringRepository.computeAndPersistDailySummary()
+                    }
+                is SettingsEvent.RestingHrAfterMinutesChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateRestingHrAfterMinutes(event.minutes)
+                        scoringRepository.computeAndPersistDailySummary()
                     }
             }
         }

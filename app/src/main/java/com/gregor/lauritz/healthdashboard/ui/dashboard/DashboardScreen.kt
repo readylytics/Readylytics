@@ -122,6 +122,11 @@ fun DashboardScreen(
                     ) ?: MetricStatus.CALIBRATING
                 val durationStatus =
                     summary?.sleepDurationStatus(uiState.goalSleepMinutes) ?: MetricStatus.CALIBRATING
+                val restingHrStatus =
+                    summary?.restingHrStatus(
+                        uiState.rhrOptimalThreshold,
+                        uiState.rhrWarningThreshold,
+                    ) ?: MetricStatus.CALIBRATING
 
                 val rhrBaseline =
                     summary?.let { s ->
@@ -240,6 +245,29 @@ fun DashboardScreen(
                                     append("\n\nGoal: ${formatSleepDuration(uiState.goalSleepMinutes)}")
                                 },
                         ),
+                        CardData(
+                            title = "Resting HR",
+                            value = summary?.restingHeartRate?.toInt()?.toString() ?: "—",
+                            unit = "bpm",
+                            status = restingHrStatus,
+                            onClick = {},
+                            tooltip =
+                                buildString {
+                                    val rBaseline = summary?.restingHrBaseline
+                                    val rCurrent = summary?.restingHeartRate
+                                    if (rBaseline != null && rCurrent != null) {
+                                        val diff = kotlin.math.abs(rCurrent - rBaseline).toInt()
+                                        val arrow = if (rCurrent > rBaseline) "↑" else "↓"
+                                        append("Baseline: ${rBaseline.toInt()} bpm $arrow ($diff bpm)")
+                                        append("\n\nMinimum heart rate captured within ")
+                                        append("${uiState.restingHrBeforeMinutes}m before and ")
+                                        append("${uiState.restingHrAfterMinutes}m after wake up.")
+                                    } else {
+                                        append("Minimum heart rate captured around wake up time.")
+                                        append("\n\nNot enough data to calculate baseline.")
+                                    }
+                                },
+                        ),
                     )
 
                 MetricCardGrid(
@@ -289,7 +317,7 @@ private fun MetricCard(
     value: String,
     unit: String,
     status: MetricStatus,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     tooltip: String,
     modifier: Modifier = Modifier,
 ) {
@@ -297,10 +325,17 @@ private fun MetricCard(
     val contentColor = status.onContainerColor()
 
     Card(
-        onClick = onClick,
+        onClick = onClick ?: {},
+        enabled = onClick != null,
         modifier =
-            modifier.semantics {
-                role = Role.Button
+            modifier.let {
+                if (onClick != null) {
+                    it.semantics {
+                        role = Role.Button
+                    }
+                } else {
+                    it
+                }
             },
         shape = RoundedCornerShape(16.dp),
         colors =
@@ -342,7 +377,7 @@ private data class CardData(
     val value: String,
     val unit: String,
     val status: MetricStatus,
-    val onClick: () -> Unit,
+    val onClick: (() -> Unit)?,
     val tooltip: String,
 )
 

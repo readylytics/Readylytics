@@ -18,4 +18,7 @@ data class DailySummaryEntity(
     val totalTrimp: Float? = null,
     val rhrRatio: Float? = null,
     val hrvBaseline: Float? = null,
+    val restingHeartRate: Float? = null,
+    val restingHrRatio: Float? = null,
+    val restingHrBaseline: Float? = null,
 )

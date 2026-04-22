@@ -29,8 +29,12 @@ object DatabaseModule {
             .databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
-            .addMigrations(HealthDatabase.MIGRATION_1_2, HealthDatabase.MIGRATION_2_3, HealthDatabase.MIGRATION_3_4)
-            .build()
+            .addMigrations(
+                HealthDatabase.MIGRATION_1_2,
+                HealthDatabase.MIGRATION_2_3,
+                HealthDatabase.MIGRATION_3_4,
+                HealthDatabase.MIGRATION_4_5,
+            ).build()
 
     @Provides
     fun provideSleepSessionDao(db: HealthDatabase): SleepSessionDao = db.sleepSessionDao()

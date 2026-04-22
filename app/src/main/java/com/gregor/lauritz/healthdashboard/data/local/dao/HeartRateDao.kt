@@ -28,6 +28,15 @@ interface HeartRateDao {
     )
     suspend fun getAvgSleepHrPerSession(fromMs: Long): List<Int>
 
+    @Query(
+        "SELECT MIN(beatsPerMinute) FROM heart_rate_records " +
+            "WHERE timestampMs >= :startTimeMs AND timestampMs <= :endTimeMs",
+    )
+    suspend fun getMinHrInRange(
+        startTimeMs: Long,
+        endTimeMs: Long,
+    ): Int?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(records: List<HeartRateRecordEntity>)
 }

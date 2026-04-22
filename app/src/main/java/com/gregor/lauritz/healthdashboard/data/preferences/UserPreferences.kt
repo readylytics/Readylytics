@@ -12,4 +12,6 @@ data class UserPreferences(
     val hrvWarningThreshold: Float = 0.90f,
     val rhrOptimalThreshold: Float = 0.95f,
     val rhrWarningThreshold: Float = 1.05f,
+    val restingHrBeforeMinutes: Int = 5,
+    val restingHrAfterMinutes: Int = 15,
 )

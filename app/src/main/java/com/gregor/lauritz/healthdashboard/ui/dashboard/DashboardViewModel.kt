@@ -22,6 +22,8 @@ data class DashboardUiState(
     val hrvWarningThreshold: Float = 0.85f,
     val rhrOptimalThreshold: Float = 1.05f,
     val rhrWarningThreshold: Float = 1.15f,
+    val restingHrBeforeMinutes: Int = 5,
+    val restingHrAfterMinutes: Int = 15,
     val isRefreshing: Boolean = false,
 )
 
@@ -33,6 +35,17 @@ fun DailySummaryEntity.rhrStatus(
         rhrRatio == null -> MetricStatus.CALIBRATING
         rhrRatio <= optimalThreshold -> MetricStatus.OPTIMAL
         rhrRatio <= warningThreshold -> MetricStatus.WARNING
+        else -> MetricStatus.POOR
+    }
+
+fun DailySummaryEntity.restingHrStatus(
+    optimalThreshold: Float,
+    warningThreshold: Float,
+): MetricStatus =
+    when {
+        restingHrRatio == null -> MetricStatus.CALIBRATING
+        restingHrRatio <= optimalThreshold -> MetricStatus.OPTIMAL
+        restingHrRatio <= warningThreshold -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
 
@@ -83,6 +96,8 @@ class DashboardViewModel
                     hrvWarningThreshold = prefs.hrvWarningThreshold,
                     rhrOptimalThreshold = prefs.rhrOptimalThreshold,
                     rhrWarningThreshold = prefs.rhrWarningThreshold,
+                    restingHrBeforeMinutes = prefs.restingHrBeforeMinutes,
+                    restingHrAfterMinutes = prefs.restingHrAfterMinutes,
                     isRefreshing = refreshing,
                 )
             }.stateIn(

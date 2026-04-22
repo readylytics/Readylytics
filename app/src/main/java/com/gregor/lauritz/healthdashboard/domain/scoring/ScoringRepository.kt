@@ -65,6 +65,9 @@ class ScoringRepository
             var remSleepPercent: Float? = null
             var rhrRatio: Float? = null
             var hrvBaseline: Float? = null
+            var restingHeartRate: Float? = null
+            var restingHrRatio: Float? = null
+            var restingHrBaseline: Float? = null
 
             if (session != null) {
                 val baselineFrom = todayMidnight.minus(BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
@@ -86,8 +89,29 @@ class ScoringRepository
                 // Median is used as the displayed user-facing baseline; mean is used in Z-score (μ_hrv).
                 hrvBaseline = prefs.hrvBaselineOverride ?: median(hrvValues)
 
+                val baselineRhr = prefs.rhrBaselineOverride ?: medianInt(rhrValues)
+
+                val minHrStartTime = session.endTime - prefs.restingHrBeforeMinutes * 60 * 1000L
+                val minHrEndTime = session.endTime + prefs.restingHrAfterMinutes * 60 * 1000L
+                val currentRestingHr = heartRateDao.getMinHrInRange(minHrStartTime, minHrEndTime)
+                restingHeartRate = currentRestingHr?.toFloat()
+
+                // Calculate resting HR baseline specifically from wake-up windows of previous sessions
+                val sessions = sleepSessionDao.getSince(baselineFrom)
+                val historicRestingHrs = mutableListOf<Int>()
+                for (s in sessions) {
+                    if (s.id == session.id) continue
+                    val start = s.endTime - prefs.restingHrBeforeMinutes * 60 * 1000L
+                    val end = s.endTime + prefs.restingHrAfterMinutes * 60 * 1000L
+                    heartRateDao.getMinHrInRange(start, end)?.let { historicRestingHrs.add(it) }
+                }
+                restingHrBaseline = if (historicRestingHrs.isNotEmpty()) medianInt(historicRestingHrs) else null
+
+                if (currentRestingHr != null && restingHrBaseline != null && restingHrBaseline!! > 0f) {
+                    restingHrRatio = currentRestingHr / restingHrBaseline!!
+                }
+
                 if (currentNocturnalRhr != null) {
-                    val baselineRhr = prefs.rhrBaselineOverride ?: medianInt(rhrValues)
                     rhrRatio = currentNocturnalRhr / (baselineRhr + 0.001f)
 
                     val sRest =
@@ -145,6 +169,9 @@ class ScoringRepository
                     totalTrimp = todayTrimp,
                     rhrRatio = rhrRatio,
                     hrvBaseline = hrvBaseline,
+                    restingHeartRate = restingHeartRate,
+                    restingHrRatio = restingHrRatio,
+                    restingHrBaseline = restingHrBaseline,
                 )
             dailySummaryDao.upsert(updated)
         }

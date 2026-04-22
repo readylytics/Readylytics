@@ -34,6 +34,8 @@ class UserPreferencesRepository
             val HRV_WARNING_THRESHOLD = floatPreferencesKey("hrv_warning_threshold")
             val RHR_OPTIMAL_THRESHOLD = floatPreferencesKey("rhr_optimal_threshold")
             val RHR_WARNING_THRESHOLD = floatPreferencesKey("rhr_warning_threshold")
+            val RESTING_HR_BEFORE_MINUTES = intPreferencesKey("resting_hr_before_minutes")
+            val RESTING_HR_AFTER_MINUTES = intPreferencesKey("resting_hr_after_minutes")
         }
 
         val userPreferences: Flow<UserPreferences> =
@@ -66,6 +68,8 @@ class UserPreferencesRepository
                         hrvWarningThreshold = prefs[Keys.HRV_WARNING_THRESHOLD] ?: 0.90f,
                         rhrOptimalThreshold = prefs[Keys.RHR_OPTIMAL_THRESHOLD] ?: 0.95f,
                         rhrWarningThreshold = prefs[Keys.RHR_WARNING_THRESHOLD] ?: 1.05f,
+                        restingHrBeforeMinutes = prefs[Keys.RESTING_HR_BEFORE_MINUTES] ?: 5,
+                        restingHrAfterMinutes = prefs[Keys.RESTING_HR_AFTER_MINUTES] ?: 15,
                     )
                 }
 
@@ -127,5 +131,13 @@ class UserPreferencesRepository
 
         suspend fun updateRhrWarningThreshold(value: Float) {
             dataStore.edit { it[Keys.RHR_WARNING_THRESHOLD] = value.coerceIn(1.0f, 1.2f) }
+        }
+
+        suspend fun updateRestingHrBeforeMinutes(minutes: Int) {
+            dataStore.edit { it[Keys.RESTING_HR_BEFORE_MINUTES] = minutes.coerceIn(0, 60) }
+        }
+
+        suspend fun updateRestingHrAfterMinutes(minutes: Int) {
+            dataStore.edit { it[Keys.RESTING_HR_AFTER_MINUTES] = minutes.coerceIn(0, 60) }
         }
     }

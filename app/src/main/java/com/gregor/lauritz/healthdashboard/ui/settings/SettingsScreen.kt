@@ -68,6 +68,12 @@ fun SettingsScreen(
     var maxHrText by rememberSaveable(uiState.maxHeartRate) {
         mutableStateOf(uiState.maxHeartRate.toString())
     }
+    var beforeMinutesText by rememberSaveable(uiState.restingHrBeforeMinutes) {
+        mutableStateOf(uiState.restingHrBeforeMinutes.toString())
+    }
+    var afterMinutesText by rememberSaveable(uiState.restingHrAfterMinutes) {
+        mutableStateOf(uiState.restingHrAfterMinutes.toString())
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -237,6 +243,44 @@ fun SettingsScreen(
                 label = { Text("Max Heart Rate") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 supportingText = { Text("150–220 bpm") },
+                singleLine = true,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+            )
+        }
+        item { Spacer(modifier = Modifier.height(12.dp)) }
+        item {
+            OutlinedTextField(
+                value = beforeMinutesText,
+                onValueChange =
+                    { value ->
+                        beforeMinutesText = value
+                        value.toIntOrNull()?.let { onEvent(SettingsEvent.RestingHrBeforeMinutesChanged(it)) }
+                    },
+                label = { Text("Wakeup Resting HR: Minutes Before") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                supportingText = { Text("Minutes before sleep end (default: 5)") },
+                singleLine = true,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+            )
+        }
+        item { Spacer(modifier = Modifier.height(12.dp)) }
+        item {
+            OutlinedTextField(
+                value = afterMinutesText,
+                onValueChange =
+                    { value ->
+                        afterMinutesText = value
+                        value.toIntOrNull()?.let { onEvent(SettingsEvent.RestingHrAfterMinutesChanged(it)) }
+                    },
+                label = { Text("Wakeup Resting HR: Minutes After") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                supportingText = { Text("Minutes after sleep end (default: 15)") },
                 singleLine = true,
                 modifier =
                     Modifier
