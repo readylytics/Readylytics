@@ -84,7 +84,16 @@ fun DashboardScreen(
                     M3ScoreDial(
                         score = summary?.loadScore,
                         label = "Load Score",
+                        displayText = summary?.strainRatio?.let { "%.2f".format(it) },
                         onClick = onNavigateToWorkouts,
+                        tooltipDescription =
+                            buildString {
+                                append("Strain Ratio = 7-day avg TRIMP ÷ 42-day avg TRIMP\n\n")
+                                append("• < 0.8: Under-trained\n")
+                                append("• 0.8–1.2: Optimal\n")
+                                append("• 1.2–1.5: Fatiguing\n")
+                                append("• > 1.5: Over-reached")
+                            },
                     )
                 }
             }

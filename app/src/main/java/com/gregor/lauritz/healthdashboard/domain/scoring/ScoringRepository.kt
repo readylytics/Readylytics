@@ -58,12 +58,12 @@ class ScoringRepository
 
             val session = sleepSessionDao.getLatest()
             var sleepScore: Float? = null
+            var readinessScore: Float? = null
             var nocturnalRhr: Float? = null
             var nocturnalHrv: Float? = null
             var deepSleepPercent: Float? = null
             var remSleepPercent: Float? = null
             var rhrRatio: Float? = null
-            var hrvZScore: Float? = null
             var hrvBaseline: Float? = null
 
             if (session != null) {
@@ -83,16 +83,15 @@ class ScoringRepository
                     remSleepPercent = session.remSleepMinutes / session.durationMinutes.toFloat() * 100f
                 }
 
+                // Median is used as the displayed user-facing baseline; mean is used in Z-score (μ_hrv).
+                hrvBaseline = prefs.hrvBaselineOverride ?: median(hrvValues)
+
                 if (currentNocturnalRhr != null) {
                     val baselineRhr = prefs.rhrBaselineOverride ?: medianInt(rhrValues)
                     rhrRatio = currentNocturnalRhr / (baselineRhr + 0.001f)
-                    sleepScore =
-                        computeSleepScore(
-                            durationMinutes = session.durationMinutes,
-                            efficiency = session.efficiency,
-                            deepSleepMinutes = session.deepSleepMinutes,
-                            remSleepMinutes = session.remSleepMinutes,
-                            goalSleepHours = prefs.goalSleepHours,
+
+                    val sRest =
+                        computeRestorationSubScore(
                             currentHrvMean = currentHrvMean,
                             hrvValues = hrvValues,
                             currentNocturnalRhr = currentNocturnalRhr,
@@ -100,13 +99,34 @@ class ScoringRepository
                             rhrBaselineOverride = prefs.rhrBaselineOverride,
                             hrvBaselineOverride = prefs.hrvBaselineOverride,
                         )
-                }
 
-                if (sessionHrvSamples.isNotEmpty()) {
-                    val baselineHrv = prefs.hrvBaselineOverride ?: median(hrvValues)
-                    val stdHrv = stdev(hrvValues).takeIf { it > 0f } ?: 5f
-                    hrvZScore = (currentHrvMean - baselineHrv) / stdHrv
-                    hrvBaseline = baselineHrv
+                    sleepScore =
+                        computeSleepScore(
+                            durationMinutes = session.durationMinutes,
+                            efficiency = session.efficiency,
+                            deepSleepMinutes = session.deepSleepMinutes,
+                            remSleepMinutes = session.remSleepMinutes,
+                            goalSleepHours = prefs.goalSleepHours,
+                            sRest = sRest,
+                        )
+
+                    val zHrv =
+                        if (sessionHrvSamples.isNotEmpty() && hrvValues.isNotEmpty()) {
+                            val mu = prefs.hrvBaselineOverride ?: mean(hrvValues)
+                            val sigma = stdev(hrvValues).takeIf { it > 0f } ?: 5f
+                            (currentHrvMean - mu) / sigma
+                        } else {
+                            null
+                        }
+
+                    readinessScore =
+                        computeReadinessScore(
+                            sRest = sRest,
+                            sleepScore = sleepScore,
+                            loadScore = loadScore,
+                            zHrv = zHrv,
+                            rhrRatio = rhrRatio,
+                        )
                 }
             }
 
@@ -115,6 +135,7 @@ class ScoringRepository
                 (existing ?: DailySummaryEntity(dateMidnightMs = todayMidnightMs)).copy(
                     sleepScore = sleepScore,
                     loadScore = loadScore,
+                    readinessScore = readinessScore,
                     strainRatio = sr,
                     nocturnalRhr = nocturnalRhr,
                     nocturnalHrv = nocturnalHrv,
@@ -123,7 +144,6 @@ class ScoringRepository
                     remSleepPercent = remSleepPercent,
                     totalTrimp = todayTrimp,
                     rhrRatio = rhrRatio,
-                    hrvZScore = hrvZScore,
                     hrvBaseline = hrvBaseline,
                 )
             dailySummaryDao.upsert(updated)
@@ -159,7 +179,7 @@ internal fun computeDurationSubScore(
     goalSleepHours: Float,
 ): Float {
     val ratio = (durationMinutes / 60f / goalSleepHours).coerceIn(0f, 1f)
-    return 0.7f * ratio * 100f + 0.3f * efficiency
+    return ratio * 100f * (efficiency / 100f)
 }
 
 internal fun computeArchSubScore(
@@ -183,14 +203,15 @@ internal fun computeRestorationSubScore(
     rhrBaselineOverride: Float?,
     hrvBaselineOverride: Float?,
 ): Float {
-    val baselineHrv = hrvBaselineOverride ?: median(hrvValues)
-    val stdHrv = stdev(hrvValues).takeIf { it > 0f } ?: 5f
-    val zHrv = (currentHrvMean - baselineHrv) / stdHrv
-    val hrvScore = ((zHrv + 2f) / 4f * 100f).coerceIn(0f, 100f)
+    // μ_hrv is the rolling mean (not median) per the Z-score formula definition.
+    val muHrv = hrvBaselineOverride ?: mean(hrvValues)
+    val sigmaHrv = stdev(hrvValues).takeIf { it > 0f } ?: 5f
+    val zHrv = (currentHrvMean - muHrv) / sigmaHrv
+    val hrvScore = (50f + 25f * zHrv).coerceIn(0f, 100f)
 
+    // RHR score: min(100, baseline / night × 100) per spec.
     val baselineRhr = rhrBaselineOverride ?: medianInt(rhrValues)
-    val ratio = currentNocturnalRhr / (baselineRhr + 0.001f)
-    val rhrScore = ((1.1f - ratio) / 0.1f * 100f).coerceIn(0f, 100f)
+    val rhrScore = (baselineRhr / (currentNocturnalRhr + 0.001f) * 100f).coerceIn(0f, 100f)
 
     return 0.5f * hrvScore + 0.5f * rhrScore
 }
@@ -201,25 +222,31 @@ internal fun computeSleepScore(
     deepSleepMinutes: Int,
     remSleepMinutes: Int,
     goalSleepHours: Float,
-    currentHrvMean: Float,
-    hrvValues: List<Float>,
-    currentNocturnalRhr: Float,
-    rhrValues: List<Int>,
-    rhrBaselineOverride: Float?,
-    hrvBaselineOverride: Float?,
+    sRest: Float,
 ): Float {
     val sDur = computeDurationSubScore(durationMinutes, efficiency, goalSleepHours)
     val sArch = computeArchSubScore(deepSleepMinutes, remSleepMinutes, durationMinutes)
-    val sRest =
-        computeRestorationSubScore(
-            currentHrvMean,
-            hrvValues,
-            currentNocturnalRhr,
-            rhrValues,
-            rhrBaselineOverride,
-            hrvBaselineOverride,
-        )
     return 0.50f * sDur + 0.25f * sArch + 0.25f * sRest
+}
+
+internal fun computeReadinessScore(
+    sRest: Float,
+    sleepScore: Float,
+    loadScore: Float,
+    zHrv: Float? = null,
+    rhrRatio: Float? = null,
+): Float {
+    var rs = 0.4f * sRest + 0.3f * sleepScore + 0.3f * loadScore
+    // Paradoxical High: elevated HRV Z-score alongside raised RHR signals illness, not peak readiness.
+    if (zHrv != null && rhrRatio != null && zHrv > 2.0f && rhrRatio > 1.05f) {
+        rs = rs.coerceAtMost(60f)
+    }
+    return rs.coerceIn(0f, 100f)
+}
+
+internal fun mean(values: List<Float>): Float {
+    if (values.isEmpty()) return 0f
+    return values.average().toFloat()
 }
 
 internal fun median(values: List<Float>): Float {

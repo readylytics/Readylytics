@@ -25,7 +25,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
         WorkoutRecordEntity::class,
         DailySummaryEntity::class,
     ],
-    version = 3,
+    version = 4,
 )
 abstract class HealthDatabase : RoomDatabase() {
     abstract fun sleepSessionDao(): SleepSessionDao
@@ -60,6 +60,50 @@ abstract class HealthDatabase : RoomDatabase() {
 
                 override fun migrate(connection: SQLiteConnection) {
                     connection.execSQL("ALTER TABLE daily_summaries ADD COLUMN hrvBaseline REAL")
+                }
+            }
+
+        val MIGRATION_3_4 =
+            object : Migration(3, 4) {
+                private val sql =
+                    listOf(
+                        """
+                        CREATE TABLE daily_summaries_new (
+                            dateMidnightMs INTEGER NOT NULL PRIMARY KEY,
+                            sleepScore REAL,
+                            loadScore REAL,
+                            readinessScore REAL,
+                            strainRatio REAL,
+                            nocturnalRhr REAL,
+                            nocturnalHrv REAL,
+                            sleepDurationMinutes INTEGER,
+                            deepSleepPercent REAL,
+                            remSleepPercent REAL,
+                            totalTrimp REAL,
+                            rhrRatio REAL,
+                            hrvBaseline REAL
+                        )
+                        """.trimIndent(),
+                        """
+                        INSERT INTO daily_summaries_new
+                            (dateMidnightMs, sleepScore, loadScore, readinessScore, strainRatio,
+                             nocturnalRhr, nocturnalHrv, sleepDurationMinutes, deepSleepPercent,
+                             remSleepPercent, totalTrimp, rhrRatio, hrvBaseline)
+                        SELECT dateMidnightMs, sleepScore, loadScore, NULL, strainRatio,
+                               nocturnalRhr, nocturnalHrv, sleepDurationMinutes, deepSleepPercent,
+                               remSleepPercent, totalTrimp, rhrRatio, hrvBaseline
+                        FROM daily_summaries
+                        """.trimIndent(),
+                        "DROP TABLE daily_summaries",
+                        "ALTER TABLE daily_summaries_new RENAME TO daily_summaries",
+                    )
+
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    sql.forEach { db.execSQL(it) }
+                }
+
+                override fun migrate(connection: SQLiteConnection) {
+                    sql.forEach { connection.execSQL(it) }
                 }
             }
     }

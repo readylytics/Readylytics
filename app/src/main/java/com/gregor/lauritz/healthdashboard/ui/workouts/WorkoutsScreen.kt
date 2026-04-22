@@ -182,6 +182,7 @@ private fun HeroSection(
         M3ScoreDial(
             score = uiState.latestSummary?.loadScore,
             label = "Load Score",
+            displayText = uiState.latestSummary?.strainRatio?.let { "%.2f".format(it) },
             tooltipDescription =
                 buildString {
                     append(
@@ -194,17 +195,16 @@ private fun HeroSection(
                 },
         )
         M3ScoreDial(
-            score = strainScore,
-            label = "Strain Ratio",
-            displayText = strainRatio?.let { "%.2f".format(it) },
+            score = uiState.latestSummary?.readinessScore,
+            label = "Readiness",
             tooltipDescription =
                 buildString {
-                    append("Strain Ratio = 7-day average TRIMP ÷ 42-day average TRIMP\n\n")
-                    append("Measures balance between recent training load (Acute) and fitness base (Chronic).\n\n")
-                    append("• < 0.8: Under-trained (need more stimulus)\n")
-                    append("• 0.8–1.2: Optimal (balanced training)\n")
-                    append("• 1.2–1.5: Fatiguing (accumulating fatigue)\n")
-                    append("• > 1.5: Over-reached (risk of overtraining)")
+                    append("Your capacity for training today — based on last night's restoration (40%), ")
+                    append("sleep quality (30%), and training load (30%).\n\n")
+                    append("• 85–100: Peak — push hard.\n")
+                    append("• 70–84: Good — train normally.\n")
+                    append("• 50–69: Moderate — reduce intensity.\n")
+                    append("• < 50: Rest day recommended.")
                 },
         )
     }
