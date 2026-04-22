@@ -6,9 +6,11 @@ import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectReposi
 import com.gregor.lauritz.healthdashboard.data.healthconnect.PermissionStatus
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -38,6 +40,17 @@ class SyncViewModel
         private val _uiState = MutableStateFlow<SyncUiState>(SyncUiState.CheckingPermissions)
         val uiState: StateFlow<SyncUiState> = _uiState.asStateFlow()
 
+        private val _syncEvents = Channel<SyncEvent>()
+        val syncEvents = _syncEvents.receiveAsFlow()
+
+        init {
+            viewModelScope.launch {
+                foregroundSyncController.syncCompletedEvent.collect {
+                    _syncEvents.send(SyncEvent.SyncCompleted)
+                }
+            }
+        }
+
         fun onAppForeground() {
             viewModelScope.launch {
                 _uiState.value = SyncUiState.CheckingPermissions
@@ -65,3 +78,7 @@ class SyncViewModel
             }
         }
     }
+
+sealed interface SyncEvent {
+    data object SyncCompleted : SyncEvent
+}

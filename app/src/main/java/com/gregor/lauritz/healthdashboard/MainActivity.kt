@@ -1,18 +1,22 @@
 package com.gregor.lauritz.healthdashboard
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppNavHost
+import com.gregor.lauritz.healthdashboard.ui.sync.SyncEvent
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -26,6 +30,23 @@ class MainActivity : ComponentActivity() {
         setContent {
             FitDashboardTheme {
                 val viewModel: SyncViewModel = hiltViewModel()
+                val context = LocalContext.current
+
+                // Handle sync events (e.g., showing a Toast)
+                LaunchedEffect(viewModel.syncEvents) {
+                    viewModel.syncEvents.collectLatest { event ->
+                        when (event) {
+                            SyncEvent.SyncCompleted -> {
+                                Toast
+                                    .makeText(
+                                        context,
+                                        R.string.sync_completed,
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                            }
+                        }
+                    }
+                }
 
                 // Trigger permission check every time the activity comes to the foreground,
                 // not just on first composition — handles the case where the user grants
