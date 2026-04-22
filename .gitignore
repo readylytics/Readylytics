@@ -32,3 +32,11 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+
+# Python files
+*.pyc
+*.pyd
+__pycache__/
+.venv/
+scripts/health_connect_export.db
