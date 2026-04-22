@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -28,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
+import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
 
@@ -104,6 +106,64 @@ fun DashboardScreen(
                 val durationStatus =
                     summary?.sleepDurationStatus(uiState.goalSleepMinutes) ?: MetricStatus.CALIBRATING
 
+                val rhrBaseline =
+                    summary?.let { s ->
+                        val ratio = s.rhrRatio
+                        val rhr = s.nocturnalRhr
+                        if (ratio != null && ratio > 0f && rhr != null) {
+                            (rhr / ratio).toInt()
+                        } else {
+                            null
+                        }
+                    }
+
+                val hrvBaseline = summary?.hrvBaseline?.toDouble()
+
+                val rhrDiff =
+                    summary?.let { s ->
+                        val ratio = s.rhrRatio
+                        val rhr = s.nocturnalRhr
+                        if (ratio != null && ratio > 0f && rhr != null) {
+                            val baseline = (rhr / ratio).toInt()
+                            kotlin.math.abs(rhr.toInt() - baseline)
+                        } else {
+                            null
+                        }
+                    }
+
+                val hrvDiff =
+                    summary?.let { s ->
+                        val baseline = s.hrvBaseline
+                        val hrv = s.nocturnalHrv
+                        if (baseline != null && hrv != null) {
+                            kotlin.math.abs(hrv - baseline)
+                        } else {
+                            null
+                        }
+                    }
+
+                val rhrArrow =
+                    if (rhrBaseline != null && summary?.nocturnalRhr != null) {
+                        if (summary.nocturnalRhr > rhrBaseline) {
+                            "↑"
+                        } else {
+                            "↓"
+                        }
+                    } else {
+                        null
+                    }
+
+                val hrvArrow =
+                    if (hrvBaseline != null && summary?.nocturnalHrv != null) {
+                        if (summary.nocturnalHrv > hrvBaseline) {
+                            "↑"
+                        } else {
+                            "↓"
+                        }
+                    } else {
+                        null
+                    }
+
                 val cards =
                     listOf(
                         CardData(
@@ -112,6 +172,20 @@ fun DashboardScreen(
                             unit = "bpm",
                             status = rhrStatus,
                             onClick = onNavigateToSleep,
+                            tooltip =
+                                buildString {
+                                    if (rhrBaseline != null && rhrArrow != null && rhrDiff != null) {
+                                        append("Baseline: $rhrBaseline bpm $rhrArrow ($rhrDiff bpm)")
+                                        append(
+                                            "\n\nCompare nocturnal resting heart rate to your personal 30-day baseline.",
+                                        )
+                                    } else {
+                                        append(
+                                            "Comparison of nocturnal resting heart rate to your personal 30-day baseline.",
+                                        )
+                                        append("\n\nNot enough data to calculate baseline.")
+                                    }
+                                },
                         ),
                         CardData(
                             title = "Sleep HRV",
@@ -119,6 +193,23 @@ fun DashboardScreen(
                             unit = "ms",
                             status = hrvStatus,
                             onClick = onNavigateToSleep,
+                            tooltip =
+                                buildString {
+                                    if (hrvBaseline != null && hrvArrow != null && hrvDiff != null) {
+                                        append(
+                                            "Baseline: ${"%.0f".format(hrvBaseline)} ms $hrvArrow" +
+                                                " (${"%.0f".format(hrvDiff)} ms)",
+                                        )
+                                        append(
+                                            "\n\nCompare your Heart Rate Variability to your unique 30-day normal range.",
+                                        )
+                                    } else {
+                                        append(
+                                            "Your Heart Rate Variability compared to your unique 30-day normal range.",
+                                        )
+                                        append("\n\nNot enough data to calculate baseline.")
+                                    }
+                                },
                         ),
                         CardData(
                             title = "Sleep Duration",
@@ -126,6 +217,11 @@ fun DashboardScreen(
                             unit = "",
                             status = durationStatus,
                             onClick = onNavigateToSleep,
+                            tooltip =
+                                buildString {
+                                    append("Total time asleep last night.")
+                                    append("\n\nGoal: ${formatSleepDuration(uiState.goalSleepMinutes)}")
+                                },
                         ),
                     )
 
@@ -158,6 +254,7 @@ private fun MetricCardGrid(
                         unit = card.unit,
                         status = card.status,
                         onClick = card.onClick,
+                        tooltip = card.tooltip,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -176,6 +273,7 @@ private fun MetricCard(
     unit: String,
     status: MetricStatus,
     onClick: () -> Unit,
+    tooltip: String,
     modifier: Modifier = Modifier,
 ) {
     val containerColor = status.containerColor()
@@ -195,11 +293,18 @@ private fun MetricCard(
             ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelSmall,
-                color = contentColor,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = contentColor,
+                )
+                MetricTooltip(description = tooltip, iconTint = contentColor)
+            }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = value,
@@ -221,6 +326,7 @@ private data class CardData(
     val unit: String,
     val status: MetricStatus,
     val onClick: () -> Unit,
+    val tooltip: String,
 )
 
 private fun formatSleepDuration(minutes: Int?): String {

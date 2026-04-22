@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,6 +30,8 @@ fun M3ScoreDial(
     score: Float?,
     label: String,
     modifier: Modifier = Modifier,
+    displayText: String? = null,
+    tooltipDescription: String? = null,
     onClick: () -> Unit = {},
 ) {
     val status =
@@ -49,7 +52,7 @@ fun M3ScoreDial(
         label = "dial_progress_$label",
     )
 
-    val scoreText = score?.toInt()?.toString() ?: "—"
+    val scoreText = displayText ?: (score?.toInt()?.toString() ?: "—")
     val semanticDesc = "$label: $scoreText"
 
     Box(
@@ -75,6 +78,12 @@ fun M3ScoreDial(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (tooltipDescription != null) {
+            MetricTooltip(
+                description = tooltipDescription,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
             )
         }
     }

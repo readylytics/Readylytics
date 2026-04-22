@@ -64,6 +64,7 @@ class ScoringRepository
             var remSleepPercent: Float? = null
             var rhrRatio: Float? = null
             var hrvZScore: Float? = null
+            var hrvBaseline: Float? = null
 
             if (session != null) {
                 val baselineFrom = todayMidnight.minus(BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
@@ -103,8 +104,9 @@ class ScoringRepository
 
                 if (sessionHrvSamples.isNotEmpty()) {
                     val baselineHrv = prefs.hrvBaselineOverride ?: median(hrvValues)
-                    val stdHrv = if (prefs.hrvBaselineOverride != null) 1f else stdev(hrvValues)
-                    hrvZScore = (currentHrvMean - baselineHrv) / (stdHrv + 0.001f)
+                    val stdHrv = stdev(hrvValues).takeIf { it > 0f } ?: 5f
+                    hrvZScore = (currentHrvMean - baselineHrv) / stdHrv
+                    hrvBaseline = baselineHrv
                 }
             }
 
@@ -122,6 +124,7 @@ class ScoringRepository
                     totalTrimp = todayTrimp,
                     rhrRatio = rhrRatio,
                     hrvZScore = hrvZScore,
+                    hrvBaseline = hrvBaseline,
                 )
             dailySummaryDao.upsert(updated)
         }
@@ -181,8 +184,8 @@ internal fun computeRestorationSubScore(
     hrvBaselineOverride: Float?,
 ): Float {
     val baselineHrv = hrvBaselineOverride ?: median(hrvValues)
-    val stdHrv = if (hrvBaselineOverride != null) 1f else stdev(hrvValues)
-    val zHrv = (currentHrvMean - baselineHrv) / (stdHrv + 0.001f)
+    val stdHrv = stdev(hrvValues).takeIf { it > 0f } ?: 5f
+    val zHrv = (currentHrvMean - baselineHrv) / stdHrv
     val hrvScore = ((zHrv + 2f) / 4f * 100f).coerceIn(0f, 100f)
 
     val baselineRhr = rhrBaselineOverride ?: medianInt(rhrValues)

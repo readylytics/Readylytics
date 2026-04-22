@@ -30,13 +30,16 @@ fun DailySummaryEntity.rhrStatus(): MetricStatus =
         else -> MetricStatus.POOR
     }
 
-fun DailySummaryEntity.hrvStatus(): MetricStatus =
-    when {
-        hrvZScore == null -> MetricStatus.CALIBRATING
-        hrvZScore >= -0.5f -> MetricStatus.OPTIMAL
-        hrvZScore >= -1.0f -> MetricStatus.WARNING
+fun DailySummaryEntity.hrvStatus(): MetricStatus {
+    val hrv = nocturnalHrv ?: return MetricStatus.CALIBRATING
+    val baseline = hrvBaseline ?: return MetricStatus.CALIBRATING
+    val ratio = hrv / baseline
+    return when {
+        ratio >= 0.95f -> MetricStatus.OPTIMAL
+        ratio >= 0.85f -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
+}
 
 fun DailySummaryEntity.sleepDurationStatus(goalMinutes: Int): MetricStatus {
     if (sleepDurationMinutes == null || goalMinutes <= 0) return MetricStatus.CALIBRATING

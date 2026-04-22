@@ -11,6 +11,8 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntit
 import com.gregor.lauritz.healthdashboard.data.local.entity.HrvRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
+import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,30 +20,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
-enum class TimeRange(
-    val days: Int,
-    val label: String,
-) {
-    SEVEN_DAYS(7, "7D"),
-    THIRTY_DAYS(30, "30D"),
-    SIX_MONTHS(180, "180D"),
-    ;
-
-    fun fromMs(): Long = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(days.toLong())
-}
-
 data class SleepUiState(
     val latestSummary: DailySummaryEntity? = null,
     val latestSession: SleepSessionEntity? = null,
-    val dailyHrv: List<Float> = emptyList(),
-    val dailyRhr: List<Float> = emptyList(),
+    val dailyHrv: List<DailyDataPoint> = emptyList(),
+    val dailyRhr: List<DailyDataPoint> = emptyList(),
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val goalSleepMinutes: Int = 480,
+    val rangeStartMs: Long = System.currentTimeMillis(),
 )
 
 fun SleepSessionEntity.efficiencyStatus(): MetricStatus =
@@ -80,11 +72,61 @@ class SleepViewModel
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
         val selectedRange = _selectedRange
 
+        /**
+         * Baseline HRV (calculated from past 30 days, constant across all views).
+         * This ensures the baseline shown in charts matches the dashboard baseline.
+         */
+        val baselineHrvFlow =
+            hrvDao
+                .observeSleepHrvSince(TimeRange.THIRTY_DAYS.fromMs())
+                .map { records ->
+                    if (records.isEmpty()) {
+                        null
+                    } else {
+                        val values = records.map { it.rmssdMs }.sorted()
+                        val mid = values.size / 2
+                        if (values.size % 2 == 0) (values[mid - 1] + values[mid]) / 2f else values[mid]
+                    }
+                }.stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = null,
+                )
+
+        /**
+         * Baseline RHR (calculated from past 30 days, constant across all views).
+         * This ensures the baseline shown in charts matches the dashboard baseline.
+         */
+        val baselineRhrFlow =
+            heartRateDao
+                .observeSleepHrSince(TimeRange.THIRTY_DAYS.fromMs())
+                .map { records ->
+                    if (records.isEmpty()) {
+                        null
+                    } else {
+                        val sessionAvgs =
+                            records
+                                .groupBy { it.sessionId }
+                                .values
+                                .map { sess -> sess.map { it.beatsPerMinute }.average().toFloat() }
+                        val sorted = sessionAvgs.sorted()
+                        val mid = sorted.size / 2
+                        val median =
+                            if (sorted.size % 2 == 0) (sorted[mid - 1] + sorted[mid]) / 2f else sorted[mid]
+                        median.toInt()
+                    }
+                }.stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = null,
+                )
+
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
             _selectedRange
                 .flatMapLatest { range ->
                     val fromMs = range.fromMs()
+                    val startDayMs = truncateToDayMs(fromMs)
                     combine(
                         dailySummaryDao.observeLatest(),
                         sleepSessionDao.observeLatest(),
@@ -95,10 +137,11 @@ class SleepViewModel
                         SleepUiState(
                             latestSummary = latestSummary,
                             latestSession = latestSession,
-                            dailyHrv = groupHrvByDay(hrvRecords),
-                            dailyRhr = groupRhrByDay(hrRecords),
+                            dailyHrv = groupHrvByDay(hrvRecords, startDayMs),
+                            dailyRhr = groupRhrByDay(hrRecords, startDayMs),
                             goalSleepMinutes = (prefs.goalSleepHours * 60).toInt(),
                             selectedRange = range,
+                            rangeStartMs = startDayMs,
                         )
                     }
                 }.stateIn(
@@ -112,21 +155,39 @@ class SleepViewModel
         }
     }
 
-private fun groupHrvByDay(records: List<HrvRecordEntity>): List<Float> =
-    records
+private fun groupHrvByDay(
+    records: List<HrvRecordEntity>,
+    startDayMs: Long,
+): List<DailyDataPoint> {
+    val dayMs = TimeUnit.DAYS.toMillis(1)
+    return records
         .groupBy { truncateToDayMs(it.timestampMs) }
         .toSortedMap()
-        .values
-        .map { daily -> daily.map { it.rmssdMs }.average().toFloat() }
+        .map { (dayMs_, daily) ->
+            DailyDataPoint(
+                dayOffset = ((dayMs_ - startDayMs) / dayMs).toInt(),
+                value = daily.map { it.rmssdMs }.average().toFloat(),
+            )
+        }
+}
 
-private fun groupRhrByDay(records: List<HeartRateRecordEntity>): List<Float> =
-    records
+private fun groupRhrByDay(
+    records: List<HeartRateRecordEntity>,
+    startDayMs: Long,
+): List<DailyDataPoint> {
+    val dayMs = TimeUnit.DAYS.toMillis(1)
+    return records
         .groupBy { truncateToDayMs(it.timestampMs) }
         .toSortedMap()
-        .values
-        .map { daily -> daily.minOf { it.beatsPerMinute }.toFloat() }
+        .map { (dayMs_, daily) ->
+            DailyDataPoint(
+                dayOffset = ((dayMs_ - startDayMs) / dayMs).toInt(),
+                value = daily.map { it.beatsPerMinute }.average().toFloat(),
+            )
+        }
+}
 
-private fun truncateToDayMs(timestampMs: Long): Long {
+internal fun truncateToDayMs(timestampMs: Long): Long {
     val cal = Calendar.getInstance()
     cal.timeInMillis = timestampMs
     cal.set(Calendar.HOUR_OF_DAY, 0)

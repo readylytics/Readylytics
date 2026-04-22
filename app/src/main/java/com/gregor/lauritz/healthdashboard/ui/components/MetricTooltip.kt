@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 
@@ -25,6 +26,7 @@ import androidx.compose.ui.window.Popup
 fun MetricTooltip(
     description: String,
     modifier: Modifier = Modifier,
+    iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
     var showPopup by remember { mutableStateOf(false) }
 
@@ -33,7 +35,7 @@ fun MetricTooltip(
             Icon(
                 imageVector = Icons.Outlined.Info,
                 contentDescription = "More information",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = iconTint,
                 modifier = Modifier.size(18.dp),
             )
         }

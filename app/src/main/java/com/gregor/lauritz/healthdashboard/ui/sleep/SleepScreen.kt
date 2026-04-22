@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.sleep
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -26,12 +29,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
+import com.gregor.lauritz.healthdashboard.ui.common.DateFormatUtils
+import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
@@ -41,27 +47,47 @@ import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
+import com.patrykandpatrick.vico.compose.cartesian.layer.point
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
+import com.patrykandpatrick.vico.compose.common.fill
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.core.cartesian.decoration.HorizontalLine
-import com.patrykandpatrick.vico.core.common.Fill
+import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.core.common.component.LineComponent
+import com.patrykandpatrick.vico.core.common.shape.CorneredShape
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 @Composable
 fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    SleepScreen(uiState = uiState, onRangeSelected = viewModel::onRangeSelected)
+    val baselineHrv by viewModel.baselineHrvFlow.collectAsStateWithLifecycle()
+    val baselineRhr by viewModel.baselineRhrFlow.collectAsStateWithLifecycle()
+    SleepScreen(
+        uiState = uiState,
+        baselineHrv = baselineHrv,
+        baselineRhr = baselineRhr,
+        onRangeSelected = viewModel::onRangeSelected,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SleepScreen(
     uiState: SleepUiState,
+    baselineHrv: Float?,
+    baselineRhr: Int?,
     onRangeSelected: (TimeRange) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -124,7 +150,13 @@ fun SleepScreen(
                 unit = "ms",
                 modifier = Modifier.padding(horizontal = 16.dp),
             ) {
-                TrendChart(data = uiState.dailyHrv)
+                TrendChart(
+                    points = uiState.dailyHrv,
+                    rangeStartMs = uiState.rangeStartMs,
+                    rangeDays = uiState.selectedRange.days,
+                    baselineUnit = "ms",
+                    baseline = baselineHrv,
+                )
             }
         }
 
@@ -136,7 +168,13 @@ fun SleepScreen(
                 unit = "bpm",
                 modifier = Modifier.padding(horizontal = 16.dp),
             ) {
-                TrendChart(data = uiState.dailyRhr)
+                TrendChart(
+                    points = uiState.dailyRhr,
+                    rangeStartMs = uiState.rangeStartMs,
+                    rangeDays = uiState.selectedRange.days,
+                    baselineUnit = "bpm",
+                    baseline = baselineRhr?.toFloat(),
+                )
             }
         }
 
@@ -201,51 +239,140 @@ private fun TrendCard(
 
 @Composable
 private fun TrendChart(
-    data: List<Float>,
+    points: List<DailyDataPoint>,
+    rangeStartMs: Long,
+    rangeDays: Int,
+    baselineUnit: String,
+    baseline: Float? = null,
     modifier: Modifier = Modifier,
 ) {
-    if (data.isEmpty()) {
+    if (points.isEmpty()) {
         EmptyChartPlaceholder(modifier = modifier)
         return
     }
 
-    val baseline =
-        remember(data) {
-            val sorted = data.sorted()
+    val dayMs = TimeUnit.DAYS.toMillis(1)
+    val calculatedBaseline =
+        remember(points) {
+            val sorted = points.map { it.value }.sorted()
             val mid = sorted.size / 2
-            if (sorted.size % 2 == 0) {
-                (sorted[mid - 1] + sorted[mid]) / 2f
-            } else {
-                sorted[mid]
-            }
+            if (sorted.size % 2 == 0) (sorted[mid - 1] + sorted[mid]) / 2f else sorted[mid]
+        }
+
+    // Use provided baseline if available, otherwise fall back to calculated baseline
+    val baselineValue = baseline ?: calculatedBaseline
+
+    val minY =
+        remember(points) {
+            (points.minOf { it.value } * 0.9f).toDouble()
+        }
+    val maxY =
+        remember(points) {
+            (points.maxOf { it.value } * 1.1f).toDouble()
         }
 
     val baselineColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val dotColor = MaterialTheme.colorScheme.primary
+
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    LaunchedEffect(data) {
+    val dateFormatter =
+        remember(rangeStartMs) {
+            SimpleDateFormat(DateFormatUtils.DATE_FORMAT_SHORT, Locale.getDefault())
+        }
+    val xAxisFormatter =
+        remember(rangeStartMs) {
+            CartesianValueFormatter { _, value, _ ->
+                dateFormatter.format(Date(rangeStartMs + value.toLong() * dayMs))
+            }
+        }
+
+    LaunchedEffect(points) {
         modelProducer.runTransaction {
-            lineSeries { series(data) }
+            lineSeries {
+                series(
+                    x = points.map { it.dayOffset },
+                    y = points.map { it.value },
+                )
+            }
         }
     }
+
+    val rangeProvider = remember(minY, maxY) { CartesianLayerRangeProvider.fixed(minY = minY, maxY = maxY) }
+    val dotComponent = rememberShapeComponent(fill = fill(dotColor), shape = CorneredShape.Pill)
+    val line =
+        LineCartesianLayer.rememberLine(
+            fill = LineCartesianLayer.LineFill.single(fill(dotColor)),
+            pointProvider =
+                LineCartesianLayer.PointProvider.single(
+                    LineCartesianLayer.point(dotComponent, 6.dp),
+                ),
+        )
 
     CartesianChartHost(
         chart =
             rememberCartesianChart(
-                rememberLineCartesianLayer(),
-                startAxis = VerticalAxis.rememberStart(),
-                bottomAxis = HorizontalAxis.rememberBottom(),
+                rememberLineCartesianLayer(
+                    lineProvider = LineCartesianLayer.LineProvider.series(line),
+                    rangeProvider = rangeProvider,
+                ),
+                startAxis =
+                    VerticalAxis.rememberStart(
+                        valueFormatter = CartesianValueFormatter { _, value, _ -> value.toInt().toString() },
+                    ),
+                bottomAxis =
+                    HorizontalAxis.rememberBottom(
+                        valueFormatter = xAxisFormatter,
+                        itemPlacer =
+                            remember(rangeDays) {
+                                HorizontalAxis.ItemPlacer.segmented()
+                            },
+                    ),
                 decorations =
                     listOf(
                         HorizontalLine(
-                            y = { baseline.toDouble() },
-                            line = LineComponent(fill = Fill(baselineColor.toArgb()), thicknessDp = 1f),
+                            y = { baselineValue.toDouble() },
+                            line = LineComponent(fill = fill(baselineColor), thicknessDp = 1f),
                         ),
                     ),
             ),
         modelProducer = modelProducer,
         modifier = modifier.fillMaxWidth().height(180.dp),
     )
+
+    Spacer(Modifier.height(6.dp))
+    BaselineLegend(
+        value = baselineValue,
+        unit = baselineUnit,
+        color = baselineColor,
+    )
+}
+
+@Composable
+private fun BaselineLegend(
+    value: Float,
+    unit: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .width(16.dp)
+                    .height(2.dp)
+                    .background(color),
+        )
+        Text(
+            text = "Baseline: ${value.roundToInt()} $unit",
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+        )
+    }
 }
 
 @Composable
@@ -278,22 +405,19 @@ private fun SleepMetricGrid(
                 title = "Sleep Efficiency",
                 value = session?.let { "${it.efficiency.roundToInt()}%" } ?: "—",
                 status = efficiencyStatus,
-                tooltip =
-                    "The percentage of time actually asleep while in bed. (Goal: >85%).",
+                tooltip = "The percentage of time actually asleep while in bed. (Goal: >85%).",
             ),
             MetricCardData(
                 title = "Deep Sleep",
                 value = summary?.deepSleepPercent?.let { "${it.toInt()}%" } ?: "—",
                 status = deepStatus,
-                tooltip =
-                    "Time in Slow Wave Sleep; responsible for tissue repair and growth hormone release.",
+                tooltip = "Time in Slow Wave Sleep; responsible for tissue repair and growth hormone release.",
             ),
             MetricCardData(
                 title = "REM Sleep",
                 value = summary?.remSleepPercent?.let { "${it.toInt()}%" } ?: "—",
                 status = remStatus,
-                tooltip =
-                    "Time in Rapid Eye Movement sleep; vital for memory and emotional processing.",
+                tooltip = "Time in Rapid Eye Movement sleep; vital for memory and emotional processing.",
             ),
         )
 
@@ -348,7 +472,7 @@ private fun SleepMetricCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = contentColor,
                 )
-                MetricTooltip(description = tooltipText)
+                MetricTooltip(description = tooltipText, iconTint = contentColor)
             }
             Spacer(Modifier.height(4.dp))
             Text(

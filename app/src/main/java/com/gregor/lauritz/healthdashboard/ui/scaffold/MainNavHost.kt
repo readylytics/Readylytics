@@ -10,7 +10,7 @@ import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardRoute
 import com.gregor.lauritz.healthdashboard.ui.navigation.TabDestination
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsRoute
 import com.gregor.lauritz.healthdashboard.ui.sleep.SleepRoute
-import com.gregor.lauritz.healthdashboard.ui.workouts.WorkoutsScreen
+import com.gregor.lauritz.healthdashboard.ui.workouts.WorkoutsRoute
 
 @Composable
 fun MainNavHost(
@@ -45,7 +45,7 @@ fun MainNavHost(
             )
         }
         composable<TabDestination.Sleep> { SleepRoute() }
-        composable<TabDestination.Workouts> { WorkoutsScreen() }
+        composable<TabDestination.Workouts> { WorkoutsRoute() }
         composable<TabDestination.Settings> { SettingsRoute() }
     }
 }

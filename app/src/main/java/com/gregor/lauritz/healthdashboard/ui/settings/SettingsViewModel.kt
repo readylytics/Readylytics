@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,6 +58,7 @@ class SettingsViewModel
     @Inject
     constructor(
         private val prefsRepo: UserPreferencesRepository,
+        private val scoringRepository: ScoringRepository,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(SettingsUiState())
         val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -84,26 +86,35 @@ class SettingsViewModel
                 is SettingsEvent.GoalSleepHoursChanged ->
                     viewModelScope.launch {
                         prefsRepo.updateGoalSleepHours(event.hours)
+                        scoringRepository.computeAndPersistDailySummary()
                     }
                 is SettingsEvent.HrvBaselineChanged -> {
-                    val value = event.text.toFloatOrNull()
+                    val value = event.text.toIntOrNull()?.toFloat()
                     if (value != null) {
-                        viewModelScope.launch { prefsRepo.updateHrvBaselineOverride(value) }
+                        viewModelScope.launch {
+                            prefsRepo.updateHrvBaselineOverride(value)
+                            scoringRepository.computeAndPersistDailySummary()
+                        }
                     }
                 }
                 SettingsEvent.HrvBaselineCleared ->
                     viewModelScope.launch {
                         prefsRepo.updateHrvBaselineOverride(null)
+                        scoringRepository.computeAndPersistDailySummary()
                     }
                 is SettingsEvent.RhrBaselineChanged -> {
-                    val value = event.text.toFloatOrNull()
+                    val value = event.text.toIntOrNull()?.toFloat()
                     if (value != null) {
-                        viewModelScope.launch { prefsRepo.updateRhrBaselineOverride(value) }
+                        viewModelScope.launch {
+                            prefsRepo.updateRhrBaselineOverride(value)
+                            scoringRepository.computeAndPersistDailySummary()
+                        }
                     }
                 }
                 SettingsEvent.RhrBaselineCleared ->
                     viewModelScope.launch {
                         prefsRepo.updateRhrBaselineOverride(null)
+                        scoringRepository.computeAndPersistDailySummary()
                     }
                 is SettingsEvent.SyncPreferenceChanged ->
                     viewModelScope.launch {

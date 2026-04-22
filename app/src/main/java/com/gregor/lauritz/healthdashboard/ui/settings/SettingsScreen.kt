@@ -60,10 +60,10 @@ fun SettingsScreen(
         mutableFloatStateOf(uiState.goalSleepHours)
     }
     var hrvText by rememberSaveable(uiState.hrvBaselineOverride) {
-        mutableStateOf(uiState.hrvBaselineOverride?.let { "%.1f".format(it) } ?: "")
+        mutableStateOf(uiState.hrvBaselineOverride?.toInt()?.toString() ?: "")
     }
     var rhrText by rememberSaveable(uiState.rhrBaselineOverride) {
-        mutableStateOf(uiState.rhrBaselineOverride?.let { "%.1f".format(it) } ?: "")
+        mutableStateOf(uiState.rhrBaselineOverride?.toInt()?.toString() ?: "")
     }
     var maxHrText by rememberSaveable(uiState.maxHeartRate) {
         mutableStateOf(uiState.maxHeartRate.toString())
@@ -120,7 +120,7 @@ fun SettingsScreen(
                         )
                     }
                 },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 trailingIcon =
                     {
                         if (hrvText.isNotEmpty()) {
@@ -155,7 +155,7 @@ fun SettingsScreen(
                         )
                     }
                 },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 trailingIcon =
                     {
                         if (rhrText.isNotEmpty()) {
