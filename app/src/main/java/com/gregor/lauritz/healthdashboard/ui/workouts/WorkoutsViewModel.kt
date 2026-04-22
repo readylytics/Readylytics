@@ -57,22 +57,24 @@ class WorkoutsViewModel
                         dailySummaryDao.observeLatest(),
                         workoutDao.observeSince(fetchFromMs),
                     ) { latest, allWorkouts ->
-                        val trimpByDay: Map<Long, Float> = allWorkouts
-                            .groupBy { truncateToDayMs(it.startTime) }
-                            .mapValues { (_, ws) -> ws.sumOf { it.trimp.toDouble() }.toFloat() }
+                        val trimpByDay: Map<Long, Float> =
+                            allWorkouts
+                                .groupBy { truncateToDayMs(it.startTime) }
+                                .mapValues { (_, ws) -> ws.sumOf { it.trimp.toDouble() }.toFloat() }
 
                         val nowDayMs = truncateToDayMs(System.currentTimeMillis())
 
                         // Build display-day midnights using Calendar.add so DST transitions
                         // don't shift subsequent days by ±1 hour.
-                        val displayDayMidnights = buildList<Long> {
-                            val cal = Calendar.getInstance()
-                            cal.timeInMillis = displayStartDayMs
-                            while (cal.timeInMillis <= nowDayMs) {
-                                add(cal.timeInMillis)
-                                cal.add(Calendar.DAY_OF_YEAR, 1)
+                        val displayDayMidnights =
+                            buildList<Long> {
+                                val cal = Calendar.getInstance()
+                                cal.timeInMillis = displayStartDayMs
+                                while (cal.timeInMillis <= nowDayMs) {
+                                    add(cal.timeInMillis)
+                                    cal.add(Calendar.DAY_OF_YEAR, 1)
+                                }
                             }
-                        }
 
                         val dailyTrimp = mutableListOf<DailyDataPoint>()
                         val dailyStrainRatio = mutableListOf<DailyDataPoint>()
@@ -83,16 +85,18 @@ class WorkoutsViewModel
                                 dailyTrimp.add(DailyDataPoint(dayOffset = i, value = trimp))
                             }
 
-                            val acuteFrom = Calendar.getInstance().run {
-                                timeInMillis = dayMidnight
-                                add(Calendar.DAY_OF_YEAR, -ACUTE_DAYS)
-                                timeInMillis
-                            }
-                            val chronicFrom = Calendar.getInstance().run {
-                                timeInMillis = dayMidnight
-                                add(Calendar.DAY_OF_YEAR, -CHRONIC_DAYS)
-                                timeInMillis
-                            }
+                            val acuteFrom =
+                                Calendar.getInstance().run {
+                                    timeInMillis = dayMidnight
+                                    add(Calendar.DAY_OF_YEAR, -ACUTE_DAYS)
+                                    timeInMillis
+                                }
+                            val chronicFrom =
+                                Calendar.getInstance().run {
+                                    timeInMillis = dayMidnight
+                                    add(Calendar.DAY_OF_YEAR, -CHRONIC_DAYS)
+                                    timeInMillis
+                                }
 
                             val acuteSum = trimpByDay.filterKeys { it in acuteFrom..dayMidnight }.values.sum()
                             val chronicSum = trimpByDay.filterKeys { it in chronicFrom..dayMidnight }.values.sum()
