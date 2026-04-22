@@ -206,13 +206,11 @@ private fun MetricCard(
                 style = MaterialTheme.typography.displaySmall,
                 color = contentColor,
             )
-            if (unit.isNotEmpty()) {
-                Text(
-                    text = unit,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = contentColor.copy(alpha = 0.7f),
-                )
-            }
+            Text(
+                text = unit,
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.7f),
+            )
         }
     }
 }

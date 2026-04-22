@@ -13,6 +13,9 @@ interface SleepSessionDao {
     fun observeSince(fromMs: Long): Flow<List<SleepSessionEntity>>
 
     @Query("SELECT * FROM sleep_sessions ORDER BY startTime DESC LIMIT 1")
+    fun observeLatest(): Flow<SleepSessionEntity?>
+
+    @Query("SELECT * FROM sleep_sessions ORDER BY startTime DESC LIMIT 1")
     suspend fun getLatest(): SleepSessionEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

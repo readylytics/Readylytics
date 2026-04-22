@@ -101,6 +101,9 @@ dependencies {
     // Serialization (type-safe nav destinations)
     implementation(libs.kotlinx.serialization.json)
 
+    // Vico charts
+    implementation(libs.vico.compose.m3)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

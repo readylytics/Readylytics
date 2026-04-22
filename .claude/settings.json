@@ -6,7 +6,8 @@
       "Bash(./gradlew lint *)",
       "Bash(./gradlew assembleDebug)",
       "Bash(./gradlew assembleDebug --info)",
-      "Bash(./gradlew ktlintCheck assembleDebug)"
+      "Bash(./gradlew ktlintCheck assembleDebug)",
+      "Bash(./gradlew compileDebugKotlin)"
     ]
   }
 }
