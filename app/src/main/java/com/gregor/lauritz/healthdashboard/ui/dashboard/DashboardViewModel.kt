@@ -8,15 +8,22 @@ import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesReposi
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 data class DashboardUiState(
     val summary: DailySummaryEntity? = null,
+    val selectedDate: LocalDate = LocalDate.now(),
     val goalSleepMinutes: Int = 480,
     val hrvOptimalThreshold: Float = 0.95f,
     val hrvWarningThreshold: Float = 0.85f,
@@ -81,36 +88,65 @@ class DashboardViewModel
         private val foregroundSyncController: ForegroundSyncController,
         prefsRepo: UserPreferencesRepository,
     ) : ViewModel() {
-        private val isRefreshing = MutableStateFlow(false)
+        private val _isRefreshing = MutableStateFlow(false)
+        val isRefreshing = _isRefreshing
 
+        private val _selectedDate = MutableStateFlow(LocalDate.now())
+        val selectedDate = _selectedDate
+
+        @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
-            combine(
-                dailySummaryDao.observeLatest(),
-                prefsRepo.userPreferences,
-                isRefreshing,
-            ) { summary, prefs, refreshing ->
-                DashboardUiState(
-                    summary = summary,
-                    goalSleepMinutes = (prefs.goalSleepHours * 60).toInt(),
-                    hrvOptimalThreshold = prefs.hrvOptimalThreshold,
-                    hrvWarningThreshold = prefs.hrvWarningThreshold,
-                    rhrOptimalThreshold = prefs.rhrOptimalThreshold,
-                    rhrWarningThreshold = prefs.rhrWarningThreshold,
-                    restingHrBeforeMinutes = prefs.restingHrBeforeMinutes,
-                    restingHrAfterMinutes = prefs.restingHrAfterMinutes,
-                    isRefreshing = refreshing,
+            _selectedDate
+                .flatMapLatest { date ->
+                    val today = LocalDate.now()
+                    val summaryFlow =
+                        if (date == today) {
+                            dailySummaryDao.observeLatest()
+                        } else {
+                            val midnightMs =
+                                date
+                                    .atStartOfDay(ZoneId.systemDefault())
+                                    .toInstant()
+                                    .toEpochMilli()
+                            flow { emit(dailySummaryDao.getByDate(midnightMs)) }
+                        }
+                    combine(
+                        summaryFlow,
+                        prefsRepo.userPreferences,
+                        _isRefreshing,
+                    ) { summary, prefs, refreshing ->
+                        DashboardUiState(
+                            summary = summary,
+                            selectedDate = date,
+                            goalSleepMinutes = (prefs.goalSleepHours * 60).toInt(),
+                            hrvOptimalThreshold = prefs.hrvOptimalThreshold,
+                            hrvWarningThreshold = prefs.hrvWarningThreshold,
+                            rhrOptimalThreshold = prefs.rhrOptimalThreshold,
+                            rhrWarningThreshold = prefs.rhrWarningThreshold,
+                            restingHrBeforeMinutes = prefs.restingHrBeforeMinutes,
+                            restingHrAfterMinutes = prefs.restingHrAfterMinutes,
+                            isRefreshing = refreshing,
+                        )
+                    }
+                }.stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = DashboardUiState(),
                 )
-            }.stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = DashboardUiState(),
-            )
 
         fun onRefresh() {
             viewModelScope.launch {
-                isRefreshing.value = true
+                _isRefreshing.value = true
                 foregroundSyncController.triggerImmediateSync()
-                isRefreshing.value = false
+                _isRefreshing.value = false
             }
+        }
+
+        fun onPreviousDay() {
+            _selectedDate.update { it.minusDays(1) }
+        }
+
+        fun onNextDay() {
+            _selectedDate.update { d -> if (d < LocalDate.now()) d.plusDays(1) else d }
         }
     }

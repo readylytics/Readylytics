@@ -26,4 +26,20 @@ interface SleepSessionDao {
 
     @Query("SELECT * FROM sleep_sessions WHERE startTime >= :fromMs")
     suspend fun getSince(fromMs: Long): List<SleepSessionEntity>
+
+    @Query(
+        "SELECT * FROM sleep_sessions WHERE endTime >= :fromMs AND endTime < :toMs ORDER BY endTime ASC LIMIT 1",
+    )
+    suspend fun getSessionEndingInRange(
+        fromMs: Long,
+        toMs: Long,
+    ): SleepSessionEntity?
+
+    @Query(
+        "SELECT * FROM sleep_sessions WHERE endTime >= :fromMs AND endTime < :toMs ORDER BY endTime ASC LIMIT 1",
+    )
+    fun observeFirstSessionEndingInRange(
+        fromMs: Long,
+        toMs: Long,
+    ): Flow<SleepSessionEntity?>
 }

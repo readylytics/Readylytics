@@ -24,13 +24,21 @@ class ForegroundSyncController
             when (prefs.syncPreference) {
                 SyncPreference.NEVER -> return
                 SyncPreference.ALWAYS -> {
-                    syncUseCase.sync()
+                    if (prefs.lastSyncTimestamp == 0L) {
+                        syncUseCase.catchUpSync()
+                    } else {
+                        syncUseCase.sync()
+                    }
                     _syncCompletedEvent.emit(Unit)
                 }
                 SyncPreference.BY_TIME -> {
                     val intervalMs = prefs.syncIntervalHours * 3_600_000L
                     if (System.currentTimeMillis() - prefs.lastSyncTimestamp > intervalMs) {
-                        syncUseCase.sync()
+                        if (prefs.lastSyncTimestamp == 0L) {
+                            syncUseCase.catchUpSync()
+                        } else {
+                            syncUseCase.sync()
+                        }
                         _syncCompletedEvent.emit(Unit)
                     }
                 }

@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -83,9 +85,16 @@ class SleepViewModel
                     if (records.isEmpty()) {
                         null
                     } else {
-                        val values = records.map { it.rmssdMs }.sorted()
+                        val values =
+                            records
+                                .map { it.rmssdMs }
+                                .sorted()
                         val mid = values.size / 2
-                        if (values.size % 2 == 0) (values[mid - 1] + values[mid]) / 2f else values[mid]
+                        if (values.size % 2 == 0) {
+                            (values[mid - 1] + values[mid]) / 2f
+                        } else {
+                            values[mid]
+                        }
                     }
                 }.stateIn(
                     scope = viewModelScope,
@@ -108,11 +117,20 @@ class SleepViewModel
                             records
                                 .groupBy { it.sessionId }
                                 .values
-                                .map { sess -> sess.map { it.beatsPerMinute }.average().toFloat() }
+                                .map { sess ->
+                                    sess
+                                        .map { it.beatsPerMinute }
+                                        .average()
+                                        .toFloat()
+                                }
                         val sorted = sessionAvgs.sorted()
                         val mid = sorted.size / 2
                         val median =
-                            if (sorted.size % 2 == 0) (sorted[mid - 1] + sorted[mid]) / 2f else sorted[mid]
+                            if (sorted.size % 2 == 0) {
+                                (sorted[mid - 1] + sorted[mid]) / 2f
+                            } else {
+                                sorted[mid]
+                            }
                         median.toInt()
                     }
                 }.stateIn(
@@ -127,9 +145,26 @@ class SleepViewModel
                 .flatMapLatest { range ->
                     val fromMs = range.fromMs()
                     val startDayMs = truncateToDayMs(fromMs)
+                    val zoneId = ZoneId.systemDefault()
+                    val todayMidnightMs =
+                        LocalDate
+                            .now(zoneId)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
+                    val tomorrowMidnightMs =
+                        LocalDate
+                            .now(zoneId)
+                            .plusDays(1)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
                     combine(
                         dailySummaryDao.observeLatest(),
-                        sleepSessionDao.observeLatest(),
+                        sleepSessionDao.observeFirstSessionEndingInRange(
+                            todayMidnightMs,
+                            tomorrowMidnightMs,
+                        ),
                         hrvDao.observeSleepHrvSince(fromMs),
                         heartRateDao.observeSleepHrSince(fromMs),
                         prefsRepo.userPreferences,
@@ -166,7 +201,11 @@ private fun groupHrvByDay(
         .map { (dayMs_, daily) ->
             DailyDataPoint(
                 dayOffset = ((dayMs_ - startDayMs) / dayMs).toInt(),
-                value = daily.map { it.rmssdMs }.average().toFloat(),
+                value =
+                    daily
+                        .map { it.rmssdMs }
+                        .average()
+                        .toFloat(),
             )
         }
 }
@@ -182,7 +221,11 @@ private fun groupRhrByDay(
         .map { (dayMs_, daily) ->
             DailyDataPoint(
                 dayOffset = ((dayMs_ - startDayMs) / dayMs).toInt(),
-                value = daily.map { it.beatsPerMinute }.average().toFloat(),
+                value =
+                    daily
+                        .map { it.beatsPerMinute }
+                        .average()
+                        .toFloat(),
             )
         }
 }

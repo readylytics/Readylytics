@@ -46,12 +46,15 @@ class HealthSyncUseCase
                 syncHeartRate(from, to, sleepEntities, workoutEntities)
                 syncHrv(from, to, sleepEntities)
 
-                scoringRepository.computeAndPersistDailySummary()
+                val today = LocalDate.now(zoneId)
+                repeat(windowDays) { i ->
+                    scoringRepository.computeAndPersistDailySummary(today.minusDays(i.toLong()))
+                }
 
                 prefsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
             }
 
-        suspend fun catchUpSync(): Result<Unit> = sync(windowDays = 42)
+        suspend fun catchUpSync(): Result<Unit> = sync(windowDays = 60)
 
         private suspend fun syncSleep(
             from: Instant,

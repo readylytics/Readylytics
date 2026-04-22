@@ -45,18 +45,41 @@ class StrainRatioTest {
     fun `both zero returns 0`() = assertEquals(0f, computeStrainRatio(0f, 0f), DELTA)
 
     @Test
-    fun `chronic zero returns 0`() = assertEquals(0f, computeStrainRatio(10f, 0f), DELTA)
+    fun `ctl zero returns 0`() = assertEquals(0f, computeStrainRatio(10f, 0f), DELTA)
 
     @Test
     fun `balanced training returns 1`() {
-        // acuteSum=7 (1/day), chronicSum=42 (1/day) → SR=1.0
-        assertEquals(1.0f, computeStrainRatio(7f, 42f), DELTA)
+        // ATL=1.0/day, CTL=1.0/day → SR=1.0
+        assertEquals(1.0f, computeStrainRatio(1f, 1f), DELTA)
     }
 
     @Test
     fun `high acute load`() {
-        // acuteSum=10.5 (1.5/day), chronicSum=42 (1.0/day) → SR=1.5
-        assertEquals(1.5f, computeStrainRatio(10.5f, 42f), DELTA)
+        // ATL=1.5/day, CTL=1.0/day → SR=1.5
+        assertEquals(1.5f, computeStrainRatio(1.5f, 1f), DELTA)
+    }
+}
+
+class ComputeCtlTest {
+    @Test
+    fun `fewer than 7 workout days returns seed`() =
+        assertEquals(35f, computeCtl(totalTrimp = 150f, windowDays = 60L, workoutDayCount = 3), DELTA)
+
+    @Test
+    fun `returns per-calendar-day average when data is sufficient`() {
+        // 600 total TRIMP over 60 days = 10 TRIMP per day
+        assertEquals(10f, computeCtl(totalTrimp = 600f, windowDays = 60L, workoutDayCount = 20), DELTA)
+    }
+
+    @Test
+    fun `steady training gives SR close to 1`() {
+        // 3 workouts/week, 30 TRIMP each over 60 days → CTL = ~12.86/day
+        // ATL same week → SR ≈ 1.0
+        val weeklyTrimp = 3 * 30f
+        val ctl = computeCtl(totalTrimp = weeklyTrimp * (60f / 7f), windowDays = 60L, workoutDayCount = 26)
+        val atl = weeklyTrimp / 7f
+        val sr = computeStrainRatio(atl, ctl)
+        assertEquals(1.0f, sr, 0.05f)
     }
 }
 
@@ -89,20 +112,20 @@ class LoadScoreTest {
 class DurationSubScoreTest {
     @Test
     fun `full goal sleep with high efficiency`() {
-        // 8h / 8h goal, 85% efficiency → 0.7*100 + 0.3*85 = 95.5
-        assertEquals(95.5f, computeDurationSubScore(480, 85f, 8f), DELTA)
+        // 8h / 8h goal, 85% efficiency → ratio=1.0, score = 1.0 * 100 * 0.85 = 85.0
+        assertEquals(85f, computeDurationSubScore(480, 85f, 8f), DELTA)
     }
 
     @Test
     fun `half sleep goal`() {
-        // 4h / 8h goal, 80% efficiency → 0.7*50 + 0.3*80 = 59.0
-        assertEquals(59f, computeDurationSubScore(240, 80f, 8f), DELTA)
+        // 4h / 8h goal, 80% efficiency → ratio=0.5, score = 0.5 * 100 * 0.80 = 40.0
+        assertEquals(40f, computeDurationSubScore(240, 80f, 8f), DELTA)
     }
 
     @Test
     fun `over-sleeping clamped at 1`() {
-        // 10h / 8h goal (clamped to 1.0), 90% efficiency → 0.7*100 + 0.3*90 = 97.0
-        assertEquals(97f, computeDurationSubScore(600, 90f, 8f), DELTA)
+        // 10h / 8h goal (clamped to 1.0), 90% efficiency → 1.0 * 100 * 0.90 = 90.0
+        assertEquals(90f, computeDurationSubScore(600, 90f, 8f), DELTA)
     }
 }
 
@@ -144,11 +167,13 @@ class RestorationSubScoreTest {
     }
 
     @Test
-    fun `poor HRV and elevated RHR clamped at 0`() {
-        // HRV Z=-2 → hrv_score=0; RHR ratio≥1.1 → rhr_score=0 → 0
+    fun `poor HRV with elevated RHR gives partial score`() {
+        // HRV at 40 vs baseline 80 → Z very negative → hrv_score=0 (clamped)
+        // RHR night=60 vs baseline=50 → rhr_score = 50/60*100 ≈ 83.3
+        // sRest = 0.5*0 + 0.5*83.3 ≈ 41.65
         val hrv = listOf(80f, 80f, 80f)
         val rhr = listOf(50, 50, 50)
-        assertEquals(0f, computeRestorationSubScore(40f, hrv, 60f, rhr, null, null), DELTA)
+        assertEquals(41.67f, computeRestorationSubScore(40f, hrv, 60f, rhr, null, null), DELTA)
     }
 
     @Test
@@ -170,11 +195,9 @@ class SleepScoreIntegrationTest {
     @Test
     fun `weighted sum of known sub-scores`() {
         // 96 deep + 96 rem out of 480 total = exactly 20% each → S'arch=100
-        // 8h / 8h goal, 85% efficiency → S'dur = 0.7*100 + 0.3*85 = 95.5
+        // 8h / 8h goal, 85% efficiency → S'dur = 1.0 * 100 * 0.85 = 85.0
         // HRV at baseline (Z=0) → hrv_score=50; RHR ratio=1.0 → rhr_score=100 → S'rest=75
-        // SS = 0.5*95.5 + 0.25*100 + 0.25*75 = 91.5
-        val hrv = listOf(60f, 60f, 60f)
-        val rhr = listOf(50, 50, 50)
+        // SS = 0.5*85 + 0.25*100 + 0.25*75 = 86.25
         val score =
             computeSleepScore(
                 durationMinutes = 480,
@@ -182,13 +205,8 @@ class SleepScoreIntegrationTest {
                 deepSleepMinutes = 96,
                 remSleepMinutes = 96,
                 goalSleepHours = 8f,
-                currentHrvMean = 60f,
-                hrvValues = hrv,
-                currentNocturnalRhr = 50f,
-                rhrValues = rhr,
-                rhrBaselineOverride = null,
-                hrvBaselineOverride = null,
+                sRest = 75f,
             )
-        assertEquals(91.5f, score, DELTA)
+        assertEquals(86.25f, score, DELTA)
     }
 }

@@ -181,17 +181,14 @@ private fun HeroSection(
     ) {
         M3ScoreDial(
             score = uiState.latestSummary?.loadScore,
-            label = "Load Score",
+            label = "Strain Ratio",
             displayText = uiState.latestSummary?.strainRatio?.let { "%.2f".format(it) },
             tooltipDescription =
                 buildString {
-                    append(
-                        "Load Score (0-100) indicates training adequacy based on Strain Ratio (Acute:Chronic Workload Ratio).\n\n",
-                    )
-                    append("• SR ≤ 0.8: Under-trained (Score: 80)\n")
-                    append("• 0.8 < SR ≤ 1.2: Optimal (Score: 100)\n")
-                    append("• 1.2 < SR ≤ 1.5: Fatiguing (Score: 100→40)\n")
-                    append("• SR > 1.5: Over-reached (Score: 40)")
+                    append("Short-term fatigue vs. long-term fitness.\n\n")
+                    append("• 0.8–1.2: Sweet spot for fitness gains\n")
+                    append("• < 0.8: Under-training\n")
+                    append("• > 1.2: Increasing injury risk")
                 },
         )
         M3ScoreDial(
@@ -199,12 +196,10 @@ private fun HeroSection(
             label = "Readiness",
             tooltipDescription =
                 buildString {
-                    append("Your capacity for training today — based on last night's restoration (40%), ")
-                    append("sleep quality (30%), and training load (30%).\n\n")
-                    append("• 85–100: Peak — push hard.\n")
-                    append("• 70–84: Good — train normally.\n")
-                    append("• 50–69: Moderate — reduce intensity.\n")
-                    append("• < 50: Rest day recommended.")
+                    append("Preparation for stress based on recent load & recovery.\n\n")
+                    append("• 85–100: Peak\n")
+                    append("• 30–69: Moderate\n")
+                    append("• < 30: Rest")
                 },
         )
     }

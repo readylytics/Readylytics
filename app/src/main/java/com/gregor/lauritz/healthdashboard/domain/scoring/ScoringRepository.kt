@@ -8,7 +8,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import kotlinx.coroutines.flow.first
-import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
@@ -18,7 +18,9 @@ import kotlin.math.sqrt
 private const val MIN_SESSIONS_FOR_CALIBRATION = 7
 private const val ACUTE_DAYS = 7L
 private const val CHRONIC_DAYS = 42L
+private const val CTL_FETCH_DAYS = 60L
 private const val BASELINE_DAYS = 30L
+private const val DEFAULT_FITNESS_LEVEL = 35f
 
 @Singleton
 class ScoringRepository
@@ -31,32 +33,33 @@ class ScoringRepository
         private val dailySummaryDao: DailySummaryDao,
         private val prefsRepo: UserPreferencesRepository,
     ) {
-        suspend fun computeAndPersistDailySummary() {
-            val now = Instant.now()
-            val todayMidnight =
-                now
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate()
-                    .atStartOfDay(ZoneId.systemDefault())
-                    .toInstant()
-            val todayMidnightMs = todayMidnight.toEpochMilli()
-            val nowMs = now.toEpochMilli()
+        suspend fun computeAndPersistDailySummary(targetDate: LocalDate = LocalDate.now()) {
+            val zoneId = ZoneId.systemDefault()
+            val dayMidnight = targetDate.atStartOfDay(zoneId).toInstant()
+            val nextDayMidnight = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant()
+            val dayMidnightMs = dayMidnight.toEpochMilli()
+            val nextDayMidnightMs = nextDayMidnight.toEpochMilli()
 
-            val calibrationFrom = todayMidnight.minus(CHRONIC_DAYS, ChronoUnit.DAYS).toEpochMilli()
+            val calibrationFrom = dayMidnight.minus(CHRONIC_DAYS, ChronoUnit.DAYS).toEpochMilli()
             if (sleepSessionDao.countSince(calibrationFrom) < MIN_SESSIONS_FOR_CALIBRATION) return
 
             val prefs = prefsRepo.userPreferences.first()
 
-            val acuteFrom = todayMidnight.minus(ACUTE_DAYS, ChronoUnit.DAYS).toEpochMilli()
-            val chronicFrom = todayMidnight.minus(CHRONIC_DAYS, ChronoUnit.DAYS).toEpochMilli()
-            val acuteSum = workoutDao.getTotalTrimp(acuteFrom, nowMs) ?: 0f
-            val chronicSum = workoutDao.getTotalTrimp(chronicFrom, nowMs) ?: 0f
-            val sr = computeStrainRatio(acuteSum, chronicSum)
+            val ctlFetchFrom = dayMidnight.minus(CTL_FETCH_DAYS, ChronoUnit.DAYS).toEpochMilli()
+            val ctlWorkoutDays = workoutDao.getDailyTrimp(ctlFetchFrom, nextDayMidnightMs).size
+            val ctlTotal = workoutDao.getTotalTrimp(ctlFetchFrom, nextDayMidnightMs) ?: 0f
+            val ctl = computeCtl(ctlTotal, CTL_FETCH_DAYS, ctlWorkoutDays)
+
+            val acuteFrom = dayMidnight.minus(ACUTE_DAYS, ChronoUnit.DAYS).toEpochMilli()
+            val acuteTotal = workoutDao.getTotalTrimp(acuteFrom, nextDayMidnightMs) ?: 0f
+            val atl = acuteTotal / ACUTE_DAYS.toFloat()
+
+            val sr = computeStrainRatio(atl, ctl)
             val loadScore = computeLoadScore(sr)
 
-            val todayTrimp = workoutDao.getTotalTrimp(todayMidnightMs, nowMs) ?: 0f
+            val todayTrimp = workoutDao.getTotalTrimp(dayMidnightMs, nextDayMidnightMs) ?: 0f
 
-            val session = sleepSessionDao.getLatest()
+            val session = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
             var sleepScore: Float? = null
             var readinessScore: Float? = null
             var nocturnalRhr: Float? = null
@@ -70,7 +73,7 @@ class ScoringRepository
             var restingHrBaseline: Float? = null
 
             if (session != null) {
-                val baselineFrom = todayMidnight.minus(BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
+                val baselineFrom = dayMidnight.minus(BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
                 val hrvValues = hrvDao.getSleepRmssdValues(baselineFrom)
                 val rhrValues = heartRateDao.getAvgSleepHrPerSession(baselineFrom)
                 val sessionHrvSamples = hrvDao.getSleepRmssdForSession(session.id)
@@ -137,8 +140,7 @@ class ScoringRepository
                     val zHrv =
                         if (sessionHrvSamples.isNotEmpty() && hrvValues.isNotEmpty()) {
                             val mu = prefs.hrvBaselineOverride ?: mean(hrvValues)
-                            val sigma = stdev(hrvValues).takeIf { it > 0f } ?: 5f
-                            (currentHrvMean - mu) / sigma
+                            (currentHrvMean - mu) / hrvSigma(hrvValues)
                         } else {
                             null
                         }
@@ -154,9 +156,9 @@ class ScoringRepository
                 }
             }
 
-            val existing = dailySummaryDao.getByDate(todayMidnightMs)
+            val existing = dailySummaryDao.getByDate(dayMidnightMs)
             val updated =
-                (existing ?: DailySummaryEntity(dateMidnightMs = todayMidnightMs)).copy(
+                (existing ?: DailySummaryEntity(dateMidnightMs = dayMidnightMs)).copy(
                     sleepScore = sleepScore,
                     loadScore = loadScore,
                     readinessScore = readinessScore,
@@ -183,13 +185,19 @@ class ScoringRepository
 // ---------------------------------------------------------------------------
 
 internal fun computeStrainRatio(
-    acuteSum: Float,
-    chronicSum: Float,
-): Float {
-    val acuteDailyAvg = acuteSum / ACUTE_DAYS
-    val chronicDailyAvg = chronicSum / CHRONIC_DAYS
-    return if (chronicDailyAvg > 0f) acuteDailyAvg / chronicDailyAvg else 0f
-}
+    atl: Float,
+    ctl: Float,
+): Float = if (ctl > 0f) atl / ctl else 0f
+
+// CTL = per-calendar-day average over the chronic window, seeded from a fitness level
+// when not enough workout history exists. Both ATL and CTL are in the same unit
+// (TRIMP per calendar day) so their ratio (SR) reaches ≈1.0 at steady training load.
+internal fun computeCtl(
+    totalTrimp: Float,
+    windowDays: Long,
+    workoutDayCount: Int,
+    seedFitnessLevel: Float = DEFAULT_FITNESS_LEVEL,
+): Float = if (workoutDayCount < 7) seedFitnessLevel else totalTrimp / windowDays.toFloat()
 
 internal fun computeLoadScore(sr: Float): Float =
     when {
@@ -232,7 +240,7 @@ internal fun computeRestorationSubScore(
 ): Float {
     // μ_hrv is the rolling mean (not median) per the Z-score formula definition.
     val muHrv = hrvBaselineOverride ?: mean(hrvValues)
-    val sigmaHrv = stdev(hrvValues).takeIf { it > 0f } ?: 5f
+    val sigmaHrv = hrvSigma(hrvValues)
     val zHrv = (currentHrvMean - muHrv) / sigmaHrv
     val hrvScore = (50f + 25f * zHrv).coerceIn(0f, 100f)
 
@@ -296,3 +304,12 @@ internal fun stdev(values: List<Float>): Float {
     val variance = values.sumOf { ((it - mean) * (it - mean)).toDouble() }.toFloat() / values.size
     return sqrt(variance)
 }
+
+// Phase-aware HRV sigma: provisional phase (<21 samples) uses a fixed 15% CV rule to
+// avoid noisy stdev estimates; mature phase uses empirical stdev.
+internal fun hrvSigma(hrvValues: List<Float>): Float =
+    if (hrvValues.size < 21) {
+        maxOf(mean(hrvValues) * 0.15f, 1e-6f)
+    } else {
+        stdev(hrvValues).takeIf { it > 0f } ?: maxOf(mean(hrvValues) * 0.15f, 1e-6f)
+    }

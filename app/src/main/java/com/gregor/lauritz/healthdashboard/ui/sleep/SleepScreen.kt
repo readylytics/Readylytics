@@ -103,7 +103,17 @@ fun SleepScreen(
                         .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                M3ScoreDial(score = uiState.latestSummary?.sleepScore, label = "Sleep Score")
+                M3ScoreDial(
+                    score = uiState.latestSummary?.sleepScore,
+                    label = "Sleep Score",
+                    tooltipDescription =
+                        buildString {
+                            append("Total quality of rest based on duration and cycles.\n\n")
+                            append("• 80–100: Optimal\n")
+                            append("• 60–79: Fair\n")
+                            append("• < 60: Poor")
+                        },
+                )
             }
         }
 
@@ -411,13 +421,13 @@ private fun SleepMetricGrid(
                 title = "Deep Sleep",
                 value = summary?.deepSleepPercent?.let { "${it.toInt()}%" } ?: "—",
                 status = deepStatus,
-                tooltip = "Time in Slow Wave Sleep; responsible for tissue repair and growth hormone release.",
+                tooltip = "Time in Stage 3 (Physical repair). Target: 15–25% of total sleep.",
             ),
             MetricCardData(
                 title = "REM Sleep",
                 value = summary?.remSleepPercent?.let { "${it.toInt()}%" } ?: "—",
                 status = remStatus,
-                tooltip = "Time in Rapid Eye Movement sleep; vital for memory and emotional processing.",
+                tooltip = "Time in Rapid Eye Movement. Target: 20–25% of total sleep.",
             ),
         )
 
