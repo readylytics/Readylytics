@@ -83,7 +83,7 @@ fun DashboardScreen(
                     )
                     M3ScoreDial(
                         score = summary?.loadScore,
-                        label = "Load Score",
+                        label = "Strain Ratio",
                         displayText = summary?.strainRatio?.let { "%.2f".format(it) },
                         onClick = onNavigateToWorkouts,
                         tooltipDescription =

@@ -13,7 +13,8 @@ import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesReposi
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import kotlinx.coroutines.flow.first
 import java.time.Instant
-import java.time.temporal.ChronoUnit
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,10 +30,16 @@ class HealthSyncUseCase
         private val prefsRepo: UserPreferencesRepository,
         private val scoringRepository: ScoringRepository,
     ) {
-        suspend fun sync(windowDays: Int = 7): Result<Unit> =
+        suspend fun sync(windowDays: Int = 8): Result<Unit> =
             runCatching {
                 val to = Instant.now()
-                val from = to.minus(windowDays.toLong(), ChronoUnit.DAYS)
+                val zoneId = ZoneId.systemDefault()
+                val from =
+                    LocalDate
+                        .now(zoneId)
+                        .minusDays(windowDays.toLong())
+                        .atStartOfDay(zoneId)
+                        .toInstant()
 
                 val sleepEntities = syncSleep(from, to)
                 val workoutEntities = syncWorkouts(from, to)

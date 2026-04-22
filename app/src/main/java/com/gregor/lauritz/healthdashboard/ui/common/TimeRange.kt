@@ -1,6 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.common
 
-import java.util.concurrent.TimeUnit
+import java.util.Calendar
 
 enum class TimeRange(
     val days: Int,
@@ -11,5 +11,13 @@ enum class TimeRange(
     SIX_MONTHS(180, "180D"),
     ;
 
-    fun fromMs(): Long = System.currentTimeMillis() - TimeUnit.DAYS.toMillis((days - 1).toLong())
+    fun fromMs(): Long {
+        val cal = Calendar.getInstance()
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        cal.add(Calendar.DAY_OF_YEAR, -days)
+        return cal.timeInMillis
+    }
 }
