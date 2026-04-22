@@ -184,6 +184,47 @@ fun SettingsScreen(
 
         // Advanced
         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        item { SectionHeader("Thresholds") }
+        item {
+            ThresholdSliderItem(
+                label = "HRV Optimal",
+                value = uiState.hrvOptimalThreshold,
+                onValueChange = { onEvent(SettingsEvent.HrvOptimalThresholdChanged(it)) },
+                valueRange = 1.0f..1.2f,
+                description = "HRV ratio to baseline to be considered Optimal (e.g. 100-120%).",
+            )
+        }
+        item {
+            ThresholdSliderItem(
+                label = "HRV Warning",
+                value = uiState.hrvWarningThreshold,
+                onValueChange = { onEvent(SettingsEvent.HrvWarningThresholdChanged(it)) },
+                valueRange = 0.8f..1.0f,
+                description = "HRV ratio to baseline to be considered Warning (e.g. 80-100%).",
+            )
+        }
+        item { Spacer(modifier = Modifier.height(8.dp)) }
+        item {
+            ThresholdSliderItem(
+                label = "RHR Optimal",
+                value = uiState.rhrOptimalThreshold,
+                onValueChange = { onEvent(SettingsEvent.RhrOptimalThresholdChanged(it)) },
+                valueRange = 0.8f..1.0f,
+                description = "RHR ratio to baseline to be considered Optimal (e.g. 80-100%).",
+            )
+        }
+        item {
+            ThresholdSliderItem(
+                label = "RHR Warning",
+                value = uiState.rhrWarningThreshold,
+                onValueChange = { onEvent(SettingsEvent.RhrWarningThresholdChanged(it)) },
+                valueRange = 1.0f..1.2f,
+                description = "RHR ratio to baseline to be considered Warning (e.g. 100-120%).",
+            )
+        }
+
+        // Advanced
+        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
         item { SectionHeader("Advanced") }
         item {
             OutlinedTextField(
@@ -309,6 +350,35 @@ private fun SyncIntervalItem(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ThresholdSliderItem(
+    label: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    description: String,
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            MetricTooltip(description = description)
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "${(value * 100).roundToInt()}%",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            steps = ((valueRange.endInclusive - valueRange.start) * 100).roundToInt() - 1,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

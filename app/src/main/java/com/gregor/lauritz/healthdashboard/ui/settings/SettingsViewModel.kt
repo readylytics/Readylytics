@@ -20,6 +20,10 @@ data class SettingsUiState(
     val syncPreference: SyncPreference = SyncPreference.BY_TIME,
     val syncIntervalHours: Int = 1,
     val maxHeartRate: Int = 190,
+    val hrvOptimalThreshold: Float = 1.00f,
+    val hrvWarningThreshold: Float = 0.90f,
+    val rhrOptimalThreshold: Float = 0.95f,
+    val rhrWarningThreshold: Float = 1.05f,
     val isLoading: Boolean = true,
 )
 
@@ -51,6 +55,22 @@ sealed interface SettingsEvent {
     data class MaxHeartRateChanged(
         val text: String,
     ) : SettingsEvent
+
+    data class HrvOptimalThresholdChanged(
+        val value: Float,
+    ) : SettingsEvent
+
+    data class HrvWarningThresholdChanged(
+        val value: Float,
+    ) : SettingsEvent
+
+    data class RhrOptimalThresholdChanged(
+        val value: Float,
+    ) : SettingsEvent
+
+    data class RhrWarningThresholdChanged(
+        val value: Float,
+    ) : SettingsEvent
 }
 
 @HiltViewModel
@@ -74,6 +94,10 @@ class SettingsViewModel
                             syncPreference = prefs.syncPreference,
                             syncIntervalHours = prefs.syncIntervalHours,
                             maxHeartRate = prefs.maxHeartRate,
+                            hrvOptimalThreshold = prefs.hrvOptimalThreshold,
+                            hrvWarningThreshold = prefs.hrvWarningThreshold,
+                            rhrOptimalThreshold = prefs.rhrOptimalThreshold,
+                            rhrWarningThreshold = prefs.rhrWarningThreshold,
                             isLoading = false,
                         )
                     }
@@ -130,6 +154,22 @@ class SettingsViewModel
                         viewModelScope.launch { prefsRepo.updateMaxHeartRate(value) }
                     }
                 }
+                is SettingsEvent.HrvOptimalThresholdChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateHrvOptimalThreshold(event.value)
+                    }
+                is SettingsEvent.HrvWarningThresholdChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateHrvWarningThreshold(event.value)
+                    }
+                is SettingsEvent.RhrOptimalThresholdChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateRhrOptimalThreshold(event.value)
+                    }
+                is SettingsEvent.RhrWarningThresholdChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateRhrWarningThreshold(event.value)
+                    }
             }
         }
     }

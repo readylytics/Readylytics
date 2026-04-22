@@ -8,4 +8,8 @@ data class UserPreferences(
     val syncIntervalHours: Int = 1,
     val lastSyncTimestamp: Long = 0L,
     val maxHeartRate: Int = 190,
+    val hrvOptimalThreshold: Float = 1.00f,
+    val hrvWarningThreshold: Float = 0.90f,
+    val rhrOptimalThreshold: Float = 0.95f,
+    val rhrWarningThreshold: Float = 1.05f,
 )

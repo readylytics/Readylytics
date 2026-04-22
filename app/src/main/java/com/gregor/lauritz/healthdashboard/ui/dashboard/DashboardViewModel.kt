@@ -11,7 +11,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -19,24 +18,34 @@ import javax.inject.Inject
 data class DashboardUiState(
     val summary: DailySummaryEntity? = null,
     val goalSleepMinutes: Int = 480,
+    val hrvOptimalThreshold: Float = 0.95f,
+    val hrvWarningThreshold: Float = 0.85f,
+    val rhrOptimalThreshold: Float = 1.05f,
+    val rhrWarningThreshold: Float = 1.15f,
     val isRefreshing: Boolean = false,
 )
 
-fun DailySummaryEntity.rhrStatus(): MetricStatus =
+fun DailySummaryEntity.rhrStatus(
+    optimalThreshold: Float,
+    warningThreshold: Float,
+): MetricStatus =
     when {
         rhrRatio == null -> MetricStatus.CALIBRATING
-        rhrRatio <= 1.05f -> MetricStatus.OPTIMAL
-        rhrRatio <= 1.15f -> MetricStatus.WARNING
+        rhrRatio <= optimalThreshold -> MetricStatus.OPTIMAL
+        rhrRatio <= warningThreshold -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
 
-fun DailySummaryEntity.hrvStatus(): MetricStatus {
+fun DailySummaryEntity.hrvStatus(
+    optimalThreshold: Float,
+    warningThreshold: Float,
+): MetricStatus {
     val hrv = nocturnalHrv ?: return MetricStatus.CALIBRATING
     val baseline = hrvBaseline ?: return MetricStatus.CALIBRATING
     val ratio = hrv / baseline
     return when {
-        ratio >= 0.95f -> MetricStatus.OPTIMAL
-        ratio >= 0.85f -> MetricStatus.WARNING
+        ratio >= optimalThreshold -> MetricStatus.OPTIMAL
+        ratio >= warningThreshold -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
 }
@@ -64,12 +73,16 @@ class DashboardViewModel
         val uiState =
             combine(
                 dailySummaryDao.observeLatest(),
-                prefsRepo.userPreferences.map { (it.goalSleepHours * 60).toInt() },
+                prefsRepo.userPreferences,
                 isRefreshing,
-            ) { summary, goalMinutes, refreshing ->
+            ) { summary, prefs, refreshing ->
                 DashboardUiState(
                     summary = summary,
-                    goalSleepMinutes = goalMinutes,
+                    goalSleepMinutes = (prefs.goalSleepHours * 60).toInt(),
+                    hrvOptimalThreshold = prefs.hrvOptimalThreshold,
+                    hrvWarningThreshold = prefs.hrvWarningThreshold,
+                    rhrOptimalThreshold = prefs.rhrOptimalThreshold,
+                    rhrWarningThreshold = prefs.rhrWarningThreshold,
                     isRefreshing = refreshing,
                 )
             }.stateIn(

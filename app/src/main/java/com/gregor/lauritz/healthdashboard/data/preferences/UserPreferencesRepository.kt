@@ -30,6 +30,10 @@ class UserPreferencesRepository
             val SYNC_INTERVAL_HOURS = intPreferencesKey("sync_interval_hours")
             val LAST_SYNC_TIMESTAMP = longPreferencesKey("last_sync_timestamp")
             val MAX_HEART_RATE = intPreferencesKey("max_heart_rate")
+            val HRV_OPTIMAL_THRESHOLD = floatPreferencesKey("hrv_optimal_threshold")
+            val HRV_WARNING_THRESHOLD = floatPreferencesKey("hrv_warning_threshold")
+            val RHR_OPTIMAL_THRESHOLD = floatPreferencesKey("rhr_optimal_threshold")
+            val RHR_WARNING_THRESHOLD = floatPreferencesKey("rhr_warning_threshold")
         }
 
         val userPreferences: Flow<UserPreferences> =
@@ -58,6 +62,10 @@ class UserPreferencesRepository
                         syncIntervalHours = prefs[Keys.SYNC_INTERVAL_HOURS] ?: 1,
                         lastSyncTimestamp = prefs[Keys.LAST_SYNC_TIMESTAMP] ?: 0L,
                         maxHeartRate = prefs[Keys.MAX_HEART_RATE] ?: 190,
+                        hrvOptimalThreshold = prefs[Keys.HRV_OPTIMAL_THRESHOLD] ?: 1.00f,
+                        hrvWarningThreshold = prefs[Keys.HRV_WARNING_THRESHOLD] ?: 0.90f,
+                        rhrOptimalThreshold = prefs[Keys.RHR_OPTIMAL_THRESHOLD] ?: 0.95f,
+                        rhrWarningThreshold = prefs[Keys.RHR_WARNING_THRESHOLD] ?: 1.05f,
                     )
                 }
 
@@ -103,5 +111,21 @@ class UserPreferencesRepository
 
         suspend fun updateMaxHeartRate(bpm: Int) {
             dataStore.edit { it[Keys.MAX_HEART_RATE] = bpm.coerceIn(150, 220) }
+        }
+
+        suspend fun updateHrvOptimalThreshold(value: Float) {
+            dataStore.edit { it[Keys.HRV_OPTIMAL_THRESHOLD] = value.coerceIn(1.0f, 1.2f) }
+        }
+
+        suspend fun updateHrvWarningThreshold(value: Float) {
+            dataStore.edit { it[Keys.HRV_WARNING_THRESHOLD] = value.coerceIn(0.8f, 1.0f) }
+        }
+
+        suspend fun updateRhrOptimalThreshold(value: Float) {
+            dataStore.edit { it[Keys.RHR_OPTIMAL_THRESHOLD] = value.coerceIn(0.8f, 1.0f) }
+        }
+
+        suspend fun updateRhrWarningThreshold(value: Float) {
+            dataStore.edit { it[Keys.RHR_WARNING_THRESHOLD] = value.coerceIn(1.0f, 1.2f) }
         }
     }

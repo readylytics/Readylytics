@@ -110,8 +110,16 @@ fun DashboardScreen(
             }
 
             item {
-                val rhrStatus = summary?.rhrStatus() ?: MetricStatus.CALIBRATING
-                val hrvStatus = summary?.hrvStatus() ?: MetricStatus.CALIBRATING
+                val rhrStatus =
+                    summary?.rhrStatus(
+                        uiState.rhrOptimalThreshold,
+                        uiState.rhrWarningThreshold,
+                    ) ?: MetricStatus.CALIBRATING
+                val hrvStatus =
+                    summary?.hrvStatus(
+                        uiState.hrvOptimalThreshold,
+                        uiState.hrvWarningThreshold,
+                    ) ?: MetricStatus.CALIBRATING
                 val durationStatus =
                     summary?.sleepDurationStatus(uiState.goalSleepMinutes) ?: MetricStatus.CALIBRATING
 
