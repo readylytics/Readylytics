@@ -316,10 +316,10 @@ fun DashboardScreen(
                                         if (rBaseline != null && rCurrent != null) {
                                             val diff = kotlin.math.abs(rCurrent - rBaseline).toInt()
                                             val arrow = if (rCurrent > rBaseline) "↑" else "↓"
-                                            append("Baseline: ${rBaseline.toInt()} bpm $arrow ($diff bpm)")
-                                            append("\n\nMinimum heart rate captured within ")
+                                            append("Minimum heart rate captured within ")
                                             append("${uiState.restingHrBeforeMinutes}m before and ")
                                             append("${uiState.restingHrAfterMinutes}m after wake up.")
+                                            append("\n\nBaseline: ${rBaseline.toInt()} bpm $arrow ($diff bpm)")
                                         } else {
                                             append("Minimum heart rate captured around wake up time.")
                                             append("\n\nNot enough data to calculate baseline.")
