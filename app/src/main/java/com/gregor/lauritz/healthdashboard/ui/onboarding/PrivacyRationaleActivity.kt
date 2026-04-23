@@ -13,18 +13,29 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class PrivacyRationaleActivity : ComponentActivity() {
+    @Inject
+    lateinit var prefsRepo: UserPreferencesRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            FitDashboardTheme {
+            val prefs by prefsRepo.userPreferences.collectAsState(initial = null)
+            val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM
+
+            FitDashboardTheme(appTheme = appTheme) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     Column(
                         modifier =

@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import kotlin.math.roundToInt
@@ -188,6 +189,11 @@ fun SettingsScreen(
             }
         }
 
+        // Appearance
+        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        item { SectionHeader("Appearance") }
+        item { AppThemeItem(uiState = uiState, onEvent = onEvent) }
+
         // Advanced
         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
         item { SectionHeader("Thresholds") }
@@ -312,6 +318,47 @@ fun SettingsScreen(
         }
 
         item { Spacer(modifier = Modifier.height(16.dp)) }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppThemeItem(
+    uiState: SettingsUiState,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        OutlinedTextField(
+            value = uiState.appTheme.displayName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("App Theme") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier =
+                Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            AppTheme.entries.forEach { theme ->
+                DropdownMenuItem(
+                    text = { Text(theme.displayName) },
+                    onClick =
+                        {
+                            onEvent(SettingsEvent.AppThemeChanged(theme))
+                            expanded = false
+                        },
+                )
+            }
+        }
     }
 }
 
@@ -449,4 +496,12 @@ private val SyncPreference.displayName: String
             SyncPreference.NEVER -> "Never"
             SyncPreference.ALWAYS -> "Always"
             SyncPreference.BY_TIME -> "By Time"
+        }
+
+private val AppTheme.displayName: String
+    get() =
+        when (this) {
+            AppTheme.SYSTEM -> "System Default"
+            AppTheme.LIGHT -> "Light"
+            AppTheme.DARK -> "Dark"
         }

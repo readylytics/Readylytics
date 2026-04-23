@@ -12,12 +12,15 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 
 data class ExtendedColors(
     val success: Color,
     val onSuccess: Color,
     val successContainer: Color,
     val onSuccessContainer: Color,
+    val neutralContainer: Color,
+    val onNeutralContainer: Color,
 )
 
 val LocalExtendedColors =
@@ -27,6 +30,8 @@ val LocalExtendedColors =
             onSuccess = OnSuccessGreenDark,
             successContainer = SuccessGreenContainerDark,
             onSuccessContainer = OnSuccessGreenContainerDark,
+            neutralContainer = PrimaryContainerDark,
+            onNeutralContainer = OnPrimaryContainerDark,
         )
     }
 
@@ -35,6 +40,8 @@ private val DarkColorScheme =
         primary = Purple80,
         secondary = PurpleGrey80,
         tertiary = Pink80,
+        primaryContainer = PrimaryContainerDark,
+        onPrimaryContainer = OnPrimaryContainerDark,
     )
 
 private val LightColorScheme =
@@ -42,6 +49,8 @@ private val LightColorScheme =
         primary = Purple40,
         secondary = PurpleGrey40,
         tertiary = Pink40,
+        primaryContainer = PrimaryContainerLight,
+        onPrimaryContainer = OnPrimaryContainerLight,
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
     surface = Color(0xFFFFFBFE),
@@ -55,11 +64,18 @@ private val LightColorScheme =
 
 @Composable
 fun FitDashboardTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    appTheme: AppTheme = AppTheme.SYSTEM,
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    val darkTheme =
+        when (appTheme) {
+            AppTheme.LIGHT -> false
+            AppTheme.DARK -> true
+            AppTheme.SYSTEM -> isSystemInDarkTheme()
+        }
+
     val colorScheme =
         when {
             dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
@@ -78,6 +94,8 @@ fun FitDashboardTheme(
                 onSuccess = OnSuccessGreenDark,
                 successContainer = SuccessGreenContainerDark,
                 onSuccessContainer = OnSuccessGreenContainerDark,
+                neutralContainer = PrimaryContainerDark,
+                onNeutralContainer = OnPrimaryContainerDark,
             )
         } else {
             ExtendedColors(
@@ -85,6 +103,8 @@ fun FitDashboardTheme(
                 onSuccess = OnSuccessGreenLight,
                 successContainer = SuccessGreenContainerLight,
                 onSuccessContainer = OnSuccessGreenContainerLight,
+                neutralContainer = PrimaryContainerLight,
+                onNeutralContainer = OnPrimaryContainerLight,
             )
         }
 

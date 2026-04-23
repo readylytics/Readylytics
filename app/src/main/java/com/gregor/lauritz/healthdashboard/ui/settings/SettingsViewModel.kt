@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
@@ -26,6 +27,7 @@ data class SettingsUiState(
     val rhrWarningThreshold: Float = 1.05f,
     val restingHrBeforeMinutes: Int = 5,
     val restingHrAfterMinutes: Int = 15,
+    val appTheme: AppTheme = AppTheme.SYSTEM,
     val isLoading: Boolean = true,
 )
 
@@ -81,6 +83,10 @@ sealed interface SettingsEvent {
     data class RestingHrAfterMinutesChanged(
         val minutes: Int,
     ) : SettingsEvent
+
+    data class AppThemeChanged(
+        val theme: AppTheme,
+    ) : SettingsEvent
 }
 
 @HiltViewModel
@@ -110,6 +116,7 @@ class SettingsViewModel
                             rhrWarningThreshold = prefs.rhrWarningThreshold,
                             restingHrBeforeMinutes = prefs.restingHrBeforeMinutes,
                             restingHrAfterMinutes = prefs.restingHrAfterMinutes,
+                            appTheme = prefs.appTheme,
                             isLoading = false,
                         )
                     }
@@ -191,6 +198,10 @@ class SettingsViewModel
                     viewModelScope.launch {
                         prefsRepo.updateRestingHrAfterMinutes(event.minutes)
                         scoringRepository.computeAndPersistDailySummary()
+                    }
+                is SettingsEvent.AppThemeChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateAppTheme(event.theme)
                     }
             }
         }

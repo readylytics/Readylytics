@@ -20,3 +20,11 @@ val SuccessGreenLight = Color(0xFF1A7A41)
 val SuccessGreenContainerLight = Color(0xFFB8F5C8)
 val OnSuccessGreenLight = Color(0xFFFFFFFF)
 val OnSuccessGreenContainerLight = Color(0xFF003917)
+
+// Brighter purple for dark mode readability
+val OnPrimaryContainerDark = Color(0xFFEADDFF)
+val PrimaryContainerDark = Color(0xFF4F378B)
+
+// Darker purple for light mode readability
+val OnPrimaryContainerLight = Color(0xFF21005D)
+val PrimaryContainerLight = Color(0xFFEADDFF)

@@ -36,6 +36,7 @@ class UserPreferencesRepository
             val RHR_WARNING_THRESHOLD = floatPreferencesKey("rhr_warning_threshold")
             val RESTING_HR_BEFORE_MINUTES = intPreferencesKey("resting_hr_before_minutes")
             val RESTING_HR_AFTER_MINUTES = intPreferencesKey("resting_hr_after_minutes")
+            val APP_THEME = stringPreferencesKey("app_theme")
         }
 
         val userPreferences: Flow<UserPreferences> =
@@ -70,6 +71,10 @@ class UserPreferencesRepository
                         rhrWarningThreshold = prefs[Keys.RHR_WARNING_THRESHOLD] ?: 1.05f,
                         restingHrBeforeMinutes = prefs[Keys.RESTING_HR_BEFORE_MINUTES] ?: 5,
                         restingHrAfterMinutes = prefs[Keys.RESTING_HR_AFTER_MINUTES] ?: 15,
+                        appTheme =
+                            prefs[Keys.APP_THEME]
+                                ?.let { runCatching { AppTheme.valueOf(it) }.getOrNull() }
+                                ?: AppTheme.SYSTEM,
                     )
                 }
 
@@ -139,5 +144,9 @@ class UserPreferencesRepository
 
         suspend fun updateRestingHrAfterMinutes(minutes: Int) {
             dataStore.edit { it[Keys.RESTING_HR_AFTER_MINUTES] = minutes.coerceIn(0, 60) }
+        }
+
+        suspend fun updateAppTheme(theme: AppTheme) {
+            dataStore.edit { it[Keys.APP_THEME] = theme.name }
         }
     }

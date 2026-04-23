@@ -14,4 +14,5 @@ data class UserPreferences(
     val rhrWarningThreshold: Float = 1.05f,
     val restingHrBeforeMinutes: Int = 5,
     val restingHrAfterMinutes: Int = 15,
+    val appTheme: AppTheme = AppTheme.SYSTEM,
 )

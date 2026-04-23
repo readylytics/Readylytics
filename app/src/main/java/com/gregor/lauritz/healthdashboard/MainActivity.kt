@@ -6,11 +6,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppNavHost
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncEvent
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
@@ -24,11 +28,17 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var hcRepo: HealthConnectRepository
 
+    @Inject
+    lateinit var prefsRepo: UserPreferencesRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            FitDashboardTheme {
+            val prefs by prefsRepo.userPreferences.collectAsState(initial = null)
+            val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM
+
+            FitDashboardTheme(appTheme = appTheme) {
                 val viewModel: SyncViewModel = hiltViewModel()
                 val context = LocalContext.current
 
