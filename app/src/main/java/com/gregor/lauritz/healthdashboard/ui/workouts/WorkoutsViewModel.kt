@@ -88,18 +88,17 @@ class WorkoutsViewModel
                         summaryFlow,
                         workoutDao.observeSince(fetchFromMs),
                     ) { latest, allWorkouts ->
+                        val filteredWorkouts = allWorkouts.filter { it.startTime < selectedMidnightMs + TimeUnit.DAYS.toMillis(1) }
                         val trimpByDay: Map<Long, Float> =
-                            allWorkouts
+                            filteredWorkouts
                                 .groupBy { truncateToDayMs(it.startTime) }
                                 .mapValues { (_, ws) -> ws.sumOf { it.trimp.toDouble() }.toFloat() }
-
-                        val nowDayMs = truncateToDayMs(System.currentTimeMillis())
 
                         val displayDayMidnights =
                             buildList<Long> {
                                 val cal = Calendar.getInstance()
                                 cal.timeInMillis = displayStartDayMs
-                                while (cal.timeInMillis <= nowDayMs) {
+                                while (cal.timeInMillis <= selectedMidnightMs) {
                                     add(cal.timeInMillis)
                                     cal.add(Calendar.DAY_OF_YEAR, 1)
                                 }
@@ -155,7 +154,7 @@ class WorkoutsViewModel
                             latestSummary = latest,
                             dailyTrimp = dailyTrimp,
                             dailyStrainRatio = dailyStrainRatio,
-                            recentWorkouts = allWorkouts.filter { it.startTime >= displayFromMs },
+                            recentWorkouts = filteredWorkouts.filter { it.startTime >= displayFromMs },
                             selectedRange = range,
                             selectedDate = date,
                             rangeStartMs = displayStartDayMs,

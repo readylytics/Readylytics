@@ -65,9 +65,9 @@ import com.patrykandpatrick.vico.core.common.data.ExtraStore
 import com.patrykandpatrick.vico.core.common.component.LineComponent
 import com.patrykandpatrick.vico.core.common.shape.CorneredShape
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -257,7 +257,6 @@ private fun AcwrChart(
     rangeDays: Int,
     modifier: Modifier = Modifier,
 ) {
-    val dayMs = TimeUnit.DAYS.toMillis(1)
     val dotColor = MaterialTheme.colorScheme.primary
     val axisLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val labelColor = MaterialTheme.colorScheme.onSurface
@@ -309,7 +308,10 @@ private fun AcwrChart(
     val xAxisFormatter =
         remember(rangeStartMs) {
             CartesianValueFormatter { _, value, _ ->
-                dateFormatter.format(Date(rangeStartMs + value.toLong() * dayMs))
+                val cal = Calendar.getInstance()
+                cal.timeInMillis = rangeStartMs
+                cal.add(Calendar.DAY_OF_YEAR, value.toInt())
+                dateFormatter.format(cal.time)
             }
         }
 
