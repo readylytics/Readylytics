@@ -63,7 +63,7 @@ This document serves as the primary technical specification for building the And
 **Goal:** Implement the "Biometric Scoring Framework" with high precision.
 - **Context:** This logic should reside in a pure-Kotlin `ScoringRepository` for unit testing.
 - **1. Edwards' TRIMP Formula:**
-  - $TRIMP = \sum_{i=1}^{5} (D_i 	imes W_i)$
+  - $TRIMP = \sum_{i=1}^{5} (D_i \times W_i)$
   - Weights ($W_i$): Z1=1, Z2=2, Z3=3, Z4=4, Z5=5.
 - **2. Strain Ratio (SR / ACWR):**
   - $SR = \frac{\text{7-day average TRIMP}}{\text{42-day average TRIMP}}$
