@@ -39,6 +39,9 @@ interface WorkoutDao {
         toMs: Long,
     ): List<Float>
 
+    @Query("SELECT MIN(startTime) FROM workout_records")
+    suspend fun getEarliestWorkoutTimestamp(): Long?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(records: List<WorkoutRecordEntity>)
 }

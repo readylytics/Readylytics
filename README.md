@@ -4,13 +4,12 @@ MyHealthStatus is a native Android health dashboard application that integrates 
 
 ## ✨ Key Features
 
-- **Native Huawei Integration:** Secure, seamless authentication using HMS Core Account Kit and on-device data syncing via Health Kit (No backend server required).
-- **Smart Dashboard:** Daily overview of core metrics (HRV, SpO2, Resting Heart Rate, Skin Temperature, Sleep, Workouts).
+- **Native Health Connect Integration:** The app connects to health connect to retrieve data fromthere.
+- **Smart Dashboard:** Daily overview of core metrics (HRV, SpO2, Resting Heart Rate, Sleep, Workouts).
 - **Dynamic Baselines:** Calculates up to a 30-day rolling average to determine personal baselines.
 - **Intelligent Color Coding:** Automatically highlights metrics in Red (negative deviation) or Green (optimal/positive deviation) based on your personal historical data.
 - **Trend Analysis:** Detailed line/bar charts with 7-day, 30-day, 180-day, and 1-year interactive views.
 - **Offline Caching:** Utilizes a local SQLite database (Room) to minimize API calls and allow fully offline viewing of historical data.
-- **Data Portability:** Complete freedom over your health data with JSON Export and Restore capabilities via the Android Storage Access Framework.
 - **Theme Support:** Full System, Light, and Dark mode integration.
 
 ## 🛠️ Tech Stack
@@ -27,22 +26,12 @@ MyHealthStatus is a native Android health dashboard application that integrates 
 
 ## 🚀 Getting Started
 
-### Prerequisites
-
-To build and run this app, you must configure it with the Huawei Developer Console:
-
-1. Register a developer account at [Huawei Developers](https://developer.huawei.com/).
-2. Create a project in **AppGallery Connect**.
-3. Enable the **Health Kit** API for your project.
-4. Generate an `agconnect-services.json` file and place it in the `app/` directory of this project.
-5. Generate a signing certificate (Keystore), extract the SHA-256 fingerprint, and register it in AppGallery Connect.
-
 ### Installation
 
 1. Clone this repository: `git clone https://github.com/yourusername/MyHealthStatus.git`
 2. Open the project in Android Studio.
 3. Sync Gradle and build the project.
-4. Run on a physical Android device with Huawei Mobile Services (HMS Core) installed (Emulators may not support Health Kit auth flows reliably).
+4. Run on a Android device with health connect data available
 
 ## 📁 Architecture Notes
 

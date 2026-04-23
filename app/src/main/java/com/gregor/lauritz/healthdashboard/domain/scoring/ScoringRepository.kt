@@ -17,8 +17,8 @@ import kotlin.math.sqrt
 
 private const val MIN_SESSIONS_FOR_CALIBRATION = 7
 private const val ACUTE_DAYS = 7L
-private const val CHRONIC_DAYS = 42L
-private const val CTL_FETCH_DAYS = 60L
+private const val CHRONIC_DAYS = 30L
+private const val CTL_FETCH_DAYS = 30L
 private const val BASELINE_DAYS = 30L
 private const val DEFAULT_FITNESS_LEVEL = 35f
 
@@ -46,9 +46,25 @@ class ScoringRepository
             val prefs = prefsRepo.userPreferences.first()
 
             val ctlFetchFrom = dayMidnight.minus(CTL_FETCH_DAYS, ChronoUnit.DAYS).toEpochMilli()
-            val ctlWorkoutDays = workoutDao.getDailyTrimp(ctlFetchFrom, nextDayMidnightMs).size
+            val earliestWorkout = workoutDao.getEarliestWorkoutTimestamp()
+            val dataTenureDays =
+                if (earliestWorkout != null) {
+                    ChronoUnit
+                        .DAYS
+                        .between(
+                            java.time.Instant
+                                .ofEpochMilli(earliestWorkout)
+                                .atZone(zoneId)
+                                .toLocalDate(),
+                            targetDate,
+                        ).toInt()
+                        .coerceAtLeast(1)
+                } else {
+                    0
+                }
+
             val ctlTotal = workoutDao.getTotalTrimp(ctlFetchFrom, nextDayMidnightMs) ?: 0f
-            val ctl = computeCtl(ctlTotal, CTL_FETCH_DAYS, ctlWorkoutDays)
+            val ctl = computeCtl(ctlTotal, CTL_FETCH_DAYS, dataTenureDays)
 
             val acuteFrom = dayMidnight.minus(ACUTE_DAYS, ChronoUnit.DAYS).toEpochMilli()
             val acuteTotal = workoutDao.getTotalTrimp(acuteFrom, nextDayMidnightMs) ?: 0f
@@ -117,7 +133,18 @@ class ScoringRepository
                 if (currentNocturnalRhr != null) {
                     rhrRatio = currentNocturnalRhr / (baselineRhr + 0.001f)
 
-                    val sRest =
+                    val minHrTimestamp = heartRateDao.getMinHrTimestamp(session.id)
+                    val isLateNadir =
+                        if (minHrTimestamp != null && session.durationMinutes > 0) {
+                            val sessionDurationMs = session.durationMinutes * 60 * 1000L
+                            val relativeNadirMs = minHrTimestamp - session.startTime
+                            // Late = last 15% of session
+                            relativeNadirMs > (sessionDurationMs * 0.85f)
+                        } else {
+                            false
+                        }
+
+                    var sRest =
                         computeRestorationSubScore(
                             currentHrvMean = currentHrvMean,
                             hrvValues = hrvValues,
@@ -126,6 +153,10 @@ class ScoringRepository
                             rhrBaselineOverride = prefs.rhrBaselineOverride,
                             hrvBaselineOverride = prefs.hrvBaselineOverride,
                         )
+
+                    if (isLateNadir) {
+                        sRest *= 0.9f
+                    }
 
                     sleepScore =
                         computeSleepScore(
@@ -195,9 +226,14 @@ internal fun computeStrainRatio(
 internal fun computeCtl(
     totalTrimp: Float,
     windowDays: Long,
-    workoutDayCount: Int,
+    dataTenureDays: Int,
     seedFitnessLevel: Float = DEFAULT_FITNESS_LEVEL,
-): Float = if (workoutDayCount < 7) seedFitnessLevel else totalTrimp / windowDays.toFloat()
+): Float =
+    when {
+        dataTenureDays < 7 -> seedFitnessLevel
+        dataTenureDays < 21 -> totalTrimp / dataTenureDays.toFloat()
+        else -> totalTrimp / windowDays.toFloat()
+    }
 
 internal fun computeLoadScore(sr: Float): Float =
     when {

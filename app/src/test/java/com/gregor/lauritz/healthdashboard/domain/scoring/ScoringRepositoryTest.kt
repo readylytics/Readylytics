@@ -62,21 +62,27 @@ class StrainRatioTest {
 
 class ComputeCtlTest {
     @Test
-    fun `fewer than 7 workout days returns seed`() =
-        assertEquals(35f, computeCtl(totalTrimp = 150f, windowDays = 60L, workoutDayCount = 3), DELTA)
+    fun `data tenure less than 7 returns seed`() =
+        assertEquals(35f, computeCtl(totalTrimp = 150f, windowDays = 30L, dataTenureDays = 3), DELTA)
 
     @Test
-    fun `returns per-calendar-day average when data is sufficient`() {
-        // 600 total TRIMP over 60 days = 10 TRIMP per day
-        assertEquals(10f, computeCtl(totalTrimp = 600f, windowDays = 60L, workoutDayCount = 20), DELTA)
+    fun `data tenure between 7 and 21 returns cumulative mean`() {
+        // 100 total TRIMP over 10 days = 10 TRIMP per day
+        assertEquals(10f, computeCtl(totalTrimp = 100f, windowDays = 30L, dataTenureDays = 10), DELTA)
+    }
+
+    @Test
+    fun `data tenure 21 or more returns average over window`() {
+        // 600 total TRIMP over 30 days = 20 TRIMP per day
+        assertEquals(20f, computeCtl(totalTrimp = 600f, windowDays = 30L, dataTenureDays = 25), DELTA)
     }
 
     @Test
     fun `steady training gives SR close to 1`() {
-        // 3 workouts/week, 30 TRIMP each over 60 days → CTL = ~12.86/day
+        // 3 workouts/week, 30 TRIMP each over 30 days → CTL = ~12.86/day
         // ATL same week → SR ≈ 1.0
         val weeklyTrimp = 3 * 30f
-        val ctl = computeCtl(totalTrimp = weeklyTrimp * (60f / 7f), windowDays = 60L, workoutDayCount = 26)
+        val ctl = computeCtl(totalTrimp = weeklyTrimp * (30f / 7f), windowDays = 30L, dataTenureDays = 30)
         val atl = weeklyTrimp / 7f
         val sr = computeStrainRatio(atl, ctl)
         assertEquals(1.0f, sr, 0.05f)
