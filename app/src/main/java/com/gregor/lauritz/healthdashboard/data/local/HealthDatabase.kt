@@ -25,7 +25,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
         WorkoutRecordEntity::class,
         DailySummaryEntity::class,
     ],
-    version = 5,
+    version = 6,
 )
 abstract class HealthDatabase : RoomDatabase() {
     abstract fun sleepSessionDao(): SleepSessionDao
@@ -119,6 +119,32 @@ abstract class HealthDatabase : RoomDatabase() {
                     connection.execSQL("ALTER TABLE daily_summaries ADD COLUMN restingHeartRate REAL")
                     connection.execSQL("ALTER TABLE daily_summaries ADD COLUMN restingHrRatio REAL")
                     connection.execSQL("ALTER TABLE daily_summaries ADD COLUMN restingHrBaseline REAL")
+                }
+            }
+
+        val MIGRATION_5_6 =
+            object : Migration(5, 6) {
+                private val sql =
+                    listOf(
+                        "CREATE TABLE daily_summaries_new (" +
+                            "dateMidnightMs INTEGER NOT NULL PRIMARY KEY, " +
+                            "sleepScore REAL, loadScore REAL, readinessScore REAL, " +
+                            "strainRatio REAL, nocturnalRhr INTEGER, nocturnalHrv INTEGER, " +
+                            "sleepDurationMinutes INTEGER, deepSleepPercent REAL, " +
+                            "remSleepPercent REAL, totalTrimp REAL, rhrRatio REAL, " +
+                            "hrvBaseline INTEGER, restingHeartRate INTEGER, " +
+                            "restingHrRatio REAL, restingHrBaseline INTEGER)",
+                        "INSERT INTO daily_summaries_new SELECT * FROM daily_summaries",
+                        "DROP TABLE daily_summaries",
+                        "ALTER TABLE daily_summaries_new RENAME TO daily_summaries",
+                    )
+
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    sql.forEach { db.execSQL(it) }
+                }
+
+                override fun migrate(connection: SQLiteConnection) {
+                    sql.forEach { connection.execSQL(it) }
                 }
             }
     }

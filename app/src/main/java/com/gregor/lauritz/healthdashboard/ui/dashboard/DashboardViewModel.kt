@@ -68,7 +68,7 @@ fun DailySummaryEntity.hrvStatus(
 ): MetricStatus {
     val hrv = nocturnalHrv ?: return MetricStatus.CALIBRATING
     val baseline = hrvBaseline ?: return MetricStatus.CALIBRATING
-    val ratio = hrv / baseline
+    val ratio = hrv.toFloat() / baseline
     val poorThreshold = warningThreshold - (1 - warningThreshold)
     return when {
         ratio >= optimalThreshold -> MetricStatus.OPTIMAL

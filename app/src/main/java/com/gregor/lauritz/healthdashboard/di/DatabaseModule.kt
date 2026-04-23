@@ -34,6 +34,7 @@ object DatabaseModule {
                 HealthDatabase.MIGRATION_2_3,
                 HealthDatabase.MIGRATION_3_4,
                 HealthDatabase.MIGRATION_4_5,
+                HealthDatabase.MIGRATION_5_6,
             ).build()
 
     @Provides

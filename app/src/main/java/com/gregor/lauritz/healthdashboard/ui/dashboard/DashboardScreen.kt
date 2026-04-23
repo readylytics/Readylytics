@@ -203,7 +203,7 @@ fun DashboardScreen(
                             }
                         }
 
-                    val hrvBaseline = summary?.hrvBaseline?.toDouble()
+                    val hrvBaseline = summary?.hrvBaseline
 
                     val rhrDiff =
                         summary?.let { s ->
@@ -211,7 +211,7 @@ fun DashboardScreen(
                             val rhr = s.nocturnalRhr
                             if (ratio != null && ratio > 0f && rhr != null) {
                                 val baseline = (rhr / ratio).toInt()
-                                kotlin.math.abs(rhr.toInt() - baseline)
+                                kotlin.math.abs(rhr - baseline)
                             } else {
                                 null
                             }
@@ -230,10 +230,10 @@ fun DashboardScreen(
 
                     val rhrArrow =
                         if (rhrBaseline != null && summary.nocturnalRhr != null) {
-                            if (summary.nocturnalRhr > rhrBaseline) {
-                                "↑"
-                            } else {
-                                "↓"
+                            when {
+                                summary.nocturnalRhr > rhrBaseline -> "↑"
+                                summary.nocturnalRhr < rhrBaseline -> "↓"
+                                else -> "="
                             }
                         } else {
                             null
@@ -241,10 +241,10 @@ fun DashboardScreen(
 
                     val hrvArrow =
                         if (hrvBaseline != null && summary.nocturnalHrv != null) {
-                            if (summary.nocturnalHrv > hrvBaseline) {
-                                "↑"
-                            } else {
-                                "↓"
+                            when {
+                                summary.nocturnalHrv > hrvBaseline -> "↑"
+                                summary.nocturnalHrv < hrvBaseline -> "↓"
+                                else -> "="
                             }
                         } else {
                             null
@@ -254,7 +254,7 @@ fun DashboardScreen(
                         listOf(
                             CardData(
                                 title = "Sleep RHR",
-                                value = summary?.nocturnalRhr?.toInt()?.toString() ?: "—",
+                                value = summary?.nocturnalRhr?.toString() ?: "—",
                                 unit = "bpm",
                                 status = rhrStatus,
                                 onClick = onNavigateToSleep,
@@ -272,7 +272,7 @@ fun DashboardScreen(
                             ),
                             CardData(
                                 title = "Sleep HRV",
-                                value = summary?.nocturnalHrv?.toInt()?.toString() ?: "—",
+                                value = summary?.nocturnalHrv?.toString() ?: "—",
                                 unit = "ms",
                                 status = hrvStatus,
                                 onClick = onNavigateToSleep,
@@ -282,9 +282,7 @@ fun DashboardScreen(
                                         append("\nTarget: Within or above your 30-day rolling average. ")
                                         append("(Higher = Recovered)")
                                         if (hrvBaseline != null && hrvArrow != null && hrvDiff != null) {
-                                            val formattedBaseline = "%.0f".format(hrvBaseline)
-                                            val formattedDiff = "%.0f".format(hrvDiff)
-                                            append("\n\nBaseline: $formattedBaseline ms $hrvArrow ($formattedDiff ms)")
+                                            append("\n\nBaseline: $hrvBaseline ms $hrvArrow ($hrvDiff ms)")
                                         } else {
                                             append("\n\nNot enough data to calculate baseline.")
                                         }
@@ -305,7 +303,7 @@ fun DashboardScreen(
                             ),
                             CardData(
                                 title = "Resting HR",
-                                value = summary?.restingHeartRate?.toInt()?.toString() ?: "—",
+                                value = summary?.restingHeartRate?.toString() ?: "—",
                                 unit = "bpm",
                                 status = restingHrStatus,
                                 onClick = {},
@@ -314,12 +312,17 @@ fun DashboardScreen(
                                         val rBaseline = summary?.restingHrBaseline
                                         val rCurrent = summary?.restingHeartRate
                                         if (rBaseline != null && rCurrent != null) {
-                                            val diff = kotlin.math.abs(rCurrent - rBaseline).toInt()
-                                            val arrow = if (rCurrent > rBaseline) "↑" else "↓"
+                                            val diff = kotlin.math.abs(rCurrent - rBaseline)
+                                            val arrow =
+                                                when {
+                                                    rCurrent > rBaseline -> "↑"
+                                                    rCurrent < rBaseline -> "↓"
+                                                    else -> "="
+                                                }
                                             append("Minimum heart rate captured within ")
                                             append("${uiState.restingHrBeforeMinutes}m before and ")
                                             append("${uiState.restingHrAfterMinutes}m after wake up.")
-                                            append("\n\nBaseline: ${rBaseline.toInt()} bpm $arrow ($diff bpm)")
+                                            append("\n\nBaseline: $rBaseline bpm $arrow ($diff bpm)")
                                         } else {
                                             append("Minimum heart rate captured around wake up time.")
                                             append("\n\nNot enough data to calculate baseline.")

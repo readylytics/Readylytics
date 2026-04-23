@@ -13,6 +13,7 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 private const val MIN_SESSIONS_FOR_CALIBRATION = 7
@@ -78,15 +79,15 @@ class ScoringRepository
             val session = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
             var sleepScore: Float? = null
             var readinessScore: Float? = null
-            var nocturnalRhr: Float? = null
-            var nocturnalHrv: Float? = null
+            var nocturnalRhr: Int? = null
+            var nocturnalHrv: Int? = null
             var deepSleepPercent: Float? = null
             var remSleepPercent: Float? = null
             var rhrRatio: Float? = null
-            var hrvBaseline: Float? = null
-            var restingHeartRate: Float? = null
+            var hrvBaseline: Int? = null
+            var restingHeartRate: Int? = null
             var restingHrRatio: Float? = null
-            var restingHrBaseline: Float? = null
+            var restingHrBaseline: Int? = null
 
             if (session != null) {
                 val baselineFrom = dayMidnight.minus(BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
@@ -95,10 +96,10 @@ class ScoringRepository
                 val sessionHrvSamples = hrvDao.getSleepRmssdForSession(session.id)
                 val currentHrvMean =
                     if (sessionHrvSamples.isNotEmpty()) sessionHrvSamples.average().toFloat() else 0f
-                val currentNocturnalRhr = heartRateDao.getAvgSleepHr(session.id)?.toFloat()
+                val currentNocturnalRhr = heartRateDao.getAvgSleepHr(session.id)
 
                 nocturnalRhr = currentNocturnalRhr
-                nocturnalHrv = currentHrvMean.takeIf { sessionHrvSamples.isNotEmpty() }
+                nocturnalHrv = if (sessionHrvSamples.isNotEmpty()) currentHrvMean.roundToInt() else null
 
                 if (session.durationMinutes > 0) {
                     deepSleepPercent = session.deepSleepMinutes / session.durationMinutes.toFloat() * 100f
@@ -106,14 +107,14 @@ class ScoringRepository
                 }
 
                 // Median is used as the displayed user-facing baseline; mean is used in Z-score (μ_hrv).
-                hrvBaseline = prefs.hrvBaselineOverride ?: median(hrvValues)
+                hrvBaseline = (prefs.hrvBaselineOverride ?: median(hrvValues)).roundToInt()
 
-                val baselineRhr = prefs.rhrBaselineOverride ?: medianInt(rhrValues)
+                val baselineRhr = (prefs.rhrBaselineOverride ?: medianInt(rhrValues)).roundToInt()
 
                 val minHrStartTime = session.endTime - prefs.restingHrBeforeMinutes * 60 * 1000L
                 val minHrEndTime = session.endTime + prefs.restingHrAfterMinutes * 60 * 1000L
                 val currentRestingHr = heartRateDao.getMinHrInRange(minHrStartTime, minHrEndTime)
-                restingHeartRate = currentRestingHr?.toFloat()
+                restingHeartRate = currentRestingHr
 
                 // Calculate resting HR baseline specifically from wake-up windows of previous sessions
                 val sessions = sleepSessionDao.getSince(baselineFrom)
@@ -124,14 +125,14 @@ class ScoringRepository
                     val end = s.endTime + prefs.restingHrAfterMinutes * 60 * 1000L
                     heartRateDao.getMinHrInRange(start, end)?.let { historicRestingHrs.add(it) }
                 }
-                restingHrBaseline = if (historicRestingHrs.isNotEmpty()) medianInt(historicRestingHrs) else null
+                restingHrBaseline = if (historicRestingHrs.isNotEmpty()) medianInt(historicRestingHrs).roundToInt() else null
 
-                if (currentRestingHr != null && restingHrBaseline != null && restingHrBaseline > 0f) {
-                    restingHrRatio = currentRestingHr / restingHrBaseline
+                if (currentRestingHr != null && restingHrBaseline != null && restingHrBaseline > 0) {
+                    restingHrRatio = currentRestingHr.toFloat() / restingHrBaseline
                 }
 
                 if (currentNocturnalRhr != null) {
-                    rhrRatio = currentNocturnalRhr / (baselineRhr + 0.001f)
+                    rhrRatio = currentNocturnalRhr.toFloat() / (baselineRhr + 0.001f)
 
                     val minHrTimestamp = heartRateDao.getMinHrTimestamp(session.id)
                     val isLateNadir =
@@ -148,7 +149,7 @@ class ScoringRepository
                         computeRestorationSubScore(
                             currentHrvMean = currentHrvMean,
                             hrvValues = hrvValues,
-                            currentNocturnalRhr = currentNocturnalRhr,
+                            currentNocturnalRhr = currentNocturnalRhr.toFloat(),
                             rhrValues = rhrValues,
                             rhrBaselineOverride = prefs.rhrBaselineOverride,
                             hrvBaselineOverride = prefs.hrvBaselineOverride,
