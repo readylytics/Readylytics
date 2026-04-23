@@ -37,24 +37,30 @@ data class DashboardUiState(
 fun DailySummaryEntity.rhrStatus(
     optimalThreshold: Float,
     warningThreshold: Float,
-): MetricStatus =
-    when {
+): MetricStatus {
+    val poorThreshold = warningThreshold + (warningThreshold - 1)
+    return when {
         rhrRatio == null -> MetricStatus.CALIBRATING
         rhrRatio <= optimalThreshold -> MetricStatus.OPTIMAL
-        rhrRatio <= warningThreshold -> MetricStatus.WARNING
+        rhrRatio < warningThreshold -> MetricStatus.NEUTRAL
+        rhrRatio in warningThreshold..<poorThreshold -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
+}
 
 fun DailySummaryEntity.restingHrStatus(
     optimalThreshold: Float,
     warningThreshold: Float,
-): MetricStatus =
-    when {
+): MetricStatus {
+    val poorThreshold = warningThreshold + (warningThreshold - 1)
+    return when {
         restingHrRatio == null -> MetricStatus.CALIBRATING
         restingHrRatio <= optimalThreshold -> MetricStatus.OPTIMAL
-        restingHrRatio <= warningThreshold -> MetricStatus.WARNING
+        restingHrRatio < warningThreshold -> MetricStatus.NEUTRAL
+        restingHrRatio in warningThreshold..<poorThreshold -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
+}
 
 fun DailySummaryEntity.hrvStatus(
     optimalThreshold: Float,
@@ -63,9 +69,11 @@ fun DailySummaryEntity.hrvStatus(
     val hrv = nocturnalHrv ?: return MetricStatus.CALIBRATING
     val baseline = hrvBaseline ?: return MetricStatus.CALIBRATING
     val ratio = hrv / baseline
+    val poorThreshold = warningThreshold - (1 - warningThreshold)
     return when {
         ratio >= optimalThreshold -> MetricStatus.OPTIMAL
-        ratio >= warningThreshold -> MetricStatus.WARNING
+        ratio > warningThreshold -> MetricStatus.NEUTRAL
+        ratio >= poorThreshold -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
 }
@@ -75,7 +83,8 @@ fun DailySummaryEntity.sleepDurationStatus(goalMinutes: Int): MetricStatus {
     val ratio = sleepDurationMinutes.toFloat() / goalMinutes
     return when {
         ratio >= 0.9f -> MetricStatus.OPTIMAL
-        ratio >= 0.75f -> MetricStatus.WARNING
+        ratio >= 0.8f -> MetricStatus.NEUTRAL
+        ratio >= 0.7f -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
 }

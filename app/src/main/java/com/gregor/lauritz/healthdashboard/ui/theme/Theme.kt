@@ -19,6 +19,10 @@ data class ExtendedColors(
     val onSuccess: Color,
     val successContainer: Color,
     val onSuccessContainer: Color,
+    val warning: Color,
+    val onWarning: Color,
+    val warningContainer: Color,
+    val onWarningContainer: Color,
     val neutralContainer: Color,
     val onNeutralContainer: Color,
 )
@@ -30,6 +34,10 @@ val LocalExtendedColors =
             onSuccess = OnSuccessGreenDark,
             successContainer = SuccessGreenContainerDark,
             onSuccessContainer = OnSuccessGreenContainerDark,
+            warning = WarningOrangeDark,
+            onWarning = OnWarningOrangeDark,
+            warningContainer = WarningOrangeContainerDark,
+            onWarningContainer = OnWarningOrangeContainerDark,
             neutralContainer = PrimaryContainerDark,
             onNeutralContainer = OnPrimaryContainerDark,
         )
@@ -94,6 +102,10 @@ fun FitDashboardTheme(
                 onSuccess = OnSuccessGreenDark,
                 successContainer = SuccessGreenContainerDark,
                 onSuccessContainer = OnSuccessGreenContainerDark,
+                warning = WarningOrangeDark,
+                onWarning = OnWarningOrangeDark,
+                warningContainer = WarningOrangeContainerDark,
+                onWarningContainer = OnWarningOrangeContainerDark,
                 neutralContainer = PrimaryContainerDark,
                 onNeutralContainer = OnPrimaryContainerDark,
             )
@@ -103,6 +115,10 @@ fun FitDashboardTheme(
                 onSuccess = OnSuccessGreenLight,
                 successContainer = SuccessGreenContainerLight,
                 onSuccessContainer = OnSuccessGreenContainerLight,
+                warning = WarningOrangeDark,
+                onWarning = OnWarningOrangeDark,
+                warningContainer = WarningOrangeContainerDark,
+                onWarningContainer = OnWarningOrangeContainerDark,
                 neutralContainer = PrimaryContainerLight,
                 onNeutralContainer = OnPrimaryContainerLight,
             )

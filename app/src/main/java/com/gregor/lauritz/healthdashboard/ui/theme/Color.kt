@@ -28,3 +28,14 @@ val PrimaryContainerDark = Color(0xFF4F378B)
 // Darker purple for light mode readability
 val OnPrimaryContainerLight = Color(0xFF21005D)
 val PrimaryContainerLight = Color(0xFFEADDFF)
+
+// Warning orange semantic colors
+val WarningOrangeDark = Color(0xFFFFB74D) // Lighter orange for dark mode
+val WarningOrangeContainerDark = Color(0xFFB36B00)
+val OnWarningOrangeDark = Color(0xFF4D2C00)
+val OnWarningOrangeContainerDark = Color(0xFFFFDDB3)
+
+val WarningOrangeLight = Color(0xFFF57C00) // Darker orange for light mode
+val WarningOrangeContainerLight = Color(0xFFFB8C00)
+val OnWarningOrangeLight = Color(0xFFFFFFFF)
+val OnWarningOrangeContainerLight = Color(0xFFFFFFFF)
