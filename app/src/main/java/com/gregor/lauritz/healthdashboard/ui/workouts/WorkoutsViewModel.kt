@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -56,13 +57,20 @@ class WorkoutsViewModel
                 selectedDateRepository.selectedDate,
             ) { range, date -> range to date }
                 .flatMapLatest { (range, date) ->
+                    val earliestWorkoutMs = workoutDao.getEarliestWorkoutTimestamp() ?: 0L
+                    val zoneId = ZoneId.systemDefault()
+                    val earliestLocalDate =
+                        if (earliestWorkoutMs > 0) {
+                            java.time.Instant.ofEpochMilli(earliestWorkoutMs).atZone(zoneId).toLocalDate()
+                        } else {
+                            null
+                        }
+
                     val displayFromMs = range.fromMs(date)
                     val displayStartDayMs = truncateToDayMs(displayFromMs)
                     // Fetch extra history so chronic (42-day) window is valid from day 1 of the range.
-                    // Minor DST imprecision here (up to 1h) is fine for a DB lower-bound query.
                     val fetchFromMs = displayStartDayMs - TimeUnit.DAYS.toMillis(CHRONIC_DAYS.toLong())
 
-                    val zoneId = ZoneId.systemDefault()
                     val selectedMidnightMs =
                         date
                             .atStartOfDay(zoneId)
@@ -87,8 +95,6 @@ class WorkoutsViewModel
 
                         val nowDayMs = truncateToDayMs(System.currentTimeMillis())
 
-                        // Build display-day midnights using Calendar.add so DST transitions
-                        // don't shift subsequent days by ±1 hour.
                         val displayDayMidnights =
                             buildList<Long> {
                                 val cal = Calendar.getInstance()
@@ -111,21 +117,36 @@ class WorkoutsViewModel
                             val acuteFrom =
                                 Calendar.getInstance().run {
                                     timeInMillis = dayMidnight
-                                    add(Calendar.DAY_OF_YEAR, -ACUTE_DAYS)
+                                    add(Calendar.DAY_OF_YEAR, -(ACUTE_DAYS - 1))
                                     timeInMillis
                                 }
                             val chronicFrom =
                                 Calendar.getInstance().run {
                                     timeInMillis = dayMidnight
-                                    add(Calendar.DAY_OF_YEAR, -CHRONIC_DAYS)
+                                    add(Calendar.DAY_OF_YEAR, -(CHRONIC_DAYS - 1))
                                     timeInMillis
                                 }
 
                             val acuteSum = trimpByDay.filterKeys { it in acuteFrom..dayMidnight }.values.sum()
                             val chronicSum = trimpByDay.filterKeys { it in chronicFrom..dayMidnight }.values.sum()
 
-                            if (chronicSum > 0f) {
-                                val sr = (acuteSum / ACUTE_DAYS) / (chronicSum / CHRONIC_DAYS)
+                            val currentDayDate =
+                                java.time.Instant
+                                    .ofEpochMilli(dayMidnight)
+                                    .atZone(zoneId)
+                                    .toLocalDate()
+
+                            val dataTenureDays =
+                                if (earliestLocalDate != null) {
+                                    ChronoUnit.DAYS.between(earliestLocalDate, currentDayDate).toInt() + 1
+                                } else {
+                                    0
+                                }
+
+                            if (dataTenureDays >= 7 && chronicSum > 0f) {
+                                val ctl = chronicSum / minOf(dataTenureDays, CHRONIC_DAYS).toFloat()
+                                val atl = acuteSum / ACUTE_DAYS.toFloat()
+                                val sr = if (ctl > 0) atl / ctl else 0f
                                 dailyStrainRatio.add(DailyDataPoint(dayOffset = i, value = sr))
                             }
                         }

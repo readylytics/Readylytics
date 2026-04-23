@@ -19,7 +19,6 @@ import kotlin.math.sqrt
 private const val MIN_SESSIONS_FOR_CALIBRATION = 7
 private const val ACUTE_DAYS = 7L
 private const val CHRONIC_DAYS = 42L
-private const val CTL_FETCH_DAYS = 42L
 private const val BASELINE_DAYS = 30L
 private const val DEFAULT_FITNESS_LEVEL = 35f
 
@@ -46,7 +45,7 @@ class ScoringRepository
 
             val prefs = prefsRepo.userPreferences.first()
 
-            val ctlFetchFrom = dayMidnight.minus(CTL_FETCH_DAYS, ChronoUnit.DAYS).toEpochMilli()
+            val ctlFetchFrom = dayMidnight.minus(CHRONIC_DAYS - 1, ChronoUnit.DAYS).toEpochMilli()
             val earliestWorkout = workoutDao.getEarliestWorkoutTimestamp()
             val dataTenureDays =
                 if (earliestWorkout != null) {
@@ -65,9 +64,9 @@ class ScoringRepository
                 }
 
             val ctlTotal = workoutDao.getTotalTrimp(ctlFetchFrom, nextDayMidnightMs) ?: 0f
-            val ctl = computeCtl(ctlTotal, CTL_FETCH_DAYS, dataTenureDays)
+            val ctl = computeCtl(ctlTotal, CHRONIC_DAYS, dataTenureDays)
 
-            val acuteFrom = dayMidnight.minus(ACUTE_DAYS, ChronoUnit.DAYS).toEpochMilli()
+            val acuteFrom = dayMidnight.minus(ACUTE_DAYS - 1, ChronoUnit.DAYS).toEpochMilli()
             val acuteTotal = workoutDao.getTotalTrimp(acuteFrom, nextDayMidnightMs) ?: 0f
             val atl = acuteTotal / ACUTE_DAYS.toFloat()
 
@@ -232,8 +231,7 @@ internal fun computeCtl(
 ): Float =
     when {
         dataTenureDays < 7 -> seedFitnessLevel
-        dataTenureDays < 21 -> totalTrimp / dataTenureDays.toFloat()
-        else -> totalTrimp / windowDays.toFloat()
+        else -> totalTrimp / minOf(dataTenureDays.toLong(), windowDays).toFloat()
     }
 
 internal fun computeLoadScore(sr: Float): Float =
