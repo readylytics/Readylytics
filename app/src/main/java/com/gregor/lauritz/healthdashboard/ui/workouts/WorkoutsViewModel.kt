@@ -56,7 +56,7 @@ class WorkoutsViewModel
                 selectedDateRepository.selectedDate,
             ) { range, date -> range to date }
                 .flatMapLatest { (range, date) ->
-                    val displayFromMs = range.fromMs()
+                    val displayFromMs = range.fromMs(date)
                     val displayStartDayMs = truncateToDayMs(displayFromMs)
                     // Fetch extra history so chronic (42-day) window is valid from day 1 of the range.
                     // Minor DST imprecision here (up to 1h) is fine for a DB lower-bound query.

@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.common
 
-import java.util.Calendar
+import java.time.LocalDate
+import java.time.ZoneId
 
 enum class TimeRange(
     val days: Int,
@@ -11,13 +12,12 @@ enum class TimeRange(
     SIX_MONTHS(180, "180D"),
     ;
 
-    fun fromMs(): Long {
-        val cal = Calendar.getInstance()
-        cal.set(Calendar.HOUR_OF_DAY, 0)
-        cal.set(Calendar.MINUTE, 0)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        cal.add(Calendar.DAY_OF_YEAR, -days)
-        return cal.timeInMillis
+    fun fromMs(baseDate: LocalDate): Long {
+        val zoneId = ZoneId.systemDefault()
+        return baseDate
+            .atStartOfDay(zoneId)
+            .minusDays(days.toLong())
+            .toInstant()
+            .toEpochMilli()
     }
 }

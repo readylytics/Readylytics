@@ -51,7 +51,12 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.point
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
+import com.patrykandpatrick.vico.core.cartesian.Scroll
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.fill
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
@@ -96,6 +101,8 @@ fun SleepScreen(
     onNextDay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val chartScrollState = rememberVicoScrollState()
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 16.dp),
@@ -191,6 +198,7 @@ fun SleepScreen(
                     rangeDays = uiState.selectedRange.days,
                     baselineUnit = "ms",
                     baseline = baselineHrv,
+                    scrollState = chartScrollState,
                 )
             }
         }
@@ -209,6 +217,7 @@ fun SleepScreen(
                     rangeDays = uiState.selectedRange.days,
                     baselineUnit = "bpm",
                     baseline = baselineRhr?.toFloat(),
+                    scrollState = chartScrollState,
                 )
             }
         }
@@ -279,6 +288,7 @@ private fun TrendChart(
     rangeDays: Int,
     baselineUnit: String,
     baseline: Float? = null,
+    scrollState: VicoScrollState = rememberVicoScrollState(),
     modifier: Modifier = Modifier,
 ) {
     if (points.isEmpty()) {
@@ -306,7 +316,10 @@ private fun TrendChart(
             (points.maxOf { it.value } * 1.1f).toDouble()
         }
 
+    val labelColor = MaterialTheme.colorScheme.onSurface
+    val labelComponent = rememberTextComponent(color = labelColor)
     val baselineColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val guidelineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
     val dotColor = MaterialTheme.colorScheme.primary
 
     val modelProducer = remember { CartesianChartModelProducer() }
@@ -353,15 +366,29 @@ private fun TrendChart(
                 ),
                 startAxis =
                     VerticalAxis.rememberStart(
+                        label = labelComponent,
                         valueFormatter = CartesianValueFormatter { _, value, _ -> value.toInt().toString() },
+                        guideline = LineComponent(fill = fill(guidelineColor), thicknessDp = 1f),
                     ),
                 bottomAxis =
                     HorizontalAxis.rememberBottom(
+                        label = labelComponent,
                         valueFormatter = xAxisFormatter,
                         itemPlacer =
                             remember(rangeDays) {
-                                HorizontalAxis.ItemPlacer.segmented()
+                                if (rangeDays == 7) {
+                                    HorizontalAxis.ItemPlacer.aligned(
+                                        spacing = { 2 },
+                                        addExtremeLabelPadding = true,
+                                    )
+                                } else {
+                                    HorizontalAxis.ItemPlacer.aligned(
+                                        spacing = { 5 },
+                                        addExtremeLabelPadding = true,
+                                    )
+                                }
                             },
+                        guideline = LineComponent(fill = fill(guidelineColor), thicknessDp = 1f),
                     ),
                 decorations =
                     listOf(
@@ -372,6 +399,8 @@ private fun TrendChart(
                     ),
             ),
         modelProducer = modelProducer,
+        scrollState = scrollState,
+        zoomState = rememberVicoZoomState(zoomEnabled = false),
         modifier = modifier.fillMaxWidth().height(180.dp),
     )
 

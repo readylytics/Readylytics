@@ -18,8 +18,8 @@ import kotlin.math.sqrt
 
 private const val MIN_SESSIONS_FOR_CALIBRATION = 7
 private const val ACUTE_DAYS = 7L
-private const val CHRONIC_DAYS = 30L
-private const val CTL_FETCH_DAYS = 30L
+private const val CHRONIC_DAYS = 42L
+private const val CTL_FETCH_DAYS = 42L
 private const val BASELINE_DAYS = 30L
 private const val DEFAULT_FITNESS_LEVEL = 35f
 

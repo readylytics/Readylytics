@@ -61,11 +61,14 @@ import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
+import com.patrykandpatrick.vico.core.common.data.ExtraStore
+import com.patrykandpatrick.vico.core.common.component.LineComponent
 import com.patrykandpatrick.vico.core.common.shape.CorneredShape
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 @Composable
@@ -101,120 +104,105 @@ fun WorkoutsScreen(
         }
 
         item {
-            HeroSection(uiState = uiState)
-        }
-
-        item { Spacer(Modifier.height(24.dp)) }
-
-        item {
-            SectionHeader(title = "Training Load & Strain Ratio (ACWR)")
-            Spacer(Modifier.height(8.dp))
-            SingleChoiceSegmentedButtonRow(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-            ) {
-                TimeRange.entries.forEachIndexed { index, range ->
-                    SegmentedButton(
-                        selected = uiState.selectedRange == range,
-                        onClick = { onRangeSelected(range) },
-                        shape =
-                            SegmentedButtonDefaults.itemShape(
-                                index = index,
-                                count = TimeRange.entries.size,
-                            ),
-                        label = { Text(range.label) },
-                    )
-                }
-            }
-        }
-
-        item { Spacer(Modifier.height(8.dp)) }
-
-        item {
-            AcwrChartCard(
-                trimpPoints = uiState.dailyTrimp,
-                ratioPoints = uiState.dailyStrainRatio,
-                rangeStartMs = uiState.rangeStartMs,
-                rangeDays = uiState.selectedRange.days,
-                modifier = Modifier.padding(horizontal = 16.dp),
+            HeroSection(
+                uiState = uiState,
+                onRangeSelected = onRangeSelected,
             )
         }
 
-        item { Spacer(Modifier.height(24.dp)) }
-
         item {
-            SectionHeader(title = "Workout History")
-            Spacer(Modifier.height(8.dp))
+            SectionHeader(title = "History")
         }
 
-        if (uiState.recentWorkouts.isEmpty()) {
-            item {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .height(80.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "No workouts in this period",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        } else {
-            items(uiState.recentWorkouts) { workout ->
-                WorkoutHistoryItem(
-                    workout = workout,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-            }
+        items(uiState.recentWorkouts) { workout ->
+            WorkoutHistoryItem(
+                workout = workout,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
         }
-
-        item { Spacer(Modifier.height(16.dp)) }
     }
 }
 
 @Composable
 private fun HeroSection(
     uiState: WorkoutsUiState,
+    onRangeSelected: (TimeRange) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        M3ScoreDial(
-            score = uiState.latestSummary?.loadScore,
-            label = "Strain Ratio",
-            displayText = uiState.latestSummary?.strainRatio?.let { "%.2f".format(it) },
-            tooltipDescription =
-                buildString {
-                    append("Short-term fatigue vs. long-term fitness.\n\n")
-                    append("• 0.8–1.2: Sweet spot for fitness gains\n")
-                    append("• < 0.8: Under-training\n")
-                    append("• > 1.2: Increasing injury risk")
-                },
+    Column(modifier = modifier) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val strainRatio = uiState.latestSummary?.strainRatio
+            val strainStatus =
+                when {
+                    strainRatio == null -> MetricStatus.CALIBRATING
+                    strainRatio in 0.8f..1.3f -> MetricStatus.OPTIMAL
+                    strainRatio in 1.3f..1.5f -> MetricStatus.NEUTRAL
+                    strainRatio > 1.5f -> MetricStatus.POOR
+                    else -> MetricStatus.WARNING
+                }
+
+            M3ScoreDial(
+                score = strainRatio,
+                label = "Strain Ratio",
+                maxScore = 2.0f,
+                status = strainStatus,
+                displayText = strainRatio?.let { "%.2f".format(it) },
+                tooltipDescription =
+                    buildString {
+                        append("The ACWR (Acute:Chronic Workload Ratio).\n\n")
+                        append("• 0.8–1.3: Optimal range\n")
+                        append("• > 1.5: High injury risk\n")
+                        append("• < 0.8: Detraining risk")
+                    },
+            )
+            M3ScoreDial(
+                score = uiState.latestSummary?.readinessScore,
+                label = "Readiness",
+                tooltipDescription = "Physical preparedness for strain today.",
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+        SectionHeader(title = "Training Load & Strain Ratio (ACWR)")
+        Spacer(Modifier.height(8.dp))
+        SingleChoiceSegmentedButtonRow(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+        ) {
+            TimeRange.entries.forEachIndexed { index, range ->
+                SegmentedButton(
+                    selected = uiState.selectedRange == range,
+                    onClick = { onRangeSelected(range) },
+                    shape =
+                        SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = TimeRange.entries.size,
+                        ),
+                    label = { Text(range.label) },
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        AcwrChartCard(
+            trimpPoints = uiState.dailyTrimp,
+            ratioPoints = uiState.dailyStrainRatio,
+            rangeStartMs = uiState.rangeStartMs,
+            rangeDays = uiState.selectedRange.days,
+            modifier = Modifier.padding(horizontal = 16.dp),
         )
-        M3ScoreDial(
-            score = uiState.latestSummary?.readinessScore,
-            label = "Readiness",
-            tooltipDescription =
-                buildString {
-                    append("Preparation for stress based on recent load & recovery.\n\n")
-                    append("• 85–100: Peak\n")
-                    append("• 30–69: Moderate\n")
-                    append("• < 30: Rest")
-                },
-        )
+
+        Spacer(Modifier.height(24.dp))
     }
 }
 
@@ -226,25 +214,28 @@ private fun AcwrChartCard(
     rangeDays: Int,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(text = "Daily TRIMP", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    text = "Daily TRIMP",
+                    style = MaterialTheme.typography.titleSmall,
+                )
                 Text(
                     text = "Strain Ratio →",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Spacer(Modifier.height(8.dp))
-            if (trimpPoints.isEmpty()) {
+            Spacer(Modifier.height(16.dp))
+            if (trimpPoints.isEmpty() && ratioPoints.isEmpty()) {
                 EmptyChartPlaceholder()
             } else {
                 AcwrChart(
@@ -269,25 +260,49 @@ private fun AcwrChart(
     val dayMs = TimeUnit.DAYS.toMillis(1)
     val dotColor = MaterialTheme.colorScheme.primary
     val axisLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val labelColor = MaterialTheme.colorScheme.onSurface
+    val guidelineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+    val labelComponent = rememberTextComponent(color = labelColor)
     val trimpTitleComponent = rememberTextComponent(color = axisLabelColor)
     val strainTitleComponent = rememberTextComponent(color = axisLabelColor)
     val trimpAxisFormatter = remember { CartesianValueFormatter { _, value, _ -> value.toInt().toString() } }
     val ratioAxisFormatter = remember { CartesianValueFormatter { _, value, _ -> "%.2f".format(value) } }
 
-    val trimpMaxY =
+    val modelProducer = remember { CartesianChartModelProducer() }
+
+    val trimpRangeProvider =
         remember(trimpPoints) {
-            (trimpPoints.maxOfOrNull { it.value }?.let { it * 1.1f } ?: 100f).toDouble()
-        }
-    val ratioMinY =
-        remember(ratioPoints) {
-            (ratioPoints.minOfOrNull { it.value }?.let { it * 0.9f } ?: 0f).toDouble()
-        }
-    val ratioMaxY =
-        remember(ratioPoints) {
-            (ratioPoints.maxOfOrNull { it.value }?.let { it * 1.1f } ?: 2f).toDouble()
+            object : CartesianLayerRangeProvider {
+                override fun getMaxY(
+                    minY: Double,
+                    maxY: Double,
+                    extraStore: ExtraStore,
+                ): Double = (ceil(maxY / 25.0) * 25.0).coerceAtLeast(100.0)
+
+                override fun getMinY(
+                    minY: Double,
+                    maxY: Double,
+                    extraStore: ExtraStore,
+                ): Double = 0.0
+            }
         }
 
-    val modelProducer = remember { CartesianChartModelProducer() }
+    val ratioRangeProvider =
+        remember(ratioPoints) {
+            object : CartesianLayerRangeProvider {
+                override fun getMaxY(
+                    minY: Double,
+                    maxY: Double,
+                    extraStore: ExtraStore,
+                ): Double = (ceil(maxY / 0.5) * 0.5).coerceAtLeast(2.0)
+
+                override fun getMinY(
+                    minY: Double,
+                    maxY: Double,
+                    extraStore: ExtraStore,
+                ): Double = 0.0
+            }
+        }
 
     val dateFormatter =
         remember(rangeStartMs) { SimpleDateFormat(DateFormatUtils.DATE_FORMAT_SHORT, Locale.getDefault()) }
@@ -307,10 +322,6 @@ private fun AcwrChart(
         }
     }
 
-    val trimpRangeProvider =
-        remember(trimpMaxY) { CartesianLayerRangeProvider.fixed(minY = 0.0, maxY = trimpMaxY) }
-    val ratioRangeProvider =
-        remember(ratioMinY, ratioMaxY) { CartesianLayerRangeProvider.fixed(minY = ratioMinY, maxY = ratioMaxY) }
     val dotComponent = rememberShapeComponent(fill = fill(dotColor), shape = CorneredShape.Pill)
     val ratioLine =
         LineCartesianLayer.rememberLine(
@@ -320,6 +331,9 @@ private fun AcwrChart(
                     LineCartesianLayer.point(dotComponent, 6.dp),
                 ),
         )
+
+    val trimpAxisItemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) }
+    val ratioAxisItemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) }
 
     CartesianChartHost(
         chart =
@@ -335,20 +349,41 @@ private fun AcwrChart(
                 ),
                 startAxis =
                     VerticalAxis.rememberStart(
+                        label = labelComponent,
                         valueFormatter = trimpAxisFormatter,
                         titleComponent = trimpTitleComponent,
                         title = "TRIMP",
+                        itemPlacer = trimpAxisItemPlacer,
+                        guideline = LineComponent(fill = fill(guidelineColor), thicknessDp = 1f),
                     ),
                 endAxis =
                     VerticalAxis.rememberEnd(
+                        label = labelComponent,
                         valueFormatter = ratioAxisFormatter,
                         titleComponent = strainTitleComponent,
                         title = "Strain",
+                        itemPlacer = ratioAxisItemPlacer,
+                        guideline = null,
                     ),
                 bottomAxis =
                     HorizontalAxis.rememberBottom(
+                        label = labelComponent,
                         valueFormatter = xAxisFormatter,
-                        itemPlacer = remember(rangeDays) { HorizontalAxis.ItemPlacer.segmented() },
+                        itemPlacer =
+                            remember(rangeDays) {
+                                if (rangeDays == 7) {
+                                    HorizontalAxis.ItemPlacer.aligned(
+                                        spacing = { 2 },
+                                        addExtremeLabelPadding = true,
+                                    )
+                                } else {
+                                    HorizontalAxis.ItemPlacer.aligned(
+                                        spacing = { 5 },
+                                        addExtremeLabelPadding = true,
+                                    )
+                                }
+                            },
+                        guideline = LineComponent(fill = fill(guidelineColor), thicknessDp = 1f),
                     ),
             ),
         modelProducer = modelProducer,
@@ -388,25 +423,21 @@ private fun WorkoutHistoryItem(
     workout: WorkoutRecordEntity,
     modifier: Modifier = Modifier,
 ) {
-    val status = workout.intensityStatus()
-    val dateFormatter = remember { SimpleDateFormat(DateFormatUtils.DATE_FORMAT_SHORT, Locale.getDefault()) }
-    val workoutDate = remember(workout.startTime) { dateFormatter.format(Date(workout.startTime)) }
+    val displayType = exerciseTypeToDisplayName(workout.exerciseType)
+    val dateStr = SimpleDateFormat("(dd.MM)", Locale.getDefault()).format(Date(workout.startTime))
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
     ) {
         Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${exerciseTypeToDisplayName(workout.exerciseType)} ($workoutDate)",
+                    text = "$displayType $dateStr",
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
@@ -415,7 +446,11 @@ private fun WorkoutHistoryItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            IntensityBadge(label = workout.intensityLabel(), status = status)
+
+            IntensityBadge(
+                label = workout.intensityLabel(),
+                status = workout.intensityStatus(),
+            )
         }
     }
 }
@@ -428,97 +463,56 @@ private fun IntensityBadge(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(50),
+        shape = RoundedCornerShape(12.dp),
         color = status.containerColor(),
-        contentColor = status.onContainerColor(),
     ) {
         Text(
             text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            color = status.onContainerColor(),
         )
     }
 }
 
-private fun exerciseTypeToDisplayName(typeString: String): String {
-    val type = typeString.toIntOrNull() ?: return "Workout"
-    return when (type) {
-        ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT -> "Workout"
-        ExerciseSessionRecord.EXERCISE_TYPE_BADMINTON -> "Badminton"
-        ExerciseSessionRecord.EXERCISE_TYPE_BASEBALL -> "Baseball"
-        ExerciseSessionRecord.EXERCISE_TYPE_BASKETBALL -> "Basketball"
-        ExerciseSessionRecord.EXERCISE_TYPE_BIKING -> "Cycling"
-        ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY -> "Stationary Bike"
-        ExerciseSessionRecord.EXERCISE_TYPE_BOOT_CAMP -> "Boot Camp"
-        ExerciseSessionRecord.EXERCISE_TYPE_BOXING -> "Boxing"
-        ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS -> "Calisthenics"
-        ExerciseSessionRecord.EXERCISE_TYPE_CRICKET -> "Cricket"
-        ExerciseSessionRecord.EXERCISE_TYPE_DANCING -> "Dancing"
-        ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL -> "Elliptical"
-        ExerciseSessionRecord.EXERCISE_TYPE_EXERCISE_CLASS -> "Exercise Class"
-        ExerciseSessionRecord.EXERCISE_TYPE_FENCING -> "Fencing"
-        ExerciseSessionRecord.EXERCISE_TYPE_FOOTBALL_AMERICAN -> "American Football"
-        ExerciseSessionRecord.EXERCISE_TYPE_FOOTBALL_AUSTRALIAN -> "Australian Football"
-        ExerciseSessionRecord.EXERCISE_TYPE_FRISBEE_DISC -> "Frisbee"
-        ExerciseSessionRecord.EXERCISE_TYPE_GOLF -> "Golf"
-        ExerciseSessionRecord.EXERCISE_TYPE_GUIDED_BREATHING -> "Guided Breathing"
-        ExerciseSessionRecord.EXERCISE_TYPE_GYMNASTICS -> "Gymnastics"
-        ExerciseSessionRecord.EXERCISE_TYPE_HANDBALL -> "Handball"
-        ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING -> "HIIT"
-        ExerciseSessionRecord.EXERCISE_TYPE_HIKING -> "Hiking"
-        ExerciseSessionRecord.EXERCISE_TYPE_ICE_HOCKEY -> "Ice Hockey"
-        ExerciseSessionRecord.EXERCISE_TYPE_ICE_SKATING -> "Ice Skating"
-        ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS -> "Martial Arts"
-        ExerciseSessionRecord.EXERCISE_TYPE_PADDLING -> "Paddling"
-        ExerciseSessionRecord.EXERCISE_TYPE_PARAGLIDING -> "Paragliding"
-        ExerciseSessionRecord.EXERCISE_TYPE_PILATES -> "Pilates"
-        ExerciseSessionRecord.EXERCISE_TYPE_RACQUETBALL -> "Racquetball"
-        ExerciseSessionRecord.EXERCISE_TYPE_ROCK_CLIMBING -> "Rock Climbing"
-        ExerciseSessionRecord.EXERCISE_TYPE_ROLLER_HOCKEY -> "Roller Hockey"
-        ExerciseSessionRecord.EXERCISE_TYPE_ROWING -> "Rowing"
-        ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE -> "Rowing Machine"
-        ExerciseSessionRecord.EXERCISE_TYPE_RUGBY -> "Rugby"
-        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING -> "Running"
-        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL -> "Treadmill Run"
-        ExerciseSessionRecord.EXERCISE_TYPE_SAILING -> "Sailing"
-        ExerciseSessionRecord.EXERCISE_TYPE_SCUBA_DIVING -> "Scuba Diving"
-        ExerciseSessionRecord.EXERCISE_TYPE_SKATING -> "Skating"
-        ExerciseSessionRecord.EXERCISE_TYPE_SKIING -> "Skiing"
-        ExerciseSessionRecord.EXERCISE_TYPE_SNOWBOARDING -> "Snowboarding"
-        ExerciseSessionRecord.EXERCISE_TYPE_SNOWSHOEING -> "Snowshoeing"
-        ExerciseSessionRecord.EXERCISE_TYPE_SOCCER -> "Soccer"
-        ExerciseSessionRecord.EXERCISE_TYPE_SOFTBALL -> "Softball"
-        ExerciseSessionRecord.EXERCISE_TYPE_SQUASH -> "Squash"
-        ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING -> "Stair Climbing"
-        ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING_MACHINE -> "Stair Machine"
-        ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING -> "Strength Training"
-        ExerciseSessionRecord.EXERCISE_TYPE_STRETCHING -> "Stretching"
-        ExerciseSessionRecord.EXERCISE_TYPE_SURFING -> "Surfing"
-        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> "Open Water Swim"
-        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL -> "Pool Swimming"
-        ExerciseSessionRecord.EXERCISE_TYPE_TABLE_TENNIS -> "Table Tennis"
-        ExerciseSessionRecord.EXERCISE_TYPE_TENNIS -> "Tennis"
-        ExerciseSessionRecord.EXERCISE_TYPE_VOLLEYBALL -> "Volleyball"
-        ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> "Walking"
-        ExerciseSessionRecord.EXERCISE_TYPE_WATER_POLO -> "Water Polo"
-        ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING -> "Weightlifting"
-        ExerciseSessionRecord.EXERCISE_TYPE_WHEELCHAIR -> "Wheelchair"
-        ExerciseSessionRecord.EXERCISE_TYPE_YOGA -> "Yoga"
-        else -> "Workout"
+private fun exerciseTypeToDisplayName(type: String): String =
+    when (type) {
+        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING.toString() -> "Running"
+        ExerciseSessionRecord.EXERCISE_TYPE_WALKING.toString() -> "Walking"
+        ExerciseSessionRecord.EXERCISE_TYPE_BIKING.toString() -> "Cycling"
+        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL.toString(),
+        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER.toString(),
+        -> "Swimming"
+        ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING.toString() -> "Strength"
+        ExerciseSessionRecord.EXERCISE_TYPE_HIKING.toString() -> "Hiking"
+        ExerciseSessionRecord.EXERCISE_TYPE_YOGA.toString() -> "Yoga"
+        ExerciseSessionRecord.EXERCISE_TYPE_PILATES.toString() -> "Pilates"
+        ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL.toString() -> "Elliptical"
+        ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE.toString() -> "Rowing"
+        ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING.toString(),
+        ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING_MACHINE.toString(),
+        -> "Stairs"
+        ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING.toString() -> "HIIT"
+        else ->
+            type
+                .replace("EXERCISE_TYPE_", "")
+                .lowercase()
+                .replaceFirstChar { it.uppercase() }
+                .replace("_", " ")
     }
-}
 
 private fun WorkoutRecordEntity.intensityLabel(): String =
     when {
-        trimp < 40f -> "Easy"
-        trimp < 80f -> "Moderate"
-        trimp < 120f -> "Hard"
-        else -> "Very Hard"
+        trimp > 200 -> "Very Hard"
+        trimp > 150 -> "Hard"
+        trimp > 100 -> "Moderate"
+        trimp > 50 -> "Light"
+        else -> "Very Light"
     }
 
 private fun WorkoutRecordEntity.intensityStatus(): MetricStatus =
     when {
-        trimp < 40f -> MetricStatus.OPTIMAL
-        trimp < 80f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
+        trimp > 150 -> MetricStatus.WARNING
+        trimp > 50 -> MetricStatus.OPTIMAL
+        else -> MetricStatus.CALIBRATING
     }
