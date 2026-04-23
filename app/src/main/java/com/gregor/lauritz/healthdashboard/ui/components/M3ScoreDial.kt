@@ -58,7 +58,7 @@ fun M3ScoreDial(
     Box(
         modifier =
             modifier
-                .size(140.dp)
+                .size(130.dp)
                 .semantics { contentDescription = semanticDesc }
                 .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,

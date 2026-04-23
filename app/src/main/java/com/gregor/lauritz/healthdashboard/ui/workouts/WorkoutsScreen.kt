@@ -188,9 +188,9 @@ private fun HeroSection(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.Top,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         M3ScoreDial(
             score = uiState.latestSummary?.loadScore,
