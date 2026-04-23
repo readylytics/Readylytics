@@ -110,8 +110,8 @@ class ScoringRepository
                 }
                 restingHrBaseline = if (historicRestingHrs.isNotEmpty()) medianInt(historicRestingHrs) else null
 
-                if (currentRestingHr != null && restingHrBaseline != null && restingHrBaseline!! > 0f) {
-                    restingHrRatio = currentRestingHr / restingHrBaseline!!
+                if (currentRestingHr != null && restingHrBaseline != null && restingHrBaseline > 0f) {
+                    restingHrRatio = currentRestingHr / restingHrBaseline
                 }
 
                 if (currentNocturnalRhr != null) {
