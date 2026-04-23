@@ -98,10 +98,8 @@ class DashboardViewModel
         prefsRepo: UserPreferencesRepository,
     ) : ViewModel() {
         private val _isRefreshing = MutableStateFlow(false)
-        val isRefreshing = _isRefreshing
 
         private val _selectedDate = MutableStateFlow(LocalDate.now())
-        val selectedDate = _selectedDate
 
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
