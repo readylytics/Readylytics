@@ -70,9 +70,9 @@ import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.core.common.component.LineComponent
 import com.patrykandpatrick.vico.core.common.shape.CorneredShape
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 @Composable
@@ -296,7 +296,6 @@ private fun TrendChart(
         return
     }
 
-    val dayMs = TimeUnit.DAYS.toMillis(1)
     val calculatedBaseline =
         remember(points) {
             val sorted = points.map { it.value }.sorted()
@@ -331,7 +330,10 @@ private fun TrendChart(
     val xAxisFormatter =
         remember(rangeStartMs) {
             CartesianValueFormatter { _, value, _ ->
-                dateFormatter.format(Date(rangeStartMs + value.toLong() * dayMs))
+                val cal = Calendar.getInstance()
+                cal.timeInMillis = rangeStartMs
+                cal.add(Calendar.DAY_OF_YEAR, value.toInt())
+                dateFormatter.format(cal.time)
             }
         }
 

@@ -24,10 +24,11 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.Calendar
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 data class SleepUiState(
@@ -186,11 +187,14 @@ class SleepViewModel
                         heartRateDao.observeSleepHrSince(fromMs),
                         prefsRepo.userPreferences,
                     ) { latestSummary, latestSession, hrvRecords, hrRecords, prefs ->
+                        val filteredHrv = hrvRecords.filter { it.timestampMs < nextDayMidnightMs }
+                        val filteredHr = hrRecords.filter { it.timestampMs < nextDayMidnightMs }
+
                         SleepUiState(
                             latestSummary = latestSummary,
                             latestSession = latestSession,
-                            dailyHrv = groupHrvByDay(hrvRecords, startDayMs),
-                            dailyRhr = groupRhrByDay(hrRecords, startDayMs),
+                            dailyHrv = groupHrvByDay(filteredHrv, startDayMs),
+                            dailyRhr = groupRhrByDay(filteredHr, startDayMs),
                             goalSleepMinutes = (prefs.goalSleepHours * 60).toInt(),
                             selectedRange = range,
                             selectedDate = date,
@@ -220,13 +224,15 @@ private fun groupHrvByDay(
     records: List<HrvRecordEntity>,
     startDayMs: Long,
 ): List<DailyDataPoint> {
-    val dayMs = TimeUnit.DAYS.toMillis(1)
+    val zoneId = ZoneId.systemDefault()
+    val startLocalDate = Instant.ofEpochMilli(startDayMs).atZone(zoneId).toLocalDate()
     return records
         .groupBy { truncateToDayMs(it.timestampMs) }
         .toSortedMap()
         .map { (dayMs_, daily) ->
+            val currentLocalDate = Instant.ofEpochMilli(dayMs_).atZone(zoneId).toLocalDate()
             DailyDataPoint(
-                dayOffset = ((dayMs_ - startDayMs) / dayMs).toInt(),
+                dayOffset = ChronoUnit.DAYS.between(startLocalDate, currentLocalDate).toInt(),
                 value =
                     daily
                         .map { it.rmssdMs }
@@ -240,13 +246,15 @@ private fun groupRhrByDay(
     records: List<HeartRateRecordEntity>,
     startDayMs: Long,
 ): List<DailyDataPoint> {
-    val dayMs = TimeUnit.DAYS.toMillis(1)
+    val zoneId = ZoneId.systemDefault()
+    val startLocalDate = Instant.ofEpochMilli(startDayMs).atZone(zoneId).toLocalDate()
     return records
         .groupBy { truncateToDayMs(it.timestampMs) }
         .toSortedMap()
         .map { (dayMs_, daily) ->
+            val currentLocalDate = Instant.ofEpochMilli(dayMs_).atZone(zoneId).toLocalDate()
             DailyDataPoint(
-                dayOffset = ((dayMs_ - startDayMs) / dayMs).toInt(),
+                dayOffset = ChronoUnit.DAYS.between(startLocalDate, currentLocalDate).toInt(),
                 value =
                     daily
                         .map { it.beatsPerMinute }
