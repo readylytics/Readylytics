@@ -168,9 +168,6 @@ private fun HeroSection(
     uiState: WorkoutsUiState,
     modifier: Modifier = Modifier,
 ) {
-    val strainRatio = uiState.latestSummary?.strainRatio
-    val strainScore = strainRatioToScore(strainRatio)
-
     Row(
         modifier =
             modifier
@@ -424,16 +421,6 @@ private fun IntensityBadge(
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
         )
-    }
-}
-
-private fun strainRatioToScore(ratio: Float?): Float? {
-    if (ratio == null) return null
-    return when {
-        ratio < 0.8f -> 80f
-        ratio <= 1.2f -> 100f
-        ratio <= 1.5f -> 100f - (ratio - 1.2f) * 200f
-        else -> 40f
     }
 }
 

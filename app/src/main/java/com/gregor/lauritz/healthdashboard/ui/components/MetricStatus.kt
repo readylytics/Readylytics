@@ -8,6 +8,7 @@ import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
 enum class MetricStatus {
     CALIBRATING,
     OPTIMAL,
+    NEUTRAL,
     WARNING,
     POOR,
 }
@@ -17,6 +18,7 @@ fun MetricStatus.containerColor(): Color =
     when (this) {
         MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.surfaceVariant
         MetricStatus.OPTIMAL -> LocalExtendedColors.current.successContainer
+        MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.primaryContainer
         MetricStatus.WARNING -> MaterialTheme.colorScheme.tertiaryContainer
         MetricStatus.POOR -> MaterialTheme.colorScheme.errorContainer
     }
@@ -26,6 +28,7 @@ fun MetricStatus.onContainerColor(): Color =
     when (this) {
         MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.onSurfaceVariant
         MetricStatus.OPTIMAL -> LocalExtendedColors.current.onSuccessContainer
+        MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.onPrimaryContainer
         MetricStatus.WARNING -> MaterialTheme.colorScheme.onTertiaryContainer
         MetricStatus.POOR -> MaterialTheme.colorScheme.onErrorContainer
     }

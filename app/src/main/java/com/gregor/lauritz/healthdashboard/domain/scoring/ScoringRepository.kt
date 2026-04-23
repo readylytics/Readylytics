@@ -237,11 +237,11 @@ internal fun computeCtl(
 
 internal fun computeLoadScore(sr: Float): Float =
     when {
-        sr <= 0f -> 80f
-        sr < 0.8f -> 80f
-        sr <= 1.2f -> 100f
-        sr <= 1.5f -> 100f - (sr - 1.2f) * 200f
-        else -> 40f
+        sr <= 0f -> 85f // Optimal (maintenance/low load)
+        sr < 0.8f -> 50f // Neutral (Under-training)
+        sr <= 1.2f -> 100f // Optimal (Sweet spot)
+        sr <= 1.5f -> 100f - (sr - 1.2f) * 100f // 1.2 -> 100, 1.5 -> 70 (Warning starts at 60 in M3ScoreDial, let's aim for 70)
+        else -> 30f // Poor
     }
 
 internal fun computeDurationSubScore(
