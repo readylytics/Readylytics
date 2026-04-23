@@ -6,6 +6,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
+import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.sleep.truncateToDayMs
@@ -16,7 +17,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -30,6 +34,7 @@ data class WorkoutsUiState(
     val dailyStrainRatio: List<DailyDataPoint> = emptyList(),
     val recentWorkouts: List<WorkoutRecordEntity> = emptyList(),
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
+    val selectedDate: LocalDate = LocalDate.now(),
     val rangeStartMs: Long = System.currentTimeMillis(),
 )
 
@@ -39,22 +44,40 @@ class WorkoutsViewModel
     constructor(
         private val dailySummaryDao: DailySummaryDao,
         private val workoutDao: WorkoutDao,
+        private val selectedDateRepository: SelectedDateRepository,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
         val selectedRange = _selectedRange.asStateFlow()
 
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
-            _selectedRange
-                .flatMapLatest { range ->
+            combine(
+                _selectedRange,
+                selectedDateRepository.selectedDate,
+            ) { range, date -> range to date }
+                .flatMapLatest { (range, date) ->
                     val displayFromMs = range.fromMs()
                     val displayStartDayMs = truncateToDayMs(displayFromMs)
                     // Fetch extra history so chronic (42-day) window is valid from day 1 of the range.
                     // Minor DST imprecision here (up to 1h) is fine for a DB lower-bound query.
                     val fetchFromMs = displayStartDayMs - TimeUnit.DAYS.toMillis(CHRONIC_DAYS.toLong())
 
+                    val zoneId = ZoneId.systemDefault()
+                    val selectedMidnightMs =
+                        date
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
+
+                    val summaryFlow =
+                        if (date == LocalDate.now(zoneId)) {
+                            dailySummaryDao.observeLatest()
+                        } else {
+                            flow { emit(dailySummaryDao.getByDate(selectedMidnightMs)) }
+                        }
+
                     combine(
-                        dailySummaryDao.observeLatest(),
+                        summaryFlow,
                         workoutDao.observeSince(fetchFromMs),
                     ) { latest, allWorkouts ->
                         val trimpByDay: Map<Long, Float> =
@@ -113,6 +136,7 @@ class WorkoutsViewModel
                             dailyStrainRatio = dailyStrainRatio,
                             recentWorkouts = allWorkouts.filter { it.startTime >= displayFromMs },
                             selectedRange = range,
+                            selectedDate = date,
                             rangeStartMs = displayStartDayMs,
                         )
                     }
@@ -124,5 +148,13 @@ class WorkoutsViewModel
 
         fun onRangeSelected(range: TimeRange) {
             _selectedRange.value = range
+        }
+
+        fun onPreviousDay() {
+            selectedDateRepository.selectPreviousDay()
+        }
+
+        fun onNextDay() {
+            selectedDateRepository.selectNextDay()
         }
     }

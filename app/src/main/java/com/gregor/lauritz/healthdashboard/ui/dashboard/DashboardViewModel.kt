@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,7 +16,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
@@ -95,15 +95,14 @@ class DashboardViewModel
     constructor(
         private val dailySummaryDao: DailySummaryDao,
         private val foregroundSyncController: ForegroundSyncController,
+        private val selectedDateRepository: SelectedDateRepository,
         prefsRepo: UserPreferencesRepository,
     ) : ViewModel() {
         private val _isRefreshing = MutableStateFlow(false)
 
-        private val _selectedDate = MutableStateFlow(LocalDate.now())
-
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
-            _selectedDate
+            selectedDateRepository.selectedDate
                 .flatMapLatest { date ->
                     val today = LocalDate.now()
                     val summaryFlow =
@@ -150,10 +149,10 @@ class DashboardViewModel
         }
 
         fun onPreviousDay() {
-            _selectedDate.update { it.minusDays(1) }
+            selectedDateRepository.selectPreviousDay()
         }
 
         fun onNextDay() {
-            _selectedDate.update { d -> if (d < LocalDate.now()) d.plusDays(1) else d }
+            selectedDateRepository.selectNextDay()
         }
     }

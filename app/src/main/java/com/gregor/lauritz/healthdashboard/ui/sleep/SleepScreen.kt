@@ -44,6 +44,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.SleepArchitectureBar
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
+import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
@@ -79,6 +80,8 @@ fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
         baselineHrv = baselineHrv,
         baselineRhr = baselineRhr,
         onRangeSelected = viewModel::onRangeSelected,
+        onPreviousDay = viewModel::onPreviousDay,
+        onNextDay = viewModel::onNextDay,
     )
 }
 
@@ -89,12 +92,22 @@ fun SleepScreen(
     baselineHrv: Float?,
     baselineRhr: Int?,
     onRangeSelected: (TimeRange) -> Unit,
+    onPreviousDay: () -> Unit,
+    onNextDay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 16.dp),
     ) {
+        item {
+            DateSwitcher(
+                selectedDate = uiState.selectedDate,
+                onPreviousDay = onPreviousDay,
+                onNextDay = onNextDay,
+            )
+        }
+
         item {
             Box(
                 modifier =
@@ -118,7 +131,19 @@ fun SleepScreen(
         }
 
         item {
-            SectionHeader(title = "Last Night")
+            val sectionLabel =
+                remember(uiState.selectedDate) {
+                    val today = java.time.LocalDate.now()
+                    when (uiState.selectedDate) {
+                        today -> "Last Night"
+                        today.minusDays(1) -> "Night of Yesterday"
+                        else -> {
+                            val pattern = java.time.format.DateTimeFormatter.ofPattern("EEE MMM d", java.util.Locale.getDefault())
+                            "Night of ${uiState.selectedDate.format(pattern)}"
+                        }
+                    }
+                }
+            SectionHeader(title = sectionLabel)
             Spacer(Modifier.height(8.dp))
             SleepArchitectureBar(
                 session = uiState.latestSession,

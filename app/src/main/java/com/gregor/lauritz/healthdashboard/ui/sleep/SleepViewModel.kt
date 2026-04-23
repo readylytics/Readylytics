@@ -11,6 +11,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntit
 import com.gregor.lauritz.healthdashboard.data.local.entity.HrvRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
@@ -34,6 +36,7 @@ data class SleepUiState(
     val dailyHrv: List<DailyDataPoint> = emptyList(),
     val dailyRhr: List<DailyDataPoint> = emptyList(),
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
+    val selectedDate: LocalDate = LocalDate.now(),
     val goalSleepMinutes: Int = 480,
     val rangeStartMs: Long = System.currentTimeMillis(),
 )
@@ -70,6 +73,7 @@ class SleepViewModel
         private val hrvDao: HrvDao,
         private val heartRateDao: HeartRateDao,
         private val prefsRepo: UserPreferencesRepository,
+        private val selectedDateRepository: SelectedDateRepository,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
         val selectedRange = _selectedRange
@@ -141,29 +145,38 @@ class SleepViewModel
 
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
-            _selectedRange
-                .flatMapLatest { range ->
+            combine(
+                _selectedRange,
+                selectedDateRepository.selectedDate,
+            ) { range, date -> range to date }
+                .flatMapLatest { (range, date) ->
                     val fromMs = range.fromMs()
                     val startDayMs = truncateToDayMs(fromMs)
                     val zoneId = ZoneId.systemDefault()
-                    val todayMidnightMs =
-                        LocalDate
-                            .now(zoneId)
+                    val selectedMidnightMs =
+                        date
                             .atStartOfDay(zoneId)
                             .toInstant()
                             .toEpochMilli()
-                    val tomorrowMidnightMs =
-                        LocalDate
-                            .now(zoneId)
+                    val nextDayMidnightMs =
+                        date
                             .plusDays(1)
                             .atStartOfDay(zoneId)
                             .toInstant()
                             .toEpochMilli()
+
+                    val summaryFlow =
+                        if (date == LocalDate.now(zoneId)) {
+                            dailySummaryDao.observeLatest()
+                        } else {
+                            flow { emit(dailySummaryDao.getByDate(selectedMidnightMs)) }
+                        }
+
                     combine(
-                        dailySummaryDao.observeLatest(),
+                        summaryFlow,
                         sleepSessionDao.observeFirstSessionEndingInRange(
-                            todayMidnightMs,
-                            tomorrowMidnightMs,
+                            selectedMidnightMs,
+                            nextDayMidnightMs,
                         ),
                         hrvDao.observeSleepHrvSince(fromMs),
                         heartRateDao.observeSleepHrSince(fromMs),
@@ -176,6 +189,7 @@ class SleepViewModel
                             dailyRhr = groupRhrByDay(hrRecords, startDayMs),
                             goalSleepMinutes = (prefs.goalSleepHours * 60).toInt(),
                             selectedRange = range,
+                            selectedDate = date,
                             rangeStartMs = startDayMs,
                         )
                     }
@@ -187,6 +201,14 @@ class SleepViewModel
 
         fun onRangeSelected(range: TimeRange) {
             _selectedRange.value = range
+        }
+
+        fun onPreviousDay() {
+            selectedDateRepository.selectPreviousDay()
+        }
+
+        fun onNextDay() {
+            selectedDateRepository.selectNextDay()
         }
     }
 

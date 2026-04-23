@@ -39,6 +39,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
+import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberEnd
@@ -70,7 +71,12 @@ import kotlin.math.roundToInt
 @Composable
 fun WorkoutsRoute(viewModel: WorkoutsViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    WorkoutsScreen(uiState = uiState, onRangeSelected = viewModel::onRangeSelected)
+    WorkoutsScreen(
+        uiState = uiState,
+        onRangeSelected = viewModel::onRangeSelected,
+        onPreviousDay = viewModel::onPreviousDay,
+        onNextDay = viewModel::onNextDay,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,12 +84,22 @@ fun WorkoutsRoute(viewModel: WorkoutsViewModel = hiltViewModel()) {
 fun WorkoutsScreen(
     uiState: WorkoutsUiState,
     onRangeSelected: (TimeRange) -> Unit,
+    onPreviousDay: () -> Unit,
+    onNextDay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 16.dp),
     ) {
+        item {
+            DateSwitcher(
+                selectedDate = uiState.selectedDate,
+                onPreviousDay = onPreviousDay,
+                onNextDay = onNextDay,
+            )
+        }
+
         item {
             HeroSection(uiState = uiState)
         }
