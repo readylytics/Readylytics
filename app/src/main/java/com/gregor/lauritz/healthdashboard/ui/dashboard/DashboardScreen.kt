@@ -228,7 +228,7 @@ fun DashboardScreen(
                         }
 
                     val rhrArrow =
-                        if (rhrBaseline != null && summary?.nocturnalRhr != null) {
+                        if (rhrBaseline != null && summary.nocturnalRhr != null) {
                             if (summary.nocturnalRhr > rhrBaseline) {
                                 "↑"
                             } else {
@@ -239,7 +239,7 @@ fun DashboardScreen(
                         }
 
                     val hrvArrow =
-                        if (hrvBaseline != null && summary?.nocturnalHrv != null) {
+                        if (hrvBaseline != null && summary.nocturnalHrv != null) {
                             if (summary.nocturnalHrv > hrvBaseline) {
                                 "↑"
                             } else {
