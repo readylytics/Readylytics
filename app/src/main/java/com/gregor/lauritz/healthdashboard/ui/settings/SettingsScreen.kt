@@ -120,7 +120,33 @@ fun SettingsScreen(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 8.dp),
     ) {
+        // Cloud Backup
+        item { SectionHeader("Cloud Backup") }
+        item {
+            CloudBackupSection(
+                uiState = uiState,
+                onEvent = onEvent,
+                context = context,
+            )
+        }
+
+        // Sync
+        item { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
+        item { SectionHeader("Health Connect Sync") }
+        item { SyncPreferenceItem(uiState = uiState, onEvent = onEvent) }
+        item {
+            AnimatedVisibility(visible = uiState.syncPreference == SyncPreference.BY_TIME) {
+                SyncIntervalItem(uiState = uiState, onEvent = onEvent)
+            }
+        }
+
+        // Appearance
+        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        item { SectionHeader("Appearance") }
+        item { AppThemeItem(uiState = uiState, onEvent = onEvent) }
+
         // Goals
+        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
         item { SectionHeader("Goals") }
         item {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
@@ -145,21 +171,6 @@ fun SettingsScreen(
                 )
             }
         }
-
-        // Sync
-        item { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
-        item { SectionHeader("Sync") }
-        item { SyncPreferenceItem(uiState = uiState, onEvent = onEvent) }
-        item {
-            AnimatedVisibility(visible = uiState.syncPreference == SyncPreference.BY_TIME) {
-                SyncIntervalItem(uiState = uiState, onEvent = onEvent)
-            }
-        }
-
-        // Appearance
-        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item { SectionHeader("Appearance") }
-        item { AppThemeItem(uiState = uiState, onEvent = onEvent) }
 
         // Thresholds
         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
@@ -488,17 +499,6 @@ fun SettingsScreen(
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-            )
-        }
-
-        // Cloud Backup
-        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item { SectionHeader("Cloud Backup") }
-        item {
-            CloudBackupSection(
-                uiState = uiState,
-                onEvent = onEvent,
-                context = context,
             )
         }
 
