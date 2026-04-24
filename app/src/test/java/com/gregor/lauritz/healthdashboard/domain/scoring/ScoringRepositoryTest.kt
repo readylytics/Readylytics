@@ -31,7 +31,7 @@ class MathHelpersTest {
     fun `stdev of single element returns 0`() = assertEquals(0f, listOf(10f).stdev(), DELTA)
 
     @Test
-    fun `stdev of two symmetric values`() = assertEquals(5f, listOf(10f, 20f).stdev(), DELTA)
+    fun `stdev of two symmetric values`() = assertEquals(7.071f, listOf(10f, 20f).stdev(), DELTA)
 
     @Test
     fun `medianInt of empty list returns 0`() = assertEquals(0f, emptyList<Int>().median(), DELTA)

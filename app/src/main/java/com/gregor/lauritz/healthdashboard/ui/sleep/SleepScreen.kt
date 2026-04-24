@@ -43,8 +43,11 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.DateFormatUtils
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
+import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
-import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
+import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
+import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
+import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.SleepArchitectureBar
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
@@ -74,8 +77,6 @@ import com.patrykandpatrick.vico.core.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.core.common.component.LineComponent
 import com.patrykandpatrick.vico.core.common.shape.CorneredShape
-import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -247,18 +248,6 @@ fun SleepScreen(
     }
 }
 
-@Composable
-private fun SectionHeader(
-    title: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-    )
-}
 
 @Composable
 private fun TrendCard(
@@ -324,27 +313,14 @@ private fun TrendChart(
             (points.maxOf { it.value } * 1.1f).toDouble()
         }
 
-    val labelColor = MaterialTheme.colorScheme.onSurface
-    val labelComponent = rememberTextComponent(color = labelColor)
+    val labelComponent = ChartDefaults.labelTextComponent()
     val baselineColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val guidelineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+    val guidelineComponent = ChartDefaults.guidelineComponent()
     val dotColor = MaterialTheme.colorScheme.primary
 
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    val dateFormatter =
-        remember(rangeStartMs) {
-            SimpleDateFormat(DateFormatUtils.DATE_FORMAT_SHORT, Locale.getDefault())
-        }
-    val xAxisFormatter =
-        remember(rangeStartMs) {
-            CartesianValueFormatter { _, value, _ ->
-                val cal = Calendar.getInstance()
-                cal.timeInMillis = rangeStartMs
-                cal.add(Calendar.DAY_OF_YEAR, value.toInt())
-                dateFormatter.format(cal.time)
-            }
-        }
+    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
 
     LaunchedEffect(points) {
         modelProducer.runTransaction {
@@ -379,27 +355,14 @@ private fun TrendChart(
                     VerticalAxis.rememberStart(
                         label = labelComponent,
                         valueFormatter = CartesianValueFormatter { _, value, _ -> value.toInt().toString() },
-                        guideline = LineComponent(fill = fill(guidelineColor), thicknessDp = 1f),
+                        guideline = guidelineComponent,
                     ),
                 bottomAxis =
                     HorizontalAxis.rememberBottom(
                         label = labelComponent,
                         valueFormatter = xAxisFormatter,
-                        itemPlacer =
-                            remember(rangeDays) {
-                                if (rangeDays == 7) {
-                                    HorizontalAxis.ItemPlacer.aligned(
-                                        spacing = { 2 },
-                                        addExtremeLabelPadding = true,
-                                    )
-                                } else {
-                                    HorizontalAxis.ItemPlacer.aligned(
-                                        spacing = { 5 },
-                                        addExtremeLabelPadding = true,
-                                    )
-                                }
-                            },
-                        guideline = LineComponent(fill = fill(guidelineColor), thicknessDp = 1f),
+                        itemPlacer = remember(rangeDays) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                        guideline = guidelineComponent,
                     ),
                 decorations =
                     listOf(
@@ -486,12 +449,12 @@ private fun SleepMetricGrid(
                     .weight(1f)
                     .fillMaxHeight()
             )
-            SleepMetricCard(
+            MetricCard(
                 title = "Sleep Efficiency",
                 value = session?.let { "${it.efficiency.roundToInt()}%" } ?: "—",
                 secondaryText = "Goal: >85%",
                 status = efficiencyStatus,
-                tooltipText = "The percentage of time actually asleep while in bed. (Goal: >85%).",
+                tooltip ="The percentage of time actually asleep while in bed. (Goal: >85%).",
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(),
@@ -501,22 +464,22 @@ private fun SleepMetricGrid(
             modifier = Modifier.height(IntrinsicSize.Min),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            SleepMetricCard(
+            MetricCard(
                 title = "Deep Sleep",
                 value = summary?.deepSleepPercent?.let { "${it.toInt()}%" } ?: "—",
                 secondaryText = "Target: 15–25%",
                 status = deepStatus,
-                tooltipText = "Time in Stage 3 (Physical repair). Target: 15–25% of total sleep.",
+                tooltip ="Time in Stage 3 (Physical repair). Target: 15–25% of total sleep.",
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(),
             )
-            SleepMetricCard(
+            MetricCard(
                 title = "REM Sleep",
                 value = summary?.remSleepPercent?.let { "${it.toInt()}%" } ?: "—",
                 secondaryText = "Target: 20–25%",
                 status = remStatus,
-                tooltipText = "Time in Rapid Eye Movement. Target: 20–25% of total sleep.",
+                tooltip ="Time in Rapid Eye Movement. Target: 20–25% of total sleep.",
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(),
@@ -534,13 +497,19 @@ private fun CircadianConsistencyCard(
     val containerColor = status.containerColor()
     val contentColor = status.onContainerColor()
 
-    val scoreText = result.score?.let { "${it.toInt()}%" } ?: "—"
-    val windowText =
-        if (result.medianBedtimeMinutes != null && result.medianWakeMinutes != null) {
+    val scoreText = when (result) {
+        is CircadianConsistencyResult.Calibrating -> "Calibrating"
+        is CircadianConsistencyResult.Ready -> "${result.score.toInt()}%"
+    }
+    val windowText = when (result) {
+        is CircadianConsistencyResult.Calibrating -> null
+        is CircadianConsistencyResult.Ready ->
             "${result.medianBedtimeMinutes.toTimeString()}→${result.medianWakeMinutes.toTimeString()}"
-        } else {
-            null
-        }
+    }
+    val thresholdMinutes = when (result) {
+        is CircadianConsistencyResult.Calibrating -> 30
+        is CircadianConsistencyResult.Ready -> result.thresholdMinutes
+    }
 
     val tooltipText =
         buildString {
@@ -550,7 +519,7 @@ private fun CircadianConsistencyCard(
             append("• 60–79%: Neutral\n")
             append("• 40–59%: Warning\n")
             append("• < 40%: Poor\n\n")
-            append("Consistency Window: ±${result.thresholdMinutes} min grace period before score drops.")
+            append("Consistency Window: ±$thresholdMinutes min grace period before score drops.")
         }
 
     Card(
@@ -577,7 +546,7 @@ private fun CircadianConsistencyCard(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                text = if (result.isCalibrating && result.score == null) "Calibrating" else scoreText,
+                text = scoreText,
                 style = MaterialTheme.typography.displaySmall,
                 color = contentColor,
             )
@@ -591,55 +560,6 @@ private fun CircadianConsistencyCard(
     }
 }
 
-@Composable
-private fun SleepMetricCard(
-    title: String,
-    value: String,
-    status: MetricStatus,
-    tooltipText: String,
-    modifier: Modifier = Modifier,
-    secondaryText: String? = null,
-) {
-    val containerColor = status.containerColor()
-    val contentColor = status.onContainerColor()
-
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = containerColor,
-                contentColor = contentColor,
-            ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = contentColor,
-                )
-                MetricTooltip(description = tooltipText, iconTint = contentColor)
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.displaySmall,
-                color = contentColor,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = secondaryText ?: "",
-                style = MaterialTheme.typography.bodySmall,
-                color = contentColor.copy(alpha = 0.7f),
-            )
-        }
-    }
-}
 
 private data class MetricCardData(
     val title: String,

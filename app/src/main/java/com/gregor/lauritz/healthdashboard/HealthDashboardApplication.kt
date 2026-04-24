@@ -15,9 +15,9 @@ import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectReposi
 import com.gregor.lauritz.healthdashboard.data.healthconnect.PermissionStatus
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.BackupPreferencesRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
-import com.gregor.lauritz.healthdashboard.ui.settings.SettingsViewModel.Companion.BACKUP_WORK_NAME
-import com.gregor.lauritz.healthdashboard.workers.BackupWorker
+import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,33 +42,20 @@ class HealthDashboardApplication :
     lateinit var prefsRepository: UserPreferencesRepository
 
     @Inject
-    lateinit var workManager: WorkManager
+    lateinit var backupPrefsRepository: BackupPreferencesRepository
+
+    @Inject
+    lateinit var workerScheduler: WorkerScheduler
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onCreate() {
         super.onCreate()
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
-        appScope.launch(Dispatchers.IO) { ensureBackupWorkerScheduled() }
-    }
-
-    private suspend fun ensureBackupWorkerScheduled() {
-        val prefs = prefsRepository.userPreferences.first()
-        val schedule = prefs.backupSchedule
-        if (schedule == BackupSchedule.MANUAL) return
-        val intervalDays = if (schedule == BackupSchedule.DAILY) 1L else 7L
-        val constraints =
-            Constraints
-                .Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .setRequiresBatteryNotLow(true)
-                .build()
-        val request =
-            PeriodicWorkRequestBuilder<BackupWorker>(intervalDays, TimeUnit.DAYS)
-                .setConstraints(constraints)
-                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
-                .build()
-        workManager.enqueueUniquePeriodicWork(BACKUP_WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
+        appScope.launch(Dispatchers.IO) {
+            val schedule = backupPrefsRepository.backupSchedule.first()
+            workerScheduler.scheduleBackupWorker(schedule)
+        }
     }
 
     override fun onStateChanged(

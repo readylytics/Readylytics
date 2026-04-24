@@ -16,7 +16,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRep
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
-import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -161,14 +161,7 @@ class SleepViewModel
             circadianRepo.result.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
-                initialValue =
-                    CircadianConsistencyResult(
-                        score = null,
-                        medianBedtimeMinutes = null,
-                        medianWakeMinutes = null,
-                        isCalibrating = true,
-                        thresholdMinutes = 30,
-                    ),
+                initialValue = CircadianConsistencyResult.Calibrating,
             )
 
         @OptIn(ExperimentalCoroutinesApi::class)

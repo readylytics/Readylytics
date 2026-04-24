@@ -1,6 +1,8 @@
 package com.gregor.lauritz.healthdashboard.ui.settings
 
 import android.content.Context
+import android.content.Intent
+import com.gregor.lauritz.healthdashboard.MainActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.BackoffPolicy
@@ -10,7 +12,9 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthManager
 import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthState
+import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
+import com.gregor.lauritz.healthdashboard.data.preferences.BackupPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
@@ -19,7 +23,8 @@ import com.gregor.lauritz.healthdashboard.domain.backup.RestoreUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
-import com.gregor.lauritz.healthdashboard.workers.BackupWorker
+import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -180,13 +185,17 @@ sealed interface SettingsEvent {
 class SettingsViewModel
     @Inject
     constructor(
+        @ApplicationContext private val context: Context,
         private val prefsRepo: UserPreferencesRepository,
+        private val appConfigRepo: AppConfigRepository,
+        private val backupPrefsRepo: BackupPreferencesRepository,
         private val scoringRepository: ScoringRepository,
         private val healthSyncUseCase: HealthSyncUseCase,
         private val driveAuthManager: DriveAuthManager,
         private val backupUseCase: BackupUseCase,
         private val restoreUseCase: RestoreUseCase,
         private val userUseCase: UserUseCase,
+        private val workerScheduler: WorkerScheduler,
         private val workManager: WorkManager,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(SettingsUiState())
@@ -271,11 +280,11 @@ class SettingsViewModel
                     }
                 is SettingsEvent.SyncPreferenceChanged ->
                     viewModelScope.launch {
-                        prefsRepo.updateSyncPreference(event.pref)
+                        appConfigRepo.updateSyncPreference(event.pref)
                     }
                 is SettingsEvent.SyncIntervalChanged ->
                     viewModelScope.launch {
-                        prefsRepo.updateSyncIntervalHours(event.hours)
+                        appConfigRepo.updateSyncIntervalHours(event.hours)
                     }
                 is SettingsEvent.MaxHeartRateChanged -> {
                     val value = event.text.toIntOrNull()
@@ -359,7 +368,7 @@ class SettingsViewModel
                     }
                 is SettingsEvent.AppThemeChanged ->
                     viewModelScope.launch {
-                        prefsRepo.updateAppTheme(event.theme)
+                        appConfigRepo.updateAppTheme(event.theme)
                     }
 
                 is SettingsEvent.DriveSignIn ->
@@ -374,8 +383,8 @@ class SettingsViewModel
 
                 is SettingsEvent.BackupScheduleChanged ->
                     viewModelScope.launch {
-                        prefsRepo.updateBackupSchedule(event.schedule)
-                        rescheduleBackupWorker(event.schedule)
+                        backupPrefsRepo.updateBackupSchedule(event.schedule)
+                        workerScheduler.scheduleBackupWorker(event.schedule)
                     }
 
                 SettingsEvent.BackupNow ->
@@ -411,7 +420,23 @@ class SettingsViewModel
                     val dir = _uiState.value.pendingRestoreDir ?: return
                     _uiState.update { it.copy(showRestoreConfirmDialog = false, isRestoring = true) }
                     viewModelScope.launch {
-                        restoreUseCase.applyRestore(dir)
+                        when (val result = restoreUseCase.applyRestore(dir)) {
+                            RestoreUseCase.RestoreResult.SuccessRequiresRestart -> {
+                                val restartIntent = Intent(context, MainActivity::class.java).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                }
+                                context.startActivity(restartIntent)
+                                // We still need to terminate the current process to ensure
+                                // that the app is fully re-initialized from the new database.
+                                kotlin.system.exitProcess(0)
+                            }
+                            is RestoreUseCase.RestoreResult.Failure -> {
+                                _uiState.update { it.copy(isRestoring = false, driveError = result.cause.message) }
+                            }
+                            RestoreUseCase.RestoreResult.Success -> {
+                                _uiState.update { it.copy(isRestoring = false) }
+                            }
+                        }
                     }
                 }
 
@@ -443,31 +468,5 @@ class SettingsViewModel
                     _uiState.update { it.copy(driveError = e.message ?: "Sign-in failed") }
                 }
             }
-        }
-
-        private fun rescheduleBackupWorker(schedule: BackupSchedule) {
-            workManager.cancelUniqueWork(BACKUP_WORK_NAME)
-            if (schedule == BackupSchedule.MANUAL) return
-            val intervalDays = if (schedule == BackupSchedule.DAILY) 1L else 7L
-            val constraints =
-                Constraints
-                    .Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .setRequiresBatteryNotLow(true)
-                    .build()
-            val request =
-                PeriodicWorkRequestBuilder<BackupWorker>(intervalDays, TimeUnit.DAYS)
-                    .setConstraints(constraints)
-                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
-                    .build()
-            workManager.enqueueUniquePeriodicWork(
-                BACKUP_WORK_NAME,
-                androidx.work.ExistingPeriodicWorkPolicy.UPDATE,
-                request,
-            )
-        }
-
-        companion object {
-            const val BACKUP_WORK_NAME = "health_backup_periodic"
         }
     }

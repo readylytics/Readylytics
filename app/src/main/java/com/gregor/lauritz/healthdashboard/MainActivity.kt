@@ -19,13 +19,9 @@ import com.gregor.lauritz.healthdashboard.ui.navigation.AppNavHost
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncEvent
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
-import com.gregor.lauritz.healthdashboard.workers.BirthdayCheckWorker
+import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -36,19 +32,13 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var prefsRepo: UserPreferencesRepository
 
-    private fun scheduleBirthdayCheck() {
-        val request = PeriodicWorkRequestBuilder<BirthdayCheckWorker>(1, TimeUnit.DAYS).build()
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-            "birthday_check",
-            ExistingPeriodicWorkPolicy.KEEP,
-            request,
-        )
-    }
+    @Inject
+    lateinit var workerScheduler: WorkerScheduler
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        scheduleBirthdayCheck()
+        workerScheduler.scheduleBirthdayWorker()
         setContent {
             val prefs by prefsRepo.userPreferences.collectAsState(initial = null)
             val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM

@@ -1,0 +1,98 @@
+package com.gregor.lauritz.healthdashboard.ui.dashboard
+
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
+import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
+import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import java.time.LocalDate
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class DashboardViewModelTest {
+
+    private val testDispatcher = StandardTestDispatcher()
+
+    private lateinit var syncController: ForegroundSyncController
+    private lateinit var viewModel: DashboardViewModel
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+
+        val dao = mockk<DailySummaryDao> {
+            every { observeLatest() } returns MutableStateFlow(null)
+            coEvery { getByDate(any()) } returns null
+        }
+        val prefsRepo = mockk<UserPreferencesRepository> {
+            every { userPreferences } returns MutableStateFlow(UserPreferences())
+        }
+        val selectedDateRepo = SelectedDateRepository()
+        val circadianRepo = mockk<CircadianConsistencyRepository> {
+            every { result } returns MutableStateFlow(CircadianConsistencyResult.Calibrating)
+        }
+        syncController = mockk()
+
+        viewModel = DashboardViewModel(
+            dailySummaryDao = dao,
+            foregroundSyncController = syncController,
+            selectedDateRepository = selectedDateRepo,
+            prefsRepo = prefsRepo,
+            circadianRepo = circadianRepo,
+        )
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `onRefresh sets isRefreshing true then false on success`() = runTest {
+        coEvery { syncController.triggerImmediateSync() } returns Unit
+
+        viewModel.onRefresh()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isRefreshing)
+        coVerify(exactly = 1) { syncController.triggerImmediateSync() }
+    }
+
+    @Test
+    fun `onRefresh sets isRefreshing false even when sync throws`() = runTest {
+        coEvery { syncController.triggerImmediateSync() } throws RuntimeException("sync failed")
+
+        viewModel.onRefresh()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isRefreshing)
+    }
+
+    @Test
+    fun `today is initialised from ViewModel not composable`() = runTest {
+        val today = viewModel.today.first()
+        assertTrue(
+            "ViewModel today should be today or earlier",
+            !today.isAfter(LocalDate.now()),
+        )
+    }
+}

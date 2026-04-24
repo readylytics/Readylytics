@@ -46,9 +46,14 @@ object WorkoutMapper {
                 .filter { it.timestampMs in session.startTime.toEpochMilli()..session.endTime.toEpochMilli() }
                 .sortedBy { it.timestampMs }
 
-        for (i in 0 until sessionSamples.size - 1) {
-            val durationMinutes = (sessionSamples[i + 1].timestampMs - sessionSamples[i].timestampMs) / 60_000f
-            val zone = zoneIndex(sessionSamples[i].beatsPerMinute, thresholds)
+        sessionSamples.forEachIndexed { index, sample ->
+            val nextMs = if (index < sessionSamples.lastIndex) {
+                sessionSamples[index + 1].timestampMs
+            } else {
+                session.endTime.toEpochMilli()
+            }
+            val durationMinutes = (nextMs - sample.timestampMs) / 60_000f
+            val zone = zoneIndex(sample.beatsPerMinute, thresholds)
             zoneMinutes[zone] += durationMinutes
         }
 

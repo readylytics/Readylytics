@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
+import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
@@ -53,7 +54,6 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
-import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.fill
 import com.patrykandpatrick.vico.core.cartesian.Zoom
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
@@ -61,7 +61,6 @@ import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
-import com.patrykandpatrick.vico.core.common.component.LineComponent
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -321,9 +320,9 @@ private fun HrChart(
         }
     }
 
-    val labelColor = MaterialTheme.colorScheme.onSurface
-    val labelComponent = rememberTextComponent(color = labelColor)
-    val guidelineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+    val labelComponent = ChartDefaults.labelTextComponent()
+    val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
+    val guidelineComponent = ChartDefaults.guidelineComponent()
 
     CartesianChartHost(
         chart =
@@ -340,18 +339,18 @@ private fun HrChart(
                     VerticalAxis.rememberStart(
                         label = labelComponent,
                         title = "BPM",
-                        titleComponent = rememberTextComponent(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                        guideline = LineComponent(fill = fill(guidelineColor), thicknessDp = 1f),
+                        titleComponent = axisLabelComponent,
+                        guideline = guidelineComponent,
                     ),
                 bottomAxis =
                     HorizontalAxis.rememberBottom(
                         label = labelComponent,
                         title = "Minutes",
-                        titleComponent = rememberTextComponent(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                        guideline = LineComponent(fill = fill(guidelineColor), thicknessDp = 1f),
+                        titleComponent = axisLabelComponent,
+                        guideline = guidelineComponent,
                         valueFormatter = { _, value, _ -> value.roundToInt().toString() },
                         itemPlacer = remember {
-                            HorizontalAxis.ItemPlacer.aligned(spacing = { xSpacing }) // tick every 10 min
+                            HorizontalAxis.ItemPlacer.aligned(spacing = { xSpacing })
                         },
                     ),
             ),

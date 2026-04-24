@@ -5,17 +5,33 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Room entities and DAOs
+-keep @androidx.room.Entity class *
+-keep class * extends androidx.room.RoomDatabase
+-keep @androidx.room.Dao interface *
+-keepclassmembers class * {
+    @androidx.room.PrimaryKey *;
+    @androidx.room.ColumnInfo *;
+}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Hilt
+-keep @dagger.hilt.android.lifecycle.HiltViewModel class *
+-keep @javax.inject.Inject class *
+-keep class * extends androidx.lifecycle.ViewModel
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Kotlin Serialization
+-keepattributes *Annotation*, InnerClasses
+-keepclassmembers class * {
+    @kotlinx.serialization.SerialName <fields>;
+}
+
+# WorkManager
+-keep class * extends androidx.work.ListenableWorker {
+    <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+
+# Health Connect
+-keep class androidx.health.connect.client.records.** { *; }
+
+# Vico Charts
+-keep class com.patrykandpatrick.vico.** { *; }

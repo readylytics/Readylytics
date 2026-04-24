@@ -89,15 +89,25 @@ class ScoringRepository
             val hrvBaseline = (prefs.hrvBaselineOverride ?: hrvValues.median()).roundToInt()
             val baselineRhrValue = (prefs.rhrBaselineOverride ?: rhrValues.median()).roundToInt()
 
-            val minHrStartTime = session.endTime - prefs.restingHrBeforeMinutes * 60 * 1000L
-            val minHrEndTime = session.endTime + prefs.restingHrAfterMinutes * 60 * 1000L
+            val beforeMs = prefs.restingHrBeforeMinutes * 60 * 1000L
+            val afterMs = prefs.restingHrAfterMinutes * 60 * 1000L
+            val minHrStartTime = session.endTime - beforeMs
+            val minHrEndTime = session.endTime + afterMs
             val currentRestingHr = heartRateDao.getMinHrInRange(minHrStartTime, minHrEndTime)
 
             val sessions = sleepSessionDao.getSince(baselineFrom)
+            // Batch-fetch all HR records covering every session's wake window in one query
+            // instead of N individual getMinHrInRange calls.
+            val batchWindowStart = (sessions.minOfOrNull { it.endTime } ?: session.endTime) - beforeMs
+            val batchWindowEnd = (sessions.maxOfOrNull { it.endTime } ?: session.endTime) + afterMs
+            val allWakeHrRecords = heartRateDao.getByTimeRange(batchWindowStart, batchWindowEnd)
+
             val historicRestingHrs = sessions.filter { it.id != session.id }.mapNotNull { s ->
-                val start = s.endTime - prefs.restingHrBeforeMinutes * 60 * 1000L
-                val end = s.endTime + prefs.restingHrAfterMinutes * 60 * 1000L
-                heartRateDao.getMinHrInRange(start, end)
+                val start = s.endTime - beforeMs
+                val end = s.endTime + afterMs
+                allWakeHrRecords
+                    .filter { it.timestampMs in start..end }
+                    .minOfOrNull { it.beatsPerMinute }
             }
             val restingHrBaseline = if (historicRestingHrs.isNotEmpty()) historicRestingHrs.median().roundToInt() else null
             val restingHrRatio = if (currentRestingHr != null && restingHrBaseline != null && restingHrBaseline > 0) {

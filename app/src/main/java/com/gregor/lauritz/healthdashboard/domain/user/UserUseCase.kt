@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.domain.user
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
+import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.Period
@@ -44,6 +45,6 @@ class UserUseCase @Inject constructor(
     }
 
     fun calculateMaxHeartRate(age: Int): Int {
-        return 220 - age
+        return HeartRateFormulas.estimateMaxHr(age)
     }
 }

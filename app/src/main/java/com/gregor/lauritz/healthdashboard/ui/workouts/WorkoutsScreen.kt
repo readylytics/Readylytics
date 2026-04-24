@@ -35,10 +35,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
-import com.gregor.lauritz.healthdashboard.ui.common.DateFormatUtils
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
+import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
-import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
+import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
+import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
@@ -67,7 +68,6 @@ import com.patrykandpatrick.vico.core.common.data.ExtraStore
 import com.patrykandpatrick.vico.core.common.component.LineComponent
 import com.patrykandpatrick.vico.core.common.shape.CorneredShape
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.ceil
@@ -128,7 +128,7 @@ fun WorkoutsScreen(
             SectionHeader(title = "History")
         }
 
-        items(uiState.recentWorkouts) { workout ->
+        items(uiState.recentWorkouts, key = { it.id }) { workout ->
             WorkoutHistoryItem(
                 workout = workout,
                 onClick = { onWorkoutClick(workout.id) },
@@ -273,12 +273,9 @@ private fun AcwrChart(
     modifier: Modifier = Modifier,
 ) {
     val dotColor = MaterialTheme.colorScheme.primary
-    val axisLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val labelColor = MaterialTheme.colorScheme.onSurface
-    val guidelineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-    val labelComponent = rememberTextComponent(color = labelColor)
-    val trimpTitleComponent = rememberTextComponent(color = axisLabelColor)
-    val strainTitleComponent = rememberTextComponent(color = axisLabelColor)
+    val labelComponent = ChartDefaults.labelTextComponent()
+    val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
+    val guidelineComponent = ChartDefaults.guidelineComponent()
     val trimpAxisFormatter = remember { CartesianValueFormatter { _, value, _ -> value.toInt().toString() } }
     val ratioAxisFormatter = remember { CartesianValueFormatter { _, value, _ -> "%.2f".format(value) } }
 
@@ -318,17 +315,7 @@ private fun AcwrChart(
             }
         }
 
-    val dateFormatter =
-        remember(rangeStartMs) { SimpleDateFormat(DateFormatUtils.DATE_FORMAT_SHORT, Locale.getDefault()) }
-    val xAxisFormatter =
-        remember(rangeStartMs) {
-            CartesianValueFormatter { _, value, _ ->
-                val cal = Calendar.getInstance()
-                cal.timeInMillis = rangeStartMs
-                cal.add(Calendar.DAY_OF_YEAR, value.toInt())
-                dateFormatter.format(cal.time)
-            }
-        }
+    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
 
     LaunchedEffect(trimpPoints, ratioPoints) {
         modelProducer.runTransaction {
@@ -370,16 +357,16 @@ private fun AcwrChart(
                     VerticalAxis.rememberStart(
                         label = labelComponent,
                         valueFormatter = trimpAxisFormatter,
-                        titleComponent = trimpTitleComponent,
+                        titleComponent = axisLabelComponent,
                         title = "TRIMP",
                         itemPlacer = trimpAxisItemPlacer,
-                        guideline = LineComponent(fill = fill(guidelineColor), thicknessDp = 1f),
+                        guideline = guidelineComponent,
                     ),
                 endAxis =
                     VerticalAxis.rememberEnd(
                         label = labelComponent,
                         valueFormatter = ratioAxisFormatter,
-                        titleComponent = strainTitleComponent,
+                        titleComponent = axisLabelComponent,
                         title = "Strain",
                         itemPlacer = ratioAxisItemPlacer,
                         guideline = null,
@@ -388,21 +375,8 @@ private fun AcwrChart(
                     HorizontalAxis.rememberBottom(
                         label = labelComponent,
                         valueFormatter = xAxisFormatter,
-                        itemPlacer =
-                            remember(rangeDays) {
-                                if (rangeDays == 7) {
-                                    HorizontalAxis.ItemPlacer.aligned(
-                                        spacing = { 2 },
-                                        addExtremeLabelPadding = true,
-                                    )
-                                } else {
-                                    HorizontalAxis.ItemPlacer.aligned(
-                                        spacing = { 5 },
-                                        addExtremeLabelPadding = true,
-                                    )
-                                }
-                            },
-                        guideline = LineComponent(fill = fill(guidelineColor), thicknessDp = 1f),
+                        itemPlacer = remember(rangeDays) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                        guideline = guidelineComponent,
                     ),
             ),
         modelProducer = modelProducer,
@@ -424,18 +398,6 @@ private fun EmptyChartPlaceholder(modifier: Modifier = Modifier) {
     }
 }
 
-@Composable
-private fun SectionHeader(
-    title: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-    )
-}
 
 @Composable
 private fun WorkoutHistoryItem(

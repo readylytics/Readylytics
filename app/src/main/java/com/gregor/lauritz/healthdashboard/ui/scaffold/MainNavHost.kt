@@ -33,7 +33,9 @@ fun MainNavHost(
         enterTransition = {
             val initialIndex = getTabIndex(initialState.destination)
             val targetIndex = getTabIndex(targetState.destination)
-            val direction = if (targetIndex > initialIndex) {
+            val direction = if (targetIndex > initialIndex ||
+                (targetIndex == initialIndex && targetState.destination.hasRoute(AppDestination.WorkoutDetail::class))
+            ) {
                 AnimatedContentTransitionScope.SlideDirection.Start
             } else {
                 AnimatedContentTransitionScope.SlideDirection.End
@@ -43,7 +45,9 @@ fun MainNavHost(
         exitTransition = {
             val initialIndex = getTabIndex(initialState.destination)
             val targetIndex = getTabIndex(targetState.destination)
-            val direction = if (targetIndex > initialIndex) {
+            val direction = if (targetIndex > initialIndex ||
+                (targetIndex == initialIndex && targetState.destination.hasRoute(AppDestination.WorkoutDetail::class))
+            ) {
                 AnimatedContentTransitionScope.SlideDirection.Start
             } else {
                 AnimatedContentTransitionScope.SlideDirection.End

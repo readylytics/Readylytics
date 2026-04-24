@@ -36,7 +36,8 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRes
 import com.gregor.lauritz.healthdashboard.domain.scoring.toStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
-import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
+import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
+import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
@@ -51,8 +52,10 @@ fun DashboardRoute(
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val today by viewModel.today.collectAsStateWithLifecycle()
     DashboardScreen(
         uiState = uiState,
+        today = today,
         onRefresh = viewModel::onRefresh,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
@@ -65,6 +68,7 @@ fun DashboardRoute(
 @Composable
 fun DashboardScreen(
     uiState: DashboardUiState,
+    today: LocalDate,
     onRefresh: () -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
@@ -73,13 +77,6 @@ fun DashboardScreen(
     modifier: Modifier = Modifier,
 ) {
     val summary = uiState.summary
-    var today by remember { mutableStateOf(LocalDate.now()) }
-
-    LifecycleResumeEffect(Unit) {
-        today = LocalDate.now()
-        onPauseOrDispose {}
-    }
-
     PullToRefreshBox(
         isRefreshing = uiState.isRefreshing,
         onRefresh = onRefresh,
@@ -221,15 +218,21 @@ private fun DashboardCircadianCard(
     val containerColor = status.containerColor()
     val contentColor = status.onContainerColor()
 
-    val scoreText = result.score?.let { "${it.toInt()}%" } ?: "—"
-    val windowText =
-        if (result.medianBedtimeMinutes != null && result.medianWakeMinutes != null) {
+    val scoreText = when (result) {
+        is CircadianConsistencyResult.Calibrating -> "Calibrating"
+        is CircadianConsistencyResult.Ready -> "${result.score.toInt()}%"
+    }
+    val windowText = when (result) {
+        is CircadianConsistencyResult.Calibrating -> ""
+        is CircadianConsistencyResult.Ready ->
             "${result.medianBedtimeMinutes.toTimeString()}→${result.medianWakeMinutes.toTimeString()}"
-        } else {
-            ""
-        }
+    }
 
-    val tooltipText =
+    val tooltipText = remember(result) {
+        val thresholdMinutes = when (result) {
+            is CircadianConsistencyResult.Calibrating -> 30
+            is CircadianConsistencyResult.Ready -> result.thresholdMinutes
+        }
         buildString {
             append("Measures how regular your sleep schedule is.\n\n")
             append("High consistency stabilizes your internal clock, improving deep sleep and energy levels.\n\n")
@@ -237,8 +240,9 @@ private fun DashboardCircadianCard(
             append("• 60–79%: Neutral\n")
             append("• 40–59%: Warning\n")
             append("• < 40%: Poor\n\n")
-            append("Consistency Window: ±${result.thresholdMinutes} min grace period before score drops.")
+            append("Consistency Window: ±$thresholdMinutes min grace period before score drops.")
         }
+    }
 
     Card(
         onClick = onNavigateToSleep,
@@ -265,7 +269,7 @@ private fun DashboardCircadianCard(
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = if (result.isCalibrating && result.score == null) "Calibrating" else scoreText,
+                text = scoreText,
                 style = MaterialTheme.typography.displaySmall,
                 color = contentColor,
             )
@@ -303,7 +307,7 @@ private fun MetricCardGrid(
                     MetricCard(
                         title = card.title,
                         value = card.value,
-                        unit = card.unit,
+                        secondaryText = card.unit,
                         status = card.status,
                         onClick = onClick,
                         tooltip = card.tooltip,
@@ -316,76 +320,4 @@ private fun MetricCardGrid(
             }
         }
     }
-}
-
-private val StaticEmptyLambda: () -> Unit = {}
-
-@Composable
-private fun MetricCard(
-    title: String,
-    value: String,
-    unit: String,
-    status: MetricStatus,
-    onClick: (() -> Unit)?,
-    tooltip: String,
-    modifier: Modifier = Modifier,
-) {
-    val containerColor = status.containerColor()
-    val contentColor = status.onContainerColor()
-
-    Card(
-        onClick = onClick ?: StaticEmptyLambda,
-        enabled = onClick != null,
-        modifier =
-            modifier.let {
-                if (onClick != null) {
-                    it.semantics {
-                        role = Role.Button
-                    }
-                } else {
-                    it
-                }
-            },
-        shape = RoundedCornerShape(16.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = containerColor,
-                contentColor = contentColor,
-                disabledContainerColor = containerColor,
-                disabledContentColor = contentColor,
-            ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = contentColor,
-                )
-                MetricTooltip(description = tooltip, iconTint = contentColor)
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.displaySmall,
-                color = contentColor,
-            )
-            Text(
-                text = unit,
-                style = MaterialTheme.typography.bodySmall,
-                color = contentColor.copy(alpha = 0.7f),
-            )
-        }
-    }
-}
-
-private fun formatSleepDuration(minutes: Int?): String {
-    if (minutes == null) return "—"
-    val hours = minutes / 60
-    val mins = minutes % 60
-    return if (mins == 0) "${hours}h" else "${hours}h ${mins}m"
 }

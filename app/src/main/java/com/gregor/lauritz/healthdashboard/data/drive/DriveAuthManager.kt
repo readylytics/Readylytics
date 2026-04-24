@@ -10,6 +10,7 @@ import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.gregor.lauritz.healthdashboard.data.preferences.BackupPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -34,6 +35,7 @@ class DriveAuthManager
     @Inject
     constructor(
         private val prefsRepo: UserPreferencesRepository,
+        private val backupPrefsRepo: BackupPreferencesRepository,
     ) {
         fun observeAuthState(): Flow<DriveAuthState> =
             prefsRepo.userPreferences.map { prefs ->
@@ -71,7 +73,7 @@ class DriveAuthManager
                             throw IllegalStateException("No email returned from Google Sign-In")
                         }
 
-                    prefsRepo.updateDriveAccountEmail(email)
+                    backupPrefsRepo.updateDriveAccountEmail(email)
                     DriveAuthState.SignedIn(email)
                 }
             }
@@ -107,6 +109,6 @@ class DriveAuthManager
         suspend fun signOut(context: Context) {
             val credentialManager = CredentialManager.create(context)
             credentialManager.clearCredentialState(ClearCredentialStateRequest())
-            prefsRepo.updateDriveAccountEmail(null)
+            backupPrefsRepo.updateDriveAccountEmail(null)
         }
     }

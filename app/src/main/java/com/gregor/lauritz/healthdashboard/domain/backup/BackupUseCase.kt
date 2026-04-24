@@ -5,6 +5,7 @@ import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthManager
 import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthState
 import com.gregor.lauritz.healthdashboard.data.drive.GoogleDriveRepository
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
+import com.gregor.lauritz.healthdashboard.data.preferences.BackupPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ class BackupUseCase
         private val driveRepository: GoogleDriveRepository,
         private val healthDatabase: HealthDatabase,
         private val prefsRepo: UserPreferencesRepository,
+        private val backupPrefsRepo: BackupPreferencesRepository,
     ) {
         suspend fun execute(): Result<Unit> =
             withContext(Dispatchers.IO) {
@@ -59,7 +61,7 @@ class BackupUseCase
                     existing.forEach { driveRepository.deleteFile(accessToken, it.id) }
 
                     driveRepository.uploadBackup(accessToken, zipFile)
-                    prefsRepo.updateLastBackupTimestamp(System.currentTimeMillis())
+                    backupPrefsRepo.updateLastBackupTimestamp(System.currentTimeMillis())
 
                     tempDir.deleteRecursively()
                     zipFile.delete()

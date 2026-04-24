@@ -41,6 +41,10 @@ object ScoringConstants {
 
         const val WEIGHT_DEEP_COMPONENT = 0.5f
         const val WEIGHT_REM_COMPONENT = 0.5f
+
+        const val DURATION_OPTIMAL_RATIO = 0.9f
+        const val DURATION_NEUTRAL_RATIO = 0.8f
+        const val DURATION_WARNING_RATIO = 0.7f
     }
 
     object Restoration {

@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.settings
 
+import android.os.Parcelable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -52,10 +53,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
+import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
+import kotlinx.parcelize.Parcelize
 import java.text.DateFormat
 import java.util.Date
 import kotlin.math.roundToInt
+
+@Parcelize
+data class SettingsExpandState(
+    val genderExpanded: Boolean = false,
+) : Parcelable
 
 @Composable
 fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
@@ -72,6 +81,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
 
     if (uiState.showRestoreConfirmDialog) {
         AlertDialog(
@@ -87,34 +97,6 @@ fun SettingsScreen(
                 TextButton(onClick = { onEvent(SettingsEvent.RestoreDismissed) }) { Text("Cancel") }
             },
         )
-    }
-
-    var sleepGoalValue by rememberSaveable(uiState.goalSleepHours) {
-        mutableFloatStateOf(uiState.goalSleepHours)
-    }
-    var hrvText by rememberSaveable(uiState.hrvBaselineOverride) {
-        mutableStateOf(uiState.hrvBaselineOverride?.toInt()?.toString() ?: "")
-    }
-    var rhrText by rememberSaveable(uiState.rhrBaselineOverride) {
-        mutableStateOf(uiState.rhrBaselineOverride?.toInt()?.toString() ?: "")
-    }
-    var maxHrText by rememberSaveable(uiState.maxHeartRate) {
-        mutableStateOf(uiState.maxHeartRate.toString())
-    }
-    var birthDayText by rememberSaveable(uiState.birthDay) {
-        mutableStateOf(uiState.birthDay.toString())
-    }
-    var birthMonthText by rememberSaveable(uiState.birthMonth) {
-        mutableStateOf(uiState.birthMonth.toString())
-    }
-    var birthYearText by rememberSaveable(uiState.birthYear) {
-        mutableStateOf(uiState.birthYear.toString())
-    }
-    var beforeMinutesText by rememberSaveable(uiState.restingHrBeforeMinutes) {
-        mutableStateOf(uiState.restingHrBeforeMinutes.toString())
-    }
-    var afterMinutesText by rememberSaveable(uiState.restingHrAfterMinutes) {
-        mutableStateOf(uiState.restingHrAfterMinutes.toString())
     }
 
     LazyColumn(
@@ -135,12 +117,7 @@ fun SettingsScreen(
         // Sync
         item { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
         item { SectionHeader("Health Connect Sync") }
-        item { SyncPreferenceItem(uiState = uiState, onEvent = onEvent) }
-        item {
-            AnimatedVisibility(visible = uiState.syncPreference == SyncPreference.BY_TIME) {
-                SyncIntervalItem(uiState = uiState, onEvent = onEvent)
-            }
-        }
+        item { SyncSettingsSection(uiState = uiState, onEvent = onEvent) }
 
         // Appearance
         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
@@ -150,394 +127,455 @@ fun SettingsScreen(
         // Sleep
         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
         item { SectionHeader("Sleep") }
-        item {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Sleep Goal", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(
-                        text = sleepGoalValue.toSleepHoursText(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                Slider(
-                    value = sleepGoalValue,
-                    onValueChange = { sleepGoalValue = it },
-                    onValueChangeFinished = {
-                        onEvent(SettingsEvent.GoalSleepHoursChanged(sleepGoalValue))
-                    },
-                    valueRange = 4f..12f,
-                    steps = 15,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-        item {
-            ThresholdSliderItem(
-                label = "Consistency Window",
-                value = uiState.consistencyThresholdMinutes.toFloat(),
-                onValueChange = { onEvent(SettingsEvent.ConsistencyThresholdChanged(it.toInt())) },
-                valueRange = 0f..90f,
-                steps = 17,
-                displayValue = "${uiState.consistencyThresholdMinutes} min",
-                description = "±Grace period (in minutes) around your median bedtime and wake time before your score starts to drop. Default: 30 min.",
-            )
-        }
-        item {
-            ThresholdSliderItem(
-                label = "Evaluation Period",
-                value = uiState.consistencyEvaluationDays.toFloat(),
-                onValueChange = { onEvent(SettingsEvent.ConsistencyEvaluationDaysChanged(it.toInt())) },
-                valueRange = 3f..14f,
-                steps = 10,
-                displayValue = "${uiState.consistencyEvaluationDays} days",
-                description = "Number of recent sleep sessions scored to compute your current consistency. Default: 7.",
-            )
-        }
-        item {
-            ThresholdSliderItem(
-                label = "Baseline Window",
-                value = uiState.consistencyBaselineDays.toFloat(),
-                onValueChange = { onEvent(SettingsEvent.ConsistencyBaselineDaysChanged(it.toInt())) },
-                valueRange = 3f..30f,
-                steps = 26,
-                displayValue = "${uiState.consistencyBaselineDays} sessions",
-                description = "Number of past sleep sessions used to calculate your median bedtime anchor. Default: 14.",
-            )
-        }
+        item { SleepSettingsSection(uiState = uiState, onEvent = onEvent) }
 
         // Thresholds
         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
         item { SectionHeader("Thresholds") }
-        item {
-            ThresholdSliderItem(
-                label = "HRV Optimal",
-                value = uiState.hrvOptimalThreshold,
-                onValueChange = { onEvent(SettingsEvent.HrvOptimalThresholdChanged(it)) },
-                valueRange = 1.0f..1.2f,
-                description = "HRV ratio to baseline to be considered Optimal (e.g. 100-120%).",
-            )
-        }
-        item {
-            ThresholdSliderItem(
-                label = "HRV Warning",
-                value = uiState.hrvWarningThreshold,
-                onValueChange = { onEvent(SettingsEvent.HrvWarningThresholdChanged(it)) },
-                valueRange = 0.8f..1.0f,
-                description = "HRV ratio to baseline to be considered Warning (e.g. 80-100%).",
-            )
-        }
-        item { Spacer(modifier = Modifier.height(8.dp)) }
-        item {
-            ThresholdSliderItem(
-                label = "RHR Optimal",
-                value = uiState.rhrOptimalThreshold,
-                onValueChange = { onEvent(SettingsEvent.RhrOptimalThresholdChanged(it)) },
-                valueRange = 0.8f..1.0f,
-                description = "RHR ratio to baseline to be considered Optimal (e.g. 80-100%).",
-            )
-        }
-        item {
-            ThresholdSliderItem(
-                label = "RHR Warning",
-                value = uiState.rhrWarningThreshold,
-                onValueChange = { onEvent(SettingsEvent.RhrWarningThresholdChanged(it)) },
-                valueRange = 1.0f..1.2f,
-                description = "RHR ratio to baseline to be considered Warning (e.g. 100-120%).",
-            )
-        }
+        item { ThresholdSettingsSection(uiState = uiState, onEvent = onEvent) }
 
         // Heart Rate Zones
         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
         item { SectionHeader("Heart Rate Zones") }
         item {
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Auto-calculate Max HR", style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            "Uses age (220 - age) if enabled",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = uiState.autoCalculateMaxHr,
-                        onCheckedChange = { onEvent(SettingsEvent.AutoCalculateMaxHrChanged(it)) }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                AnimatedVisibility(visible = uiState.autoCalculateMaxHr) {
-                    Column {
-                        Text(
-                            "Date of Birth",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            OutlinedTextField(
-                                value = birthDayText,
-                                onValueChange = { v ->
-                                    birthDayText = v.filter { it.isDigit() }.take(2)
-                                    val d = birthDayText.toIntOrNull() ?: return@OutlinedTextField
-                                    val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
-                                    val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
-                                    if (d in 1..31 && m in 1..12 && y in 1900..9999) {
-                                        onEvent(SettingsEvent.BirthdayChanged(d, m, y))
-                                    }
-                                },
-                                label = { Text("Day") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            OutlinedTextField(
-                                value = birthMonthText,
-                                onValueChange = { v ->
-                                    birthMonthText = v.filter { it.isDigit() }.take(2)
-                                    val d = birthDayText.toIntOrNull() ?: return@OutlinedTextField
-                                    val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
-                                    val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
-                                    if (d in 1..31 && m in 1..12 && y in 1900..9999) {
-                                        onEvent(SettingsEvent.BirthdayChanged(d, m, y))
-                                    }
-                                },
-                                label = { Text("Month") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            OutlinedTextField(
-                                value = birthYearText,
-                                onValueChange = { v ->
-                                    birthYearText = v.filter { it.isDigit() }.take(4)
-                                    val d = birthDayText.toIntOrNull() ?: return@OutlinedTextField
-                                    val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
-                                    val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
-                                    if (d in 1..31 && m in 1..12 && y in 1900..9999) {
-                                        onEvent(SettingsEvent.BirthdayChanged(d, m, y))
-                                    }
-                                },
-                                label = { Text("Year") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.weight(1.4f),
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "Age: ${uiState.age} (auto-calculated)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        GenderSelector(
-                            selectedGender = uiState.gender,
-                            onGenderSelected = { onEvent(SettingsEvent.GenderChanged(it)) }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = maxHrText,
-                    onValueChange = {
-                        maxHrText = it
-                        onEvent(SettingsEvent.MaxHeartRateChanged(it))
-                    },
-                    label = { Text("Max Heart Rate (bpm)") },
-                    enabled = !uiState.autoCalculateMaxHr,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    supportingText = {
-                        if (uiState.autoCalculateMaxHr) {
-                            Text("Calculated from age")
-                        } else {
-                            Text("Manual override")
-                        }
-                    },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Manual Zone Editing", style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            "Customize percentage thresholds",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = uiState.manualZoneEditing,
-                        onCheckedChange = { onEvent(SettingsEvent.ManualZoneEditingChanged(it)) }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (uiState.manualZoneEditing) {
-                    ZoneEditingSection(uiState = uiState, onEvent = onEvent)
-                } else {
-                    Text(
-                        "Calculated Zones",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    HeartRateZonesDisplay(
-                        maxHr = uiState.maxHeartRate,
-                        z1p = uiState.zone1MaxPercent,
-                        z2p = uiState.zone2MaxPercent,
-                        z3p = uiState.zone3MaxPercent,
-                        z4p = uiState.zone4MaxPercent
-                    )
-                }
-
-                Text(
-                    "Zones are used for TRIMP and workout intensity tracking.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
+            HeartRateZoneSection(
+                uiState = uiState,
+                onEvent = onEvent,
+                expandState = expandState,
+                onExpandStateChange = { expandState = it }
+            )
         }
 
         // Advanced
         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
         item { SectionHeader("Advanced") }
+        item { AdvancedSettingsSection(uiState = uiState, onEvent = onEvent) }
 
-        // Baselines
-        item {
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        item { Spacer(modifier = Modifier.height(16.dp)) }
+    }
+}
+
+@Composable
+private fun SyncSettingsSection(
+    uiState: SettingsUiState,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    Column {
+        SyncPreferenceItem(uiState = uiState, onEvent = onEvent)
+        AnimatedVisibility(visible = uiState.syncPreference == SyncPreference.BY_TIME) {
+            SyncIntervalItem(uiState = uiState, onEvent = onEvent)
+        }
+    }
+}
+
+@Composable
+private fun SleepSettingsSection(
+    uiState: SettingsUiState,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var sleepGoalValue by rememberSaveable(uiState.goalSleepHours) {
+        mutableFloatStateOf(uiState.goalSleepHours)
+    }
+
+    Column {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Sleep Goal", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    "Baseline Overrides",
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    text = sleepGoalValue.toSleepHoursText(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
                 )
-                OutlinedTextField(
-                    value = hrvText,
-                    onValueChange = {
-                        hrvText = it
-                        onEvent(SettingsEvent.HrvBaselineChanged(it))
-                    },
-                    label = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("HRV Baseline (ms)")
-                            MetricTooltip(
-                                description = "Overrides the 30-day rolling median used in scoring."
-                            )
-                        }
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    trailingIcon = {
-                        if (hrvText.isNotEmpty()) {
-                            IconButton(onClick = {
-                                hrvText = ""
-                                onEvent(SettingsEvent.HrvBaselineCleared)
-                            }) {
-                                Icon(Icons.Filled.Clear, contentDescription = "Clear")
+            }
+            Slider(
+                value = sleepGoalValue,
+                onValueChange = { sleepGoalValue = it },
+                onValueChangeFinished = {
+                    onEvent(SettingsEvent.GoalSleepHoursChanged(sleepGoalValue))
+                },
+                valueRange = 4f..12f,
+                steps = 15,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        ThresholdSliderItem(
+            label = "Consistency Window",
+            value = uiState.consistencyThresholdMinutes.toFloat(),
+            onValueChange = { onEvent(SettingsEvent.ConsistencyThresholdChanged(it.toInt())) },
+            valueRange = 0f..90f,
+            steps = 17,
+            displayValue = "${uiState.consistencyThresholdMinutes} min",
+            description = "±Grace period (in minutes) around your median bedtime and wake time before your score starts to drop. Default: 30 min.",
+        )
+        ThresholdSliderItem(
+            label = "Evaluation Period",
+            value = uiState.consistencyEvaluationDays.toFloat(),
+            onValueChange = { onEvent(SettingsEvent.ConsistencyEvaluationDaysChanged(it.toInt())) },
+            valueRange = 3f..14f,
+            steps = 10,
+            displayValue = "${uiState.consistencyEvaluationDays} days",
+            description = "Number of recent sleep sessions scored to compute your current consistency. Default: 7.",
+        )
+        ThresholdSliderItem(
+            label = "Baseline Window",
+            value = uiState.consistencyBaselineDays.toFloat(),
+            onValueChange = { onEvent(SettingsEvent.ConsistencyBaselineDaysChanged(it.toInt())) },
+            valueRange = 3f..30f,
+            steps = 26,
+            displayValue = "${uiState.consistencyBaselineDays} sessions",
+            description = "Number of past sleep sessions used to calculate your median bedtime anchor. Default: 14.",
+        )
+    }
+}
+
+@Composable
+private fun ThresholdSettingsSection(
+    uiState: SettingsUiState,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    Column {
+        ThresholdSliderItem(
+            label = "HRV Optimal",
+            value = uiState.hrvOptimalThreshold,
+            onValueChange = { onEvent(SettingsEvent.HrvOptimalThresholdChanged(it)) },
+            valueRange = 1.0f..1.2f,
+            description = "HRV ratio to baseline to be considered Optimal (e.g. 100-120%).",
+        )
+        ThresholdSliderItem(
+            label = "HRV Warning",
+            value = uiState.hrvWarningThreshold,
+            onValueChange = { onEvent(SettingsEvent.HrvWarningThresholdChanged(it)) },
+            valueRange = 0.8f..1.0f,
+            description = "HRV ratio to baseline to be considered Warning (e.g. 80-100%).",
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        ThresholdSliderItem(
+            label = "RHR Optimal",
+            value = uiState.rhrOptimalThreshold,
+            onValueChange = { onEvent(SettingsEvent.RhrOptimalThresholdChanged(it)) },
+            valueRange = 0.8f..1.0f,
+            description = "RHR ratio to baseline to be considered Optimal (e.g. 80-100%).",
+        )
+        ThresholdSliderItem(
+            label = "RHR Warning",
+            value = uiState.rhrWarningThreshold,
+            onValueChange = { onEvent(SettingsEvent.RhrWarningThresholdChanged(it)) },
+            valueRange = 1.0f..1.2f,
+            description = "RHR ratio to baseline to be considered Warning (e.g. 100-120%).",
+        )
+    }
+}
+
+@Composable
+private fun HeartRateZoneSection(
+    uiState: SettingsUiState,
+    onEvent: (SettingsEvent) -> Unit,
+    expandState: SettingsExpandState,
+    onExpandStateChange: (SettingsExpandState) -> Unit,
+) {
+    var maxHrText by rememberSaveable(uiState.maxHeartRate) {
+        mutableStateOf(uiState.maxHeartRate.toString())
+    }
+    var birthDayText by rememberSaveable(uiState.birthDay) {
+        mutableStateOf(uiState.birthDay.toString())
+    }
+    var birthMonthText by rememberSaveable(uiState.birthMonth) {
+        mutableStateOf(uiState.birthMonth.toString())
+    }
+    var birthYearText by rememberSaveable(uiState.birthYear) {
+        mutableStateOf(uiState.birthYear.toString())
+    }
+
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Auto-calculate Max HR", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    "Uses age (220 - age) if enabled",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = uiState.autoCalculateMaxHr,
+                onCheckedChange = { onEvent(SettingsEvent.AutoCalculateMaxHrChanged(it)) }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        AnimatedVisibility(visible = uiState.autoCalculateMaxHr) {
+            Column {
+                Text(
+                    "Date of Birth",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = birthDayText,
+                        onValueChange = { v ->
+                            birthDayText = v.filter { it.isDigit() }.take(2)
+                            val d = birthDayText.toIntOrNull() ?: return@OutlinedTextField
+                            val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
+                            val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
+                            if (d in 1..31 && m in 1..12 && y in 1900..9999) {
+                                onEvent(SettingsEvent.BirthdayChanged(d, m, y))
                             }
-                        }
-                    },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                        },
+                        label = { Text("Day") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedTextField(
+                        value = birthMonthText,
+                        onValueChange = { v ->
+                            birthMonthText = v.filter { it.isDigit() }.take(2)
+                            val d = birthDayText.toIntOrNull() ?: return@OutlinedTextField
+                            val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
+                            val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
+                            if (d in 1..31 && m in 1..12 && y in 1900..9999) {
+                                onEvent(SettingsEvent.BirthdayChanged(d, m, y))
+                            }
+                        },
+                        label = { Text("Month") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedTextField(
+                        value = birthYearText,
+                        onValueChange = { v ->
+                            birthYearText = v.filter { it.isDigit() }.take(4)
+                            val d = birthDayText.toIntOrNull() ?: return@OutlinedTextField
+                            val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
+                            val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
+                            if (d in 1..31 && m in 1..12 && y in 1900..9999) {
+                                onEvent(SettingsEvent.BirthdayChanged(d, m, y))
+                            }
+                        },
+                        label = { Text("Year") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1.4f),
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Age: ${uiState.age} (auto-calculated)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = rhrText,
-                    onValueChange = {
-                        rhrText = it
-                        onEvent(SettingsEvent.RhrBaselineChanged(it))
-                    },
-                    label = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("RHR Baseline (bpm)")
-                            MetricTooltip(
-                                description = "Overrides the 30-day rolling median used in scoring."
-                            )
-                        }
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    trailingIcon = {
-                        if (rhrText.isNotEmpty()) {
-                            IconButton(onClick = {
-                                rhrText = ""
-                                onEvent(SettingsEvent.RhrBaselineCleared)
-                            }) {
-                                Icon(Icons.Filled.Clear, contentDescription = "Clear")
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                GenderSelector(
+                    selectedGender = uiState.gender,
+                    expanded = expandState.genderExpanded,
+                    onExpandedChange = { onExpandStateChange(expandState.copy(genderExpanded = it)) },
+                    onGenderSelected = { onEvent(SettingsEvent.GenderChanged(it)) }
                 )
             }
         }
 
-        item { Spacer(modifier = Modifier.height(16.dp)) }
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Wakeup Resting HR fields
-        item {
+        OutlinedTextField(
+            value = maxHrText,
+            onValueChange = {
+                maxHrText = it
+                onEvent(SettingsEvent.MaxHeartRateChanged(it))
+            },
+            label = { Text("Max Heart Rate (bpm)") },
+            enabled = !uiState.autoCalculateMaxHr,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            supportingText = {
+                if (uiState.autoCalculateMaxHr) {
+                    Text("Calculated from age")
+                } else {
+                    Text("Manual override")
+                }
+            },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Manual Zone Editing", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    "Customize percentage thresholds",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = uiState.manualZoneEditing,
+                onCheckedChange = { onEvent(SettingsEvent.ManualZoneEditingChanged(it)) }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (uiState.manualZoneEditing) {
+            ZoneEditingSection(uiState = uiState, onEvent = onEvent)
+        } else {
+            Text(
+                "Calculated Zones",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            HeartRateZonesDisplay(
+                maxHr = uiState.maxHeartRate,
+                z1p = uiState.zone1MaxPercent,
+                z2p = uiState.zone2MaxPercent,
+                z3p = uiState.zone3MaxPercent,
+                z4p = uiState.zone4MaxPercent
+            )
+        }
+
+        Text(
+            "Zones are used for TRIMP and workout intensity tracking.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+    }
+}
+
+@Composable
+private fun AdvancedSettingsSection(
+    uiState: SettingsUiState,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var hrvText by rememberSaveable(uiState.hrvBaselineOverride) {
+        mutableStateOf(uiState.hrvBaselineOverride?.toInt()?.toString() ?: "")
+    }
+    var rhrText by rememberSaveable(uiState.rhrBaselineOverride) {
+        mutableStateOf(uiState.rhrBaselineOverride?.toInt()?.toString() ?: "")
+    }
+    var beforeMinutesText by rememberSaveable(uiState.restingHrBeforeMinutes) {
+        mutableStateOf(uiState.restingHrBeforeMinutes.toString())
+    }
+    var afterMinutesText by rememberSaveable(uiState.restingHrAfterMinutes) {
+        mutableStateOf(uiState.restingHrAfterMinutes.toString())
+    }
+
+    Column {
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text(
+                "Baseline Overrides",
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             OutlinedTextField(
-                value = beforeMinutesText,
-                onValueChange =
-                    { value ->
-                        beforeMinutesText = value
-                        value.toIntOrNull()?.let { onEvent(SettingsEvent.RestingHrBeforeMinutesChanged(it)) }
-                    },
+                value = hrvText,
+                onValueChange = {
+                    hrvText = it
+                    onEvent(SettingsEvent.HrvBaselineChanged(it))
+                },
                 label = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Resting HR: Minutes Before")
+                        Text("HRV Baseline (ms)")
                         MetricTooltip(
-                            description = "Minutes before sleep end to include in wakeup resting HR calculation (default: 5)."
+                            description = "Overrides the 30-day rolling median used in scoring."
                         )
                     }
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                trailingIcon = {
+                    if (hrvText.isNotEmpty()) {
+                        IconButton(onClick = {
+                            hrvText = ""
+                            onEvent(SettingsEvent.HrvBaselineCleared)
+                        }) {
+                            Icon(Icons.Filled.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
                 singleLine = true,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth()
             )
-        }
-        item { Spacer(modifier = Modifier.height(12.dp)) }
-        item {
+            Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
-                value = afterMinutesText,
-                onValueChange =
-                    { value ->
-                        afterMinutesText = value
-                        value.toIntOrNull()?.let { onEvent(SettingsEvent.RestingHrAfterMinutesChanged(it)) }
-                    },
+                value = rhrText,
+                onValueChange = {
+                    rhrText = it
+                    onEvent(SettingsEvent.RhrBaselineChanged(it))
+                },
                 label = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Resting HR: Minutes After")
+                        Text("RHR Baseline (bpm)")
                         MetricTooltip(
-                            description = "Minutes after sleep end to include in wakeup resting HR calculation (default: 15)."
+                            description = "Overrides the 30-day rolling median used in scoring."
                         )
                     }
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                trailingIcon = {
+                    if (rhrText.isNotEmpty()) {
+                        IconButton(onClick = {
+                            rhrText = ""
+                            onEvent(SettingsEvent.RhrBaselineCleared)
+                        }) {
+                            Icon(Icons.Filled.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
                 singleLine = true,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth()
             )
         }
 
-        item { Spacer(modifier = Modifier.height(16.dp)) }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = beforeMinutesText,
+            onValueChange = { value ->
+                beforeMinutesText = value
+                value.toIntOrNull()?.let { onEvent(SettingsEvent.RestingHrBeforeMinutesChanged(it)) }
+            },
+            label = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Resting HR: Minutes Before")
+                    MetricTooltip(
+                        description = "Minutes before sleep end to include in wakeup resting HR calculation (default: 5)."
+                    )
+                }
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = afterMinutesText,
+            onValueChange = { value ->
+                afterMinutesText = value
+                value.toIntOrNull()?.let { onEvent(SettingsEvent.RestingHrAfterMinutesChanged(it)) }
+            },
+            label = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Resting HR: Minutes After")
+                    MetricTooltip(
+                        description = "Minutes after sleep end to include in wakeup resting HR calculation (default: 15)."
+                    )
+                }
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+        )
     }
 }
 
@@ -642,14 +680,15 @@ private fun ZonePercentageSliderItem(
 @Composable
 private fun GenderSelector(
     selectedGender: String?,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     onGenderSelected: (String?) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
     val genders = listOf("Male", "Female", "Other", "Prefer not to say")
 
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { expanded = it },
+        onExpandedChange = onExpandedChange,
         modifier = Modifier.fillMaxWidth(),
     ) {
         OutlinedTextField(
@@ -665,7 +704,7 @@ private fun GenderSelector(
         )
         ExposedDropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false },
+            onDismissRequest = { onExpandedChange(false) },
         ) {
             genders.forEach { gender ->
                 DropdownMenuItem(
@@ -673,7 +712,7 @@ private fun GenderSelector(
                     onClick =
                         {
                             onGenderSelected(gender)
-                            expanded = false
+                            onExpandedChange(false)
                         },
                 )
             }
@@ -681,134 +720,56 @@ private fun GenderSelector(
                 text = { Text("Clear") },
                 onClick = {
                     onGenderSelected(null)
-                    expanded = false
+                    onExpandedChange(false)
                 }
             )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppThemeItem(
     uiState: SettingsUiState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
+    DropdownPreferenceItem(
+        label = "App Theme",
+        selectedDisplayValue = uiState.appTheme.displayName,
+        options = AppTheme.entries,
+        onOptionSelected = { onEvent(SettingsEvent.AppThemeChanged(it)) },
+        optionLabel = { it.displayName },
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-    ) {
-        OutlinedTextField(
-            value = uiState.appTheme.displayName,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("App Theme") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            modifier =
-                Modifier
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                    .fillMaxWidth(),
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            AppTheme.entries.forEach { theme ->
-                DropdownMenuItem(
-                    text = { Text(theme.displayName) },
-                    onClick =
-                        {
-                            onEvent(SettingsEvent.AppThemeChanged(theme))
-                            expanded = false
-                        },
-                )
-            }
-        }
-    }
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SyncPreferenceItem(
     uiState: SettingsUiState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
+    DropdownPreferenceItem(
+        label = "Foreground Sync",
+        selectedDisplayValue = uiState.syncPreference.displayName,
+        options = SyncPreference.entries,
+        onOptionSelected = { onEvent(SettingsEvent.SyncPreferenceChanged(it)) },
+        optionLabel = { it.displayName },
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-    ) {
-        OutlinedTextField(
-            value = uiState.syncPreference.displayName,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Foreground Sync") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            modifier =
-                Modifier
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                    .fillMaxWidth(),
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            SyncPreference.entries.forEach { pref ->
-                DropdownMenuItem(
-                    text = { Text(pref.displayName) },
-                    onClick =
-                        {
-                            onEvent(SettingsEvent.SyncPreferenceChanged(pref))
-                            expanded = false
-                        },
-                )
-            }
-        }
-    }
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SyncIntervalItem(
     uiState: SettingsUiState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
+    DropdownPreferenceItem(
+        label = "Sync Interval",
+        selectedDisplayValue = "${uiState.syncIntervalHours}h",
+        options = (1..24).toList(),
+        onOptionSelected = { onEvent(SettingsEvent.SyncIntervalChanged(it)) },
+        optionLabel = { "${it}h" },
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-    ) {
-        OutlinedTextField(
-            value = "${uiState.syncIntervalHours}h",
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Sync Interval") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            modifier =
-                Modifier
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                    .fillMaxWidth(),
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            (1..24).forEach { hours ->
-                DropdownMenuItem(
-                    text = { Text("${hours}h") },
-                    onClick =
-                        {
-                            onEvent(SettingsEvent.SyncIntervalChanged(hours))
-                            expanded = false
-                        },
-                )
-            }
-        }
-    }
+    )
 }
 
 @Composable
@@ -1000,42 +961,17 @@ private fun CloudBackupSection(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BackupScheduleItem(
     uiState: SettingsUiState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
+    DropdownPreferenceItem(
+        label = "Auto Backup",
+        selectedDisplayValue = uiState.backupSchedule.displayName,
+        options = BackupSchedule.entries,
+        onOptionSelected = { onEvent(SettingsEvent.BackupScheduleChanged(it)) },
+        optionLabel = { it.displayName },
         modifier = Modifier.fillMaxWidth(),
-    ) {
-        OutlinedTextField(
-            value = uiState.backupSchedule.displayName,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Auto Backup") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            modifier =
-                Modifier
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                    .fillMaxWidth(),
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            BackupSchedule.entries.forEach { schedule ->
-                DropdownMenuItem(
-                    text = { Text(schedule.displayName) },
-                    onClick = {
-                        onEvent(SettingsEvent.BackupScheduleChanged(schedule))
-                        expanded = false
-                    },
-                )
-            }
-        }
-    }
+    )
 }

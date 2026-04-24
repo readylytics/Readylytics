@@ -4,9 +4,11 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
-import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
@@ -16,21 +18,25 @@ import kotlin.math.abs
 private const val MIN_BASELINE_SESSIONS = 3
 private const val NAP_THRESHOLD_MINUTES = 180
 
-data class CircadianConsistencyResult(
-    val score: Float?,
-    val medianBedtimeMinutes: Int?,
-    val medianWakeMinutes: Int?,
-    val isCalibrating: Boolean,
-    val thresholdMinutes: Int,
-)
+sealed class CircadianConsistencyResult {
+    data object Calibrating : CircadianConsistencyResult()
+    data class Ready(
+        val score: Float,
+        val medianBedtimeMinutes: Int,
+        val medianWakeMinutes: Int,
+        val thresholdMinutes: Int,
+    ) : CircadianConsistencyResult()
+}
 
 fun CircadianConsistencyResult.toStatus(): MetricStatus =
-    when {
-        isCalibrating || score == null -> MetricStatus.CALIBRATING
-        score >= 80f -> MetricStatus.OPTIMAL
-        score >= 60f -> MetricStatus.NEUTRAL
-        score >= 40f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
+    when (this) {
+        is CircadianConsistencyResult.Calibrating -> MetricStatus.CALIBRATING
+        is CircadianConsistencyResult.Ready -> when {
+            score >= 80f -> MetricStatus.OPTIMAL
+            score >= 60f -> MetricStatus.NEUTRAL
+            score >= 40f -> MetricStatus.WARNING
+            else -> MetricStatus.POOR
+        }
     }
 
 fun Int.toTimeString(): String {
@@ -47,13 +53,14 @@ class CircadianConsistencyRepository
         private val sleepSessionDao: SleepSessionDao,
         private val prefsRepo: UserPreferencesRepository,
     ) {
-        val result: Flow<CircadianConsistencyResult> = run {
-            val fromMs = System.currentTimeMillis() - 60L * 24 * 60 * 60 * 1000L
-            combine(
-                sleepSessionDao.observeSince(fromMs),
-                prefsRepo.userPreferences,
-            ) { sessions, prefs -> compute(sessions, prefs) }
-        }
+        @OptIn(ExperimentalCoroutinesApi::class)
+        val result: Flow<CircadianConsistencyResult> =
+            prefsRepo.userPreferences.flatMapLatest { prefs ->
+                val fromMs = System.currentTimeMillis() - 60L * 24 * 60 * 60 * 1000L
+                sleepSessionDao.observeSince(fromMs).map { sessions ->
+                    compute(sessions, prefs)
+                }
+            }
 
         private fun compute(
             sessions: List<SleepSessionEntity>,
@@ -71,13 +78,7 @@ class CircadianConsistencyRepository
             val baselineSessions = validSessions.take(baselineCount)
 
             if (baselineSessions.size < MIN_BASELINE_SESSIONS) {
-                return CircadianConsistencyResult(
-                    score = null,
-                    medianBedtimeMinutes = null,
-                    medianWakeMinutes = null,
-                    isCalibrating = true,
-                    thresholdMinutes = threshold,
-                )
+                return CircadianConsistencyResult.Calibrating
             }
 
             val medianBed = baselineSessions.map { normalizeMinutes(it.startTime) }.median()
@@ -85,13 +86,7 @@ class CircadianConsistencyRepository
 
             val evalSessions = validSessions.take(evalCount)
             if (evalSessions.isEmpty()) {
-                return CircadianConsistencyResult(
-                    score = null,
-                    medianBedtimeMinutes = medianBed,
-                    medianWakeMinutes = medianWake,
-                    isCalibrating = true,
-                    thresholdMinutes = threshold,
-                )
+                return CircadianConsistencyResult.Calibrating
             }
 
             val dailyScores =
@@ -103,11 +98,10 @@ class CircadianConsistencyRepository
                     (bedScore + wakeScore) / 2f
                 }
 
-            return CircadianConsistencyResult(
+            return CircadianConsistencyResult.Ready(
                 score = dailyScores.average().toFloat(),
                 medianBedtimeMinutes = medianBed,
                 medianWakeMinutes = medianWake,
-                isCalibrating = false,
                 thresholdMinutes = threshold,
             )
         }

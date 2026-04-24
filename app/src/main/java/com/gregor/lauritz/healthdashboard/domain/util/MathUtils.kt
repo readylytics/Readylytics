@@ -30,6 +30,7 @@ fun List<Int>.median(): Float {
 fun List<Float>.stdev(): Float {
     if (size < 2) return 0f
     val avg = mean()
-    val variance = sumOf { ((it - avg) * (it - avg)).toDouble() }.toFloat() / size
+    // Bessel's correction (n-1) for sample standard deviation
+    val variance = sumOf { ((it - avg) * (it - avg)).toDouble() }.toFloat() / (size - 1)
     return sqrt(variance)
 }

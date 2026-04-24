@@ -5,12 +5,16 @@ import com.gregor.lauritz.healthdashboard.data.healthconnect.HeartRateMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HrvMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.SleepDataMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.WorkoutMapper
+import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
+import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.LocalDate
@@ -23,11 +27,13 @@ class HealthSyncUseCase
     @Inject
     constructor(
         private val hcRepo: HealthConnectRepository,
+        private val db: HealthDatabase,
         private val sleepDao: SleepSessionDao,
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
         private val prefsRepo: UserPreferencesRepository,
+        private val appConfigRepo: AppConfigRepository,
         private val scoringRepository: ScoringRepository,
     ) {
         suspend fun sync(windowDays: Int = 8): Result<Unit> =
@@ -43,10 +49,12 @@ class HealthSyncUseCase
 
                 val prefs = prefsRepo.userPreferences.first()
 
-                val sleepEntities = syncSleep(from, to)
-                val workoutEntities = syncWorkouts(from, to, prefs)
-                syncHeartRate(from, to, sleepEntities, workoutEntities, prefs)
-                syncHrv(from, to, sleepEntities)
+                db.withTransaction {
+                    val sleepEntities = syncSleep(from, to)
+                    val workoutEntities = syncWorkouts(from, to, prefs)
+                    syncHeartRate(from, to, sleepEntities, workoutEntities, prefs)
+                    syncHrv(from, to, sleepEntities)
+                }
                 updateCalculatedMetrics(prefs)
 
                 val today = LocalDate.now(zoneId)
@@ -54,7 +62,7 @@ class HealthSyncUseCase
                     scoringRepository.computeAndPersistDailySummary(today.minusDays(i.toLong()))
                 }
 
-                prefsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
+                appConfigRepo.updateLastSyncTimestamp(System.currentTimeMillis())
             }
 
         suspend fun catchUpSync(): Result<Unit> = sync(windowDays = 60)
@@ -127,7 +135,7 @@ class HealthSyncUseCase
         private suspend fun updateCalculatedMetrics(prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences) {
             // Always recalculate Max HR if auto-calculate is enabled (in case age changed via onboarding/settings)
             if (prefs.autoCalculateMaxHr) {
-                val calculatedMaxHr = 220 - prefs.age
+                val calculatedMaxHr = HeartRateFormulas.estimateMaxHr(prefs.age)
                 if (calculatedMaxHr != prefs.maxHeartRate) {
                     prefsRepo.updateMaxHeartRate(calculatedMaxHr)
                 }

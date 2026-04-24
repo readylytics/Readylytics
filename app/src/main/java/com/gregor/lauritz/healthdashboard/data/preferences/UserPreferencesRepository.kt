@@ -16,7 +16,9 @@ import java.io.IOException
 import java.time.LocalDate
 import java.time.Period
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class UserPreferencesRepository
     @Inject
     constructor(
@@ -145,18 +147,6 @@ class UserPreferencesRepository
             }
         }
 
-        suspend fun updateSyncPreference(preference: SyncPreference) {
-            dataStore.edit { it[Keys.SYNC_PREFERENCE] = preference.name }
-        }
-
-        suspend fun updateSyncIntervalHours(hours: Int) {
-            dataStore.edit { it[Keys.SYNC_INTERVAL_HOURS] = hours.coerceIn(1, 24) }
-        }
-
-        suspend fun updateLastSyncTimestamp(timestampMs: Long) {
-            dataStore.edit { it[Keys.LAST_SYNC_TIMESTAMP] = timestampMs }
-        }
-
         suspend fun updateMaxHeartRate(bpm: Int) {
             dataStore.edit { it[Keys.MAX_HEART_RATE] = bpm.coerceIn(100, 250) }
         }
@@ -226,25 +216,6 @@ class UserPreferencesRepository
 
         suspend fun updateRestingHrAfterMinutes(minutes: Int) {
             dataStore.edit { it[Keys.RESTING_HR_AFTER_MINUTES] = minutes.coerceIn(0, 60) }
-        }
-
-        suspend fun updateAppTheme(theme: AppTheme) {
-            dataStore.edit { it[Keys.APP_THEME] = theme.name }
-        }
-
-        suspend fun updateDriveAccountEmail(email: String?) {
-            dataStore.edit { prefs ->
-                if (email != null) prefs[Keys.DRIVE_ACCOUNT_EMAIL] = email
-                else prefs.remove(Keys.DRIVE_ACCOUNT_EMAIL)
-            }
-        }
-
-        suspend fun updateBackupSchedule(schedule: BackupSchedule) {
-            dataStore.edit { it[Keys.BACKUP_SCHEDULE] = schedule.name }
-        }
-
-        suspend fun updateLastBackupTimestamp(ts: Long) {
-            dataStore.edit { it[Keys.LAST_BACKUP_TIMESTAMP] = ts }
         }
 
         suspend fun updateConsistencyThresholdMinutes(minutes: Int) {
