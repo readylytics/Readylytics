@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
@@ -9,25 +10,30 @@ import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 
+@Immutable
 data class DashboardUiState(
     val summary: DailySummaryEntity? = null,
     val selectedDate: LocalDate = LocalDate.now(),
     val isRefreshing: Boolean = false,
     val cardData: List<CardData> = emptyList(),
+    val cardRows: List<List<CardData>> = emptyList(),
 )
 
+@Immutable
 data class CardData(
     val title: String,
     val value: String,
@@ -137,18 +143,20 @@ class DashboardViewModel
                         prefsRepo.userPreferences,
                         _isRefreshing,
                     ) { summary, prefs, refreshing ->
+                        val data =
+                            calculateCardData(
+                                summary,
+                                prefs,
+                                date,
+                            )
                         DashboardUiState(
                             summary = summary,
                             selectedDate = date,
                             isRefreshing = refreshing,
-                            cardData =
-                                calculateCardData(
-                                    summary,
-                                    prefs,
-                                    date,
-                                ),
+                            cardData = data,
+                            cardRows = data.chunked(2),
                         )
-                    }
+                    }.flowOn(Dispatchers.Default)
                 }.stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),

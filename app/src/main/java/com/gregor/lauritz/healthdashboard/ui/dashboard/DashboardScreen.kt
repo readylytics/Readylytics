@@ -20,7 +20,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -28,6 +30,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
@@ -67,7 +70,12 @@ fun DashboardScreen(
     modifier: Modifier = Modifier,
 ) {
     val summary = uiState.summary
-    val today = LocalDate.now()
+    var today by remember { mutableStateOf(LocalDate.now()) }
+
+    LifecycleResumeEffect(Unit) {
+        today = LocalDate.now()
+        onPauseOrDispose {}
+    }
 
     PullToRefreshBox(
         isRefreshing = uiState.isRefreshing,
@@ -87,6 +95,24 @@ fun DashboardScreen(
             }
 
             item {
+                val sleepTooltip =
+                    remember {
+                        buildString {
+                            append("Total quality of rest based on duration and cycles.\n\n")
+                            append("• 80–100: Optimal\n")
+                            append("• 60–79: Fair\n")
+                            append("• < 60: Poor")
+                        }
+                    }
+                val readinessTooltip =
+                    remember {
+                        buildString {
+                            append("Preparation for stress based on recent load & recovery.\n\n")
+                            append("• 85–100: Peak\n")
+                            append("• 30–69: Moderate\n")
+                            append("• < 30: Rest")
+                        }
+                    }
                 Row(
                     modifier =
                         Modifier
@@ -99,25 +125,13 @@ fun DashboardScreen(
                         score = summary?.sleepScore,
                         label = "Sleep Score",
                         onClick = onNavigateToSleep,
-                        tooltipDescription =
-                            buildString {
-                                append("Total quality of rest based on duration and cycles.\n\n")
-                                append("• 80–100: Optimal\n")
-                                append("• 60–79: Fair\n")
-                                append("• < 60: Poor")
-                            },
+                        tooltipDescription = sleepTooltip,
                     )
                     M3ScoreDial(
                         score = summary?.readinessScore,
                         label = "Readiness",
                         onClick = onNavigateToWorkouts,
-                        tooltipDescription =
-                            buildString {
-                                append("Preparation for stress based on recent load & recovery.\n\n")
-                                append("• 85–100: Peak\n")
-                                append("• 30–69: Moderate\n")
-                                append("• < 30: Rest")
-                            },
+                        tooltipDescription = readinessTooltip,
                     )
                 }
             }
@@ -126,7 +140,7 @@ fun DashboardScreen(
 
             item {
                 val sectionLabel =
-                    remember(uiState.selectedDate) {
+                    remember(uiState.selectedDate, today) {
                         when (uiState.selectedDate) {
                             today -> "Last Night"
                             today.minusDays(1) -> "Night of Yesterday"
@@ -146,9 +160,7 @@ fun DashboardScreen(
                 )
             }
 
-            if (summary == null &&
-                uiState.selectedDate < today
-            ) {
+            if (summary == null && (uiState.selectedDate < today)) {
                 item {
                     Box(
                         modifier =
@@ -167,7 +179,7 @@ fun DashboardScreen(
             } else {
                 item {
                     MetricCardGrid(
-                        cards = uiState.cardData,
+                        rows = uiState.cardRows,
                         onNavigateToSleep = onNavigateToSleep,
                         onNavigateToWorkouts = onNavigateToWorkouts,
                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -182,7 +194,7 @@ fun DashboardScreen(
 
 @Composable
 private fun MetricCardGrid(
-    cards: List<com.gregor.lauritz.healthdashboard.ui.dashboard.CardData>,
+    rows: List<List<CardData>>,
     onNavigateToSleep: () -> Unit,
     onNavigateToWorkouts: () -> Unit,
     modifier: Modifier = Modifier,
@@ -191,14 +203,16 @@ private fun MetricCardGrid(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        cards.chunked(2).forEach { row ->
+        rows.forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { card ->
                     val onClick =
-                        when (card.action) {
-                            DashboardAction.NAVIGATE_SLEEP -> onNavigateToSleep
-                            DashboardAction.NAVIGATE_WORKOUTS -> onNavigateToWorkouts
-                            null -> null
+                        remember(card.action, onNavigateToSleep, onNavigateToWorkouts) {
+                            when (card.action) {
+                                DashboardAction.NAVIGATE_SLEEP -> onNavigateToSleep
+                                DashboardAction.NAVIGATE_WORKOUTS -> onNavigateToWorkouts
+                                null -> null
+                            }
                         }
                     MetricCard(
                         title = card.title,
@@ -218,6 +232,8 @@ private fun MetricCardGrid(
     }
 }
 
+private val StaticEmptyLambda: () -> Unit = {}
+
 @Composable
 private fun MetricCard(
     title: String,
@@ -232,7 +248,7 @@ private fun MetricCard(
     val contentColor = status.onContainerColor()
 
     Card(
-        onClick = onClick ?: {},
+        onClick = onClick ?: StaticEmptyLambda,
         enabled = onClick != null,
         modifier =
             modifier.let {
