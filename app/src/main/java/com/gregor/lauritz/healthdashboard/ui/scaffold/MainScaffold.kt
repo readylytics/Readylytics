@@ -30,7 +30,10 @@ fun MainScaffold(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    val showBottomBar = currentDestination?.hasRoute(AppDestination.WorkoutDetail::class) != true
+    val showBottomBar = currentDestination?.let { dest ->
+        !dest.hasRoute(AppDestination.WorkoutDetail::class) &&
+        !dest.hasRoute(AppDestination.RestingHrDetail::class)
+    } ?: true
 
     Scaffold(
         modifier = modifier,

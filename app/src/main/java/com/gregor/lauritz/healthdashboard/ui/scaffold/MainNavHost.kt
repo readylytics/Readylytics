@@ -16,6 +16,7 @@ import androidx.navigation.toRoute
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardRoute
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppDestination
 import com.gregor.lauritz.healthdashboard.ui.navigation.TabDestination
+import com.gregor.lauritz.healthdashboard.ui.rhr.RestingHrDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsRoute
 import com.gregor.lauritz.healthdashboard.ui.sleep.SleepRoute
 import com.gregor.lauritz.healthdashboard.ui.workouts.WorkoutDetailRoute
@@ -33,9 +34,14 @@ fun MainNavHost(
         enterTransition = {
             val initialIndex = getTabIndex(initialState.destination)
             val targetIndex = getTabIndex(targetState.destination)
-            val direction = if (targetIndex > initialIndex ||
-                (targetIndex == initialIndex && targetState.destination.hasRoute(AppDestination.WorkoutDetail::class))
-            ) {
+
+            val isEnteringDetail = targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
+                targetState.destination.hasRoute(AppDestination.RestingHrDetail::class)
+
+            val direction = if (isEnteringDetail) {
+                // Invert direction for details as requested
+                AnimatedContentTransitionScope.SlideDirection.End
+            } else if (targetIndex > initialIndex) {
                 AnimatedContentTransitionScope.SlideDirection.Start
             } else {
                 AnimatedContentTransitionScope.SlideDirection.End
@@ -45,9 +51,14 @@ fun MainNavHost(
         exitTransition = {
             val initialIndex = getTabIndex(initialState.destination)
             val targetIndex = getTabIndex(targetState.destination)
-            val direction = if (targetIndex > initialIndex ||
-                (targetIndex == initialIndex && targetState.destination.hasRoute(AppDestination.WorkoutDetail::class))
-            ) {
+
+            val isLeavingDetail = initialState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
+                initialState.destination.hasRoute(AppDestination.RestingHrDetail::class)
+
+            val direction = if (isLeavingDetail) {
+                // Keep slide out direction consistent with pop
+                AnimatedContentTransitionScope.SlideDirection.End
+            } else if (targetIndex > initialIndex) {
                 AnimatedContentTransitionScope.SlideDirection.Start
             } else {
                 AnimatedContentTransitionScope.SlideDirection.End
@@ -87,6 +98,9 @@ fun MainNavHost(
                         restoreState = true
                     }
                 },
+                onNavigateToRhr = {
+                    navController.navigate(AppDestination.RestingHrDetail)
+                },
             )
         }
         composable<TabDestination.Sleep> { SleepRoute() }
@@ -99,6 +113,11 @@ fun MainNavHost(
             val detail: AppDestination.WorkoutDetail = backStackEntry.toRoute()
             WorkoutDetailRoute(
                 workoutId = detail.workoutId,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable<AppDestination.RestingHrDetail> {
+            RestingHrDetailRoute(
                 onBack = { navController.popBackStack() },
             )
         }
@@ -115,6 +134,8 @@ private fun getTabIndex(destination: NavDestination?): Int {
 
     // WorkoutDetail is logically under Workouts
     if (destination.hasRoute(AppDestination.WorkoutDetail::class)) return 2
+    // RestingHrDetail is logically under Dashboard
+    if (destination.hasRoute(AppDestination.RestingHrDetail::class)) return 0
 
     return -1
 }

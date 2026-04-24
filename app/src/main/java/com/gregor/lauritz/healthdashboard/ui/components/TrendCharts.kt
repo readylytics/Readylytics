@@ -1,0 +1,227 @@
+package com.gregor.lauritz.healthdashboard.ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
+import com.patrykandpatrick.vico.compose.cartesian.layer.point
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
+import com.patrykandpatrick.vico.compose.common.fill
+import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.core.cartesian.decoration.HorizontalLine
+import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
+import com.patrykandpatrick.vico.core.common.component.LineComponent
+import com.patrykandpatrick.vico.core.common.shape.CorneredShape
+
+@Composable
+fun TrendCard(
+    title: String,
+    unit: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = unit,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            content()
+        }
+    }
+}
+
+@Composable
+fun TrendChart(
+    points: List<DailyDataPoint>,
+    rangeStartMs: Long,
+    rangeDays: Int,
+    baselineUnit: String,
+    baseline: Float? = null,
+    scrollState: VicoScrollState = rememberVicoScrollState(),
+    modifier: Modifier = Modifier,
+) {
+    if (points.isEmpty()) {
+        EmptyChartPlaceholder(modifier = modifier)
+        return
+    }
+
+    val calculatedBaseline =
+        remember(points) {
+            val sorted = points.map { it.value }.sorted()
+            val mid = sorted.size / 2
+            if (sorted.size % 2 == 0) (sorted[mid - 1] + sorted[mid]) / 2f else sorted[mid]
+        }
+
+    // Use provided baseline if available, otherwise fall back to calculated baseline
+    val baselineValue = baseline ?: calculatedBaseline
+
+    val minY =
+        remember(points) {
+            (points.minOf { it.value } * 0.9f).toDouble()
+        }
+    val maxY =
+        remember(points) {
+            (points.maxOf { it.value } * 1.1f).toDouble()
+        }
+
+    val labelComponent = ChartDefaults.labelTextComponent()
+    val baselineColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val guidelineComponent = ChartDefaults.guidelineComponent()
+    val dotColor = MaterialTheme.colorScheme.primary
+
+    val modelProducer = remember { CartesianChartModelProducer() }
+
+    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
+
+    LaunchedEffect(points) {
+        modelProducer.runTransaction {
+            lineSeries {
+                series(
+                    x = points.map { it.dayOffset },
+                    y = points.map { it.value },
+                )
+            }
+        }
+    }
+
+    val rangeProvider = remember(minY, maxY) { CartesianLayerRangeProvider.fixed(minY = minY, maxY = maxY) }
+    val dotComponent = rememberShapeComponent(fill = fill(dotColor), shape = CorneredShape.Pill)
+    val line =
+        LineCartesianLayer.rememberLine(
+            fill = LineCartesianLayer.LineFill.single(fill(dotColor)),
+            pointProvider =
+                LineCartesianLayer.PointProvider.single(
+                    LineCartesianLayer.point(dotComponent, 6.dp),
+                ),
+        )
+
+    CartesianChartHost(
+        chart =
+            rememberCartesianChart(
+                rememberLineCartesianLayer(
+                    lineProvider = LineCartesianLayer.LineProvider.series(line),
+                    rangeProvider = rangeProvider,
+                ),
+                startAxis =
+                    VerticalAxis.rememberStart(
+                        label = labelComponent,
+                        valueFormatter = CartesianValueFormatter { _, value, _ -> value.toInt().toString() },
+                        guideline = guidelineComponent,
+                    ),
+                bottomAxis =
+                    HorizontalAxis.rememberBottom(
+                        label = labelComponent,
+                        valueFormatter = xAxisFormatter,
+                        itemPlacer = remember(rangeDays) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                        guideline = guidelineComponent,
+                    ),
+                decorations =
+                    listOf(
+                        HorizontalLine(
+                            y = { baselineValue.toDouble() },
+                            line = LineComponent(fill = fill(baselineColor), thicknessDp = 1f),
+                        ),
+                    ),
+            ),
+        modelProducer = modelProducer,
+        scrollState = scrollState,
+        zoomState = rememberVicoZoomState(zoomEnabled = false),
+        modifier = modifier.fillMaxWidth().height(180.dp),
+    )
+
+    Spacer(Modifier.height(6.dp))
+    BaselineLegend(
+        value = baselineValue,
+        unit = baselineUnit,
+        color = baselineColor,
+    )
+}
+
+@Composable
+fun BaselineLegend(
+    value: Float,
+    unit: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(width = 12.dp, height = 2.dp)
+                    .background(color),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = "Baseline: ${value.toInt()} $unit",
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+        )
+    }
+}
+
+@Composable
+fun EmptyChartPlaceholder(modifier: Modifier = Modifier) {
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(180.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "No data available",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}

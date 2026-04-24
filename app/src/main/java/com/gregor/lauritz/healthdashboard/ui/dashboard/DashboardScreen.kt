@@ -49,6 +49,7 @@ import java.util.Locale
 fun DashboardRoute(
     onNavigateToSleep: () -> Unit,
     onNavigateToWorkouts: () -> Unit,
+    onNavigateToRhr: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -61,6 +62,7 @@ fun DashboardRoute(
         onNextDay = viewModel::onNextDay,
         onNavigateToSleep = onNavigateToSleep,
         onNavigateToWorkouts = onNavigateToWorkouts,
+        onNavigateToRhr = onNavigateToRhr,
     )
 }
 
@@ -74,6 +76,7 @@ fun DashboardScreen(
     onNextDay: () -> Unit,
     onNavigateToSleep: () -> Unit,
     onNavigateToWorkouts: () -> Unit,
+    onNavigateToRhr: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val summary = uiState.summary
@@ -182,6 +185,7 @@ fun DashboardScreen(
                         rows = uiState.cardRows,
                         onNavigateToSleep = onNavigateToSleep,
                         onNavigateToWorkouts = onNavigateToWorkouts,
+                        onNavigateToRhr = onNavigateToRhr,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }
@@ -287,6 +291,7 @@ private fun MetricCardGrid(
     rows: List<List<CardData>>,
     onNavigateToSleep: () -> Unit,
     onNavigateToWorkouts: () -> Unit,
+    onNavigateToRhr: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -297,10 +302,11 @@ private fun MetricCardGrid(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { card ->
                     val onClick =
-                        remember(card.action, onNavigateToSleep, onNavigateToWorkouts) {
+                        remember(card.action, onNavigateToSleep, onNavigateToWorkouts, onNavigateToRhr) {
                             when (card.action) {
                                 DashboardAction.NAVIGATE_SLEEP -> onNavigateToSleep
                                 DashboardAction.NAVIGATE_WORKOUTS -> onNavigateToWorkouts
+                                DashboardAction.NAVIGATE_RHR -> onNavigateToRhr
                                 null -> null
                             }
                         }

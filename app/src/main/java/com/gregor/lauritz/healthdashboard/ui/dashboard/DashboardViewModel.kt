@@ -52,6 +52,7 @@ data class CardData(
 enum class DashboardAction {
     NAVIGATE_SLEEP,
     NAVIGATE_WORKOUTS,
+    NAVIGATE_RHR,
 }
 
 fun DailySummaryEntity.rhrStatus(
@@ -307,6 +308,7 @@ class DashboardViewModel
                 value = summary.restingHeartRate?.toString() ?: "—",
                 unit = "bpm",
                 status = restingHrStatus,
+                action = DashboardAction.NAVIGATE_RHR,
                 tooltip = buildString {
                     val rBaseline = summary.restingHrBaseline
                     val rCurrent = summary.restingHeartRate
