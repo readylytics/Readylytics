@@ -18,6 +18,7 @@ import com.gregor.lauritz.healthdashboard.domain.backup.BackupUseCase
 import com.gregor.lauritz.healthdashboard.domain.backup.RestoreUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
+import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
 import com.gregor.lauritz.healthdashboard.workers.BackupWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,6 +57,9 @@ data class SettingsUiState(
     val rhrWarningThreshold: Float = 1.05f,
     val restingHrBeforeMinutes: Int = 5,
     val restingHrAfterMinutes: Int = 15,
+    val consistencyThresholdMinutes: Int = 30,
+    val consistencyEvaluationDays: Int = 7,
+    val consistencyBaselineDays: Int = 14,
     val appTheme: AppTheme = AppTheme.SYSTEM,
     val isLoading: Boolean = true,
     val driveEmail: String? = null,
@@ -146,12 +150,24 @@ sealed interface SettingsEvent {
         val minutes: Int,
     ) : SettingsEvent
 
+    data class ConsistencyThresholdChanged(
+        val minutes: Int,
+    ) : SettingsEvent
+
+    data class ConsistencyEvaluationDaysChanged(
+        val days: Int,
+    ) : SettingsEvent
+
+    data class ConsistencyBaselineDaysChanged(
+        val days: Int,
+    ) : SettingsEvent
+
     data class AppThemeChanged(
         val theme: AppTheme,
     ) : SettingsEvent
 
-    data class DriveSignIn(val activityContext: Context) : SettingsEvent
-    data class DriveSignOut(val context: Context) : SettingsEvent
+    data object DriveSignIn : SettingsEvent
+    data object DriveSignOut : SettingsEvent
     data class BackupScheduleChanged(val schedule: BackupSchedule) : SettingsEvent
     data object BackupNow : SettingsEvent
     data object RestoreFromDrive : SettingsEvent
@@ -170,6 +186,7 @@ class SettingsViewModel
         private val driveAuthManager: DriveAuthManager,
         private val backupUseCase: BackupUseCase,
         private val restoreUseCase: RestoreUseCase,
+        private val userUseCase: UserUseCase,
         private val workManager: WorkManager,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(SettingsUiState())
@@ -203,6 +220,9 @@ class SettingsViewModel
                             rhrWarningThreshold = prefs.rhrWarningThreshold,
                             restingHrBeforeMinutes = prefs.restingHrBeforeMinutes,
                             restingHrAfterMinutes = prefs.restingHrAfterMinutes,
+                            consistencyThresholdMinutes = prefs.consistencyThresholdMinutes,
+                            consistencyEvaluationDays = prefs.consistencyEvaluationDays,
+                            consistencyBaselineDays = prefs.consistencyBaselineDays,
                             appTheme = prefs.appTheme,
                             driveEmail = prefs.driveAccountEmail,
                             backupSchedule = prefs.backupSchedule,
@@ -271,10 +291,7 @@ class SettingsViewModel
                     viewModelScope.launch {
                         prefsRepo.updateAutoCalculateMaxHr(event.enabled)
                         if (event.enabled) {
-                            val currentPrefs = prefsRepo.userPreferences.first()
-                            val calculatedMaxHr = 220 - currentPrefs.age
-                            prefsRepo.updateMaxHeartRate(calculatedMaxHr)
-                            healthSyncUseCase.sync()
+                            userUseCase.calculateAndSetMaxHr()
                         }
                     }
                 }
@@ -294,16 +311,7 @@ class SettingsViewModel
 
                 is SettingsEvent.BirthdayChanged -> {
                     viewModelScope.launch {
-                        prefsRepo.updateBirthday(event.day, event.month, event.year)
-                        val currentPrefs = prefsRepo.userPreferences.first()
-                        if (currentPrefs.autoCalculateMaxHr) {
-                            val age = Period.between(
-                                LocalDate.of(event.year, event.month, event.day),
-                                LocalDate.now(),
-                            ).years
-                            prefsRepo.updateMaxHeartRate(220 - age)
-                            healthSyncUseCase.sync()
-                        }
+                        userUseCase.updateBirthday(event.day, event.month, event.year)
                     }
                 }
 
@@ -337,6 +345,18 @@ class SettingsViewModel
                         prefsRepo.updateRestingHrAfterMinutes(event.minutes)
                         scoringRepository.computeAndPersistDailySummary()
                     }
+                is SettingsEvent.ConsistencyThresholdChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateConsistencyThresholdMinutes(event.minutes)
+                    }
+                is SettingsEvent.ConsistencyEvaluationDaysChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateConsistencyEvaluationDays(event.days)
+                    }
+                is SettingsEvent.ConsistencyBaselineDaysChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateConsistencyBaselineDays(event.days)
+                    }
                 is SettingsEvent.AppThemeChanged ->
                     viewModelScope.launch {
                         prefsRepo.updateAppTheme(event.theme)
@@ -344,14 +364,12 @@ class SettingsViewModel
 
                 is SettingsEvent.DriveSignIn ->
                     viewModelScope.launch {
-                        driveAuthManager.signIn(event.activityContext).onFailure { e ->
-                            _uiState.update { it.copy(driveError = e.message ?: "Sign-in failed") }
-                        }
+                        _uiState.update { it.copy(driveError = "Sign-in should be handled by the UI layer") }
                     }
 
                 is SettingsEvent.DriveSignOut ->
                     viewModelScope.launch {
-                        driveAuthManager.signOut(event.context)
+                        _uiState.update { it.copy(driveError = "Sign-out should be handled by the UI layer") }
                     }
 
                 is SettingsEvent.BackupScheduleChanged ->
@@ -404,6 +422,26 @@ class SettingsViewModel
 
                 SettingsEvent.DismissDriveError ->
                     _uiState.update { it.copy(driveError = null) }
+            }
+        }
+
+        fun onSignInResult(result: Result<DriveAuthState.SignedIn>) {
+            result.onFailure { e ->
+                _uiState.update { it.copy(driveError = e.message ?: "Sign-in failed") }
+            }
+        }
+
+        fun signOut(context: Context) {
+            viewModelScope.launch {
+                driveAuthManager.signOut(context)
+            }
+        }
+
+        fun signIn(context: Context) {
+            viewModelScope.launch {
+                driveAuthManager.signIn(context).onFailure { e ->
+                    _uiState.update { it.copy(driveError = e.message ?: "Sign-in failed") }
+                }
             }
         }
 

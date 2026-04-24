@@ -31,4 +31,7 @@ data class UserPreferences(
     val driveAccountEmail: String? = null,
     val backupSchedule: BackupSchedule = BackupSchedule.MANUAL,
     val lastBackupTimestamp: Long = 0L,
+    val consistencyThresholdMinutes: Int = 30,
+    val consistencyEvaluationDays: Int = 7,
+    val consistencyBaselineDays: Int = 14,
 )

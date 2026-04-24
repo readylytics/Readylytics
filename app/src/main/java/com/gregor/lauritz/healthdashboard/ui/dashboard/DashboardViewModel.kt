@@ -7,6 +7,8 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
+import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,6 +33,7 @@ data class DashboardUiState(
     val isRefreshing: Boolean = false,
     val cardData: List<CardData> = emptyList(),
     val cardRows: List<List<CardData>> = emptyList(),
+    val circadianConsistency: CircadianConsistencyResult? = null,
 )
 
 @Immutable
@@ -119,6 +122,7 @@ class DashboardViewModel
         private val foregroundSyncController: ForegroundSyncController,
         private val selectedDateRepository: SelectedDateRepository,
         prefsRepo: UserPreferencesRepository,
+        circadianRepo: CircadianConsistencyRepository,
     ) : ViewModel() {
         private val _isRefreshing = MutableStateFlow(false)
 
@@ -142,7 +146,8 @@ class DashboardViewModel
                         summaryFlow,
                         prefsRepo.userPreferences,
                         _isRefreshing,
-                    ) { summary, prefs, refreshing ->
+                        circadianRepo.result,
+                    ) { summary, prefs, refreshing, circadian ->
                         val data =
                             calculateCardData(
                                 summary,
@@ -155,6 +160,7 @@ class DashboardViewModel
                             isRefreshing = refreshing,
                             cardData = data,
                             cardRows = data.chunked(2),
+                            circadianConsistency = circadian,
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(

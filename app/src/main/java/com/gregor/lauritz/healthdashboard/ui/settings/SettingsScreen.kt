@@ -60,7 +60,7 @@ import kotlin.math.roundToInt
 @Composable
 fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    SettingsScreen(uiState = uiState, onEvent = viewModel::onEvent)
+    SettingsScreen(uiState = uiState, onEvent = viewModel::onEvent, viewModel = viewModel)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,6 +68,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
 fun SettingsScreen(
     uiState: SettingsUiState,
     onEvent: (SettingsEvent) -> Unit,
+    viewModel: SettingsViewModel,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -126,6 +127,7 @@ fun SettingsScreen(
             CloudBackupSection(
                 uiState = uiState,
                 onEvent = onEvent,
+                viewModel = viewModel,
                 context = context,
             )
         }
@@ -145,9 +147,9 @@ fun SettingsScreen(
         item { SectionHeader("Appearance") }
         item { AppThemeItem(uiState = uiState, onEvent = onEvent) }
 
-        // Goals
+        // Sleep
         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item { SectionHeader("Goals") }
+        item { SectionHeader("Sleep") }
         item {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -170,6 +172,39 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+        }
+        item {
+            ThresholdSliderItem(
+                label = "Consistency Window",
+                value = uiState.consistencyThresholdMinutes.toFloat(),
+                onValueChange = { onEvent(SettingsEvent.ConsistencyThresholdChanged(it.toInt())) },
+                valueRange = 0f..90f,
+                steps = 17,
+                displayValue = "${uiState.consistencyThresholdMinutes} min",
+                description = "±Grace period (in minutes) around your median bedtime and wake time before your score starts to drop. Default: 30 min.",
+            )
+        }
+        item {
+            ThresholdSliderItem(
+                label = "Evaluation Period",
+                value = uiState.consistencyEvaluationDays.toFloat(),
+                onValueChange = { onEvent(SettingsEvent.ConsistencyEvaluationDaysChanged(it.toInt())) },
+                valueRange = 3f..14f,
+                steps = 10,
+                displayValue = "${uiState.consistencyEvaluationDays} days",
+                description = "Number of recent sleep sessions scored to compute your current consistency. Default: 7.",
+            )
+        }
+        item {
+            ThresholdSliderItem(
+                label = "Baseline Window",
+                value = uiState.consistencyBaselineDays.toFloat(),
+                onValueChange = { onEvent(SettingsEvent.ConsistencyBaselineDaysChanged(it.toInt())) },
+                valueRange = 3f..30f,
+                steps = 26,
+                displayValue = "${uiState.consistencyBaselineDays} sessions",
+                description = "Number of past sleep sessions used to calculate your median bedtime anchor. Default: 14.",
+            )
         }
 
         // Thresholds
@@ -783,6 +818,8 @@ private fun ThresholdSliderItem(
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
     description: String,
+    steps: Int = ((valueRange.endInclusive - valueRange.start) * 100).roundToInt() - 1,
+    displayValue: String = "${(value * 100).roundToInt()}%",
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -790,7 +827,7 @@ private fun ThresholdSliderItem(
             MetricTooltip(description = description)
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "${(value * 100).roundToInt()}%",
+                text = displayValue,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -799,7 +836,7 @@ private fun ThresholdSliderItem(
             value = value,
             onValueChange = onValueChange,
             valueRange = valueRange,
-            steps = ((valueRange.endInclusive - valueRange.start) * 100).roundToInt() - 1,
+            steps = steps,
             modifier = Modifier.fillMaxWidth(),
         )
     }
@@ -851,6 +888,7 @@ private val BackupSchedule.displayName: String
 private fun CloudBackupSection(
     uiState: SettingsUiState,
     onEvent: (SettingsEvent) -> Unit,
+    viewModel: SettingsViewModel,
     context: android.content.Context,
 ) {
     val signedIn = uiState.driveEmail != null
@@ -875,11 +913,11 @@ private fun CloudBackupSection(
                 )
             }
             if (signedIn) {
-                TextButton(onClick = { onEvent(SettingsEvent.DriveSignOut(context)) }) {
+                TextButton(onClick = { viewModel.signOut(context) }) {
                     Text("Sign Out")
                 }
             } else {
-                TextButton(onClick = { onEvent(SettingsEvent.DriveSignIn(context)) }) {
+                TextButton(onClick = { viewModel.signIn(context) }) {
                     Text("Sign In")
                 }
             }

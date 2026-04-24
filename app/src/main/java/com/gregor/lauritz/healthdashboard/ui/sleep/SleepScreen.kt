@@ -4,9 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,6 +37,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
+import com.gregor.lauritz.healthdashboard.domain.scoring.toStatus
+import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.DateFormatUtils
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -80,10 +85,12 @@ fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val baselineHrv by viewModel.baselineHrvFlow.collectAsStateWithLifecycle()
     val baselineRhr by viewModel.baselineRhrFlow.collectAsStateWithLifecycle()
+    val circadianConsistency by viewModel.circadianConsistencyFlow.collectAsStateWithLifecycle()
     SleepScreen(
         uiState = uiState,
         baselineHrv = baselineHrv,
         baselineRhr = baselineRhr,
+        circadianConsistency = circadianConsistency,
         onRangeSelected = viewModel::onRangeSelected,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
@@ -96,6 +103,7 @@ fun SleepScreen(
     uiState: SleepUiState,
     baselineHrv: Float?,
     baselineRhr: Int?,
+    circadianConsistency: CircadianConsistencyResult,
     onRangeSelected: (TimeRange) -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
@@ -230,6 +238,7 @@ fun SleepScreen(
             SleepMetricGrid(
                 session = uiState.latestSession,
                 summary = uiState.latestSummary,
+                circadianResult = circadianConsistency,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
@@ -459,50 +468,125 @@ private fun EmptyChartPlaceholder(modifier: Modifier = Modifier) {
 private fun SleepMetricGrid(
     session: SleepSessionEntity?,
     summary: DailySummaryEntity?,
+    circadianResult: CircadianConsistencyResult,
     modifier: Modifier = Modifier,
 ) {
     val efficiencyStatus = session?.efficiencyStatus() ?: MetricStatus.CALIBRATING
     val deepStatus = summary?.deepSleepStatus() ?: MetricStatus.CALIBRATING
     val remStatus = summary?.remSleepStatus() ?: MetricStatus.CALIBRATING
 
-    val cards =
-        listOf(
-            MetricCardData(
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            CircadianConsistencyCard(
+                result = circadianResult,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            )
+            SleepMetricCard(
                 title = "Sleep Efficiency",
                 value = session?.let { "${it.efficiency.roundToInt()}%" } ?: "—",
+                secondaryText = "Goal: >85%",
                 status = efficiencyStatus,
-                tooltip = "The percentage of time actually asleep while in bed. (Goal: >85%).",
-            ),
-            MetricCardData(
+                tooltipText = "The percentage of time actually asleep while in bed. (Goal: >85%).",
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+            )
+        }
+        Row(
+            modifier = Modifier.height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SleepMetricCard(
                 title = "Deep Sleep",
                 value = summary?.deepSleepPercent?.let { "${it.toInt()}%" } ?: "—",
+                secondaryText = "Target: 15–25%",
                 status = deepStatus,
-                tooltip = "Time in Stage 3 (Physical repair). Target: 15–25% of total sleep.",
-            ),
-            MetricCardData(
+                tooltipText = "Time in Stage 3 (Physical repair). Target: 15–25% of total sleep.",
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+            )
+            SleepMetricCard(
                 title = "REM Sleep",
                 value = summary?.remSleepPercent?.let { "${it.toInt()}%" } ?: "—",
+                secondaryText = "Target: 20–25%",
                 status = remStatus,
-                tooltip = "Time in Rapid Eye Movement. Target: 20–25% of total sleep.",
-            ),
-        )
+                tooltipText = "Time in Rapid Eye Movement. Target: 20–25% of total sleep.",
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+            )
+        }
+    }
+}
 
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        cards.chunked(2).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { card ->
-                    SleepMetricCard(
-                        title = card.title,
-                        value = card.value,
-                        status = card.status,
-                        tooltipText = card.tooltip,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                if (row.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
+@Composable
+private fun CircadianConsistencyCard(
+    result: CircadianConsistencyResult,
+    modifier: Modifier = Modifier,
+) {
+    val status = result.toStatus()
+    val containerColor = status.containerColor()
+    val contentColor = status.onContainerColor()
+
+    val scoreText = result.score?.let { "${it.toInt()}%" } ?: "—"
+    val windowText =
+        if (result.medianBedtimeMinutes != null && result.medianWakeMinutes != null) {
+            "${result.medianBedtimeMinutes.toTimeString()}→${result.medianWakeMinutes.toTimeString()}"
+        } else {
+            null
+        }
+
+    val tooltipText =
+        buildString {
+            append("Measures how regular your sleep schedule is.\n\n")
+            append("High consistency stabilizes your internal clock, improving deep sleep and energy levels.\n\n")
+            append("• ≥ 80%: Optimal\n")
+            append("• 60–79%: Neutral\n")
+            append("• 40–59%: Warning\n")
+            append("• < 40%: Poor\n\n")
+            append("Consistency Window: ±${result.thresholdMinutes} min grace period before score drops.")
+        }
+
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = containerColor,
+                contentColor = contentColor,
+            ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Circadian",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = contentColor,
+                )
+                MetricTooltip(description = tooltipText, iconTint = contentColor)
             }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = if (result.isCalibrating && result.score == null) "Calibrating" else scoreText,
+                style = MaterialTheme.typography.displaySmall,
+                color = contentColor,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = windowText ?: "",
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.7f),
+            )
         }
     }
 }
@@ -514,6 +598,7 @@ private fun SleepMetricCard(
     status: MetricStatus,
     tooltipText: String,
     modifier: Modifier = Modifier,
+    secondaryText: String? = null,
 ) {
     val containerColor = status.containerColor()
     val contentColor = status.onContainerColor()
@@ -545,6 +630,12 @@ private fun SleepMetricCard(
                 text = value,
                 style = MaterialTheme.typography.displaySmall,
                 color = contentColor,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = secondaryText ?: "",
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.7f),
             )
         }
     }

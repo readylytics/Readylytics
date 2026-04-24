@@ -53,6 +53,9 @@ class UserPreferencesRepository
             val DRIVE_ACCOUNT_EMAIL = stringPreferencesKey("drive_account_email")
             val BACKUP_SCHEDULE = stringPreferencesKey("backup_schedule")
             val LAST_BACKUP_TIMESTAMP = longPreferencesKey("last_backup_timestamp")
+            val CONSISTENCY_THRESHOLD_MINUTES = intPreferencesKey("consistency_threshold_minutes")
+            val CONSISTENCY_EVALUATION_DAYS = intPreferencesKey("consistency_evaluation_days")
+            val CONSISTENCY_BASELINE_DAYS = intPreferencesKey("consistency_baseline_days")
         }
 
         val userPreferences: Flow<UserPreferences> =
@@ -108,6 +111,9 @@ class UserPreferencesRepository
                                 ?.let { runCatching { BackupSchedule.valueOf(it) }.getOrNull() }
                                 ?: BackupSchedule.MANUAL,
                         lastBackupTimestamp = prefs[Keys.LAST_BACKUP_TIMESTAMP] ?: 0L,
+                        consistencyThresholdMinutes = prefs[Keys.CONSISTENCY_THRESHOLD_MINUTES] ?: 30,
+                        consistencyEvaluationDays = prefs[Keys.CONSISTENCY_EVALUATION_DAYS] ?: 7,
+                        consistencyBaselineDays = prefs[Keys.CONSISTENCY_BASELINE_DAYS] ?: 14,
                     )
                 }
 
@@ -180,11 +186,13 @@ class UserPreferencesRepository
             val safeDay = day.coerceIn(1, 31)
             val safeMonth = month.coerceIn(1, 12)
             val safeYear = year.coerceIn(1900, LocalDate.now().year)
-            val age = Period.between(LocalDate.of(safeYear, safeMonth, safeDay), LocalDate.now()).years
+
             dataStore.edit { prefs ->
                 prefs[Keys.BIRTH_DAY] = safeDay
                 prefs[Keys.BIRTH_MONTH] = safeMonth
                 prefs[Keys.BIRTH_YEAR] = safeYear
+
+                val age = Period.between(LocalDate.of(safeYear, safeMonth, safeDay), LocalDate.now()).years
                 prefs[Keys.AGE] = age.coerceIn(1, 120)
             }
         }
@@ -237,5 +245,17 @@ class UserPreferencesRepository
 
         suspend fun updateLastBackupTimestamp(ts: Long) {
             dataStore.edit { it[Keys.LAST_BACKUP_TIMESTAMP] = ts }
+        }
+
+        suspend fun updateConsistencyThresholdMinutes(minutes: Int) {
+            dataStore.edit { it[Keys.CONSISTENCY_THRESHOLD_MINUTES] = minutes.coerceIn(0, 90) }
+        }
+
+        suspend fun updateConsistencyEvaluationDays(days: Int) {
+            dataStore.edit { it[Keys.CONSISTENCY_EVALUATION_DAYS] = days.coerceIn(3, 30) }
+        }
+
+        suspend fun updateConsistencyBaselineDays(days: Int) {
+            dataStore.edit { it[Keys.CONSISTENCY_BASELINE_DAYS] = days.coerceIn(3, 30) }
         }
     }

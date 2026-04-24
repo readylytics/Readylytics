@@ -32,6 +32,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
+import com.gregor.lauritz.healthdashboard.domain.scoring.toStatus
+import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
@@ -185,9 +188,92 @@ fun DashboardScreen(
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }
+                uiState.circadianConsistency?.let { circadian ->
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            DashboardCircadianCard(
+                                result = circadian,
+                                onNavigateToSleep = onNavigateToSleep,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
             }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun DashboardCircadianCard(
+    result: CircadianConsistencyResult,
+    onNavigateToSleep: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val status = result.toStatus()
+    val containerColor = status.containerColor()
+    val contentColor = status.onContainerColor()
+
+    val scoreText = result.score?.let { "${it.toInt()}%" } ?: "—"
+    val windowText =
+        if (result.medianBedtimeMinutes != null && result.medianWakeMinutes != null) {
+            "${result.medianBedtimeMinutes.toTimeString()}→${result.medianWakeMinutes.toTimeString()}"
+        } else {
+            ""
+        }
+
+    val tooltipText =
+        buildString {
+            append("Measures how regular your sleep schedule is.\n\n")
+            append("High consistency stabilizes your internal clock, improving deep sleep and energy levels.\n\n")
+            append("• ≥ 80%: Optimal\n")
+            append("• 60–79%: Neutral\n")
+            append("• 40–59%: Warning\n")
+            append("• < 40%: Poor\n\n")
+            append("Consistency Window: ±${result.thresholdMinutes} min grace period before score drops.")
+        }
+
+    Card(
+        onClick = onNavigateToSleep,
+        modifier = modifier.semantics { role = Role.Button },
+        shape = RoundedCornerShape(16.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = containerColor,
+                contentColor = contentColor,
+            ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Circadian Consistency",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = contentColor,
+                )
+                MetricTooltip(description = tooltipText, iconTint = contentColor)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = if (result.isCalibrating && result.score == null) "Calibrating" else scoreText,
+                style = MaterialTheme.typography.displaySmall,
+                color = contentColor,
+            )
+            Text(
+                text = windowText,
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.7f),
+            )
         }
     }
 }

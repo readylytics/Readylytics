@@ -12,6 +12,8 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.HrvRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
+import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.MetricStatus
@@ -47,23 +49,26 @@ data class SleepUiState(
 fun SleepSessionEntity.efficiencyStatus(): MetricStatus =
     when {
         efficiency >= 85f -> MetricStatus.OPTIMAL
+        efficiency >= 80f -> MetricStatus.NEUTRAL
         efficiency >= 70f -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
 
 fun DailySummaryEntity.deepSleepStatus(): MetricStatus =
-    when {
-        deepSleepPercent == null -> MetricStatus.CALIBRATING
-        deepSleepPercent >= 20f -> MetricStatus.OPTIMAL
-        deepSleepPercent >= 10f -> MetricStatus.WARNING
+    when (deepSleepPercent) {
+        null -> MetricStatus.CALIBRATING
+        in 25f..30f -> MetricStatus.NEUTRAL
+        in 15f..25f -> MetricStatus.OPTIMAL
+        in 10f..15f -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
 
 fun DailySummaryEntity.remSleepStatus(): MetricStatus =
-    when {
-        remSleepPercent == null -> MetricStatus.CALIBRATING
-        remSleepPercent >= 20f -> MetricStatus.OPTIMAL
-        remSleepPercent >= 15f -> MetricStatus.WARNING
+    when (remSleepPercent) {
+        null -> MetricStatus.CALIBRATING
+        in 25f..30f -> MetricStatus.NEUTRAL
+        in 20f..25f -> MetricStatus.OPTIMAL
+        in 15f..20f -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
 
@@ -77,9 +82,9 @@ class SleepViewModel
         private val heartRateDao: HeartRateDao,
         private val prefsRepo: UserPreferencesRepository,
         private val selectedDateRepository: SelectedDateRepository,
+        private val circadianRepo: CircadianConsistencyRepository,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
-        val selectedRange = _selectedRange
 
         /**
          * Baseline HRV (calculated from past 30 days, constant across all views).
@@ -150,6 +155,20 @@ class SleepViewModel
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = null,
+            )
+
+        val circadianConsistencyFlow =
+            circadianRepo.result.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue =
+                    CircadianConsistencyResult(
+                        score = null,
+                        medianBedtimeMinutes = null,
+                        medianWakeMinutes = null,
+                        isCalibrating = true,
+                        thresholdMinutes = 30,
+                    ),
             )
 
         @OptIn(ExperimentalCoroutinesApi::class)
