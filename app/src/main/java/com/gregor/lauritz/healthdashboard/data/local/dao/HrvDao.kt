@@ -1,9 +1,8 @@
 package com.gregor.lauritz.healthdashboard.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import com.gregor.lauritz.healthdashboard.data.local.entity.HrvRecordEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -29,6 +28,6 @@ interface HrvDao {
     )
     suspend fun getSleepRmssdForSession(sessionId: String): List<Float>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertAll(records: List<HrvRecordEntity>)
 }

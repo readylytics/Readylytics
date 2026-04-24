@@ -8,8 +8,8 @@ import androidx.room.PrimaryKey
     tableName = "heart_rate_records",
     indices = [
         Index(value = ["timestampMs"]),
-        Index(value = ["recordType"]),
-        Index(value = ["sessionId"]),
+        Index(value = ["recordType", "timestampMs"]),
+        Index(value = ["sessionId", "recordType", "beatsPerMinute"]),
     ],
 )
 data class HeartRateRecordEntity(

@@ -1,9 +1,15 @@
 package com.gregor.lauritz.healthdashboard.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "workout_records")
+@Entity(
+    tableName = "workout_records",
+    indices = [
+        Index(value = ["startTime"]),
+    ],
+)
 data class WorkoutRecordEntity(
     @PrimaryKey val id: String,
     val startTime: Long,

@@ -25,7 +25,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
         WorkoutRecordEntity::class,
         DailySummaryEntity::class,
     ],
-    version = 8,
+    version = 9,
 )
 abstract class HealthDatabase : RoomDatabase() {
     abstract fun sleepSessionDao(): SleepSessionDao
@@ -171,6 +171,31 @@ abstract class HealthDatabase : RoomDatabase() {
                     connection.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)")
                     connection.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType` ON `heart_rate_records` (`recordType`)")
                     connection.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId` ON `heart_rate_records` (`sessionId`)")
+                }
+            }
+
+        val MIGRATION_8_9 =
+            object : Migration(8, 9) {
+                private val sql =
+                    listOf(
+                        "CREATE INDEX IF NOT EXISTS index_workout_records_startTime ON workout_records (startTime)",
+                        "CREATE INDEX IF NOT EXISTS index_hrv_records_timestampMs ON hrv_records (timestampMs)",
+                        "CREATE INDEX IF NOT EXISTS index_hrv_records_recordType_timestampMs ON hrv_records (recordType, timestampMs)",
+                        "CREATE INDEX IF NOT EXISTS index_hrv_records_sessionId ON hrv_records (sessionId)",
+                        "CREATE INDEX IF NOT EXISTS index_sleep_sessions_startTime ON sleep_sessions (startTime)",
+                        "CREATE INDEX IF NOT EXISTS index_sleep_sessions_endTime ON sleep_sessions (endTime)",
+                        "DROP INDEX IF EXISTS index_heart_rate_records_recordType",
+                        "DROP INDEX IF EXISTS index_heart_rate_records_sessionId",
+                        "CREATE INDEX IF NOT EXISTS index_heart_rate_records_recordType_timestampMs ON heart_rate_records (recordType, timestampMs)",
+                        "CREATE INDEX IF NOT EXISTS index_heart_rate_records_sessionId_recordType_beatsPerMinute ON heart_rate_records (sessionId, recordType, beatsPerMinute)",
+                    )
+
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    sql.forEach { db.execSQL(it) }
+                }
+
+                override fun migrate(connection: SQLiteConnection) {
+                    sql.forEach { connection.execSQL(it) }
                 }
             }
     }

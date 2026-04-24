@@ -2,6 +2,8 @@ package com.gregor.lauritz.healthdashboard.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
@@ -37,6 +39,15 @@ object DatabaseModule {
                 HealthDatabase.MIGRATION_5_6,
                 HealthDatabase.MIGRATION_6_7,
                 HealthDatabase.MIGRATION_7_8,
+                HealthDatabase.MIGRATION_8_9,
+            )
+            .addCallback(
+                object : RoomDatabase.Callback() {
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        super.onOpen(db)
+                        db.execSQL("PRAGMA synchronous = NORMAL")
+                    }
+                },
             )
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()

@@ -63,27 +63,29 @@ class StrainRatioTest {
 class ComputeCtlTest {
     @Test
     fun `data tenure less than 7 returns seed`() =
-        assertEquals(35f, computeCtl(totalTrimp = 150f, windowDays = 30L, dataTenureDays = 3), DELTA)
+        assertEquals(35f, computeCtlEma(dailyTrimpList = List(3) { 50f }), DELTA)
 
     @Test
     fun `data tenure between 7 and 21 returns cumulative mean`() {
         // 100 total TRIMP over 10 days = 10 TRIMP per day
-        assertEquals(10f, computeCtl(totalTrimp = 100f, windowDays = 30L, dataTenureDays = 10), DELTA)
+        assertEquals(10f, computeCtlEma(dailyTrimpList = List(10) { 10f }), DELTA)
     }
 
     @Test
-    fun `data tenure 21 or more returns average over window`() {
-        // 600 total TRIMP over 30 days = 20 TRIMP per day
-        assertEquals(20f, computeCtl(totalTrimp = 600f, windowDays = 30L, dataTenureDays = 25), DELTA)
+    fun `data tenure 21 or more returns EMA`() {
+        // 21 days of 20 TRIMP = SMA of 20
+        // Day 22: 40 TRIMP. Alpha = 2/(42+1) ≈ 0.0465
+        // EMA = 40 * 0.0465 + 20 * (1 - 0.0465) = 1.86 + 19.07 = 20.93
+        val dailyTrimpList = List(21) { 20f } + 40f
+        assertEquals(20.93f, computeCtlEma(dailyTrimpList = dailyTrimpList), DELTA)
     }
 
     @Test
     fun `steady training gives SR close to 1`() {
-        // 3 workouts/week, 30 TRIMP each over 30 days → CTL = ~12.86/day
-        // ATL same week → SR ≈ 1.0
-        val weeklyTrimp = 3 * 30f
-        val ctl = computeCtl(totalTrimp = weeklyTrimp * (30f / 7f), windowDays = 30L, dataTenureDays = 30)
-        val atl = weeklyTrimp / 7f
+        // 30 days of 10 TRIMP/day
+        val dailyTrimpList = List(30) { 10f }
+        val ctl = computeCtlEma(dailyTrimpList = dailyTrimpList)
+        val atl = 10f // Average of any 7 days of 10/day is 10
         val sr = computeStrainRatio(atl, ctl)
         assertEquals(1.0f, sr, 0.05f)
     }

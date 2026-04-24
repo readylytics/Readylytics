@@ -249,9 +249,9 @@ internal fun computeLoadScore(sr: Float): Float =
         sr <= 0f -> 85f // Optimal (maintenance/low load)
         sr < 0.8f -> 50f // Neutral (Under-training)
         sr <= 1.2f -> 100f // Optimal (Sweet spot)
-        // Strict specification: 200 multiplier, hard floor at 40
-        sr <= 1.5f -> 100f - (sr - 1.2f) * 200f
-        else -> 40f // Poor
+        // Strict specification: 100 multiplier
+        sr <= 1.5f -> 100f - (sr - 1.2f) * 100f
+        else -> 30f // Poor
     }
 
 internal fun computeDurationSubScore(
