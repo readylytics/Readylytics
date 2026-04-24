@@ -1,17 +1,31 @@
 package com.gregor.lauritz.healthdashboard.ui.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthManager
+import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthState
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
+import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.domain.backup.BackupUseCase
+import com.gregor.lauritz.healthdashboard.domain.backup.RestoreUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
+import com.gregor.lauritz.healthdashboard.workers.BackupWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 data class SettingsUiState(
@@ -29,6 +43,14 @@ data class SettingsUiState(
     val restingHrAfterMinutes: Int = 15,
     val appTheme: AppTheme = AppTheme.SYSTEM,
     val isLoading: Boolean = true,
+    val driveEmail: String? = null,
+    val backupSchedule: BackupSchedule = BackupSchedule.MANUAL,
+    val lastBackupTimestamp: Long = 0L,
+    val isBackingUp: Boolean = false,
+    val isRestoring: Boolean = false,
+    val showRestoreConfirmDialog: Boolean = false,
+    val driveError: String? = null,
+    val pendingRestoreDir: File? = null,
 )
 
 sealed interface SettingsEvent {
@@ -87,6 +109,15 @@ sealed interface SettingsEvent {
     data class AppThemeChanged(
         val theme: AppTheme,
     ) : SettingsEvent
+
+    data class DriveSignIn(val activityContext: Context) : SettingsEvent
+    data class DriveSignOut(val context: Context) : SettingsEvent
+    data class BackupScheduleChanged(val schedule: BackupSchedule) : SettingsEvent
+    data object BackupNow : SettingsEvent
+    data object RestoreFromDrive : SettingsEvent
+    data object RestoreConfirmed : SettingsEvent
+    data object RestoreDismissed : SettingsEvent
+    data object DismissDriveError : SettingsEvent
 }
 
 @HiltViewModel
@@ -95,6 +126,10 @@ class SettingsViewModel
     constructor(
         private val prefsRepo: UserPreferencesRepository,
         private val scoringRepository: ScoringRepository,
+        private val driveAuthManager: DriveAuthManager,
+        private val backupUseCase: BackupUseCase,
+        private val restoreUseCase: RestoreUseCase,
+        private val workManager: WorkManager,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(SettingsUiState())
         val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -117,6 +152,9 @@ class SettingsViewModel
                             restingHrBeforeMinutes = prefs.restingHrBeforeMinutes,
                             restingHrAfterMinutes = prefs.restingHrAfterMinutes,
                             appTheme = prefs.appTheme,
+                            driveEmail = prefs.driveAccountEmail,
+                            backupSchedule = prefs.backupSchedule,
+                            lastBackupTimestamp = prefs.lastBackupTimestamp,
                             isLoading = false,
                         )
                     }
@@ -203,6 +241,95 @@ class SettingsViewModel
                     viewModelScope.launch {
                         prefsRepo.updateAppTheme(event.theme)
                     }
+
+                is SettingsEvent.DriveSignIn ->
+                    viewModelScope.launch {
+                        driveAuthManager.signIn(event.activityContext).onFailure { e ->
+                            _uiState.update { it.copy(driveError = e.message ?: "Sign-in failed") }
+                        }
+                    }
+
+                is SettingsEvent.DriveSignOut ->
+                    viewModelScope.launch {
+                        driveAuthManager.signOut(event.context)
+                    }
+
+                is SettingsEvent.BackupScheduleChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateBackupSchedule(event.schedule)
+                        rescheduleBackupWorker(event.schedule)
+                    }
+
+                SettingsEvent.BackupNow ->
+                    viewModelScope.launch {
+                        _uiState.update { it.copy(isBackingUp = true, driveError = null) }
+                        backupUseCase.execute()
+                            .onFailure { e ->
+                                _uiState.update { it.copy(driveError = e.message ?: "Backup failed") }
+                            }
+                        _uiState.update { it.copy(isBackingUp = false) }
+                    }
+
+                SettingsEvent.RestoreFromDrive ->
+                    viewModelScope.launch {
+                        _uiState.update { it.copy(isRestoring = true, driveError = null) }
+                        restoreUseCase.downloadAndValidate()
+                            .onSuccess { dir ->
+                                _uiState.update {
+                                    it.copy(
+                                        isRestoring = false,
+                                        showRestoreConfirmDialog = true,
+                                        pendingRestoreDir = dir,
+                                    )
+                                }
+                            }.onFailure { e ->
+                                _uiState.update {
+                                    it.copy(isRestoring = false, driveError = e.message ?: "Restore download failed")
+                                }
+                            }
+                    }
+
+                SettingsEvent.RestoreConfirmed -> {
+                    val dir = _uiState.value.pendingRestoreDir ?: return
+                    _uiState.update { it.copy(showRestoreConfirmDialog = false, isRestoring = true) }
+                    viewModelScope.launch {
+                        restoreUseCase.applyRestore(dir)
+                    }
+                }
+
+                SettingsEvent.RestoreDismissed -> {
+                    _uiState.value.pendingRestoreDir?.deleteRecursively()
+                    _uiState.update { it.copy(showRestoreConfirmDialog = false, pendingRestoreDir = null) }
+                }
+
+                SettingsEvent.DismissDriveError ->
+                    _uiState.update { it.copy(driveError = null) }
             }
+        }
+
+        private fun rescheduleBackupWorker(schedule: BackupSchedule) {
+            workManager.cancelUniqueWork(BACKUP_WORK_NAME)
+            if (schedule == BackupSchedule.MANUAL) return
+            val intervalDays = if (schedule == BackupSchedule.DAILY) 1L else 7L
+            val constraints =
+                Constraints
+                    .Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .setRequiresBatteryNotLow(true)
+                    .build()
+            val request =
+                PeriodicWorkRequestBuilder<BackupWorker>(intervalDays, TimeUnit.DAYS)
+                    .setConstraints(constraints)
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
+                    .build()
+            workManager.enqueueUniquePeriodicWork(
+                BACKUP_WORK_NAME,
+                androidx.work.ExistingPeriodicWorkPolicy.UPDATE,
+                request,
+            )
+        }
+
+        companion object {
+            const val BACKUP_WORK_NAME = "health_backup_periodic"
         }
     }

@@ -323,7 +323,9 @@ private fun AcwrChart(
 
     LaunchedEffect(trimpPoints, ratioPoints) {
         modelProducer.runTransaction {
-            columnSeries { series(x = trimpPoints.map { it.dayOffset }, y = trimpPoints.map { it.value }) }
+            if (trimpPoints.isNotEmpty()) {
+                columnSeries { series(x = trimpPoints.map { it.dayOffset }, y = trimpPoints.map { it.value }) }
+            }
             if (ratioPoints.isNotEmpty()) {
                 lineSeries { series(x = ratioPoints.map { it.dayOffset }, y = ratioPoints.map { it.value }) }
             }

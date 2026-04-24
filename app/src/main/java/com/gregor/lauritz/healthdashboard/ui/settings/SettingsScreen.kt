@@ -9,10 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -22,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -35,13 +40,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
+import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
+import java.text.DateFormat
+import java.util.Date
 import kotlin.math.roundToInt
 
 @Composable
@@ -57,6 +66,24 @@ fun SettingsScreen(
     onEvent: (SettingsEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+
+    if (uiState.showRestoreConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { onEvent(SettingsEvent.RestoreDismissed) },
+            title = { Text("Restore from Drive?") },
+            text = {
+                Text("This will replace all local health data and restart the app. This cannot be undone.")
+            },
+            confirmButton = {
+                Button(onClick = { onEvent(SettingsEvent.RestoreConfirmed) }) { Text("Restore") }
+            },
+            dismissButton = {
+                TextButton(onClick = { onEvent(SettingsEvent.RestoreDismissed) }) { Text("Cancel") }
+            },
+        )
+    }
+
     var sliderValue by rememberSaveable(uiState.goalSleepHours) {
         mutableFloatStateOf(uiState.goalSleepHours)
     }
@@ -295,26 +322,15 @@ fun SettingsScreen(
             )
         }
 
-        // Backup
+        // Cloud Backup
         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item { SectionHeader("Backup") }
+        item { SectionHeader("Cloud Backup") }
         item {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Google Drive Backup", style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        "Coming in Phase 9",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                TextButton(onClick = {}, enabled = false) {
-                    Text("Back Up Now")
-                }
-            }
+            CloudBackupSection(
+                uiState = uiState,
+                onEvent = onEvent,
+                context = context,
+            )
         }
 
         item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -505,3 +521,167 @@ private val AppTheme.displayName: String
             AppTheme.LIGHT -> "Light"
             AppTheme.DARK -> "Dark"
         }
+
+private val BackupSchedule.displayName: String
+    get() =
+        when (this) {
+            BackupSchedule.MANUAL -> "Manual only"
+            BackupSchedule.DAILY -> "Daily"
+            BackupSchedule.WEEKLY -> "Weekly"
+        }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CloudBackupSection(
+    uiState: SettingsUiState,
+    onEvent: (SettingsEvent) -> Unit,
+    context: android.content.Context,
+) {
+    val signedIn = uiState.driveEmail != null
+
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+        // Account row
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Google Account", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = uiState.driveEmail ?: "Not connected",
+                    style = MaterialTheme.typography.bodySmall,
+                    color =
+                        if (signedIn) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                )
+            }
+            if (signedIn) {
+                TextButton(onClick = { onEvent(SettingsEvent.DriveSignOut(context)) }) {
+                    Text("Sign Out")
+                }
+            } else {
+                TextButton(onClick = { onEvent(SettingsEvent.DriveSignIn(context)) }) {
+                    Text("Sign In")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Backup schedule dropdown
+        BackupScheduleItem(uiState = uiState, onEvent = onEvent)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Last backup timestamp
+        val lastBackupText =
+            if (uiState.lastBackupTimestamp == 0L) {
+                "Never backed up"
+            } else {
+                "Last backup: ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(uiState.lastBackupTimestamp))}"
+            }
+        Text(
+            text = lastBackupText,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Action buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Button(
+                onClick = { onEvent(SettingsEvent.BackupNow) },
+                enabled = signedIn && !uiState.isBackingUp && !uiState.isRestoring,
+                modifier = Modifier.weight(1f),
+            ) {
+                if (uiState.isBackingUp) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                } else {
+                    Text("Back Up Now")
+                }
+            }
+            Spacer(modifier = Modifier.size(8.dp))
+            OutlinedButton(
+                onClick = { onEvent(SettingsEvent.RestoreFromDrive) },
+                enabled = signedIn && !uiState.isBackingUp && !uiState.isRestoring,
+                modifier = Modifier.weight(1f),
+            ) {
+                if (uiState.isRestoring) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Text("Restore")
+                }
+            }
+        }
+
+        // Inline error display
+        if (uiState.driveError != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = uiState.driveError,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { onEvent(SettingsEvent.DismissDriveError) }) {
+                    Text("Dismiss")
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BackupScheduleItem(
+    uiState: SettingsUiState,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        OutlinedTextField(
+            value = uiState.backupSchedule.displayName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Auto Backup") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier =
+                Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            BackupSchedule.entries.forEach { schedule ->
+                DropdownMenuItem(
+                    text = { Text(schedule.displayName) },
+                    onClick = {
+                        onEvent(SettingsEvent.BackupScheduleChanged(schedule))
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}

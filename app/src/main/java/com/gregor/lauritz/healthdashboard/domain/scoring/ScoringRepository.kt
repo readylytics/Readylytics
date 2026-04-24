@@ -231,7 +231,9 @@ internal fun computeCtl(
 ): Float =
     when {
         dataTenureDays < 7 -> seedFitnessLevel
-        else -> totalTrimp / minOf(dataTenureDays.toLong(), windowDays).toFloat()
+        // Once 3+ weeks of data exist, normalize over the full window (rest = 0 training).
+        dataTenureDays < 21 -> totalTrimp / dataTenureDays.toFloat()
+        else -> totalTrimp / windowDays.toFloat()
     }
 
 internal fun computeLoadScore(sr: Float): Float =

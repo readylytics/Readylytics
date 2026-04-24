@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -76,9 +78,11 @@ fun WorkoutDetailRoute(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
         topBar = {
             TopAppBar(
                 title = { Text("Workout Details") },
+                windowInsets = WindowInsets(0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -204,10 +208,11 @@ private fun HrChart(
     }
 
     LaunchedEffect(workoutSamples) {
+        if (workoutSamples.isEmpty()) return@LaunchedEffect
         modelProducer.runTransaction {
             lineSeries {
                 series(
-                    x = workoutSamples.map { ChronoUnit.SECONDS.between(workoutStartInstant, it.timestamp).toDouble() / 60.0 },
+                    x = workoutSamples.map { (ChronoUnit.SECONDS.between(workoutStartInstant, it.timestamp).toDouble() / 60.0).let { m -> (m * 100.0).roundToInt() / 100.0 } },
                     y = workoutSamples.map { it.bpm.toDouble() },
                 )
             }

@@ -106,6 +106,18 @@ dependencies {
     // Vico charts
     implementation(libs.vico.compose.m3)
 
+    // Google Drive backup
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services)
+    implementation(libs.google.identity.googleid)
+    implementation(libs.play.services.auth)
+    implementation(libs.okhttp)
+
+    // WorkManager + Hilt integration
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.work.compiler)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -126,6 +126,7 @@ abstract class HealthDatabase : RoomDatabase() {
             object : Migration(5, 6) {
                 private val sql =
                     listOf(
+                        "DROP TABLE IF EXISTS daily_summaries_new",
                         "CREATE TABLE daily_summaries_new (" +
                             "dateMidnightMs INTEGER NOT NULL PRIMARY KEY, " +
                             "sleepScore REAL, loadScore REAL, readinessScore REAL, " +

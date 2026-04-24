@@ -37,6 +37,9 @@ class UserPreferencesRepository
             val RESTING_HR_BEFORE_MINUTES = intPreferencesKey("resting_hr_before_minutes")
             val RESTING_HR_AFTER_MINUTES = intPreferencesKey("resting_hr_after_minutes")
             val APP_THEME = stringPreferencesKey("app_theme")
+            val DRIVE_ACCOUNT_EMAIL = stringPreferencesKey("drive_account_email")
+            val BACKUP_SCHEDULE = stringPreferencesKey("backup_schedule")
+            val LAST_BACKUP_TIMESTAMP = longPreferencesKey("last_backup_timestamp")
         }
 
         val userPreferences: Flow<UserPreferences> =
@@ -75,6 +78,12 @@ class UserPreferencesRepository
                             prefs[Keys.APP_THEME]
                                 ?.let { runCatching { AppTheme.valueOf(it) }.getOrNull() }
                                 ?: AppTheme.SYSTEM,
+                        driveAccountEmail = prefs[Keys.DRIVE_ACCOUNT_EMAIL],
+                        backupSchedule =
+                            prefs[Keys.BACKUP_SCHEDULE]
+                                ?.let { runCatching { BackupSchedule.valueOf(it) }.getOrNull() }
+                                ?: BackupSchedule.MANUAL,
+                        lastBackupTimestamp = prefs[Keys.LAST_BACKUP_TIMESTAMP] ?: 0L,
                     )
                 }
 
@@ -148,5 +157,20 @@ class UserPreferencesRepository
 
         suspend fun updateAppTheme(theme: AppTheme) {
             dataStore.edit { it[Keys.APP_THEME] = theme.name }
+        }
+
+        suspend fun updateDriveAccountEmail(email: String?) {
+            dataStore.edit { prefs ->
+                if (email != null) prefs[Keys.DRIVE_ACCOUNT_EMAIL] = email
+                else prefs.remove(Keys.DRIVE_ACCOUNT_EMAIL)
+            }
+        }
+
+        suspend fun updateBackupSchedule(schedule: BackupSchedule) {
+            dataStore.edit { it[Keys.BACKUP_SCHEDULE] = schedule.name }
+        }
+
+        suspend fun updateLastBackupTimestamp(ts: Long) {
+            dataStore.edit { it[Keys.LAST_BACKUP_TIMESTAMP] = ts }
         }
     }

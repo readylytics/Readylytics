@@ -1,5 +1,7 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
+enum class BackupSchedule { MANUAL, DAILY, WEEKLY }
+
 data class UserPreferences(
     val goalSleepHours: Float = 8f,
     val hrvBaselineOverride: Float? = null,
@@ -15,4 +17,7 @@ data class UserPreferences(
     val restingHrBeforeMinutes: Int = 5,
     val restingHrAfterMinutes: Int = 15,
     val appTheme: AppTheme = AppTheme.SYSTEM,
+    val driveAccountEmail: String? = null,
+    val backupSchedule: BackupSchedule = BackupSchedule.MANUAL,
+    val lastBackupTimestamp: Long = 0L,
 )

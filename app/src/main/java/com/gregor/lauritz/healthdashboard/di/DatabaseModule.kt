@@ -35,7 +35,9 @@ object DatabaseModule {
                 HealthDatabase.MIGRATION_3_4,
                 HealthDatabase.MIGRATION_4_5,
                 HealthDatabase.MIGRATION_5_6,
-            ).build()
+            )
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
 
     @Provides
     fun provideSleepSessionDao(db: HealthDatabase): SleepSessionDao = db.sleepSessionDao()
