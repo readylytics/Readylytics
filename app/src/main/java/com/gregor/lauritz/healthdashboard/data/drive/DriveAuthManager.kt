@@ -26,9 +26,7 @@ sealed interface DriveAuthState {
     data class SignedIn(val email: String) : DriveAuthState
 }
 
-// Web Client ID from Google Cloud Console → APIs & Services → Credentials.
-// Replace with your project's OAuth 2.0 Web Client ID before building.
-private const val OAUTH_SERVER_CLIENT_ID = "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com"
+private const val OAUTH_SERVER_CLIENT_ID = "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com" // TODO
 private const val DRIVE_APPDATA_SCOPE = "https://www.googleapis.com/auth/drive.appdata"
 
 @Singleton
