@@ -72,13 +72,17 @@ import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 @Composable
-fun WorkoutsRoute(viewModel: WorkoutsViewModel = hiltViewModel()) {
+fun WorkoutsRoute(
+    viewModel: WorkoutsViewModel = hiltViewModel(),
+    onWorkoutClick: (String) -> Unit,
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     WorkoutsScreen(
         uiState = uiState,
         onRangeSelected = viewModel::onRangeSelected,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
+        onWorkoutClick = onWorkoutClick,
     )
 }
 
@@ -89,6 +93,7 @@ fun WorkoutsScreen(
     onRangeSelected: (TimeRange) -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
+    onWorkoutClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -117,6 +122,7 @@ fun WorkoutsScreen(
         items(uiState.recentWorkouts) { workout ->
             WorkoutHistoryItem(
                 workout = workout,
+                onClick = { onWorkoutClick(workout.id) },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
         }
@@ -423,6 +429,7 @@ private fun SectionHeader(
 @Composable
 private fun WorkoutHistoryItem(
     workout: WorkoutRecordEntity,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val displayType = exerciseTypeToDisplayName(workout.exerciseType)
@@ -431,6 +438,7 @@ private fun WorkoutHistoryItem(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
+        onClick = onClick,
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -476,32 +484,6 @@ private fun IntensityBadge(
         )
     }
 }
-
-private fun exerciseTypeToDisplayName(type: String): String =
-    when (type) {
-        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING.toString() -> "Running"
-        ExerciseSessionRecord.EXERCISE_TYPE_WALKING.toString() -> "Walking"
-        ExerciseSessionRecord.EXERCISE_TYPE_BIKING.toString() -> "Cycling"
-        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL.toString(),
-        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER.toString(),
-        -> "Swimming"
-        ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING.toString() -> "Strength"
-        ExerciseSessionRecord.EXERCISE_TYPE_HIKING.toString() -> "Hiking"
-        ExerciseSessionRecord.EXERCISE_TYPE_YOGA.toString() -> "Yoga"
-        ExerciseSessionRecord.EXERCISE_TYPE_PILATES.toString() -> "Pilates"
-        ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL.toString() -> "Elliptical"
-        ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE.toString() -> "Rowing"
-        ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING.toString(),
-        ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING_MACHINE.toString(),
-        -> "Stairs"
-        ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING.toString() -> "HIIT"
-        else ->
-            type
-                .replace("EXERCISE_TYPE_", "")
-                .lowercase()
-                .replaceFirstChar { it.uppercase() }
-                .replace("_", " ")
-    }
 
 private fun WorkoutRecordEntity.intensityLabel(): String =
     when {

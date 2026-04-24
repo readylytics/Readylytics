@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface WorkoutDao {
+    @Query("SELECT * FROM workout_records WHERE id = :id")
+    suspend fun getById(id: String): WorkoutRecordEntity?
+
     @Query("SELECT * FROM workout_records WHERE startTime >= :fromMs ORDER BY startTime DESC")
     fun observeSince(fromMs: Long): Flow<List<WorkoutRecordEntity>>
 

@@ -6,10 +6,13 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardRoute
+import com.gregor.lauritz.healthdashboard.ui.navigation.AppDestination
 import com.gregor.lauritz.healthdashboard.ui.navigation.TabDestination
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsRoute
 import com.gregor.lauritz.healthdashboard.ui.sleep.SleepRoute
+import com.gregor.lauritz.healthdashboard.ui.workouts.WorkoutDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.workouts.WorkoutsRoute
 
 @Composable
@@ -45,7 +48,18 @@ fun MainNavHost(
             )
         }
         composable<TabDestination.Sleep> { SleepRoute() }
-        composable<TabDestination.Workouts> { WorkoutsRoute() }
+        composable<TabDestination.Workouts> {
+            WorkoutsRoute { id ->
+                navController.navigate(AppDestination.WorkoutDetail(id))
+            }
+        }
+        composable<AppDestination.WorkoutDetail> { backStackEntry ->
+            val detail: AppDestination.WorkoutDetail = backStackEntry.toRoute()
+            WorkoutDetailRoute(
+                workoutId = detail.workoutId,
+                onBack = { navController.popBackStack() },
+            )
+        }
         composable<TabDestination.Settings> { SettingsRoute() }
     }
 }
