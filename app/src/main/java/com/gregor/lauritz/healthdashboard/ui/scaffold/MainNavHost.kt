@@ -6,6 +6,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -28,10 +30,38 @@ fun MainNavHost(
         navController = navController,
         startDestination = TabDestination.Dashboard,
         modifier = modifier,
-        enterTransition = { fadeIn(animationSpec = tween(300)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300)) },
-        exitTransition = { fadeOut(animationSpec = tween(300)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300)) },
-        popEnterTransition = { fadeIn(animationSpec = tween(300)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300)) },
-        popExitTransition = { fadeOut(animationSpec = tween(300)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300)) },
+        enterTransition = {
+            val initialIndex = getTabIndex(initialState.destination)
+            val targetIndex = getTabIndex(targetState.destination)
+            val direction = if (targetIndex > initialIndex) {
+                AnimatedContentTransitionScope.SlideDirection.Start
+            } else {
+                AnimatedContentTransitionScope.SlideDirection.End
+            }
+            fadeIn(animationSpec = tween(300)) + slideIntoContainer(direction, tween(300))
+        },
+        exitTransition = {
+            val initialIndex = getTabIndex(initialState.destination)
+            val targetIndex = getTabIndex(targetState.destination)
+            val direction = if (targetIndex > initialIndex) {
+                AnimatedContentTransitionScope.SlideDirection.Start
+            } else {
+                AnimatedContentTransitionScope.SlideDirection.End
+            }
+            fadeOut(animationSpec = tween(300)) + slideOutOfContainer(direction, tween(300))
+        },
+        popEnterTransition = {
+            fadeIn(animationSpec = tween(300)) + slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.End,
+                tween(300)
+            )
+        },
+        popExitTransition = {
+            fadeOut(animationSpec = tween(300)) + slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.End,
+                tween(300)
+            )
+        },
     ) {
         composable<TabDestination.Dashboard> {
             DashboardRoute(
@@ -70,4 +100,17 @@ fun MainNavHost(
         }
         composable<TabDestination.Settings> { SettingsRoute() }
     }
+}
+
+private fun getTabIndex(destination: NavDestination?): Int {
+    if (destination == null) return -1
+    val index = TabDestination.all.indexOfFirst { tab ->
+        destination.hasRoute(tab::class)
+    }
+    if (index != -1) return index
+
+    // WorkoutDetail is logically under Workouts
+    if (destination.hasRoute(AppDestination.WorkoutDetail::class)) return 2
+
+    return -1
 }
