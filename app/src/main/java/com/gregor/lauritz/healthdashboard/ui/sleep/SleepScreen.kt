@@ -334,7 +334,7 @@ private fun CircadianConsistencyCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Circadian",
+                    text = "Circadian Consistency",
                     style = MaterialTheme.typography.labelSmall,
                     color = contentColor,
                 )
