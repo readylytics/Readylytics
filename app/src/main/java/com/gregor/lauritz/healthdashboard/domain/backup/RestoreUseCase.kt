@@ -111,6 +111,13 @@ class RestoreUseCase
             if (json.has("restingHrAfterMinutes")) prefsRepo.updateRestingHrAfterMinutes(json.getInt("restingHrAfterMinutes"))
             if (json.has("appTheme")) prefsRepo.updateAppTheme(AppTheme.valueOf(json.getString("appTheme")))
             if (json.has("backupSchedule")) prefsRepo.updateBackupSchedule(BackupSchedule.valueOf(json.getString("backupSchedule")))
+            if (json.has("birthDay") && json.has("birthMonth") && json.has("birthYear")) {
+                prefsRepo.updateBirthday(
+                    json.getInt("birthDay"),
+                    json.getInt("birthMonth"),
+                    json.getInt("birthYear"),
+                )
+            }
         }
 
         private fun unzip(

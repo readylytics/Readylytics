@@ -84,6 +84,9 @@ class BackupUseCase
                 .put("restingHrAfterMinutes", prefs.restingHrAfterMinutes)
                 .put("appTheme", prefs.appTheme.name)
                 .put("backupSchedule", prefs.backupSchedule.name)
+                .put("birthDay", prefs.birthDay)
+                .put("birthMonth", prefs.birthMonth)
+                .put("birthYear", prefs.birthYear)
                 .toString()
         }
 

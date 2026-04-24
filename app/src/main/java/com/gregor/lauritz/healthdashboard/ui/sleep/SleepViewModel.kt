@@ -83,6 +83,7 @@ class SleepViewModel
          * Baseline HRV (calculated from past 30 days, constant across all views).
          * This ensures the baseline shown in charts matches the dashboard baseline.
          */
+        @OptIn(ExperimentalCoroutinesApi::class)
         val baselineHrvFlow =
             selectedDateRepository.selectedDate.flatMapLatest { date ->
                 hrvDao
@@ -113,6 +114,7 @@ class SleepViewModel
          * Baseline RHR (calculated from past 30 days, constant across all views).
          * This ensures the baseline shown in charts matches the dashboard baseline.
          */
+        @OptIn(ExperimentalCoroutinesApi::class)
         val baselineRhrFlow =
             selectedDateRepository.selectedDate.flatMapLatest { date ->
                 heartRateDao

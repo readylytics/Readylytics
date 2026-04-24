@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.io.IOException
+import java.time.LocalDate
+import java.time.Period
 import javax.inject.Inject
 
 class UserPreferencesRepository
@@ -30,6 +32,17 @@ class UserPreferencesRepository
             val SYNC_INTERVAL_HOURS = intPreferencesKey("sync_interval_hours")
             val LAST_SYNC_TIMESTAMP = longPreferencesKey("last_sync_timestamp")
             val MAX_HEART_RATE = intPreferencesKey("max_heart_rate")
+            val AUTO_CALCULATE_MAX_HR = booleanPreferencesKey("auto_calculate_max_hr")
+            val MANUAL_ZONE_EDITING = booleanPreferencesKey("manual_zone_editing")
+            val ZONE_1_MAX_PERCENT = floatPreferencesKey("zone_1_max_percent")
+            val ZONE_2_MAX_PERCENT = floatPreferencesKey("zone_2_max_percent")
+            val ZONE_3_MAX_PERCENT = floatPreferencesKey("zone_3_max_percent")
+            val ZONE_4_MAX_PERCENT = floatPreferencesKey("zone_4_max_percent")
+            val AGE = intPreferencesKey("age")
+            val BIRTH_DAY = intPreferencesKey("birth_day")
+            val BIRTH_MONTH = intPreferencesKey("birth_month")
+            val BIRTH_YEAR = intPreferencesKey("birth_year")
+            val GENDER = stringPreferencesKey("gender")
             val HRV_OPTIMAL_THRESHOLD = floatPreferencesKey("hrv_optimal_threshold")
             val HRV_WARNING_THRESHOLD = floatPreferencesKey("hrv_warning_threshold")
             val RHR_OPTIMAL_THRESHOLD = floatPreferencesKey("rhr_optimal_threshold")
@@ -68,6 +81,17 @@ class UserPreferencesRepository
                         syncIntervalHours = prefs[Keys.SYNC_INTERVAL_HOURS] ?: 1,
                         lastSyncTimestamp = prefs[Keys.LAST_SYNC_TIMESTAMP] ?: 0L,
                         maxHeartRate = prefs[Keys.MAX_HEART_RATE] ?: 190,
+                        autoCalculateMaxHr = prefs[Keys.AUTO_CALCULATE_MAX_HR] ?: true,
+                        manualZoneEditing = prefs[Keys.MANUAL_ZONE_EDITING] ?: false,
+                        zone1MaxPercent = prefs[Keys.ZONE_1_MAX_PERCENT] ?: 0.60f,
+                        zone2MaxPercent = prefs[Keys.ZONE_2_MAX_PERCENT] ?: 0.70f,
+                        zone3MaxPercent = prefs[Keys.ZONE_3_MAX_PERCENT] ?: 0.80f,
+                        zone4MaxPercent = prefs[Keys.ZONE_4_MAX_PERCENT] ?: 0.90f,
+                        age = prefs[Keys.AGE] ?: 30,
+                        birthDay = prefs[Keys.BIRTH_DAY] ?: 1,
+                        birthMonth = prefs[Keys.BIRTH_MONTH] ?: 1,
+                        birthYear = prefs[Keys.BIRTH_YEAR] ?: 1994,
+                        gender = prefs[Keys.GENDER],
                         hrvOptimalThreshold = prefs[Keys.HRV_OPTIMAL_THRESHOLD] ?: 1.00f,
                         hrvWarningThreshold = prefs[Keys.HRV_WARNING_THRESHOLD] ?: 0.90f,
                         rhrOptimalThreshold = prefs[Keys.RHR_OPTIMAL_THRESHOLD] ?: 0.95f,
@@ -128,7 +152,48 @@ class UserPreferencesRepository
         }
 
         suspend fun updateMaxHeartRate(bpm: Int) {
-            dataStore.edit { it[Keys.MAX_HEART_RATE] = bpm.coerceIn(150, 220) }
+            dataStore.edit { it[Keys.MAX_HEART_RATE] = bpm.coerceIn(100, 250) }
+        }
+
+        suspend fun updateAutoCalculateMaxHr(enabled: Boolean) {
+            dataStore.edit { it[Keys.AUTO_CALCULATE_MAX_HR] = enabled }
+        }
+
+        suspend fun updateManualZoneEditing(enabled: Boolean) {
+            dataStore.edit { it[Keys.MANUAL_ZONE_EDITING] = enabled }
+        }
+
+        suspend fun updateZonePercentages(z1: Float, z2: Float, z3: Float, z4: Float) {
+            dataStore.edit { prefs ->
+                prefs[Keys.ZONE_1_MAX_PERCENT] = z1
+                prefs[Keys.ZONE_2_MAX_PERCENT] = z2
+                prefs[Keys.ZONE_3_MAX_PERCENT] = z3
+                prefs[Keys.ZONE_4_MAX_PERCENT] = z4
+            }
+        }
+
+        suspend fun updateAge(age: Int) {
+            dataStore.edit { it[Keys.AGE] = age.coerceIn(1, 120) }
+        }
+
+        suspend fun updateBirthday(day: Int, month: Int, year: Int) {
+            val safeDay = day.coerceIn(1, 31)
+            val safeMonth = month.coerceIn(1, 12)
+            val safeYear = year.coerceIn(1900, LocalDate.now().year)
+            val age = Period.between(LocalDate.of(safeYear, safeMonth, safeDay), LocalDate.now()).years
+            dataStore.edit { prefs ->
+                prefs[Keys.BIRTH_DAY] = safeDay
+                prefs[Keys.BIRTH_MONTH] = safeMonth
+                prefs[Keys.BIRTH_YEAR] = safeYear
+                prefs[Keys.AGE] = age.coerceIn(1, 120)
+            }
+        }
+
+        suspend fun updateGender(gender: String?) {
+            dataStore.edit { prefs ->
+                if (gender != null) prefs[Keys.GENDER] = gender
+                else prefs.remove(Keys.GENDER)
+            }
         }
 
         suspend fun updateHrvOptimalThreshold(value: Float) {

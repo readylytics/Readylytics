@@ -45,6 +45,7 @@ class HealthSyncUseCase
                 val workoutEntities = syncWorkouts(from, to)
                 syncHeartRate(from, to, sleepEntities, workoutEntities)
                 syncHrv(from, to, sleepEntities)
+                updateCalculatedMetrics()
 
                 val today = LocalDate.now(zoneId)
                 repeat(windowDays) { i ->
@@ -67,10 +68,20 @@ class HealthSyncUseCase
         private suspend fun syncWorkouts(
             from: Instant,
             to: Instant,
-        ) = hcRepo
-            .readExerciseSessions(from, to)
-            .map { WorkoutMapper.mapExerciseSession(it, emptyList(), 190) }
-            .also { workoutDao.upsertAll(it) }
+        ): List<com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity> {
+            val prefs = prefsRepo.userPreferences.first()
+            val thresholds = WorkoutMapper.zoneThresholds(
+                prefs.maxHeartRate,
+                prefs.zone1MaxPercent,
+                prefs.zone2MaxPercent,
+                prefs.zone3MaxPercent,
+                prefs.zone4MaxPercent
+            )
+            return hcRepo
+                .readExerciseSessions(from, to)
+                .map { WorkoutMapper.mapExerciseSession(it, emptyList(), thresholds) }
+                .also { workoutDao.upsertAll(it) }
+        }
 
         private suspend fun syncHeartRate(
             from: Instant,
@@ -84,11 +95,18 @@ class HealthSyncUseCase
             heartRateDao.upsertAll(hrEntities)
 
             // Re-map workouts with actual HR samples for accurate zone/TRIMP calculation
+            val thresholds = WorkoutMapper.zoneThresholds(
+                prefs.maxHeartRate,
+                prefs.zone1MaxPercent,
+                prefs.zone2MaxPercent,
+                prefs.zone3MaxPercent,
+                prefs.zone4MaxPercent
+            )
             val workoutSessions = hcRepo.readExerciseSessions(from, to)
             val remappedWorkouts =
                 workoutSessions.map { session ->
                     val sessionHr = hrEntities.filter { it.sessionId == session.metadata.id }
-                    WorkoutMapper.mapExerciseSession(session, sessionHr, prefs.maxHeartRate)
+                    WorkoutMapper.mapExerciseSession(session, sessionHr, thresholds)
                 }
             workoutDao.upsertAll(remappedWorkouts)
         }
@@ -101,5 +119,16 @@ class HealthSyncUseCase
             val hrvRecords = hcRepo.readHrvSamples(from, to)
             val hrvEntities = HrvMapper.mapToEntities(hrvRecords, sleepEntities)
             hrvDao.upsertAll(hrvEntities)
+        }
+
+        private suspend fun updateCalculatedMetrics() {
+            val prefs = prefsRepo.userPreferences.first()
+            // Always recalculate Max HR if auto-calculate is enabled (in case age changed via onboarding/settings)
+            if (prefs.autoCalculateMaxHr) {
+                val calculatedMaxHr = 220 - prefs.age
+                if (calculatedMaxHr != prefs.maxHeartRate) {
+                    prefsRepo.updateMaxHeartRate(calculatedMaxHr)
+                }
+            }
         }
     }

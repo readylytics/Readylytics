@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.settings
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
@@ -29,6 +31,7 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -84,7 +88,7 @@ fun SettingsScreen(
         )
     }
 
-    var sliderValue by rememberSaveable(uiState.goalSleepHours) {
+    var sleepGoalValue by rememberSaveable(uiState.goalSleepHours) {
         mutableFloatStateOf(uiState.goalSleepHours)
     }
     var hrvText by rememberSaveable(uiState.hrvBaselineOverride) {
@@ -95,6 +99,15 @@ fun SettingsScreen(
     }
     var maxHrText by rememberSaveable(uiState.maxHeartRate) {
         mutableStateOf(uiState.maxHeartRate.toString())
+    }
+    var birthDayText by rememberSaveable(uiState.birthDay) {
+        mutableStateOf(uiState.birthDay.toString())
+    }
+    var birthMonthText by rememberSaveable(uiState.birthMonth) {
+        mutableStateOf(uiState.birthMonth.toString())
+    }
+    var birthYearText by rememberSaveable(uiState.birthYear) {
+        mutableStateOf(uiState.birthYear.toString())
     }
     var beforeMinutesText by rememberSaveable(uiState.restingHrBeforeMinutes) {
         mutableStateOf(uiState.restingHrBeforeMinutes.toString())
@@ -115,95 +128,22 @@ fun SettingsScreen(
                     Text("Sleep Goal", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
-                        text = sliderValue.toSleepHoursText(),
+                        text = sleepGoalValue.toSleepHoursText(),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
                 Slider(
-                    value = sliderValue,
-                    onValueChange = { sliderValue = it },
+                    value = sleepGoalValue,
+                    onValueChange = { sleepGoalValue = it },
                     onValueChangeFinished = {
-                        onEvent(SettingsEvent.GoalSleepHoursChanged(sliderValue))
+                        onEvent(SettingsEvent.GoalSleepHoursChanged(sleepGoalValue))
                     },
                     valueRange = 4f..12f,
                     steps = 15,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-        }
-
-        // Baselines
-        item { HorizontalDivider(modifier = Modifier.padding(top = 4.dp)) }
-        item { SectionHeader("Baselines") }
-        item {
-            OutlinedTextField(
-                value = hrvText,
-                onValueChange =
-                    { value ->
-                        hrvText = value
-                        onEvent(SettingsEvent.HrvBaselineChanged(value))
-                    },
-                label = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("HRV Baseline Override (ms)")
-                        MetricTooltip(
-                            description =
-                                "HRV in ms. Overrides the 30-day rolling median " +
-                                    "used in sleep restoration scoring.",
-                        )
-                    }
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                trailingIcon =
-                    {
-                        if (hrvText.isNotEmpty()) {
-                            IconButton(onClick = { onEvent(SettingsEvent.HrvBaselineCleared) }) {
-                                Icon(Icons.Filled.Clear, contentDescription = "Clear HRV baseline")
-                            }
-                        }
-                    },
-                singleLine = true,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-            )
-        }
-        item { Spacer(modifier = Modifier.height(12.dp)) }
-        item {
-            OutlinedTextField(
-                value = rhrText,
-                onValueChange =
-                    { value ->
-                        rhrText = value
-                        onEvent(SettingsEvent.RhrBaselineChanged(value))
-                    },
-                label = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("RHR Baseline Override (bpm)")
-                        MetricTooltip(
-                            description =
-                                "Resting heart rate in bpm. Overrides the 30-day " +
-                                    "rolling median used in sleep restoration scoring.",
-                        )
-                    }
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                trailingIcon =
-                    {
-                        if (rhrText.isNotEmpty()) {
-                            IconButton(onClick = { onEvent(SettingsEvent.RhrBaselineCleared) }) {
-                                Icon(Icons.Filled.Clear, contentDescription = "Clear RHR baseline")
-                            }
-                        }
-                    },
-                singleLine = true,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-            )
         }
 
         // Sync
@@ -221,7 +161,7 @@ fun SettingsScreen(
         item { SectionHeader("Appearance") }
         item { AppThemeItem(uiState = uiState, onEvent = onEvent) }
 
-        // Advanced
+        // Thresholds
         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
         item { SectionHeader("Thresholds") }
         item {
@@ -262,28 +202,245 @@ fun SettingsScreen(
             )
         }
 
+        // Heart Rate Zones
+        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        item { SectionHeader("Heart Rate Zones") }
+        item {
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Auto-calculate Max HR", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Uses age (220 - age) if enabled",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = uiState.autoCalculateMaxHr,
+                        onCheckedChange = { onEvent(SettingsEvent.AutoCalculateMaxHrChanged(it)) }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                AnimatedVisibility(visible = uiState.autoCalculateMaxHr) {
+                    Column {
+                        Text(
+                            "Date of Birth",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = birthDayText,
+                                onValueChange = { v ->
+                                    birthDayText = v.filter { it.isDigit() }.take(2)
+                                    val d = birthDayText.toIntOrNull() ?: return@OutlinedTextField
+                                    val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
+                                    val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
+                                    if (d in 1..31 && m in 1..12 && y in 1900..9999) {
+                                        onEvent(SettingsEvent.BirthdayChanged(d, m, y))
+                                    }
+                                },
+                                label = { Text("Day") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            OutlinedTextField(
+                                value = birthMonthText,
+                                onValueChange = { v ->
+                                    birthMonthText = v.filter { it.isDigit() }.take(2)
+                                    val d = birthDayText.toIntOrNull() ?: return@OutlinedTextField
+                                    val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
+                                    val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
+                                    if (d in 1..31 && m in 1..12 && y in 1900..9999) {
+                                        onEvent(SettingsEvent.BirthdayChanged(d, m, y))
+                                    }
+                                },
+                                label = { Text("Month") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            OutlinedTextField(
+                                value = birthYearText,
+                                onValueChange = { v ->
+                                    birthYearText = v.filter { it.isDigit() }.take(4)
+                                    val d = birthDayText.toIntOrNull() ?: return@OutlinedTextField
+                                    val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
+                                    val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
+                                    if (d in 1..31 && m in 1..12 && y in 1900..9999) {
+                                        onEvent(SettingsEvent.BirthdayChanged(d, m, y))
+                                    }
+                                },
+                                label = { Text("Year") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.weight(1.4f),
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Age: ${uiState.age} (auto-calculated)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        GenderSelector(
+                            selectedGender = uiState.gender,
+                            onGenderSelected = { onEvent(SettingsEvent.GenderChanged(it)) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = maxHrText,
+                    onValueChange = {
+                        maxHrText = it
+                        onEvent(SettingsEvent.MaxHeartRateChanged(it))
+                    },
+                    label = { Text("Max Heart Rate (bpm)") },
+                    enabled = !uiState.autoCalculateMaxHr,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    supportingText = {
+                        if (uiState.autoCalculateMaxHr) {
+                            Text("Calculated from age")
+                        } else {
+                            Text("Manual override")
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Manual Zone Editing", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Customize percentage thresholds",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = uiState.manualZoneEditing,
+                        onCheckedChange = { onEvent(SettingsEvent.ManualZoneEditingChanged(it)) }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (uiState.manualZoneEditing) {
+                    ZoneEditingSection(uiState = uiState, onEvent = onEvent)
+                } else {
+                    Text(
+                        "Calculated Zones",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    HeartRateZonesDisplay(
+                        maxHr = uiState.maxHeartRate,
+                        z1p = uiState.zone1MaxPercent,
+                        z2p = uiState.zone2MaxPercent,
+                        z3p = uiState.zone3MaxPercent,
+                        z4p = uiState.zone4MaxPercent
+                    )
+                }
+
+                Text(
+                    "Zones are used for TRIMP and workout intensity tracking.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        }
+
         // Advanced
         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
         item { SectionHeader("Advanced") }
+
+        // Baselines
         item {
-            OutlinedTextField(
-                value = maxHrText,
-                onValueChange =
-                    { value ->
-                        maxHrText = value
-                        onEvent(SettingsEvent.MaxHeartRateChanged(value))
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Text(
+                    "Baseline Overrides",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                OutlinedTextField(
+                    value = hrvText,
+                    onValueChange = {
+                        hrvText = it
+                        onEvent(SettingsEvent.HrvBaselineChanged(it))
                     },
-                label = { Text("Max Heart Rate") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                supportingText = { Text("150–220 bpm") },
-                singleLine = true,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-            )
+                    label = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("HRV Baseline (ms)")
+                            MetricTooltip(
+                                description = "Overrides the 30-day rolling median used in scoring."
+                            )
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    trailingIcon = {
+                        if (hrvText.isNotEmpty()) {
+                            IconButton(onClick = {
+                                hrvText = ""
+                                onEvent(SettingsEvent.HrvBaselineCleared)
+                            }) {
+                                Icon(Icons.Filled.Clear, contentDescription = "Clear")
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = rhrText,
+                    onValueChange = {
+                        rhrText = it
+                        onEvent(SettingsEvent.RhrBaselineChanged(it))
+                    },
+                    label = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("RHR Baseline (bpm)")
+                            MetricTooltip(
+                                description = "Overrides the 30-day rolling median used in scoring."
+                            )
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    trailingIcon = {
+                        if (rhrText.isNotEmpty()) {
+                            IconButton(onClick = {
+                                rhrText = ""
+                                onEvent(SettingsEvent.RhrBaselineCleared)
+                            }) {
+                                Icon(Icons.Filled.Clear, contentDescription = "Clear")
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
-        item { Spacer(modifier = Modifier.height(12.dp)) }
+
+        item { Spacer(modifier = Modifier.height(16.dp)) }
+
+        // Wakeup Resting HR fields
         item {
             OutlinedTextField(
                 value = beforeMinutesText,
@@ -292,9 +449,15 @@ fun SettingsScreen(
                         beforeMinutesText = value
                         value.toIntOrNull()?.let { onEvent(SettingsEvent.RestingHrBeforeMinutesChanged(it)) }
                     },
-                label = { Text("Wakeup Resting HR: Minutes Before") },
+                label = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Resting HR: Minutes Before")
+                        MetricTooltip(
+                            description = "Minutes before sleep end to include in wakeup resting HR calculation (default: 5)."
+                        )
+                    }
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                supportingText = { Text("Minutes before sleep end (default: 5)") },
                 singleLine = true,
                 modifier =
                     Modifier
@@ -311,9 +474,15 @@ fun SettingsScreen(
                         afterMinutesText = value
                         value.toIntOrNull()?.let { onEvent(SettingsEvent.RestingHrAfterMinutesChanged(it)) }
                     },
-                label = { Text("Wakeup Resting HR: Minutes After") },
+                label = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Resting HR: Minutes After")
+                        MetricTooltip(
+                            description = "Minutes after sleep end to include in wakeup resting HR calculation (default: 15)."
+                        )
+                    }
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                supportingText = { Text("Minutes after sleep end (default: 15)") },
                 singleLine = true,
                 modifier =
                     Modifier
@@ -334,6 +503,153 @@ fun SettingsScreen(
         }
 
         item { Spacer(modifier = Modifier.height(16.dp)) }
+    }
+}
+
+@Composable
+private fun HeartRateZonesDisplay(
+    maxHr: Int,
+    z1p: Float,
+    z2p: Float,
+    z3p: Float,
+    z4p: Float
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        val zones = listOf(
+            "Zone 1" to (0.50..z1p.toDouble()),
+            "Zone 2" to (z1p.toDouble()..z2p.toDouble()),
+            "Zone 3" to (z2p.toDouble()..z3p.toDouble()),
+            "Zone 4" to (z3p.toDouble()..z4p.toDouble()),
+            "Zone 5" to (z4p.toDouble()..1.00)
+        )
+
+        zones.forEach { (name, range) ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(name, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = "${(maxHr * range.start).roundToInt()} - ${(maxHr * range.endInclusive).roundToInt()} bpm",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ZoneEditingSection(
+    uiState: SettingsUiState,
+    onEvent: (SettingsEvent) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            "Zone Max Percentages",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        ZonePercentageSliderItem(
+            label = "Zone 1 Max",
+            value = uiState.zone1MaxPercent,
+            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(it, uiState.zone2MaxPercent, uiState.zone3MaxPercent, uiState.zone4MaxPercent)) }
+        )
+        ZonePercentageSliderItem(
+            label = "Zone 2 Max",
+            value = uiState.zone2MaxPercent,
+            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(uiState.zone1MaxPercent, it, uiState.zone3MaxPercent, uiState.zone4MaxPercent)) }
+        )
+        ZonePercentageSliderItem(
+            label = "Zone 3 Max",
+            value = uiState.zone3MaxPercent,
+            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(uiState.zone1MaxPercent, uiState.zone2MaxPercent, it, uiState.zone4MaxPercent)) }
+        )
+        ZonePercentageSliderItem(
+            label = "Zone 4 Max",
+            value = uiState.zone4MaxPercent,
+            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(uiState.zone1MaxPercent, uiState.zone2MaxPercent, uiState.zone3MaxPercent, it)) }
+        )
+    }
+}
+
+@Composable
+private fun ZonePercentageSliderItem(
+    label: String,
+    value: Float,
+    onValueChange: (Float) -> Unit
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.bodySmall)
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "${(value * 100).roundToInt()}%",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = 0.4f..0.95f,
+            steps = 54, // 1% increments
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GenderSelector(
+    selectedGender: String?,
+    onGenderSelected: (String?) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val genders = listOf("Male", "Female", "Other", "Prefer not to say")
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        OutlinedTextField(
+            value = selectedGender ?: "Not set",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Gender") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier =
+                Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            genders.forEach { gender ->
+                DropdownMenuItem(
+                    text = { Text(gender) },
+                    onClick =
+                        {
+                            onGenderSelected(gender)
+                            expanded = false
+                        },
+                )
+            }
+            DropdownMenuItem(
+                text = { Text("Clear") },
+                onClick = {
+                    onGenderSelected(null)
+                    expanded = false
+                }
+            )
+        }
     }
 }
 

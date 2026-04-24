@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -96,7 +98,14 @@ fun WorkoutsScreen(
     onWorkoutClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val listState = rememberLazyListState()
+    // Explicitly persist scroll state across navigation
+    rememberSaveable(saver = androidx.compose.foundation.lazy.LazyListState.Saver) {
+        listState
+    }
+
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 16.dp),
     ) {
@@ -453,7 +462,7 @@ private fun WorkoutHistoryItem(
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    text = "${workout.durationMinutes} min  ·  TRIMP ${workout.trimp.roundToInt()}",
+                    text = "${workout.durationMinutes} min  ·  TRIMP ${workout.trimp.roundToInt()}  ·  ${if (workout.avgHr > 0) "${workout.avgHr} bpm" else "-- bpm"}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -498,6 +507,7 @@ private fun WorkoutRecordEntity.intensityLabel(): String =
 
 private fun WorkoutRecordEntity.intensityStatus(): MetricStatus =
     when {
+        trimp > 200 -> MetricStatus.POOR
         trimp > 150 -> MetricStatus.WARNING
         trimp > 50 -> MetricStatus.OPTIMAL
         else -> MetricStatus.CALIBRATING

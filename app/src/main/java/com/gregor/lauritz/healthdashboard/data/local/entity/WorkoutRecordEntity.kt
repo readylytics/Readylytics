@@ -16,4 +16,5 @@ data class WorkoutRecordEntity(
     val zone4Minutes: Float,
     val zone5Minutes: Float,
     val trimp: Float,
+    val avgHr: Int,
 )

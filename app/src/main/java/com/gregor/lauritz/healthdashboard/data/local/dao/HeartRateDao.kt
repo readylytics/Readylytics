@@ -44,6 +44,15 @@ interface HeartRateDao {
     )
     suspend fun getMinHrTimestamp(sessionId: String): Long?
 
+    @Query(
+        "SELECT * FROM heart_rate_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
+            "ORDER BY timestampMs ASC",
+    )
+    suspend fun getByTimeRange(
+        startMs: Long,
+        endMs: Long,
+    ): List<HeartRateRecordEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(records: List<HeartRateRecordEntity>)
 }

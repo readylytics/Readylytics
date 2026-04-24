@@ -16,6 +16,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.ui.onboarding.OnboardingRoute
 import com.gregor.lauritz.healthdashboard.ui.scaffold.MainScaffold
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncUiState
@@ -25,6 +26,7 @@ import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
 fun AppNavHost(
     viewModel: SyncViewModel = hiltViewModel(),
     hcRepo: HealthConnectRepository,
+    prefsRepo: UserPreferencesRepository, // Added prefsRepo
     navController: NavHostController = rememberNavController(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -56,7 +58,7 @@ fun AppNavHost(
         }
 
         composable<AppDestination.Onboarding> {
-            OnboardingRoute(viewModel = viewModel, hcRepo = hcRepo)
+            OnboardingRoute(viewModel = viewModel, hcRepo = hcRepo, prefsRepo = prefsRepo)
         }
 
         composable<AppDestination.Unavailable> {

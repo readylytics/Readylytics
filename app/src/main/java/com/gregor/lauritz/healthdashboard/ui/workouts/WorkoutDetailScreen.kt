@@ -12,13 +12,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -121,7 +126,23 @@ fun WorkoutDetailScreen(
         }
 
         item {
-            TrimpCard(workout.trimp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                TrimpCard(
+                    trimp = workout.trimp,
+                    modifier = Modifier.weight(1f),
+                )
+                AvgPulseCard(
+                    avgHr = workout.avgHr,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+
+        item {
+            ZoneBreakdownCard(workout)
         }
 
         item {
@@ -153,12 +174,93 @@ private fun WorkoutHeader(workout: WorkoutRecordEntity) {
 }
 
 @Composable
-private fun TrimpCard(trimp: Float) {
+private fun TrimpCard(
+    trimp: Float,
+    modifier: Modifier = Modifier,
+) {
+    Card(modifier = modifier) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Training Load", style = MaterialTheme.typography.titleSmall)
+            Text(text = trimp.roundToInt().toString(), style = MaterialTheme.typography.headlineMedium)
+            Text("TRIMP", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun AvgPulseCard(
+    avgHr: Int,
+    modifier: Modifier = Modifier,
+) {
+    Card(modifier = modifier) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Avg Pulse", style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = if (avgHr > 0) avgHr.toString() else "--",
+                style = MaterialTheme.typography.headlineMedium,
+            )
+            Text("BPM", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun ZoneBreakdownCard(workout: WorkoutRecordEntity) {
+    val totalMinutes = workout.durationMinutes.toFloat().coerceAtLeast(1f)
+    val zones =
+        listOf(
+            Triple("Zone 5", workout.zone5Minutes, MaterialTheme.colorScheme.error),
+            Triple("Zone 4", workout.zone4Minutes, MaterialTheme.colorScheme.tertiary),
+            Triple("Zone 3", workout.zone3Minutes, MaterialTheme.colorScheme.primary),
+            Triple("Zone 2", workout.zone2Minutes, MaterialTheme.colorScheme.secondary),
+            Triple("Zone 1", workout.zone1Minutes, MaterialTheme.colorScheme.onSurfaceVariant),
+        )
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
-            Text("Training Load (TRIMP)", style = MaterialTheme.typography.titleSmall)
-            Text(text = trimp.roundToInt().toString(), style = MaterialTheme.typography.headlineLarge)
+            Text("Heart Rate Zones", style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(12.dp))
+            zones.forEach { (label, minutes, color) ->
+                ZoneRow(label, minutes, totalMinutes, color)
+            }
         }
+    }
+}
+
+@Composable
+private fun ZoneRow(
+    label: String,
+    minutes: Float,
+    totalMinutes: Float,
+    color: Color,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.width(52.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        LinearProgressIndicator(
+            progress = { (minutes / totalMinutes).coerceIn(0f, 1f) },
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+            color = color,
+            trackColor = color.copy(alpha = 0.15f),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = "%.0f min".format(minutes),
+            modifier = Modifier.width(44.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.End,
+        )
     }
 }
 

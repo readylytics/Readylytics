@@ -35,6 +35,7 @@ object DatabaseModule {
                 HealthDatabase.MIGRATION_3_4,
                 HealthDatabase.MIGRATION_4_5,
                 HealthDatabase.MIGRATION_5_6,
+                HealthDatabase.MIGRATION_6_7,
             )
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()

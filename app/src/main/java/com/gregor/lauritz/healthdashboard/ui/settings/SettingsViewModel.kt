@@ -17,14 +17,18 @@ import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesReposi
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupUseCase
 import com.gregor.lauritz.healthdashboard.domain.backup.RestoreUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
+import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.workers.BackupWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
+import java.time.LocalDate
+import java.time.Period
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -35,6 +39,17 @@ data class SettingsUiState(
     val syncPreference: SyncPreference = SyncPreference.BY_TIME,
     val syncIntervalHours: Int = 1,
     val maxHeartRate: Int = 190,
+    val autoCalculateMaxHr: Boolean = true,
+    val manualZoneEditing: Boolean = false,
+    val zone1MaxPercent: Float = 0.60f,
+    val zone2MaxPercent: Float = 0.70f,
+    val zone3MaxPercent: Float = 0.80f,
+    val zone4MaxPercent: Float = 0.90f,
+    val age: Int = 30,
+    val birthDay: Int = 1,
+    val birthMonth: Int = 1,
+    val birthYear: Int = 1994,
+    val gender: String? = null,
     val hrvOptimalThreshold: Float = 1.00f,
     val hrvWarningThreshold: Float = 0.90f,
     val rhrOptimalThreshold: Float = 0.95f,
@@ -82,6 +97,31 @@ sealed interface SettingsEvent {
         val text: String,
     ) : SettingsEvent
 
+    data class AutoCalculateMaxHrChanged(
+        val enabled: Boolean,
+    ) : SettingsEvent
+
+    data class ManualZoneEditingChanged(
+        val enabled: Boolean,
+    ) : SettingsEvent
+
+    data class ZonePercentagesChanged(
+        val z1: Float,
+        val z2: Float,
+        val z3: Float,
+        val z4: Float,
+    ) : SettingsEvent
+
+    data class BirthdayChanged(
+        val day: Int,
+        val month: Int,
+        val year: Int,
+    ) : SettingsEvent
+
+    data class GenderChanged(
+        val gender: String?,
+    ) : SettingsEvent
+
     data class HrvOptimalThresholdChanged(
         val value: Float,
     ) : SettingsEvent
@@ -126,6 +166,7 @@ class SettingsViewModel
     constructor(
         private val prefsRepo: UserPreferencesRepository,
         private val scoringRepository: ScoringRepository,
+        private val healthSyncUseCase: HealthSyncUseCase,
         private val driveAuthManager: DriveAuthManager,
         private val backupUseCase: BackupUseCase,
         private val restoreUseCase: RestoreUseCase,
@@ -145,6 +186,17 @@ class SettingsViewModel
                             syncPreference = prefs.syncPreference,
                             syncIntervalHours = prefs.syncIntervalHours,
                             maxHeartRate = prefs.maxHeartRate,
+                            autoCalculateMaxHr = prefs.autoCalculateMaxHr,
+                            manualZoneEditing = prefs.manualZoneEditing,
+                            zone1MaxPercent = prefs.zone1MaxPercent,
+                            zone2MaxPercent = prefs.zone2MaxPercent,
+                            zone3MaxPercent = prefs.zone3MaxPercent,
+                            zone4MaxPercent = prefs.zone4MaxPercent,
+                            age = prefs.age,
+                            birthDay = prefs.birthDay,
+                            birthMonth = prefs.birthMonth,
+                            birthYear = prefs.birthYear,
+                            gender = prefs.gender,
                             hrvOptimalThreshold = prefs.hrvOptimalThreshold,
                             hrvWarningThreshold = prefs.hrvWarningThreshold,
                             rhrOptimalThreshold = prefs.rhrOptimalThreshold,
@@ -208,9 +260,57 @@ class SettingsViewModel
                 is SettingsEvent.MaxHeartRateChanged -> {
                     val value = event.text.toIntOrNull()
                     if (value != null) {
-                        viewModelScope.launch { prefsRepo.updateMaxHeartRate(value) }
+                        viewModelScope.launch {
+                            prefsRepo.updateMaxHeartRate(value)
+                            healthSyncUseCase.sync()
+                        }
                     }
                 }
+
+                is SettingsEvent.AutoCalculateMaxHrChanged -> {
+                    viewModelScope.launch {
+                        prefsRepo.updateAutoCalculateMaxHr(event.enabled)
+                        if (event.enabled) {
+                            val currentPrefs = prefsRepo.userPreferences.first()
+                            val calculatedMaxHr = 220 - currentPrefs.age
+                            prefsRepo.updateMaxHeartRate(calculatedMaxHr)
+                            healthSyncUseCase.sync()
+                        }
+                    }
+                }
+
+                is SettingsEvent.ManualZoneEditingChanged -> {
+                    viewModelScope.launch {
+                        prefsRepo.updateManualZoneEditing(event.enabled)
+                    }
+                }
+
+                is SettingsEvent.ZonePercentagesChanged -> {
+                    viewModelScope.launch {
+                        prefsRepo.updateZonePercentages(event.z1, event.z2, event.z3, event.z4)
+                        healthSyncUseCase.sync()
+                    }
+                }
+
+                is SettingsEvent.BirthdayChanged -> {
+                    viewModelScope.launch {
+                        prefsRepo.updateBirthday(event.day, event.month, event.year)
+                        val currentPrefs = prefsRepo.userPreferences.first()
+                        if (currentPrefs.autoCalculateMaxHr) {
+                            val age = Period.between(
+                                LocalDate.of(event.year, event.month, event.day),
+                                LocalDate.now(),
+                            ).years
+                            prefsRepo.updateMaxHeartRate(220 - age)
+                            healthSyncUseCase.sync()
+                        }
+                    }
+                }
+
+                is SettingsEvent.GenderChanged -> {
+                    viewModelScope.launch { prefsRepo.updateGender(event.gender) }
+                }
+
                 is SettingsEvent.HrvOptimalThresholdChanged ->
                     viewModelScope.launch {
                         prefsRepo.updateHrvOptimalThreshold(event.value)

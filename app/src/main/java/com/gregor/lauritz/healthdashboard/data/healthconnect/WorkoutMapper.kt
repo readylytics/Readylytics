@@ -3,16 +3,23 @@ package com.gregor.lauritz.healthdashboard.data.healthconnect
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
+import kotlin.math.roundToInt
 
 object WorkoutMapper {
     private val ZONE_WEIGHTS = floatArrayOf(1f, 2f, 3f, 4f, 5f)
 
-    fun zoneThresholds(maxHr: Int): IntArray =
+    fun zoneThresholds(
+        maxHr: Int,
+        z1p: Float = 0.60f,
+        z2p: Float = 0.70f,
+        z3p: Float = 0.80f,
+        z4p: Float = 0.90f
+    ): IntArray =
         intArrayOf(
-            (maxHr * 0.65).toInt(),
-            (maxHr * 0.75).toInt(),
-            (maxHr * 0.85).toInt(),
-            (maxHr * 0.92).toInt(),
+            (maxHr * z1p).toInt(),
+            (maxHr * z2p).toInt(),
+            (maxHr * z3p).toInt(),
+            (maxHr * z4p).toInt(),
         )
 
     private fun zoneIndex(
@@ -30,9 +37,8 @@ object WorkoutMapper {
     fun mapExerciseSession(
         session: ExerciseSessionRecord,
         hrSamples: List<HeartRateRecordEntity>,
-        maxHrBpm: Int,
+        thresholds: IntArray,
     ): WorkoutRecordEntity {
-        val thresholds = zoneThresholds(maxHrBpm)
         val zoneMinutes = FloatArray(5)
 
         val sessionSamples =
@@ -54,6 +60,12 @@ object WorkoutMapper {
                 .toFloat()
         val durationMinutes = ((session.endTime.toEpochMilli() - session.startTime.toEpochMilli()) / 60_000L).toInt()
 
+        val avgHr = if (sessionSamples.isNotEmpty()) {
+            sessionSamples.map { it.beatsPerMinute }.average().roundToInt()
+        } else {
+            0
+        }
+
         return WorkoutRecordEntity(
             id = session.metadata.id,
             startTime = session.startTime.toEpochMilli(),
@@ -66,6 +78,7 @@ object WorkoutMapper {
             zone4Minutes = zoneMinutes[3],
             zone5Minutes = zoneMinutes[4],
             trimp = trimp,
+            avgHr = avgHr,
         )
     }
 }

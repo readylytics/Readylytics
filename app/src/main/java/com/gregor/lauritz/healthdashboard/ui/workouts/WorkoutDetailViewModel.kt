@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.workouts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
+import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,6 +34,7 @@ class WorkoutDetailViewModel
     constructor(
         private val workoutDao: WorkoutDao,
         private val hcRepo: HealthConnectRepository,
+        private val heartRateDao: HeartRateDao,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(WorkoutDetailUiState())
         val uiState = _uiState.asStateFlow()
@@ -45,14 +47,21 @@ class WorkoutDetailViewModel
                 val end = Instant.ofEpochMilli(workout.endTime)
                 val endPlus3Min = end.plus(3, ChronoUnit.MINUTES)
 
-                val hrRecords = hcRepo.readHeartRateSamples(start, endPlus3Min)
-                val allSamples =
-                    hrRecords
+                val hcSamples =
+                    hcRepo
+                        .readHeartRateSamples(start, endPlus3Min)
                         .asSequence()
                         .flatMap { record ->
                             record.samples.map { HeartRatePoint(it.time, it.beatsPerMinute.toInt()) }
-                        }.sortedBy { it.timestamp }
-                        .toList()
+                        }.toList()
+                val dbSamples =
+                    heartRateDao
+                        .getByTimeRange(start.toEpochMilli(), endPlus3Min.toEpochMilli())
+                        .map { HeartRatePoint(Instant.ofEpochMilli(it.timestampMs), it.beatsPerMinute) }
+                val allSamples =
+                    (hcSamples + dbSamples)
+                        .distinctBy { it.timestamp }
+                        .sortedBy { it.timestamp }
 
                 // Calculate HRR
                 val workoutEndInstant = Instant.ofEpochMilli(workout.endTime)
@@ -60,10 +69,8 @@ class WorkoutDetailViewModel
 
                 if (endHr != null) {
                     val hrByMinute = (1..3).map { minute ->
-                        val from = workoutEndInstant.plus((minute - 1).toLong(), ChronoUnit.MINUTES)
                         val to = workoutEndInstant.plus(minute.toLong(), ChronoUnit.MINUTES)
-
-                        allSamples.lastOrNull { it.timestamp > from && it.timestamp <= to }?.bpm
+                        allSamples.lastOrNull { it.timestamp > workoutEndInstant && it.timestamp <= to }?.bpm
                     }
                     val (hr1Min, hr2Min, hr3Min) = hrByMinute
                     _uiState.value =
