@@ -40,31 +40,25 @@ class ScoringRepository
             val dayMidnightMs = dayMidnight.toEpochMilli()
             val nextDayMidnightMs = nextDayMidnight.toEpochMilli()
 
+            // Calculate timezone offset for the query
+            val tzOffsetMs = zoneId.rules.getOffset(dayMidnight).totalSeconds * 1000L
+
             val calibrationFrom = dayMidnight.minus(CHRONIC_DAYS, ChronoUnit.DAYS).toEpochMilli()
             if (sleepSessionDao.countSince(calibrationFrom) < MIN_SESSIONS_FOR_CALIBRATION) return
 
             val prefs = prefsRepo.userPreferences.first()
 
+            // Fetch daily list instead of single total
             val ctlFetchFrom = dayMidnight.minus(CHRONIC_DAYS - 1, ChronoUnit.DAYS).toEpochMilli()
-            val earliestWorkout = workoutDao.getEarliestWorkoutTimestamp()
-            val dataTenureDays =
-                if (earliestWorkout != null) {
-                    ChronoUnit
-                        .DAYS
-                        .between(
-                            java.time.Instant
-                                .ofEpochMilli(earliestWorkout)
-                                .atZone(zoneId)
-                                .toLocalDate(),
-                            targetDate,
-                        ).toInt()
-                        .coerceAtLeast(1)
-                } else {
-                    0
-                }
+            val dailyTrimpList =
+                workoutDao.getDailyTrimp(
+                    fromMs = ctlFetchFrom,
+                    toMs = nextDayMidnightMs,
+                    tzOffsetMs = tzOffsetMs,
+                )
 
-            val ctlTotal = workoutDao.getTotalTrimp(ctlFetchFrom, nextDayMidnightMs) ?: 0f
-            val ctl = computeCtl(ctlTotal, CHRONIC_DAYS, dataTenureDays)
+            // Calculate true EMA
+            val ctl = computeCtlEma(dailyTrimpList = dailyTrimpList, windowDays = CHRONIC_DAYS)
 
             val acuteFrom = dayMidnight.minus(ACUTE_DAYS - 1, ChronoUnit.DAYS).toEpochMilli()
             val acuteTotal = workoutDao.getTotalTrimp(acuteFrom, nextDayMidnightMs) ?: 0f
@@ -223,26 +217,41 @@ internal fun computeStrainRatio(
 // CTL = per-calendar-day average over the chronic window, seeded from a fitness level
 // when not enough workout history exists. Both ATL and CTL are in the same unit
 // (TRIMP per calendar day) so their ratio (SR) reaches ≈1.0 at steady training load.
-internal fun computeCtl(
-    totalTrimp: Float,
-    windowDays: Long,
-    dataTenureDays: Int,
+internal fun computeCtlEma(
+    dailyTrimpList: List<Float>,
     seedFitnessLevel: Float = DEFAULT_FITNESS_LEVEL,
-): Float =
-    when {
-        dataTenureDays < 7 -> seedFitnessLevel
-        // Once 3+ weeks of data exist, normalize over the full window (rest = 0 training).
-        dataTenureDays < 21 -> totalTrimp / dataTenureDays.toFloat()
-        else -> totalTrimp / windowDays.toFloat()
+    windowDays: Long = 42L,
+): Float {
+    val dataTenureDays = dailyTrimpList.size
+
+    // Phase 1: Calibration (Cold Start)
+    if (dataTenureDays < 7) return seedFitnessLevel
+
+    // Phase 2: Provisional (Simple Moving Average)
+    val sma = dailyTrimpList.take(21).average().toFloat()
+    if (dataTenureDays <= 21) return sma
+
+    // Phase 3: Mature (Exponential Moving Average)
+    val alpha = 2f / (windowDays + 1f)
+    var currentEma = sma // Seed the EMA with the SMA of the first 21 days
+
+    // Apply EMA iteratively for days 22+
+    for (i in 21 until dailyTrimpList.size) {
+        val dailyTrimp = dailyTrimpList[i]
+        currentEma = (dailyTrimp * alpha) + (currentEma * (1f - alpha))
     }
+
+    return currentEma
+}
 
 internal fun computeLoadScore(sr: Float): Float =
     when {
         sr <= 0f -> 85f // Optimal (maintenance/low load)
         sr < 0.8f -> 50f // Neutral (Under-training)
         sr <= 1.2f -> 100f // Optimal (Sweet spot)
-        sr <= 1.5f -> 100f - (sr - 1.2f) * 100f // 1.2 -> 100, 1.5 -> 70 (Warning starts at 60 in M3ScoreDial, let's aim for 70)
-        else -> 30f // Poor
+        // Strict specification: 200 multiplier, hard floor at 40
+        sr <= 1.5f -> 100f - (sr - 1.2f) * 200f
+        else -> 40f // Poor
     }
 
 internal fun computeDurationSubScore(

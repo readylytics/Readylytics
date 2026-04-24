@@ -34,12 +34,13 @@ interface WorkoutDao {
     @Query(
         "SELECT SUM(trimp) FROM workout_records " +
             "WHERE startTime >= :fromMs AND startTime < :toMs " +
-            "GROUP BY startTime / 86400000 " +
-            "ORDER BY startTime / 86400000 ASC",
+            "GROUP BY (startTime + :tzOffsetMs) / 86400000 " +
+            "ORDER BY (startTime + :tzOffsetMs) / 86400000 ASC",
     )
     suspend fun getDailyTrimp(
         fromMs: Long,
         toMs: Long,
+        tzOffsetMs: Long
     ): List<Float>
 
     @Query("SELECT MIN(startTime) FROM workout_records")
