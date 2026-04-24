@@ -166,173 +166,10 @@ fun DashboardScreen(
                 }
             } else {
                 item {
-                    val rhrStatus =
-                        summary?.let {
-                            it.rhrStatus(
-                                uiState.rhrOptimalThreshold,
-                                uiState.rhrWarningThreshold,
-                            )
-                        } ?: MetricStatus.CALIBRATING
-                    val hrvStatus =
-                        summary?.let {
-                            it.hrvStatus(
-                                uiState.hrvOptimalThreshold,
-                                uiState.hrvWarningThreshold,
-                            )
-                        } ?: MetricStatus.CALIBRATING
-                    val durationStatus =
-                        summary?.let {
-                            it.sleepDurationStatus(uiState.goalSleepMinutes)
-                        } ?: MetricStatus.CALIBRATING
-                    val restingHrStatus =
-                        summary?.let {
-                            it.restingHrStatus(
-                                uiState.rhrOptimalThreshold,
-                                uiState.rhrWarningThreshold,
-                            )
-                        } ?: MetricStatus.CALIBRATING
-
-                    val rhrBaseline =
-                        summary?.let { s ->
-                            val ratio = s.rhrRatio
-                            val rhr = s.nocturnalRhr
-                            if (ratio != null && ratio > 0f && rhr != null) {
-                                (rhr / ratio).toInt()
-                            } else {
-                                null
-                            }
-                        }
-
-                    val hrvBaseline = summary?.hrvBaseline
-
-                    val rhrDiff =
-                        summary?.let { s ->
-                            val ratio = s.rhrRatio
-                            val rhr = s.nocturnalRhr
-                            if (ratio != null && ratio > 0f && rhr != null) {
-                                val baseline = (rhr / ratio).toInt()
-                                kotlin.math.abs(rhr - baseline)
-                            } else {
-                                null
-                            }
-                        }
-
-                    val hrvDiff =
-                        summary?.let { s ->
-                            val baseline = s.hrvBaseline
-                            val hrv = s.nocturnalHrv
-                            if (baseline != null && hrv != null) {
-                                kotlin.math.abs(hrv - baseline)
-                            } else {
-                                null
-                            }
-                        }
-
-                    val rhrArrow =
-                        if (rhrBaseline != null && summary.nocturnalRhr != null) {
-                            when {
-                                summary.nocturnalRhr > rhrBaseline -> "↑"
-                                summary.nocturnalRhr < rhrBaseline -> "↓"
-                                else -> "="
-                            }
-                        } else {
-                            null
-                        }
-
-                    val hrvArrow =
-                        if (hrvBaseline != null && summary.nocturnalHrv != null) {
-                            when {
-                                summary.nocturnalHrv > hrvBaseline -> "↑"
-                                summary.nocturnalHrv < hrvBaseline -> "↓"
-                                else -> "="
-                            }
-                        } else {
-                            null
-                        }
-
-                    val cards =
-                        listOf(
-                            CardData(
-                                title = "Sleep RHR",
-                                value = summary?.nocturnalRhr?.toString() ?: "—",
-                                unit = "bpm",
-                                status = rhrStatus,
-                                onClick = onNavigateToSleep,
-                                tooltip =
-                                    buildString {
-                                        append("Average heart rate during sleep.\n")
-                                        append("Target: lower or equal to your 30-day rolling average. ")
-                                        append("(Lower = Recovered)")
-                                        if (rhrBaseline != null && rhrArrow != null && rhrDiff != null) {
-                                            append("\n\nBaseline: $rhrBaseline bpm $rhrArrow ($rhrDiff bpm)")
-                                        } else {
-                                            append("\n\nNot enough data to calculate baseline.")
-                                        }
-                                    },
-                            ),
-                            CardData(
-                                title = "Sleep HRV",
-                                value = summary?.nocturnalHrv?.toString() ?: "—",
-                                unit = "ms",
-                                status = hrvStatus,
-                                onClick = onNavigateToSleep,
-                                tooltip =
-                                    buildString {
-                                        append("Variation between heartbeats in milliseconds.")
-                                        append("\nTarget: Within or above your 30-day rolling average. ")
-                                        append("(Higher = Recovered)")
-                                        if (hrvBaseline != null && hrvArrow != null && hrvDiff != null) {
-                                            append("\n\nBaseline: $hrvBaseline ms $hrvArrow ($hrvDiff ms)")
-                                        } else {
-                                            append("\n\nNot enough data to calculate baseline.")
-                                        }
-                                    },
-                            ),
-                            CardData(
-                                title = "Sleep Duration",
-                                value = formatSleepDuration(summary?.sleepDurationMinutes),
-                                unit = "",
-                                status = durationStatus,
-                                onClick = onNavigateToSleep,
-                                tooltip =
-                                    buildString {
-                                        append("Total time asleep last night.")
-                                        val goal = formatSleepDuration(uiState.goalSleepMinutes)
-                                        append("\n\nGoal: $goal")
-                                    },
-                            ),
-                            CardData(
-                                title = "Resting HR",
-                                value = summary?.restingHeartRate?.toString() ?: "—",
-                                unit = "bpm",
-                                status = restingHrStatus,
-                                onClick = {},
-                                tooltip =
-                                    buildString {
-                                        val rBaseline = summary?.restingHrBaseline
-                                        val rCurrent = summary?.restingHeartRate
-                                        if (rBaseline != null && rCurrent != null) {
-                                            val diff = kotlin.math.abs(rCurrent - rBaseline)
-                                            val arrow =
-                                                when {
-                                                    rCurrent > rBaseline -> "↑"
-                                                    rCurrent < rBaseline -> "↓"
-                                                    else -> "="
-                                                }
-                                            append("Minimum heart rate captured within ")
-                                            append("${uiState.restingHrBeforeMinutes}m before and ")
-                                            append("${uiState.restingHrAfterMinutes}m after wake up.")
-                                            append("\n\nBaseline: $rBaseline bpm $arrow ($diff bpm)")
-                                        } else {
-                                            append("Minimum heart rate captured around wake up time.")
-                                            append("\n\nNot enough data to calculate baseline.")
-                                        }
-                                    },
-                            ),
-                        )
-
                     MetricCardGrid(
-                        cards = cards,
+                        cards = uiState.cardData,
+                        onNavigateToSleep = onNavigateToSleep,
+                        onNavigateToWorkouts = onNavigateToWorkouts,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }
@@ -345,7 +182,9 @@ fun DashboardScreen(
 
 @Composable
 private fun MetricCardGrid(
-    cards: List<CardData>,
+    cards: List<com.gregor.lauritz.healthdashboard.ui.dashboard.CardData>,
+    onNavigateToSleep: () -> Unit,
+    onNavigateToWorkouts: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -355,12 +194,18 @@ private fun MetricCardGrid(
         cards.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { card ->
+                    val onClick =
+                        when (card.action) {
+                            DashboardAction.NAVIGATE_SLEEP -> onNavigateToSleep
+                            DashboardAction.NAVIGATE_WORKOUTS -> onNavigateToWorkouts
+                            null -> null
+                        }
                     MetricCard(
                         title = card.title,
                         value = card.value,
                         unit = card.unit,
                         status = card.status,
-                        onClick = card.onClick,
+                        onClick = onClick,
                         tooltip = card.tooltip,
                         modifier = Modifier.weight(1f),
                     )
@@ -404,6 +249,8 @@ private fun MetricCard(
             CardDefaults.cardColors(
                 containerColor = containerColor,
                 contentColor = contentColor,
+                disabledContainerColor = containerColor,
+                disabledContentColor = contentColor,
             ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -433,15 +280,6 @@ private fun MetricCard(
         }
     }
 }
-
-private data class CardData(
-    val title: String,
-    val value: String,
-    val unit: String,
-    val status: MetricStatus,
-    val onClick: (() -> Unit)?,
-    val tooltip: String,
-)
 
 private fun formatSleepDuration(minutes: Int?): String {
     if (minutes == null) return "—"

@@ -47,7 +47,7 @@ class HealthConnectRepository
         fun isAvailable(): Boolean = HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
 
         suspend fun checkPermissions(): PermissionStatus =
-            withContext(Dispatchers.Main) {
+            withContext(Dispatchers.IO) {
                 if (!isAvailable()) return@withContext PermissionStatus.Unavailable
                 val granted = client.permissionController.getGrantedPermissions()
                 if (granted.containsAll(requiredPermissions)) {

@@ -36,6 +36,8 @@ data class SleepUiState(
     val latestSession: SleepSessionEntity? = null,
     val dailyHrv: List<DailyDataPoint> = emptyList(),
     val dailyRhr: List<DailyDataPoint> = emptyList(),
+    val hrvBaseline: Float? = null,
+    val rhrBaseline: Float? = null,
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val selectedDate: LocalDate = LocalDate.now(),
     val goalSleepMinutes: Int = 480,
@@ -188,15 +190,32 @@ class SleepViewModel
                         hrvDao.observeSleepHrvSince(fromMs),
                         heartRateDao.observeSleepHrSince(fromMs),
                         prefsRepo.userPreferences,
-                    ) { latestSummary, latestSession, hrvRecords, hrRecords, prefs ->
+                        baselineHrvFlow,
+                        baselineRhrFlow,
+                    ) { flows ->
+                        val latestSummary = flows[0] as DailySummaryEntity?
+                        val latestSession = flows[1] as SleepSessionEntity?
+                        @Suppress("UNCHECKED_CAST")
+                        val hrvRecords = flows[2] as List<HrvRecordEntity>
+                        @Suppress("UNCHECKED_CAST")
+                        val hrRecords = flows[3] as List<HeartRateRecordEntity>
+                        val prefs = flows[4] as com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+                        val bHrv = flows[5] as Float?
+                        val bRhr = flows[6] as Int?
+
                         val filteredHrv = hrvRecords.filter { it.timestampMs < nextDayMidnightMs }
                         val filteredHr = hrRecords.filter { it.timestampMs < nextDayMidnightMs }
+
+                        val hrvPoints = groupHrvByDay(filteredHrv, startDayMs)
+                        val rhrPoints = groupRhrByDay(filteredHr, startDayMs)
 
                         SleepUiState(
                             latestSummary = latestSummary,
                             latestSession = latestSession,
-                            dailyHrv = groupHrvByDay(filteredHrv, startDayMs),
-                            dailyRhr = groupRhrByDay(filteredHr, startDayMs),
+                            dailyHrv = hrvPoints,
+                            dailyRhr = rhrPoints,
+                            hrvBaseline = bHrv ?: calculateMedian(hrvPoints),
+                            rhrBaseline = bRhr?.toFloat() ?: calculateMedian(rhrPoints),
                             goalSleepMinutes = (prefs.goalSleepHours * 60).toInt(),
                             selectedRange = range,
                             selectedDate = date,
@@ -208,6 +227,13 @@ class SleepViewModel
                     started = SharingStarted.WhileSubscribed(5_000),
                     initialValue = SleepUiState(),
                 )
+
+        private fun calculateMedian(points: List<DailyDataPoint>): Float? {
+            if (points.isEmpty()) return null
+            val sorted = points.map { it.value }.sorted()
+            val mid = sorted.size / 2
+            return if (sorted.size % 2 == 0) (sorted[mid - 1] + sorted[mid]) / 2f else sorted[mid]
+        }
 
         fun onRangeSelected(range: TimeRange) {
             _selectedRange.value = range

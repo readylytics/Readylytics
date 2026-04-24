@@ -24,26 +24,34 @@ import javax.inject.Inject
 data class DashboardUiState(
     val summary: DailySummaryEntity? = null,
     val selectedDate: LocalDate = LocalDate.now(),
-    val goalSleepMinutes: Int = 480,
-    val hrvOptimalThreshold: Float = 0.95f,
-    val hrvWarningThreshold: Float = 0.85f,
-    val rhrOptimalThreshold: Float = 1.05f,
-    val rhrWarningThreshold: Float = 1.15f,
-    val restingHrBeforeMinutes: Int = 5,
-    val restingHrAfterMinutes: Int = 15,
     val isRefreshing: Boolean = false,
+    val cardData: List<CardData> = emptyList(),
 )
+
+data class CardData(
+    val title: String,
+    val value: String,
+    val unit: String,
+    val status: MetricStatus,
+    val tooltip: String,
+    val action: DashboardAction? = null,
+)
+
+enum class DashboardAction {
+    NAVIGATE_SLEEP,
+    NAVIGATE_WORKOUTS,
+}
 
 fun DailySummaryEntity.rhrStatus(
     optimalThreshold: Float,
     warningThreshold: Float,
 ): MetricStatus {
+    val ratio = rhrRatio ?: return MetricStatus.CALIBRATING
     val poorThreshold = warningThreshold + (warningThreshold - 1)
     return when {
-        rhrRatio == null -> MetricStatus.CALIBRATING
-        rhrRatio <= optimalThreshold -> MetricStatus.OPTIMAL
-        rhrRatio < warningThreshold -> MetricStatus.NEUTRAL
-        rhrRatio in warningThreshold..<poorThreshold -> MetricStatus.WARNING
+        ratio <= optimalThreshold -> MetricStatus.OPTIMAL
+        ratio < warningThreshold -> MetricStatus.NEUTRAL
+        ratio in warningThreshold..<poorThreshold -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
 }
@@ -52,12 +60,20 @@ fun DailySummaryEntity.restingHrStatus(
     optimalThreshold: Float,
     warningThreshold: Float,
 ): MetricStatus {
+    val rhr = restingHeartRate ?: return MetricStatus.CALIBRATING
+    // Calculate ratio on the fly if stored ratio is missing but we have a baseline
+    val ratio =
+        restingHrRatio ?: restingHrBaseline?.let { baseline ->
+            if (baseline > 0) rhr.toFloat() / baseline else null
+        } ?: rhrRatio // Fallback to nocturnal ratio if specific resting ratio/baseline is missing
+
+    if (ratio == null) return MetricStatus.CALIBRATING
+
     val poorThreshold = warningThreshold + (warningThreshold - 1)
     return when {
-        restingHrRatio == null -> MetricStatus.CALIBRATING
-        restingHrRatio <= optimalThreshold -> MetricStatus.OPTIMAL
-        restingHrRatio < warningThreshold -> MetricStatus.NEUTRAL
-        restingHrRatio in warningThreshold..<poorThreshold -> MetricStatus.WARNING
+        ratio <= optimalThreshold -> MetricStatus.OPTIMAL
+        ratio < warningThreshold -> MetricStatus.NEUTRAL
+        ratio in warningThreshold..<poorThreshold -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
 }
@@ -124,14 +140,13 @@ class DashboardViewModel
                         DashboardUiState(
                             summary = summary,
                             selectedDate = date,
-                            goalSleepMinutes = (prefs.goalSleepHours * 60).toInt(),
-                            hrvOptimalThreshold = prefs.hrvOptimalThreshold,
-                            hrvWarningThreshold = prefs.hrvWarningThreshold,
-                            rhrOptimalThreshold = prefs.rhrOptimalThreshold,
-                            rhrWarningThreshold = prefs.rhrWarningThreshold,
-                            restingHrBeforeMinutes = prefs.restingHrBeforeMinutes,
-                            restingHrAfterMinutes = prefs.restingHrAfterMinutes,
                             isRefreshing = refreshing,
+                            cardData =
+                                calculateCardData(
+                                    summary,
+                                    prefs,
+                                    date,
+                                ),
                         )
                     }
                 }.stateIn(
@@ -139,6 +154,176 @@ class DashboardViewModel
                     started = SharingStarted.WhileSubscribed(5_000),
                     initialValue = DashboardUiState(),
                 )
+
+        private fun calculateCardData(
+            summary: DailySummaryEntity?,
+            prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences,
+            selectedDate: LocalDate,
+        ): List<CardData> {
+            if (summary == null) return emptyList()
+
+            val rhrStatus =
+                summary.rhrStatus(
+                    prefs.rhrOptimalThreshold,
+                    prefs.rhrWarningThreshold,
+                )
+            val hrvStatus =
+                summary.hrvStatus(
+                    prefs.hrvOptimalThreshold,
+                    prefs.hrvWarningThreshold,
+                )
+            val durationStatus =
+                summary.sleepDurationStatus((prefs.goalSleepHours * 60).toInt())
+            val restingHrStatus =
+                summary.restingHrStatus(
+                    prefs.rhrOptimalThreshold,
+                    prefs.rhrWarningThreshold,
+                )
+
+            val rhrBaseline =
+                summary.let { s ->
+                    val ratio = s.rhrRatio
+                    val rhr = s.nocturnalRhr
+                    if (ratio != null && ratio > 0f && rhr != null) {
+                        (rhr / ratio).toInt()
+                    } else {
+                        null
+                    }
+                }
+
+            val hrvBaseline = summary.hrvBaseline
+
+            val rhrDiff =
+                summary.let { s ->
+                    val ratio = s.rhrRatio
+                    val rhr = s.nocturnalRhr
+                    if (ratio != null && ratio > 0f && rhr != null) {
+                        val baseline = (rhr / ratio).toInt()
+                        kotlin.math.abs(rhr - baseline)
+                    } else {
+                        null
+                    }
+                }
+
+            val hrvDiff =
+                summary.let { s ->
+                    val baseline = s.hrvBaseline
+                    val hrv = s.nocturnalHrv
+                    if (baseline != null && hrv != null) {
+                        kotlin.math.abs(hrv - baseline)
+                    } else {
+                        null
+                    }
+                }
+
+            val rhrArrow =
+                if (rhrBaseline != null && summary.nocturnalRhr != null) {
+                    when {
+                        summary.nocturnalRhr > rhrBaseline -> "↑"
+                        summary.nocturnalRhr < rhrBaseline -> "↓"
+                        else -> "="
+                    }
+                } else {
+                    null
+                }
+
+            val hrvArrow =
+                if (hrvBaseline != null && summary.nocturnalHrv != null) {
+                    when {
+                        summary.nocturnalHrv > hrvBaseline -> "↑"
+                        summary.nocturnalHrv < hrvBaseline -> "↓"
+                        else -> "="
+                    }
+                } else {
+                    null
+                }
+
+            return listOf(
+                CardData(
+                    title = "Sleep RHR",
+                    value = summary.nocturnalRhr?.toString() ?: "—",
+                    unit = "bpm",
+                    status = rhrStatus,
+                    action = DashboardAction.NAVIGATE_SLEEP,
+                    tooltip =
+                        buildString {
+                            append("Average heart rate during sleep.\n")
+                            append("Target: lower or equal to your 30-day rolling average. ")
+                            append("(Lower = Recovered)")
+                            if (rhrBaseline != null && rhrArrow != null && rhrDiff != null) {
+                                append("\n\nBaseline: $rhrBaseline bpm $rhrArrow ($rhrDiff bpm)")
+                            } else {
+                                append("\n\nNot enough data to calculate baseline.")
+                            }
+                        },
+                ),
+                CardData(
+                    title = "Sleep HRV",
+                    value = summary.nocturnalHrv?.toString() ?: "—",
+                    unit = "ms",
+                    status = hrvStatus,
+                    action = DashboardAction.NAVIGATE_SLEEP,
+                    tooltip =
+                        buildString {
+                            append("Variation between heartbeats in milliseconds.")
+                            append("\nTarget: Within or above your 30-day rolling average. ")
+                            append("(Higher = Recovered)")
+                            if (hrvBaseline != null && hrvArrow != null && hrvDiff != null) {
+                                append("\n\nBaseline: $hrvBaseline ms $hrvArrow ($hrvDiff ms)")
+                            } else {
+                                append("\n\nNot enough data to calculate baseline.")
+                            }
+                        },
+                ),
+                CardData(
+                    title = "Sleep Duration",
+                    value = formatSleepDuration(summary.sleepDurationMinutes),
+                    unit = "",
+                    status = durationStatus,
+                    action = DashboardAction.NAVIGATE_SLEEP,
+                    tooltip =
+                        buildString {
+                            append("Total time asleep last night.")
+                            val goal = formatSleepDuration((prefs.goalSleepHours * 60).toInt())
+                            append("\n\nGoal: $goal")
+                        },
+                ),
+                CardData(
+                    title = "Resting HR",
+                    value = summary.restingHeartRate?.toString() ?: "—",
+                    unit = "bpm",
+                    status = restingHrStatus,
+                    tooltip =
+                        buildString {
+                            val rBaseline = summary.restingHrBaseline
+                            val rCurrent = summary.restingHeartRate
+                            if (rBaseline != null && rCurrent != null) {
+                                val diff = kotlin.math.abs(rCurrent - rBaseline)
+                                val arrow =
+                                    when {
+                                        rCurrent > rBaseline -> "↑"
+                                        rCurrent < rBaseline -> "↓"
+                                        else -> "="
+                                    }
+                                append("Minimum heart rate captured within ")
+                                append("${prefs.restingHrBeforeMinutes}m before and ")
+                                append("${prefs.restingHrAfterMinutes}m after wake up.")
+                                append("\n\nBaseline: $rBaseline bpm $arrow ($diff bpm)")
+                            } else {
+                                append("Minimum heart rate captured around wake up time.")
+                                append("\n\nNot enough data to calculate baseline.")
+                            }
+                        },
+                ),
+            )
+        }
+
+        private fun formatSleepDuration(minutes: Int?): String {
+            if (minutes == null) return "—"
+            val hours = minutes / 60
+            val mins = minutes % 60
+            return if (mins == 0) "${hours}h" else "${hours}h ${mins}m"
+        }
 
         fun onRefresh() {
             viewModelScope.launch {

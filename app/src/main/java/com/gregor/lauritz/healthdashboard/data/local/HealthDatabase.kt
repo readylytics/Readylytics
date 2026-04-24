@@ -25,7 +25,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
         WorkoutRecordEntity::class,
         DailySummaryEntity::class,
     ],
-    version = 7,
+    version = 8,
 )
 abstract class HealthDatabase : RoomDatabase() {
     abstract fun sleepSessionDao(): SleepSessionDao
@@ -157,6 +157,20 @@ abstract class HealthDatabase : RoomDatabase() {
 
                 override fun migrate(connection: SQLiteConnection) {
                     connection.execSQL("ALTER TABLE workout_records ADD COLUMN avgHr INTEGER NOT NULL DEFAULT 0")
+                }
+            }
+        val MIGRATION_7_8 =
+            object : Migration(7, 8) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType` ON `heart_rate_records` (`recordType`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId` ON `heart_rate_records` (`sessionId`)")
+                }
+
+                override fun migrate(connection: SQLiteConnection) {
+                    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)")
+                    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType` ON `heart_rate_records` (`recordType`)")
+                    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId` ON `heart_rate_records` (`sessionId`)")
                 }
             }
     }

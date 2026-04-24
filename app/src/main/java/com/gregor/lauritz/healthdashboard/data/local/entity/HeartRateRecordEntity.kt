@@ -1,9 +1,17 @@
 package com.gregor.lauritz.healthdashboard.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "heart_rate_records")
+@Entity(
+    tableName = "heart_rate_records",
+    indices = [
+        Index(value = ["timestampMs"]),
+        Index(value = ["recordType"]),
+        Index(value = ["sessionId"]),
+    ],
+)
 data class HeartRateRecordEntity(
     @PrimaryKey val id: String,
     val timestampMs: Long,

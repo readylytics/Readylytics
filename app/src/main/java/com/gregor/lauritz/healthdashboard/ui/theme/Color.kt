@@ -38,4 +38,4 @@ val OnWarningOrangeContainerDark = Color(0xFFFFDDB3)
 val WarningOrangeLight = Color(0xFFF57C00) // Darker orange for light mode
 val WarningOrangeContainerLight = Color(0xFFFB8C00)
 val OnWarningOrangeLight = Color(0xFFFFFFFF)
-val OnWarningOrangeContainerLight = Color(0xFFFFFFFF)
+val OnWarningOrangeContainerLight = Color(0xFF4D2C00)

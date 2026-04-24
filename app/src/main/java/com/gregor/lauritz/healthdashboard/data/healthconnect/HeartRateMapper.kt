@@ -10,12 +10,39 @@ object HeartRateMapper {
         records: List<HeartRateRecord>,
         sleepSessions: List<SleepSessionEntity>,
         workoutSessions: List<WorkoutRecordEntity>,
-    ): List<HeartRateRecordEntity> =
-        records.flatMap { record ->
+    ): List<HeartRateRecordEntity> {
+        val sortedSleep = sleepSessions.sortedBy { it.startTime }
+        val sortedWorkouts = workoutSessions.sortedBy { it.startTime }
+
+        var sleepIdx = 0
+        var workoutIdx = 0
+
+        return records.flatMap { record ->
             record.samples.map { sample ->
                 val sampleMs = sample.time.toEpochMilli()
-                val sleepSession = sleepSessions.firstOrNull { sampleMs in it.startTime..it.endTime }
-                val workoutSession = workoutSessions.firstOrNull { sampleMs in it.startTime..it.endTime }
+
+                // Efficiently find matching sleep session (assuming samples are somewhat ordered)
+                while (sleepIdx < sortedSleep.size && sortedSleep[sleepIdx].endTime < sampleMs) {
+                    sleepIdx++
+                }
+                val sleepSession =
+                    if (sleepIdx < sortedSleep.size && sampleMs in sortedSleep[sleepIdx].startTime..sortedSleep[sleepIdx].endTime) {
+                        sortedSleep[sleepIdx]
+                    } else {
+                        null
+                    }
+
+                // Efficiently find matching workout session
+                while (workoutIdx < sortedWorkouts.size && sortedWorkouts[workoutIdx].endTime < sampleMs) {
+                    workoutIdx++
+                }
+                val workoutSession =
+                    if (workoutIdx < sortedWorkouts.size && sampleMs in sortedWorkouts[workoutIdx].startTime..sortedWorkouts[workoutIdx].endTime) {
+                        sortedWorkouts[workoutIdx]
+                    } else {
+                        null
+                    }
+
                 val (recordType, sessionId) =
                     when {
                         sleepSession != null -> "SLEEP" to sleepSession.id
@@ -31,4 +58,5 @@ object HeartRateMapper {
                 )
             }
         }
+    }
 }
