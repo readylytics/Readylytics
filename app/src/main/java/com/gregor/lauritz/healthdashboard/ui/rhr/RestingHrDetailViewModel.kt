@@ -3,7 +3,6 @@ package com.gregor.lauritz.healthdashboard.ui.rhr
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.DailyRestingHeartRateAverageDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
@@ -31,19 +30,15 @@ import javax.inject.Inject
 data class RestingHrDetailUiState(
     val latestSummary: DailySummaryEntity? = null,
     val dailyRhr: List<DailyDataPoint> = emptyList(),
-    val rhrAvg7d: Float = 0f,
-    val rhrAvg30d: Float = 0f,
     val rhrBaseline: Float? = null,
     val rhrStatus: MetricStatus? = null,
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val rangeStartMs: Long = 0,
-    val showTrends: Boolean = false,
 )
 
 @HiltViewModel
 class RestingHrDetailViewModel @Inject constructor(
     private val dailySummaryDao: DailySummaryDao,
-    private val rhrAverageDao: DailyRestingHeartRateAverageDao,
     private val selectedDateRepository: SelectedDateRepository,
     private val prefsRepo: UserPreferencesRepository,
 ) : ViewModel() {
@@ -82,8 +77,7 @@ class RestingHrDetailViewModel @Inject constructor(
                     rhrBaseline = latest?.restingHrBaseline?.toFloat(),
                     rhrStatus = latest?.restingHrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold),
                     selectedRange = range,
-                    rangeStartMs = startDayMs,
-                    showTrends = prefs.showTrends
+                    rangeStartMs = startDayMs
                 )
             }.flowOn(Dispatchers.Default)
         }.stateIn(
