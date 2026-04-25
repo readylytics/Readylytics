@@ -44,7 +44,7 @@ class ScoringRepository
             val rhrBaselineFrom = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
             val rhrBaselineValues = heartRateDao.getAvgSleepHrPerSession(rhrBaselineFrom)
             val rhrBaselineValue = prefs.rhrBaselineOverride
-                ?: rhrBaselineValues.median().toFloat().takeIf { it > 0f }
+                ?: rhrBaselineValues.median().takeIf { it > 0f }
                 ?: 60f
 
             android.util.Log.d("ScoringRepository", "PAI CALC START [$targetDate]")
