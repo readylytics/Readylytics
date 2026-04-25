@@ -1,57 +1,44 @@
-# SPEC — Health Dashboard Performance
+# SPEC: Data Retention & Health Connect Resync
 
-## §G Goal
+## §G: Goal
+Add user-configurable data retention window (1y default, 180d–3y range, disableable) + manual Health Connect resync (drop & reload 60d). Daily auto-cleanup deletes expired data.
 
-Fix app jitter across all screens/interactions. Target 120 FPS.
+## §C: Constraints
+- Offline-first: Room DB is SSOT, no remote sync except HC ingestion.
+- MVVM + Clean Architecture; state via StateFlow in VM.
+- Material 3 UI (Compose).
+- WorkManager for background cleanup (daily check).
+- DataStore (Preferences) stores retention config.
+- No data loss on retention change — only forward deletions.
+- Resync clears HC-sourced data only (preserves manual entries if present).
+- Retention range: 180d (min) to 1095d (3y max), or "unlimited" (disabled).
 
-## §C Constraints
+## §I: External Surfaces
+- **Settings UI screen**: retention period toggle/slider + resync button.
+- **DataStore**: `retentionDaysEnabled` (bool), `retentionDays` (int: 180–365).
+- **WorkManager**: daily `DataCleanupWorker` task.
+- **Room DB queries**: bulk delete by date range (Sleep, HeartRate, HRV, Exercise).
+- **Health Connect API**: resync queries (last 60d).
 
-- minSdk 35 (Android 15)
-- Jetpack Compose + Material 3 (dynamic dark theme)
-- Room + DataStore as SSOT (offline-first)
-- Vico charting (line/bar renders)
-- Android Studio profiler available for investigation
+## §V: Invariants
+- **V1**: Retention setting always: `disabled` OR `180 ≤ days ≤ 1095`. UI slider increments by 30d steps. Enforces range.
+- **V2**: Resync clears HC-sourced tables (Sleep, HeartRate, HRV, Exercise) only; re-queries HC for last 60d.
+- **V3**: Daily cleanup task runs (WorkManager) and only deletes records `createdAt < now - retentionDays`.
+- **V4**: Disabling retention halts cleanup; re-enabling does not backfill or retroactive-delete.
+- **V5**: Resync in progress blocks UI (shows spinner/progress); fails gracefully if HC unavailable.
 
-## §I External Surfaces
-
-- Tab navigation (tab switches, bottom nav)
-- HR detail screen (open/close)
-- Settings screen (scroll, value changes apply)
-- Sleep tab (scroll, data display)
-- Workout tab (scroll, data display)
-- Settings adaptation (theme changes, preference updates)
-
-## §V Invariants
-
-V1. No blocking Room queries on main thread. All queries async via Flow/suspend DAOs.
-
-V2. Recomposition granular. State scoped to minimal widgets. Avoid object allocations in @Composable bodies.
-
-V3. Vico chart renders lazily. Heavy calculations deferred via remember { produceState { } } or ViewModel.
-
-V4. Lists use LazyColumn/LazyGrid with stable keys. No full-list recompose on data update.
-
-V5. DataStore Preferences reads cached in ViewModel StateFlow. No read-on-every-frame.
-
-V6. Measured baseline ≥60 FPS on all screens. Target ≥120 FPS on scroll-heavy screens (Sleep, Workout, Settings).
-
-## §T Tasks
+## §T: Tasks
 
 | id | status | title | cites |
 |----|--------|-------|-------|
-| T1 | x | Profile all screens w/ Android Studio (CPU, compose, frame time) | V6 |
-| T2 | x | Identify blocking code paths (Room, StateFlow, Compose recomp) | V1,V2,V5 |
-| T3 | x | Audit Room DAOs for N+1, missing indices, sync queries | V1 |
-| T4 | x | Optimize Compose recomposition (state granularity, remember blocks) | V2 |
-| T5 | x | Optimize Vico chart rendering (lazy eval, memoization) | V3 |
-| T6 | x | Cache DataStore reads in ViewModel StateFlow | V5 |
-| T7 | x | Verify LazyColumn/LazyGrid key stability in lists | V4 |
-| T8 | x | Re-profile all screens. Verify ≥120 FPS on scroll screens | V6 |
+| T1 | x | Add retention config to DataStore schema | V1 |
+| T2 | . | Build Settings UI: retention toggle + resync button | V1,I.ui |
+| T3 | . | Implement resync VM logic (clear tables, re-query HC 60d) | V2,I.api |
+| T4 | . | Implement DataCleanupWorker (daily, check & delete old records) | V3,V4,I.worker |
+| T5 | . | Add unit tests: retention range validation, delete-by-date | V1,V3 |
+| T6 | . | Test Settings UI flows (toggle, slider, resync button) | T2,T3 |
 
-## §B Bug Log
+## §B: Bugs
 
 | id | date | cause | fix |
 |----|------|-------|-----|
-| B1 | 2026-04-25 | String allocations on every recompose (SleepScreen, WorkoutsScreen) | V2: memoized buildString in remember blocks |
-| B2 | 2026-04-25 | Heavy transforms (filter/map/sort) in combine lambdas without flowOn | V1,V2: added flowOn(Dispatchers.Default) to RestingHrDetailViewModel |
-| B3 | 2026-04-25 | Chart components reconstructed on every parent recompose | V3: chart rendering already lazy (verified), model producers memoized |

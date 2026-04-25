@@ -61,6 +61,8 @@ class UserPreferencesRepository
             val CONSISTENCY_BASELINE_DAYS = intPreferencesKey("consistency_baseline_days")
             val PAI_SCALING_FACTOR = floatPreferencesKey("pai_scaling_factor")
             val STEP_GOAL = intPreferencesKey("step_goal")
+            val RETENTION_DAYS_ENABLED = booleanPreferencesKey("retention_days_enabled")
+            val RETENTION_DAYS = intPreferencesKey("retention_days")
         }
 
         val userPreferences: Flow<UserPreferences> =
@@ -122,6 +124,8 @@ class UserPreferencesRepository
                         consistencyBaselineDays = prefs[Keys.CONSISTENCY_BASELINE_DAYS] ?: 14,
                         paiScalingFactor = prefs[Keys.PAI_SCALING_FACTOR] ?: 0.2f,
                         stepGoal = prefs[Keys.STEP_GOAL] ?: 10000,
+                        retentionDaysEnabled = prefs[Keys.RETENTION_DAYS_ENABLED] ?: true,
+                        retentionDays = prefs[Keys.RETENTION_DAYS] ?: 365,
                     )
                 }
 
@@ -249,5 +253,13 @@ class UserPreferencesRepository
 
         suspend fun updateStepGoal(steps: Int) {
             dataStore.edit { it[Keys.STEP_GOAL] = steps.coerceIn(1000, 30000) }
+        }
+
+        suspend fun updateRetentionDaysEnabled(enabled: Boolean) {
+            dataStore.edit { it[Keys.RETENTION_DAYS_ENABLED] = enabled }
+        }
+
+        suspend fun updateRetentionDays(days: Int) {
+            dataStore.edit { it[Keys.RETENTION_DAYS] = days.coerceIn(180, 1095) }
         }
     }

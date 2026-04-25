@@ -37,4 +37,6 @@ data class UserPreferences(
     val consistencyBaselineDays: Int = 14,
     val paiScalingFactor: Float = 0.2f,
     val stepGoal: Int = 10000,
+    val retentionDaysEnabled: Boolean = true,
+    val retentionDays: Int = 365,
 )

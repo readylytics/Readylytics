@@ -4,7 +4,8 @@
       "Bash(./gradlew addKtlintCheckGitPreCommitHook)",
       "Bash(./gradlew :app:tasks --group=formatting)",
       "Bash(./gradlew :app:tasks --all)",
-      "Bash(grep -E \"\\\\.kt$\")"
+      "Bash(grep -E \"\\\\.kt$\")",
+      "Bash(./gradlew assembleDebug --no-build-cache)"
     ]
   }
 }
