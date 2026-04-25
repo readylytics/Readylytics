@@ -79,24 +79,19 @@ data class SettingsSectionMetadata(
 
 val settingsSections = listOf(
     SettingsSectionMetadata(
-        id = "cloud_data",
+        id = "cloud_data_sync",
         name = "Cloud & Data",
-        keywords = listOf("cloud", "backup", "drive", "data", "retention", "resync", "google account")
-    ),
-    SettingsSectionMetadata(
-        id = "health_connect",
-        name = "Health Connect",
-        keywords = listOf("health connect", "sync", "foreground")
+        keywords = listOf("cloud", "backup", "drive", "data", "retention", "resync", "google account", "health connect", "sync", "foreground")
     ),
     SettingsSectionMetadata(
         id = "baselines_thresholds",
         name = "Baselines & Thresholds",
-        keywords = listOf("sleep", "hrv", "rhr", "heart rate", "zone", "baseline", "threshold", "consistency")
+        keywords = listOf("step", "goal", "sleep", "hrv", "rhr", "heart rate", "zone", "baseline", "threshold", "consistency")
     ),
     SettingsSectionMetadata(
         id = "display",
         name = "Display",
-        keywords = listOf("appearance", "theme", "activity", "step", "goal")
+        keywords = listOf("appearance", "theme")
     ),
     SettingsSectionMetadata(
         id = "advanced",
@@ -147,12 +142,11 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     }
 }
 
-// Settings grouped into 5 collapsible sections:
-// 1. Cloud & Data: Cloud Backup, Data Management
-// 2. Health Connect: Health Connect Sync
-// 3. Baselines & Thresholds: Sleep, Heart Rate Zones, Thresholds
-// 4. Display: Appearance, Activity
-// 5. Advanced: Advanced (baseline overrides, PAI scaling, resting HR timing)
+// Settings grouped into 4 collapsible sections:
+// 1. Cloud & Data: Cloud Backup, Data Management, Health Connect Sync
+// 2. Baselines & Thresholds: Daily Step Goal, Sleep, Heart Rate Zones, Thresholds
+// 3. Display: Appearance
+// 4. Advanced: Advanced (baseline overrides, PAI scaling, resting HR timing)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -210,9 +204,9 @@ fun SettingsScreen(
                 singleLine = true,
             )
         }
-        // Cloud Backup & Data Management
-        if (matchingSections.any { it.id == "cloud_data" }) {
-            item(key = "header_cloud_data") {
+        // Cloud & Data & Health Connect
+        if (matchingSections.any { it.id == "cloud_data_sync" }) {
+            item(key = "header_cloud_data_sync") {
                 M3CollapsibleSection(
                     header = "Cloud & Data",
                     expanded = !uiState.collapseCloudData,
@@ -229,24 +223,13 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         SectionHeader("Data Management")
                         DataManagementSection(uiState = uiState, onEvent = onEvent)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        SectionHeader("Health Connect")
+                        SyncSettingsSection(uiState = uiState, onEvent = onEvent)
                     }
                 }
             }
-            item(key = "divider_after_cloud_data") { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
-        }
-
-        // Health Connect Sync
-        if (matchingSections.any { it.id == "health_connect" }) {
-            item(key = "header_sync") {
-                M3CollapsibleSection(
-                    header = "Health Connect",
-                    expanded = !uiState.collapseHealthConnect,
-                    onExpandedChange = { onEvent(SettingsEvent.CollapseHealthConnectChanged(!it)) }
-                ) {
-                    SyncSettingsSection(uiState = uiState, onEvent = onEvent)
-                }
-            }
-            item(key = "divider_after_sync") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+            item(key = "divider_after_cloud_data_sync") { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
         }
 
         // Baselines & Thresholds
@@ -258,6 +241,9 @@ fun SettingsScreen(
                     onExpandedChange = { onEvent(SettingsEvent.CollapseBaselinesThresholdsChanged(!it)) }
                 ) {
                     Column {
+                        SectionHeader("Daily Step Goal")
+                        ActivitySettingsSection(uiState = uiState, onEvent = onEvent)
+                        Spacer(modifier = Modifier.height(12.dp))
                         SectionHeader("Sleep")
                         SleepSettingsSection(uiState = uiState, onEvent = onEvent)
                         Spacer(modifier = Modifier.height(12.dp))
@@ -285,13 +271,7 @@ fun SettingsScreen(
                     expanded = !uiState.collapseDisplay,
                     onExpandedChange = { onEvent(SettingsEvent.CollapseDisplayChanged(!it)) }
                 ) {
-                    Column {
-                        SectionHeader("Appearance")
-                        AppThemeItem(uiState = uiState, onEvent = onEvent)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        SectionHeader("Activity")
-                        ActivitySettingsSection(uiState = uiState, onEvent = onEvent)
-                    }
+                    AppThemeItem(uiState = uiState, onEvent = onEvent)
                 }
             }
             item(key = "divider_after_display") { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
