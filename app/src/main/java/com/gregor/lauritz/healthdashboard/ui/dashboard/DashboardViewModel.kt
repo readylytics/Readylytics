@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -131,7 +130,6 @@ class DashboardViewModel
         private val _isRefreshing = MutableStateFlow(false)
 
         val today: StateFlow<LocalDate> = selectedDateRepository.selectedDate
-            .map { it ?: LocalDate.now() }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
@@ -158,7 +156,7 @@ class DashboardViewModel
                         summaryFlow,
                         prefsRepo.userPreferences,
                         _isRefreshing,
-                        circadianRepo.result,
+                        circadianRepo.resultFor(date),
                     ) { summary, prefs, refreshing, circadian ->
                         val data =
                             calculateCardData(

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -54,11 +55,15 @@ class CircadianConsistencyRepository
         private val prefsRepo: UserPreferencesRepository,
     ) {
         @OptIn(ExperimentalCoroutinesApi::class)
-        val result: Flow<CircadianConsistencyResult> =
+        fun resultFor(anchorDate: LocalDate): Flow<CircadianConsistencyResult> =
             prefsRepo.userPreferences.flatMapLatest { prefs ->
-                val fromMs = System.currentTimeMillis() - 60L * 24 * 60 * 60 * 1000L
+                val anchorMs = anchorDate.plusDays(1)
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .toInstant().toEpochMilli()
+                val fromMs = anchorMs - 60L * 24 * 60 * 60 * 1000L
                 sleepSessionDao.observeSince(fromMs).map { sessions ->
-                    compute(sessions, prefs)
+                    val filtered = sessions.filter { it.endTime < anchorMs }
+                    compute(filtered, prefs)
                 }
             }
 

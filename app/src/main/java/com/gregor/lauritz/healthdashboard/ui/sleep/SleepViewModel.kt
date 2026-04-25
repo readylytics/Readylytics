@@ -157,8 +157,11 @@ class SleepViewModel
                 initialValue = null,
             )
 
+        @OptIn(ExperimentalCoroutinesApi::class)
         val circadianConsistencyFlow =
-            circadianRepo.result.stateIn(
+            selectedDateRepository.selectedDate.flatMapLatest { date ->
+                circadianRepo.resultFor(date)
+            }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = CircadianConsistencyResult.Calibrating,
