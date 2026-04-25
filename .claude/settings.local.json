@@ -7,8 +7,7 @@
       "Bash(grep -E \"\\\\.kt$\")",
       "Bash(./gradlew assembleDebug --no-build-cache)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)",
-      "Bash(./gradlew testDebugUnitTest --tests \"*MovingAverageCalculatorTest*\")"
+      "Bash(git commit -m ' *)"
     ]
   }
 }
