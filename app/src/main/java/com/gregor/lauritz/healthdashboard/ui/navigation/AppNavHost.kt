@@ -18,10 +18,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.ui.about.AboutScreen
 import com.gregor.lauritz.healthdashboard.ui.onboarding.OnboardingRoute
 import com.gregor.lauritz.healthdashboard.ui.scaffold.MainScaffold
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncUiState
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavHost(
@@ -31,16 +33,25 @@ fun AppNavHost(
     navController: NavHostController = rememberNavController(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val userPrefs by prefsRepo.userPreferences.collectAsStateWithLifecycle(initial = null)
 
-    LaunchedEffect(uiState) {
+    LaunchedEffect(uiState, userPrefs?.aboutDismissed) {
         val currentDest = navController.currentDestination
         when (uiState) {
-            SyncUiState.NeedsPermissions ->
-                if (currentDest?.hasRoute<AppDestination.Onboarding>() != true) {
-                    navController.navigate(AppDestination.Onboarding) {
+            SyncUiState.NeedsPermissions -> {
+                val targetDest = if (userPrefs?.aboutDismissed == false) {
+                    AppDestination.About
+                } else {
+                    AppDestination.Onboarding
+                }
+                if (currentDest?.hasRoute<AppDestination.Onboarding>() != true &&
+                    currentDest?.hasRoute<AppDestination.About>() != true
+                ) {
+                    navController.navigate(targetDest) {
                         popUpTo(AppDestination.MainShell) { inclusive = true }
                     }
                 }
+            }
             SyncUiState.Unavailable ->
                 if (currentDest?.hasRoute<AppDestination.Unavailable>() != true) {
                     navController.navigate(AppDestination.Unavailable) {
@@ -51,6 +62,7 @@ fun AppNavHost(
                 if (currentDest?.hasRoute<AppDestination.MainShell>() != true) {
                     navController.navigate(AppDestination.MainShell) {
                         popUpTo(AppDestination.Onboarding) { inclusive = true }
+                        popUpTo(AppDestination.About) { inclusive = true }
                     }
                 }
             else -> Unit
@@ -63,6 +75,19 @@ fun AppNavHost(
     ) {
         composable<AppDestination.MainShell> {
             MainScaffold()
+        }
+
+        composable<AppDestination.About> {
+            AboutScreen(
+                onDismiss = {
+                    navController.viewModelStoreOwner.viewModelScope.launch {
+                        prefsRepo.updateAboutDismissed(true)
+                    }
+                    navController.navigate(AppDestination.Onboarding) {
+                        popUpTo(AppDestination.About) { inclusive = true }
+                    }
+                }
+            )
         }
 
         composable<AppDestination.Onboarding> {

@@ -4,6 +4,9 @@ import kotlinx.serialization.Serializable
 
 sealed interface AppDestination {
     @Serializable
+    data object About : AppDestination
+
+    @Serializable
     data object Onboarding : AppDestination
 
     @Serializable
