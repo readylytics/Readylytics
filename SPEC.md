@@ -44,11 +44,14 @@ V6. Measured baseline ≥60 FPS on all screens. Target ≥120 FPS on scroll-heav
 | T3 | x | Audit Room DAOs for N+1, missing indices, sync queries | V1 |
 | T4 | x | Optimize Compose recomposition (state granularity, remember blocks) | V2 |
 | T5 | x | Optimize Vico chart rendering (lazy eval, memoization) | V3 |
-| T6 | . | Cache DataStore reads in ViewModel StateFlow | V5 |
-| T7 | . | Verify LazyColumn/LazyGrid key stability in lists | V4 |
-| T8 | . | Re-profile all screens. Verify ≥120 FPS on scroll screens | V6 |
+| T6 | x | Cache DataStore reads in ViewModel StateFlow | V5 |
+| T7 | x | Verify LazyColumn/LazyGrid key stability in lists | V4 |
+| T8 | x | Re-profile all screens. Verify ≥120 FPS on scroll screens | V6 |
 
 ## §B Bug Log
 
 | id | date | cause | fix |
 |----|------|-------|-----|
+| B1 | 2026-04-25 | String allocations on every recompose (SleepScreen, WorkoutsScreen) | V2: memoized buildString in remember blocks |
+| B2 | 2026-04-25 | Heavy transforms (filter/map/sort) in combine lambdas without flowOn | V1,V2: added flowOn(Dispatchers.Default) to RestingHrDetailViewModel |
+| B3 | 2026-04-25 | Chart components reconstructed on every parent recompose | V3: chart rendering already lazy (verified), model producers memoized |
