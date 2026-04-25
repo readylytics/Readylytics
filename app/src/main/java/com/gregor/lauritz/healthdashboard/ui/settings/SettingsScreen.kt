@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -69,6 +70,47 @@ import kotlin.math.roundToInt
 data class SettingsExpandState(
     val genderExpanded: Boolean = false,
 ) : Parcelable
+
+data class SettingsSectionMetadata(
+    val id: String,
+    val name: String,
+    val keywords: List<String>,
+)
+
+val settingsSections = listOf(
+    SettingsSectionMetadata(
+        id = "cloud_data",
+        name = "Cloud & Data",
+        keywords = listOf("cloud", "backup", "drive", "data", "retention", "resync", "google account")
+    ),
+    SettingsSectionMetadata(
+        id = "health_connect",
+        name = "Health Connect",
+        keywords = listOf("health connect", "sync", "foreground")
+    ),
+    SettingsSectionMetadata(
+        id = "baselines_thresholds",
+        name = "Baselines & Thresholds",
+        keywords = listOf("sleep", "hrv", "rhr", "heart rate", "zone", "baseline", "threshold", "consistency")
+    ),
+    SettingsSectionMetadata(
+        id = "display",
+        name = "Display",
+        keywords = listOf("appearance", "theme", "activity", "step", "goal")
+    ),
+    SettingsSectionMetadata(
+        id = "advanced",
+        name = "Advanced",
+        keywords = listOf("advanced", "override", "pai", "resting", "hr timing")
+    ),
+)
+
+fun sectionMatches(section: SettingsSectionMetadata, query: String): Boolean {
+    if (query.isBlank()) return true
+    val lowerQuery = query.lowercase()
+    return section.name.lowercase().contains(lowerQuery) ||
+            section.keywords.any { it.contains(lowerQuery) }
+}
 
 @Composable
 fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
@@ -122,6 +164,12 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+
+    val matchingSections = settingsSections.filter { sectionMatches(it, searchQuery) }
+    val shouldExpandSection = { sectionId: String ->
+        searchQuery.isNotBlank() && matchingSections.any { it.id == sectionId }
+    }
 
     if (uiState.showRestoreConfirmDialog) {
         AlertDialog(
@@ -143,63 +191,95 @@ fun SettingsScreen(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 8.dp),
     ) {
-        // Cloud Backup
-        item(key = "header_backup") { SectionHeader("Cloud Backup") }
-        item(key = "section_backup") {
-            CloudBackupSection(
-                uiState = uiState,
-                onEvent = onEvent,
-                viewModel = viewModel,
-                context = context,
+        item(key = "search") {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = { Text("Search settings...") },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Filled.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
+                singleLine = true,
             )
         }
-
-        // Sync
-        item(key = "divider_sync") { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
-        item(key = "header_sync") { SectionHeader("Health Connect Sync") }
-        item(key = "section_sync") { SyncSettingsSection(uiState = uiState, onEvent = onEvent) }
-
-        // Data Management
-        item(key = "divider_data") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item(key = "header_data") { SectionHeader("Data Management") }
-        item(key = "section_data") { DataManagementSection(uiState = uiState, onEvent = onEvent) }
-
-        // Appearance
-        item(key = "divider_appearance") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item(key = "header_appearance") { SectionHeader("Appearance") }
-        item(key = "section_appearance") { AppThemeItem(uiState = uiState, onEvent = onEvent) }
-
-        // Sleep
-        item(key = "divider_sleep") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item(key = "header_sleep") { SectionHeader("Sleep") }
-        item(key = "section_sleep") { SleepSettingsSection(uiState = uiState, onEvent = onEvent) }
-
-        // Thresholds
-        item(key = "divider_thresholds") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item(key = "header_thresholds") { SectionHeader("Thresholds") }
-        item(key = "section_thresholds") { ThresholdSettingsSection(uiState = uiState, onEvent = onEvent) }
-
-        // Heart Rate Zones
-        item(key = "divider_hr_zones") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item(key = "header_hr_zones") { SectionHeader("Heart Rate Zones") }
-        item(key = "section_hr_zones") {
-            HeartRateZoneSection(
-                uiState = uiState,
-                onEvent = onEvent,
-                expandState = expandState,
-                onExpandStateChange = { expandState = it }
-            )
+        // Cloud Backup & Data Management
+        if (matchingSections.any { it.id == "cloud_data" }) {
+            item(key = "header_cloud_data") { SectionHeader("Cloud & Data") }
+            item(key = "section_cloud_data") {
+                Column {
+                    SectionHeader("Cloud Backup")
+                    CloudBackupSection(
+                        uiState = uiState,
+                        onEvent = onEvent,
+                        viewModel = viewModel,
+                        context = context,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SectionHeader("Data Management")
+                    DataManagementSection(uiState = uiState, onEvent = onEvent)
+                }
+            }
+            item(key = "divider_after_cloud_data") { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
         }
 
-        // Activity
-        item(key = "divider_activity") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item(key = "header_activity") { SectionHeader("Activity") }
-        item(key = "section_activity") { ActivitySettingsSection(uiState = uiState, onEvent = onEvent) }
+        // Health Connect Sync
+        if (matchingSections.any { it.id == "health_connect" }) {
+            item(key = "header_sync") { SectionHeader("Health Connect") }
+            item(key = "section_sync") { SyncSettingsSection(uiState = uiState, onEvent = onEvent) }
+            item(key = "divider_after_sync") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        }
+
+        // Baselines & Thresholds
+        if (matchingSections.any { it.id == "baselines_thresholds" }) {
+            item(key = "header_baselines") { SectionHeader("Baselines & Thresholds") }
+            item(key = "section_baselines") {
+                Column {
+                    SectionHeader("Sleep")
+                    SleepSettingsSection(uiState = uiState, onEvent = onEvent)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SectionHeader("Heart Rate Zones")
+                    HeartRateZoneSection(
+                        uiState = uiState,
+                        onEvent = onEvent,
+                        expandState = expandState,
+                        onExpandStateChange = { expandState = it }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SectionHeader("Thresholds")
+                    ThresholdSettingsSection(uiState = uiState, onEvent = onEvent)
+                }
+            }
+            item(key = "divider_after_baselines") { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
+        }
+
+        // Display
+        if (matchingSections.any { it.id == "display" }) {
+            item(key = "header_display") { SectionHeader("Display") }
+            item(key = "section_display") {
+                Column {
+                    SectionHeader("Appearance")
+                    AppThemeItem(uiState = uiState, onEvent = onEvent)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SectionHeader("Activity")
+                    ActivitySettingsSection(uiState = uiState, onEvent = onEvent)
+                }
+            }
+            item(key = "divider_after_display") { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
+        }
 
         // Advanced
-        item(key = "divider_advanced") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item(key = "header_advanced") { SectionHeader("Advanced") }
-        item(key = "section_advanced") { AdvancedSettingsSection(uiState = uiState, onEvent = onEvent) }
+        if (matchingSections.any { it.id == "advanced" }) {
+            item(key = "header_advanced") { SectionHeader("Advanced") }
+            item(key = "section_advanced") { AdvancedSettingsSection(uiState = uiState, onEvent = onEvent) }
+        }
 
         item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(16.dp)) }
     }
