@@ -201,6 +201,7 @@ fun SettingsScreen(
                         }
                     }
                 },
+                shape = RoundedCornerShape(16.dp),
                 singleLine = true,
             )
         }
