@@ -42,13 +42,14 @@ class DashboardViewModelTest {
         val dao = mockk<DailySummaryDao> {
             every { observeLatest() } returns MutableStateFlow(null)
             coEvery { getByDate(any()) } returns null
+            every { observeSince(any()) } returns MutableStateFlow(emptyList())
         }
         val prefsRepo = mockk<UserPreferencesRepository> {
             every { userPreferences } returns MutableStateFlow(UserPreferences())
         }
         val selectedDateRepo = SelectedDateRepository()
         val circadianRepo = mockk<CircadianConsistencyRepository> {
-            every { result } returns MutableStateFlow(CircadianConsistencyResult.Calibrating)
+            every { resultFor(any()) } returns MutableStateFlow(CircadianConsistencyResult.Calibrating)
         }
         syncController = mockk()
 

@@ -5,17 +5,20 @@ import androidx.room.Query
 import androidx.room.Upsert
 import com.gregor.lauritz.healthdashboard.data.local.entity.HrvRecordEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Dao
 interface HrvDao {
     @Query("SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
-    fun observeSince(fromMs: Long): Flow<List<HrvRecordEntity>>
+    fun _observeSince(fromMs: Long): Flow<List<HrvRecordEntity>>
+    fun observeSince(fromMs: Long): Flow<List<HrvRecordEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
     @Query(
         "SELECT * FROM hrv_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +
             "ORDER BY timestampMs ASC",
     )
-    fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordEntity>>
+    fun _observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordEntity>>
+    fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordEntity>> = _observeSleepHrvSince(fromMs).distinctUntilChanged()
 
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +

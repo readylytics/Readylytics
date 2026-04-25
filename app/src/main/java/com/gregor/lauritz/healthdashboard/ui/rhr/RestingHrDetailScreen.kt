@@ -82,7 +82,7 @@ fun RestingHrDetailScreen(
                 .fillMaxSize(),
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
-            item {
+            item(key = "score_dial") {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -99,7 +99,7 @@ fun RestingHrDetailScreen(
                 }
             }
 
-            item {
+            item(key = "trends_header") {
                 SectionHeader(title = "Trends")
                 Spacer(Modifier.height(8.dp))
                 SingleChoiceSegmentedButtonRow(
@@ -121,9 +121,9 @@ fun RestingHrDetailScreen(
                 }
             }
 
-            item { Spacer(Modifier.height(8.dp)) }
+            item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
 
-            item {
+            item(key = "rhr_chart") {
                 TrendCard(
                     title = "Resting Heart Rate",
                     unit = "bpm",
@@ -140,7 +140,7 @@ fun RestingHrDetailScreen(
                 }
             }
 
-            item { Spacer(Modifier.height(16.dp)) }
+            item(key = "spacer_bottom") { Spacer(Modifier.height(16.dp)) }
         }
     }
 }

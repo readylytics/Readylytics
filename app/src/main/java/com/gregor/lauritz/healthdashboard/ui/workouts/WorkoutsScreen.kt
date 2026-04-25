@@ -111,7 +111,7 @@ fun WorkoutsScreen(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 16.dp),
     ) {
-        item {
+        item(key = "date_switcher") {
             DateSwitcher(
                 selectedDate = uiState.selectedDate,
                 onPreviousDay = onPreviousDay,
@@ -119,14 +119,14 @@ fun WorkoutsScreen(
             )
         }
 
-        item {
+        item(key = "hero_section") {
             HeroSection(
                 uiState = uiState,
                 onRangeSelected = onRangeSelected,
             )
         }
 
-        item {
+        item(key = "history_header") {
             SectionHeader(title = "History")
         }
 

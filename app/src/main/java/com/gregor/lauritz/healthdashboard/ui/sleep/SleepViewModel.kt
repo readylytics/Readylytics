@@ -21,16 +21,17 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Dispatchers
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
-import java.util.Calendar
 import javax.inject.Inject
 
 data class SleepUiState(
@@ -236,7 +237,7 @@ class SleepViewModel
                             selectedDate = date,
                             rangeStartMs = startDayMs,
                         )
-                    }
+                    }.flowOn(Dispatchers.Default)
                 }.stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
@@ -308,11 +309,11 @@ private fun groupRhrByDay(
 }
 
 internal fun truncateToDayMs(timestampMs: Long): Long {
-    val cal = Calendar.getInstance()
-    cal.timeInMillis = timestampMs
-    cal.set(Calendar.HOUR_OF_DAY, 0)
-    cal.set(Calendar.MINUTE, 0)
-    cal.set(Calendar.SECOND, 0)
-    cal.set(Calendar.MILLISECOND, 0)
-    return cal.timeInMillis
+    val zoneId = ZoneId.systemDefault()
+    return Instant.ofEpochMilli(timestampMs)
+        .atZone(zoneId)
+        .toLocalDate()
+        .atStartOfDay(zoneId)
+        .toInstant()
+        .toEpochMilli()
 }

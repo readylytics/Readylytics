@@ -5,6 +5,7 @@ import androidx.room.Query
 import androidx.room.Upsert
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Dao
 interface HeartRateDao {
@@ -12,7 +13,8 @@ interface HeartRateDao {
         "SELECT * FROM heart_rate_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +
             "ORDER BY timestampMs ASC",
     )
-    fun observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordEntity>>
+    fun _observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordEntity>>
+    fun observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordEntity>> = _observeSleepHrSince(fromMs).distinctUntilChanged()
 
     @Query(
         "SELECT CAST(ROUND(AVG(beatsPerMinute)) AS INTEGER) FROM heart_rate_records " +

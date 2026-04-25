@@ -15,15 +15,17 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Dispatchers
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
-import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -65,7 +67,7 @@ class WorkoutsViewModel
                     val zoneId = ZoneId.systemDefault()
                     val earliestLocalDate =
                         if (earliestWorkoutMs > 0) {
-                            java.time.Instant.ofEpochMilli(earliestWorkoutMs).atZone(zoneId).toLocalDate()
+                            Instant.ofEpochMilli(earliestWorkoutMs).atZone(zoneId).toLocalDate()
                         } else {
                             null
                         }
@@ -103,11 +105,11 @@ class WorkoutsViewModel
 
                         val displayDayMidnights =
                             buildList<Long> {
-                                val cal = Calendar.getInstance()
-                                cal.timeInMillis = displayStartDayMs
-                                while (cal.timeInMillis <= selectedMidnightMs) {
-                                    add(cal.timeInMillis)
-                                    cal.add(Calendar.DAY_OF_YEAR, 1)
+                                var current = Instant.ofEpochMilli(displayStartDayMs).atZone(zoneId).toLocalDate()
+                                val end = date
+                                while (!current.isAfter(end)) {
+                                    add(current.atStartOfDay(zoneId).toInstant().toEpochMilli())
+                                    current = current.plusDays(1)
                                 }
                             }
 
@@ -120,27 +122,12 @@ class WorkoutsViewModel
                                 dailyTrimp.add(DailyDataPoint(dayOffset = i, value = trimp))
                             }
 
-                            val acuteFrom =
-                                Calendar.getInstance().run {
-                                    timeInMillis = dayMidnight
-                                    add(Calendar.DAY_OF_YEAR, -(ACUTE_DAYS - 1))
-                                    timeInMillis
-                                }
-                            val chronicFrom =
-                                Calendar.getInstance().run {
-                                    timeInMillis = dayMidnight
-                                    add(Calendar.DAY_OF_YEAR, -(CHRONIC_DAYS - 1))
-                                    timeInMillis
-                                }
+                            val currentDayDate = Instant.ofEpochMilli(dayMidnight).atZone(zoneId).toLocalDate()
+                            val acuteFrom = currentDayDate.minusDays((ACUTE_DAYS - 1).toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli()
+                            val chronicFrom = currentDayDate.minusDays((CHRONIC_DAYS - 1).toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli()
 
                             val acuteSum = trimpByDay.filterKeys { it in acuteFrom..dayMidnight }.values.sum()
                             val chronicSum = trimpByDay.filterKeys { it in chronicFrom..dayMidnight }.values.sum()
-
-                            val currentDayDate =
-                                java.time.Instant
-                                    .ofEpochMilli(dayMidnight)
-                                    .atZone(zoneId)
-                                    .toLocalDate()
 
                             val dataTenureDays =
                                 if (earliestLocalDate != null) {
@@ -168,7 +155,7 @@ class WorkoutsViewModel
                             paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries),
                             todayPaiScore = latest?.paiScore,
                         )
-                    }
+                    }.flowOn(Dispatchers.Default)
                 }.stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),

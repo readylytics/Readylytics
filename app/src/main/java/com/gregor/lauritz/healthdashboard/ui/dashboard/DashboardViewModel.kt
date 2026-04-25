@@ -7,9 +7,13 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.model.hrvStatus
+import com.gregor.lauritz.healthdashboard.domain.model.paiStatus
+import com.gregor.lauritz.healthdashboard.domain.model.restingHrStatus
+import com.gregor.lauritz.healthdashboard.domain.model.rhrStatus
+import com.gregor.lauritz.healthdashboard.domain.model.sleepDurationStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
-import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -59,79 +63,6 @@ enum class DashboardAction {
     NAVIGATE_WORKOUTS,
     NAVIGATE_RHR,
     NAVIGATE_STEPS,
-}
-
-fun DailySummaryEntity.rhrStatus(
-    optimalThreshold: Float,
-    warningThreshold: Float,
-): MetricStatus {
-    val ratio = rhrRatio ?: return MetricStatus.CALIBRATING
-    val poorThreshold = warningThreshold + (warningThreshold - 1)
-    return when {
-        ratio <= optimalThreshold -> MetricStatus.OPTIMAL
-        ratio < warningThreshold -> MetricStatus.NEUTRAL
-        ratio in warningThreshold..<poorThreshold -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
-}
-
-fun DailySummaryEntity.restingHrStatus(
-    optimalThreshold: Float,
-    warningThreshold: Float,
-): MetricStatus {
-    val rhr = restingHeartRate ?: return MetricStatus.CALIBRATING
-    // Calculate ratio on the fly if stored ratio is missing but we have a baseline
-    val ratio =
-        restingHrRatio ?: restingHrBaseline?.let { baseline ->
-            if (baseline > 0) rhr.toFloat() / baseline else null
-        } ?: rhrRatio // Fallback to nocturnal ratio if specific resting ratio/baseline is missing
-
-    if (ratio == null) return MetricStatus.CALIBRATING
-
-    val poorThreshold = warningThreshold + (warningThreshold - 1)
-    return when {
-        ratio <= optimalThreshold -> MetricStatus.OPTIMAL
-        ratio < warningThreshold -> MetricStatus.NEUTRAL
-        ratio in warningThreshold..<poorThreshold -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
-}
-
-fun DailySummaryEntity.hrvStatus(
-    optimalThreshold: Float,
-    warningThreshold: Float,
-): MetricStatus {
-    val hrv = nocturnalHrv ?: return MetricStatus.CALIBRATING
-    val baseline = hrvBaseline ?: return MetricStatus.CALIBRATING
-    val ratio = hrv.toFloat() / baseline
-    val poorThreshold = warningThreshold - (1 - warningThreshold)
-    return when {
-        ratio >= optimalThreshold -> MetricStatus.OPTIMAL
-        ratio > warningThreshold -> MetricStatus.NEUTRAL
-        ratio >= poorThreshold -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
-}
-
-fun DailySummaryEntity.sleepDurationStatus(goalMinutes: Int): MetricStatus {
-    if (sleepDurationMinutes == null || goalMinutes <= 0) return MetricStatus.CALIBRATING
-    val ratio = sleepDurationMinutes.toFloat() / goalMinutes
-    return when {
-        ratio >= ScoringConstants.Sleep.DURATION_OPTIMAL_RATIO -> MetricStatus.OPTIMAL
-        ratio >= ScoringConstants.Sleep.DURATION_NEUTRAL_RATIO -> MetricStatus.NEUTRAL
-        ratio >= ScoringConstants.Sleep.DURATION_WARNING_RATIO -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
-}
-
-fun DailySummaryEntity.paiStatus(): MetricStatus {
-    val pai = totalPai ?: return MetricStatus.CALIBRATING
-    return when {
-        pai >= 100f -> MetricStatus.OPTIMAL
-        pai >= 75f -> MetricStatus.NEUTRAL
-        pai >= 50f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
 }
 
 @HiltViewModel

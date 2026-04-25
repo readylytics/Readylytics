@@ -54,12 +54,7 @@ fun M3ScoreDial(
             else -> MetricStatus.POOR
         }
 
-    val progressColor =
-        if (effectiveStatus == MetricStatus.NEUTRAL) {
-            effectiveStatus.containerColor()
-        } else {
-            effectiveStatus.onContainerColor()
-        }
+    val progressColor = effectiveStatus.gaugeColor()
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
 
     val animatedProgress by animateFloatAsState(
@@ -85,9 +80,14 @@ fun M3ScoreDial(
             trackColor = trackColor,
         )
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            val textStyle = if (scoreText.length >= 5) {
+                MaterialTheme.typography.headlineMedium
+            } else {
+                MaterialTheme.typography.displaySmall
+            }
             Text(
                 text = scoreText,
-                style = MaterialTheme.typography.displaySmall,
+                style = textStyle,
                 color = if (score != null) progressColor else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(

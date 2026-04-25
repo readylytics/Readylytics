@@ -69,6 +69,8 @@ class ScoringRepositoryN1Test {
 
         coEvery { workoutDao.getDailyTrimp(any(), any(), any()) } returns emptyList()
         coEvery { workoutDao.getTotalTrimp(any(), any()) } returns 0f
+        coEvery { workoutDao.getTotalDurationMinutes(any(), any()) } returns 0
+        coEvery { workoutDao.getWeightedAvgHr(any(), any()) } returns 0f
 
         coEvery { hrvDao.getSleepRmssdValues(any()) } returns listOf(60f, 60f, 60f)
         coEvery { hrvDao.getSleepRmssdForSession(any()) } returns listOf(60f, 60f)
@@ -103,9 +105,10 @@ class ScoringRepositoryN1Test {
     }
 
     @Test
-    fun `early return when insufficient sessions for calibration`() = runTest {
+    fun `is persisted even when insufficient sessions for calibration`() = runTest {
         coEvery { sleepSessionDao.countSince(any()) } returns 3
         repo.computeAndPersistDailySummary(LocalDate.now())
-        coVerify(exactly = 0) { dailySummaryDao.upsert(any()) }
+        // Should still upsert the PAI-only summary
+        coVerify(exactly = 1) { dailySummaryDao.upsert(any()) }
     }
 }

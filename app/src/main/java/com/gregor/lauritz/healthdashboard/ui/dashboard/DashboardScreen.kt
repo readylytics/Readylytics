@@ -94,7 +94,7 @@ fun DashboardScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
-            item {
+            item(key = "date_switcher") {
                 DateSwitcher(
                     selectedDate = uiState.selectedDate,
                     onPreviousDay = onPreviousDay,
@@ -102,7 +102,7 @@ fun DashboardScreen(
                 )
             }
 
-            item {
+            item(key = "hero_scores") {
                 val sleepTooltip =
                     remember {
                         buildString {
@@ -144,9 +144,9 @@ fun DashboardScreen(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(8.dp)) }
+            item(key = "spacer_hero") { Spacer(modifier = Modifier.height(8.dp)) }
 
-            item {
+            item(key = "steps_card") {
                 DashboardStepsCard(
                     stepCount = uiState.stepCount,
                     stepGoal = uiState.stepGoal,
@@ -155,9 +155,9 @@ fun DashboardScreen(
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(8.dp)) }
+            item(key = "spacer_steps") { Spacer(modifier = Modifier.height(8.dp)) }
 
-            item {
+            item(key = "section_label") {
                 val sectionLabel =
                     remember(uiState.selectedDate, today) {
                         when (uiState.selectedDate) {
@@ -180,7 +180,7 @@ fun DashboardScreen(
             }
 
             if (summary == null && (uiState.selectedDate < today)) {
-                item {
+                item(key = "no_data_placeholder") {
                     Box(
                         modifier =
                             Modifier
@@ -196,7 +196,7 @@ fun DashboardScreen(
                     }
                 }
             } else {
-                item {
+                item(key = "metric_grid") {
                     MetricCardGrid(
                         rows = uiState.cardRows,
                         onNavigateToSleep = onNavigateToSleep,
@@ -205,7 +205,7 @@ fun DashboardScreen(
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }
-                item {
+                item(key = "bottom_cards") {
                     if (uiState.restingHrCard != null || uiState.circadianConsistency != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
@@ -241,7 +241,7 @@ fun DashboardScreen(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+            item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 }
@@ -347,9 +347,7 @@ private fun DashboardStepsCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "Goal: ${stepGoal.toString().let { n ->
-                        n.reversed().chunked(3).joinToString(",").reversed()
-                    }}",
+                    text = "Goal: ${java.text.NumberFormat.getNumberInstance().format(stepGoal)}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

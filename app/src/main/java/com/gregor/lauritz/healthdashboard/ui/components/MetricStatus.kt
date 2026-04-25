@@ -25,3 +25,22 @@ fun MetricStatus.onContainerColor(): Color =
         MetricStatus.WARNING -> LocalExtendedColors.current.onWarningContainer
         MetricStatus.POOR -> MaterialTheme.colorScheme.onErrorContainer
     }
+
+@Composable
+fun MetricStatus.gaugeColor(): Color {
+    return if (this == MetricStatus.NEUTRAL) {
+        this.containerColor()
+    } else {
+        this.onContainerColor()
+    }
+}
+
+@Composable
+fun MetricStatus.contentColor(): Color =
+    when (this) {
+        MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.onSurfaceVariant
+        MetricStatus.OPTIMAL -> LocalExtendedColors.current.success
+        MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.tertiary
+        MetricStatus.WARNING -> LocalExtendedColors.current.warning
+        MetricStatus.POOR -> MaterialTheme.colorScheme.error
+    }

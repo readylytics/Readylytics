@@ -84,10 +84,16 @@ class HealthSyncUseCase
                     val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
                     val dayMidnightMs = dayStart.toEpochMilli()
                     val steps = hcRepo.readSteps(dayStart, dayEnd)
-                    val existing = dailySummaryDao.getByDate(dayMidnightMs)
-                        ?: DailySummaryEntity(dateMidnightMs = dayMidnightMs)
-                    dailySummaryDao.upsert(existing.copy(stepCount = steps.toInt().takeIf { it > 0 }))
+                    // Run scoring first so its getByDate+copy cycle preserves any existing stepCount,
+                    // then patch stepCount onto the result in a single upsert.
                     scoringRepository.computeAndPersistDailySummary(day)
+                    val afterScoring = dailySummaryDao.getByDate(dayMidnightMs)
+                        ?: DailySummaryEntity(dateMidnightMs = dayMidnightMs)
+                    dailySummaryDao.upsert(
+                        afterScoring.copy(
+                            stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt().takeIf { it > 0 }
+                        )
+                    )
                 }
 
                 appConfigRepo.updateLastSyncTimestamp(System.currentTimeMillis())

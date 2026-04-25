@@ -13,6 +13,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDate
 
 private const val ONE_DAY_MS = 24 * 60 * 60 * 1000L
 private const val FOUR_HOURS_MINUTES = 240
@@ -56,13 +57,16 @@ class CircadianConsistencyRepositoryTest {
     ): CircadianConsistencyRepository {
         val sessionFlow = MutableStateFlow(sessions)
         val dao = object : SleepSessionDao {
+            override fun _observeSince(fromMs: Long) = sessionFlow
             override fun observeSince(fromMs: Long): Flow<List<SleepSessionEntity>> = sessionFlow
+            override fun _observeLatest() = throw UnsupportedOperationException()
             override fun observeLatest() = throw UnsupportedOperationException()
             override suspend fun getLatest() = throw UnsupportedOperationException()
             override suspend fun upsertAll(sessions: List<SleepSessionEntity>) = throw UnsupportedOperationException()
             override suspend fun countSince(fromMs: Long) = throw UnsupportedOperationException()
             override suspend fun getSince(fromMs: Long) = throw UnsupportedOperationException()
             override suspend fun getSessionEndingInRange(fromMs: Long, toMs: Long) = throw UnsupportedOperationException()
+            override fun _observeFirstSessionEndingInRange(fromMs: Long, toMs: Long) = throw UnsupportedOperationException()
             override fun observeFirstSessionEndingInRange(fromMs: Long, toMs: Long) = throw UnsupportedOperationException()
         }
         val prefsRepo = mockk<UserPreferencesRepository>()
@@ -73,7 +77,7 @@ class CircadianConsistencyRepositoryTest {
     @Test
     fun `emits Calibrating when fewer than MIN_BASELINE_SESSIONS sessions exist`() = runTest {
         val repo = buildRepo(sessions = listOf(fakeSleepSession("1", bedHour = 23)))
-        val result = repo.result.first()
+        val result = repo.resultFor(LocalDate.now()).first()
         assertTrue(result is CircadianConsistencyResult.Calibrating)
     }
 
@@ -93,7 +97,7 @@ class CircadianConsistencyRepositoryTest {
             )
         }
         val repo = buildRepo(sessions = naps)
-        assertTrue(repo.result.first() is CircadianConsistencyResult.Calibrating)
+        assertTrue(repo.resultFor(LocalDate.now()).first() is CircadianConsistencyResult.Calibrating)
     }
 
     @Test
@@ -102,7 +106,7 @@ class CircadianConsistencyRepositoryTest {
             fakeSleepSession(id = "s$i", bedHour = 23, wakeHour = 7, daysAgo = i)
         }
         val repo = buildRepo(sessions)
-        val result = repo.result.first()
+        val result = repo.resultFor(LocalDate.now()).first()
         assertTrue("Expected Ready, got $result", result is CircadianConsistencyResult.Ready)
         val ready = result as CircadianConsistencyResult.Ready
         assertEquals(100f, ready.score, 1f)
@@ -116,7 +120,7 @@ class CircadianConsistencyRepositoryTest {
             fakeSleepSession(id = "s$i", bedHour = bedHour, wakeHour = 7, daysAgo = i)
         }
         val repo = buildRepo(sessions)
-        val result = repo.result.first()
+        val result = repo.resultFor(LocalDate.now()).first()
         assertTrue(result is CircadianConsistencyResult.Ready)
         val ready = result as CircadianConsistencyResult.Ready
         assertTrue("Score should be < 80 for inconsistent schedule, was ${ready.score}", ready.score < 80f)
@@ -129,7 +133,7 @@ class CircadianConsistencyRepositoryTest {
         }
         val prefs = defaultPrefs.copy(consistencyThresholdMinutes = 45)
         val repo = buildRepo(sessions, prefs)
-        val result = repo.result.first() as CircadianConsistencyResult.Ready
+        val result = repo.resultFor(LocalDate.now()).first() as CircadianConsistencyResult.Ready
         assertEquals(45, result.thresholdMinutes)
     }
 }

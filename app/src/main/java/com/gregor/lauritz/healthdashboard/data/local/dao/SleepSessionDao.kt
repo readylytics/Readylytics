@@ -5,14 +5,17 @@ import androidx.room.Query
 import androidx.room.Upsert
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Dao
 interface SleepSessionDao {
     @Query("SELECT * FROM sleep_sessions WHERE startTime >= :fromMs ORDER BY startTime DESC")
-    fun observeSince(fromMs: Long): Flow<List<SleepSessionEntity>>
+    fun _observeSince(fromMs: Long): Flow<List<SleepSessionEntity>>
+    fun observeSince(fromMs: Long): Flow<List<SleepSessionEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
     @Query("SELECT * FROM sleep_sessions ORDER BY startTime DESC LIMIT 1")
-    fun observeLatest(): Flow<SleepSessionEntity?>
+    fun _observeLatest(): Flow<SleepSessionEntity?>
+    fun observeLatest(): Flow<SleepSessionEntity?> = _observeLatest().distinctUntilChanged()
 
     @Query("SELECT * FROM sleep_sessions ORDER BY startTime DESC LIMIT 1")
     suspend fun getLatest(): SleepSessionEntity?
@@ -37,8 +40,9 @@ interface SleepSessionDao {
     @Query(
         "SELECT * FROM sleep_sessions WHERE endTime >= :fromMs AND endTime < :toMs ORDER BY endTime ASC LIMIT 1",
     )
-    fun observeFirstSessionEndingInRange(
+    fun _observeFirstSessionEndingInRange(
         fromMs: Long,
         toMs: Long,
     ): Flow<SleepSessionEntity?>
+    fun observeFirstSessionEndingInRange(fromMs: Long, toMs: Long): Flow<SleepSessionEntity?> = _observeFirstSessionEndingInRange(fromMs, toMs).distinctUntilChanged()
 }

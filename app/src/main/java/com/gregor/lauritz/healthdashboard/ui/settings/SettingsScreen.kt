@@ -104,8 +104,8 @@ fun SettingsScreen(
         contentPadding = PaddingValues(vertical = 8.dp),
     ) {
         // Cloud Backup
-        item { SectionHeader("Cloud Backup") }
-        item {
+        item(key = "header_backup") { SectionHeader("Cloud Backup") }
+        item(key = "section_backup") {
             CloudBackupSection(
                 uiState = uiState,
                 onEvent = onEvent,
@@ -115,29 +115,29 @@ fun SettingsScreen(
         }
 
         // Sync
-        item { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
-        item { SectionHeader("Health Connect Sync") }
-        item { SyncSettingsSection(uiState = uiState, onEvent = onEvent) }
+        item(key = "divider_sync") { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
+        item(key = "header_sync") { SectionHeader("Health Connect Sync") }
+        item(key = "section_sync") { SyncSettingsSection(uiState = uiState, onEvent = onEvent) }
 
         // Appearance
-        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item { SectionHeader("Appearance") }
-        item { AppThemeItem(uiState = uiState, onEvent = onEvent) }
+        item(key = "divider_appearance") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        item(key = "header_appearance") { SectionHeader("Appearance") }
+        item(key = "section_appearance") { AppThemeItem(uiState = uiState, onEvent = onEvent) }
 
         // Sleep
-        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item { SectionHeader("Sleep") }
-        item { SleepSettingsSection(uiState = uiState, onEvent = onEvent) }
+        item(key = "divider_sleep") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        item(key = "header_sleep") { SectionHeader("Sleep") }
+        item(key = "section_sleep") { SleepSettingsSection(uiState = uiState, onEvent = onEvent) }
 
         // Thresholds
-        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item { SectionHeader("Thresholds") }
-        item { ThresholdSettingsSection(uiState = uiState, onEvent = onEvent) }
+        item(key = "divider_thresholds") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        item(key = "header_thresholds") { SectionHeader("Thresholds") }
+        item(key = "section_thresholds") { ThresholdSettingsSection(uiState = uiState, onEvent = onEvent) }
 
         // Heart Rate Zones
-        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item { SectionHeader("Heart Rate Zones") }
-        item {
+        item(key = "divider_hr_zones") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        item(key = "header_hr_zones") { SectionHeader("Heart Rate Zones") }
+        item(key = "section_hr_zones") {
             HeartRateZoneSection(
                 uiState = uiState,
                 onEvent = onEvent,
@@ -147,16 +147,16 @@ fun SettingsScreen(
         }
 
         // Activity
-        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item { SectionHeader("Activity") }
-        item { ActivitySettingsSection(uiState = uiState, onEvent = onEvent) }
+        item(key = "divider_activity") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        item(key = "header_activity") { SectionHeader("Activity") }
+        item(key = "section_activity") { ActivitySettingsSection(uiState = uiState, onEvent = onEvent) }
 
         // Advanced
-        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
-        item { SectionHeader("Advanced") }
-        item { AdvancedSettingsSection(uiState = uiState, onEvent = onEvent) }
+        item(key = "divider_advanced") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        item(key = "header_advanced") { SectionHeader("Advanced") }
+        item(key = "section_advanced") { AdvancedSettingsSection(uiState = uiState, onEvent = onEvent) }
 
-        item { Spacer(modifier = Modifier.height(16.dp)) }
+        item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(16.dp)) }
     }
 }
 
@@ -178,7 +178,7 @@ private fun SleepSettingsSection(
     uiState: SettingsUiState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
-    var sleepGoalValue by rememberSaveable(uiState.goalSleepHours) {
+    var sleepGoalValue by remember(uiState.goalSleepHours) {
         mutableFloatStateOf(uiState.goalSleepHours)
     }
 
@@ -204,31 +204,46 @@ private fun SleepSettingsSection(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+
+        var consistencyWindow by remember(uiState.consistencyThresholdMinutes) {
+            mutableFloatStateOf(uiState.consistencyThresholdMinutes.toFloat())
+        }
         ThresholdSliderItem(
             label = "Consistency Window",
-            value = uiState.consistencyThresholdMinutes.toFloat(),
-            onValueChange = { onEvent(SettingsEvent.ConsistencyThresholdChanged(it.toInt())) },
+            value = consistencyWindow,
+            onValueChange = { consistencyWindow = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyThresholdChanged(consistencyWindow.toInt())) },
             valueRange = 0f..90f,
             steps = 17,
-            displayValue = "${uiState.consistencyThresholdMinutes} min",
+            displayValue = "${consistencyWindow.toInt()} min",
             description = "±Grace period (in minutes) around your median bedtime and wake time before your score starts to drop. Default: 30 min.",
         )
+
+        var evaluationPeriod by remember(uiState.consistencyEvaluationDays) {
+            mutableFloatStateOf(uiState.consistencyEvaluationDays.toFloat())
+        }
         ThresholdSliderItem(
             label = "Evaluation Period",
-            value = uiState.consistencyEvaluationDays.toFloat(),
-            onValueChange = { onEvent(SettingsEvent.ConsistencyEvaluationDaysChanged(it.toInt())) },
+            value = evaluationPeriod,
+            onValueChange = { evaluationPeriod = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyEvaluationDaysChanged(evaluationPeriod.toInt())) },
             valueRange = 3f..14f,
             steps = 10,
-            displayValue = "${uiState.consistencyEvaluationDays} days",
+            displayValue = "${evaluationPeriod.toInt()} days",
             description = "Number of recent sleep sessions scored to compute your current consistency. Default: 7.",
         )
+
+        var baselineWindow by remember(uiState.consistencyBaselineDays) {
+            mutableFloatStateOf(uiState.consistencyBaselineDays.toFloat())
+        }
         ThresholdSliderItem(
             label = "Baseline Window",
-            value = uiState.consistencyBaselineDays.toFloat(),
-            onValueChange = { onEvent(SettingsEvent.ConsistencyBaselineDaysChanged(it.toInt())) },
+            value = baselineWindow,
+            onValueChange = { baselineWindow = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyBaselineDaysChanged(baselineWindow.toInt())) },
             valueRange = 3f..30f,
             steps = 26,
-            displayValue = "${uiState.consistencyBaselineDays} sessions",
+            displayValue = "${baselineWindow.toInt()} sessions",
             description = "Number of past sleep sessions used to calculate your median bedtime anchor. Default: 14.",
         )
     }
@@ -240,32 +255,43 @@ private fun ThresholdSettingsSection(
     onEvent: (SettingsEvent) -> Unit,
 ) {
     Column {
+        var hrvOptimal by remember(uiState.hrvOptimalThreshold) { mutableFloatStateOf(uiState.hrvOptimalThreshold) }
         ThresholdSliderItem(
             label = "HRV Optimal",
-            value = uiState.hrvOptimalThreshold,
-            onValueChange = { onEvent(SettingsEvent.HrvOptimalThresholdChanged(it)) },
+            value = hrvOptimal,
+            onValueChange = { hrvOptimal = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.HrvOptimalThresholdChanged(hrvOptimal)) },
             valueRange = 1.0f..1.2f,
             description = "HRV ratio to baseline to be considered Optimal (e.g. 100-120%).",
         )
+
+        var hrvWarning by remember(uiState.hrvWarningThreshold) { mutableFloatStateOf(uiState.hrvWarningThreshold) }
         ThresholdSliderItem(
             label = "HRV Warning",
-            value = uiState.hrvWarningThreshold,
-            onValueChange = { onEvent(SettingsEvent.HrvWarningThresholdChanged(it)) },
+            value = hrvWarning,
+            onValueChange = { hrvWarning = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.HrvWarningThresholdChanged(hrvWarning)) },
             valueRange = 0.8f..1.0f,
             description = "HRV ratio to baseline to be considered Warning (e.g. 80-100%).",
         )
         Spacer(modifier = Modifier.height(8.dp))
+
+        var rhrOptimal by remember(uiState.rhrOptimalThreshold) { mutableFloatStateOf(uiState.rhrOptimalThreshold) }
         ThresholdSliderItem(
             label = "RHR Optimal",
-            value = uiState.rhrOptimalThreshold,
-            onValueChange = { onEvent(SettingsEvent.RhrOptimalThresholdChanged(it)) },
+            value = rhrOptimal,
+            onValueChange = { rhrOptimal = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.RhrOptimalThresholdChanged(rhrOptimal)) },
             valueRange = 0.8f..1.0f,
             description = "RHR ratio to baseline to be considered Optimal (e.g. 80-100%).",
         )
+
+        var rhrWarning by remember(uiState.rhrWarningThreshold) { mutableFloatStateOf(uiState.rhrWarningThreshold) }
         ThresholdSliderItem(
             label = "RHR Warning",
-            value = uiState.rhrWarningThreshold,
-            onValueChange = { onEvent(SettingsEvent.RhrWarningThresholdChanged(it)) },
+            value = rhrWarning,
+            onValueChange = { rhrWarning = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.RhrWarningThresholdChanged(rhrWarning)) },
             valueRange = 1.0f..1.2f,
             description = "RHR ratio to baseline to be considered Warning (e.g. 100-120%).",
         )
@@ -459,20 +485,23 @@ private fun ActivitySettingsSection(
     uiState: SettingsUiState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
+    var stepGoal by remember(uiState.stepGoal) { mutableFloatStateOf(uiState.stepGoal.toFloat()) }
+
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Daily Step Goal", style = MaterialTheme.typography.bodyMedium)
             MetricTooltip(description = "Target steps per day. Reaching this goal shows as Optimal on the dashboard.")
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "${uiState.stepGoal} steps",
+                text = "${stepGoal.roundToInt()} steps",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
         }
         Slider(
-            value = uiState.stepGoal.toFloat(),
-            onValueChange = { onEvent(SettingsEvent.StepGoalChanged(it.roundToInt())) },
+            value = stepGoal,
+            onValueChange = { stepGoal = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.StepGoalChanged(stepGoal.roundToInt())) },
             valueRange = 1000f..30000f,
             steps = 57,
             modifier = Modifier.fillMaxWidth(),
@@ -485,16 +514,16 @@ private fun AdvancedSettingsSection(
     uiState: SettingsUiState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
-    var hrvText by rememberSaveable(uiState.hrvBaselineOverride) {
+    var hrvText by remember(uiState.hrvBaselineOverride) {
         mutableStateOf(uiState.hrvBaselineOverride?.toInt()?.toString() ?: "")
     }
-    var rhrText by rememberSaveable(uiState.rhrBaselineOverride) {
+    var rhrText by remember(uiState.rhrBaselineOverride) {
         mutableStateOf(uiState.rhrBaselineOverride?.toInt()?.toString() ?: "")
     }
-    var beforeMinutesText by rememberSaveable(uiState.restingHrBeforeMinutes) {
+    var beforeMinutesText by remember(uiState.restingHrBeforeMinutes) {
         mutableStateOf(uiState.restingHrBeforeMinutes.toString())
     }
-    var afterMinutesText by rememberSaveable(uiState.restingHrAfterMinutes) {
+    var afterMinutesText by remember(uiState.restingHrAfterMinutes) {
         mutableStateOf(uiState.restingHrAfterMinutes.toString())
     }
 
@@ -608,13 +637,16 @@ private fun AdvancedSettingsSection(
                 .padding(horizontal = 16.dp),
         )
         Spacer(modifier = Modifier.height(16.dp))
+
+        var paiScaling by remember(uiState.paiScalingFactor) { mutableFloatStateOf(uiState.paiScalingFactor) }
         ThresholdSliderItem(
             label = "PAI Scaling Factor",
-            value = uiState.paiScalingFactor,
-            onValueChange = { onEvent(SettingsEvent.PaiScalingFactorChanged(it)) },
+            value = paiScaling,
+            onValueChange = { paiScaling = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.PaiScalingFactorChanged(paiScaling)) },
             valueRange = 0.1f..0.3f,
             steps = 20, // (0.3 - 0.1) / 0.01 = 20
-            displayValue = "%.2f".format(uiState.paiScalingFactor),
+            displayValue = "%.2f".format(paiScaling),
             description = "Adjusts how quickly you earn PAI points. Default: 0.20.",
         )
     }
@@ -822,6 +854,7 @@ private fun ThresholdSliderItem(
     description: String,
     steps: Int = ((valueRange.endInclusive - valueRange.start) * 100).roundToInt() - 1,
     displayValue: String = "${(value * 100).roundToInt()}%",
+    onValueChangeFinished: (() -> Unit)? = null,
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -837,6 +870,7 @@ private fun ThresholdSliderItem(
         Slider(
             value = value,
             onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
             valueRange = valueRange,
             steps = steps,
             modifier = Modifier.fillMaxWidth(),

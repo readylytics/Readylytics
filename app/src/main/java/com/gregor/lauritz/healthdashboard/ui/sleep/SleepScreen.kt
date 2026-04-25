@@ -91,7 +91,7 @@ fun SleepScreen(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 16.dp),
     ) {
-        item {
+        item(key = "date_switcher") {
             DateSwitcher(
                 selectedDate = uiState.selectedDate,
                 onPreviousDay = onPreviousDay,
@@ -99,7 +99,7 @@ fun SleepScreen(
             )
         }
 
-        item {
+        item(key = "score_dial") {
             Box(
                 modifier =
                     Modifier
@@ -121,7 +121,7 @@ fun SleepScreen(
             }
         }
 
-        item {
+        item(key = "architecture_bar") {
             val sectionLabel =
                 remember(uiState.selectedDate) {
                     val today = java.time.LocalDate.now()
@@ -146,9 +146,9 @@ fun SleepScreen(
             }
         }
 
-        item { Spacer(Modifier.height(24.dp)) }
+        item(key = "spacer_arch") { Spacer(Modifier.height(24.dp)) }
 
-        item {
+        item(key = "trends_header") {
             SectionHeader(title = "Restoration Trends")
             Spacer(Modifier.height(8.dp))
             SingleChoiceSegmentedButtonRow(
@@ -172,9 +172,9 @@ fun SleepScreen(
             }
         }
 
-        item { Spacer(Modifier.height(8.dp)) }
+        item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
 
-        item {
+        item(key = "hrv_chart") {
             TrendCard(
                 title = "HRV",
                 unit = "ms",
@@ -191,9 +191,9 @@ fun SleepScreen(
             }
         }
 
-        item { Spacer(Modifier.height(8.dp)) }
+        item(key = "spacer_hrv") { Spacer(Modifier.height(8.dp)) }
 
-        item {
+        item(key = "rhr_chart") {
             TrendCard(
                 title = "Resting Heart Rate",
                 unit = "bpm",
@@ -210,9 +210,9 @@ fun SleepScreen(
             }
         }
 
-        item { Spacer(Modifier.height(24.dp)) }
+        item(key = "spacer_rhr") { Spacer(Modifier.height(24.dp)) }
 
-        item {
+        item(key = "metrics_grid") {
             SectionHeader(title = "Metrics")
             Spacer(Modifier.height(8.dp))
             SleepMetricGrid(
@@ -223,7 +223,7 @@ fun SleepScreen(
             )
         }
 
-        item { Spacer(Modifier.height(16.dp)) }
+        item(key = "spacer_bottom") { Spacer(Modifier.height(16.dp)) }
     }
 }
 

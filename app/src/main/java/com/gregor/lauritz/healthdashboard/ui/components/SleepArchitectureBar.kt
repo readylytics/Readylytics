@@ -36,11 +36,12 @@ fun SleepArchitectureBar(
     session: SleepSessionEntity?,
     modifier: Modifier = Modifier,
 ) {
-    val primary = MaterialTheme.colorScheme.primary
-    val tertiary = MaterialTheme.colorScheme.tertiary
-    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val deepColor = if (isDark) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary
+    val remColor = MaterialTheme.colorScheme.tertiaryContainer
     val lightSleep = MaterialTheme.colorScheme.outlineVariant
-    val error = MaterialTheme.colorScheme.error
+    val awakeColor = MaterialTheme.colorScheme.error
+    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -56,10 +57,10 @@ fun SleepArchitectureBar(
 
     val segments =
         listOf(
-            StageSegment("Deep", session.deepSleepMinutes) { primary },
-            StageSegment("REM", session.remSleepMinutes) { tertiary },
+            StageSegment("Deep", session.deepSleepMinutes) { deepColor },
+            StageSegment("REM", session.remSleepMinutes) { remColor },
             StageSegment("Light", session.lightSleepMinutes) { lightSleep },
-            StageSegment("Awake", session.awakeMinutes) { error },
+            StageSegment("Awake", session.awakeMinutes) { awakeColor },
         )
 
     val resolvedColors = segments.map { it.color() }

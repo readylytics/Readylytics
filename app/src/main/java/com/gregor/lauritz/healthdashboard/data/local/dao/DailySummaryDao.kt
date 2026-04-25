@@ -5,17 +5,20 @@ import androidx.room.Query
 import androidx.room.Upsert
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Dao
 interface DailySummaryDao {
     @Query("SELECT * FROM daily_summaries ORDER BY dateMidnightMs DESC LIMIT 1")
-    fun observeLatest(): Flow<DailySummaryEntity?>
+    fun _observeLatest(): Flow<DailySummaryEntity?>
+    fun observeLatest(): Flow<DailySummaryEntity?> = _observeLatest().distinctUntilChanged()
 
     @Query(
         "SELECT * FROM daily_summaries WHERE dateMidnightMs >= :fromMs " +
             "ORDER BY dateMidnightMs DESC",
     )
-    fun observeSince(fromMs: Long): Flow<List<DailySummaryEntity>>
+    fun _observeSince(fromMs: Long): Flow<List<DailySummaryEntity>>
+    fun observeSince(fromMs: Long): Flow<List<DailySummaryEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
     @Upsert
     suspend fun upsert(summary: DailySummaryEntity)

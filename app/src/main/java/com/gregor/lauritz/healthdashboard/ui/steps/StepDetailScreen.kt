@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.domain.model.stepsStatus
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
@@ -80,7 +81,7 @@ fun StepDetailScreen(
                 .fillMaxSize(),
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
-            item {
+            item(key = "score_dial") {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -91,12 +92,13 @@ fun StepDetailScreen(
                         score = uiState.latestSummary?.stepCount?.toFloat(),
                         label = "Steps Today",
                         maxScore = (uiState.stepGoal * 1.5f),
+                        status = uiState.latestSummary?.stepCount?.let { stepsStatus(it, uiState.stepGoal) },
                         tooltipDescription = "Total steps recorded today.\nGoal: ${uiState.stepGoal} steps.",
                     )
                 }
             }
 
-            item {
+            item(key = "trends_header") {
                 SectionHeader(title = "Trends")
                 Spacer(Modifier.height(8.dp))
                 SingleChoiceSegmentedButtonRow(
@@ -118,9 +120,9 @@ fun StepDetailScreen(
                 }
             }
 
-            item { Spacer(Modifier.height(8.dp)) }
+            item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
 
-            item {
+            item(key = "steps_chart") {
                 TrendCard(
                     title = "Daily Steps",
                     unit = "steps",
@@ -137,7 +139,7 @@ fun StepDetailScreen(
                 }
             }
 
-            item { Spacer(Modifier.height(16.dp)) }
+            item(key = "spacer_bottom") { Spacer(Modifier.height(16.dp)) }
         }
     }
 }

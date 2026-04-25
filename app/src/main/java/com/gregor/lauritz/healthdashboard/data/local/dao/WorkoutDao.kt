@@ -5,6 +5,7 @@ import androidx.room.Query
 import androidx.room.Upsert
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Dao
 interface WorkoutDao {
@@ -12,7 +13,8 @@ interface WorkoutDao {
     suspend fun getById(id: String): WorkoutRecordEntity?
 
     @Query("SELECT * FROM workout_records WHERE startTime >= :fromMs ORDER BY startTime DESC")
-    fun observeSince(fromMs: Long): Flow<List<WorkoutRecordEntity>>
+    fun _observeSince(fromMs: Long): Flow<List<WorkoutRecordEntity>>
+    fun observeSince(fromMs: Long): Flow<List<WorkoutRecordEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
     @Query(
         "SELECT AVG(trimp) FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs",

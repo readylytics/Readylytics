@@ -20,16 +20,11 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.stepsStatus
+import java.text.NumberFormat
 
 // stepGoal fills bar to 75% width — mirrors PAI bar design
 private fun barMax(stepGoal: Int): Float = stepGoal / 0.75f
-
-fun stepsStatus(stepCount: Int, stepGoal: Int): MetricStatus = when {
-    stepCount >= stepGoal -> MetricStatus.OPTIMAL
-    stepCount >= stepGoal * 0.75f -> MetricStatus.NEUTRAL
-    stepCount >= stepGoal * 0.5f -> MetricStatus.WARNING
-    else -> MetricStatus.POOR
-}
 
 @Composable
 fun StepsBar(
@@ -38,8 +33,8 @@ fun StepsBar(
     modifier: Modifier = Modifier,
 ) {
     val count = stepCount ?: 0
-    val status = if (stepCount != null) stepsStatus(count, stepGoal) else MetricStatus.POOR
-    val fillColor = status.onContainerColor()
+    val status = if (stepCount != null) stepsStatus(count, stepGoal) else MetricStatus.CALIBRATING
+    val fillColor = status.gaugeColor()
     val trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
 
@@ -83,7 +78,7 @@ fun StepsBar(
 
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = if (stepCount != null) "${count.toLocaleString()} steps" else "-- steps",
+                text = if (stepCount != null) "${count.formatSteps()} steps" else "-- steps",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = if (stepCount != null) fillColor else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -98,4 +93,4 @@ fun StepsBar(
     }
 }
 
-private fun Int.toLocaleString(): String = String.format("%,d", this)
+internal fun Int.formatSteps(): String = NumberFormat.getNumberInstance().format(this)

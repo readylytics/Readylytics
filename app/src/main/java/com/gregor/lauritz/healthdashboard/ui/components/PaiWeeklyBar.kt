@@ -41,7 +41,7 @@ fun PaiWeeklyBar(
         totalPai >= 50f -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
-    val fillColor = status.onContainerColor()
+    val fillColor = status.gaugeColor()
     val trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
