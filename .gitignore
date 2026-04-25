@@ -40,3 +40,5 @@ google-services.json
 __pycache__/
 .venv/
 scripts/health_connect_export.db
+
+SPEC.md
