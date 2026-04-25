@@ -119,6 +119,11 @@ fun SettingsScreen(
         item(key = "header_sync") { SectionHeader("Health Connect Sync") }
         item(key = "section_sync") { SyncSettingsSection(uiState = uiState, onEvent = onEvent) }
 
+        // Data Management
+        item(key = "divider_data") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        item(key = "header_data") { SectionHeader("Data Management") }
+        item(key = "section_data") { DataManagementSection(uiState = uiState, onEvent = onEvent) }
+
         // Appearance
         item(key = "divider_appearance") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
         item(key = "header_appearance") { SectionHeader("Appearance") }
@@ -169,6 +174,82 @@ private fun SyncSettingsSection(
         SyncPreferenceItem(uiState = uiState, onEvent = onEvent)
         AnimatedVisibility(visible = uiState.syncPreference == SyncPreference.BY_TIME) {
             SyncIntervalItem(uiState = uiState, onEvent = onEvent)
+        }
+    }
+}
+
+@Composable
+private fun DataManagementSection(
+    uiState: SettingsUiState,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var retentionDays by remember(uiState.retentionDays) {
+        mutableFloatStateOf(uiState.retentionDays.toFloat())
+    }
+
+    Column {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text("Retention Enabled", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.weight(1f))
+                Switch(
+                    checked = uiState.retentionDaysEnabled,
+                    onCheckedChange = { onEvent(SettingsEvent.RetentionDaysEnabledChanged(it)) }
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = uiState.retentionDaysEnabled) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Retention Period", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = "${retentionDays.toInt()} days",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Slider(
+                    value = retentionDays,
+                    onValueChange = { retentionDays = it },
+                    onValueChangeFinished = {
+                        onEvent(SettingsEvent.RetentionDaysChanged(retentionDays.toInt()))
+                    },
+                    valueRange = 180f..1095f,
+                    steps = 30,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = "Automatically delete data older than the retention period.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Button(
+                onClick = { onEvent(SettingsEvent.ResyncHealthConnect) },
+                enabled = !uiState.isResyncing,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (uiState.isResyncing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text("Resync Health Connect Data")
+            }
+            Text(
+                text = "Clear all data from Health Connect and reload the last 60 days.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 }

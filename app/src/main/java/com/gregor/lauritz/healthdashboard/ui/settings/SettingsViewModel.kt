@@ -78,6 +78,9 @@ data class SettingsUiState(
     val showRestoreConfirmDialog: Boolean = false,
     val driveError: String? = null,
     val pendingRestoreDir: File? = null,
+    val retentionDaysEnabled: Boolean = true,
+    val retentionDays: Int = 365,
+    val isResyncing: Boolean = false,
 )
 
 sealed interface SettingsEvent {
@@ -191,6 +194,9 @@ sealed interface SettingsEvent {
     data object RestoreConfirmed : SettingsEvent
     data object RestoreDismissed : SettingsEvent
     data object DismissDriveError : SettingsEvent
+    data class RetentionDaysEnabledChanged(val enabled: Boolean) : SettingsEvent
+    data class RetentionDaysChanged(val days: Int) : SettingsEvent
+    data object ResyncHealthConnect : SettingsEvent
 }
 
 @HiltViewModel
@@ -251,6 +257,8 @@ class SettingsViewModel
                             driveEmail = prefs.driveAccountEmail,
                             backupSchedule = prefs.backupSchedule,
                             lastBackupTimestamp = prefs.lastBackupTimestamp,
+                            retentionDaysEnabled = prefs.retentionDaysEnabled,
+                            retentionDays = prefs.retentionDays,
                             isLoading = false,
                         )
                     }
@@ -477,6 +485,23 @@ class SettingsViewModel
 
                 SettingsEvent.DismissDriveError ->
                     _uiState.update { it.copy(driveError = null) }
+
+                is SettingsEvent.RetentionDaysEnabledChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateRetentionDaysEnabled(event.enabled)
+                    }
+
+                is SettingsEvent.RetentionDaysChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateRetentionDays(event.days)
+                    }
+
+                SettingsEvent.ResyncHealthConnect ->
+                    viewModelScope.launch {
+                        _uiState.update { it.copy(isResyncing = true) }
+                        healthSyncUseCase.sync()
+                        _uiState.update { it.copy(isResyncing = false) }
+                    }
             }
         }
 
