@@ -764,6 +764,22 @@ private fun AdvancedSettingsSection(
             displayValue = "%.2f".format(paiScaling),
             description = "Adjusts how quickly you earn PAI points. Default: 0.20.",
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Show Trends on Charts")
+            Switch(
+                checked = uiState.showTrends,
+                onCheckedChange = { onEvent(SettingsEvent.ShowTrendsChanged(it)) },
+            )
+        }
     }
 }
 
