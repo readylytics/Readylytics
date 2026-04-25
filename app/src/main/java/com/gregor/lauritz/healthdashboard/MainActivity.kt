@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         workerScheduler.scheduleBirthdayWorker()
+        workerScheduler.scheduleDataCleanupWorker()
         setContent {
             val prefs by prefsRepo.userPreferences.collectAsState(initial = null)
             val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM

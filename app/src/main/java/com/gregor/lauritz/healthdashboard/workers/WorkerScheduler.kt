@@ -18,6 +18,7 @@ class WorkerScheduler @Inject constructor(
     companion object {
         const val BACKUP_WORK_NAME = "health_backup_periodic"
         const val BIRTHDAY_WORK_NAME = "birthday_check_periodic"
+        const val DATA_CLEANUP_WORK_NAME = "data_cleanup_periodic"
     }
 
     fun scheduleBackupWorker(schedule: BackupSchedule) {
@@ -56,6 +57,23 @@ class WorkerScheduler @Inject constructor(
 
         workManager.enqueueUniquePeriodicWork(
             BIRTHDAY_WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
+    }
+
+    fun scheduleDataCleanupWorker() {
+        val constraints = Constraints.Builder()
+            .setRequiresBatteryNotLow(true)
+            .build()
+
+        val request = PeriodicWorkRequestBuilder<DataCleanupWorker>(1, TimeUnit.DAYS)
+            .setConstraints(constraints)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            DATA_CLEANUP_WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
             request
         )
