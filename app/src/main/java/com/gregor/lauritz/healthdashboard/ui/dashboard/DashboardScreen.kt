@@ -37,6 +37,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.toStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
+import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
@@ -189,19 +190,37 @@ fun DashboardScreen(
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }
-                uiState.circadianConsistency?.let { circadian ->
-                    item {
+                item {
+                    if (uiState.restingHrCard != null || uiState.circadianConsistency != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             modifier = Modifier.padding(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            DashboardCircadianCard(
-                                result = circadian,
-                                onNavigateToSleep = onNavigateToSleep,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Spacer(modifier = Modifier.weight(1f))
+                            if (uiState.restingHrCard != null) {
+                                val card = uiState.restingHrCard
+                                MetricCard(
+                                    title = card.title,
+                                    value = card.value,
+                                    secondaryText = card.unit,
+                                    status = card.status,
+                                    onClick = onNavigateToRhr,
+                                    tooltip = card.tooltip,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+
+                            if (uiState.circadianConsistency != null) {
+                                DashboardCircadianCard(
+                                    result = uiState.circadianConsistency,
+                                    onNavigateToSleep = onNavigateToSleep,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }

@@ -45,6 +45,12 @@ interface WorkoutDao {
     @Query("SELECT MIN(startTime) FROM workout_records")
     suspend fun getEarliestWorkoutTimestamp(): Long?
 
+    @Query("SELECT SUM(durationMinutes) FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs")
+    suspend fun getTotalDurationMinutes(fromMs: Long, toMs: Long): Int?
+
+    @Query("SELECT SUM(avgHr * durationMinutes) / CAST(SUM(durationMinutes) AS FLOAT) FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs AND durationMinutes > 0")
+    suspend fun getWeightedAvgHr(fromMs: Long, toMs: Long): Float?
+
     @Upsert
     suspend fun upsertAll(records: List<WorkoutRecordEntity>)
 }

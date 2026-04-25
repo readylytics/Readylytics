@@ -20,6 +20,7 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
@@ -38,7 +39,9 @@ fun SleepArchitectureBar(
     val primary = MaterialTheme.colorScheme.primary
     val tertiary = MaterialTheme.colorScheme.tertiary
     val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
+    val lightSleep = MaterialTheme.colorScheme.outlineVariant
     val error = MaterialTheme.colorScheme.error
+    val outlineColor = MaterialTheme.colorScheme.outlineVariant
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
 
     val totalMinutes =
@@ -55,7 +58,7 @@ fun SleepArchitectureBar(
         listOf(
             StageSegment("Deep", session.deepSleepMinutes) { primary },
             StageSegment("REM", session.remSleepMinutes) { tertiary },
-            StageSegment("Light", session.lightSleepMinutes) { surfaceVariant },
+            StageSegment("Light", session.lightSleepMinutes) { lightSleep },
             StageSegment("Awake", session.awakeMinutes) { error },
         )
 
@@ -98,6 +101,12 @@ fun SleepArchitectureBar(
                     xOffset += segmentWidth
                 }
             }
+
+            drawRoundRect(
+                color = outlineColor,
+                cornerRadius = CornerRadius(radius),
+                style = Stroke(width = 1.dp.toPx()),
+            )
         }
 
         Spacer(Modifier.height(8.dp))

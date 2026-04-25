@@ -22,4 +22,7 @@ interface DailySummaryDao {
 
     @Query("SELECT * FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
     suspend fun getByDate(dateMidnightMs: Long): DailySummaryEntity?
+
+    @Query("SELECT * FROM daily_summaries WHERE dateMidnightMs >= :fromMs ORDER BY dateMidnightMs ASC")
+    suspend fun getSince(fromMs: Long): List<DailySummaryEntity>
 }

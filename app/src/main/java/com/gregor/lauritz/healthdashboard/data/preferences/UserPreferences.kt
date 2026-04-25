@@ -34,4 +34,5 @@ data class UserPreferences(
     val consistencyThresholdMinutes: Int = 30,
     val consistencyEvaluationDays: Int = 7,
     val consistencyBaselineDays: Int = 14,
+    val paiScalingFactor: Float = 0.2f,
 )

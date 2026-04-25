@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.workouts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
@@ -11,7 +12,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 import javax.inject.Inject
 
 data class HeartRatePoint(
@@ -25,6 +30,8 @@ data class WorkoutDetailUiState(
     val hrr1Min: Int? = null,
     val hrr2Min: Int? = null,
     val hrr3Min: Int? = null,
+    val totalPai: Float? = null,
+    val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val isLoading: Boolean = true,
 )
 
@@ -35,6 +42,7 @@ class WorkoutDetailViewModel
         private val workoutDao: WorkoutDao,
         private val hcRepo: HealthConnectRepository,
         private val heartRateDao: HeartRateDao,
+        private val dailySummaryDao: DailySummaryDao,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(WorkoutDetailUiState())
         val uiState = _uiState.asStateFlow()
@@ -67,6 +75,21 @@ class WorkoutDetailViewModel
                 val workoutEndInstant = Instant.ofEpochMilli(workout.endTime)
                 val endHr = allSamples.lastOrNull { it.timestamp <= workoutEndInstant }?.bpm
 
+                val workoutDate = start.atZone(ZoneId.systemDefault()).toLocalDate()
+                val midnight = workoutDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                val summary = dailySummaryDao.getByDate(midnight)
+
+                val sevenDaysAgo = workoutDate.minusDays(6).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                val summaries = dailySummaryDao.getSince(sevenDaysAgo)
+                val summaryByDate = summaries.associateBy { it.dateMidnightMs }
+                val paiBreakdown = (6 downTo 0).map { daysBack ->
+                    val day = workoutDate.minusDays(daysBack.toLong())
+                    val dayMs = day.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    val label = day.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+                    val pai = summaryByDate[dayMs]?.paiScore ?: 0f
+                    label to pai
+                }
+
                 if (endHr != null) {
                     val hrByMinute = (1..3).map { minute ->
                         val to = workoutEndInstant.plus(minute.toLong(), ChronoUnit.MINUTES)
@@ -80,6 +103,8 @@ class WorkoutDetailViewModel
                             hrr1Min = hr1Min?.let { endHr - it },
                             hrr2Min = hr2Min?.let { endHr - it },
                             hrr3Min = hr3Min?.let { endHr - it },
+                            totalPai = summary?.totalPai,
+                            paiDailyBreakdown = paiBreakdown,
                             isLoading = false,
                         )
                 } else {
@@ -87,6 +112,8 @@ class WorkoutDetailViewModel
                         WorkoutDetailUiState(
                             workout = workout,
                             hrSamples = allSamples,
+                            totalPai = summary?.totalPai,
+                            paiDailyBreakdown = paiBreakdown,
                             isLoading = false,
                         )
                 }

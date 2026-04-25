@@ -41,12 +41,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
+import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
+import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
+import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
@@ -361,6 +365,60 @@ private fun HrChart(
         ),
         modifier = Modifier.fillMaxWidth().height(200.dp),
     )
+}
+
+@Composable
+private fun PaiProgressCard(totalPai: Float?) {
+    val pai = totalPai ?: 0f
+    val progress = (pai / 150f).coerceIn(0f, 1f)
+
+    val status = when {
+        pai >= 100f -> MetricStatus.OPTIMAL
+        pai >= 75f -> MetricStatus.NEUTRAL
+        pai >= 50f -> MetricStatus.WARNING
+        else -> MetricStatus.POOR
+    }
+
+    val color = status.onContainerColor()
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Weekly PAI Progress", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "${pai.toInt()} / 100",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = color
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(12.dp)
+                    .clip(RoundedCornerShape(6.dp)),
+                color = color,
+                trackColor = color.copy(alpha = 0.15f),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = when {
+                    pai >= 100f -> "Optimal heart protection reached!"
+                    pai >= 75f -> "Almost there! Keep it up."
+                    pai >= 50f -> "Maintain consistency to reach 100."
+                    else -> "Start moving to improve your heart health."
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
 
 @Composable

@@ -21,4 +21,6 @@ data class DailySummaryEntity(
     val restingHeartRate: Int? = null,
     val restingHrRatio: Float? = null,
     val restingHrBaseline: Int? = null,
+    val paiScore: Float? = null,
+    val totalPai: Float? = null,
 )

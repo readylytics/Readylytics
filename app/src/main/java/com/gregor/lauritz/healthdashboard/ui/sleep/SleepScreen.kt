@@ -134,12 +134,16 @@ fun SleepScreen(
                         }
                     }
                 }
-            SectionHeader(title = sectionLabel)
-            Spacer(Modifier.height(8.dp))
-            SleepArchitectureBar(
-                session = uiState.latestSession,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
+            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(sectionLabel, style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(12.dp))
+                    SleepArchitectureBar(
+                        session = uiState.latestSession,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
         }
 
         item { Spacer(Modifier.height(24.dp)) }

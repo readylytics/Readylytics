@@ -40,6 +40,14 @@ fun M3ScoreDial(
     val effectiveStatus =
         status ?: when {
             score == null -> MetricStatus.CALIBRATING
+            label.contains("PAI", ignoreCase = true) -> {
+                when {
+                    score >= 100f -> MetricStatus.OPTIMAL
+                    score >= 75f -> MetricStatus.NEUTRAL
+                    score >= 50f -> MetricStatus.WARNING
+                    else -> MetricStatus.POOR
+                }
+            }
             score >= 85f -> MetricStatus.OPTIMAL
             score >= 60f -> MetricStatus.NEUTRAL
             score >= 40f -> MetricStatus.WARNING

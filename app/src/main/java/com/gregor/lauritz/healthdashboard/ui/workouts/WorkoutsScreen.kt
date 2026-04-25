@@ -38,6 +38,8 @@ import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
+import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
+import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
@@ -182,6 +184,51 @@ private fun HeroSection(
                 label = "Readiness",
                 tooltipDescription = "Physical preparedness for strain today.",
             )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("PAI", style = MaterialTheme.typography.titleSmall)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        uiState.todayPaiScore?.let { earned ->
+                            if (earned > 0f) {
+                                Text(
+                                    text = "+${earned.toInt()} today",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        MetricTooltip(
+                            description = buildString {
+                                append("Your 7-day rolling heart health score.\n")
+                                append("Based on how often and how hard you challenge your heart.\n\n")
+                                append("• 100+: Optimal\n")
+                                append("• 75–99: Neutral\n")
+                                append("• 50–74: Warning\n")
+                                append("• < 50: Poor")
+                            },
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                PaiWeeklyBar(
+                    dailyBreakdown = uiState.paiDailyBreakdown,
+                    totalPai = uiState.latestSummary?.totalPai ?: 0f,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
 
         Spacer(Modifier.height(8.dp))

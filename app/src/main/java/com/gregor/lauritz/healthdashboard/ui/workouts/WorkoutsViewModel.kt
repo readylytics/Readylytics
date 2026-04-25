@@ -21,8 +21,10 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Calendar
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -37,6 +39,8 @@ data class WorkoutsUiState(
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val selectedDate: LocalDate = LocalDate.now(),
     val rangeStartMs: Long = System.currentTimeMillis(),
+    val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
+    val todayPaiScore: Float? = null,
 )
 
 @HiltViewModel
@@ -84,10 +88,13 @@ class WorkoutsViewModel
                             flow { emit(dailySummaryDao.getByDate(selectedMidnightMs)) }
                         }
 
+                    val paiFromMs = date.minusDays(6)
+                        .atStartOfDay(zoneId).toInstant().toEpochMilli()
                     combine(
                         summaryFlow,
                         workoutDao.observeSince(fetchFromMs),
-                    ) { latest, allWorkouts ->
+                        dailySummaryDao.observeSince(paiFromMs),
+                    ) { latest, allWorkouts, paiSummaries ->
                         val filteredWorkouts = allWorkouts.filter { it.startTime < selectedMidnightMs + TimeUnit.DAYS.toMillis(1) }
                         val trimpByDay: Map<Long, Float> =
                             filteredWorkouts
@@ -158,6 +165,8 @@ class WorkoutsViewModel
                             selectedRange = range,
                             selectedDate = date,
                             rangeStartMs = displayStartDayMs,
+                            paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries),
+                            todayPaiScore = latest?.paiScore,
                         )
                     }
                 }.stateIn(
@@ -165,6 +174,20 @@ class WorkoutsViewModel
                     started = SharingStarted.WhileSubscribed(5_000),
                     initialValue = WorkoutsUiState(),
                 )
+
+        private fun buildPaiBreakdown(
+            endDate: LocalDate,
+            summaries: List<DailySummaryEntity>,
+        ): List<Pair<String, Float>> {
+            val zoneId = ZoneId.systemDefault()
+            val fmt = DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
+            return (6 downTo 0).map { daysBack ->
+                val day = endDate.minusDays(daysBack.toLong())
+                val dayMs = day.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                val entry = summaries.firstOrNull { it.dateMidnightMs == dayMs }
+                day.format(fmt) to (entry?.paiScore ?: 0f)
+            }
+        }
 
         fun onRangeSelected(range: TimeRange) {
             _selectedRange.value = range

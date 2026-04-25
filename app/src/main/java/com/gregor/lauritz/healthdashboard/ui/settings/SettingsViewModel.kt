@@ -65,6 +65,7 @@ data class SettingsUiState(
     val consistencyThresholdMinutes: Int = 30,
     val consistencyEvaluationDays: Int = 7,
     val consistencyBaselineDays: Int = 14,
+    val paiScalingFactor: Float = 0.2f,
     val appTheme: AppTheme = AppTheme.SYSTEM,
     val isLoading: Boolean = true,
     val driveEmail: String? = null,
@@ -167,6 +168,10 @@ sealed interface SettingsEvent {
         val days: Int,
     ) : SettingsEvent
 
+    data class PaiScalingFactorChanged(
+        val value: Float,
+    ) : SettingsEvent
+
     data class AppThemeChanged(
         val theme: AppTheme,
     ) : SettingsEvent
@@ -232,6 +237,7 @@ class SettingsViewModel
                             consistencyThresholdMinutes = prefs.consistencyThresholdMinutes,
                             consistencyEvaluationDays = prefs.consistencyEvaluationDays,
                             consistencyBaselineDays = prefs.consistencyBaselineDays,
+                            paiScalingFactor = prefs.paiScalingFactor,
                             appTheme = prefs.appTheme,
                             driveEmail = prefs.driveAccountEmail,
                             backupSchedule = prefs.backupSchedule,
@@ -365,6 +371,11 @@ class SettingsViewModel
                 is SettingsEvent.ConsistencyBaselineDaysChanged ->
                     viewModelScope.launch {
                         prefsRepo.updateConsistencyBaselineDays(event.days)
+                    }
+                is SettingsEvent.PaiScalingFactorChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updatePaiScalingFactor(event.value)
+                        scoringRepository.computeAndPersistDailySummary()
                     }
                 is SettingsEvent.AppThemeChanged ->
                     viewModelScope.launch {

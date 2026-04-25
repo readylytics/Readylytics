@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import javax.inject.Inject
 
 @Immutable
@@ -36,6 +38,8 @@ data class DashboardUiState(
     val cardData: List<CardData> = emptyList(),
     val cardRows: List<List<CardData>> = emptyList(),
     val circadianConsistency: CircadianConsistencyResult? = null,
+    val restingHrCard: CardData? = null,
+    val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
 )
 
 @Immutable
@@ -117,6 +121,16 @@ fun DailySummaryEntity.sleepDurationStatus(goalMinutes: Int): MetricStatus {
     }
 }
 
+fun DailySummaryEntity.paiStatus(): MetricStatus {
+    val pai = totalPai ?: return MetricStatus.CALIBRATING
+    return when {
+        pai >= 100f -> MetricStatus.OPTIMAL
+        pai >= 75f -> MetricStatus.NEUTRAL
+        pai >= 50f -> MetricStatus.WARNING
+        else -> MetricStatus.POOR
+    }
+}
+
 @HiltViewModel
 class DashboardViewModel
     @Inject
@@ -152,12 +166,16 @@ class DashboardViewModel
                                     .toEpochMilli()
                             flow { emit(dailySummaryDao.getByDate(midnightMs)) }
                         }
+                    val paiFromMs = date.minusDays(6)
+                        .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    val paiBreakdownFlow = dailySummaryDao.observeSince(paiFromMs)
                     combine(
                         summaryFlow,
                         prefsRepo.userPreferences,
                         _isRefreshing,
                         circadianRepo.resultFor(date),
-                    ) { summary, prefs, refreshing, circadian ->
+                        paiBreakdownFlow,
+                    ) { summary, prefs, refreshing, circadian, paiSummaries ->
                         val data =
                             calculateCardData(
                                 summary,
@@ -171,6 +189,8 @@ class DashboardViewModel
                             cardData = data,
                             cardRows = data.chunked(2),
                             circadianConsistency = circadian,
+                            restingHrCard = summary?.let { restingHrCard(it, prefs) },
+                            paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries),
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(
@@ -189,9 +209,44 @@ class DashboardViewModel
             return listOf(
                 sleepCard(summary, prefs),
                 hrvCard(summary, prefs),
+                paiCard(summary),
                 sleepDurationCard(summary, prefs),
-                restingHrCard(summary, prefs)
             )
+        }
+
+        private fun paiCard(summary: DailySummaryEntity): CardData {
+            val status = summary.paiStatus()
+            val value = summary.totalPai?.toInt()?.toString() ?: "—"
+
+            return CardData(
+                title = "Current PAI",
+                value = value,
+                unit = "",
+                status = status,
+                action = DashboardAction.NAVIGATE_WORKOUTS,
+                tooltip = buildString {
+                    append("Your 7-day rolling heart health score.\n")
+                    append("Based on how often and how hard you challenge your heart.\n\n")
+                    append("• 100+: Optimal\n")
+                    append("• 75-99: Neutral\n")
+                    append("• 50-74: Warning\n")
+                    append("• < 50: Poor")
+                }
+            )
+        }
+
+        private fun buildPaiBreakdown(
+            endDate: LocalDate,
+            summaries: List<DailySummaryEntity>,
+        ): List<Pair<String, Float>> {
+            val zoneId = ZoneId.systemDefault()
+            val fmt = DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
+            return (6 downTo 0).map { daysBack ->
+                val day = endDate.minusDays(daysBack.toLong())
+                val dayMs = day.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                val entry = summaries.firstOrNull { it.dateMidnightMs == dayMs }
+                day.format(fmt) to (entry?.paiScore ?: 0f)
+            }
         }
 
         private fun sleepCard(

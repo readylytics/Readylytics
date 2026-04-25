@@ -576,6 +576,16 @@ private fun AdvancedSettingsSection(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
         )
+        Spacer(modifier = Modifier.height(16.dp))
+        ThresholdSliderItem(
+            label = "PAI Scaling Factor",
+            value = uiState.paiScalingFactor,
+            onValueChange = { onEvent(SettingsEvent.PaiScalingFactorChanged(it)) },
+            valueRange = 0.1f..0.3f,
+            steps = 20, // (0.3 - 0.1) / 0.01 = 20
+            displayValue = "%.2f".format(uiState.paiScalingFactor),
+            description = "Adjusts how quickly you earn PAI points. Default: 0.20.",
+        )
     }
 }
 
