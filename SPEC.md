@@ -26,6 +26,7 @@ Add user-configurable data retention window (1y default, 180d–3y range, disabl
 - **V3**: Daily cleanup task runs (WorkManager) and only deletes records `createdAt < now - retentionDays`.
 - **V4**: Disabling retention halts cleanup; re-enabling does not backfill or retroactive-delete.
 - **V5**: Resync in progress blocks UI (shows spinner/progress); fails gracefully if HC unavailable.
+- **V6**: Resync in progress disables tab/navigation switching. Locked until resync completes or errors.
 
 ## §T: Tasks
 
@@ -37,6 +38,7 @@ Add user-configurable data retention window (1y default, 180d–3y range, disabl
 | T4 | x | Implement DataCleanupWorker (daily, check & delete old records) | V3,V4,I.worker |
 | T5 | x | Add unit tests: retention range validation, delete-by-date | V1,V3 |
 | T6 | x | Test Settings UI flows (toggle, slider, resync button) | T2,T3 |
+| T7 | x | Disable navigation during resync (block tab switching) | V6,I.ui |
 
 ## §B: Bugs
 

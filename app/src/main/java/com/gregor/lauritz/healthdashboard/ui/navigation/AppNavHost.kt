@@ -20,17 +20,20 @@ import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectReposi
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.ui.onboarding.OnboardingRoute
 import com.gregor.lauritz.healthdashboard.ui.scaffold.MainScaffold
+import com.gregor.lauritz.healthdashboard.ui.settings.SettingsViewModel
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncUiState
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
 
 @Composable
 fun AppNavHost(
     viewModel: SyncViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
     hcRepo: HealthConnectRepository,
     prefsRepo: UserPreferencesRepository, // Added prefsRepo
     navController: NavHostController = rememberNavController(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val settingsUiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState) {
         val currentDest = navController.currentDestination
@@ -62,7 +65,7 @@ fun AppNavHost(
         startDestination = AppDestination.MainShell,
     ) {
         composable<AppDestination.MainShell> {
-            MainScaffold()
+            MainScaffold(isResyncingInProgress = settingsUiState.isResyncing)
         }
 
         composable<AppDestination.Onboarding> {

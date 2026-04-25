@@ -26,7 +26,7 @@ import com.gregor.lauritz.healthdashboard.ui.navigation.AppDestination
 import com.gregor.lauritz.healthdashboard.ui.navigation.TabDestination
 
 @Composable
-fun MainScaffold(modifier: Modifier = Modifier) {
+fun MainScaffold(modifier: Modifier = Modifier, isResyncingInProgress: Boolean = false) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -60,6 +60,7 @@ fun MainScaffold(modifier: Modifier = Modifier) {
                             },
                             label = { Text(stringResource(tab.labelRes)) },
                             selected = selected,
+                            enabled = !isResyncingInProgress,
                             onClick = {
                                 navController.navigate(tab) {
                                     popUpTo(navController.graph.findStartDestination().id) {
