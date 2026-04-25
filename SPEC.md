@@ -36,7 +36,7 @@ Add user-configurable data retention window (1y default, 180d–3y range, disabl
 | T3 | x | Implement resync VM logic (clear tables, re-query HC 60d) | V2,I.api |
 | T4 | x | Implement DataCleanupWorker (daily, check & delete old records) | V3,V4,I.worker |
 | T5 | x | Add unit tests: retention range validation, delete-by-date | V1,V3 |
-| T6 | . | Test Settings UI flows (toggle, slider, resync button) | T2,T3 |
+| T6 | x | Test Settings UI flows (toggle, slider, resync button) | T2,T3 |
 
 ## §B: Bugs
 
