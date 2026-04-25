@@ -107,16 +107,18 @@ fun SleepScreen(
                         .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center,
             ) {
+                val sleepScoreTooltip = remember {
+                    buildString {
+                        append("Total quality of rest based on duration and cycles.\n\n")
+                        append("• 80–100: Optimal\n")
+                        append("• 60–79: Fair\n")
+                        append("• < 60: Poor")
+                    }
+                }
                 M3ScoreDial(
                     score = uiState.latestSummary?.sleepScore,
                     label = "Sleep Score",
-                    tooltipDescription =
-                        buildString {
-                            append("Total quality of rest based on duration and cycles.\n\n")
-                            append("• 80–100: Optimal\n")
-                            append("• 60–79: Fair\n")
-                            append("• < 60: Poor")
-                        },
+                    tooltipDescription = sleepScoreTooltip,
                 )
             }
         }
@@ -306,12 +308,11 @@ private fun CircadianConsistencyCard(
         is CircadianConsistencyResult.Ready ->
             "${result.medianBedtimeMinutes.toTimeString()}→${result.medianWakeMinutes.toTimeString()}"
     }
-    val thresholdMinutes = when (result) {
-        is CircadianConsistencyResult.Calibrating -> 30
-        is CircadianConsistencyResult.Ready -> result.thresholdMinutes
-    }
-
-    val tooltipText =
+    val tooltipText = remember(result) {
+        val thresholdMinutes = when (result) {
+            is CircadianConsistencyResult.Calibrating -> 30
+            is CircadianConsistencyResult.Ready -> result.thresholdMinutes
+        }
         buildString {
             append("Measures how regular your sleep schedule is.\n\n")
             append("High consistency stabilizes your internal clock, improving deep sleep and energy levels.\n\n")
@@ -321,6 +322,7 @@ private fun CircadianConsistencyCard(
             append("• < 40%: Poor\n\n")
             append("Consistency Window: ±$thresholdMinutes min grace period before score drops.")
         }
+    }
 
     Card(
         modifier = modifier,

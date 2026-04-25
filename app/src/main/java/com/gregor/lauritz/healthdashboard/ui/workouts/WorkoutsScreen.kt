@@ -165,19 +165,21 @@ private fun HeroSection(
                     else -> MetricStatus.WARNING
                 }
 
+            val strainTooltip = remember {
+                buildString {
+                    append("The ACWR (Acute:Chronic Workload Ratio).\n\n")
+                    append("• 0.8–1.3: Optimal range\n")
+                    append("• > 1.5: High injury risk\n")
+                    append("• < 0.8: Detraining risk")
+                }
+            }
             M3ScoreDial(
                 score = strainRatio,
                 label = "Strain Ratio",
                 maxScore = 2.0f,
                 status = strainStatus,
                 displayText = strainRatio?.let { "%.2f".format(it) },
-                tooltipDescription =
-                    buildString {
-                        append("The ACWR (Acute:Chronic Workload Ratio).\n\n")
-                        append("• 0.8–1.3: Optimal range\n")
-                        append("• > 1.5: High injury risk\n")
-                        append("• < 0.8: Detraining risk")
-                    },
+                tooltipDescription = strainTooltip,
             )
             M3ScoreDial(
                 score = uiState.latestSummary?.readinessScore,
@@ -210,15 +212,18 @@ private fun HeroSection(
                                 )
                             }
                         }
-                        MetricTooltip(
-                            description = buildString {
+                        val paiTooltip = remember {
+                            buildString {
                                 append("Your 7-day rolling heart health score.\n")
                                 append("Based on how often and how hard you challenge your heart.\n\n")
                                 append("• 100+: Optimal\n")
                                 append("• 75–99: Neutral\n")
                                 append("• 50–74: Warning\n")
                                 append("• < 50: Poor")
-                            },
+                            }
+                        }
+                        MetricTooltip(
+                            description = paiTooltip,
                         )
                     }
                 }

@@ -3,7 +3,8 @@
     "allow": [
       "Bash(./gradlew addKtlintCheckGitPreCommitHook)",
       "Bash(./gradlew :app:tasks --group=formatting)",
-      "Bash(./gradlew :app:tasks --all)"
+      "Bash(./gradlew :app:tasks --all)",
+      "Bash(grep -E \"\\\\.kt$\")"
     ]
   }
 }
