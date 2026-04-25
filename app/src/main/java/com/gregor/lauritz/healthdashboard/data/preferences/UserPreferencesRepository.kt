@@ -68,6 +68,7 @@ class UserPreferencesRepository
             val COLLAPSE_BASELINES_THRESHOLDS = booleanPreferencesKey("collapse_baselines_thresholds")
             val COLLAPSE_DISPLAY = booleanPreferencesKey("collapse_display")
             val COLLAPSE_ADVANCED = booleanPreferencesKey("collapse_advanced")
+            val ABOUT_DISMISSED = booleanPreferencesKey("about_dismissed")
         }
 
         val userPreferences: Flow<UserPreferences> =
@@ -136,6 +137,7 @@ class UserPreferencesRepository
                         collapseBaselinesThresholds = prefs[Keys.COLLAPSE_BASELINES_THRESHOLDS] ?: true,
                         collapseDisplay = prefs[Keys.COLLAPSE_DISPLAY] ?: true,
                         collapseAdvanced = prefs[Keys.COLLAPSE_ADVANCED] ?: true,
+                        aboutDismissed = prefs[Keys.ABOUT_DISMISSED] ?: false,
                     )
                 }
 
@@ -291,5 +293,9 @@ class UserPreferencesRepository
 
         suspend fun updateCollapseAdvanced(collapsed: Boolean) {
             dataStore.edit { it[Keys.COLLAPSE_ADVANCED] = collapsed }
+        }
+
+        suspend fun updateAboutDismissed(dismissed: Boolean) {
+            dataStore.edit { it[Keys.ABOUT_DISMISSED] = dismissed }
         }
     }

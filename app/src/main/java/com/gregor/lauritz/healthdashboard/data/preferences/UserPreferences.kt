@@ -44,4 +44,5 @@ data class UserPreferences(
     val collapseBaselinesThresholds: Boolean = true,
     val collapseDisplay: Boolean = true,
     val collapseAdvanced: Boolean = true,
+    val aboutDismissed: Boolean = false,
 )
