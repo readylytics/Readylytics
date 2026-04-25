@@ -19,6 +19,7 @@ class WorkerScheduler @Inject constructor(
         const val BACKUP_WORK_NAME = "health_backup_periodic"
         const val BIRTHDAY_WORK_NAME = "birthday_check_periodic"
         const val DATA_CLEANUP_WORK_NAME = "data_cleanup_periodic"
+        const val AVERAGE_CALCULATION_WORK_NAME = "average_calculation_periodic"
     }
 
     fun scheduleBackupWorker(schedule: BackupSchedule) {
@@ -74,6 +75,23 @@ class WorkerScheduler @Inject constructor(
 
         workManager.enqueueUniquePeriodicWork(
             DATA_CLEANUP_WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
+    }
+
+    fun scheduleAverageCalculationWorker() {
+        val constraints = Constraints.Builder()
+            .setRequiresBatteryNotLow(true)
+            .build()
+
+        val request = PeriodicWorkRequestBuilder<AverageCalculationWorker>(1, TimeUnit.DAYS)
+            .setConstraints(constraints)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            AVERAGE_CALCULATION_WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
             request
         )
