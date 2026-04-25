@@ -146,6 +146,11 @@ fun SettingsScreen(
             )
         }
 
+        // Activity
+        item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
+        item { SectionHeader("Activity") }
+        item { ActivitySettingsSection(uiState = uiState, onEvent = onEvent) }
+
         // Advanced
         item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
         item { SectionHeader("Advanced") }
@@ -445,6 +450,32 @@ private fun HeartRateZoneSection(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp)
+        )
+    }
+}
+
+@Composable
+private fun ActivitySettingsSection(
+    uiState: SettingsUiState,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Daily Step Goal", style = MaterialTheme.typography.bodyMedium)
+            MetricTooltip(description = "Target steps per day. Reaching this goal shows as Optimal on the dashboard.")
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "${uiState.stepGoal} steps",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Slider(
+            value = uiState.stepGoal.toFloat(),
+            onValueChange = { onEvent(SettingsEvent.StepGoalChanged(it.roundToInt())) },
+            valueRange = 1000f..30000f,
+            steps = 57,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

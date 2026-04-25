@@ -1,8 +1,6 @@
-package com.gregor.lauritz.healthdashboard.ui.rhr
+package com.gregor.lauritz.healthdashboard.ui.steps
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -38,13 +36,13 @@ import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 
 @Composable
-fun RestingHrDetailRoute(
+fun StepDetailRoute(
     onBack: () -> Unit,
-    viewModel: RestingHrDetailViewModel = hiltViewModel(),
+    viewModel: StepDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    RestingHrDetailScreen(
+    StepDetailScreen(
         uiState = uiState,
         onBack = onBack,
         onRangeSelected = viewModel::onRangeSelected,
@@ -53,8 +51,8 @@ fun RestingHrDetailRoute(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RestingHrDetailScreen(
-    uiState: RestingHrDetailUiState,
+fun StepDetailScreen(
+    uiState: StepDetailUiState,
     onBack: () -> Unit,
     onRangeSelected: (TimeRange) -> Unit,
     modifier: Modifier = Modifier,
@@ -66,7 +64,7 @@ fun RestingHrDetailScreen(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             TopAppBar(
-                title = { Text("Resting Heart Rate") },
+                title = { Text("Daily Steps") },
                 windowInsets = WindowInsets(0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -90,11 +88,10 @@ fun RestingHrDetailScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     M3ScoreDial(
-                        score = uiState.latestSummary?.restingHeartRate?.toFloat(),
-                        label = "Resting HR",
-                        maxScore = 120f,
-                        status = uiState.rhrStatus,
-                        tooltipDescription = "Minimum heart rate captured around wake up time."
+                        score = uiState.latestSummary?.stepCount?.toFloat(),
+                        label = "Steps Today",
+                        maxScore = (uiState.stepGoal * 1.5f),
+                        tooltipDescription = "Total steps recorded today.\nGoal: ${uiState.stepGoal} steps.",
                     )
                 }
             }
@@ -125,16 +122,16 @@ fun RestingHrDetailScreen(
 
             item {
                 TrendCard(
-                    title = "Resting Heart Rate",
-                    unit = "bpm",
+                    title = "Daily Steps",
+                    unit = "steps",
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
                     TrendChart(
-                        points = uiState.dailyRhr,
+                        points = uiState.dailySteps,
                         rangeStartMs = uiState.rangeStartMs,
                         rangeDays = uiState.selectedRange.days,
-                        baselineUnit = "bpm",
-                        baseline = uiState.rhrBaseline,
+                        baselineUnit = "steps",
+                        baseline = uiState.stepGoal.toFloat(),
                         scrollState = chartScrollState,
                     )
                 }

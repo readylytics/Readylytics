@@ -7,6 +7,8 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -38,6 +40,7 @@ class HealthConnectRepository
                 HealthPermission.getReadPermission(HeartRateRecord::class),
                 HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
                 HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+                HealthPermission.getReadPermission(StepsRecord::class),
             )
 
         val client: HealthConnectClient by lazy {
@@ -111,5 +114,19 @@ class HealthConnectRepository
                             timeRangeFilter = TimeRangeFilter.between(from, to),
                         ),
                     ).records
+            }
+
+        suspend fun readSteps(
+            from: Instant,
+            to: Instant,
+        ): Long =
+            withContext(Dispatchers.IO) {
+                val result = client.aggregate(
+                    AggregateRequest(
+                        metrics = setOf(StepsRecord.COUNT_TOTAL),
+                        timeRangeFilter = TimeRangeFilter.between(from, to),
+                    )
+                )
+                result[StepsRecord.COUNT_TOTAL] ?: 0L
             }
     }

@@ -59,6 +59,7 @@ class UserPreferencesRepository
             val CONSISTENCY_EVALUATION_DAYS = intPreferencesKey("consistency_evaluation_days")
             val CONSISTENCY_BASELINE_DAYS = intPreferencesKey("consistency_baseline_days")
             val PAI_SCALING_FACTOR = floatPreferencesKey("pai_scaling_factor")
+            val STEP_GOAL = intPreferencesKey("step_goal")
         }
 
         val userPreferences: Flow<UserPreferences> =
@@ -118,6 +119,7 @@ class UserPreferencesRepository
                         consistencyEvaluationDays = prefs[Keys.CONSISTENCY_EVALUATION_DAYS] ?: 7,
                         consistencyBaselineDays = prefs[Keys.CONSISTENCY_BASELINE_DAYS] ?: 14,
                         paiScalingFactor = prefs[Keys.PAI_SCALING_FACTOR] ?: 0.2f,
+                        stepGoal = prefs[Keys.STEP_GOAL] ?: 10000,
                     )
                 }
 
@@ -234,5 +236,9 @@ class UserPreferencesRepository
 
         suspend fun updatePaiScalingFactor(value: Float) {
             dataStore.edit { it[Keys.PAI_SCALING_FACTOR] = value.coerceIn(0.1f, 0.3f) }
+        }
+
+        suspend fun updateStepGoal(steps: Int) {
+            dataStore.edit { it[Keys.STEP_GOAL] = steps.coerceIn(1000, 30000) }
         }
     }

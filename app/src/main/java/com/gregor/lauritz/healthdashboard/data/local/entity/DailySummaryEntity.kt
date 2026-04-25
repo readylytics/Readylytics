@@ -23,4 +23,5 @@ data class DailySummaryEntity(
     val restingHrBaseline: Int? = null,
     val paiScore: Float? = null,
     val totalPai: Float? = null,
+    val stepCount: Int? = null,
 )

@@ -19,6 +19,7 @@ import com.gregor.lauritz.healthdashboard.ui.navigation.TabDestination
 import com.gregor.lauritz.healthdashboard.ui.rhr.RestingHrDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsRoute
 import com.gregor.lauritz.healthdashboard.ui.sleep.SleepRoute
+import com.gregor.lauritz.healthdashboard.ui.steps.StepDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.workouts.WorkoutDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.workouts.WorkoutsRoute
 
@@ -36,7 +37,8 @@ fun MainNavHost(
             val targetIndex = getTabIndex(targetState.destination)
 
             val isEnteringDetail = targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
-                targetState.destination.hasRoute(AppDestination.RestingHrDetail::class)
+                targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
+                targetState.destination.hasRoute(AppDestination.StepDetail::class)
 
             val direction = if (isEnteringDetail) {
                 // Invert direction for details as requested
@@ -53,7 +55,8 @@ fun MainNavHost(
             val targetIndex = getTabIndex(targetState.destination)
 
             val isLeavingDetail = initialState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
-                initialState.destination.hasRoute(AppDestination.RestingHrDetail::class)
+                initialState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
+                initialState.destination.hasRoute(AppDestination.StepDetail::class)
 
             val direction = if (isLeavingDetail) {
                 // Keep slide out direction consistent with pop
@@ -101,6 +104,9 @@ fun MainNavHost(
                 onNavigateToRhr = {
                     navController.navigate(AppDestination.RestingHrDetail)
                 },
+                onNavigateToSteps = {
+                    navController.navigate(AppDestination.StepDetail)
+                },
             )
         }
         composable<TabDestination.Sleep> { SleepRoute() }
@@ -121,6 +127,11 @@ fun MainNavHost(
                 onBack = { navController.popBackStack() },
             )
         }
+        composable<AppDestination.StepDetail> {
+            StepDetailRoute(
+                onBack = { navController.popBackStack() },
+            )
+        }
         composable<TabDestination.Settings> { SettingsRoute() }
     }
 }
@@ -134,8 +145,9 @@ private fun getTabIndex(destination: NavDestination?): Int {
 
     // WorkoutDetail is logically under Workouts
     if (destination.hasRoute(AppDestination.WorkoutDetail::class)) return 2
-    // RestingHrDetail is logically under Dashboard
+    // RestingHrDetail and StepDetail are logically under Dashboard
     if (destination.hasRoute(AppDestination.RestingHrDetail::class)) return 0
+    if (destination.hasRoute(AppDestination.StepDetail::class)) return 0
 
     return -1
 }

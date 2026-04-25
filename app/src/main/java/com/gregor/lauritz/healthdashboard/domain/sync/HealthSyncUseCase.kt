@@ -5,10 +5,12 @@ import com.gregor.lauritz.healthdashboard.data.healthconnect.HeartRateMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HrvMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.SleepDataMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.WorkoutMapper
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
@@ -30,6 +32,7 @@ class HealthSyncUseCase
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
+        private val dailySummaryDao: DailySummaryDao,
         private val prefsRepo: UserPreferencesRepository,
         private val appConfigRepo: AppConfigRepository,
         private val scoringRepository: ScoringRepository,
@@ -76,7 +79,15 @@ class HealthSyncUseCase
 
                 val today = LocalDate.now(zoneId)
                 repeat(windowDays) { i ->
-                    scoringRepository.computeAndPersistDailySummary(today.minusDays(i.toLong()))
+                    val day = today.minusDays(i.toLong())
+                    val dayStart = day.atStartOfDay(zoneId).toInstant()
+                    val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
+                    val dayMidnightMs = dayStart.toEpochMilli()
+                    val steps = hcRepo.readSteps(dayStart, dayEnd)
+                    val existing = dailySummaryDao.getByDate(dayMidnightMs)
+                        ?: DailySummaryEntity(dateMidnightMs = dayMidnightMs)
+                    dailySummaryDao.upsert(existing.copy(stepCount = steps.toInt().takeIf { it > 0 }))
+                    scoringRepository.computeAndPersistDailySummary(day)
                 }
 
                 appConfigRepo.updateLastSyncTimestamp(System.currentTimeMillis())

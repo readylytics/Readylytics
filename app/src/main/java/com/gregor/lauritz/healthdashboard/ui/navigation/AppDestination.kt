@@ -17,4 +17,7 @@ sealed interface AppDestination {
 
     @Serializable
     data object RestingHrDetail : AppDestination
+
+    @Serializable
+    data object StepDetail : AppDestination
 }

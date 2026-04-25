@@ -1,4 +1,4 @@
-package com.gregor.lauritz.healthdashboard.ui.rhr
+package com.gregor.lauritz.healthdashboard.ui.steps
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -6,10 +6,8 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
-import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
-import com.gregor.lauritz.healthdashboard.ui.dashboard.restingHrStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +15,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.time.Instant
 import java.time.LocalDate
@@ -25,17 +22,16 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
-data class RestingHrDetailUiState(
+data class StepDetailUiState(
     val latestSummary: DailySummaryEntity? = null,
-    val dailyRhr: List<DailyDataPoint> = emptyList(),
-    val rhrBaseline: Float? = null,
-    val rhrStatus: MetricStatus? = null,
+    val dailySteps: List<DailyDataPoint> = emptyList(),
+    val stepGoal: Int = 10000,
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val rangeStartMs: Long = 0,
 )
 
 @HiltViewModel
-class RestingHrDetailViewModel @Inject constructor(
+class StepDetailViewModel @Inject constructor(
     private val dailySummaryDao: DailySummaryDao,
     private val selectedDateRepository: SelectedDateRepository,
     private val prefsRepo: UserPreferencesRepository,
@@ -44,7 +40,7 @@ class RestingHrDetailViewModel @Inject constructor(
     private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<RestingHrDetailUiState> = combine(
+    val uiState: StateFlow<StepDetailUiState> = combine(
         _selectedRange,
         selectedDateRepository.selectedDate
     ) { range, date -> range to date }
@@ -58,22 +54,21 @@ class RestingHrDetailViewModel @Inject constructor(
                 prefsRepo.userPreferences
             ) { latest, history, prefs ->
                 val points = history
-                    .filter { it.restingHeartRate != null }
+                    .filter { it.stepCount != null }
                     .map { summary ->
                         val dayMs = summary.dateMidnightMs
                         val dayOffset = ChronoUnit.DAYS.between(
                             Instant.ofEpochMilli(startDayMs).atZone(ZoneId.systemDefault()).toLocalDate(),
                             Instant.ofEpochMilli(dayMs).atZone(ZoneId.systemDefault()).toLocalDate()
                         ).toInt()
-                        DailyDataPoint(dayOffset, summary.restingHeartRate!!.toFloat())
+                        DailyDataPoint(dayOffset, summary.stepCount!!.toFloat())
                     }
                     .sortedBy { it.dayOffset }
 
-                RestingHrDetailUiState(
+                StepDetailUiState(
                     latestSummary = latest,
-                    dailyRhr = points,
-                    rhrBaseline = latest?.restingHrBaseline?.toFloat(),
-                    rhrStatus = latest?.restingHrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold),
+                    dailySteps = points,
+                    stepGoal = prefs.stepGoal,
                     selectedRange = range,
                     rangeStartMs = startDayMs
                 )
@@ -81,7 +76,7 @@ class RestingHrDetailViewModel @Inject constructor(
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = RestingHrDetailUiState()
+            initialValue = StepDetailUiState()
         )
 
     fun onRangeSelected(range: TimeRange) {

@@ -40,6 +40,8 @@ data class DashboardUiState(
     val circadianConsistency: CircadianConsistencyResult? = null,
     val restingHrCard: CardData? = null,
     val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
+    val stepCount: Int? = null,
+    val stepGoal: Int = 10000,
 )
 
 @Immutable
@@ -56,6 +58,7 @@ enum class DashboardAction {
     NAVIGATE_SLEEP,
     NAVIGATE_WORKOUTS,
     NAVIGATE_RHR,
+    NAVIGATE_STEPS,
 }
 
 fun DailySummaryEntity.rhrStatus(
@@ -191,6 +194,8 @@ class DashboardViewModel
                             circadianConsistency = circadian,
                             restingHrCard = summary?.let { restingHrCard(it, prefs) },
                             paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries),
+                            stepCount = summary?.stepCount,
+                            stepGoal = prefs.stepGoal,
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(

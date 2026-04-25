@@ -38,6 +38,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
 import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
+import com.gregor.lauritz.healthdashboard.ui.components.StepsBar
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
@@ -51,6 +52,7 @@ fun DashboardRoute(
     onNavigateToSleep: () -> Unit,
     onNavigateToWorkouts: () -> Unit,
     onNavigateToRhr: () -> Unit,
+    onNavigateToSteps: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -64,6 +66,7 @@ fun DashboardRoute(
         onNavigateToSleep = onNavigateToSleep,
         onNavigateToWorkouts = onNavigateToWorkouts,
         onNavigateToRhr = onNavigateToRhr,
+        onNavigateToSteps = onNavigateToSteps,
     )
 }
 
@@ -78,6 +81,7 @@ fun DashboardScreen(
     onNavigateToSleep: () -> Unit,
     onNavigateToWorkouts: () -> Unit,
     onNavigateToRhr: () -> Unit,
+    onNavigateToSteps: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val summary = uiState.summary
@@ -138,6 +142,17 @@ fun DashboardScreen(
                         tooltipDescription = readinessTooltip,
                     )
                 }
+            }
+
+            item { Spacer(modifier = Modifier.height(8.dp)) }
+
+            item {
+                DashboardStepsCard(
+                    stepCount = uiState.stepCount,
+                    stepGoal = uiState.stepGoal,
+                    onClick = onNavigateToSteps,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
             }
 
             item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -306,6 +321,49 @@ private fun DashboardCircadianCard(
 }
 
 @Composable
+private fun DashboardStepsCard(
+    stepCount: Int?,
+    stepGoal: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth().semantics { role = Role.Button },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Daily Steps",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "Goal: ${stepGoal.toString().let { n ->
+                        n.reversed().chunked(3).joinToString(",").reversed()
+                    }}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            StepsBar(
+                stepCount = stepCount,
+                stepGoal = stepGoal,
+            )
+        }
+    }
+}
+
+@Composable
 private fun MetricCardGrid(
     rows: List<List<CardData>>,
     onNavigateToSleep: () -> Unit,
@@ -326,6 +384,7 @@ private fun MetricCardGrid(
                                 DashboardAction.NAVIGATE_SLEEP -> onNavigateToSleep
                                 DashboardAction.NAVIGATE_WORKOUTS -> onNavigateToWorkouts
                                 DashboardAction.NAVIGATE_RHR -> onNavigateToRhr
+                                DashboardAction.NAVIGATE_STEPS -> null
                                 null -> null
                             }
                         }
