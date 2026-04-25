@@ -82,6 +82,11 @@ data class SettingsUiState(
     val retentionDaysEnabled: Boolean = true,
     val retentionDays: Int = 365,
     val isResyncing: Boolean = false,
+    val collapseCloudData: Boolean = true,
+    val collapseHealthConnect: Boolean = true,
+    val collapseBaselinesThresholds: Boolean = true,
+    val collapseDisplay: Boolean = true,
+    val collapseAdvanced: Boolean = true,
 )
 
 sealed interface SettingsEvent {
@@ -198,6 +203,11 @@ sealed interface SettingsEvent {
     data class RetentionDaysEnabledChanged(val enabled: Boolean) : SettingsEvent
     data class RetentionDaysChanged(val days: Int) : SettingsEvent
     data object ResyncHealthConnect : SettingsEvent
+    data class CollapseCloudDataChanged(val collapsed: Boolean) : SettingsEvent
+    data class CollapseHealthConnectChanged(val collapsed: Boolean) : SettingsEvent
+    data class CollapseBaselinesThresholdsChanged(val collapsed: Boolean) : SettingsEvent
+    data class CollapseDisplayChanged(val collapsed: Boolean) : SettingsEvent
+    data class CollapseAdvancedChanged(val collapsed: Boolean) : SettingsEvent
 }
 
 @HiltViewModel
@@ -261,6 +271,11 @@ class SettingsViewModel
                             lastBackupTimestamp = prefs.lastBackupTimestamp,
                             retentionDaysEnabled = prefs.retentionDaysEnabled,
                             retentionDays = prefs.retentionDays,
+                            collapseCloudData = prefs.collapseCloudData,
+                            collapseHealthConnect = prefs.collapseHealthConnect,
+                            collapseBaselinesThresholds = prefs.collapseBaselinesThresholds,
+                            collapseDisplay = prefs.collapseDisplay,
+                            collapseAdvanced = prefs.collapseAdvanced,
                             isLoading = false,
                         )
                     }
@@ -503,6 +518,31 @@ class SettingsViewModel
                         _uiState.update { it.copy(isResyncing = true) }
                         resyncHealthConnectUseCase.execute()
                         _uiState.update { it.copy(isResyncing = false) }
+                    }
+
+                is SettingsEvent.CollapseCloudDataChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateCollapseCloudData(event.collapsed)
+                    }
+
+                is SettingsEvent.CollapseHealthConnectChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateCollapseHealthConnect(event.collapsed)
+                    }
+
+                is SettingsEvent.CollapseBaselinesThresholdsChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateCollapseBaselinesThresholds(event.collapsed)
+                    }
+
+                is SettingsEvent.CollapseDisplayChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateCollapseDisplay(event.collapsed)
+                    }
+
+                is SettingsEvent.CollapseAdvancedChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateCollapseAdvanced(event.collapsed)
                     }
             }
         }

@@ -63,6 +63,11 @@ class UserPreferencesRepository
             val STEP_GOAL = intPreferencesKey("step_goal")
             val RETENTION_DAYS_ENABLED = booleanPreferencesKey("retention_days_enabled")
             val RETENTION_DAYS = intPreferencesKey("retention_days")
+            val COLLAPSE_CLOUD_DATA = booleanPreferencesKey("collapse_cloud_data")
+            val COLLAPSE_HEALTH_CONNECT = booleanPreferencesKey("collapse_health_connect")
+            val COLLAPSE_BASELINES_THRESHOLDS = booleanPreferencesKey("collapse_baselines_thresholds")
+            val COLLAPSE_DISPLAY = booleanPreferencesKey("collapse_display")
+            val COLLAPSE_ADVANCED = booleanPreferencesKey("collapse_advanced")
         }
 
         val userPreferences: Flow<UserPreferences> =
@@ -126,6 +131,11 @@ class UserPreferencesRepository
                         stepGoal = prefs[Keys.STEP_GOAL] ?: 10000,
                         retentionDaysEnabled = prefs[Keys.RETENTION_DAYS_ENABLED] ?: true,
                         retentionDays = prefs[Keys.RETENTION_DAYS] ?: 365,
+                        collapseCloudData = prefs[Keys.COLLAPSE_CLOUD_DATA] ?: true,
+                        collapseHealthConnect = prefs[Keys.COLLAPSE_HEALTH_CONNECT] ?: true,
+                        collapseBaselinesThresholds = prefs[Keys.COLLAPSE_BASELINES_THRESHOLDS] ?: true,
+                        collapseDisplay = prefs[Keys.COLLAPSE_DISPLAY] ?: true,
+                        collapseAdvanced = prefs[Keys.COLLAPSE_ADVANCED] ?: true,
                     )
                 }
 
@@ -261,5 +271,25 @@ class UserPreferencesRepository
 
         suspend fun updateRetentionDays(days: Int) {
             dataStore.edit { it[Keys.RETENTION_DAYS] = days.coerceIn(180, 1095) }
+        }
+
+        suspend fun updateCollapseCloudData(collapsed: Boolean) {
+            dataStore.edit { it[Keys.COLLAPSE_CLOUD_DATA] = collapsed }
+        }
+
+        suspend fun updateCollapseHealthConnect(collapsed: Boolean) {
+            dataStore.edit { it[Keys.COLLAPSE_HEALTH_CONNECT] = collapsed }
+        }
+
+        suspend fun updateCollapseBaselinesThresholds(collapsed: Boolean) {
+            dataStore.edit { it[Keys.COLLAPSE_BASELINES_THRESHOLDS] = collapsed }
+        }
+
+        suspend fun updateCollapseDisplay(collapsed: Boolean) {
+            dataStore.edit { it[Keys.COLLAPSE_DISPLAY] = collapsed }
+        }
+
+        suspend fun updateCollapseAdvanced(collapsed: Boolean) {
+            dataStore.edit { it[Keys.COLLAPSE_ADVANCED] = collapsed }
         }
     }

@@ -39,4 +39,9 @@ data class UserPreferences(
     val stepGoal: Int = 10000,
     val retentionDaysEnabled: Boolean = true,
     val retentionDays: Int = 365,
+    val collapseCloudData: Boolean = true,
+    val collapseHealthConnect: Boolean = true,
+    val collapseBaselinesThresholds: Boolean = true,
+    val collapseDisplay: Boolean = true,
+    val collapseAdvanced: Boolean = true,
 )

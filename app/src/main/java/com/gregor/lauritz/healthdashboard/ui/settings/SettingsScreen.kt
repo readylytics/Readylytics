@@ -212,19 +212,24 @@ fun SettingsScreen(
         }
         // Cloud Backup & Data Management
         if (matchingSections.any { it.id == "cloud_data" }) {
-            item(key = "header_cloud_data") { SectionHeader("Cloud & Data") }
-            item(key = "section_cloud_data") {
-                Column {
-                    SectionHeader("Cloud Backup")
-                    CloudBackupSection(
-                        uiState = uiState,
-                        onEvent = onEvent,
-                        viewModel = viewModel,
-                        context = context,
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    SectionHeader("Data Management")
-                    DataManagementSection(uiState = uiState, onEvent = onEvent)
+            item(key = "header_cloud_data") {
+                M3CollapsibleSection(
+                    header = "Cloud & Data",
+                    expanded = !uiState.collapseCloudData,
+                    onExpandedChange = { onEvent(SettingsEvent.CollapseCloudDataChanged(!it)) }
+                ) {
+                    Column {
+                        SectionHeader("Cloud Backup")
+                        CloudBackupSection(
+                            uiState = uiState,
+                            onEvent = onEvent,
+                            viewModel = viewModel,
+                            context = context,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        SectionHeader("Data Management")
+                        DataManagementSection(uiState = uiState, onEvent = onEvent)
+                    }
                 }
             }
             item(key = "divider_after_cloud_data") { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
@@ -232,29 +237,41 @@ fun SettingsScreen(
 
         // Health Connect Sync
         if (matchingSections.any { it.id == "health_connect" }) {
-            item(key = "header_sync") { SectionHeader("Health Connect") }
-            item(key = "section_sync") { SyncSettingsSection(uiState = uiState, onEvent = onEvent) }
+            item(key = "header_sync") {
+                M3CollapsibleSection(
+                    header = "Health Connect",
+                    expanded = !uiState.collapseHealthConnect,
+                    onExpandedChange = { onEvent(SettingsEvent.CollapseHealthConnectChanged(!it)) }
+                ) {
+                    SyncSettingsSection(uiState = uiState, onEvent = onEvent)
+                }
+            }
             item(key = "divider_after_sync") { HorizontalDivider(modifier = Modifier.padding(top = 8.dp)) }
         }
 
         // Baselines & Thresholds
         if (matchingSections.any { it.id == "baselines_thresholds" }) {
-            item(key = "header_baselines") { SectionHeader("Baselines & Thresholds") }
-            item(key = "section_baselines") {
-                Column {
-                    SectionHeader("Sleep")
-                    SleepSettingsSection(uiState = uiState, onEvent = onEvent)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    SectionHeader("Heart Rate Zones")
-                    HeartRateZoneSection(
-                        uiState = uiState,
-                        onEvent = onEvent,
-                        expandState = expandState,
-                        onExpandStateChange = { expandState = it }
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    SectionHeader("Thresholds")
-                    ThresholdSettingsSection(uiState = uiState, onEvent = onEvent)
+            item(key = "header_baselines") {
+                M3CollapsibleSection(
+                    header = "Baselines & Thresholds",
+                    expanded = !uiState.collapseBaselinesThresholds,
+                    onExpandedChange = { onEvent(SettingsEvent.CollapseBaselinesThresholdsChanged(!it)) }
+                ) {
+                    Column {
+                        SectionHeader("Sleep")
+                        SleepSettingsSection(uiState = uiState, onEvent = onEvent)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        SectionHeader("Heart Rate Zones")
+                        HeartRateZoneSection(
+                            uiState = uiState,
+                            onEvent = onEvent,
+                            expandState = expandState,
+                            onExpandStateChange = { expandState = it }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        SectionHeader("Thresholds")
+                        ThresholdSettingsSection(uiState = uiState, onEvent = onEvent)
+                    }
                 }
             }
             item(key = "divider_after_baselines") { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
@@ -262,14 +279,19 @@ fun SettingsScreen(
 
         // Display
         if (matchingSections.any { it.id == "display" }) {
-            item(key = "header_display") { SectionHeader("Display") }
-            item(key = "section_display") {
-                Column {
-                    SectionHeader("Appearance")
-                    AppThemeItem(uiState = uiState, onEvent = onEvent)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    SectionHeader("Activity")
-                    ActivitySettingsSection(uiState = uiState, onEvent = onEvent)
+            item(key = "header_display") {
+                M3CollapsibleSection(
+                    header = "Display",
+                    expanded = !uiState.collapseDisplay,
+                    onExpandedChange = { onEvent(SettingsEvent.CollapseDisplayChanged(!it)) }
+                ) {
+                    Column {
+                        SectionHeader("Appearance")
+                        AppThemeItem(uiState = uiState, onEvent = onEvent)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        SectionHeader("Activity")
+                        ActivitySettingsSection(uiState = uiState, onEvent = onEvent)
+                    }
                 }
             }
             item(key = "divider_after_display") { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
@@ -277,8 +299,15 @@ fun SettingsScreen(
 
         // Advanced
         if (matchingSections.any { it.id == "advanced" }) {
-            item(key = "header_advanced") { SectionHeader("Advanced") }
-            item(key = "section_advanced") { AdvancedSettingsSection(uiState = uiState, onEvent = onEvent) }
+            item(key = "header_advanced") {
+                M3CollapsibleSection(
+                    header = "Advanced",
+                    expanded = !uiState.collapseAdvanced,
+                    onExpandedChange = { onEvent(SettingsEvent.CollapseAdvancedChanged(!it)) }
+                ) {
+                    AdvancedSettingsSection(uiState = uiState, onEvent = onEvent)
+                }
+            }
         }
 
         item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(16.dp)) }
