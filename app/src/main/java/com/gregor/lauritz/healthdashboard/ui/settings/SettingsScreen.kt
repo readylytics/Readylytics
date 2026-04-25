@@ -105,6 +105,13 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
     }
 }
 
+// Settings grouped into 5 collapsible sections:
+// 1. Cloud & Data: Cloud Backup, Data Management
+// 2. Health Connect: Health Connect Sync
+// 3. Baselines & Thresholds: Sleep, Heart Rate Zones, Thresholds
+// 4. Display: Appearance, Activity
+// 5. Advanced: Advanced (baseline overrides, PAI scaling, resting HR timing)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
