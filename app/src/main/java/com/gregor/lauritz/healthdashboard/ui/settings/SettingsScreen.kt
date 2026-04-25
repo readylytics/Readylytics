@@ -4,7 +4,6 @@ import android.os.Parcelable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -60,7 +60,6 @@ import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
-import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import kotlinx.parcelize.Parcelize
 import java.text.DateFormat
 import java.util.Date
@@ -210,7 +209,7 @@ fun SettingsScreen(
             item(key = "header_cloud_data_sync") {
                 M3CollapsibleSection(
                     header = "Cloud & Data",
-                    expanded = !uiState.collapseCloudData,
+                    expanded = !uiState.collapseCloudData || shouldExpandSection("cloud_data_sync"),
                     onExpandedChange = { onEvent(SettingsEvent.CollapseCloudDataChanged(!it)) }
                 ) {
                     Column {
@@ -238,7 +237,7 @@ fun SettingsScreen(
             item(key = "header_baselines") {
                 M3CollapsibleSection(
                     header = "Baselines & Thresholds",
-                    expanded = !uiState.collapseBaselinesThresholds,
+                    expanded = !uiState.collapseBaselinesThresholds || shouldExpandSection("baselines_thresholds"),
                     onExpandedChange = { onEvent(SettingsEvent.CollapseBaselinesThresholdsChanged(!it)) }
                 ) {
                     Column {
@@ -269,7 +268,7 @@ fun SettingsScreen(
             item(key = "header_display") {
                 M3CollapsibleSection(
                     header = "Display",
-                    expanded = !uiState.collapseDisplay,
+                    expanded = !uiState.collapseDisplay || shouldExpandSection("display"),
                     onExpandedChange = { onEvent(SettingsEvent.CollapseDisplayChanged(!it)) }
                 ) {
                     AppThemeItem(uiState = uiState, onEvent = onEvent)
@@ -283,7 +282,7 @@ fun SettingsScreen(
             item(key = "header_advanced") {
                 M3CollapsibleSection(
                     header = "Advanced",
-                    expanded = !uiState.collapseAdvanced,
+                    expanded = !uiState.collapseAdvanced || shouldExpandSection("advanced"),
                     onExpandedChange = { onEvent(SettingsEvent.CollapseAdvancedChanged(!it)) }
                 ) {
                     AdvancedSettingsSection(uiState = uiState, onEvent = onEvent)
