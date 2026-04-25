@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Query
 import androidx.room.Upsert
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
@@ -45,4 +46,10 @@ interface SleepSessionDao {
         toMs: Long,
     ): Flow<SleepSessionEntity?>
     fun observeFirstSessionEndingInRange(fromMs: Long, toMs: Long): Flow<SleepSessionEntity?> = _observeFirstSessionEndingInRange(fromMs, toMs).distinctUntilChanged()
+
+    @Query("DELETE FROM sleep_sessions WHERE endTime < :beforeMs")
+    suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
+
+    @Query("DELETE FROM sleep_sessions")
+    suspend fun deleteAll(): Int
 }

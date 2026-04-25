@@ -33,4 +33,10 @@ interface HrvDao {
 
     @Upsert
     suspend fun upsertAll(records: List<HrvRecordEntity>)
+
+    @Query("DELETE FROM hrv_records WHERE timestampMs < :beforeMs")
+    suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
+
+    @Query("DELETE FROM hrv_records")
+    suspend fun deleteAll(): Int
 }

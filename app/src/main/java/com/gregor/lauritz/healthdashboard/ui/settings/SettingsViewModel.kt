@@ -22,6 +22,7 @@ import com.gregor.lauritz.healthdashboard.domain.backup.BackupUseCase
 import com.gregor.lauritz.healthdashboard.domain.backup.RestoreUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
+import com.gregor.lauritz.healthdashboard.domain.sync.ResyncHealthConnectUseCase
 import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
 import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -209,6 +210,7 @@ class SettingsViewModel
         private val backupPrefsRepo: BackupPreferencesRepository,
         private val scoringRepository: ScoringRepository,
         private val healthSyncUseCase: HealthSyncUseCase,
+        private val resyncHealthConnectUseCase: ResyncHealthConnectUseCase,
         private val driveAuthManager: DriveAuthManager,
         private val backupUseCase: BackupUseCase,
         private val restoreUseCase: RestoreUseCase,
@@ -499,7 +501,7 @@ class SettingsViewModel
                 SettingsEvent.ResyncHealthConnect ->
                     viewModelScope.launch {
                         _uiState.update { it.copy(isResyncing = true) }
-                        healthSyncUseCase.sync()
+                        resyncHealthConnectUseCase.execute()
                         _uiState.update { it.copy(isResyncing = false) }
                     }
             }

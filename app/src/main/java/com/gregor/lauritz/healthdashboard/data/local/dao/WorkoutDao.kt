@@ -55,4 +55,10 @@ interface WorkoutDao {
 
     @Upsert
     suspend fun upsertAll(records: List<WorkoutRecordEntity>)
+
+    @Query("DELETE FROM workout_records WHERE startTime < :beforeMs")
+    suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
+
+    @Query("DELETE FROM workout_records")
+    suspend fun deleteAll(): Int
 }

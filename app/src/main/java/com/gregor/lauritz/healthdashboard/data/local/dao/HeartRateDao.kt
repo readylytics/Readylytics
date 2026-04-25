@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Query
 import androidx.room.Upsert
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
@@ -56,4 +57,10 @@ interface HeartRateDao {
 
     @Upsert
     suspend fun upsertAll(records: List<HeartRateRecordEntity>)
+
+    @Query("DELETE FROM heart_rate_records WHERE timestampMs < :beforeMs")
+    suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
+
+    @Query("DELETE FROM heart_rate_records")
+    suspend fun deleteAll(): Int
 }

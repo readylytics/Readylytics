@@ -28,4 +28,10 @@ interface DailySummaryDao {
 
     @Query("SELECT * FROM daily_summaries WHERE dateMidnightMs >= :fromMs ORDER BY dateMidnightMs ASC")
     suspend fun getSince(fromMs: Long): List<DailySummaryEntity>
+
+    @Query("DELETE FROM daily_summaries WHERE dateMidnightMs < :beforeMs")
+    suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
+
+    @Query("DELETE FROM daily_summaries")
+    suspend fun deleteAll(): Int
 }

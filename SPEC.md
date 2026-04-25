@@ -33,7 +33,7 @@ Add user-configurable data retention window (1y default, 180d–3y range, disabl
 |----|--------|-------|-------|
 | T1 | x | Add retention config to DataStore schema | V1 |
 | T2 | x | Build Settings UI: retention toggle + resync button | V1,I.ui |
-| T3 | . | Implement resync VM logic (clear tables, re-query HC 60d) | V2,I.api |
+| T3 | x | Implement resync VM logic (clear tables, re-query HC 60d) | V2,I.api |
 | T4 | . | Implement DataCleanupWorker (daily, check & delete old records) | V3,V4,I.worker |
 | T5 | . | Add unit tests: retention range validation, delete-by-date | V1,V3 |
 | T6 | . | Test Settings UI flows (toggle, slider, resync button) | T2,T3 |
