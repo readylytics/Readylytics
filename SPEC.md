@@ -43,7 +43,7 @@ V6. Measured baseline ≥60 FPS on all screens. Target ≥120 FPS on scroll-heav
 | T2 | x | Identify blocking code paths (Room, StateFlow, Compose recomp) | V1,V2,V5 |
 | T3 | x | Audit Room DAOs for N+1, missing indices, sync queries | V1 |
 | T4 | x | Optimize Compose recomposition (state granularity, remember blocks) | V2 |
-| T5 | . | Optimize Vico chart rendering (lazy eval, memoization) | V3 |
+| T5 | x | Optimize Vico chart rendering (lazy eval, memoization) | V3 |
 | T6 | . | Cache DataStore reads in ViewModel StateFlow | V5 |
 | T7 | . | Verify LazyColumn/LazyGrid key stability in lists | V4 |
 | T8 | . | Re-profile all screens. Verify ≥120 FPS on scroll screens | V6 |
