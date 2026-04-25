@@ -63,7 +63,6 @@ class UserPreferencesRepository
             val STEP_GOAL = intPreferencesKey("step_goal")
             val RETENTION_DAYS_ENABLED = booleanPreferencesKey("retention_days_enabled")
             val RETENTION_DAYS = intPreferencesKey("retention_days")
-            val SHOW_TRENDS = booleanPreferencesKey("show_trends")
         }
 
         val userPreferences: Flow<UserPreferences> =
@@ -127,7 +126,6 @@ class UserPreferencesRepository
                         stepGoal = prefs[Keys.STEP_GOAL] ?: 10000,
                         retentionDaysEnabled = prefs[Keys.RETENTION_DAYS_ENABLED] ?: true,
                         retentionDays = prefs[Keys.RETENTION_DAYS] ?: 365,
-                        showTrends = prefs[Keys.SHOW_TRENDS] ?: false,
                     )
                 }
 
@@ -263,9 +261,5 @@ class UserPreferencesRepository
 
         suspend fun updateRetentionDays(days: Int) {
             dataStore.edit { it[Keys.RETENTION_DAYS] = days.coerceIn(180, 1095) }
-        }
-
-        suspend fun updateShowTrends(enabled: Boolean) {
-            dataStore.edit { it[Keys.SHOW_TRENDS] = enabled }
         }
     }

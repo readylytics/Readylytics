@@ -39,5 +39,4 @@ data class UserPreferences(
     val stepGoal: Int = 10000,
     val retentionDaysEnabled: Boolean = true,
     val retentionDays: Int = 365,
-    val showTrends: Boolean = false,
 )

@@ -82,7 +82,6 @@ data class SettingsUiState(
     val retentionDaysEnabled: Boolean = true,
     val retentionDays: Int = 365,
     val isResyncing: Boolean = false,
-    val showTrends: Boolean = false,
 )
 
 sealed interface SettingsEvent {
@@ -199,7 +198,6 @@ sealed interface SettingsEvent {
     data class RetentionDaysEnabledChanged(val enabled: Boolean) : SettingsEvent
     data class RetentionDaysChanged(val days: Int) : SettingsEvent
     data object ResyncHealthConnect : SettingsEvent
-    data class ShowTrendsChanged(val enabled: Boolean) : SettingsEvent
 }
 
 @HiltViewModel
@@ -263,7 +261,6 @@ class SettingsViewModel
                             lastBackupTimestamp = prefs.lastBackupTimestamp,
                             retentionDaysEnabled = prefs.retentionDaysEnabled,
                             retentionDays = prefs.retentionDays,
-                            showTrends = prefs.showTrends,
                             isLoading = false,
                         )
                     }
@@ -506,11 +503,6 @@ class SettingsViewModel
                         _uiState.update { it.copy(isResyncing = true) }
                         resyncHealthConnectUseCase.execute()
                         _uiState.update { it.copy(isResyncing = false) }
-                    }
-
-                is SettingsEvent.ShowTrendsChanged ->
-                    viewModelScope.launch {
-                        prefsRepo.updateShowTrends(event.enabled)
                     }
             }
         }
