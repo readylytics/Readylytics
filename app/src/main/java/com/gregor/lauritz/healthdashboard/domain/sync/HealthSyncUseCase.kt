@@ -57,6 +57,7 @@ class HealthSyncUseCase
 
                 val thresholds = WorkoutMapper.zoneThresholds(
                     prefs.maxHeartRate,
+                    prefs.zone1MinPercent,
                     prefs.zone1MaxPercent,
                     prefs.zone2MaxPercent,
                     prefs.zone3MaxPercent,

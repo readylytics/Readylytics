@@ -12,6 +12,7 @@ data class UserPreferences(
     val maxHeartRate: Int = 190,
     val autoCalculateMaxHr: Boolean = true,
     val manualZoneEditing: Boolean = false,
+    val zone1MinPercent: Float = 0.50f,
     val zone1MaxPercent: Float = 0.60f,
     val zone2MaxPercent: Float = 0.70f,
     val zone3MaxPercent: Float = 0.80f,

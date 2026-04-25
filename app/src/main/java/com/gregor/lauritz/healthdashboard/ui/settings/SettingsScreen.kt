@@ -464,6 +464,7 @@ private fun HeartRateZoneSection(
             Spacer(modifier = Modifier.height(4.dp))
             HeartRateZonesDisplay(
                 maxHr = uiState.maxHeartRate,
+                z1MinP = uiState.zone1MinPercent,
                 z1p = uiState.zone1MaxPercent,
                 z2p = uiState.zone2MaxPercent,
                 z3p = uiState.zone3MaxPercent,
@@ -655,6 +656,7 @@ private fun AdvancedSettingsSection(
 @Composable
 private fun HeartRateZonesDisplay(
     maxHr: Int,
+    z1MinP: Float,
     z1p: Float,
     z2p: Float,
     z3p: Float,
@@ -665,7 +667,7 @@ private fun HeartRateZonesDisplay(
         modifier = Modifier.fillMaxWidth()
     ) {
         val zones = listOf(
-            "Zone 1" to (0.50..z1p.toDouble()),
+            "Zone 1" to (z1MinP.toDouble()..z1p.toDouble()),
             "Zone 2" to (z1p.toDouble()..z2p.toDouble()),
             "Zone 3" to (z2p.toDouble()..z3p.toDouble()),
             "Zone 4" to (z3p.toDouble()..z4p.toDouble()),
@@ -695,30 +697,40 @@ private fun ZoneEditingSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            "Zone Max Percentages",
+            "Zone Percentages",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary
         )
 
         ZonePercentageSliderItem(
+            label = "Zone 1 Min",
+            value = uiState.zone1MinPercent,
+            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(it, uiState.zone1MaxPercent, uiState.zone2MaxPercent, uiState.zone3MaxPercent, uiState.zone4MaxPercent)) },
+            allowedRange = 0.30f..uiState.zone1MaxPercent - 0.01f
+        )
+        ZonePercentageSliderItem(
             label = "Zone 1 Max",
             value = uiState.zone1MaxPercent,
-            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(it, uiState.zone2MaxPercent, uiState.zone3MaxPercent, uiState.zone4MaxPercent)) }
+            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(uiState.zone1MinPercent, it, uiState.zone2MaxPercent, uiState.zone3MaxPercent, uiState.zone4MaxPercent)) },
+            allowedRange = uiState.zone1MinPercent + 0.01f..uiState.zone2MaxPercent - 0.01f
         )
         ZonePercentageSliderItem(
             label = "Zone 2 Max",
             value = uiState.zone2MaxPercent,
-            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(uiState.zone1MaxPercent, it, uiState.zone3MaxPercent, uiState.zone4MaxPercent)) }
+            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(uiState.zone1MinPercent, uiState.zone1MaxPercent, it, uiState.zone3MaxPercent, uiState.zone4MaxPercent)) },
+            allowedRange = uiState.zone1MaxPercent + 0.01f..uiState.zone3MaxPercent - 0.01f
         )
         ZonePercentageSliderItem(
             label = "Zone 3 Max",
             value = uiState.zone3MaxPercent,
-            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(uiState.zone1MaxPercent, uiState.zone2MaxPercent, it, uiState.zone4MaxPercent)) }
+            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(uiState.zone1MinPercent, uiState.zone1MaxPercent, uiState.zone2MaxPercent, uiState.zone3MaxPercent, it)) },
+            allowedRange = uiState.zone2MaxPercent + 0.01f..uiState.zone4MaxPercent - 0.01f
         )
         ZonePercentageSliderItem(
             label = "Zone 4 Max",
             value = uiState.zone4MaxPercent,
-            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(uiState.zone1MaxPercent, uiState.zone2MaxPercent, uiState.zone3MaxPercent, it)) }
+            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(uiState.zone1MinPercent, uiState.zone1MaxPercent, uiState.zone2MaxPercent, uiState.zone3MaxPercent, it)) },
+            allowedRange = uiState.zone3MaxPercent + 0.01f..0.99f
         )
     }
 }
@@ -727,7 +739,9 @@ private fun ZoneEditingSection(
 private fun ZonePercentageSliderItem(
     label: String,
     value: Float,
-    onValueChange: (Float) -> Unit
+    onValueChange: (Float) -> Unit,
+    allowedRange: ClosedFloatingPointRange<Float>,
+    valueRange: ClosedFloatingPointRange<Float> = 0.30f..0.99f
 ) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -741,9 +755,9 @@ private fun ZonePercentageSliderItem(
         }
         Slider(
             value = value,
-            onValueChange = onValueChange,
-            valueRange = 0.4f..0.95f,
-            steps = 54, // 1% increments
+            onValueChange = { onValueChange(it.coerceIn(allowedRange)) },
+            valueRange = valueRange,
+            steps = ((valueRange.endInclusive - valueRange.start) * 100).roundToInt() - 1,
             modifier = Modifier.fillMaxWidth()
         )
     }

@@ -36,6 +36,7 @@ class UserPreferencesRepository
             val MAX_HEART_RATE = intPreferencesKey("max_heart_rate")
             val AUTO_CALCULATE_MAX_HR = booleanPreferencesKey("auto_calculate_max_hr")
             val MANUAL_ZONE_EDITING = booleanPreferencesKey("manual_zone_editing")
+            val ZONE_1_MIN_PERCENT = floatPreferencesKey("zone_1_min_percent")
             val ZONE_1_MAX_PERCENT = floatPreferencesKey("zone_1_max_percent")
             val ZONE_2_MAX_PERCENT = floatPreferencesKey("zone_2_max_percent")
             val ZONE_3_MAX_PERCENT = floatPreferencesKey("zone_3_max_percent")
@@ -90,6 +91,7 @@ class UserPreferencesRepository
                         maxHeartRate = prefs[Keys.MAX_HEART_RATE] ?: 190,
                         autoCalculateMaxHr = prefs[Keys.AUTO_CALCULATE_MAX_HR] ?: true,
                         manualZoneEditing = prefs[Keys.MANUAL_ZONE_EDITING] ?: false,
+                        zone1MinPercent = prefs[Keys.ZONE_1_MIN_PERCENT] ?: 0.50f,
                         zone1MaxPercent = prefs[Keys.ZONE_1_MAX_PERCENT] ?: 0.60f,
                         zone2MaxPercent = prefs[Keys.ZONE_2_MAX_PERCENT] ?: 0.70f,
                         zone3MaxPercent = prefs[Keys.ZONE_3_MAX_PERCENT] ?: 0.80f,
@@ -163,12 +165,19 @@ class UserPreferencesRepository
             dataStore.edit { it[Keys.MANUAL_ZONE_EDITING] = enabled }
         }
 
-        suspend fun updateZonePercentages(z1: Float, z2: Float, z3: Float, z4: Float) {
+        suspend fun updateZonePercentages(
+            z1Min: Float,
+            z1Max: Float,
+            z2Max: Float,
+            z3Max: Float,
+            z4Max: Float
+        ) {
             dataStore.edit { prefs ->
-                prefs[Keys.ZONE_1_MAX_PERCENT] = z1
-                prefs[Keys.ZONE_2_MAX_PERCENT] = z2
-                prefs[Keys.ZONE_3_MAX_PERCENT] = z3
-                prefs[Keys.ZONE_4_MAX_PERCENT] = z4
+                prefs[Keys.ZONE_1_MIN_PERCENT] = z1Min
+                prefs[Keys.ZONE_1_MAX_PERCENT] = z1Max
+                prefs[Keys.ZONE_2_MAX_PERCENT] = z2Max
+                prefs[Keys.ZONE_3_MAX_PERCENT] = z3Max
+                prefs[Keys.ZONE_4_MAX_PERCENT] = z4Max
             }
         }
 

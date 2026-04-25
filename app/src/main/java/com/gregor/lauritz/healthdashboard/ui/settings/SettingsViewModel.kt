@@ -47,6 +47,7 @@ data class SettingsUiState(
     val maxHeartRate: Int = 190,
     val autoCalculateMaxHr: Boolean = true,
     val manualZoneEditing: Boolean = false,
+    val zone1MinPercent: Float = 0.50f,
     val zone1MaxPercent: Float = 0.60f,
     val zone2MaxPercent: Float = 0.70f,
     val zone3MaxPercent: Float = 0.80f,
@@ -117,10 +118,11 @@ sealed interface SettingsEvent {
     ) : SettingsEvent
 
     data class ZonePercentagesChanged(
-        val z1: Float,
-        val z2: Float,
-        val z3: Float,
-        val z4: Float,
+        val z1Min: Float,
+        val z1Max: Float,
+        val z2Max: Float,
+        val z3Max: Float,
+        val z4Max: Float,
     ) : SettingsEvent
 
     data class BirthdayChanged(
@@ -224,6 +226,7 @@ class SettingsViewModel
                             maxHeartRate = prefs.maxHeartRate,
                             autoCalculateMaxHr = prefs.autoCalculateMaxHr,
                             manualZoneEditing = prefs.manualZoneEditing,
+                            zone1MinPercent = prefs.zone1MinPercent,
                             zone1MaxPercent = prefs.zone1MaxPercent,
                             zone2MaxPercent = prefs.zone2MaxPercent,
                             zone3MaxPercent = prefs.zone3MaxPercent,
@@ -325,7 +328,13 @@ class SettingsViewModel
 
                 is SettingsEvent.ZonePercentagesChanged -> {
                     viewModelScope.launch {
-                        prefsRepo.updateZonePercentages(event.z1, event.z2, event.z3, event.z4)
+                        prefsRepo.updateZonePercentages(
+                            event.z1Min,
+                            event.z1Max,
+                            event.z2Max,
+                            event.z3Max,
+                            event.z4Max
+                        )
                         healthSyncUseCase.sync()
                     }
                 }

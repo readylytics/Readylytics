@@ -10,12 +10,14 @@ object WorkoutMapper {
 
     fun zoneThresholds(
         maxHr: Int,
+        z1MinP: Float = 0.50f,
         z1p: Float = 0.60f,
         z2p: Float = 0.70f,
         z3p: Float = 0.80f,
         z4p: Float = 0.90f
     ): IntArray =
         intArrayOf(
+            (maxHr * z1MinP).toInt(),
             (maxHr * z1p).toInt(),
             (maxHr * z2p).toInt(),
             (maxHr * z3p).toInt(),
@@ -27,10 +29,11 @@ object WorkoutMapper {
         thresholds: IntArray,
     ): Int =
         when {
-            bpm < thresholds[0] -> 0
-            bpm < thresholds[1] -> 1
-            bpm < thresholds[2] -> 2
-            bpm < thresholds[3] -> 3
+            bpm < thresholds[0] -> -1 // Below Zone 1 Min
+            bpm < thresholds[1] -> 0
+            bpm < thresholds[2] -> 1
+            bpm < thresholds[3] -> 2
+            bpm < thresholds[4] -> 3
             else -> 4
         }
 
@@ -54,7 +57,9 @@ object WorkoutMapper {
             }
             val durationMinutes = (nextMs - sample.timestampMs) / 60_000f
             val zone = zoneIndex(sample.beatsPerMinute, thresholds)
-            zoneMinutes[zone] += durationMinutes
+            if (zone >= 0) {
+                zoneMinutes[zone] += durationMinutes
+            }
         }
 
         val trimp =
