@@ -1,68 +1,46 @@
-# Interactive Line Charts with Trend Visualization
+# SPEC: Data Retention & Health Connect Resync
 
-## §G Goal
-Make all health data line charts clickable. Show daily values on point tap. Add trend mode toggle in advanced settings showing 7d vs 30d moving average comparison. Store 7d/30d averages in database to avoid recalc on render.
+## §G: Goal
+Add user-configurable data retention window (1y default, 180d–3y range, disableable) + manual Health Connect resync (drop & reload 60d). Daily auto-cleanup deletes expired data.
 
-## §C Constraints
-- Offline-first: all calculations from Room DB, no network calls for chart data
-- Material 3 UI: use theme colors for trend lines, follow design system
-- No regression: existing chart functionality must work with clickable layer added
-- Performance: moving average queries must complete < 100ms (chart must feel instant)
-- Data scope: trend visualization only shows last point on chart (don't clutter with multi-point trends)
+## §C: Constraints
+- Offline-first: Room DB is SSOT, no remote sync except HC ingestion.
+- MVVM + Clean Architecture; state via StateFlow in VM.
+- Material 3 UI (Compose).
+- WorkManager for background cleanup (daily check).
+- DataStore (Preferences) stores retention config.
+- No data loss on retention change — only forward deletions.
+- Resync clears HC-sourced data only (preserves manual entries if present).
+- Retention range: 180d (min) to 1095d (3y max), or "unlimited" (disabled).
 
-## §I External Surfaces
+## §I: External Surfaces
+- **Settings UI screen**: retention period toggle/slider + resync button.
+- **DataStore**: `retentionDaysEnabled` (bool), `retentionDays` (int: 180–365).
+- **WorkManager**: daily `DataCleanupWorker` task.
+- **Room DB queries**: bulk delete by date range (Sleep, HeartRate, HRV, Exercise).
+- **Health Connect API**: resync queries (last 60d).
 
-### I.charts
-Dashboard and detail screens (HRV, RHR, Sleep, Workout detail): line charts for each metric. Currently render via Vico library. Must support tap-to-show-value overlay. Vico API: investigate how to intercept touch events on chart points.
+## §V: Invariants
+- **V1**: Retention setting always: `disabled` OR `180 ≤ days ≤ 1095`. UI slider increments by 30d steps. Enforces range.
+- **V2**: Resync clears HC-sourced tables (Sleep, HeartRate, HRV, Exercise) only; re-queries HC for last 60d.
+- **V3**: Daily cleanup task runs (WorkManager) and only deletes records `createdAt < now - retentionDays`.
+- **V4**: Disabling retention halts cleanup; re-enabling does not backfill or retroactive-delete.
+- **V5**: Resync in progress blocks UI (shows spinner/progress); fails gracefully if HC unavailable.
+- **V6**: Resync in progress disables tab/navigation switching. Locked until resync completes or errors.
 
-### I.settings
-Advanced Settings screen: new toggle "Show Trends" (boolean, default false). Stored in DataStore Preferences. Shows/hides trend lines in charts.
+## §T: Tasks
 
-### I.db_tables
-Room entities for moving averages:
-- `DailyHrvAverage`: `date`, `avg7d`, `avg30d`
-- `DailyRestingHeartRateAverage`: `date`, `avg7d`, `avg30d`
-- `DailySleepAverage`: `date`, `avg7d`, `avg30d` (or `duration`, `score` variants?)
-- `DailyWorkoutAverage`: `date`, `totalTrimp7d`, `totalTrimp30d` (or per-metric)
+| id | status | title | cites |
+|----|--------|-------|-------|
+| T1 | x | Add retention config to DataStore schema | V1 |
+| T2 | x | Build Settings UI: retention toggle + resync button | V1,I.ui |
+| T3 | x | Implement resync VM logic (clear tables, re-query HC 60d) | V2,I.api |
+| T4 | x | Implement DataCleanupWorker (daily, check & delete old records) | V3,V4,I.worker |
+| T5 | x | Add unit tests: retention range validation, delete-by-date | V1,V3 |
+| T6 | x | Test Settings UI flows (toggle, slider, resync button) | T2,T3 |
+| T7 | x | Disable navigation during resync (block tab switching) | V6,I.ui |
 
-### I.queries
-DAOs must provide:
-- `getChartData(startMs: Long, endMs: Long): Flow<List<ChartPoint>>` with raw + avg columns
-- `getLastPoint(): ChartPoint?` for trend display on latest value
-
-## §V Invariants
-
-### V1. Clickable Points
-Every line chart point is a tap target. Single tap shows day's value in overlay (date + value + unit). Overlay dismisses on tap outside or after 3s timeout.
-
-### V2. Trend Toggle Control
-Advanced Settings contains "Show Trends" switch. State flows through Settings ViewModel → all chart Composables. When false, trend lines hidden from render. When true, last chart point shows two extra lines: 7d avg and 30d avg.
-
-### V3. Moving Average Accuracy
-7d average = median of last 7 days (or mean?). 30d average = median of last 30 days. Calculated fresh per day at end-of-day sync (WorkManager or Room trigger). Stored in database for instant retrieval.
-
-### V4. Trend Line Styling
-Trend lines use M3 secondary/tertiary tonal colors (not primary). 7d line dashed, 30d line solid (or similar distinction). Legend required if both visible.
-
-### V5. No Regression
-Existing charts (non-interactive, non-trending) continue to render at same performance. Adding click layer must not block scroll or pinch-zoom if chart supports it.
-
-## §T Tasks
-
-| id | status | task | cites |
-|---|---|---|---|
-| T1 | x | Add `DailyHrvAverage`, `DailyRestingHeartRateAverage`, `DailySleepAverage` entities to Room schema | I.db_tables, V3 |
-| T2 | . | Create DAOs with `upsertAverage(date, avg7d, avg30d)` and query methods | I.queries, V3 |
-| T3 | . | Implement moving average calculator (7d median, 30d median) | V3 |
-| T4 | . | Add WorkManager task to calculate + store averages daily at sync time | V3 |
-| T5 | . | Add "Show Trends" toggle to Advanced Settings UI + store in UserPreferences | I.settings, V2 |
-| T6 | . | Update chart Composables to accept trend-visibility state and raw+avg data | I.charts, V1, V4 |
-| T7 | . | Implement Vico chart tap detection and value overlay (date + number) | I.charts, V1 |
-| T8 | . | Render trend lines (7d dashed, 30d solid) on last chart point when toggle on | I.charts, V4, V2 |
-| T9 | . | Verify no performance regression on existing charts (benchmark chart render time) | V5 |
-
-## §B Bugs
+## §B: Bugs
 
 | id | date | cause | fix |
-|---|---|---|---|
-
+|----|------|-------|-----|
