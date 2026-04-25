@@ -11,7 +11,6 @@ object MovingAverageCalculator {
         }
     }
 
-    @JvmName("medianInts")
     fun median(values: List<Int>): Float {
         if (values.isEmpty()) return 0f
         val floats = values.map { it.toFloat() }
