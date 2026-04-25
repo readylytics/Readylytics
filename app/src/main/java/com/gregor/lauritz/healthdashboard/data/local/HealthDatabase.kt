@@ -11,11 +11,17 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailyHrvAverageDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailyRestingHeartRateAverageDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailySleepAverageDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.HrvRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
+import com.gregor.lauritz.healthdashboard.data.local.entity.DailyHrvAverageEntity
+import com.gregor.lauritz.healthdashboard.data.local.entity.DailyRestingHeartRateAverageEntity
+import com.gregor.lauritz.healthdashboard.data.local.entity.DailySleepAverageEntity
 
 @Database(
     entities = [
@@ -24,8 +30,11 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
         HrvRecordEntity::class,
         WorkoutRecordEntity::class,
         DailySummaryEntity::class,
+        DailyHrvAverageEntity::class,
+        DailyRestingHeartRateAverageEntity::class,
+        DailySleepAverageEntity::class,
     ],
-    version = 11,
+    version = 12,
 )
 abstract class HealthDatabase : RoomDatabase() {
     abstract fun sleepSessionDao(): SleepSessionDao
@@ -37,6 +46,12 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun workoutDao(): WorkoutDao
 
     abstract fun dailySummaryDao(): DailySummaryDao
+
+    abstract fun dailyHrvAverageDao(): DailyHrvAverageDao
+
+    abstract fun dailyRestingHeartRateAverageDao(): DailyRestingHeartRateAverageDao
+
+    abstract fun dailySleepAverageDao(): DailySleepAverageDao
 
     companion object {
         val MIGRATION_1_2 =
@@ -220,6 +235,44 @@ abstract class HealthDatabase : RoomDatabase() {
 
                 override fun migrate(connection: SQLiteConnection) {
                     connection.execSQL("ALTER TABLE daily_summaries ADD COLUMN stepCount INTEGER")
+                }
+            }
+
+        val MIGRATION_11_12 =
+            object : Migration(11, 12) {
+                private val sql =
+                    listOf(
+                        """
+                        CREATE TABLE daily_hrv_averages (
+                            dateMidnightMs INTEGER NOT NULL PRIMARY KEY,
+                            avg7d REAL NOT NULL,
+                            avg30d REAL NOT NULL
+                        )
+                        """.trimIndent(),
+                        """
+                        CREATE TABLE daily_rhr_averages (
+                            dateMidnightMs INTEGER NOT NULL PRIMARY KEY,
+                            avg7d REAL NOT NULL,
+                            avg30d REAL NOT NULL
+                        )
+                        """.trimIndent(),
+                        """
+                        CREATE TABLE daily_sleep_averages (
+                            dateMidnightMs INTEGER NOT NULL PRIMARY KEY,
+                            durationAvg7d REAL NOT NULL,
+                            durationAvg30d REAL NOT NULL,
+                            scoreAvg7d REAL NOT NULL,
+                            scoreAvg30d REAL NOT NULL
+                        )
+                        """.trimIndent(),
+                    )
+
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    sql.forEach { db.execSQL(it) }
+                }
+
+                override fun migrate(connection: SQLiteConnection) {
+                    sql.forEach { connection.execSQL(it) }
                 }
             }
     }

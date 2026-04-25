@@ -11,6 +11,9 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailyHrvAverageDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailyRestingHeartRateAverageDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailySleepAverageDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -42,6 +45,7 @@ object DatabaseModule {
                 HealthDatabase.MIGRATION_8_9,
                 HealthDatabase.MIGRATION_9_10,
                 HealthDatabase.MIGRATION_10_11,
+                HealthDatabase.MIGRATION_11_12,
             )
             .addCallback(
                 object : RoomDatabase.Callback() {
@@ -68,4 +72,13 @@ object DatabaseModule {
 
     @Provides
     fun provideDailySummaryDao(db: HealthDatabase): DailySummaryDao = db.dailySummaryDao()
+
+    @Provides
+    fun provideDailyHrvAverageDao(db: HealthDatabase): DailyHrvAverageDao = db.dailyHrvAverageDao()
+
+    @Provides
+    fun provideDailyRestingHeartRateAverageDao(db: HealthDatabase): DailyRestingHeartRateAverageDao = db.dailyRestingHeartRateAverageDao()
+
+    @Provides
+    fun provideDailySleepAverageDao(db: HealthDatabase): DailySleepAverageDao = db.dailySleepAverageDao()
 }
