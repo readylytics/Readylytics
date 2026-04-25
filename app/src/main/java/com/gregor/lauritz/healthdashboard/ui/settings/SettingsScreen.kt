@@ -79,7 +79,7 @@ fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
         if (uiState.isResyncing) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f),
+                color = MaterialTheme.colorScheme.background,
             ) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
