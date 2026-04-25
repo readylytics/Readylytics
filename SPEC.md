@@ -54,7 +54,7 @@ Existing charts (non-interactive, non-trending) continue to render at same perfo
 | T1 | x | Add `DailyHrvAverage`, `DailyRestingHeartRateAverage`, `DailySleepAverage` entities to Room schema | I.db_tables, V3 |
 | T2 | x | Create DAOs with `upsertAverage(date, avg7d, avg30d)` and query methods | I.queries, V3 |
 | T3 | x | Implement moving average calculator (7d median, 30d median) | V3 |
-| T4 | x | Add WorkManager task to calculate + store averages daily at sync time | V3 |
+| T4 | . | Add WorkManager task to calculate + store averages daily at sync time | V3 |
 | T5 | . | Add "Show Trends" toggle to Advanced Settings UI + store in UserPreferences | I.settings, V2 |
 | T6 | . | Update chart Composables to accept trend-visibility state and raw+avg data | I.charts, V1, V4 |
 | T7 | . | Implement Vico chart tap detection and value overlay (date + number) | I.charts, V1 |
