@@ -309,7 +309,7 @@ private fun HrChart(
     }
 
     val xSpacing = remember(durationMinutes) {
-        maxOf(1, (durationMinutes / 5.0).roundToInt())
+        maxOf(1, (durationMinutes / 8.0).roundToInt())
     }
 
     LaunchedEffect(workoutSamples) {

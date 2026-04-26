@@ -6,7 +6,8 @@
       "Bash(./gradlew :app:tasks --all)",
       "Bash(grep -E \"\\\\.kt$\")",
       "Bash(./gradlew assembleDebug --no-build-cache)",
-      "Bash(./gradlew :app:assembleDebug)"
+      "Bash(./gradlew :app:assembleDebug)",
+      "Bash(./gradlew assembleDebug -x test)"
     ]
   }
 }
