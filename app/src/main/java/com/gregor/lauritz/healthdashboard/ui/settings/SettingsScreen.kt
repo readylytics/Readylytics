@@ -925,71 +925,89 @@ private fun ZoneEditingSection(
     uiState: SettingsUiState,
     onEvent: (SettingsEvent) -> Unit
 ) {
+    var z1Min by rememberSaveable { mutableStateOf(uiState.zone1MinBpm.toString()) }
+    var z1Max by rememberSaveable { mutableStateOf(uiState.zone1MaxBpm.toString()) }
+    var z2Max by rememberSaveable { mutableStateOf(uiState.zone2MaxBpm.toString()) }
+    var z3Max by rememberSaveable { mutableStateOf(uiState.zone3MaxBpm.toString()) }
+    var z4Max by rememberSaveable { mutableStateOf(uiState.zone4MaxBpm.toString()) }
+
+    val isValid = remember(z1Min, z1Max, z2Max, z3Max, z4Max) {
+        val vals = listOf(z1Min, z1Max, z2Max, z3Max, z4Max).mapNotNull { it.toIntOrNull() }
+        vals.size == 5 &&
+            vals[0] in 1..220 && vals[1] in 1..220 &&
+            vals[2] in 1..220 && vals[3] in 1..220 && vals[4] in 1..220 &&
+            vals[0] < vals[1] && vals[1] < vals[2] &&
+            vals[2] < vals[3] && vals[3] < vals[4] && vals[4] <= 220
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            "Zone Percentages",
+            "Heart Rate Zones (BPM)",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary
         )
 
-        ZonePercentageSliderItem(
-            label = "Zone 1 Min",
-            value = uiState.zone1MinPercent,
-            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(it, uiState.zone1MaxPercent, uiState.zone2MaxPercent, uiState.zone3MaxPercent, uiState.zone4MaxPercent)) },
-            allowedRange = 0.30f..uiState.zone1MaxPercent - 0.01f
-        )
-        ZonePercentageSliderItem(
-            label = "Zone 1 Max",
-            value = uiState.zone1MaxPercent,
-            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(uiState.zone1MinPercent, it, uiState.zone2MaxPercent, uiState.zone3MaxPercent, uiState.zone4MaxPercent)) },
-            allowedRange = uiState.zone1MinPercent + 0.01f..uiState.zone2MaxPercent - 0.01f
-        )
-        ZonePercentageSliderItem(
-            label = "Zone 2 Max",
-            value = uiState.zone2MaxPercent,
-            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(uiState.zone1MinPercent, uiState.zone1MaxPercent, it, uiState.zone3MaxPercent, uiState.zone4MaxPercent)) },
-            allowedRange = uiState.zone1MaxPercent + 0.01f..uiState.zone3MaxPercent - 0.01f
-        )
-        ZonePercentageSliderItem(
-            label = "Zone 3 Max",
-            value = uiState.zone3MaxPercent,
-            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(uiState.zone1MinPercent, uiState.zone1MaxPercent, uiState.zone2MaxPercent, uiState.zone3MaxPercent, it)) },
-            allowedRange = uiState.zone2MaxPercent + 0.01f..uiState.zone4MaxPercent - 0.01f
-        )
-        ZonePercentageSliderItem(
-            label = "Zone 4 Max",
-            value = uiState.zone4MaxPercent,
-            onValueChange = { onEvent(SettingsEvent.ZonePercentagesChanged(uiState.zone1MinPercent, uiState.zone1MaxPercent, uiState.zone2MaxPercent, uiState.zone3MaxPercent, it)) },
-            allowedRange = uiState.zone3MaxPercent + 0.01f..0.99f
-        )
+        ZoneBpmInputRow("Zone 1", z1Min, { z1Min = it }, true, z1Max)
+        ZoneBpmInputRow("Zone 1 Max", z1Max, { z1Max = it }, false, z2Max)
+        ZoneBpmInputRow("Zone 2 Max", z2Max, { z2Max = it }, false, z3Max)
+        ZoneBpmInputRow("Zone 3 Max", z3Max, { z3Max = it }, false, z4Max)
+        ZoneBpmInputRow("Zone 4 Max", z4Max, { z4Max = it }, false, "220")
+
+        if (isValid) {
+            Button(
+                onClick = {
+                    onEvent(SettingsEvent.ZoneBpmsChanged(
+                        z1Min.toInt(), z1Max.toInt(), z2Max.toInt(), z3Max.toInt(), z4Max.toInt()
+                    ))
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+            ) {
+                Text("Save Zone Boundaries")
+            }
+        } else {
+            Text(
+                "Invalid: All values must be 1-220 BPM and strictly increasing",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
     }
 }
 
 @Composable
-private fun ZonePercentageSliderItem(
+private fun ZoneBpmInputRow(
     label: String,
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    allowedRange: ClosedFloatingPointRange<Float>,
-    valueRange: ClosedFloatingPointRange<Float> = 0.30f..0.99f
+    value: String,
+    onValueChange: (String) -> Unit,
+    editable: Boolean,
+    linkedValue: String?
 ) {
-    Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.bodySmall)
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "${(value * 100).roundToInt()}%",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Slider(
+    val isValid = value.toIntOrNull()?.let { it in 1..220 } ?: false
+    val inputColor = if (value.isNotEmpty() && !isValid) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(label, modifier = Modifier.width(80.dp), style = MaterialTheme.typography.bodySmall)
+        OutlinedTextField(
             value = value,
-            onValueChange = { onValueChange(it.coerceIn(allowedRange)) },
-            valueRange = valueRange,
-            steps = ((valueRange.endInclusive - valueRange.start) * 100).roundToInt() - 1,
-            modifier = Modifier.fillMaxWidth()
+            onValueChange = { if (editable) onValueChange(it) },
+            modifier = Modifier.width(70.dp),
+            textStyle = MaterialTheme.typography.bodySmall,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            readOnly = !editable,
+            singleLine = true,
+            isError = value.isNotEmpty() && !isValid,
         )
+        if (linkedValue != null && linkedValue != value) {
+            Text("(${linkedValue})", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
