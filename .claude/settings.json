@@ -8,8 +8,7 @@
       "Bash(./gradlew assembleDebug --info)",
       "Bash(./gradlew ktlintCheck assembleDebug)",
       "Bash(./gradlew compileDebugKotlin)",
-      "Bash(./gradlew testDebugUnitTest)",
-      "Bash(./gradlew testDebugUnitTest --tests \"com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculatorTest\")"
+      "Bash(./gradlew testDebugUnitTest)"
     ]
   }
 }

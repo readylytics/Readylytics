@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Fit Dashboard"
+rootProject.name = "Readylytics"
 include(":app")

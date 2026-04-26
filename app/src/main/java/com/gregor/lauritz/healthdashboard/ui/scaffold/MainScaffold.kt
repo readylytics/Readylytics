@@ -33,7 +33,8 @@ fun MainScaffold(modifier: Modifier = Modifier) {
     val showBottomBar = currentDestination?.let { dest ->
         !dest.hasRoute(AppDestination.WorkoutDetail::class) &&
         !dest.hasRoute(AppDestination.RestingHrDetail::class) &&
-        !dest.hasRoute(AppDestination.StepDetail::class)
+        !dest.hasRoute(AppDestination.StepDetail::class) &&
+        !dest.hasRoute(AppDestination.About::class)
     } ?: true
 
     Scaffold(

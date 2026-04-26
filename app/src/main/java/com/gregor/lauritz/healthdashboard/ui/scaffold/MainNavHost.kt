@@ -13,6 +13,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.gregor.lauritz.healthdashboard.ui.about.AboutScreen
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardRoute
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppDestination
 import com.gregor.lauritz.healthdashboard.ui.navigation.TabDestination
@@ -38,7 +39,8 @@ fun MainNavHost(
 
             val isEnteringDetail = targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
                 targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
-                targetState.destination.hasRoute(AppDestination.StepDetail::class)
+                targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
+                targetState.destination.hasRoute(AppDestination.About::class)
 
             val direction = if (isEnteringDetail) {
                 // Invert direction for details as requested
@@ -56,7 +58,8 @@ fun MainNavHost(
 
             val isLeavingDetail = initialState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
                 initialState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
-                initialState.destination.hasRoute(AppDestination.StepDetail::class)
+                initialState.destination.hasRoute(AppDestination.StepDetail::class) ||
+                initialState.destination.hasRoute(AppDestination.About::class)
 
             val direction = if (isLeavingDetail) {
                 // Keep slide out direction consistent with pop
@@ -132,7 +135,18 @@ fun MainNavHost(
                 onBack = { navController.popBackStack() },
             )
         }
-        composable<TabDestination.Settings> { SettingsRoute() }
+        composable<AppDestination.About> {
+            AboutScreen(
+                onDismiss = { navController.popBackStack() }
+            )
+        }
+        composable<TabDestination.Settings> {
+            SettingsRoute(
+                onNavigateToAbout = {
+                    navController.navigate(AppDestination.About)
+                }
+            )
+        }
     }
 }
 
@@ -148,6 +162,8 @@ private fun getTabIndex(destination: NavDestination?): Int {
     // RestingHrDetail and StepDetail are logically under Dashboard
     if (destination.hasRoute(AppDestination.RestingHrDetail::class)) return 0
     if (destination.hasRoute(AppDestination.StepDetail::class)) return 0
+    // About is logically under Settings
+    if (destination.hasRoute(AppDestination.About::class)) return 3
 
     return -1
 }

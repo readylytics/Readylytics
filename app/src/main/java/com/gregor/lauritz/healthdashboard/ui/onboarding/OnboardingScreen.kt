@@ -98,7 +98,7 @@ private fun WelcomeScreen(onNext: () -> Unit) {
         Spacer(Modifier.height(24.dp))
 
         Text(
-            text = "Welcome to Fit Dashboard",
+            text = "Welcome to Readylytics",
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center,
         )

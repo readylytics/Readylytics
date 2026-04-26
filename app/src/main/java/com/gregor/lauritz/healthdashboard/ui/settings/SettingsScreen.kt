@@ -4,8 +4,8 @@ import android.os.Parcelable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,7 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -107,10 +108,13 @@ fun sectionMatches(section: SettingsSectionMetadata, query: String): Boolean {
 }
 
 @Composable
-fun SettingsRoute(viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsRoute(
+    viewModel: SettingsViewModel = hiltViewModel(),
+    onNavigateToAbout: () -> Unit = {},
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    SettingsScreen(uiState = uiState, onEvent = viewModel::onEvent, viewModel = viewModel)
+    SettingsScreen(uiState = uiState, onEvent = viewModel::onEvent, viewModel = viewModel, onNavigateToAbout = onNavigateToAbout)
 
     // Loading dialog during resync - appears on top of everything including tab bar
     if (uiState.isResyncing) {
@@ -154,6 +158,7 @@ fun SettingsScreen(
     onEvent: (SettingsEvent) -> Unit,
     viewModel: SettingsViewModel,
     modifier: Modifier = Modifier,
+    onNavigateToAbout: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
@@ -180,117 +185,132 @@ fun SettingsScreen(
         )
     }
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 8.dp),
-    ) {
-        item(key = "search") {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+    Column(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Search settings...") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Filled.Clear, contentDescription = "Clear")
+                    .padding(vertical = 8.dp)
+            ) {
+                // Search
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    placeholder = { Text("Search settings...") },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Filled.Clear, contentDescription = "Clear")
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                )
+
+                // Cloud & Data & Health Connect
+                if (matchingSections.any { it.id == "cloud_data_sync" }) {
+                    M3CollapsibleSection(
+                        header = "Cloud & Data",
+                        expanded = !uiState.collapseCloudData || shouldExpandSection("cloud_data_sync"),
+                        onExpandedChange = { onEvent(SettingsEvent.CollapseCloudDataChanged(!it)) }
+                    ) {
+                        Column {
+                            SectionHeader("Cloud Backup")
+                            CloudBackupSection(
+                                uiState = uiState,
+                                onEvent = onEvent,
+                                viewModel = viewModel,
+                                context = context,
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            SectionHeader("Data Management")
+                            DataManagementSection(uiState = uiState, onEvent = onEvent)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            SectionHeader("Health Connect")
+                            SyncSettingsSection(uiState = uiState, onEvent = onEvent)
                         }
                     }
-                },
-                shape = RoundedCornerShape(16.dp),
-                singleLine = true,
-            )
-        }
-        // Cloud & Data & Health Connect
-        if (matchingSections.any { it.id == "cloud_data_sync" }) {
-            item(key = "header_cloud_data_sync") {
-                M3CollapsibleSection(
-                    header = "Cloud & Data",
-                    expanded = !uiState.collapseCloudData || shouldExpandSection("cloud_data_sync"),
-                    onExpandedChange = { onEvent(SettingsEvent.CollapseCloudDataChanged(!it)) }
-                ) {
-                    Column {
-                        SectionHeader("Cloud Backup")
-                        CloudBackupSection(
-                            uiState = uiState,
-                            onEvent = onEvent,
-                            viewModel = viewModel,
-                            context = context,
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        SectionHeader("Data Management")
-                        DataManagementSection(uiState = uiState, onEvent = onEvent)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        SectionHeader("Health Connect")
-                        SyncSettingsSection(uiState = uiState, onEvent = onEvent)
+                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
+                }
+
+                // Baselines & Thresholds
+                if (matchingSections.any { it.id == "baselines_thresholds" }) {
+                    M3CollapsibleSection(
+                        header = "Baselines & Thresholds",
+                        expanded = !uiState.collapseBaselinesThresholds || shouldExpandSection("baselines_thresholds"),
+                        onExpandedChange = { onEvent(SettingsEvent.CollapseBaselinesThresholdsChanged(!it)) }
+                    ) {
+                        Column {
+                            SectionHeader("Daily Step Goal")
+                            ActivitySettingsSection(uiState = uiState, onEvent = onEvent)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            SectionHeader("Sleep")
+                            SleepSettingsSection(uiState = uiState, onEvent = onEvent)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            SectionHeader("Heart Rate Zones")
+                            HeartRateZoneSection(
+                                uiState = uiState,
+                                onEvent = onEvent,
+                                expandState = expandState,
+                                onExpandStateChange = { expandState = it }
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            SectionHeader("Thresholds")
+                            ThresholdSettingsSection(uiState = uiState, onEvent = onEvent)
+                        }
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
+                }
+
+                // Display
+                if (matchingSections.any { it.id == "display" }) {
+                    M3CollapsibleSection(
+                        header = "Display",
+                        expanded = !uiState.collapseDisplay || shouldExpandSection("display"),
+                        onExpandedChange = { onEvent(SettingsEvent.CollapseDisplayChanged(!it)) }
+                    ) {
+                        AppThemeItem(uiState = uiState, onEvent = onEvent)
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
+                }
+
+                // Advanced
+                if (matchingSections.any { it.id == "advanced" }) {
+                    M3CollapsibleSection(
+                        header = "Advanced",
+                        expanded = !uiState.collapseAdvanced || shouldExpandSection("advanced"),
+                        onExpandedChange = { onEvent(SettingsEvent.CollapseAdvancedChanged(!it)) }
+                    ) {
+                        AdvancedSettingsSection(uiState = uiState, onEvent = onEvent)
                     }
                 }
-            }
-            item(key = "divider_after_cloud_data_sync") { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
-        }
 
-        // Baselines & Thresholds
-        if (matchingSections.any { it.id == "baselines_thresholds" }) {
-            item(key = "header_baselines") {
-                M3CollapsibleSection(
-                    header = "Baselines & Thresholds",
-                    expanded = !uiState.collapseBaselinesThresholds || shouldExpandSection("baselines_thresholds"),
-                    onExpandedChange = { onEvent(SettingsEvent.CollapseBaselinesThresholdsChanged(!it)) }
-                ) {
-                    Column {
-                        SectionHeader("Daily Step Goal")
-                        ActivitySettingsSection(uiState = uiState, onEvent = onEvent)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        SectionHeader("Sleep")
-                        SleepSettingsSection(uiState = uiState, onEvent = onEvent)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        SectionHeader("Heart Rate Zones")
-                        HeartRateZoneSection(
-                            uiState = uiState,
-                            onEvent = onEvent,
-                            expandState = expandState,
-                            onExpandStateChange = { expandState = it }
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        SectionHeader("Thresholds")
-                        ThresholdSettingsSection(uiState = uiState, onEvent = onEvent)
-                    }
-                }
-            }
-            item(key = "divider_after_baselines") { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
-        }
-
-        // Display
-        if (matchingSections.any { it.id == "display" }) {
-            item(key = "header_display") {
-                M3CollapsibleSection(
-                    header = "Display",
-                    expanded = !uiState.collapseDisplay || shouldExpandSection("display"),
-                    onExpandedChange = { onEvent(SettingsEvent.CollapseDisplayChanged(!it)) }
-                ) {
-                    AppThemeItem(uiState = uiState, onEvent = onEvent)
-                }
-            }
-            item(key = "divider_after_display") { HorizontalDivider(modifier = Modifier.padding(top = 12.dp)) }
-        }
-
-        // Advanced
-        if (matchingSections.any { it.id == "advanced" }) {
-            item(key = "header_advanced") {
-                M3CollapsibleSection(
-                    header = "Advanced",
-                    expanded = !uiState.collapseAdvanced || shouldExpandSection("advanced"),
-                    onExpandedChange = { onEvent(SettingsEvent.CollapseAdvancedChanged(!it)) }
-                ) {
-                    AdvancedSettingsSection(uiState = uiState, onEvent = onEvent)
-                }
             }
         }
 
-        item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(16.dp)) }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            TextButton(onClick = onNavigateToAbout) {
+                Text(
+                    text = "About Readylytics",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 

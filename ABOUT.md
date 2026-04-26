@@ -20,7 +20,7 @@ While many apps focus only on how long you sleep, **Readylytics** prioritizes ho
 We use a transparent version of the **Personal Activity Intelligence (PAI)** model to ensure your heart stays resilient.
 
 - **Intensity Weighting:** We use the **Banister TRIMP (Training Impulse)** model to weight high-intensity efforts exponentially.
-- **The Formula:** $$T_d = \sum (D \cdot HR_r \cdot a \cdot e^{b \cdot HR_r})$$
+- **The Formula:** $T_d = \sum D \cdot HR_r \cdot a \cdot \exp(b \cdot HR_r)$
 - **Clinical Targets:** Your goal is a 7-day rolling sum of **100 points**. Maintaining this "100 PAI" threshold has been clinically shown to reduce cardiovascular mortality risk by up to 25%.
 - **The Multiplier:** To prevent "point chasing," points become harder to earn as you approach 100, and daily gains are capped at 75 points.
 
