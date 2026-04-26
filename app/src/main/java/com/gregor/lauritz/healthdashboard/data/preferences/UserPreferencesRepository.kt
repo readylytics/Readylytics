@@ -41,6 +41,12 @@ class UserPreferencesRepository
             val ZONE_2_MAX_PERCENT = floatPreferencesKey("zone_2_max_percent")
             val ZONE_3_MAX_PERCENT = floatPreferencesKey("zone_3_max_percent")
             val ZONE_4_MAX_PERCENT = floatPreferencesKey("zone_4_max_percent")
+            val ZONE_1_MIN_BPM = intPreferencesKey("zone_1_min_bpm")
+            val ZONE_1_MAX_BPM = intPreferencesKey("zone_1_max_bpm")
+            val ZONE_2_MAX_BPM = intPreferencesKey("zone_2_max_bpm")
+            val ZONE_3_MAX_BPM = intPreferencesKey("zone_3_max_bpm")
+            val ZONE_4_MAX_BPM = intPreferencesKey("zone_4_max_bpm")
+            val BPM_MIGRATION_DONE = booleanPreferencesKey("bpm_migration_done")
             val AGE = intPreferencesKey("age")
             val BIRTH_DAY = intPreferencesKey("birth_day")
             val BIRTH_MONTH = intPreferencesKey("birth_month")
@@ -76,6 +82,32 @@ class UserPreferencesRepository
                 .catch { e ->
                     if (e is IOException) emit(emptyPreferences()) else throw e
                 }.map { prefs ->
+                    val maxHr = prefs[Keys.MAX_HEART_RATE] ?: 190
+
+                    val z1MinBpm = prefs[Keys.ZONE_1_MIN_BPM]
+                    val z1MaxBpm = prefs[Keys.ZONE_1_MAX_BPM]
+                    val z2MaxBpm = prefs[Keys.ZONE_2_MAX_BPM]
+                    val z3MaxBpm = prefs[Keys.ZONE_3_MAX_BPM]
+                    val z4MaxBpm = prefs[Keys.ZONE_4_MAX_BPM]
+
+                    val (zone1MinBpm, zone1MaxBpm, zone2MaxBpm, zone3MaxBpm, zone4MaxBpm) =
+                        if (z1MinBpm != null && z1MaxBpm != null && z2MaxBpm != null && z3MaxBpm != null && z4MaxBpm != null) {
+                            listOf(z1MinBpm, z1MaxBpm, z2MaxBpm, z3MaxBpm, z4MaxBpm)
+                        } else {
+                            val z1Min = prefs[Keys.ZONE_1_MIN_PERCENT] ?: 0.50f
+                            val z1Max = prefs[Keys.ZONE_1_MAX_PERCENT] ?: 0.60f
+                            val z2Max = prefs[Keys.ZONE_2_MAX_PERCENT] ?: 0.70f
+                            val z3Max = prefs[Keys.ZONE_3_MAX_PERCENT] ?: 0.80f
+                            val z4Max = prefs[Keys.ZONE_4_MAX_PERCENT] ?: 0.90f
+                            listOf(
+                                (z1Min * maxHr).toInt(),
+                                (z1Max * maxHr).toInt(),
+                                (z2Max * maxHr).toInt(),
+                                (z3Max * maxHr).toInt(),
+                                (z4Max * maxHr).toInt()
+                            )
+                        }
+
                     UserPreferences(
                         goalSleepHours = prefs[Keys.GOAL_SLEEP_HOURS] ?: 8f,
                         hrvBaselineOverride =
@@ -96,7 +128,7 @@ class UserPreferencesRepository
                                 ?: SyncPreference.BY_TIME,
                         syncIntervalHours = prefs[Keys.SYNC_INTERVAL_HOURS] ?: 1,
                         lastSyncTimestamp = prefs[Keys.LAST_SYNC_TIMESTAMP] ?: 0L,
-                        maxHeartRate = prefs[Keys.MAX_HEART_RATE] ?: 190,
+                        maxHeartRate = maxHr,
                         autoCalculateMaxHr = prefs[Keys.AUTO_CALCULATE_MAX_HR] ?: true,
                         manualZoneEditing = prefs[Keys.MANUAL_ZONE_EDITING] ?: false,
                         zone1MinPercent = prefs[Keys.ZONE_1_MIN_PERCENT] ?: 0.50f,
@@ -104,6 +136,11 @@ class UserPreferencesRepository
                         zone2MaxPercent = prefs[Keys.ZONE_2_MAX_PERCENT] ?: 0.70f,
                         zone3MaxPercent = prefs[Keys.ZONE_3_MAX_PERCENT] ?: 0.80f,
                         zone4MaxPercent = prefs[Keys.ZONE_4_MAX_PERCENT] ?: 0.90f,
+                        zone1MinBpm = zone1MinBpm,
+                        zone1MaxBpm = zone1MaxBpm,
+                        zone2MaxBpm = zone2MaxBpm,
+                        zone3MaxBpm = zone3MaxBpm,
+                        zone4MaxBpm = zone4MaxBpm,
                         age = prefs[Keys.AGE] ?: 30,
                         birthDay = prefs[Keys.BIRTH_DAY] ?: 1,
                         birthMonth = prefs[Keys.BIRTH_MONTH] ?: 1,
@@ -194,6 +231,22 @@ class UserPreferencesRepository
                 prefs[Keys.ZONE_2_MAX_PERCENT] = z2Max
                 prefs[Keys.ZONE_3_MAX_PERCENT] = z3Max
                 prefs[Keys.ZONE_4_MAX_PERCENT] = z4Max
+            }
+        }
+
+        suspend fun updateZoneBpms(
+            z1Min: Int,
+            z1Max: Int,
+            z2Max: Int,
+            z3Max: Int,
+            z4Max: Int
+        ) {
+            dataStore.edit { prefs ->
+                prefs[Keys.ZONE_1_MIN_BPM] = z1Min
+                prefs[Keys.ZONE_1_MAX_BPM] = z1Max
+                prefs[Keys.ZONE_2_MAX_BPM] = z2Max
+                prefs[Keys.ZONE_3_MAX_BPM] = z3Max
+                prefs[Keys.ZONE_4_MAX_BPM] = z4Max
             }
         }
 
