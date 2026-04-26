@@ -11,14 +11,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.draw.clip
@@ -308,10 +306,6 @@ private fun HrChart(
         ).toInt()
     }
 
-    val xSpacing = remember(durationMinutes) {
-        maxOf(1, (durationMinutes / 12.0).roundToInt())
-    }
-
     LaunchedEffect(workoutSamples) {
         if (workoutSamples.isEmpty()) return@LaunchedEffect
         modelProducer.runTransaction {
@@ -353,8 +347,10 @@ private fun HrChart(
                         titleComponent = axisLabelComponent,
                         guideline = guidelineComponent,
                         valueFormatter = { _, value, _ -> value.roundToInt().toString() },
-                        itemPlacer = remember {
-                            HorizontalAxis.ItemPlacer.aligned(spacing = { xSpacing })
+                        itemPlacer = remember(durationMinutes) {
+                            HorizontalAxis.ItemPlacer.aligned(spacing = {
+                                maxOf(1, durationMinutes / 5)
+                            })
                         },
                     ),
             ),

@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 import android.os.Parcelable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -978,6 +980,41 @@ private fun ZoneEditingSection(
 }
 
 @Composable
+private fun CompactOutlinedTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    isError: Boolean = false,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        enabled = enabled,
+        modifier = modifier
+            .background(
+                MaterialTheme.colorScheme.surface,
+                RoundedCornerShape(8.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = if (isError) MaterialTheme.colorScheme.error
+                        else if (!enabled) MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+                        else MaterialTheme.colorScheme.outline,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        textStyle = MaterialTheme.typography.bodySmall.copy(
+            color = if (enabled) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        ),
+        singleLine = true,
+        keyboardOptions = keyboardOptions,
+    )
+}
+
+@Composable
 private fun ZoneRow(
     zoneLabel: String,
     minValue: String,
@@ -999,34 +1036,24 @@ private fun ZoneRow(
     ) {
         Text(zoneLabel, modifier = Modifier.width(60.dp), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
 
-        OutlinedTextField(
+        CompactOutlinedTextField(
             value = minValue,
             onValueChange = { if (minEditable && onMinChange != null) onMinChange(it) },
-            modifier = Modifier
-                .width(60.dp)
-                .height(40.dp),
-            textStyle = MaterialTheme.typography.bodySmall,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            readOnly = !minEditable,
-            singleLine = true,
+            modifier = Modifier.width(72.dp),
             isError = minValue.isNotEmpty() && !minValid,
             enabled = minEditable,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         )
 
         Text("–", style = MaterialTheme.typography.bodySmall)
 
-        OutlinedTextField(
+        CompactOutlinedTextField(
             value = maxValue,
             onValueChange = { if (maxEditable && onMaxChange != null) onMaxChange(it) },
-            modifier = Modifier
-                .width(60.dp)
-                .height(40.dp),
-            textStyle = MaterialTheme.typography.bodySmall,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            readOnly = !maxEditable,
-            singleLine = true,
+            modifier = Modifier.width(72.dp),
             isError = maxValue.isNotEmpty() && !maxValid,
             enabled = maxEditable,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         )
     }
 }
