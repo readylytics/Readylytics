@@ -53,6 +53,11 @@ data class SettingsUiState(
     val zone2MaxPercent: Float = 0.70f,
     val zone3MaxPercent: Float = 0.80f,
     val zone4MaxPercent: Float = 0.90f,
+    val zone1MinBpm: Int = 95,
+    val zone1MaxBpm: Int = 114,
+    val zone2MaxBpm: Int = 133,
+    val zone3MaxBpm: Int = 152,
+    val zone4MaxBpm: Int = 171,
     val age: Int = 30,
     val birthDay: Int = 1,
     val birthMonth: Int = 1,
@@ -132,6 +137,14 @@ sealed interface SettingsEvent {
         val z2Max: Float,
         val z3Max: Float,
         val z4Max: Float,
+    ) : SettingsEvent
+
+    data class ZoneBpmsChanged(
+        val z1Min: Int,
+        val z1Max: Int,
+        val z2Max: Int,
+        val z3Max: Int,
+        val z4Max: Int,
     ) : SettingsEvent
 
     data class BirthdayChanged(
@@ -249,6 +262,11 @@ class SettingsViewModel
                             zone2MaxPercent = prefs.zone2MaxPercent,
                             zone3MaxPercent = prefs.zone3MaxPercent,
                             zone4MaxPercent = prefs.zone4MaxPercent,
+                            zone1MinBpm = prefs.zone1MinBpm,
+                            zone1MaxBpm = prefs.zone1MaxBpm,
+                            zone2MaxBpm = prefs.zone2MaxBpm,
+                            zone3MaxBpm = prefs.zone3MaxBpm,
+                            zone4MaxBpm = prefs.zone4MaxBpm,
                             age = prefs.age,
                             birthDay = prefs.birthDay,
                             birthMonth = prefs.birthMonth,
@@ -354,6 +372,19 @@ class SettingsViewModel
                 is SettingsEvent.ZonePercentagesChanged -> {
                     viewModelScope.launch {
                         prefsRepo.updateZonePercentages(
+                            event.z1Min,
+                            event.z1Max,
+                            event.z2Max,
+                            event.z3Max,
+                            event.z4Max
+                        )
+                        healthSyncUseCase.sync()
+                    }
+                }
+
+                is SettingsEvent.ZoneBpmsChanged -> {
+                    viewModelScope.launch {
+                        prefsRepo.updateZoneBpms(
                             event.z1Min,
                             event.z1Max,
                             event.z2Max,
