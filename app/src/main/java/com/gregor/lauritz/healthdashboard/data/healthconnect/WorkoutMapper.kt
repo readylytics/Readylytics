@@ -9,19 +9,18 @@ object WorkoutMapper {
     private val ZONE_WEIGHTS = floatArrayOf(1f, 2f, 3f, 4f, 5f)
 
     fun zoneThresholds(
-        maxHr: Int,
-        z1MinP: Float = 0.50f,
-        z1p: Float = 0.60f,
-        z2p: Float = 0.70f,
-        z3p: Float = 0.80f,
-        z4p: Float = 0.90f
+        z1Min: Int = 95,
+        z1Max: Int = 114,
+        z2Max: Int = 133,
+        z3Max: Int = 152,
+        z4Max: Int = 171
     ): IntArray =
         intArrayOf(
-            (maxHr * z1MinP).toInt(),
-            (maxHr * z1p).toInt(),
-            (maxHr * z2p).toInt(),
-            (maxHr * z3p).toInt(),
-            (maxHr * z4p).toInt(),
+            z1Min,
+            z1Max,
+            z2Max,
+            z3Max,
+            z4Max,
         )
 
     private fun zoneIndex(

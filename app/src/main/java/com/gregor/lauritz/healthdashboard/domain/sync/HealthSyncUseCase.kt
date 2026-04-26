@@ -56,12 +56,11 @@ class HealthSyncUseCase
                 val hrvRecords = hcRepo.readHrvSamples(from, to)
 
                 val thresholds = WorkoutMapper.zoneThresholds(
-                    prefs.maxHeartRate,
-                    prefs.zone1MinPercent,
-                    prefs.zone1MaxPercent,
-                    prefs.zone2MaxPercent,
-                    prefs.zone3MaxPercent,
-                    prefs.zone4MaxPercent,
+                    prefs.zone1MinBpm,
+                    prefs.zone1MaxBpm,
+                    prefs.zone2MaxBpm,
+                    prefs.zone3MaxBpm,
+                    prefs.zone4MaxBpm,
                 )
                 val initialWorkouts = exerciseRecords.map { WorkoutMapper.mapExerciseSession(it, emptyList(), thresholds) }
                 val hrEntities = HeartRateMapper.mapToEntities(hrRecords, sleepEntities, initialWorkouts)
