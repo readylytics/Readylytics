@@ -5,7 +5,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.BackoffPolicy
+import androidx.work.Configuration
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
@@ -19,6 +21,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.BackupPreferencesRepo
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,7 +29,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
 
 @HiltAndroidApp
 class HealthDashboardApplication :
@@ -47,11 +49,21 @@ class HealthDashboardApplication :
     @Inject
     lateinit var workerScheduler: WorkerScheduler
 
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
+
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onCreate() {
         super.onCreate()
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+        try {
+            WorkManager.initialize(this, Configuration.Builder()
+                .setWorkerFactory(workerFactory)
+                .build())
+        } catch (e: IllegalStateException) {
+            // Already initialized
+        }
         appScope.launch(Dispatchers.IO) {
             val schedule = backupPrefsRepository.backupSchedule.first()
             workerScheduler.scheduleBackupWorker(schedule)

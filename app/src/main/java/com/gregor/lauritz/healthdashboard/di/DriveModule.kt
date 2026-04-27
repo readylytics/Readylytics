@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.di
 
 import android.app.Application
+import androidx.work.Configuration
 import androidx.work.WorkManager
 import com.gregor.lauritz.healthdashboard.data.drive.GoogleDriveRepository
 import dagger.Module
@@ -30,5 +31,12 @@ object DriveModule {
 
     @Provides
     @Singleton
-    fun provideWorkManager(app: Application): WorkManager = WorkManager.getInstance(app)
+    fun provideWorkManager(app: Application): WorkManager {
+        return try {
+            WorkManager.getInstance(app)
+        } catch (e: IllegalStateException) {
+            WorkManager.initialize(app, Configuration.Builder().build())
+            WorkManager.getInstance(app)
+        }
+    }
 }
