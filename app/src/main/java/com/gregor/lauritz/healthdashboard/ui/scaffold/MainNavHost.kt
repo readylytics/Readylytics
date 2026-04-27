@@ -43,8 +43,7 @@ fun MainNavHost(
                 targetState.destination.hasRoute(AppDestination.About::class)
 
             val direction = if (isEnteringDetail) {
-                // Invert direction for details as requested
-                AnimatedContentTransitionScope.SlideDirection.End
+                AnimatedContentTransitionScope.SlideDirection.Start
             } else if (targetIndex > initialIndex) {
                 AnimatedContentTransitionScope.SlideDirection.Start
             } else {
@@ -60,11 +59,15 @@ fun MainNavHost(
                 initialState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                 initialState.destination.hasRoute(AppDestination.StepDetail::class) ||
                 initialState.destination.hasRoute(AppDestination.About::class)
+            val isEnteringDetail = targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
+                targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
+                targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
+                targetState.destination.hasRoute(AppDestination.About::class)
 
             val direction = if (isLeavingDetail) {
                 // Keep slide out direction consistent with pop
                 AnimatedContentTransitionScope.SlideDirection.End
-            } else if (targetIndex > initialIndex) {
+            } else if (isEnteringDetail || targetIndex > initialIndex) {
                 AnimatedContentTransitionScope.SlideDirection.Start
             } else {
                 AnimatedContentTransitionScope.SlideDirection.End
