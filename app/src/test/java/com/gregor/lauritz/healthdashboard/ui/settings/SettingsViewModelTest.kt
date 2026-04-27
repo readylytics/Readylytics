@@ -3,25 +3,12 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.preferencesDataStoreFile
-import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.platform.app.InstrumentationRegistry
-import dagger.hilt.android.testing.HiltAndroidRule
-import dagger.hilt.android.testing.HiltAndroidTest
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.runTest
-import org.junit.After
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import androidx.lifecycle.viewModelScope
-import androidx.work.WorkManager
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthManager
 import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupUseCase
 import com.gregor.lauritz.healthdashboard.domain.backup.RestoreUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
@@ -29,20 +16,32 @@ import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.sync.ResyncHealthConnectUseCase
 import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
 import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
-import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthManager
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.robolectric.annotation.Config
+import dagger.hilt.android.testing.HiltTestApplication
 import javax.inject.Inject
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import androidx.work.WorkManager
 
 @HiltAndroidTest
+@RunWith(AndroidJUnit4::class)
+@Config(application = HiltTestApplication::class)
 class SettingsViewModelTest {
 
     @get:Rule
     val hiltRule = HiltAndroidRule(this)
 
     private lateinit var context: Context
-    private lateinit var dataStore: DataStore<Preferences>
 
     @Inject
     lateinit var prefsRepo: UserPreferencesRepository
@@ -160,7 +159,5 @@ class SettingsViewModelTest {
 
         assertFalse(viewModel.uiState.first().isResyncing)
         viewModel.onEvent(SettingsEvent.ResyncHealthConnect)
-        // Note: isResyncing would be true during the resync, but clearing all data
-        // in test context may cause the resync to fail quickly.
     }
 }

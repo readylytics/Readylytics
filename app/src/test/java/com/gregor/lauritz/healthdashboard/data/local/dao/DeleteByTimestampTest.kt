@@ -12,13 +12,12 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
 class DeleteByTimestampTest {
@@ -51,15 +50,15 @@ class DeleteByTimestampTest {
     @Test
     fun `sleep session delete before timestamp only deletes old records`() = runTest {
         val now = System.currentTimeMillis()
-        val oldTime = now - (60 * 24 * 60 * 60 * 1000) // 60 days ago
-        val newTime = now - (10 * 24 * 60 * 60 * 1000) // 10 days ago
+        val oldTime = now - (60L * 24 * 60 * 60 * 1000) // 60 days ago
+        val newTime = now - (10L * 24 * 60 * 60 * 1000) // 10 days ago
 
         sleepDao.upsertAll(listOf(
             SleepSessionEntity(id = "old", startTime = oldTime, endTime = oldTime + 3600000, durationMinutes = 60, efficiency = 0.85f, deepSleepMinutes = 20, remSleepMinutes = 20, lightSleepMinutes = 20, awakeMinutes = 0),
             SleepSessionEntity(id = "new", startTime = newTime, endTime = newTime + 3600000, durationMinutes = 60, efficiency = 0.85f, deepSleepMinutes = 20, remSleepMinutes = 20, lightSleepMinutes = 20, awakeMinutes = 0)
         ))
 
-        val cutoffTime = now - (30 * 24 * 60 * 60 * 1000) // 30 days ago
+        val cutoffTime = now - (30L * 24 * 60 * 60 * 1000) // 30 days ago
         sleepDao.deleteBeforeTimestamp(cutoffTime)
 
         val remaining = sleepDao.getSince(0)
@@ -70,15 +69,15 @@ class DeleteByTimestampTest {
     @Test
     fun `heart rate delete before timestamp only deletes old records`() = runTest {
         val now = System.currentTimeMillis()
-        val oldTime = now - (60 * 24 * 60 * 60 * 1000)
-        val newTime = now - (10 * 24 * 60 * 60 * 1000)
+        val oldTime = now - (60L * 24 * 60 * 60 * 1000)
+        val newTime = now - (10L * 24 * 60 * 60 * 1000)
 
         heartRateDao.upsertAll(listOf(
             HeartRateRecordEntity(id = "old", timestampMs = oldTime, beatsPerMinute = 75, recordType = "SLEEP", sessionId = "session1"),
             HeartRateRecordEntity(id = "new", timestampMs = newTime, beatsPerMinute = 80, recordType = "SLEEP", sessionId = "session2")
         ))
 
-        val cutoffTime = now - (30 * 24 * 60 * 60 * 1000)
+        val cutoffTime = now - (30L * 24 * 60 * 60 * 1000)
         heartRateDao.deleteBeforeTimestamp(cutoffTime)
 
         val remaining = heartRateDao.getByTimeRange(0, now + 1000000)
@@ -89,15 +88,15 @@ class DeleteByTimestampTest {
     @Test
     fun `hrv delete before timestamp only deletes old records`() = runTest {
         val now = System.currentTimeMillis()
-        val oldTime = now - (60 * 24 * 60 * 60 * 1000)
-        val newTime = now - (10 * 24 * 60 * 60 * 1000)
+        val oldTime = now - (60L * 24 * 60 * 60 * 1000)
+        val newTime = now - (10L * 24 * 60 * 60 * 1000)
 
         hrvDao.upsertAll(listOf(
             HrvRecordEntity(id = "old", timestampMs = oldTime, rmssdMs = 50f, recordType = "SLEEP", sessionId = "session1"),
             HrvRecordEntity(id = "new", timestampMs = newTime, rmssdMs = 45f, recordType = "SLEEP", sessionId = "session2")
         ))
 
-        val cutoffTime = now - (30 * 24 * 60 * 60 * 1000)
+        val cutoffTime = now - (30L * 24 * 60 * 60 * 1000)
         hrvDao.deleteBeforeTimestamp(cutoffTime)
 
         val remaining = hrvDao.observeSince(0).first()
@@ -108,15 +107,41 @@ class DeleteByTimestampTest {
     @Test
     fun `workout delete before timestamp only deletes old records`() = runTest {
         val now = System.currentTimeMillis()
-        val oldTime = now - (60 * 24 * 60 * 60 * 1000)
-        val newTime = now - (10 * 24 * 60 * 60 * 1000)
+        val oldTime = now - (60L * 24 * 60 * 60 * 1000)
+        val newTime = now - (10L * 24 * 60 * 60 * 1000)
 
         workoutDao.upsertAll(listOf(
-            WorkoutRecordEntity(id = "old", startTime = oldTime, endTime = oldTime + 3600000, durationMinutes = 60, caloriesBurned = 500f, trimp = 100f, avgHr = 150, zone1Percent = 10f, zone2Percent = 30f, zone3Percent = 40f, zone4Percent = 20f),
-            WorkoutRecordEntity(id = "new", startTime = newTime, endTime = newTime + 3600000, durationMinutes = 60, caloriesBurned = 500f, trimp = 100f, avgHr = 150, zone1Percent = 10f, zone2Percent = 30f, zone3Percent = 40f, zone4Percent = 20f)
+            WorkoutRecordEntity(
+                id = "old",
+                startTime = oldTime,
+                endTime = oldTime + 3600000,
+                exerciseType = "Running",
+                durationMinutes = 60,
+                zone1Minutes = 10f,
+                zone2Minutes = 10f,
+                zone3Minutes = 20f,
+                zone4Minutes = 10f,
+                zone5Minutes = 10f,
+                trimp = 100f,
+                avgHr = 150
+            ),
+            WorkoutRecordEntity(
+                id = "new",
+                startTime = newTime,
+                endTime = newTime + 3600000,
+                exerciseType = "Running",
+                durationMinutes = 60,
+                zone1Minutes = 10f,
+                zone2Minutes = 10f,
+                zone3Minutes = 20f,
+                zone4Minutes = 10f,
+                zone5Minutes = 10f,
+                trimp = 100f,
+                avgHr = 150
+            )
         ))
 
-        val cutoffTime = now - (30 * 24 * 60 * 60 * 1000)
+        val cutoffTime = now - (30L * 24 * 60 * 60 * 1000)
         workoutDao.deleteBeforeTimestamp(cutoffTime)
 
         val remaining = workoutDao.observeSince(0).first()
@@ -150,7 +175,7 @@ class DeleteByTimestampTest {
         ))
 
         sleepDao.deleteAll()
-        val remaining = sleepDao.getSince(0).toList()
+        val remaining = sleepDao.getSince(0)
         assertEquals(0, remaining.size)
     }
 }

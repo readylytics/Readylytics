@@ -2,24 +2,24 @@ package com.gregor.lauritz.healthdashboard.data.preferences
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.preferencesDataStoreFile
-import dagger.hilt.android.testing.HiltAndroidRule
-import dagger.hilt.android.testing.HiltAndroidTest
+import androidx.datastore.preferences.preferencesDataStoreFile
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
-import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
 
-@HiltAndroidTest
+@RunWith(AndroidJUnit4::class)
 class UserPreferencesRepositoryTest {
-
-    @get:Rule
-    val hiltRule = HiltAndroidRule(this)
 
     private lateinit var context: Context
     private lateinit var dataStore: DataStore<Preferences>
@@ -27,10 +27,10 @@ class UserPreferencesRepositoryTest {
 
     @Before
     fun setup() {
-        context = InstrumentationRegistry.getInstrumentation().targetContext
-        dataStore = androidx.datastore.preferences.core.PreferenceDataStoreFactory.create(
+        context = ApplicationProvider.getApplicationContext()
+        dataStore = PreferenceDataStoreFactory.create(
             corruptionHandler = androidx.datastore.core.handlers.ReplaceFileCorruptionHandler { emptyPreferences() },
-            scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob()),
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
             produceFile = { context.preferencesDataStoreFile("test_prefs") }
         )
         repository = UserPreferencesRepository(dataStore)

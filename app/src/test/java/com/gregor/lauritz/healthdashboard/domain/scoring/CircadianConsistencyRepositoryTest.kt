@@ -68,6 +68,8 @@ class CircadianConsistencyRepositoryTest {
             override suspend fun getSessionEndingInRange(fromMs: Long, toMs: Long) = throw UnsupportedOperationException()
             override fun _observeFirstSessionEndingInRange(fromMs: Long, toMs: Long) = throw UnsupportedOperationException()
             override fun observeFirstSessionEndingInRange(fromMs: Long, toMs: Long) = throw UnsupportedOperationException()
+            override suspend fun deleteBeforeTimestamp(beforeMs: Long) = throw UnsupportedOperationException()
+            override suspend fun deleteAll() = throw UnsupportedOperationException()
         }
         val prefsRepo = mockk<UserPreferencesRepository>()
         every { prefsRepo.userPreferences } returns MutableStateFlow(prefs)
