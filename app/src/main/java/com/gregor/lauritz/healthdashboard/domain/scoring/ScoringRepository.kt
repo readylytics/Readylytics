@@ -186,8 +186,10 @@ class ScoringRepository
             val batchWindowStart = (sessions.minOfOrNull { it.endTime } ?: session.endTime) - beforeMs
             val batchWindowEnd = (sessions.maxOfOrNull { it.endTime } ?: session.endTime) + afterMs
 
-            val historicRestingHrs = withContext(Dispatchers.IO) {
-                val allWakeHrRecords = heartRateDao.getByTimeRange(batchWindowStart, batchWindowEnd)
+            val allWakeHrRecords = withContext(Dispatchers.IO) {
+                heartRateDao.getByTimeRange(batchWindowStart, batchWindowEnd)
+            }
+            val historicRestingHrs = withContext(Dispatchers.Default) {
                 sessions.filter { it.id != session.id }.mapNotNull { s ->
                     val start = s.endTime - beforeMs
                     val end = s.endTime + afterMs

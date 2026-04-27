@@ -369,13 +369,18 @@ private fun AcwrChart(
 
     val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
 
-    LaunchedEffect(trimpPoints, ratioPoints) {
+    val trimpX = remember(trimpPoints) { trimpPoints.map { it.dayOffset } }
+    val trimpY = remember(trimpPoints) { trimpPoints.map { it.value } }
+    val ratioX = remember(ratioPoints) { ratioPoints.map { it.dayOffset } }
+    val ratioY = remember(ratioPoints) { ratioPoints.map { it.value } }
+
+    LaunchedEffect(trimpX, trimpY, ratioX, ratioY) {
         modelProducer.runTransaction {
-            if (trimpPoints.isNotEmpty()) {
-                columnSeries { series(x = trimpPoints.map { it.dayOffset }, y = trimpPoints.map { it.value }) }
+            if (trimpX.isNotEmpty()) {
+                columnSeries { series(x = trimpX, y = trimpY) }
             }
-            if (ratioPoints.isNotEmpty()) {
-                lineSeries { series(x = ratioPoints.map { it.dayOffset }, y = ratioPoints.map { it.value }) }
+            if (ratioX.isNotEmpty()) {
+                lineSeries { series(x = ratioX, y = ratioY) }
             }
         }
     }
@@ -458,7 +463,13 @@ private fun WorkoutHistoryItem(
     modifier: Modifier = Modifier,
 ) {
     val displayType = exerciseTypeToDisplayName(workout.exerciseType)
-    val dateStr = SimpleDateFormat("(dd.MM)", Locale.getDefault()).format(Date(workout.startTime))
+    val dateStr = remember(workout.startTime) {
+        val fmt = java.time.format.DateTimeFormatter.ofPattern("(dd.MM)", Locale.getDefault())
+        java.time.Instant.ofEpochMilli(workout.startTime)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalDate()
+            .format(fmt)
+    }
 
     Card(
         modifier = modifier.fillMaxWidth(),

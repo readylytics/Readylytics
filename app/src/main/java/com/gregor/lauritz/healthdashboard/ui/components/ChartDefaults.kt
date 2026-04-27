@@ -33,12 +33,13 @@ object ChartDefaults {
     @Composable
     fun rememberDayOffsetFormatter(rangeStartMs: Long): CartesianValueFormatter =
         remember(rangeStartMs) {
-            val fmt = SimpleDateFormat(DateFormatUtils.DATE_FORMAT_SHORT, Locale.getDefault())
+            val fmt = java.time.format.DateTimeFormatter.ofPattern(DateFormatUtils.DATE_FORMAT_SHORT, Locale.getDefault())
             CartesianValueFormatter { _, value, _ ->
-                val cal = Calendar.getInstance()
-                cal.timeInMillis = rangeStartMs
-                cal.add(Calendar.DAY_OF_YEAR, value.toInt())
-                fmt.format(cal.time)
+                val date = java.time.Instant.ofEpochMilli(rangeStartMs)
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDate()
+                    .plusDays(value.toLong())
+                date.format(fmt)
             }
         }
 

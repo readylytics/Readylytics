@@ -47,6 +47,16 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+private const val SLEEP_TOOLTIP = "Total quality of rest based on duration and cycles.\n\n" +
+    "• 80–100: Optimal\n" +
+    "• 60–79: Fair\n" +
+    "• < 60: Poor"
+
+private const val READINESS_TOOLTIP = "Preparation for stress based on recent load & recovery.\n\n" +
+    "• 85–100: Peak\n" +
+    "• 30–69: Moderate\n" +
+    "• < 30: Rest"
+
 @Composable
 fun DashboardRoute(
     onNavigateToSleep: () -> Unit,
@@ -103,24 +113,6 @@ fun DashboardScreen(
             }
 
             item(key = "hero_scores") {
-                val sleepTooltip =
-                    remember {
-                        buildString {
-                            append("Total quality of rest based on duration and cycles.\n\n")
-                            append("• 80–100: Optimal\n")
-                            append("• 60–79: Fair\n")
-                            append("• < 60: Poor")
-                        }
-                    }
-                val readinessTooltip =
-                    remember {
-                        buildString {
-                            append("Preparation for stress based on recent load & recovery.\n\n")
-                            append("• 85–100: Peak\n")
-                            append("• 30–69: Moderate\n")
-                            append("• < 30: Rest")
-                        }
-                    }
                 Row(
                     modifier =
                         Modifier
@@ -133,13 +125,13 @@ fun DashboardScreen(
                         score = summary?.sleepScore,
                         label = "Sleep Score",
                         onClick = onNavigateToSleep,
-                        tooltipDescription = sleepTooltip,
+                        tooltipDescription = SLEEP_TOOLTIP,
                     )
                     M3ScoreDial(
                         score = summary?.readinessScore,
                         label = "Readiness",
                         onClick = onNavigateToWorkouts,
-                        tooltipDescription = readinessTooltip,
+                        tooltipDescription = READINESS_TOOLTIP,
                     )
                 }
             }
