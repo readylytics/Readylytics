@@ -31,6 +31,11 @@ interface HrvDao {
     )
     suspend fun getSleepRmssdForSession(sessionId: String): List<Float>
 
+    @Query(
+        "SELECT rmssdMs FROM hrv_records WHERE timestampMs >= :fromMs AND timestampMs <= :toMs",
+    )
+    suspend fun getRmssdInTimeRange(fromMs: Long, toMs: Long): List<Float>
+
     @Upsert
     suspend fun upsertAll(records: List<HrvRecordEntity>)
 

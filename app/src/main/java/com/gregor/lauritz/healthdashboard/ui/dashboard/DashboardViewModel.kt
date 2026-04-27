@@ -262,8 +262,12 @@ class DashboardViewModel
                     append("Variation between heartbeats in milliseconds.")
                     append("\nTarget: Within or above your 30-day rolling average. ")
                     append("(Higher = Recovered)")
-                    if (hrvBaseline != null && hrvArrow != null && hrvDiff != null) {
-                        append("\n\nBaseline: $hrvBaseline ms $hrvArrow ($hrvDiff ms)")
+                    if (hrvBaseline != null) {
+                        if (hrvArrow != null && hrvDiff != null) {
+                            append("\n\nBaseline: $hrvBaseline ms $hrvArrow ($hrvDiff ms)")
+                        } else {
+                            append("\n\nBaseline: $hrvBaseline ms (today's HRV not yet available)")
+                        }
                     } else {
                         append("\n\nNot enough data to calculate baseline.")
                     }

@@ -60,18 +60,32 @@ class HealthConnectRepository
                 }
             }
 
+        private suspend inline fun <reified T : androidx.health.connect.client.records.Record> readAllPages(
+            from: Instant,
+            to: Instant,
+        ): List<T> {
+            val all = mutableListOf<T>()
+            var pageToken: String? = null
+            do {
+                val response = client.readRecords(
+                    ReadRecordsRequest(
+                        recordType = T::class,
+                        timeRangeFilter = TimeRangeFilter.between(from, to),
+                        pageToken = pageToken,
+                    ),
+                )
+                all.addAll(response.records)
+                pageToken = response.pageToken
+            } while (pageToken != null)
+            return all
+        }
+
         suspend fun readSleepSessions(
             from: Instant,
             to: Instant,
         ): List<SleepSessionRecord> =
             withContext(Dispatchers.IO) {
-                client
-                    .readRecords(
-                        ReadRecordsRequest(
-                            recordType = SleepSessionRecord::class,
-                            timeRangeFilter = TimeRangeFilter.between(from, to),
-                        ),
-                    ).records
+                readAllPages<SleepSessionRecord>(from, to)
             }
 
         suspend fun readHeartRateSamples(
@@ -79,13 +93,7 @@ class HealthConnectRepository
             to: Instant,
         ): List<HeartRateRecord> =
             withContext(Dispatchers.IO) {
-                client
-                    .readRecords(
-                        ReadRecordsRequest(
-                            recordType = HeartRateRecord::class,
-                            timeRangeFilter = TimeRangeFilter.between(from, to),
-                        ),
-                    ).records
+                readAllPages<HeartRateRecord>(from, to)
             }
 
         suspend fun readHrvSamples(
@@ -93,13 +101,7 @@ class HealthConnectRepository
             to: Instant,
         ): List<HeartRateVariabilityRmssdRecord> =
             withContext(Dispatchers.IO) {
-                client
-                    .readRecords(
-                        ReadRecordsRequest(
-                            recordType = HeartRateVariabilityRmssdRecord::class,
-                            timeRangeFilter = TimeRangeFilter.between(from, to),
-                        ),
-                    ).records
+                readAllPages<HeartRateVariabilityRmssdRecord>(from, to)
             }
 
         suspend fun readExerciseSessions(
@@ -107,13 +109,7 @@ class HealthConnectRepository
             to: Instant,
         ): List<ExerciseSessionRecord> =
             withContext(Dispatchers.IO) {
-                client
-                    .readRecords(
-                        ReadRecordsRequest(
-                            recordType = ExerciseSessionRecord::class,
-                            timeRangeFilter = TimeRangeFilter.between(from, to),
-                        ),
-                    ).records
+                readAllPages<ExerciseSessionRecord>(from, to)
             }
 
         suspend fun readSteps(

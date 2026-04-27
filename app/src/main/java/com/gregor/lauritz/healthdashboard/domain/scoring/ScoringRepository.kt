@@ -103,6 +103,14 @@ class ScoringRepository
 
             summary = summary.copy(loadScore = loadScore, strainRatio = sr, totalTrimp = todayTrimp)
 
+            // Always compute and persist HRV baseline regardless of sleep session availability
+            val baselineFromMs = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
+            val hrvBaselineValues = hrvDao.getSleepRmssdValues(baselineFromMs)
+            val computedHrvBaseline = (prefs.hrvBaselineOverride
+                ?: hrvBaselineValues.median().takeIf { it > 0f })
+                ?.roundToInt()
+            summary = summary.copy(hrvBaseline = computedHrvBaseline)
+
             val session = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
             if (session != null) {
                 summary = calculateSleepMetrics(session, dayMidnight, prefs, summary, loadScore)
@@ -140,11 +148,21 @@ class ScoringRepository
             val baselineFrom = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
             val hrvValues = hrvDao.getSleepRmssdValues(baselineFrom)
             val rhrValues = heartRateDao.getAvgSleepHrPerSession(baselineFrom)
-            val sessionHrvSamples = hrvDao.getSleepRmssdForSession(session.id)
+            var sessionHrvSamples = hrvDao.getSleepRmssdForSession(session.id)
+            android.util.Log.d(
+                "ScoringRepository",
+                "HRV session lookup [sessionId=${session.id}] startTime=${session.startTime} endTime=${session.endTime} samples=${sessionHrvSamples.size}"
+            )
+            if (sessionHrvSamples.isEmpty()) {
+                sessionHrvSamples = hrvDao.getRmssdInTimeRange(session.startTime, session.endTime)
+                android.util.Log.d(
+                    "ScoringRepository",
+                    "HRV time-range fallback [start=${session.startTime} end=${session.endTime}] samples=${sessionHrvSamples.size}"
+                )
+            }
             val currentHrvMean = sessionHrvSamples.mean()
             val currentNocturnalRhr = heartRateDao.getAvgSleepHr(session.id)
 
-            val hrvBaseline = (prefs.hrvBaselineOverride ?: hrvValues.median()).roundToInt()
             val baselineRhrValue = (prefs.rhrBaselineOverride ?: rhrValues.median()).roundToInt()
 
             val beforeMs = prefs.restingHrBeforeMinutes * 60 * 1000L
@@ -228,7 +246,6 @@ class ScoringRepository
                 deepSleepPercent = if (session.durationMinutes > 0) session.deepSleepMinutes / session.durationMinutes.toFloat() * 100f else null,
                 remSleepPercent = if (session.durationMinutes > 0) session.remSleepMinutes / session.durationMinutes.toFloat() * 100f else null,
                 rhrRatio = rhrRatio,
-                hrvBaseline = hrvBaseline,
                 restingHeartRate = currentRestingHr,
                 restingHrRatio = restingHrRatio,
                 restingHrBaseline = restingHrBaseline
