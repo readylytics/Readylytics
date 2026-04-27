@@ -16,7 +16,7 @@ enum class TimeRange(
         val zoneId = ZoneId.systemDefault()
         return baseDate
             .atStartOfDay(zoneId)
-            .minusDays(days.toLong())
+            .minusDays(days.toLong() - 1)
             .toInstant()
             .toEpochMilli()
     }

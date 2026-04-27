@@ -7,8 +7,6 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
-import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
-import com.gregor.lauritz.healthdashboard.data.local.entity.HrvRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
@@ -192,7 +190,8 @@ class SleepViewModel
 
                     val summaryFlow =
                         if (date == LocalDate.now(zoneId)) {
-                            dailySummaryDao.observeLatest()
+                            val todayMs = LocalDate.now(zoneId).atStartOfDay(zoneId).toInstant().toEpochMilli()
+                            dailySummaryDao.observeSince(todayMs).map { it.firstOrNull() }
                         } else {
                             flow { emit(dailySummaryDao.getByDate(selectedMidnightMs)) }
                         }
@@ -203,8 +202,7 @@ class SleepViewModel
                             selectedMidnightMs,
                             nextDayMidnightMs,
                         ),
-                        hrvDao.observeSleepHrvSince(fromMs),
-                        heartRateDao.observeSleepHrSince(fromMs),
+                        dailySummaryDao.observeSince(fromMs),
                         prefsRepo.userPreferences,
                         baselineHrvFlow,
                         baselineRhrFlow,
@@ -212,18 +210,25 @@ class SleepViewModel
                         val latestSummary = flows[0] as DailySummaryEntity?
                         val latestSession = flows[1] as SleepSessionEntity?
                         @Suppress("UNCHECKED_CAST")
-                        val hrvRecords = flows[2] as List<HrvRecordEntity>
-                        @Suppress("UNCHECKED_CAST")
-                        val hrRecords = flows[3] as List<HeartRateRecordEntity>
-                        val prefs = flows[4] as com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-                        val bHrv = flows[5] as Float?
-                        val bRhr = flows[6] as Int?
+                        val summaries = flows[2] as List<DailySummaryEntity>
+                        val prefs = flows[3] as com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+                        val bHrv = flows[4] as Float?
+                        val bRhr = flows[5] as Int?
 
-                        val filteredHrv = hrvRecords.filter { it.timestampMs < nextDayMidnightMs }
-                        val filteredHr = hrRecords.filter { it.timestampMs < nextDayMidnightMs }
+                        val startLocalDate = Instant.ofEpochMilli(startDayMs).atZone(zoneId).toLocalDate()
 
-                        val hrvPoints = groupHrvByDay(filteredHrv, startDayMs)
-                        val rhrPoints = groupRhrByDay(filteredHr, startDayMs)
+                        val hrvPoints = summaries.mapNotNull { s ->
+                            s.nocturnalHrv?.let { hrv ->
+                                val d = Instant.ofEpochMilli(s.dateMidnightMs).atZone(zoneId).toLocalDate()
+                                DailyDataPoint(dayOffset = ChronoUnit.DAYS.between(startLocalDate, d).toInt(), value = hrv.toFloat())
+                            }
+                        }
+                        val rhrPoints = summaries.mapNotNull { s ->
+                            s.nocturnalRhr?.let { rhr ->
+                                val d = Instant.ofEpochMilli(s.dateMidnightMs).atZone(zoneId).toLocalDate()
+                                DailyDataPoint(dayOffset = ChronoUnit.DAYS.between(startLocalDate, d).toInt(), value = rhr.toFloat())
+                            }
+                        }
 
                         SleepUiState(
                             latestSummary = latestSummary,
@@ -263,50 +268,6 @@ class SleepViewModel
             selectedDateRepository.selectNextDay()
         }
     }
-
-private fun groupHrvByDay(
-    records: List<HrvRecordEntity>,
-    startDayMs: Long,
-): List<DailyDataPoint> {
-    val zoneId = ZoneId.systemDefault()
-    val startLocalDate = Instant.ofEpochMilli(startDayMs).atZone(zoneId).toLocalDate()
-    return records
-        .groupBy { truncateToDayMs(it.timestampMs) }
-        .toSortedMap()
-        .map { (dayMs_, daily) ->
-            val currentLocalDate = Instant.ofEpochMilli(dayMs_).atZone(zoneId).toLocalDate()
-            DailyDataPoint(
-                dayOffset = ChronoUnit.DAYS.between(startLocalDate, currentLocalDate).toInt(),
-                value =
-                    daily
-                        .map { it.rmssdMs }
-                        .average()
-                        .toFloat(),
-            )
-        }
-}
-
-private fun groupRhrByDay(
-    records: List<HeartRateRecordEntity>,
-    startDayMs: Long,
-): List<DailyDataPoint> {
-    val zoneId = ZoneId.systemDefault()
-    val startLocalDate = Instant.ofEpochMilli(startDayMs).atZone(zoneId).toLocalDate()
-    return records
-        .groupBy { truncateToDayMs(it.timestampMs) }
-        .toSortedMap()
-        .map { (dayMs_, daily) ->
-            val currentLocalDate = Instant.ofEpochMilli(dayMs_).atZone(zoneId).toLocalDate()
-            DailyDataPoint(
-                dayOffset = ChronoUnit.DAYS.between(startLocalDate, currentLocalDate).toInt(),
-                value =
-                    daily
-                        .map { it.beatsPerMinute }
-                        .average()
-                        .toFloat(),
-            )
-        }
-}
 
 internal fun truncateToDayMs(timestampMs: Long): Long {
     val zoneId = ZoneId.systemDefault()

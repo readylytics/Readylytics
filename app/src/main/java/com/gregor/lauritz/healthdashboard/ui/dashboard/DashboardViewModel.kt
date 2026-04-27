@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -89,9 +90,11 @@ class DashboardViewModel
             selectedDateRepository.selectedDate
                 .flatMapLatest { date ->
                     val today = LocalDate.now()
+                    val zoneId = ZoneId.systemDefault()
                     val summaryFlow =
                         if (date == today) {
-                            dailySummaryDao.observeLatest()
+                            val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                            dailySummaryDao.observeSince(todayMs).map { it.firstOrNull() }
                         } else {
                             val midnightMs =
                                 date

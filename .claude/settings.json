@@ -8,7 +8,9 @@
       "Bash(./gradlew assembleDebug --info)",
       "Bash(./gradlew ktlintCheck assembleDebug)",
       "Bash(./gradlew compileDebugKotlin)",
-      "Bash(./gradlew testDebugUnitTest)"
+      "Bash(./gradlew testDebugUnitTest)",
+      "Bash(./gradlew testDebugUnitTest --no-build-cache)",
+      "Bash(./gradlew testDebugUnitTest --tests TimeRangeTest)"
     ]
   }
 }
