@@ -176,6 +176,8 @@ class ScoringRepository
             val afterMs = prefs.restingHrAfterMinutes * 60 * 1000L
             val minHrStartTime = session.endTime - beforeMs
             val minHrEndTime = session.endTime + afterMs
+
+            // Get current resting HR from our single nocturnal fetch if possible, or fallback to DAO
             val currentRestingHr = heartRateDao.getMinHrInRange(minHrStartTime, minHrEndTime)
 
             val sessions = sleepSessionDao.getSince(baselineFrom)
@@ -183,14 +185,16 @@ class ScoringRepository
             // instead of N individual getMinHrInRange calls.
             val batchWindowStart = (sessions.minOfOrNull { it.endTime } ?: session.endTime) - beforeMs
             val batchWindowEnd = (sessions.maxOfOrNull { it.endTime } ?: session.endTime) + afterMs
-            val allWakeHrRecords = heartRateDao.getByTimeRange(batchWindowStart, batchWindowEnd)
 
-            val historicRestingHrs = sessions.filter { it.id != session.id }.mapNotNull { s ->
-                val start = s.endTime - beforeMs
-                val end = s.endTime + afterMs
-                allWakeHrRecords
-                    .filter { it.timestampMs in start..end }
-                    .minOfOrNull { it.beatsPerMinute }
+            val historicRestingHrs = withContext(Dispatchers.IO) {
+                val allWakeHrRecords = heartRateDao.getByTimeRange(batchWindowStart, batchWindowEnd)
+                sessions.filter { it.id != session.id }.mapNotNull { s ->
+                    val start = s.endTime - beforeMs
+                    val end = s.endTime + afterMs
+                    allWakeHrRecords
+                        .filter { it.timestampMs in start..end }
+                        .minOfOrNull { it.beatsPerMinute }
+                }
             }
             val restingHrBaseline = if (historicRestingHrs.isNotEmpty()) historicRestingHrs.median().roundToInt() else null
             val restingHrRatio = if (currentRestingHr != null && restingHrBaseline != null && restingHrBaseline > 0) {

@@ -69,13 +69,7 @@ class HealthDashboardApplication :
         source: LifecycleOwner,
         event: Lifecycle.Event,
     ) {
-        if (event == Lifecycle.Event.ON_START) {
-            appScope.launch {
-                if (hcRepository.checkPermissions() is PermissionStatus.Granted) {
-                    foregroundSyncController.evaluateAndSync()
-                }
-            }
-        }
+        // Redundant sync trigger removed. MainActivity handles foreground sync via SyncViewModel.
     }
 
     override fun onTerminate() {

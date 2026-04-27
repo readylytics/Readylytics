@@ -18,6 +18,8 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
@@ -39,8 +41,11 @@ class HealthSyncUseCase
         private val appConfigRepo: AppConfigRepository,
         private val scoringRepository: ScoringRepository,
     ) {
-        suspend fun sync(windowDays: Int = 8): Result<Unit> =
-            withContext(Dispatchers.Default) {
+    private val syncMutex = Mutex()
+
+    suspend fun sync(windowDays: Int = 8): Result<Unit> =
+        syncMutex.withLock {
+            withContext(Dispatchers.IO) {
                 runCatching {
                     val to = Instant.now()
                     val zoneId = ZoneId.systemDefault()
@@ -116,16 +121,17 @@ class HealthSyncUseCase
                     appConfigRepo.updateLastSyncTimestamp(System.currentTimeMillis())
                 }
             }
+        }
 
-        suspend fun catchUpSync(): Result<Unit> = sync(windowDays = 60)
+    suspend fun catchUpSync(): Result<Unit> = sync(windowDays = 60)
 
-        private suspend fun updateCalculatedMetrics(prefs: UserPreferences) {
-            // Always recalculate Max HR if auto-calculate is enabled (in case age changed via onboarding/settings)
-            if (prefs.autoCalculateMaxHr) {
-                val calculatedMaxHr = HeartRateFormulas.estimateMaxHr(prefs.age)
-                if (calculatedMaxHr != prefs.maxHeartRate) {
-                    prefsRepo.updateMaxHeartRate(calculatedMaxHr)
-                }
+    private suspend fun updateCalculatedMetrics(prefs: UserPreferences) {
+        // Always recalculate Max HR if auto-calculate is enabled (in case age changed via onboarding/settings)
+        if (prefs.autoCalculateMaxHr) {
+            val calculatedMaxHr = HeartRateFormulas.estimateMaxHr(prefs.age)
+            if (calculatedMaxHr != prefs.maxHeartRate) {
+                prefsRepo.updateMaxHeartRate(calculatedMaxHr)
             }
         }
     }
+}

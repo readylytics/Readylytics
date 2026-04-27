@@ -47,6 +47,7 @@ object DatabaseModule {
                 object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
                         super.onOpen(db)
+                        db.execSQL("PRAGMA journal_mode = WAL")
                         db.execSQL("PRAGMA synchronous = NORMAL")
                     }
                 },
