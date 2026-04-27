@@ -7,7 +7,10 @@
       "Bash(grep -E \"\\\\.kt$\")",
       "Bash(./gradlew assembleDebug --no-build-cache)",
       "Bash(./gradlew :app:assembleDebug)",
-      "Bash(./gradlew assembleDebug -x test)"
+      "Bash(./gradlew assembleDebug -x test)",
+      "Bash(./gradlew compileDebugKotlin -x lintVitalRelease)",
+      "Bash(./gradlew testDebugUnitTest -x lintVitalRelease)",
+      "Bash(./gradlew testDebugUnitTest --tests \"*Workout*\")"
     ]
   }
 }

@@ -27,6 +27,8 @@ data class HeartRatePoint(
 data class WorkoutDetailUiState(
     val workout: WorkoutRecordEntity? = null,
     val hrSamples: List<HeartRatePoint> = emptyList(),
+    val hrChartData: List<Pair<Double, Double>> = emptyList(),
+    val durationMinutes: Int = 0,
     val hrr1Min: Int? = null,
     val hrr2Min: Int? = null,
     val hrr3Min: Int? = null,
@@ -46,6 +48,30 @@ class WorkoutDetailViewModel
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(WorkoutDetailUiState())
         val uiState = _uiState.asStateFlow()
+
+        private fun computeChartData(
+            samples: List<HeartRatePoint>,
+            workoutStart: Long,
+            workoutEnd: Long,
+        ): Pair<List<Pair<Double, Double>>, Int> {
+            val workoutStartInstant = Instant.ofEpochMilli(workoutStart)
+            val workoutEndInstant = Instant.ofEpochMilli(workoutEnd)
+            val workoutSamples = samples.filter { it.timestamp in workoutStartInstant..workoutEndInstant }
+            val durationMinutes = ChronoUnit.MINUTES.between(workoutStartInstant, workoutEndInstant)
+                .toInt()
+                .coerceAtLeast(1)
+
+            val chartData = workoutSamples
+                .groupBy {
+                    (ChronoUnit.SECONDS.between(workoutStartInstant, it.timestamp) / 60L).toInt()
+                }
+                .toSortedMap()
+                .map { (minute, points) ->
+                    minute.toDouble() to points.map { it.bpm.toDouble() }.average()
+                }
+
+            return chartData to durationMinutes
+        }
 
         fun loadWorkout(workoutId: String) {
             viewModelScope.launch {
@@ -71,7 +97,8 @@ class WorkoutDetailViewModel
                         .distinctBy { it.timestamp }
                         .sortedBy { it.timestamp }
 
-                // Calculate HRR
+                val (chartData, durationMinutes) = computeChartData(allSamples, workout.startTime, workout.endTime)
+
                 val workoutEndInstant = Instant.ofEpochMilli(workout.endTime)
                 val endHr = allSamples.lastOrNull { it.timestamp <= workoutEndInstant }?.bpm
 
@@ -100,6 +127,8 @@ class WorkoutDetailViewModel
                         WorkoutDetailUiState(
                             workout = workout,
                             hrSamples = allSamples,
+                            hrChartData = chartData,
+                            durationMinutes = durationMinutes,
                             hrr1Min = hr1Min?.let { endHr - it },
                             hrr2Min = hr2Min?.let { endHr - it },
                             hrr3Min = hr3Min?.let { endHr - it },
@@ -112,6 +141,8 @@ class WorkoutDetailViewModel
                         WorkoutDetailUiState(
                             workout = workout,
                             hrSamples = allSamples,
+                            hrChartData = chartData,
+                            durationMinutes = durationMinutes,
                             totalPai = summary?.totalPai,
                             paiDailyBreakdown = paiBreakdown,
                             isLoading = false,

@@ -45,10 +45,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.ui.common.DateFormatUtils
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
+import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
+import java.time.Instant
+import java.time.ZoneId
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
@@ -64,11 +68,6 @@ import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
-import java.text.SimpleDateFormat
-import java.time.Instant
-import java.time.temporal.ChronoUnit
-import java.util.Date
-import java.util.Locale
 import kotlin.math.roundToInt
 
 private const val TARGET_X_AXIS_LABELS = 6
@@ -134,12 +133,20 @@ fun WorkoutDetailScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                TrimpCard(
-                    trimp = workout.trimp,
+                MetricCard(
+                    title = "Training Load",
+                    value = workout.trimp.roundToInt().toString(),
+                    secondaryText = "TRIMP",
+                    status = MetricStatus.NEUTRAL,
+                    tooltip = "Total training impulse - measures training intensity and duration.",
                     modifier = Modifier.weight(1f),
                 )
-                AvgPulseCard(
-                    avgHr = workout.avgHr,
+                MetricCard(
+                    title = "Avg Pulse",
+                    value = if (workout.avgHr > 0) workout.avgHr.toString() else "--",
+                    secondaryText = "BPM",
+                    status = MetricStatus.NEUTRAL,
+                    tooltip = "Average heart rate during the workout.",
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -150,7 +157,7 @@ fun WorkoutDetailScreen(
         }
 
         item {
-            HrChartCard(uiState.hrSamples, workout.startTime, workout.endTime)
+            HrChartCard(uiState.hrChartData, uiState.durationMinutes)
         }
 
         item {
@@ -161,10 +168,17 @@ fun WorkoutDetailScreen(
 
 @Composable
 private fun WorkoutHeader(workout: WorkoutRecordEntity) {
-    val type = exerciseTypeToDisplayName(workout.exerciseType)
-    val start = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(workout.startTime))
-    val end = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(workout.endTime))
-    val date = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date(workout.startTime))
+    val type = remember(workout.exerciseType) { exerciseTypeToDisplayName(workout.exerciseType) }
+
+    val (start, end, date) = remember(workout.startTime, workout.endTime) {
+        val startInstant = Instant.ofEpochMilli(workout.startTime).atZone(ZoneId.systemDefault())
+        val endInstant = Instant.ofEpochMilli(workout.endTime).atZone(ZoneId.systemDefault())
+        Triple(
+            startInstant.format(DateFormatUtils.WORKOUT_TIME_FORMATTER),
+            endInstant.format(DateFormatUtils.WORKOUT_TIME_FORMATTER),
+            startInstant.format(DateFormatUtils.WORKOUT_DATE_FORMATTER),
+        )
+    }
 
     Column {
         Text(text = type, style = MaterialTheme.typography.headlineMedium)
@@ -174,37 +188,6 @@ private fun WorkoutHeader(workout: WorkoutRecordEntity) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
-}
-
-@Composable
-private fun TrimpCard(
-    trimp: Float,
-    modifier: Modifier = Modifier,
-) {
-    Card(modifier = modifier) {
-        Column(Modifier.padding(16.dp)) {
-            Text("Training Load", style = MaterialTheme.typography.titleSmall)
-            Text(text = trimp.roundToInt().toString(), style = MaterialTheme.typography.headlineMedium)
-            Text("TRIMP", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun AvgPulseCard(
-    avgHr: Int,
-    modifier: Modifier = Modifier,
-) {
-    Card(modifier = modifier) {
-        Column(Modifier.padding(16.dp)) {
-            Text("Avg Pulse", style = MaterialTheme.typography.titleSmall)
-            Text(
-                text = if (avgHr > 0) avgHr.toString() else "--",
-                style = MaterialTheme.typography.headlineMedium,
-            )
-            Text("BPM", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
     }
 }
 
@@ -270,29 +253,22 @@ private fun ZoneRow(
 
 @Composable
 private fun HrChartCard(
-    samples: List<HeartRatePoint>,
-    workoutStart: Long,
-    workoutEnd: Long,
+    chartData: List<Pair<Double, Double>>,
+    durationMinutes: Int,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text("Heart Rate", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(16.dp))
-            if (samples.isEmpty()) {
+            if (chartData.isEmpty()) {
                 Text("No HR data available")
             } else {
-                HrChart(samples, workoutStart, workoutEnd)
+                HrChart(chartData, durationMinutes)
             }
         }
     }
 }
 
-/**
- * Picks ~[target] label minutes evenly across [0, durationMinutes], anchored
- * at both endpoints. For prime/awkward durations (e.g. 31, 47) this yields
- * uneven but visually balanced spacing while guaranteeing 0 and the final
- * minute are present.
- */
 private fun computeLabelMinutes(durationMinutes: Int, target: Int): List<Double> {
     if (durationMinutes <= 0) return listOf(0.0)
     val intervals = (target - 1).coerceAtLeast(1)
@@ -307,44 +283,18 @@ private fun computeLabelMinutes(durationMinutes: Int, target: Int): List<Double>
 
 @Composable
 private fun HrChart(
-    samples: List<HeartRatePoint>,
-    workoutStart: Long,
-    workoutEnd: Long,
+    chartData: List<Pair<Double, Double>>,
+    durationMinutes: Int,
 ) {
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    val workoutStartInstant = Instant.ofEpochMilli(workoutStart)
-    val workoutEndInstant = Instant.ofEpochMilli(workoutEnd)
-
-    val workoutSamples = remember(samples, workoutStartInstant, workoutEndInstant) {
-        samples.filter { it.timestamp in workoutStartInstant..workoutEndInstant }
-    }
-
-    val durationMinutes = remember(workoutStart, workoutEnd) {
-        ChronoUnit.MINUTES.between(workoutStartInstant, workoutEndInstant)
-            .toInt()
-            .coerceAtLeast(1)
-    }
-
-    // 1-minute averages → integer x values, x-step locked to 1.
-    val perMinuteSeries = remember(workoutSamples, workoutStartInstant) {
-        workoutSamples
-            .groupBy {
-                (ChronoUnit.SECONDS.between(workoutStartInstant, it.timestamp) / 60L).toInt()
-            }
-            .toSortedMap()
-            .map { (minute, points) ->
-                minute.toDouble() to points.map { it.bpm.toDouble() }.average()
-            }
-    }
-
-    LaunchedEffect(perMinuteSeries) {
-        if (perMinuteSeries.isEmpty()) return@LaunchedEffect
+    LaunchedEffect(chartData) {
+        if (chartData.isEmpty()) return@LaunchedEffect
         modelProducer.runTransaction {
             lineSeries {
                 series(
-                    x = perMinuteSeries.map { it.first },
-                    y = perMinuteSeries.map { it.second },
+                    x = chartData.map { it.first },
+                    y = chartData.map { it.second },
                 )
             }
         }
@@ -354,11 +304,6 @@ private fun HrChart(
         computeLabelMinutes(durationMinutes, TARGET_X_AXIS_LABELS)
     }
 
-    // Custom ItemPlacer: always include 0 and durationMinutes as labels.
-    // Returning empty strings from valueFormatter is illegal in Vico 2, so
-    // controlling the actual label set is the supported route. We delegate
-    // every other concern (margins, measurements, etc.) to the default
-    // aligned placer via interface-by delegation.
     val itemPlacer = remember(labelMinutes) {
         val base = HorizontalAxis.ItemPlacer.aligned(
             spacing = { 1 },
@@ -413,60 +358,6 @@ private fun HrChart(
         ),
         modifier = Modifier.fillMaxWidth().height(200.dp),
     )
-}
-
-@Composable
-private fun PaiProgressCard(totalPai: Float?) {
-    val pai = totalPai ?: 0f
-    val progress = (pai / 150f).coerceIn(0f, 1f)
-
-    val status = when {
-        pai >= 100f -> MetricStatus.OPTIMAL
-        pai >= 75f -> MetricStatus.NEUTRAL
-        pai >= 50f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
-
-    val color = status.onContainerColor()
-
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Weekly PAI Progress", style = MaterialTheme.typography.titleSmall)
-                Text(
-                    "${pai.toInt()} / 100",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = color
-                )
-            }
-            Spacer(Modifier.height(12.dp))
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(12.dp)
-                    .clip(RoundedCornerShape(6.dp)),
-                color = color,
-                trackColor = color.copy(alpha = 0.15f),
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = when {
-                    pai >= 100f -> "Optimal heart protection reached!"
-                    pai >= 75f -> "Almost there! Keep it up."
-                    pai >= 50f -> "Maintain consistency to reach 100."
-                    else -> "Start moving to improve your heart health."
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
 }
 
 @Composable
