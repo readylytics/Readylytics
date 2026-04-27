@@ -6,13 +6,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.hilt.work.HiltWorkerFactory
-import androidx.work.BackoffPolicy
 import androidx.work.Configuration
-import androidx.work.Constraints
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.data.healthconnect.PermissionStatus
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
@@ -28,12 +22,12 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.util.concurrent.TimeUnit
 
 @HiltAndroidApp
 class HealthDashboardApplication :
     Application(),
-    LifecycleEventObserver {
+    LifecycleEventObserver,
+    Configuration.Provider {
     @Inject
     lateinit var hcRepository: HealthConnectRepository
 
@@ -52,18 +46,17 @@ class HealthDashboardApplication :
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
+
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onCreate() {
         super.onCreate()
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
-        try {
-            WorkManager.initialize(this, Configuration.Builder()
-                .setWorkerFactory(workerFactory)
-                .build())
-        } catch (e: IllegalStateException) {
-            // Already initialized
-        }
+
         appScope.launch(Dispatchers.IO) {
             val schedule = backupPrefsRepository.backupSchedule.first()
             workerScheduler.scheduleBackupWorker(schedule)

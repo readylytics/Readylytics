@@ -20,15 +20,15 @@ import java.time.ZoneId
 class DataCleanupWorker
     @AssistedInject
     constructor(
-        @Assisted appContext: Context,
-        @Assisted workerParams: WorkerParameters,
+        @Assisted context: Context,
+        @Assisted params: WorkerParameters,
         private val sleepDao: SleepSessionDao,
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
         private val dailySummaryDao: DailySummaryDao,
         private val prefsRepo: UserPreferencesRepository,
-    ) : CoroutineWorker(appContext, workerParams) {
+    ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
             return runCatching {
                 val prefs = prefsRepo.userPreferences.first()

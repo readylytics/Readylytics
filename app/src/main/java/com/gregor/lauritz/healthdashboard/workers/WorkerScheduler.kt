@@ -7,13 +7,14 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
+import dagger.Lazy
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class WorkerScheduler @Inject constructor(
-    private val workManager: WorkManager
+    private val workManager: Lazy<WorkManager>
 ) {
     companion object {
         const val BACKUP_WORK_NAME = "health_backup_periodic"
@@ -23,7 +24,7 @@ class WorkerScheduler @Inject constructor(
 
     fun scheduleBackupWorker(schedule: BackupSchedule) {
         if (schedule == BackupSchedule.MANUAL) {
-            workManager.cancelUniqueWork(BACKUP_WORK_NAME)
+            workManager.get().cancelUniqueWork(BACKUP_WORK_NAME)
             return
         }
 
@@ -38,7 +39,7 @@ class WorkerScheduler @Inject constructor(
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
             .build()
 
-        workManager.enqueueUniquePeriodicWork(
+        workManager.get().enqueueUniquePeriodicWork(
             BACKUP_WORK_NAME,
             ExistingPeriodicWorkPolicy.UPDATE,
             request
@@ -55,7 +56,7 @@ class WorkerScheduler @Inject constructor(
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
             .build()
 
-        workManager.enqueueUniquePeriodicWork(
+        workManager.get().enqueueUniquePeriodicWork(
             BIRTHDAY_WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
             request
@@ -72,7 +73,7 @@ class WorkerScheduler @Inject constructor(
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
             .build()
 
-        workManager.enqueueUniquePeriodicWork(
+        workManager.get().enqueueUniquePeriodicWork(
             DATA_CLEANUP_WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
             request

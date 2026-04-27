@@ -13,10 +13,10 @@ import dagger.assisted.AssistedInject
 class BackupWorker
     @AssistedInject
     constructor(
-        @Assisted appContext: Context,
-        @Assisted workerParams: WorkerParameters,
+        @Assisted context: Context,
+        @Assisted params: WorkerParameters,
         private val backupUseCase: BackupUseCase,
-    ) : CoroutineWorker(appContext, workerParams) {
+    ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
             val result = backupUseCase.execute()
             return when {
