@@ -82,7 +82,7 @@ class UserPreferencesRepository
                 .catch { e ->
                     if (e is IOException) emit(emptyPreferences()) else throw e
                 }.map { prefs ->
-                    val maxHr = prefs[Keys.MAX_HEART_RATE] ?: 190
+                    val maxHr = prefs[Keys.MAX_HEART_RATE] ?: SettingsDefaults.MAX_HEART_RATE
 
                     val z1MinBpm = prefs[Keys.ZONE_1_MIN_BPM]
                     val z1MaxBpm = prefs[Keys.ZONE_1_MAX_BPM]
@@ -94,11 +94,11 @@ class UserPreferencesRepository
                         if (z1MinBpm != null && z1MaxBpm != null && z2MaxBpm != null && z3MaxBpm != null && z4MaxBpm != null) {
                             listOf(z1MinBpm, z1MaxBpm, z2MaxBpm, z3MaxBpm, z4MaxBpm)
                         } else {
-                            val z1Min = prefs[Keys.ZONE_1_MIN_PERCENT] ?: 0.50f
-                            val z1Max = prefs[Keys.ZONE_1_MAX_PERCENT] ?: 0.60f
-                            val z2Max = prefs[Keys.ZONE_2_MAX_PERCENT] ?: 0.70f
-                            val z3Max = prefs[Keys.ZONE_3_MAX_PERCENT] ?: 0.80f
-                            val z4Max = prefs[Keys.ZONE_4_MAX_PERCENT] ?: 0.90f
+                            val z1Min = prefs[Keys.ZONE_1_MIN_PERCENT] ?: SettingsDefaults.ZONE_1_MIN_PERCENT
+                            val z1Max = prefs[Keys.ZONE_1_MAX_PERCENT] ?: SettingsDefaults.ZONE_1_MAX_PERCENT
+                            val z2Max = prefs[Keys.ZONE_2_MAX_PERCENT] ?: SettingsDefaults.ZONE_2_MAX_PERCENT
+                            val z3Max = prefs[Keys.ZONE_3_MAX_PERCENT] ?: SettingsDefaults.ZONE_3_MAX_PERCENT
+                            val z4Max = prefs[Keys.ZONE_4_MAX_PERCENT] ?: SettingsDefaults.ZONE_4_MAX_PERCENT
                             listOf(
                                 (z1Min * maxHr).toInt(),
                                 (z1Max * maxHr).toInt(),
@@ -109,72 +109,72 @@ class UserPreferencesRepository
                         }
 
                     UserPreferences(
-                        goalSleepHours = prefs[Keys.GOAL_SLEEP_HOURS] ?: 8f,
+                        goalSleepHours = prefs[Keys.GOAL_SLEEP_HOURS] ?: SettingsDefaults.GOAL_SLEEP_HOURS,
                         hrvBaselineOverride =
                             if (prefs[Keys.HRV_BASELINE_OVERRIDE_SET] == true) {
                                 prefs[Keys.HRV_BASELINE_OVERRIDE]
                             } else {
-                                null
+                                SettingsDefaults.HRV_BASELINE_OVERRIDE
                             },
                         rhrBaselineOverride =
                             if (prefs[Keys.RHR_BASELINE_OVERRIDE_SET] == true) {
                                 prefs[Keys.RHR_BASELINE_OVERRIDE]
                             } else {
-                                null
+                                SettingsDefaults.RHR_BASELINE_OVERRIDE
                             },
                         syncPreference =
                             prefs[Keys.SYNC_PREFERENCE]
                                 ?.let { runCatching { SyncPreference.valueOf(it) }.getOrNull() }
-                                ?: SyncPreference.BY_TIME,
-                        syncIntervalHours = prefs[Keys.SYNC_INTERVAL_HOURS] ?: 1,
-                        lastSyncTimestamp = prefs[Keys.LAST_SYNC_TIMESTAMP] ?: 0L,
+                                ?: SettingsDefaults.SYNC_PREFERENCE,
+                        syncIntervalHours = prefs[Keys.SYNC_INTERVAL_HOURS] ?: SettingsDefaults.SYNC_INTERVAL_HOURS,
+                        lastSyncTimestamp = prefs[Keys.LAST_SYNC_TIMESTAMP] ?: SettingsDefaults.LAST_SYNC_TIMESTAMP,
                         maxHeartRate = maxHr,
-                        autoCalculateMaxHr = prefs[Keys.AUTO_CALCULATE_MAX_HR] ?: true,
-                        manualZoneEditing = prefs[Keys.MANUAL_ZONE_EDITING] ?: false,
-                        zone1MinPercent = prefs[Keys.ZONE_1_MIN_PERCENT] ?: 0.50f,
-                        zone1MaxPercent = prefs[Keys.ZONE_1_MAX_PERCENT] ?: 0.60f,
-                        zone2MaxPercent = prefs[Keys.ZONE_2_MAX_PERCENT] ?: 0.70f,
-                        zone3MaxPercent = prefs[Keys.ZONE_3_MAX_PERCENT] ?: 0.80f,
-                        zone4MaxPercent = prefs[Keys.ZONE_4_MAX_PERCENT] ?: 0.90f,
+                        autoCalculateMaxHr = prefs[Keys.AUTO_CALCULATE_MAX_HR] ?: SettingsDefaults.AUTO_CALCULATE_MAX_HR,
+                        manualZoneEditing = prefs[Keys.MANUAL_ZONE_EDITING] ?: SettingsDefaults.MANUAL_ZONE_EDITING,
+                        zone1MinPercent = prefs[Keys.ZONE_1_MIN_PERCENT] ?: SettingsDefaults.ZONE_1_MIN_PERCENT,
+                        zone1MaxPercent = prefs[Keys.ZONE_1_MAX_PERCENT] ?: SettingsDefaults.ZONE_1_MAX_PERCENT,
+                        zone2MaxPercent = prefs[Keys.ZONE_2_MAX_PERCENT] ?: SettingsDefaults.ZONE_2_MAX_PERCENT,
+                        zone3MaxPercent = prefs[Keys.ZONE_3_MAX_PERCENT] ?: SettingsDefaults.ZONE_3_MAX_PERCENT,
+                        zone4MaxPercent = prefs[Keys.ZONE_4_MAX_PERCENT] ?: SettingsDefaults.ZONE_4_MAX_PERCENT,
                         zone1MinBpm = zone1MinBpm,
                         zone1MaxBpm = zone1MaxBpm,
                         zone2MaxBpm = zone2MaxBpm,
                         zone3MaxBpm = zone3MaxBpm,
                         zone4MaxBpm = zone4MaxBpm,
-                        age = prefs[Keys.AGE] ?: 30,
-                        birthDay = prefs[Keys.BIRTH_DAY] ?: 1,
-                        birthMonth = prefs[Keys.BIRTH_MONTH] ?: 1,
-                        birthYear = prefs[Keys.BIRTH_YEAR] ?: 1994,
-                        gender = prefs[Keys.GENDER],
-                        hrvOptimalThreshold = prefs[Keys.HRV_OPTIMAL_THRESHOLD] ?: 1.00f,
-                        hrvWarningThreshold = prefs[Keys.HRV_WARNING_THRESHOLD] ?: 0.90f,
-                        rhrOptimalThreshold = prefs[Keys.RHR_OPTIMAL_THRESHOLD] ?: 0.95f,
-                        rhrWarningThreshold = prefs[Keys.RHR_WARNING_THRESHOLD] ?: 1.05f,
-                        restingHrBeforeMinutes = prefs[Keys.RESTING_HR_BEFORE_MINUTES] ?: 5,
-                        restingHrAfterMinutes = prefs[Keys.RESTING_HR_AFTER_MINUTES] ?: 15,
+                        age = prefs[Keys.AGE] ?: SettingsDefaults.AGE,
+                        birthDay = prefs[Keys.BIRTH_DAY] ?: SettingsDefaults.BIRTH_DAY,
+                        birthMonth = prefs[Keys.BIRTH_MONTH] ?: SettingsDefaults.BIRTH_MONTH,
+                        birthYear = prefs[Keys.BIRTH_YEAR] ?: SettingsDefaults.BIRTH_YEAR,
+                        gender = prefs[Keys.GENDER] ?: SettingsDefaults.GENDER,
+                        hrvOptimalThreshold = prefs[Keys.HRV_OPTIMAL_THRESHOLD] ?: SettingsDefaults.HRV_OPTIMAL_THRESHOLD,
+                        hrvWarningThreshold = prefs[Keys.HRV_WARNING_THRESHOLD] ?: SettingsDefaults.HRV_WARNING_THRESHOLD,
+                        rhrOptimalThreshold = prefs[Keys.RHR_OPTIMAL_THRESHOLD] ?: SettingsDefaults.RHR_OPTIMAL_THRESHOLD,
+                        rhrWarningThreshold = prefs[Keys.RHR_WARNING_THRESHOLD] ?: SettingsDefaults.RHR_WARNING_THRESHOLD,
+                        restingHrBeforeMinutes = prefs[Keys.RESTING_HR_BEFORE_MINUTES] ?: SettingsDefaults.RESTING_HR_BEFORE_MINUTES,
+                        restingHrAfterMinutes = prefs[Keys.RESTING_HR_AFTER_MINUTES] ?: SettingsDefaults.RESTING_HR_AFTER_MINUTES,
                         appTheme =
                             prefs[Keys.APP_THEME]
                                 ?.let { runCatching { AppTheme.valueOf(it) }.getOrNull() }
-                                ?: AppTheme.SYSTEM,
-                        driveAccountEmail = prefs[Keys.DRIVE_ACCOUNT_EMAIL],
+                                ?: SettingsDefaults.APP_THEME,
+                        driveAccountEmail = prefs[Keys.DRIVE_ACCOUNT_EMAIL] ?: SettingsDefaults.DRIVE_ACCOUNT_EMAIL,
                         backupSchedule =
                             prefs[Keys.BACKUP_SCHEDULE]
                                 ?.let { runCatching { BackupSchedule.valueOf(it) }.getOrNull() }
-                                ?: BackupSchedule.MANUAL,
-                        lastBackupTimestamp = prefs[Keys.LAST_BACKUP_TIMESTAMP] ?: 0L,
-                        consistencyThresholdMinutes = prefs[Keys.CONSISTENCY_THRESHOLD_MINUTES] ?: 30,
-                        consistencyEvaluationDays = prefs[Keys.CONSISTENCY_EVALUATION_DAYS] ?: 7,
-                        consistencyBaselineDays = prefs[Keys.CONSISTENCY_BASELINE_DAYS] ?: 14,
-                        paiScalingFactor = prefs[Keys.PAI_SCALING_FACTOR] ?: 0.2f,
-                        stepGoal = prefs[Keys.STEP_GOAL] ?: 10000,
-                        retentionDaysEnabled = prefs[Keys.RETENTION_DAYS_ENABLED] ?: true,
-                        retentionDays = prefs[Keys.RETENTION_DAYS] ?: 365,
-                        collapseCloudData = prefs[Keys.COLLAPSE_CLOUD_DATA] ?: true,
-                        collapseHealthConnect = prefs[Keys.COLLAPSE_HEALTH_CONNECT] ?: true,
-                        collapseBaselinesThresholds = prefs[Keys.COLLAPSE_BASELINES_THRESHOLDS] ?: true,
-                        collapseDisplay = prefs[Keys.COLLAPSE_DISPLAY] ?: true,
-                        collapseAdvanced = prefs[Keys.COLLAPSE_ADVANCED] ?: true,
-                        aboutDismissed = prefs[Keys.ABOUT_DISMISSED] ?: false,
+                                ?: SettingsDefaults.BACKUP_SCHEDULE,
+                        lastBackupTimestamp = prefs[Keys.LAST_BACKUP_TIMESTAMP] ?: SettingsDefaults.LAST_BACKUP_TIMESTAMP,
+                        consistencyThresholdMinutes = prefs[Keys.CONSISTENCY_THRESHOLD_MINUTES] ?: SettingsDefaults.CONSISTENCY_THRESHOLD_MINUTES,
+                        consistencyEvaluationDays = prefs[Keys.CONSISTENCY_EVALUATION_DAYS] ?: SettingsDefaults.CONSISTENCY_EVALUATION_DAYS,
+                        consistencyBaselineDays = prefs[Keys.CONSISTENCY_BASELINE_DAYS] ?: SettingsDefaults.CONSISTENCY_BASELINE_DAYS,
+                        paiScalingFactor = prefs[Keys.PAI_SCALING_FACTOR] ?: SettingsDefaults.PAI_SCALING_FACTOR,
+                        stepGoal = prefs[Keys.STEP_GOAL] ?: SettingsDefaults.STEP_GOAL,
+                        retentionDaysEnabled = prefs[Keys.RETENTION_DAYS_ENABLED] ?: SettingsDefaults.RETENTION_DAYS_ENABLED,
+                        retentionDays = prefs[Keys.RETENTION_DAYS] ?: SettingsDefaults.RETENTION_DAYS,
+                        collapseCloudData = prefs[Keys.COLLAPSE_CLOUD_DATA] ?: SettingsDefaults.COLLAPSE_CLOUD_DATA,
+                        collapseHealthConnect = prefs[Keys.COLLAPSE_HEALTH_CONNECT] ?: SettingsDefaults.COLLAPSE_HEALTH_CONNECT,
+                        collapseBaselinesThresholds = prefs[Keys.COLLAPSE_BASELINES_THRESHOLDS] ?: SettingsDefaults.COLLAPSE_BASELINES_THRESHOLDS,
+                        collapseDisplay = prefs[Keys.COLLAPSE_DISPLAY] ?: SettingsDefaults.COLLAPSE_DISPLAY,
+                        collapseAdvanced = prefs[Keys.COLLAPSE_ADVANCED] ?: SettingsDefaults.COLLAPSE_ADVANCED,
+                        aboutDismissed = prefs[Keys.ABOUT_DISMISSED] ?: SettingsDefaults.ABOUT_DISMISSED,
                     )
                 }
 

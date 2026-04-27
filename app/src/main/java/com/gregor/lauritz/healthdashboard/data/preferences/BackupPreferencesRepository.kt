@@ -21,17 +21,17 @@ class BackupPreferencesRepository @Inject constructor(
     }
 
     val driveAccountEmail: Flow<String?> = dataStore.data.map { prefs ->
-        prefs[Keys.DRIVE_ACCOUNT_EMAIL]
+        prefs[Keys.DRIVE_ACCOUNT_EMAIL] ?: SettingsDefaults.DRIVE_ACCOUNT_EMAIL
     }
 
     val backupSchedule: Flow<BackupSchedule> = dataStore.data.map { prefs ->
         prefs[Keys.BACKUP_SCHEDULE]?.let {
             runCatching { BackupSchedule.valueOf(it) }.getOrNull()
-        } ?: BackupSchedule.MANUAL
+        } ?: SettingsDefaults.BACKUP_SCHEDULE
     }
 
     val lastBackupTimestamp: Flow<Long> = dataStore.data.map { prefs ->
-        prefs[Keys.LAST_BACKUP_TIMESTAMP] ?: 0L
+        prefs[Keys.LAST_BACKUP_TIMESTAMP] ?: SettingsDefaults.LAST_BACKUP_TIMESTAMP
     }
 
     suspend fun updateDriveAccountEmail(email: String?) {

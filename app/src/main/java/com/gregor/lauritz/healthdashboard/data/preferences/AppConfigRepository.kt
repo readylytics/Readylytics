@@ -25,21 +25,21 @@ class AppConfigRepository @Inject constructor(
     val syncPreference: Flow<SyncPreference> = dataStore.data.map { prefs ->
         prefs[Keys.SYNC_PREFERENCE]?.let {
             runCatching { SyncPreference.valueOf(it) }.getOrNull()
-        } ?: SyncPreference.BY_TIME
+        } ?: SettingsDefaults.SYNC_PREFERENCE
     }
 
     val syncIntervalHours: Flow<Int> = dataStore.data.map { prefs ->
-        prefs[Keys.SYNC_INTERVAL_HOURS] ?: 1
+        prefs[Keys.SYNC_INTERVAL_HOURS] ?: SettingsDefaults.SYNC_INTERVAL_HOURS
     }
 
     val lastSyncTimestamp: Flow<Long> = dataStore.data.map { prefs ->
-        prefs[Keys.LAST_SYNC_TIMESTAMP] ?: 0L
+        prefs[Keys.LAST_SYNC_TIMESTAMP] ?: SettingsDefaults.LAST_SYNC_TIMESTAMP
     }
 
     val appTheme: Flow<AppTheme> = dataStore.data.map { prefs ->
         prefs[Keys.APP_THEME]?.let {
             runCatching { AppTheme.valueOf(it) }.getOrNull()
-        } ?: AppTheme.SYSTEM
+        } ?: SettingsDefaults.APP_THEME
     }
 
     suspend fun updateSyncPreference(preference: SyncPreference) {
