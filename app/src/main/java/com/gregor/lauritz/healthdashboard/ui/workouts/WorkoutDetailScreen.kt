@@ -57,6 +57,7 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLa
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.fill
+import com.patrykandpatrick.vico.core.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.core.cartesian.Zoom
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
@@ -69,6 +70,8 @@ import java.time.temporal.ChronoUnit
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
+
+private const val TARGET_X_AXIS_LABELS = 6
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -284,6 +287,24 @@ private fun HrChartCard(
     }
 }
 
+/**
+ * Picks ~[target] label minutes evenly across [0, durationMinutes], anchored
+ * at both endpoints. For prime/awkward durations (e.g. 31, 47) this yields
+ * uneven but visually balanced spacing while guaranteeing 0 and the final
+ * minute are present.
+ */
+private fun computeLabelMinutes(durationMinutes: Int, target: Int): List<Double> {
+    if (durationMinutes <= 0) return listOf(0.0)
+    val intervals = (target - 1).coerceAtLeast(1)
+    if (durationMinutes <= intervals) {
+        return (0..durationMinutes).map { it.toDouble() }
+    }
+    val step = durationMinutes.toDouble() / intervals
+    return (0..intervals)
+        .map { (it * step).roundToInt().toDouble() }
+        .distinct()
+}
+
 @Composable
 private fun HrChart(
     samples: List<HeartRatePoint>,
@@ -300,21 +321,56 @@ private fun HrChart(
     }
 
     val durationMinutes = remember(workoutStart, workoutEnd) {
-        ChronoUnit.MINUTES.between(
-            Instant.ofEpochMilli(workoutStart),
-            Instant.ofEpochMilli(workoutEnd)
-        ).toInt()
+        ChronoUnit.MINUTES.between(workoutStartInstant, workoutEndInstant)
+            .toInt()
+            .coerceAtLeast(1)
     }
 
-    LaunchedEffect(workoutSamples) {
-        if (workoutSamples.isEmpty()) return@LaunchedEffect
+    // 1-minute averages → integer x values, x-step locked to 1.
+    val perMinuteSeries = remember(workoutSamples, workoutStartInstant) {
+        workoutSamples
+            .groupBy {
+                (ChronoUnit.SECONDS.between(workoutStartInstant, it.timestamp) / 60L).toInt()
+            }
+            .toSortedMap()
+            .map { (minute, points) ->
+                minute.toDouble() to points.map { it.bpm.toDouble() }.average()
+            }
+    }
+
+    LaunchedEffect(perMinuteSeries) {
+        if (perMinuteSeries.isEmpty()) return@LaunchedEffect
         modelProducer.runTransaction {
             lineSeries {
                 series(
-                    x = workoutSamples.map { (ChronoUnit.SECONDS.between(workoutStartInstant, it.timestamp).toDouble() / 60.0).let { m -> (m * 100.0).roundToInt() / 100.0 } },
-                    y = workoutSamples.map { it.bpm.toDouble() },
+                    x = perMinuteSeries.map { it.first },
+                    y = perMinuteSeries.map { it.second },
                 )
             }
+        }
+    }
+
+    val labelMinutes = remember(durationMinutes) {
+        computeLabelMinutes(durationMinutes, TARGET_X_AXIS_LABELS)
+    }
+
+    // Custom ItemPlacer: always include 0 and durationMinutes as labels.
+    // Returning empty strings from valueFormatter is illegal in Vico 2, so
+    // controlling the actual label set is the supported route. We delegate
+    // every other concern (margins, measurements, etc.) to the default
+    // aligned placer via interface-by delegation.
+    val itemPlacer = remember(labelMinutes) {
+        val base = HorizontalAxis.ItemPlacer.aligned(
+            spacing = { 1 },
+            addExtremeLabelPadding = true,
+        )
+        object : HorizontalAxis.ItemPlacer by base {
+            override fun getLabelValues(
+                context: CartesianDrawingContext,
+                visibleXRange: ClosedFloatingPointRange<Double>,
+                fullXRange: ClosedFloatingPointRange<Double>,
+                maxLabelWidth: Float,
+            ): List<Double> = labelMinutes.filter { it in fullXRange }
         }
     }
 
@@ -347,11 +403,7 @@ private fun HrChart(
                         titleComponent = axisLabelComponent,
                         guideline = guidelineComponent,
                         valueFormatter = { _, value, _ -> value.roundToInt().toString() },
-                        itemPlacer = remember(durationMinutes) {
-                            HorizontalAxis.ItemPlacer.aligned(spacing = {
-                                maxOf(1, durationMinutes / 5)
-                            })
-                        },
+                        itemPlacer = itemPlacer,
                     ),
             ),
         modelProducer = modelProducer,
