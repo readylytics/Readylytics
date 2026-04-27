@@ -13,8 +13,7 @@ import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectReposi
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncUiState
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
@@ -26,7 +25,7 @@ fun OnboardingRoute(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val permissions = remember { hcRepo.requiredPermissions }
-    val scope = remember { CoroutineScope(Dispatchers.Main) }
+    val scope = rememberCoroutineScope()
 
     val permissionLauncher =
         rememberLauncherForActivityResult(

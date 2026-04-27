@@ -34,40 +34,40 @@ fun AppNavHost(
     navController: NavHostController = rememberNavController(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val userPrefs by prefsRepo.userPreferences.collectAsStateWithLifecycle(initialValue = null)
 
-    LaunchedEffect(uiState) {
-        prefsRepo.userPreferences.collect { userPrefs ->
-            val currentDest = navController.currentDestination
-            when (uiState) {
-                SyncUiState.NeedsPermissions -> {
-                    val targetDest = if (!userPrefs.aboutDismissed) {
-                        AppDestination.About
-                    } else {
-                        AppDestination.Onboarding
-                    }
-                    if (currentDest?.hasRoute<AppDestination.Onboarding>() != true &&
-                        currentDest?.hasRoute<AppDestination.About>() != true
-                    ) {
-                        navController.navigate(targetDest) {
-                            popUpTo(AppDestination.MainShell) { inclusive = true }
-                        }
+    LaunchedEffect(uiState, userPrefs) {
+        val prefs = userPrefs ?: return@LaunchedEffect
+        val currentDest = navController.currentDestination
+        when (uiState) {
+            SyncUiState.NeedsPermissions -> {
+                val targetDest = if (!prefs.aboutDismissed) {
+                    AppDestination.About
+                } else {
+                    AppDestination.Onboarding
+                }
+                if (currentDest?.hasRoute<AppDestination.Onboarding>() != true &&
+                    currentDest?.hasRoute<AppDestination.About>() != true
+                ) {
+                    navController.navigate(targetDest) {
+                        popUpTo(AppDestination.MainShell) { inclusive = true }
                     }
                 }
-                SyncUiState.Unavailable ->
-                    if (currentDest?.hasRoute<AppDestination.Unavailable>() != true) {
-                        navController.navigate(AppDestination.Unavailable) {
-                            popUpTo(AppDestination.MainShell) { inclusive = true }
-                        }
-                    }
-                SyncUiState.PermissionsGranted ->
-                    if (currentDest?.hasRoute<AppDestination.MainShell>() != true) {
-                        navController.navigate(AppDestination.MainShell) {
-                            popUpTo(AppDestination.Onboarding) { inclusive = true }
-                            popUpTo(AppDestination.About) { inclusive = true }
-                        }
-                    }
-                else -> Unit
             }
+            SyncUiState.Unavailable ->
+                if (currentDest?.hasRoute<AppDestination.Unavailable>() != true) {
+                    navController.navigate(AppDestination.Unavailable) {
+                        popUpTo(AppDestination.MainShell) { inclusive = true }
+                    }
+                }
+            SyncUiState.PermissionsGranted ->
+                if (currentDest?.hasRoute<AppDestination.MainShell>() != true) {
+                    navController.navigate(AppDestination.MainShell) {
+                        popUpTo(AppDestination.Onboarding) { inclusive = true }
+                        popUpTo(AppDestination.About) { inclusive = true }
+                    }
+                }
+            else -> Unit
         }
     }
 

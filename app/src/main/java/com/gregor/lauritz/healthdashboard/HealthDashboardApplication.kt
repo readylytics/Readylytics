@@ -60,6 +60,8 @@ class HealthDashboardApplication :
         appScope.launch(Dispatchers.IO) {
             val schedule = backupPrefsRepository.backupSchedule.first()
             workerScheduler.scheduleBackupWorker(schedule)
+            workerScheduler.scheduleBirthdayWorker()
+            workerScheduler.scheduleDataCleanupWorker()
         }
     }
 

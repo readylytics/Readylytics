@@ -8,6 +8,8 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import dagger.Lazy
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,10 +24,10 @@ class WorkerScheduler @Inject constructor(
         const val DATA_CLEANUP_WORK_NAME = "data_cleanup_periodic"
     }
 
-    fun scheduleBackupWorker(schedule: BackupSchedule) {
+    suspend fun scheduleBackupWorker(schedule: BackupSchedule) = withContext(Dispatchers.IO) {
         if (schedule == BackupSchedule.MANUAL) {
             workManager.get().cancelUniqueWork(BACKUP_WORK_NAME)
-            return
+            return@withContext
         }
 
         val intervalDays = if (schedule == BackupSchedule.DAILY) 1L else 7L
@@ -46,7 +48,7 @@ class WorkerScheduler @Inject constructor(
         )
     }
 
-    fun scheduleBirthdayWorker() {
+    suspend fun scheduleBirthdayWorker() = withContext(Dispatchers.IO) {
         val constraints = Constraints.Builder()
             .setRequiresBatteryNotLow(true)
             .build()
@@ -63,7 +65,7 @@ class WorkerScheduler @Inject constructor(
         )
     }
 
-    fun scheduleDataCleanupWorker() {
+    suspend fun scheduleDataCleanupWorker() = withContext(Dispatchers.IO) {
         val constraints = Constraints.Builder()
             .setRequiresBatteryNotLow(true)
             .build()

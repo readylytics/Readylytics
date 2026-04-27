@@ -23,6 +23,9 @@ interface DailySummaryDao {
     @Upsert
     suspend fun upsert(summary: DailySummaryEntity)
 
+    @Upsert
+    suspend fun upsertAll(summaries: List<DailySummaryEntity>)
+
     @Query("SELECT * FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
     suspend fun getByDate(dateMidnightMs: Long): DailySummaryEntity?
 

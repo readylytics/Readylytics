@@ -11,7 +11,9 @@ import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.domain.util.mean
 import com.gregor.lauritz.healthdashboard.domain.util.median
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -32,111 +34,116 @@ class ScoringRepository
         private val prefsRepo: UserPreferencesRepository,
     ) {
         suspend fun computeAndPersistDailySummary(targetDate: LocalDate = LocalDate.now()) {
-            val zoneId = ZoneId.systemDefault()
-            val dayMidnight = targetDate.atStartOfDay(zoneId).toInstant()
-            val nextDayMidnight = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant()
-            val dayMidnightMs = dayMidnight.toEpochMilli()
-            val nextDayMidnightMs = nextDayMidnight.toEpochMilli()
+            val summary = computeDailySummary(targetDate)
+            dailySummaryDao.upsert(summary)
+        }
 
-            val prefs = prefsRepo.userPreferences.first()
-            val hrMax = if (prefs.autoCalculateMaxHr) (206.9f - (0.67f * prefs.age)) else prefs.maxHeartRate.toFloat()
+        suspend fun computeDailySummary(targetDate: LocalDate = LocalDate.now()): DailySummaryEntity =
+            withContext(Dispatchers.Default) {
+                val zoneId = ZoneId.systemDefault()
+                val dayMidnight = targetDate.atStartOfDay(zoneId).toInstant()
+                val nextDayMidnight = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant()
+                val dayMidnightMs = dayMidnight.toEpochMilli()
+                val nextDayMidnightMs = nextDayMidnight.toEpochMilli()
 
-            val rhrBaselineFrom = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
-            val rhrBaselineValues = heartRateDao.getAvgSleepHrPerSession(rhrBaselineFrom)
-            val rhrBaselineValue = prefs.rhrBaselineOverride
-                ?: rhrBaselineValues.median().takeIf { it > 0f }
-                ?: 60f
+                val prefs = prefsRepo.userPreferences.first()
+                val hrMax = if (prefs.autoCalculateMaxHr) (206.9f - (0.67f * prefs.age)) else prefs.maxHeartRate.toFloat()
 
-            android.util.Log.d("ScoringRepository", "PAI CALC START [$targetDate]")
+                val rhrBaselineFrom = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
+                val rhrBaselineValues = heartRateDao.getAvgSleepHrPerSession(rhrBaselineFrom)
+                val rhrBaselineValue = prefs.rhrBaselineOverride
+                    ?: rhrBaselineValues.median().takeIf { it > 0f }
+                    ?: 60f
 
-            // Calculate Daily PAI points from workouts (no sleep calibration needed)
-            val totalDuration = workoutDao.getTotalDurationMinutes(dayMidnightMs, nextDayMidnightMs) ?: 0
-            val weightedAvgHr = workoutDao.getWeightedAvgHr(dayMidnightMs, nextDayMidnightMs) ?: 0f
+                android.util.Log.d("ScoringRepository", "PAI CALC START [$targetDate]")
 
-            android.util.Log.d("ScoringRepository", "Workout Data - Duration: $totalDuration, WeightedAvgHr: $weightedAvgHr, RHR Baseline: $rhrBaselineValue, HR Max: $hrMax")
+                // Calculate Daily PAI points from workouts (no sleep calibration needed)
+                val totalDuration = workoutDao.getTotalDurationMinutes(dayMidnightMs, nextDayMidnightMs) ?: 0
+                val weightedAvgHr = workoutDao.getWeightedAvgHr(dayMidnightMs, nextDayMidnightMs) ?: 0f
 
-            val dailyTrimpRaw = PaiCalculator.calculateDailyTrimp(
-                durationMinutes = totalDuration.toFloat(),
-                hrAvg = weightedAvgHr,
-                rhrBaseline = rhrBaselineValue,
-                hrMax = hrMax,
-                gender = prefs.gender
-            )
-            val dailyPaiRaw = PaiCalculator.calculateDailyPai(dailyTrimpRaw, prefs.paiScalingFactor)
+                android.util.Log.d("ScoringRepository", "Workout Data - Duration: $totalDuration, WeightedAvgHr: $weightedAvgHr, RHR Baseline: $rhrBaselineValue, HR Max: $hrMax")
 
-            android.util.Log.d("ScoringRepository", "Result - DailyTrimpRaw: $dailyTrimpRaw, DailyPaiRaw: $dailyPaiRaw")
+                val dailyTrimpRaw = PaiCalculator.calculateDailyTrimp(
+                    durationMinutes = totalDuration.toFloat(),
+                    hrAvg = weightedAvgHr,
+                    rhrBaseline = rhrBaselineValue,
+                    hrMax = hrMax,
+                    gender = prefs.gender
+                )
+                val dailyPaiRaw = PaiCalculator.calculateDailyPai(dailyTrimpRaw, prefs.paiScalingFactor)
 
-            var summary = (dailySummaryDao.getByDate(dayMidnightMs) ?: DailySummaryEntity(dateMidnightMs = dayMidnightMs))
-                .copy(paiScore = dailyPaiRaw)
+                android.util.Log.d("ScoringRepository", "Result - DailyTrimpRaw: $dailyTrimpRaw, DailyPaiRaw: $dailyPaiRaw")
 
-            // Sleep calibration check — guard strain/sleep/readiness metrics only
-            val calibrationFrom = dayMidnight.minus(ScoringConstants.CHRONIC_DAYS, ChronoUnit.DAYS).toEpochMilli()
-            val isCalibrated = sleepSessionDao.countSince(calibrationFrom) >= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
+                var summary = (dailySummaryDao.getByDate(dayMidnightMs) ?: DailySummaryEntity(dateMidnightMs = dayMidnightMs))
+                    .copy(paiScore = dailyPaiRaw)
 
-            if (!isCalibrated) {
-                // Persist PAI-only partial summary and skip sleep/strain scoring
+                // Sleep calibration check — guard strain/sleep/readiness metrics only
+                val calibrationFrom = dayMidnight.minus(ScoringConstants.CHRONIC_DAYS, ChronoUnit.DAYS).toEpochMilli()
+                val isCalibrated = sleepSessionDao.countSince(calibrationFrom) >= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
+
+                if (!isCalibrated) {
+                    // Persist PAI-only partial summary and skip sleep/strain scoring
+                    val zoneIdSystem = ZoneId.systemDefault()
+                    val previousDays = (1..6).map { i ->
+                        targetDate.minusDays(i.toLong()).atStartOfDay(zoneIdSystem).toInstant().toEpochMilli()
+                            .let { dailySummaryDao.getByDate(it)?.paiScore ?: 0f }
+                    }
+                    val totalPaiSoFar = previousDays.sum()
+                    val finalDailyPai = PaiCalculator.applyAccumulationMultiplier(dailyPaiRaw, totalPaiSoFar)
+                    summary = summary.copy(paiScore = finalDailyPai, totalPai = totalPaiSoFar + finalDailyPai)
+                    android.util.Log.d("ScoringRepository", "PAI FINAL (uncalibrated) - FinalDaily: $finalDailyPai, Total: ${totalPaiSoFar + finalDailyPai}")
+                    return@withContext summary
+                }
+
+                val tzOffsetMs = zoneId.rules.getOffset(dayMidnight).totalSeconds * 1000L
+                val ctlFetchFrom = dayMidnight.minus(ScoringConstants.CHRONIC_DAYS - 1, ChronoUnit.DAYS).toEpochMilli()
+                val dailyTrimpList = workoutDao.getDailyTrimp(ctlFetchFrom, nextDayMidnightMs, tzOffsetMs)
+
+                val ctl = ScoringCalculator.computeCtlEma(dailyTrimpList = dailyTrimpList)
+                val acuteFrom = dayMidnight.minus(ScoringConstants.ACUTE_DAYS - 1, ChronoUnit.DAYS).toEpochMilli()
+                val acuteTotal = workoutDao.getTotalTrimp(acuteFrom, nextDayMidnightMs) ?: 0f
+                val atl = acuteTotal / ScoringConstants.ACUTE_DAYS.toFloat()
+
+                val sr = ScoringCalculator.computeStrainRatio(atl, ctl)
+                val loadScore = ScoringCalculator.computeLoadScore(sr)
+                val todayTrimp = workoutDao.getTotalTrimp(dayMidnightMs, nextDayMidnightMs) ?: 0f
+
+                summary = summary.copy(loadScore = loadScore, strainRatio = sr, totalTrimp = todayTrimp)
+
+                // Always compute and persist HRV baseline regardless of sleep session availability
+                val baselineFromMs = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
+                val hrvBaselineValues = hrvDao.getSleepRmssdValues(baselineFromMs)
+                val computedHrvBaseline = (prefs.hrvBaselineOverride
+                    ?: hrvBaselineValues.median().takeIf { it > 0f })
+                    ?.roundToInt()
+                summary = summary.copy(hrvBaseline = computedHrvBaseline)
+
+                val session = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
+                if (session != null) {
+                    summary = calculateSleepMetrics(session, dayMidnight, prefs, summary, loadScore)
+                }
+
+                // After readiness is calculated, adjust PAI and calculate rolling sum
+                val adjustedDailyPai = PaiCalculator.adjustForReadiness(summary.paiScore ?: 0f, summary.readinessScore)
+
                 val zoneIdSystem = ZoneId.systemDefault()
                 val previousDays = (1..6).map { i ->
                     targetDate.minusDays(i.toLong()).atStartOfDay(zoneIdSystem).toInstant().toEpochMilli()
                         .let { dailySummaryDao.getByDate(it)?.paiScore ?: 0f }
                 }
+
                 val totalPaiSoFar = previousDays.sum()
-                val finalDailyPai = PaiCalculator.applyAccumulationMultiplier(dailyPaiRaw, totalPaiSoFar)
-                summary = summary.copy(paiScore = finalDailyPai, totalPai = totalPaiSoFar + finalDailyPai)
-                android.util.Log.d("ScoringRepository", "PAI FINAL (uncalibrated) - FinalDaily: $finalDailyPai, Total: ${totalPaiSoFar + finalDailyPai}")
-                dailySummaryDao.upsert(summary)
-                return
+                val finalDailyPai = PaiCalculator.applyAccumulationMultiplier(adjustedDailyPai, totalPaiSoFar)
+
+                summary = summary.copy(
+                    paiScore = finalDailyPai,
+                    totalPai = totalPaiSoFar + finalDailyPai
+                )
+
+                android.util.Log.d("ScoringRepository", "PAI FINAL - Adjusted: $adjustedDailyPai, PrevTotal: $totalPaiSoFar, FinalDaily: $finalDailyPai, Total: ${totalPaiSoFar + finalDailyPai}")
+
+                summary
             }
-
-            val tzOffsetMs = zoneId.rules.getOffset(dayMidnight).totalSeconds * 1000L
-            val ctlFetchFrom = dayMidnight.minus(ScoringConstants.CHRONIC_DAYS - 1, ChronoUnit.DAYS).toEpochMilli()
-            val dailyTrimpList = workoutDao.getDailyTrimp(ctlFetchFrom, nextDayMidnightMs, tzOffsetMs)
-
-            val ctl = ScoringCalculator.computeCtlEma(dailyTrimpList = dailyTrimpList)
-            val acuteFrom = dayMidnight.minus(ScoringConstants.ACUTE_DAYS - 1, ChronoUnit.DAYS).toEpochMilli()
-            val acuteTotal = workoutDao.getTotalTrimp(acuteFrom, nextDayMidnightMs) ?: 0f
-            val atl = acuteTotal / ScoringConstants.ACUTE_DAYS.toFloat()
-
-            val sr = ScoringCalculator.computeStrainRatio(atl, ctl)
-            val loadScore = ScoringCalculator.computeLoadScore(sr)
-            val todayTrimp = workoutDao.getTotalTrimp(dayMidnightMs, nextDayMidnightMs) ?: 0f
-
-            summary = summary.copy(loadScore = loadScore, strainRatio = sr, totalTrimp = todayTrimp)
-
-            // Always compute and persist HRV baseline regardless of sleep session availability
-            val baselineFromMs = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
-            val hrvBaselineValues = hrvDao.getSleepRmssdValues(baselineFromMs)
-            val computedHrvBaseline = (prefs.hrvBaselineOverride
-                ?: hrvBaselineValues.median().takeIf { it > 0f })
-                ?.roundToInt()
-            summary = summary.copy(hrvBaseline = computedHrvBaseline)
-
-            val session = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
-            if (session != null) {
-                summary = calculateSleepMetrics(session, dayMidnight, prefs, summary, loadScore)
-            }
-
-            // After readiness is calculated, adjust PAI and calculate rolling sum
-            val adjustedDailyPai = PaiCalculator.adjustForReadiness(summary.paiScore ?: 0f, summary.readinessScore)
-
-            val zoneIdSystem = ZoneId.systemDefault()
-            val previousDays = (1..6).map { i ->
-                targetDate.minusDays(i.toLong()).atStartOfDay(zoneIdSystem).toInstant().toEpochMilli()
-                    .let { dailySummaryDao.getByDate(it)?.paiScore ?: 0f }
-            }
-
-            val totalPaiSoFar = previousDays.sum()
-            val finalDailyPai = PaiCalculator.applyAccumulationMultiplier(adjustedDailyPai, totalPaiSoFar)
-
-            summary = summary.copy(
-                paiScore = finalDailyPai,
-                totalPai = totalPaiSoFar + finalDailyPai
-            )
-
-            android.util.Log.d("ScoringRepository", "PAI FINAL - Adjusted: $adjustedDailyPai, PrevTotal: $totalPaiSoFar, FinalDaily: $finalDailyPai, Total: ${totalPaiSoFar + finalDailyPai}")
-
-            dailySummaryDao.upsert(summary)
-        }
 
         private suspend fun calculateSleepMetrics(
             session: SleepSessionEntity,
@@ -144,7 +151,7 @@ class ScoringRepository
             prefs: UserPreferences,
             summary: DailySummaryEntity,
             loadScore: Float
-        ): DailySummaryEntity {
+        ): DailySummaryEntity = withContext(Dispatchers.Default) {
             val baselineFrom = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
             val hrvValues = hrvDao.getSleepRmssdValues(baselineFrom)
             val rhrValues = heartRateDao.getAvgSleepHrPerSession(baselineFrom)
@@ -187,7 +194,7 @@ class ScoringRepository
             }
             val restingHrBaseline = if (historicRestingHrs.isNotEmpty()) historicRestingHrs.median().roundToInt() else null
             val restingHrRatio = if (currentRestingHr != null && restingHrBaseline != null && restingHrBaseline > 0) {
-                currentRestingHr.toFloat() / restingHrBaseline
+                currentRestingHr.toFloat() / restingHrBaseline.toFloat()
             } else null
 
             var rhrRatio: Float? = null
@@ -237,7 +244,7 @@ class ScoringRepository
                 )
             }
 
-            return summary.copy(
+            return@withContext summary.copy(
                 sleepScore = sleepScore,
                 readinessScore = readinessScore,
                 nocturnalRhr = currentNocturnalRhr,
