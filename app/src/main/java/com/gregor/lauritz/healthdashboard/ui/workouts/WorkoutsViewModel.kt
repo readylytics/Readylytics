@@ -10,6 +10,7 @@ import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.sleep.truncateToDayMs
+import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -127,7 +128,7 @@ class WorkoutsViewModel
                             val chronicFrom = currentDayDate.minusDays((CHRONIC_DAYS - 1).toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli()
 
                             val acuteSum = trimpByDay.filterKeys { it in acuteFrom..dayMidnight }.values.sum()
-                            val chronicSum = trimpByDay.filterKeys { it in chronicFrom..dayMidnight }.values.sum()
+                            val chronicTrimpList = trimpByDay.filterKeys { it in chronicFrom..dayMidnight }.values.toList()
 
                             val dataTenureDays =
                                 if (earliestLocalDate != null) {
@@ -136,10 +137,10 @@ class WorkoutsViewModel
                                     0
                                 }
 
-                            if (dataTenureDays >= 7 && chronicSum > 0f) {
-                                val ctl = chronicSum / minOf(dataTenureDays, CHRONIC_DAYS).toFloat()
+                            if (dataTenureDays >= 7 && chronicTrimpList.isNotEmpty()) {
+                                val ctl = ScoringCalculator.computeCtlEma(chronicTrimpList)
                                 val atl = acuteSum / ACUTE_DAYS.toFloat()
-                                val sr = if (ctl > 0) atl / ctl else 0f
+                                val sr = ScoringCalculator.computeStrainRatio(atl, ctl)
                                 dailyStrainRatio.add(DailyDataPoint(dayOffset = i, value = sr))
                             }
                         }
