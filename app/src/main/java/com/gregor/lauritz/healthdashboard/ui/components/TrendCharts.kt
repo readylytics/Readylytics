@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -151,7 +152,7 @@ fun TrendChart(
                 startAxis =
                     VerticalAxis.rememberStart(
                         label = labelComponent,
-                        valueFormatter = CartesianValueFormatter { _, value, _ -> value.toInt().toString() },
+                        valueFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() },
                         guideline = guidelineComponent,
                     ),
                 bottomAxis =
@@ -164,7 +165,7 @@ fun TrendChart(
                 decorations =
                     listOf(
                         HorizontalLine(
-                            y = { baselineValue.toDouble() },
+                            y = { baselineValue.roundToInt().toDouble() },
                             line = LineComponent(fill = fill(baselineColor), thicknessDp = 1f),
                         ),
                     ),
@@ -202,7 +203,7 @@ fun BaselineLegend(
         )
         Spacer(Modifier.width(8.dp))
         Text(
-            text = "Baseline: ${value.toInt()} $unit",
+            text = "Baseline: ${value.roundToInt()} $unit",
             style = MaterialTheme.typography.labelSmall,
             color = color,
         )

@@ -38,6 +38,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRes
 import com.gregor.lauritz.healthdashboard.domain.scoring.toStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
+import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
@@ -49,6 +50,8 @@ import com.gregor.lauritz.healthdashboard.ui.components.containerColor
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import java.time.Instant
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -136,9 +139,30 @@ fun SleepScreen(
                         }
                     }
                 }
+            val bedTime = uiState.latestSession?.let {
+                Instant.ofEpochMilli(it.startTime)
+                    .atZone(ZoneId.systemDefault())
+                    .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
+            } ?: "—"
+            val wakeTime = uiState.latestSession?.let {
+                Instant.ofEpochMilli(it.endTime)
+                    .atZone(ZoneId.systemDefault())
+                    .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
+            } ?: "—"
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(sectionLabel, style = MaterialTheme.typography.titleSmall)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(sectionLabel, style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            text = "$bedTime – $wakeTime",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Spacer(Modifier.height(12.dp))
                     SleepArchitectureBar(
                         session = uiState.latestSession,
@@ -290,77 +314,6 @@ private fun SleepMetricGrid(
     }
 }
 
-@Composable
-private fun CircadianConsistencyCard(
-    result: CircadianConsistencyResult,
-    modifier: Modifier = Modifier,
-) {
-    val status = result.toStatus()
-    val containerColor = status.containerColor()
-    val contentColor = status.onContainerColor()
-
-    val scoreText = when (result) {
-        is CircadianConsistencyResult.Calibrating -> "Calibrating"
-        is CircadianConsistencyResult.Ready -> "${result.score.toInt()}%"
-    }
-    val windowText = when (result) {
-        is CircadianConsistencyResult.Calibrating -> null
-        is CircadianConsistencyResult.Ready ->
-            "${result.medianBedtimeMinutes.toTimeString()}→${result.medianWakeMinutes.toTimeString()}"
-    }
-    val tooltipText = remember(result) {
-        val thresholdMinutes = when (result) {
-            is CircadianConsistencyResult.Calibrating -> 30
-            is CircadianConsistencyResult.Ready -> result.thresholdMinutes
-        }
-        buildString {
-            append("Measures how regular your sleep schedule is.\n\n")
-            append("High consistency stabilizes your internal clock, improving deep sleep and energy levels.\n\n")
-            append("• ≥ 80%: Optimal\n")
-            append("• 60–79%: Neutral\n")
-            append("• 40–59%: Warning\n")
-            append("• < 40%: Poor\n\n")
-            append("Consistency Window: ±$thresholdMinutes min grace period before score drops.")
-        }
-    }
-
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = containerColor,
-                contentColor = contentColor,
-            ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "Circadian Consistency",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = contentColor,
-                )
-                MetricTooltip(description = tooltipText, iconTint = contentColor)
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = scoreText,
-                style = MaterialTheme.typography.displaySmall,
-                color = contentColor,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = windowText ?: "",
-                style = MaterialTheme.typography.bodySmall,
-                color = contentColor.copy(alpha = 0.7f),
-            )
-        }
-    }
-}
 
 private data class MetricCardData(
     val title: String,

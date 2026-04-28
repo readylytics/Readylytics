@@ -35,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.scoring.toStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
+import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
 import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
@@ -220,9 +221,9 @@ fun DashboardScreen(
                             }
 
                             if (uiState.circadianConsistency != null) {
-                                DashboardCircadianCard(
+                                CircadianConsistencyCard(
                                     result = uiState.circadianConsistency,
-                                    onNavigateToSleep = onNavigateToSleep,
+                                    onClick = onNavigateToSleep,
                                     modifier = Modifier.weight(1f),
                                 )
                             } else {
@@ -238,79 +239,6 @@ fun DashboardScreen(
     }
 }
 
-@Composable
-private fun DashboardCircadianCard(
-    result: CircadianConsistencyResult,
-    onNavigateToSleep: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val status = result.toStatus()
-    val containerColor = status.containerColor()
-    val contentColor = status.onContainerColor()
-
-    val scoreText = when (result) {
-        is CircadianConsistencyResult.Calibrating -> "Calibrating"
-        is CircadianConsistencyResult.Ready -> "${result.score.toInt()}%"
-    }
-    val windowText = when (result) {
-        is CircadianConsistencyResult.Calibrating -> ""
-        is CircadianConsistencyResult.Ready ->
-            "${result.medianBedtimeMinutes.toTimeString()}→${result.medianWakeMinutes.toTimeString()}"
-    }
-
-    val tooltipText = remember(result) {
-        val thresholdMinutes = when (result) {
-            is CircadianConsistencyResult.Calibrating -> 30
-            is CircadianConsistencyResult.Ready -> result.thresholdMinutes
-        }
-        buildString {
-            append("Measures how regular your sleep schedule is.\n\n")
-            append("High consistency stabilizes your internal clock, improving deep sleep and energy levels.\n\n")
-            append("• ≥ 80%: Optimal\n")
-            append("• 60–79%: Neutral\n")
-            append("• 40–59%: Warning\n")
-            append("• < 40%: Poor\n\n")
-            append("Consistency Window: ±$thresholdMinutes min grace period before score drops.")
-        }
-    }
-
-    Card(
-        onClick = onNavigateToSleep,
-        modifier = modifier.semantics { role = Role.Button },
-        shape = RoundedCornerShape(16.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = containerColor,
-                contentColor = contentColor,
-            ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "Circadian Consistency",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = contentColor,
-                )
-                MetricTooltip(description = tooltipText, iconTint = contentColor)
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = scoreText,
-                style = MaterialTheme.typography.displaySmall,
-                color = contentColor,
-            )
-            Text(
-                text = windowText,
-                style = MaterialTheme.typography.bodySmall,
-                color = contentColor.copy(alpha = 0.7f),
-            )
-        }
-    }
-}
 
 @Composable
 private fun DashboardStepsCard(
@@ -381,7 +309,7 @@ private fun MetricCardGrid(
                     MetricCard(
                         title = card.title,
                         value = card.value,
-                        secondaryText = card.unit,
+                        secondaryText = card.secondaryText ?: card.unit,
                         status = card.status,
                         onClick = onClick,
                         tooltip = card.tooltip,

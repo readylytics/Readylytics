@@ -4,7 +4,9 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
+import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.hrvStatus
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -47,6 +50,7 @@ data class DashboardUiState(
     val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val stepCount: Int? = null,
     val stepGoal: Int = 10000,
+    val lastSleepSession: SleepSessionEntity? = null,
 )
 
 @Immutable
@@ -57,6 +61,7 @@ data class CardData(
     val status: MetricStatus,
     val tooltip: String,
     val action: DashboardAction? = null,
+    val secondaryText: String? = null,
 )
 
 enum class DashboardAction {
@@ -71,6 +76,7 @@ class DashboardViewModel
     @Inject
     constructor(
         private val dailySummaryDao: DailySummaryDao,
+        private val sleepSessionDao: SleepSessionDao,
         private val foregroundSyncController: ForegroundSyncController,
         private val selectedDateRepository: SelectedDateRepository,
         prefsRepo: UserPreferencesRepository,
@@ -106,18 +112,33 @@ class DashboardViewModel
                     val paiFromMs = date.minusDays(6)
                         .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
                     val paiBreakdownFlow = dailySummaryDao.observeSince(paiFromMs)
+                    val sessionFlow = sleepSessionDao.observeFirstSessionEndingInRange(
+                        fromMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                        toMs = date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                    )
                     combine(
-                        summaryFlow,
-                        prefsRepo.userPreferences,
-                        _isRefreshing,
-                        circadianRepo.resultFor(date),
-                        paiBreakdownFlow,
-                    ) { summary, prefs, refreshing, circadian, paiSummaries ->
+                        combine(
+                            summaryFlow,
+                            prefsRepo.userPreferences,
+                            _isRefreshing,
+                            circadianRepo.resultFor(date),
+                            paiBreakdownFlow
+                        ) { summary, prefs, refreshing, circadian, paiSummaries ->
+                            Pair(summary, Pair(prefs, Pair(refreshing, Pair(circadian, paiSummaries))))
+                        },
+                        sessionFlow
+                    ) { state, session ->
+                        val summary = state.first
+                        val prefs = state.second.first
+                        val refreshing = state.second.second.first
+                        val circadian = state.second.second.second.first
+                        val paiSummaries = state.second.second.second.second
                         val data =
                             calculateCardData(
                                 summary,
                                 prefs,
                                 date,
+                                session,
                             )
                         DashboardUiState(
                             summary = summary,
@@ -130,6 +151,7 @@ class DashboardViewModel
                             paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries),
                             stepCount = summary?.stepCount,
                             stepGoal = prefs.stepGoal,
+                            lastSleepSession = session,
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(
@@ -142,6 +164,7 @@ class DashboardViewModel
             summary: DailySummaryEntity?,
             prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences,
             selectedDate: LocalDate,
+            lastSleepSession: SleepSessionEntity?,
         ): List<CardData> {
             if (summary == null) return emptyList()
 
@@ -149,7 +172,7 @@ class DashboardViewModel
                 sleepCard(summary, prefs),
                 hrvCard(summary, prefs),
                 paiCard(summary),
-                sleepDurationCard(summary, prefs),
+                sleepDurationCard(summary, prefs, lastSleepSession),
             )
         }
 
@@ -277,9 +300,17 @@ class DashboardViewModel
 
         private fun sleepDurationCard(
             summary: DailySummaryEntity,
-            prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+            prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences,
+            lastSleepSession: SleepSessionEntity?,
         ): CardData {
             val durationStatus = summary.sleepDurationStatus((prefs.goalSleepHours * 60).toInt())
+            val lastNightText = lastSleepSession?.let { session ->
+                val fmt = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+                val zone = ZoneId.systemDefault()
+                val bed = Instant.ofEpochMilli(session.startTime).atZone(zone).format(fmt)
+                val wake = Instant.ofEpochMilli(session.endTime).atZone(zone).format(fmt)
+                "$bed→$wake"
+            }
             return CardData(
                 title = "Sleep Duration",
                 value = formatSleepDuration(summary.sleepDurationMinutes),
@@ -291,7 +322,9 @@ class DashboardViewModel
                     val goal = formatSleepDuration((prefs.goalSleepHours * 60).toInt())
                     append("\n\nGoal: $goal")
                 },
-            )
+            ).let {
+                if (lastNightText != null) it.copy(secondaryText = lastNightText) else it
+            }
         }
 
         private fun restingHrCard(
