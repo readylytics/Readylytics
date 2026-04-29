@@ -23,7 +23,7 @@ object ScoringConstants {
         const val NEUTRAL_SCORE = 50f
         const val OPTIMAL_LOW_SCORE = 85f
         const val OPTIMAL_SWEET_SPOT_SCORE = 100f
-        const val POOR_SCORE = 30f
+        const val POOR_SCORE = 40f
 
         const val SR_UNDER_TRAINING = 0.8f
         const val SR_SWEET_SPOT_MIN = 0.8f
@@ -52,7 +52,7 @@ object ScoringConstants {
         const val WEIGHT_RHR_SCORE = 0.5f
 
         const val LATE_NADIR_PENALTY = 0.9f
-        const val LATE_NADIR_THRESHOLD = 0.85f // last 15%
+        const val LATE_NADIR_THRESHOLD = 0.5f // second half of sleep (spec: t_nadir > 0.5 * TST)
 
         const val PROVISIONAL_CV_RULE = 0.15f // 15% coefficient of variation
         const val MIN_SIGMA = 1e-6f
@@ -64,7 +64,7 @@ object ScoringConstants {
         const val WEIGHT_LOAD = 0.3f
 
         const val PARADOXICAL_HIGH_Z_HRV = 2.0f
-        const val PARADOXICAL_HIGH_RHR_RATIO = 1.05f
+        const val PARADOXICAL_HIGH_RHR_DELTA_BPM = 5f // spec: nocturnal RHR >= 5 bpm above baseline
         const val PARADOXICAL_HIGH_MAX_SCORE = 60f
     }
 }

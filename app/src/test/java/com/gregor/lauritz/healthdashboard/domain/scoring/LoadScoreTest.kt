@@ -22,11 +22,11 @@ class LoadScoreTest {
     fun `at 1_2 boundary is optimal`() = assertEquals(100f, ScoringCalculator.computeLoadScore(1.2f), DELTA)
 
     @Test
-    fun `at 1_35 is fatigued midpoint`() = assertEquals(85f, ScoringCalculator.computeLoadScore(1.35f), DELTA)
+    fun `at 1_35 is fatigued midpoint`() = assertEquals(70f, ScoringCalculator.computeLoadScore(1.35f), DELTA)
 
     @Test
-    fun `at 1_5 is warning boundary`() = assertEquals(70f, ScoringCalculator.computeLoadScore(1.5f), DELTA)
+    fun `at 1_5 is warning boundary`() = assertEquals(40f, ScoringCalculator.computeLoadScore(1.5f), DELTA)
 
     @Test
-    fun `above 1_5 is poor`() = assertEquals(30f, ScoringCalculator.computeLoadScore(2.0f), DELTA)
+    fun `above 1_5 is poor`() = assertEquals(40f, ScoringCalculator.computeLoadScore(2.0f), DELTA)
 }

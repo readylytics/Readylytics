@@ -45,7 +45,7 @@ object ScoringCalculator {
             sr <= 0f -> Strain.OPTIMAL_LOW_SCORE
             sr < Strain.SR_UNDER_TRAINING -> Strain.NEUTRAL_SCORE
             sr <= Strain.SR_SWEET_SPOT_MAX -> Strain.OPTIMAL_SWEET_SPOT_SCORE
-            sr <= Strain.SR_OVER_TRAINING_MAX -> Strain.OPTIMAL_SWEET_SPOT_SCORE - (sr - Strain.SR_SWEET_SPOT_MAX) * 100f
+            sr <= Strain.SR_OVER_TRAINING_MAX -> Strain.OPTIMAL_SWEET_SPOT_SCORE - (sr - Strain.SR_SWEET_SPOT_MAX) * 200f
             else -> Strain.POOR_SCORE
         }
 
@@ -108,13 +108,13 @@ object ScoringCalculator {
         sleepScore: Float,
         loadScore: Float,
         zHrv: Float? = null,
-        rhrRatio: Float? = null,
+        rhrDeltaBpm: Float? = null,
     ): Float {
         var rs = Readiness.WEIGHT_RESTORATION * sRest + Readiness.WEIGHT_SLEEP * sleepScore + Readiness.WEIGHT_LOAD * loadScore
 
-        if (zHrv != null && rhrRatio != null &&
+        if (zHrv != null && rhrDeltaBpm != null &&
             zHrv > Readiness.PARADOXICAL_HIGH_Z_HRV &&
-            rhrRatio > Readiness.PARADOXICAL_HIGH_RHR_RATIO) {
+            rhrDeltaBpm >= Readiness.PARADOXICAL_HIGH_RHR_DELTA_BPM) {
             rs = rs.coerceAtMost(Readiness.PARADOXICAL_HIGH_MAX_SCORE)
         }
         return rs.coerceIn(0f, 100f)

@@ -241,12 +241,13 @@ class ScoringRepository
                     (currentHrvMean - mu) / ScoringCalculator.hrvSigma(hrvValues)
                 } else null
 
+                val rhrDeltaBpm = currentNocturnalRhr.toFloat() - baselineRhrValue.toFloat()
                 readinessScore = ScoringCalculator.computeReadinessScore(
                     sRest = sRest,
                     sleepScore = sleepScore,
                     loadScore = loadScore,
                     zHrv = zHrv,
-                    rhrRatio = rhrRatio
+                    rhrDeltaBpm = rhrDeltaBpm
                 )
             }
 
