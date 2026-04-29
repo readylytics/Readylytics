@@ -42,6 +42,7 @@ object DatabaseModule {
                 HealthDatabase.MIGRATION_8_9,
                 HealthDatabase.MIGRATION_9_10,
                 HealthDatabase.MIGRATION_10_11,
+                HealthDatabase.MIGRATION_11_12,
             )
             .addCallback(
                 object : RoomDatabase.Callback() {
@@ -52,7 +53,6 @@ object DatabaseModule {
                     }
                 },
             )
-            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
     @Provides

@@ -42,6 +42,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -166,7 +167,9 @@ fun SettingsScreen(
     var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
-    val matchingSections = settingsSections.filter { sectionMatches(it, searchQuery) }
+    val matchingSections by remember(searchQuery) {
+        derivedStateOf { settingsSections.filter { sectionMatches(it, searchQuery) } }
+    }
     val shouldExpandSection = { sectionId: String ->
         searchQuery.isNotBlank() && matchingSections.any { it.id == sectionId }
     }

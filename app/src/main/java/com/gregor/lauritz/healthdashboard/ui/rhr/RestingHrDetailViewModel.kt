@@ -10,6 +10,7 @@ import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.domain.model.restingHrStatus
+import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -52,7 +53,7 @@ class RestingHrDetailViewModel @Inject constructor(
     ) { range, date -> range to date }
         .flatMapLatest { (range, date) ->
             val fromMs = range.fromMs(date)
-            val startDayMs = truncateToDayMs(fromMs)
+            val startDayMs = fromMs.truncateToDayMs()
 
             combine(
                 dailySummaryDao.observeLatest(),
@@ -90,12 +91,4 @@ class RestingHrDetailViewModel @Inject constructor(
         _selectedRange.value = range
     }
 
-    private fun truncateToDayMs(ms: Long): Long {
-        return Instant.ofEpochMilli(ms)
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate()
-            .atStartOfDay(ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
-    }
 }

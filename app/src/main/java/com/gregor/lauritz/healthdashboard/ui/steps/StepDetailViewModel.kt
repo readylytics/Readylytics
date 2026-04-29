@@ -6,6 +6,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -46,7 +47,7 @@ class StepDetailViewModel @Inject constructor(
     ) { range, date -> range to date }
         .flatMapLatest { (range, date) ->
             val fromMs = range.fromMs(date)
-            val startDayMs = truncateToDayMs(fromMs)
+            val startDayMs = fromMs.truncateToDayMs()
 
             combine(
                 dailySummaryDao.observeLatest(),
@@ -83,12 +84,4 @@ class StepDetailViewModel @Inject constructor(
         _selectedRange.value = range
     }
 
-    private fun truncateToDayMs(ms: Long): Long {
-        return Instant.ofEpochMilli(ms)
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate()
-            .atStartOfDay(ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
-    }
 }

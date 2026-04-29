@@ -71,6 +71,14 @@ enum class DashboardAction {
     NAVIGATE_STEPS,
 }
 
+private data class DashboardInputs(
+    val summary: DailySummaryEntity?,
+    val prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences,
+    val isRefreshing: Boolean,
+    val circadian: CircadianConsistencyResult?,
+    val paiSummaries: List<DailySummaryEntity>,
+)
+
 @HiltViewModel
 class DashboardViewModel
     @Inject
@@ -124,33 +132,28 @@ class DashboardViewModel
                             circadianRepo.resultFor(date),
                             paiBreakdownFlow
                         ) { summary, prefs, refreshing, circadian, paiSummaries ->
-                            Pair(summary, Pair(prefs, Pair(refreshing, Pair(circadian, paiSummaries))))
+                            DashboardInputs(summary, prefs, refreshing, circadian, paiSummaries)
                         },
                         sessionFlow
-                    ) { state, session ->
-                        val summary = state.first
-                        val prefs = state.second.first
-                        val refreshing = state.second.second.first
-                        val circadian = state.second.second.second.first
-                        val paiSummaries = state.second.second.second.second
+                    ) { inputs, session ->
                         val data =
                             calculateCardData(
-                                summary,
-                                prefs,
+                                inputs.summary,
+                                inputs.prefs,
                                 date,
                                 session,
                             )
                         DashboardUiState(
-                            summary = summary,
+                            summary = inputs.summary,
                             selectedDate = date,
-                            isRefreshing = refreshing,
+                            isRefreshing = inputs.isRefreshing,
                             cardData = data,
                             cardRows = data.chunked(2),
-                            circadianConsistency = circadian,
-                            restingHrCard = summary?.let { restingHrCard(it, prefs) },
-                            paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries),
-                            stepCount = summary?.stepCount,
-                            stepGoal = prefs.stepGoal,
+                            circadianConsistency = inputs.circadian,
+                            restingHrCard = inputs.summary?.let { restingHrCard(it, inputs.prefs) },
+                            paiDailyBreakdown = buildPaiBreakdown(date, inputs.paiSummaries),
+                            stepCount = inputs.summary?.stepCount,
+                            stepGoal = inputs.prefs.stepGoal,
                             lastSleepSession = session,
                         )
                     }.flowOn(Dispatchers.Default)

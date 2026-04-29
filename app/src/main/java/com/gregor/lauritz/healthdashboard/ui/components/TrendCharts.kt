@@ -102,13 +102,12 @@ fun TrendChart(
     // Use provided baseline if available, otherwise fall back to calculated baseline
     val baselineValue = baseline ?: calculatedBaseline
 
-    val minY =
+    val (minY, maxY) =
         remember(points) {
-            (points.minOf { it.value } * 0.9f).toDouble()
-        }
-    val maxY =
-        remember(points) {
-            (points.maxOf { it.value } * 1.1f).toDouble()
+            val (lo, hi) = points.fold(Float.MAX_VALUE to -Float.MAX_VALUE) { (lo, hi), p ->
+                minOf(lo, p.value) to maxOf(hi, p.value)
+            }
+            (lo * 0.9f).toDouble() to (hi * 1.1f).toDouble()
         }
 
     val labelComponent = ChartDefaults.labelTextComponent()

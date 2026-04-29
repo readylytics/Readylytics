@@ -32,6 +32,12 @@ android {
         testOptions {
             unitTests.isReturnDefaultValues = true
         }
+
+        buildConfigField(
+            "String",
+            "OAUTH_WEB_CLIENT_ID",
+            "\"YOUR_WEB_CLIENT_ID.apps.googleusercontent.com\"",
+        )
     }
 
     buildTypes {
@@ -50,6 +56,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     lint {
         abortOnError = true
