@@ -34,3 +34,11 @@ fun List<Float>.stdev(): Float {
     val variance = sumOf { ((it - avg) * (it - avg)).toDouble() }.toFloat() / (size - 1)
     return sqrt(variance)
 }
+
+@JvmName("stdevInt")
+fun List<Int>.stdev(): Float {
+    if (size < 2) return 0f
+    val avg = average().toFloat()
+    val variance = sumOf { ((it - avg) * (it - avg)).toDouble() }.toFloat() / (size - 1)
+    return sqrt(variance)
+}

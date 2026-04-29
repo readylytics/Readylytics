@@ -112,7 +112,7 @@ object ScoringCalculator {
         rmssdHistory: List<Float>,
         baselineOverride: Float? = null,
     ): Float? {
-        if (currentRmssdMs <= 0f && baselineOverride == null && rmssdHistory.isEmpty()) return null
+        if (currentRmssdMs <= 0f || (baselineOverride == null && rmssdHistory.isEmpty())) return null
         val lnHistory = rmssdHistory.map { ln(it.coerceAtLeast(0.001f)) }
         val lnToday   = ln(currentRmssdMs.coerceAtLeast(0.001f))
         val mu = if (baselineOverride != null) ln(baselineOverride.coerceAtLeast(0.001f))
@@ -130,7 +130,7 @@ object ScoringCalculator {
     ): Float? {
         if (rhrHistory.isEmpty() && baselineOverride == null) return null
         val mu    = baselineOverride ?: rhrHistory.median()
-        val sigma = rhrHistory.map { it.toFloat() }.stdev()
+        val sigma = rhrHistory.stdev()
             .takeIf { it > 0f } ?: (mu * 0.05f).coerceAtLeast(1f)
         return (currentRhrBpm - mu) / sigma
     }
