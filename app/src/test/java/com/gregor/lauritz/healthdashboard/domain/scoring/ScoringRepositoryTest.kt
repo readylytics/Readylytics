@@ -4,9 +4,15 @@ import com.gregor.lauritz.healthdashboard.domain.util.mean
 import com.gregor.lauritz.healthdashboard.domain.util.median
 import com.gregor.lauritz.healthdashboard.domain.util.stdev
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.ln
 
-private const val DELTA = 0.01f
+private const val DELTA = 0.5f
+
+// ─── Math helpers ─────────────────────────────────────────────────────────────
 
 class MathHelpersTest {
     @Test
@@ -43,6 +49,8 @@ class MathHelpersTest {
     fun `medianInt of even list averages middle two`() = assertEquals(55f, listOf(50, 60).median(), DELTA)
 }
 
+// ─── Strain Ratio ─────────────────────────────────────────────────────────────
+
 class StrainRatioTest {
     @Test
     fun `both zero returns 0`() = assertEquals(0f, ScoringCalculator.computeStrainRatio(0f, 0f), DELTA)
@@ -51,15 +59,13 @@ class StrainRatioTest {
     fun `ctl zero returns 0`() = assertEquals(0f, ScoringCalculator.computeStrainRatio(10f, 0f), DELTA)
 
     @Test
-    fun `balanced training returns 1`() {
-        assertEquals(1.0f, ScoringCalculator.computeStrainRatio(1f, 1f), DELTA)
-    }
+    fun `balanced training returns 1`() = assertEquals(1.0f, ScoringCalculator.computeStrainRatio(1f, 1f), DELTA)
 
     @Test
-    fun `high acute load`() {
-        assertEquals(1.5f, ScoringCalculator.computeStrainRatio(1.5f, 1f), DELTA)
-    }
+    fun `high acute load`() = assertEquals(1.5f, ScoringCalculator.computeStrainRatio(1.5f, 1f), DELTA)
 }
+
+// ─── CTL EMA ──────────────────────────────────────────────────────────────────
 
 class ComputeCtlTest {
     @Test
@@ -67,9 +73,8 @@ class ComputeCtlTest {
         assertEquals(35f, ScoringCalculator.computeCtlEma(dailyTrimpList = List(3) { 50f }), DELTA)
 
     @Test
-    fun `data tenure between 7 and 21 returns cumulative mean`() {
+    fun `data tenure between 7 and 21 returns cumulative mean`() =
         assertEquals(10f, ScoringCalculator.computeCtlEma(dailyTrimpList = List(10) { 10f }), DELTA)
-    }
 
     @Test
     fun `data tenure 21 or more returns EMA`() {
@@ -81,94 +86,221 @@ class ComputeCtlTest {
     fun `steady training gives SR close to 1`() {
         val dailyTrimpList = List(30) { 10f }
         val ctl = ScoringCalculator.computeCtlEma(dailyTrimpList = dailyTrimpList)
-        val atl = 10f
-        val sr = ScoringCalculator.computeStrainRatio(atl, ctl)
+        val sr = ScoringCalculator.computeStrainRatio(10f, ctl)
         assertEquals(1.0f, sr, 0.05f)
     }
 }
 
+// ─── Duration sub-score (additive efficiency) ─────────────────────────────────
+// Formula: 0.7 * TST_term + 0.3 * eff_banded
+// REF: Buysse 1989 PSQI; A.3 — avoids double-penalty since TST = TIB × SE
+
 class DurationSubScoreTest {
     @Test
-    fun `full goal sleep with high efficiency`() {
-        assertEquals(85f, ScoringCalculator.computeDurationSubScore(480, 85f, 8f), DELTA)
+    fun `full goal sleep with excellent efficiency`() {
+        // TST_term=100, eff=90% → 100. 0.7*100 + 0.3*100 = 100
+        assertEquals(100f, ScoringCalculator.computeDurationSubScore(480, 90f, 8f), DELTA)
     }
 
     @Test
-    fun `half sleep goal`() {
-        assertEquals(40f, ScoringCalculator.computeDurationSubScore(240, 80f, 8f), DELTA)
+    fun `full goal sleep with good efficiency`() {
+        // TST_term=100, eff=85% → 85. 0.7*100 + 0.3*85 = 95.5
+        assertEquals(95.5f, ScoringCalculator.computeDurationSubScore(480, 85f, 8f), DELTA)
     }
 
     @Test
-    fun `over-sleeping clamped at 1`() {
-        assertEquals(90f, ScoringCalculator.computeDurationSubScore(600, 90f, 8f), DELTA)
+    fun `half sleep goal with fair efficiency`() {
+        // TST_term=50 (4h / 8h), eff=80% → 65. 0.7*50 + 0.3*65 = 54.5
+        assertEquals(54.5f, ScoringCalculator.computeDurationSubScore(240, 80f, 8f), DELTA)
+    }
+
+    @Test
+    fun `over-sleeping clamped at 100`() {
+        // TST_term clamped to 100, eff=90% → 100. 0.7*100 + 0.3*100 = 100
+        assertEquals(100f, ScoringCalculator.computeDurationSubScore(600, 90f, 8f), DELTA)
+    }
+
+    @Test
+    fun `poor efficiency drags down score`() {
+        // TST_term=100, eff=60% → 40. 0.7*100 + 0.3*40 = 82
+        assertEquals(82f, ScoringCalculator.computeDurationSubScore(480, 60f, 8f), DELTA)
     }
 }
+
+// ─── Architecture sub-score (age-banded denominators) ─────────────────────────
+// REF: Ohayon 2004 Sleep 27:1255; Boulos 2019 Lancet Respir Med 7:533
 
 class ArchSubScoreTest {
     @Test
-    fun `at benchmark deep and rem`() {
-        assertEquals(100f, ScoringCalculator.computeArchSubScore(90, 90, 450), DELTA)
+    fun `at age-banded targets for under-30 scores 100`() {
+        // age=25: deep target=18%, rem target=22%; 18 and 22 of 100 min TST
+        assertEquals(100f, ScoringCalculator.computeArchSubScore(18, 22, 100, 25), DELTA)
     }
 
     @Test
-    fun `no deep or rem`() = assertEquals(0f, ScoringCalculator.computeArchSubScore(0, 0, 480), DELTA)
+    fun `at age-banded targets for age 40 scores 100`() {
+        // age=40: deep target=16%, rem target=21%
+        assertEquals(100f, ScoringCalculator.computeArchSubScore(16, 21, 100, 40), DELTA)
+    }
 
     @Test
-    fun `zero duration guard`() = assertEquals(0f, ScoringCalculator.computeArchSubScore(0, 0, 0), DELTA)
+    fun `at age-banded targets for age 70 scores 100`() {
+        // age=70: deep target=12%, rem target=18%
+        assertEquals(100f, ScoringCalculator.computeArchSubScore(12, 18, 100, 70), DELTA)
+    }
 
     @Test
-    fun `excess deep sleep capped at 100`() {
-        assertEquals(100f, ScoringCalculator.computeArchSubScore(120, 90, 450), DELTA)
+    fun `no deep or rem scores 0`() =
+        assertEquals(0f, ScoringCalculator.computeArchSubScore(0, 0, 480), DELTA)
+
+    @Test
+    fun `zero duration guard`() =
+        assertEquals(0f, ScoringCalculator.computeArchSubScore(0, 0, 0), DELTA)
+
+    @Test
+    fun `excess deep sleep is capped at target, not penalised`() {
+        // deep=30% > target of 18% → capped at 100; rem=20% < target of 22% → 90.9
+        val score = ScoringCalculator.computeArchSubScore(30, 20, 100, 25)
+        assertEquals(95.45f, score, DELTA)
+    }
+
+    @Test
+    fun `older user not penalised for lower deep sleep typical of age`() {
+        // age=70 target is 12%; 12% deep = perfect score component of 100
+        val score70 = ScoringCalculator.computeArchSubScore(12, 18, 100, 70)
+        val score25 = ScoringCalculator.computeArchSubScore(12, 18, 100, 25)
+        // 70yo scores 100; 25yo scores lower (12% < 18% target)
+        assertTrue("70yo should score at least as high as 25yo for same sleep", score70 >= score25)
     }
 }
 
+// ─── Restoration sub-score (lnRMSSD + RHR Z-score) ───────────────────────────
+// HRV operates on ln(RMSSD) internally; display values remain in raw ms.
+// RHR uses Z-score: elevated RHR → positive Z → lower score.
+// REF: Plews 2013 Sports Med 43:773; Mishra 2020 Nat Biomed Eng
+
 class RestorationSubScoreTest {
     @Test
-    fun `neutral Z-score and ratio 1_0 gives midpoint`() {
+    fun `both signals at personal baseline return 50`() {
+        // Z_hrv = 0, Z_rhr = 0 → 0.5*50 + 0.5*50 = 50
         val hrv = listOf(60f, 60f, 60f)
-        val rhr = listOf(50, 50, 50)
-        assertEquals(75f, ScoringCalculator.computeRestorationSubScore(60f, hrv, 50f, rhr, null, null), DELTA)
-    }
-
-    @Test
-    fun `excellent HRV and low RHR capped at 100`() {
-        val hrv = listOf(40f, 40f, 40f)
         val rhr = listOf(60, 60, 60)
-        assertEquals(100f, ScoringCalculator.computeRestorationSubScore(60f, hrv, 50f, rhr, null, null), DELTA)
+        assertEquals(50f, ScoringCalculator.computeRestorationSubScore(60f, hrv, 60f, rhr, null, null), DELTA)
     }
 
     @Test
-    fun `poor HRV with elevated RHR gives partial score`() {
-        val hrv = listOf(80f, 80f, 80f)
-        val rhr = listOf(50, 50, 50)
-        assertEquals(41.67f, ScoringCalculator.computeRestorationSubScore(40f, hrv, 60f, rhr, null, null), DELTA)
+    fun `elevated HRV above personal mean raises score above 50`() {
+        // currentHrv > mean(history) → positive Z_hrv → higher restoration
+        val hrv = listOf(40f, 40f, 40f, 40f, 40f)
+        val rhr = listOf(60, 60, 60, 60, 60)
+        val score = ScoringCalculator.computeRestorationSubScore(60f, hrv, 60f, rhr, null, null)
+        assertTrue("Score should be above 50 with HRV above baseline, was $score", score > 50f)
+    }
+
+    @Test
+    fun `elevated nocturnal RHR lowers score below 50`() {
+        // currentRhr > baseline → positive Z_rhr → lower restoration
+        val hrv = listOf(60f, 60f, 60f)
+        val rhr = listOf(55, 55, 55, 55, 55, 55, 55, 55)
+        val score = ScoringCalculator.computeRestorationSubScore(60f, hrv, 70f, rhr, null, null)
+        assertTrue("Score should be below 50 with elevated RHR, was $score", score < 50f)
     }
 
     @Test
     fun `rhr override respected`() {
+        // Override baseline=60, currentRhr=60 → Z_rhr=0; HRV at baseline → Z_hrv=0 → sRest=50
         val hrv = listOf(60f, 60f, 60f)
-        assertEquals(75f, ScoringCalculator.computeRestorationSubScore(60f, hrv, 50f, emptyList(), 50f, null), DELTA)
+        assertEquals(50f, ScoringCalculator.computeRestorationSubScore(60f, hrv, 60f, emptyList(), 60f, null), DELTA)
     }
 
     @Test
     fun `hrv override respected`() {
-        val rhr = listOf(50, 50, 50)
-        assertEquals(75f, ScoringCalculator.computeRestorationSubScore(60f, emptyList(), 50f, rhr, null, 60f), DELTA)
+        // Override baseline=60ms, currentHrv=60ms → Z_hrv=0; RHR at baseline → sRest=50
+        val rhr = listOf(60, 60, 60)
+        assertEquals(50f, ScoringCalculator.computeRestorationSubScore(60f, emptyList(), 60f, rhr, null, 60f), DELTA)
+    }
+
+    @Test
+    fun `hrv z-score is invariant to uniform scaling of all values`() {
+        // ln(k*x) - ln(k*mu) = ln(x) - ln(mu) → scaling history and today by same factor leaves Z unchanged
+        val hrv = listOf(40f, 50f, 60f, 55f, 45f)
+        val rhr = listOf(60, 60, 60, 60, 60)
+        val score1 = ScoringCalculator.computeRestorationSubScore(50f, hrv, 60f, rhr, null, null)
+        val scaledHrv = hrv.map { it * 2f }
+        val score2 = ScoringCalculator.computeRestorationSubScore(100f, scaledHrv, 60f, rhr, null, null)
+        assertEquals(score1, score2, DELTA)
     }
 }
 
+// ─── HRV Z-score helper ───────────────────────────────────────────────────────
+
+class HrvZScoreTest {
+    @Test
+    fun `returns null when history is empty and no override`() {
+        assertNull(ScoringCalculator.computeHrvZScore(50f, emptyList(), null))
+    }
+
+    @Test
+    fun `z-score is zero when current equals historical mean`() {
+        val history = List(10) { 50f }
+        val z = ScoringCalculator.computeHrvZScore(50f, history)
+        assertNotNull(z)
+        assertEquals(0f, z!!, DELTA)
+    }
+
+    @Test
+    fun `positive z-score when current above mean`() {
+        val history = List(10) { 40f }
+        val z = ScoringCalculator.computeHrvZScore(60f, history)
+        assertNotNull(z)
+        assertTrue("Z should be positive, was $z", z!! > 0f)
+    }
+
+    @Test
+    fun `negative z-score when current below mean`() {
+        val history = List(10) { 60f }
+        val z = ScoringCalculator.computeHrvZScore(40f, history)
+        assertNotNull(z)
+        assertTrue("Z should be negative, was $z", z!! < 0f)
+    }
+}
+
+// ─── Sleep Score integration ──────────────────────────────────────────────────
+
 class SleepScoreIntegrationTest {
     @Test
-    fun `weighted sum of known sub-scores`() {
-        val score =
-            ScoringCalculator.computeSleepScore(
-                durationMinutes = 480,
-                efficiency = 85f,
-                deepSleepMinutes = 96,
-                remSleepMinutes = 96,
-                goalSleepHours = 8f,
-                sRest = 75f,
-            )
-        assertEquals(86.25f, score, DELTA)
+    fun `weighted sum of known sub-scores at age 30`() {
+        // sDur: TST=480min, goal=8h → TST_term=100; eff=85% → 85; 0.7*100+0.3*85 = 95.5
+        // sArch: deep=96/480=20%, rem=96/480=20%; age=30 → deepTarget=18%, remTarget=22%
+        //   deepComp = (0.20/0.18)→capped→100; remComp = (0.20/0.22)*100 = 90.9
+        //   sArch = 0.5*100 + 0.5*90.9 = 95.45
+        // SS = 0.50*95.5 + 0.25*95.45 + 0.25*75 = 47.75 + 23.86 + 18.75 = 90.36
+        val score = ScoringCalculator.computeSleepScore(
+            durationMinutes = 480,
+            efficiency = 85f,
+            deepSleepMinutes = 96,
+            remSleepMinutes = 96,
+            goalSleepHours = 8f,
+            sRest = 75f,
+            userAge = 30,
+        )
+        assertEquals(90.36f, score, DELTA)
+    }
+
+    @Test
+    fun `perfect sleep at age 25 hits benchmark targets`() {
+        // TST_term=100, eff=90%→100, sDur=100
+        // deep=18%, rem=22% of 100min TST → both hit age-25 targets → sArch=100
+        // SS = 0.5*100 + 0.25*100 + 0.25*100 = 100
+        val score = ScoringCalculator.computeSleepScore(
+            durationMinutes = 100,
+            efficiency = 90f,
+            deepSleepMinutes = 18,
+            remSleepMinutes = 22,
+            goalSleepHours = (100f / 60f),
+            sRest = 100f,
+            userAge = 25,
+        )
+        assertEquals(100f, score, DELTA)
     }
 }

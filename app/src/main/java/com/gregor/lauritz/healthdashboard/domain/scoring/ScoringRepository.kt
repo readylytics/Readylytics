@@ -102,7 +102,9 @@ class ScoringRepository
                 val ctl = ScoringCalculator.computeCtlEma(dailyTrimpList = dailyTrimpList)
                 val acuteFrom = dayMidnight.minus(ScoringConstants.ACUTE_DAYS - 1, ChronoUnit.DAYS).toEpochMilli()
                 val acuteTotal = workoutDao.getTotalTrimp(acuteFrom, nextDayMidnightMs) ?: 0f
-                val atl = acuteTotal / ScoringConstants.ACUTE_DAYS.toFloat()
+                // Seed ATL = CTL during cold-start so SR initialises at 1.0 — REF: A.15 review
+                val atl = if (dailyTrimpList.size < ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION) ctl
+                          else acuteTotal / ScoringConstants.ACUTE_DAYS.toFloat()
 
                 val sr = ScoringCalculator.computeStrainRatio(atl, ctl)
                 val loadScore = ScoringCalculator.computeLoadScore(sr)
@@ -233,21 +235,28 @@ class ScoringRepository
                     deepSleepMinutes = session.deepSleepMinutes,
                     remSleepMinutes = session.remSleepMinutes,
                     goalSleepHours = prefs.goalSleepHours,
-                    sRest = sRest
+                    sRest = sRest,
+                    userAge = prefs.age,
                 )
 
-                val zHrv = if (sessionHrvSamples.isNotEmpty() && hrvValues.isNotEmpty()) {
-                    val mu = prefs.hrvBaselineOverride ?: hrvValues.mean()
-                    (currentHrvMean - mu) / ScoringCalculator.hrvSigma(hrvValues)
+                val zHrv = if (sessionHrvSamples.isNotEmpty()) {
+                    ScoringCalculator.computeHrvZScore(currentHrvMean, hrvValues, prefs.hrvBaselineOverride)
                 } else null
 
+                val zRhr = ScoringCalculator.computeRhrZScore(
+                    currentRhrBpm = currentNocturnalRhr.toFloat(),
+                    rhrHistory = rhrValues,
+                    baselineOverride = prefs.rhrBaselineOverride,
+                )
                 val rhrDeltaBpm = currentNocturnalRhr.toFloat() - baselineRhrValue.toFloat()
+
                 readinessScore = ScoringCalculator.computeReadinessScore(
                     sRest = sRest,
                     sleepScore = sleepScore,
                     loadScore = loadScore,
-                    zHrv = zHrv,
-                    rhrDeltaBpm = rhrDeltaBpm
+                    zLnHrv = zHrv,
+                    zRhr = zRhr,
+                    rhrDeltaBpm = rhrDeltaBpm,
                 )
             }
 
