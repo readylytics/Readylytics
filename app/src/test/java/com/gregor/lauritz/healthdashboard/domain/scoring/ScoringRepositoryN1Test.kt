@@ -7,6 +7,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import io.mockk.coEvery
@@ -27,6 +28,7 @@ class ScoringRepositoryN1Test {
     private lateinit var workoutDao: WorkoutDao
     private lateinit var dailySummaryDao: DailySummaryDao
     private lateinit var prefsRepo: UserPreferencesRepository
+    private lateinit var scoringCalculator: ScoringCalculator
     private lateinit var repo: ScoringRepository
 
     private val baseMs = System.currentTimeMillis()
@@ -56,7 +58,7 @@ class ScoringRepositoryN1Test {
         dailySummaryDao = mockk()
         prefsRepo = mockk()
 
-        every { prefsRepo.userPreferences } returns MutableStateFlow(UserPreferences())
+        every { prefsRepo.userPreferences } returns MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.GENERAL))
 
         // Provide enough sessions to pass the calibration guard (MIN_SESSIONS_FOR_CALIBRATION = 7)
         coEvery { sleepSessionDao.countSince(any()) } returns 10
@@ -73,7 +75,10 @@ class ScoringRepositoryN1Test {
         coEvery { workoutDao.getWeightedAvgHr(any(), any()) } returns 0f
 
         coEvery { hrvDao.getSleepRmssdValues(any()) } returns listOf(60f, 60f, 60f)
+        coEvery { hrvDao.getSleepRmssdValuesSince(any(), any()) } returns listOf(60f, 60f, 60f)
         coEvery { hrvDao.getSleepRmssdForSession(any()) } returns listOf(60f, 60f)
+        coEvery { hrvDao.getRmssdInTimeRange(any(), any()) } returns listOf(60f, 60f)
+        coEvery { hrvDao.getSleepRmssdValuesForSessions(any()) } returns listOf(60f, 60f, 60f)
 
         coEvery { heartRateDao.getAvgSleepHrPerSession(any()) } returns listOf(55, 55, 55)
         coEvery { heartRateDao.getAvgSleepHr(any()) } returns 55
@@ -84,7 +89,53 @@ class ScoringRepositoryN1Test {
         coEvery { dailySummaryDao.getByDate(any()) } returns null
         coEvery { dailySummaryDao.upsert(any()) } returns Unit
 
-        repo = ScoringRepository(workoutDao, sleepSessionDao, heartRateDao, hrvDao, dailySummaryDao, prefsRepo)
+        scoringCalculator = ScoringCalculatorImpl()
+        repo = ScoringRepository(workoutDao, sleepSessionDao, heartRateDao, hrvDao, dailySummaryDao, prefsRepo, scoringCalculator)
+    }
+
+    @Test
+    fun `baseline calculation excludes invalid nights`() = runTest {
+        val validSession = makeSleepSession("valid", 1)
+        val shortSession = makeSleepSession("short", 2).copy(durationMinutes = 120) // 2h < 4h threshold
+        
+        coEvery { sleepSessionDao.getSince(any()) } returns listOf(validSession, shortSession)
+        
+        repo.computeAndPersistDailySummary(LocalDate.now())
+        
+        // Should only fetch HRV samples for the valid session
+        coVerify { hrvDao.getSleepRmssdValuesForSessions(listOf("valid")) }
+        coVerify(exactly = 0) { hrvDao.getSleepRmssdValuesForSessions(match { it.contains("short") }) }
+    }
+
+    @Test
+    fun `timezone jump suppresses late nadir penalty`() = runTest {
+        // Mock current session as having a late nadir
+        val todaySession = makeSleepSession("today", 0).copy(
+            startZoneOffsetSeconds = 3600, // UTC+1
+            endZoneOffsetSeconds = 3600
+        )
+        val prevSession = makeSleepSession("prev", 1).copy(
+            startZoneOffsetSeconds = -18000, // UTC-5 (e.g. travel from NY to London)
+            endZoneOffsetSeconds = -18000
+        )
+        
+        coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns todaySession
+        coEvery { sleepSessionDao.getSince(any()) } returns listOf(todaySession, prevSession)
+        
+        // Mock a late nadir timestamp (e.g. 80% into the session)
+        val sessionDurationMs = todaySession.durationMinutes * 60 * 1000L
+        val lateNadirTs = todaySession.startTime + (sessionDurationMs * 0.8).toLong()
+        coEvery { heartRateDao.getMinHrTimestamp("today") } returns lateNadirTs
+
+        repo.computeAndPersistDailySummary(LocalDate.now())
+
+        // Capture persisted summary and check flags
+        val summarySlot = io.mockk.slot<DailySummaryEntity>()
+        coVerify { dailySummaryDao.upsert(capture(summarySlot)) }
+        
+        val flags = summarySlot.captured.recoveryFlags ?: ""
+        // NADIR_DELAYED should be suppressed due to the timezone jump
+        assert(!flags.contains("NADIR_DELAYED")) { "NADIR_DELAYED should be suppressed during travel, but found in flags: $flags" }
     }
 
     @Test

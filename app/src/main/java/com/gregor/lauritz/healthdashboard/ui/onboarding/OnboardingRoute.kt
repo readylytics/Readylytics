@@ -37,10 +37,11 @@ fun OnboardingRoute(
         }
 
     OnboardingScreen(
-        onGrantPermissionsClick = { day, month, year, gender ->
+        onGrantPermissionsClick = { day, month, year, gender, physiologyProfile ->
             scope.launch {
                 prefsRepo.updateBirthday(day, month, year)
                 prefsRepo.updateGender(gender)
+                prefsRepo.updatePhysiologyProfile(physiologyProfile)
 
                 // Trigger permission request after saving profile
                 permissionLauncher.launch(permissions)

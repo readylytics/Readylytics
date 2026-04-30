@@ -40,11 +40,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
+import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
 import java.time.LocalDate
 
 @Composable
 fun OnboardingScreen(
-    onGrantPermissionsClick: (birthDay: Int, birthMonth: Int, birthYear: Int, gender: String) -> Unit,
+    onGrantPermissionsClick: (birthDay: Int, birthMonth: Int, birthYear: Int, gender: String, physiologyProfile: PhysiologyProfile) -> Unit,
     onOpenSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
@@ -167,13 +169,14 @@ private fun FeatureItem(
 
 @Composable
 private fun ProfileSetupScreen(
-    onGrantPermissionsClick: (birthDay: Int, birthMonth: Int, birthYear: Int, gender: String) -> Unit,
+    onGrantPermissionsClick: (birthDay: Int, birthMonth: Int, birthYear: Int, gender: String, physiologyProfile: PhysiologyProfile) -> Unit,
     onOpenSettingsClick: () -> Unit,
 ) {
     var birthDay by remember { mutableStateOf(LocalDate.now().dayOfMonth.toString()) }
     var birthMonth by remember { mutableStateOf(LocalDate.now().monthValue.toString()) }
     var birthYear by remember { mutableStateOf((LocalDate.now().year - 30).toString()) }
     var gender by remember { mutableStateOf("Other") }
+    var physiologyProfile by remember { mutableStateOf(PhysiologyProfile.GENERAL) }
 
     Column(
         modifier = Modifier
@@ -192,12 +195,26 @@ private fun ProfileSetupScreen(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = "Your birthday and gender are used to calculate your max heart rate and personalize scores. They are stored only on your device.",
+            text = "Your birthday, gender, and activity profile are used to calculate your max heart rate and personalize scores. They are stored only on your device.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Spacer(Modifier.height(20.dp))
+
+        Text(
+            text = "Activity Profile",
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+
+        PhysiologyProfilePicker(
+            selectedProfile = physiologyProfile,
+            onProfileSelected = { physiologyProfile = it }
+        )
+
+        Spacer(Modifier.height(16.dp))
 
         Text(
             text = "Date of Birth",
@@ -285,6 +302,7 @@ private fun ProfileSetupScreen(
                     monthInt ?: 1,
                     yearInt ?: 1990,
                     gender,
+                    physiologyProfile,
                 )
             },
             modifier = Modifier.fillMaxWidth(),

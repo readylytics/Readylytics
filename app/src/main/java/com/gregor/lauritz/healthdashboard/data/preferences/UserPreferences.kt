@@ -50,4 +50,5 @@ data class UserPreferences(
     val collapseDisplay: Boolean = SettingsDefaults.COLLAPSE_DISPLAY,
     val collapseAdvanced: Boolean = SettingsDefaults.COLLAPSE_ADVANCED,
     val aboutDismissed: Boolean = SettingsDefaults.ABOUT_DISMISSED,
+    val physiologyProfile: PhysiologyProfile = SettingsDefaults.PHYSIOLOGY_PROFILE,
 )

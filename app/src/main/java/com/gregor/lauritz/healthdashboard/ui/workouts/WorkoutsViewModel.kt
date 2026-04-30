@@ -53,6 +53,7 @@ class WorkoutsViewModel
         private val dailySummaryDao: DailySummaryDao,
         private val workoutDao: WorkoutDao,
         private val selectedDateRepository: SelectedDateRepository,
+        private val scoringCalculator: ScoringCalculator,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
         val selectedRange = _selectedRange.asStateFlow()
@@ -138,9 +139,9 @@ class WorkoutsViewModel
                                 }
 
                             if (dataTenureDays >= 7 && chronicTrimpList.isNotEmpty()) {
-                                val ctl = ScoringCalculator.computeCtlEma(chronicTrimpList)
+                                val ctl = scoringCalculator.computeCtlEma(chronicTrimpList)
                                 val atl = acuteSum / ACUTE_DAYS.toFloat()
-                                val sr = ScoringCalculator.computeStrainRatio(atl, ctl)
+                                val sr = scoringCalculator.computeStrainRatio(atl, ctl)
                                 dailyStrainRatio.add(DailyDataPoint(dayOffset = i, value = sr))
                             }
                         }

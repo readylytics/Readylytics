@@ -76,6 +76,7 @@ class UserPreferencesRepository
             val COLLAPSE_DISPLAY = booleanPreferencesKey("collapse_display")
             val COLLAPSE_ADVANCED = booleanPreferencesKey("collapse_advanced")
             val ABOUT_DISMISSED = booleanPreferencesKey("about_dismissed")
+            val PHYSIOLOGY_PROFILE = stringPreferencesKey("physiology_profile")
         }
 
         private fun Int.toValidMaxHr() = coerceIn(100, 250)
@@ -189,6 +190,9 @@ class UserPreferencesRepository
                         collapseDisplay = prefs[Keys.COLLAPSE_DISPLAY] ?: SettingsDefaults.COLLAPSE_DISPLAY,
                         collapseAdvanced = prefs[Keys.COLLAPSE_ADVANCED] ?: SettingsDefaults.COLLAPSE_ADVANCED,
                         aboutDismissed = prefs[Keys.ABOUT_DISMISSED] ?: SettingsDefaults.ABOUT_DISMISSED,
+                        physiologyProfile = prefs[Keys.PHYSIOLOGY_PROFILE]
+                            ?.let { runCatching { PhysiologyProfile.valueOf(it) }.getOrNull() }
+                            ?: SettingsDefaults.PHYSIOLOGY_PROFILE,
                     )
                 }
 
@@ -364,5 +368,9 @@ class UserPreferencesRepository
 
         suspend fun updateAboutDismissed(dismissed: Boolean) {
             dataStore.edit { it[Keys.ABOUT_DISMISSED] = dismissed }
+        }
+
+        suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) {
+            dataStore.edit { it[Keys.PHYSIOLOGY_PROFILE] = profile.name }
         }
     }

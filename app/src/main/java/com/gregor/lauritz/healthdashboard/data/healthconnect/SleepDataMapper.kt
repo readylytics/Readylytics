@@ -40,6 +40,8 @@ object SleepDataMapper {
             lightSleepMinutes = lightMinutes,
             awakeMinutes = awakeMinutes,
             sleepScore = null,
+            startZoneOffsetSeconds = session.startZoneOffset?.totalSeconds,
+            endZoneOffsetSeconds = session.endZoneOffset?.totalSeconds,
         )
     }
 }

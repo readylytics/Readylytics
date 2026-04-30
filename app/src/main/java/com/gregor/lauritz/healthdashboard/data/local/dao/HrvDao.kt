@@ -27,9 +27,20 @@ interface HrvDao {
     suspend fun getSleepRmssdValues(fromMs: Long): List<Float>
 
     @Query(
+        "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +
+            "ORDER BY timestampMs DESC LIMIT :limit",
+    )
+    suspend fun getSleepRmssdValuesSince(fromMs: Long, limit: Int): List<Float>
+
+    @Query(
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId = :sessionId",
     )
     suspend fun getSleepRmssdForSession(sessionId: String): List<Float>
+
+    @Query(
+        "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId IN (:sessionIds)",
+    )
+    suspend fun getSleepRmssdValuesForSessions(sessionIds: List<String>): List<Float>
 
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE timestampMs >= :fromMs AND timestampMs <= :toMs",

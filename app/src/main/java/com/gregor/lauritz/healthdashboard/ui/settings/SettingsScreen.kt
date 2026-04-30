@@ -64,6 +64,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
+import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
 import kotlinx.parcelize.Parcelize
 import java.text.DateFormat
 import java.util.Date
@@ -267,6 +268,12 @@ fun SettingsScreen(
                                 onEvent = onEvent,
                                 expandState = expandState,
                                 onExpandStateChange = { expandState = it }
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            PhysiologyProfilePicker(
+                                selectedProfile = uiState.physiologyProfile,
+                                onProfileSelected = { onEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
+                                modifier = Modifier.padding(horizontal = 16.dp),
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Thresholds")
@@ -885,6 +892,7 @@ private fun AdvancedSettingsSection(
             displayValue = "%.2f".format(paiScaling),
             description = "Adjusts how quickly you earn PAI points. Default: 0.20.",
         )
+
     }
 }
 

@@ -1,12 +1,12 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 12,
-    "identityHash": "290a8c32c274f0b9e223c9b773165b97",
+    "version": 13,
+    "identityHash": "2deb98cb68b60933b4d10918ac372c4b",
     "entities": [
       {
         "tableName": "sleep_sessions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `durationMinutes` INTEGER NOT NULL, `efficiency` REAL NOT NULL, `deepSleepMinutes` INTEGER NOT NULL, `remSleepMinutes` INTEGER NOT NULL, `lightSleepMinutes` INTEGER NOT NULL, `awakeMinutes` INTEGER NOT NULL, `sleepScore` REAL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `durationMinutes` INTEGER NOT NULL, `efficiency` REAL NOT NULL, `deepSleepMinutes` INTEGER NOT NULL, `remSleepMinutes` INTEGER NOT NULL, `lightSleepMinutes` INTEGER NOT NULL, `awakeMinutes` INTEGER NOT NULL, `sleepScore` REAL, `startZoneOffsetSeconds` INTEGER, `endZoneOffsetSeconds` INTEGER, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -66,6 +66,16 @@
             "fieldPath": "sleepScore",
             "columnName": "sleepScore",
             "affinity": "REAL"
+          },
+          {
+            "fieldPath": "startZoneOffsetSeconds",
+            "columnName": "startZoneOffsetSeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "endZoneOffsetSeconds",
+            "columnName": "endZoneOffsetSeconds",
+            "affinity": "INTEGER"
           }
         ],
         "primaryKey": {
@@ -471,7 +481,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '290a8c32c274f0b9e223c9b773165b97')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2deb98cb68b60933b4d10918ac372c4b')"
     ]
   }
 }

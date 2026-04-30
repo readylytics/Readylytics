@@ -1,12 +1,12 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 12,
-    "identityHash": "290a8c32c274f0b9e223c9b773165b97",
+    "version": 15,
+    "identityHash": "8ff6a3c1f3fbc1ddac4e3aedd5bdb743",
     "entities": [
       {
         "tableName": "sleep_sessions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `durationMinutes` INTEGER NOT NULL, `efficiency` REAL NOT NULL, `deepSleepMinutes` INTEGER NOT NULL, `remSleepMinutes` INTEGER NOT NULL, `lightSleepMinutes` INTEGER NOT NULL, `awakeMinutes` INTEGER NOT NULL, `sleepScore` REAL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `durationMinutes` INTEGER NOT NULL, `efficiency` REAL NOT NULL, `deepSleepMinutes` INTEGER NOT NULL, `remSleepMinutes` INTEGER NOT NULL, `lightSleepMinutes` INTEGER NOT NULL, `awakeMinutes` INTEGER NOT NULL, `sleepScore` REAL, `startZoneOffsetSeconds` INTEGER, `endZoneOffsetSeconds` INTEGER, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -66,6 +66,16 @@
             "fieldPath": "sleepScore",
             "columnName": "sleepScore",
             "affinity": "REAL"
+          },
+          {
+            "fieldPath": "startZoneOffsetSeconds",
+            "columnName": "startZoneOffsetSeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "endZoneOffsetSeconds",
+            "columnName": "endZoneOffsetSeconds",
+            "affinity": "INTEGER"
           }
         ],
         "primaryKey": {
@@ -336,7 +346,7 @@
       },
       {
         "tableName": "daily_summaries",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`dateMidnightMs` INTEGER NOT NULL, `sleepScore` REAL, `loadScore` REAL, `readinessScore` REAL, `strainRatio` REAL, `nocturnalRhr` INTEGER, `nocturnalHrv` INTEGER, `sleepDurationMinutes` INTEGER, `deepSleepPercent` REAL, `remSleepPercent` REAL, `totalTrimp` REAL, `rhrRatio` REAL, `hrvBaseline` INTEGER, `restingHeartRate` INTEGER, `restingHrRatio` REAL, `restingHrBaseline` INTEGER, `paiScore` REAL, `totalPai` REAL, `stepCount` INTEGER, `zLnHrv` REAL, `zRhr` REAL, `recoveryFlags` TEXT, PRIMARY KEY(`dateMidnightMs`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`dateMidnightMs` INTEGER NOT NULL, `sleepScore` REAL, `loadScore` REAL, `readinessScore` REAL, `strainRatio` REAL, `nocturnalRhr` INTEGER, `nocturnalHrv` INTEGER, `sleepDurationMinutes` INTEGER, `deepSleepPercent` REAL, `remSleepPercent` REAL, `totalTrimp` REAL, `rhrRatio` REAL, `hrvBaseline` INTEGER, `restingHeartRate` INTEGER, `restingHrRatio` REAL, `restingHrBaseline` INTEGER, `paiScore` REAL, `totalPai` REAL, `stepCount` INTEGER, `zLnHrv` REAL, `zRhr` REAL, `recoveryFlags` TEXT, `hrvSigma` REAL, `rollingMu` REAL, `rhrDeltaBpm` REAL, `lateNadir` INTEGER, `stagesSuspicious` INTEGER, `isCalibrating` INTEGER, `hrvScoreContribution` REAL, `rhrScoreContribution` REAL, `durationScoreContribution` REAL, `architectureScoreContribution` REAL, `loadContribution` REAL, `sRest` REAL, PRIMARY KEY(`dateMidnightMs`))",
         "fields": [
           {
             "fieldPath": "dateMidnightMs",
@@ -448,6 +458,66 @@
             "fieldPath": "recoveryFlags",
             "columnName": "recoveryFlags",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "hrvSigma",
+            "columnName": "hrvSigma",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "rollingMu",
+            "columnName": "rollingMu",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "rhrDeltaBpm",
+            "columnName": "rhrDeltaBpm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "lateNadir",
+            "columnName": "lateNadir",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "stagesSuspicious",
+            "columnName": "stagesSuspicious",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isCalibrating",
+            "columnName": "isCalibrating",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "hrvScoreContribution",
+            "columnName": "hrvScoreContribution",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "rhrScoreContribution",
+            "columnName": "rhrScoreContribution",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "durationScoreContribution",
+            "columnName": "durationScoreContribution",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "architectureScoreContribution",
+            "columnName": "architectureScoreContribution",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "loadContribution",
+            "columnName": "loadContribution",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "sRest",
+            "columnName": "sRest",
+            "affinity": "REAL"
           }
         ],
         "primaryKey": {
@@ -471,7 +541,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '290a8c32c274f0b9e223c9b773165b97')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8ff6a3c1f3fbc1ddac4e3aedd5bdb743')"
     ]
   }
 }
