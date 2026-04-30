@@ -15,6 +15,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
+import com.gregor.lauritz.healthdashboard.domain.util.logD
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -61,21 +62,19 @@ class HealthSyncUseCase
                     val exerciseRecords = hcRepo.readExerciseSessions(from, to)
                     val hrRecords = hcRepo.readHeartRateSamples(from, to)
                     val hrvRecords = hcRepo.readHrvSamples(from, to)
-                    android.util.Log.d(
-                        "HealthSyncUseCase",
+                    logD("HealthSyncUseCase") {
                         "Fetched HC: sleep=${sleepEntities.size} hrv=${hrvRecords.size} hr=${hrRecords.size} from=$from to=$to"
-                    )
+                    }
                     if (hrvRecords.isNotEmpty()) {
                         val newest = hrvRecords.maxByOrNull { it.time }?.time
                         val oldest = hrvRecords.minByOrNull { it.time }?.time
-                        android.util.Log.d("HealthSyncUseCase", "HRV time range in fetch: oldest=$oldest newest=$newest")
+                        logD("HealthSyncUseCase") { "HRV time range in fetch: oldest=$oldest newest=$newest" }
                     }
                     if (sleepEntities.isNotEmpty()) {
                         val latestSession = sleepEntities.maxByOrNull { it.endTime }
-                        android.util.Log.d(
-                            "HealthSyncUseCase",
+                        logD("HealthSyncUseCase") {
                             "Latest sleep session: id=${latestSession?.id} start=${latestSession?.startTime} end=${latestSession?.endTime}"
-                        )
+                        }
                     }
 
                     val thresholds = WorkoutMapper.zoneThresholds(

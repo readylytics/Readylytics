@@ -18,6 +18,8 @@ import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
+class HealthConnectPermissionRevokedException(cause: SecurityException) : Exception("Health Connect permissions were revoked", cause)
+
 sealed interface PermissionStatus {
     data object Granted : PermissionStatus
 
@@ -66,17 +68,23 @@ class HealthConnectRepository
         ): List<T> {
             val all = mutableListOf<T>()
             var pageToken: String? = null
-            do {
-                val response = client.readRecords(
-                    ReadRecordsRequest(
-                        recordType = T::class,
-                        timeRangeFilter = TimeRangeFilter.between(from, to),
-                        pageToken = pageToken,
-                    ),
-                )
-                all.addAll(response.records)
-                pageToken = response.pageToken
-            } while (pageToken != null)
+            try {
+                do {
+                    val response = client.readRecords(
+                        ReadRecordsRequest(
+                            recordType = T::class,
+                            timeRangeFilter = TimeRangeFilter.between(from, to),
+                            pageToken = pageToken,
+                        ),
+                    )
+                    all.addAll(response.records)
+                    pageToken = response.pageToken
+                } while (pageToken != null)
+            } catch (e: SecurityException) {
+                // Permission was revoked between the permission check and this read.
+                // Throwing allows the caller to catch the revocation and trigger a re-prompt.
+                throw HealthConnectPermissionRevokedException(e)
+            }
             return all
         }
 

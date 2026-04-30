@@ -14,6 +14,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -42,29 +43,38 @@ class BackupUseCase
                             .getOrThrow()
 
                     val tempDir = File(context.cacheDir, "backup_temp").also { it.mkdirs() }
-                    val dbFile = context.getDatabasePath("health_dashboard.db")
-                    // Copy the main DB file and WAL companion files so the backup is consistent
-                    dbFile.copyTo(File(tempDir, "health.db"), overwrite = true)
-                    val walFile = File("${dbFile.path}-wal")
-                    val shmFile = File("${dbFile.path}-shm")
-                    if (walFile.exists()) walFile.copyTo(File(tempDir, "health.db-wal"), overwrite = true)
-                    if (shmFile.exists()) shmFile.copyTo(File(tempDir, "health.db-shm"), overwrite = true)
-
-                    val prefsJson = exportPreferencesToJson()
-                    File(tempDir, "preferences.json").writeText(prefsJson)
-
                     val zipFile = File(context.cacheDir, "health_backup.zip")
-                    zipDirectory(tempDir, zipFile)
+                    try {
+                        val dbFile = context.getDatabasePath("health_dashboard.db")
+                        // Copy the main DB file and WAL companion files so the backup is consistent
+                        dbFile.copyTo(File(tempDir, "health.db"), overwrite = true)
+                        val walFile = File("${dbFile.path}-wal")
+                        val shmFile = File("${dbFile.path}-shm")
+                        if (walFile.exists()) walFile.copyTo(File(tempDir, "health.db-wal"), overwrite = true)
+                        if (shmFile.exists()) shmFile.copyTo(File(tempDir, "health.db-shm"), overwrite = true)
 
-                    // Delete existing backup (keep only the latest)
-                    val existing = driveRepository.listBackupFiles(accessToken)
-                    existing.forEach { driveRepository.deleteFile(accessToken, it.id) }
+                        val prefsJson = exportPreferencesToJson()
+                        File(tempDir, "preferences.json").writeText(prefsJson)
 
-                    driveRepository.uploadBackup(accessToken, zipFile)
-                    backupPrefsRepo.updateLastBackupTimestamp(System.currentTimeMillis())
+                        zipDirectory(tempDir, zipFile)
 
-                    tempDir.deleteRecursively()
-                    zipFile.delete()
+                        // Validate the ZIP before upload — guard against corrupt archives
+                        require(zipFile.exists() && zipFile.length() > 0) { "Backup ZIP creation failed" }
+                        ZipFile(zipFile).use { /* validates ZIP structure */ }
+
+                        // Upload first so an upload failure keeps the previous backup intact
+                        val uploadedId = driveRepository.uploadBackup(accessToken, zipFile)
+                        backupPrefsRepo.updateLastBackupTimestamp(System.currentTimeMillis())
+
+                        // Prune old backups, keeping the one we just uploaded plus one previous version
+                        val existing = driveRepository.listBackupFiles(accessToken)
+                            .filter { it.id != uploadedId }
+                            .sortedByDescending { it.name }
+                        existing.drop(1).forEach { driveRepository.deleteFile(accessToken, it.id) }
+                    } finally {
+                        tempDir.deleteRecursively()
+                        zipFile.delete()
+                    }
                     Unit
                 }
             }

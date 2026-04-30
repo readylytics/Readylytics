@@ -10,6 +10,7 @@ import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.gregor.lauritz.healthdashboard.BuildConfig
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +28,6 @@ sealed interface DriveAuthState {
     data class SignedIn(val email: String) : DriveAuthState
 }
 
-private const val OAUTH_SERVER_CLIENT_ID = "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com" // TODO
 private const val DRIVE_APPDATA_SCOPE = "https://www.googleapis.com/auth/drive.appdata"
 
 @Singleton
@@ -51,7 +51,7 @@ class DriveAuthManager
                         GetGoogleIdOption
                             .Builder()
                             .setFilterByAuthorizedAccounts(false)
-                            .setServerClientId(OAUTH_SERVER_CLIENT_ID)
+                            .setServerClientId(BuildConfig.OAUTH_WEB_CLIENT_ID)
                             .build()
                     val request =
                         GetCredentialRequest

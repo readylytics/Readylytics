@@ -12,6 +12,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesReposi
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
+import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
@@ -174,7 +175,7 @@ class SleepViewModel
             ) { range, date -> range to date }
                 .flatMapLatest { (range, date) ->
                     val fromMs = range.fromMs(date)
-                    val startDayMs = truncateToDayMs(fromMs)
+                    val startDayMs = fromMs.truncateToDayMs()
                     val zoneId = ZoneId.systemDefault()
                     val selectedMidnightMs =
                         date
@@ -269,12 +270,3 @@ class SleepViewModel
         }
     }
 
-internal fun truncateToDayMs(timestampMs: Long): Long {
-    val zoneId = ZoneId.systemDefault()
-    return Instant.ofEpochMilli(timestampMs)
-        .atZone(zoneId)
-        .toLocalDate()
-        .atStartOfDay(zoneId)
-        .toInstant()
-        .toEpochMilli()
-}
