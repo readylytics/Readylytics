@@ -38,9 +38,8 @@ object ScoringConstants {
     // Defaults
     const val DEFAULT_FITNESS_LEVEL = 35f
     const val DEFAULT_GOAL_SLEEP_HOURS = 8f
-
-    // EMA Parameters
-    const val PROVISIONAL_DAYS = 21
+    const val DEFAULT_RHR_BPM = 60f
+    const val TIMEZONE_JUMP_THRESHOLD_SECONDS = 7200L
 
     object Strain {
         const val OPTIMAL_SWEET_SPOT_SCORE = 100f

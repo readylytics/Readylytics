@@ -25,7 +25,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
         WorkoutRecordEntity::class,
         DailySummaryEntity::class,
     ],
-    version = 14,
+    version = 16,
 )
 abstract class HealthDatabase : RoomDatabase() {
     abstract fun sleepSessionDao(): SleepSessionDao
@@ -266,5 +266,131 @@ abstract class HealthDatabase : RoomDatabase() {
                     connection.execSQL("ALTER TABLE daily_summaries ADD COLUMN hrvSigma REAL")
                 }
             }
+
+        // ReadinessResult diagnostics + contributors persistence — REF: plan_scoring.md §3
+        val MIGRATION_14_15 =
+            object : Migration(14, 15) {
+                private val sql =
+                    listOf(
+                        "ALTER TABLE daily_summaries ADD COLUMN rollingMu REAL",
+                        "ALTER TABLE daily_summaries ADD COLUMN rhrDeltaBpm REAL",
+                        "ALTER TABLE daily_summaries ADD COLUMN lateNadir INTEGER",
+                        "ALTER TABLE daily_summaries ADD COLUMN stagesSuspicious INTEGER",
+                        "ALTER TABLE daily_summaries ADD COLUMN isCalibrating INTEGER",
+                        "ALTER TABLE daily_summaries ADD COLUMN hrvScoreContribution REAL",
+                        "ALTER TABLE daily_summaries ADD COLUMN rhrScoreContribution REAL",
+                        "ALTER TABLE daily_summaries ADD COLUMN durationScoreContribution REAL",
+                        "ALTER TABLE daily_summaries ADD COLUMN architectureScoreContribution REAL",
+                        "ALTER TABLE daily_summaries ADD COLUMN loadContribution REAL",
+                        "ALTER TABLE daily_summaries ADD COLUMN sRest REAL",
+                    )
+
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    sql.forEach { db.execSQL(it) }
+                }
+
+                override fun migrate(connection: SQLiteConnection) {
+                    sql.forEach { connection.execSQL(it) }
+                }
+            }
+
+        // Refactor DailySummaryEntity to use @Embedded ReadinessResult.Diagnostics/Contributors
+        val MIGRATION_15_16 =
+            object : Migration(15, 16) {
+                private val sql =
+                    listOf(
+                        """
+                        CREATE TABLE daily_summaries_new (
+                            dateMidnightMs INTEGER NOT NULL PRIMARY KEY,
+                            sleepScore REAL,
+                            loadScore REAL,
+                            readinessScore REAL,
+                            strainRatio REAL,
+                            nocturnalRhr INTEGER,
+                            nocturnalHrv INTEGER,
+                            sleepDurationMinutes INTEGER,
+                            deepSleepPercent REAL,
+                            remSleepPercent REAL,
+                            totalTrimp REAL,
+                            rhrRatio REAL,
+                            hrvBaseline INTEGER,
+                            restingHeartRate INTEGER,
+                            restingHrRatio REAL,
+                            restingHrBaseline INTEGER,
+                            paiScore REAL,
+                            totalPai REAL,
+                            stepCount INTEGER,
+                            zLnHrv REAL,
+                            zRhr REAL,
+                            recoveryFlags TEXT,
+                            hrvSigma REAL,
+                            diag_zLnHrv REAL,
+                            diag_zRhr REAL,
+                            diag_lnSigma REAL,
+                            diag_rollingMu REAL,
+                            diag_rhrDeltaBpm REAL,
+                            diag_isCalibrating INTEGER NOT NULL,
+                            diag_stagesSuspicious INTEGER NOT NULL,
+                            diag_lateNadir INTEGER NOT NULL,
+                            diag_hrvMissing INTEGER NOT NULL,
+                            diag_timezoneJump INTEGER NOT NULL,
+                            contrib_hrvScore REAL,
+                            contrib_rhrScore REAL,
+                            contrib_durationScore REAL,
+                            contrib_architectureScore REAL,
+                            contrib_loadContribution REAL,
+                            rollingMu REAL,
+                            rhrDeltaBpm REAL,
+                            lateNadir INTEGER,
+                            stagesSuspicious INTEGER,
+                            isCalibrating INTEGER,
+                            hrvScoreContribution REAL,
+                            rhrScoreContribution REAL,
+                            durationScoreContribution REAL,
+                            architectureScoreContribution REAL,
+                            loadContribution REAL,
+                            sRest REAL
+                        )
+                        """.trimIndent(),
+                        """
+                        INSERT INTO daily_summaries_new
+                            (dateMidnightMs, sleepScore, loadScore, readinessScore, strainRatio,
+                             nocturnalRhr, nocturnalHrv, sleepDurationMinutes, deepSleepPercent,
+                             remSleepPercent, totalTrimp, rhrRatio, hrvBaseline, restingHeartRate,
+                             restingHrRatio, restingHrBaseline, paiScore, totalPai, stepCount,
+                             zLnHrv, zRhr, recoveryFlags, hrvSigma,
+                             diag_zLnHrv, diag_zRhr, diag_lnSigma, diag_rollingMu, diag_rhrDeltaBpm,
+                             diag_isCalibrating, diag_stagesSuspicious, diag_lateNadir, diag_hrvMissing, diag_timezoneJump,
+                             contrib_hrvScore, contrib_rhrScore, contrib_durationScore, contrib_architectureScore, contrib_loadContribution,
+                             rollingMu, rhrDeltaBpm, lateNadir, stagesSuspicious, isCalibrating,
+                             hrvScoreContribution, rhrScoreContribution, durationScoreContribution,
+                             architectureScoreContribution, loadContribution, sRest)
+                        SELECT dateMidnightMs, sleepScore, loadScore, readinessScore, strainRatio,
+                               nocturnalRhr, nocturnalHrv, sleepDurationMinutes, deepSleepPercent,
+                               remSleepPercent, totalTrimp, rhrRatio, hrvBaseline, restingHeartRate,
+                               restingHrRatio, restingHrBaseline, paiScore, totalPai, stepCount,
+                               zLnHrv, zRhr, recoveryFlags, hrvSigma,
+                               zLnHrv, zRhr, hrvSigma, rollingMu, rhrDeltaBpm,
+                               COALESCE(isCalibrating, 0), COALESCE(stagesSuspicious, 0), COALESCE(lateNadir, 0), 0, 0,
+                               hrvScoreContribution, rhrScoreContribution, durationScoreContribution, architectureScoreContribution, loadContribution,
+                               rollingMu, rhrDeltaBpm, lateNadir, stagesSuspicious, isCalibrating,
+                               hrvScoreContribution, rhrScoreContribution, durationScoreContribution,
+                               architectureScoreContribution, loadContribution, sRest
+                        FROM daily_summaries
+                        """.trimIndent(),
+                        "DROP TABLE daily_summaries",
+                        "ALTER TABLE daily_summaries_new RENAME TO daily_summaries",
+                        "CREATE INDEX IF NOT EXISTS index_daily_summaries_dateMidnightMs ON daily_summaries (dateMidnightMs)",
+                    )
+
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    sql.forEach { db.execSQL(it) }
+                }
+
+                override fun migrate(connection: SQLiteConnection) {
+                    sql.forEach { connection.execSQL(it) }
+                }
+            }
     }
 }
+

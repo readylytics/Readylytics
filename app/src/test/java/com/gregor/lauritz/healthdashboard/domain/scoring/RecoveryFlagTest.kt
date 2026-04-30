@@ -8,6 +8,7 @@ import org.junit.Test
 // Single-night anomalies are noise; both nights must show the same pattern before a flag fires.
 // REF: Le Meur 2013 Med Sci Sports Exerc; Mishra 2020 Nat Biomed Eng
 class RecoveryFlagTest {
+    private val calculator = ScoringCalculatorImpl()
 
     private fun flags(
         zLnHrv: Float? = null,
@@ -19,7 +20,7 @@ class RecoveryFlagTest {
         stagesSuspicious: Boolean = false,
         isLateNadir: Boolean = false,
         isCalibrating: Boolean = false,
-    ) = ScoringCalculator.computeRecoveryFlags(
+    ) = calculator.computeRecoveryFlags(
         zLnHrv, zRhr, rhrDeltaBpm, yesterdayZLnHrv, yesterdayZRhr,
         hrvMissing, stagesSuspicious, isLateNadir, isCalibrating,
     )

@@ -5,6 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ValidNightTest {
+    private val calculator = ScoringCalculatorImpl()
 
     private fun validate(
         rmssdMs: Float? = 50f,
@@ -12,7 +13,7 @@ class ValidNightTest {
         durationMinutes: Int = 480,
         deepMinutes: Int = 80,
         remMinutes: Int = 96,
-    ) = ScoringCalculator.validateNight(rmssdMs, rhrBpm, durationMinutes, deepMinutes, remMinutes)
+    ) = calculator.validateNight(rmssdMs, rhrBpm, durationMinutes, deepMinutes, remMinutes)
 
     // ─── RMSSD bounds ─────────────────────────────────────────────────────────
 

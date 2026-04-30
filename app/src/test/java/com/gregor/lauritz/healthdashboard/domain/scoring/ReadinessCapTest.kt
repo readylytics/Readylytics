@@ -10,13 +10,14 @@ private const val DELTA = 0.01f
 // OVERREACHING → cap 70; ILLNESS_ONSET → cap 50; both → min cap (50); empty → no cap.
 // REF: Le Meur 2013 Med Sci Sports Exerc; Mishra 2020 Nat Biomed Eng
 class ReadinessCapTest {
+    private val calculator = ScoringCalculatorImpl()
 
     private fun readiness(
         sRest: Float = 80f,
         sleepScore: Float = 80f,
         loadScore: Float = 80f,
         flags: Set<RecoveryFlag> = emptySet(),
-    ) = ScoringCalculator.computeReadinessScore(sRest, sleepScore, loadScore, flags)
+    ) = calculator.computeReadinessScore(sRest, sleepScore, loadScore, flags)
 
     // Baseline uncapped score: 0.4*80 + 0.3*80 + 0.3*80 = 80
     private val baseUncapped = 80f

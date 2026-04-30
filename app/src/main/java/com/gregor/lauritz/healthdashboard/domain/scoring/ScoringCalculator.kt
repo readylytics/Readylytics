@@ -10,30 +10,137 @@ import com.gregor.lauritz.healthdashboard.domain.util.median
 import com.gregor.lauritz.healthdashboard.domain.util.stdev
 import kotlin.math.exp
 import kotlin.math.ln
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+interface ScoringCalculator {
+    fun computeStrainRatio(atl: Float, ctl: Float): Float
+    fun computeCtlEma(
+        dailyTrimpList: List<Float>,
+        seedFitnessLevel: Float = ScoringConstants.DEFAULT_FITNESS_LEVEL,
+        windowDays: Long = ScoringConstants.CHRONIC_DAYS,
+    ): Float
+    fun computeAtlEma(
+        dailyTrimpList: List<Float>,
+        seedFatigueLevel: Float = ScoringConstants.DEFAULT_FITNESS_LEVEL,
+        windowDays: Long = ScoringConstants.ACUTE_DAYS,
+    ): Float
+    fun computeLoadScore(sr: Float): Float
+    fun computeDurationSubScore(
+        durationMinutes: Int,
+        efficiency: Float,
+        goalSleepHours: Float,
+    ): Float
+    fun computeArchSubScore(
+        deepSleepMinutes: Int,
+        remSleepMinutes: Int,
+        durationMinutes: Int,
+        userAge: Int = 30,
+    ): Float
+    fun hrvSigma(lnHrvValues: List<Float>, sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior): Float
+    fun computeHrvZScore(
+        currentRmssdMs: Float,
+        muHistory: List<Float>,
+        sigmaHistory: List<Float>,
+        sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior,
+        baselineOverride: Float? = null,
+    ): Float?
+    fun computeHrvScore(z: Float): Float
+    fun computeRhrZScore(
+        currentRhrBpm: Float,
+        rhrHistory: List<Int>,
+        baselineOverride: Float? = null,
+    ): Float?
+    fun computeRestorationSubScore(
+        currentHrvMean: Float,
+        muHrvHistory: List<Float>,
+        sigmaHrvHistory: List<Float>,
+        sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior,
+        currentNocturnalRhr: Float,
+        rhrValues: List<Int>,
+        rhrBaselineOverride: Float?,
+        hrvBaselineOverride: Float?,
+    ): Float
+    fun computeSleepScore(
+        durationMinutes: Int,
+        efficiency: Float,
+        deepSleepMinutes: Int,
+        remSleepMinutes: Int,
+        goalSleepHours: Float,
+        sRest: Float,
+        userAge: Int = 30,
+        stagesSuspicious: Boolean = false,
+    ): Float
+    fun computeRecoveryFlags(
+        zLnHrv: Float?,
+        zRhr: Float?,
+        rhrDeltaBpm: Float?,
+        yesterdayZLnHrv: Float?,
+        yesterdayZRhr: Float?,
+        hrvMissing: Boolean,
+        stagesSuspicious: Boolean,
+        isLateNadir: Boolean,
+        isCalibrating: Boolean,
+    ): Set<RecoveryFlag>
+    fun computeReadinessScore(
+        sRest: Float,
+        sleepScore: Float,
+        loadScore: Float,
+        recoveryFlags: Set<RecoveryFlag> = emptySet(),
+    ): Float
+    fun isLateNadir(
+        minHrTimestampMs: Long,
+        sessionStartMs: Long,
+        durationMinutes: Int,
+    ): Boolean
+
+    data class NightValidationResult(
+        val rmssdValid: Boolean,
+        val rhrValid: Boolean,
+        val durationValid: Boolean,
+        val stagesValid: Boolean,
+        val stagesSuspicious: Boolean,
+        val hrCoverageValid: Boolean = true,
+    ) {
+        val canContributeToBaseline: Boolean
+            get() = rmssdValid && rhrValid && durationValid && hrCoverageValid
+    }
+
+    fun validateNight(
+        rmssdMs: Float?,
+        rhrBpm: Float?,
+        durationMinutes: Int,
+        deepMinutes: Int,
+        remMinutes: Int,
+        hrCoverageValid: Boolean = true,
+    ): NightValidationResult
+}
 
 /**
- * Pure Kotlin object containing all scoring formulas.
+ * Pure Kotlin class containing all scoring formulas.
  * Decoupled from data fetching and persistence for better testability and clean architecture.
  *
  * HRV display values are always in raw ms. The ln(RMSSD) transform is applied internally
  * only for Z-score statistics to normalise the log-normal distribution.
  * REF: Plews 2013 Sports Med 43:773; Buchheit 2014 Front Physiol 5:73
  */
-object ScoringCalculator {
+@Singleton
+class ScoringCalculatorImpl @Inject constructor() : ScoringCalculator {
 
-    fun computeStrainRatio(atl: Float, ctl: Float): Float =
+    override fun computeStrainRatio(atl: Float, ctl: Float): Float =
         if (ctl > 0f) atl / ctl else 0f
 
-    fun computeCtlEma(
+    override fun computeCtlEma(
         dailyTrimpList: List<Float>,
-        seedFitnessLevel: Float = ScoringConstants.DEFAULT_FITNESS_LEVEL,
-        windowDays: Long = ScoringConstants.CHRONIC_DAYS,
+        seedFitnessLevel: Float,
+        windowDays: Long,
     ): Float = computeEma(dailyTrimpList, seedFitnessLevel, windowDays)
 
-    fun computeAtlEma(
+    override fun computeAtlEma(
         dailyTrimpList: List<Float>,
-        seedFatigueLevel: Float = ScoringConstants.DEFAULT_FITNESS_LEVEL,
-        windowDays: Long = ScoringConstants.ACUTE_DAYS,
+        seedFatigueLevel: Float,
+        windowDays: Long,
     ): Float = computeEma(dailyTrimpList, seedFatigueLevel, windowDays)
 
     private fun computeEma(
@@ -42,16 +149,16 @@ object ScoringCalculator {
         windowDays: Long,
     ): Float {
         val n = data.size
-        if (n < 7) return seed
+        if (n < ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION) return seed
 
-        // Initialize with SMA of the first 7 days to stabilize the start
-        val sma = data.take(7).average().toFloat()
-        if (n <= 7) return sma
+        // Initialize with SMA of the first MIN_SESSIONS_FOR_CALIBRATION days to stabilize the start
+        val sma = data.take(ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION).average().toFloat()
+        if (n <= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION) return sma
 
         val alpha = 2f / (windowDays + 1f)
         var currentEma = sma
 
-        for (i in 7 until data.size) {
+        for (i in ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION until data.size) {
             currentEma = (data[i] * alpha) + (currentEma * (1f - alpha))
         }
 
@@ -61,7 +168,7 @@ object ScoringCalculator {
     // All SR ≤ sweet-spot (1.3) score 100; no penalty for rest days.
     // Above 1.3: smooth quadratic decay with no artificial floor.
     // REF: Gabbett 2016 BJSM; Windt & Gabbett 2018 BJSM; Impellizzeri 2020 IJSPP
-    fun computeLoadScore(sr: Float): Float {
+    override fun computeLoadScore(sr: Float): Float {
         if (sr <= Strain.SR_SWEET_SPOT_MAX) return Strain.OPTIMAL_SWEET_SPOT_SCORE
         val excess = sr - Strain.SR_SWEET_SPOT_MAX
         return (100f * exp(-Strain.QUADRATIC_PENALTY_K * excess * excess)).coerceIn(0f, 100f)
@@ -70,7 +177,7 @@ object ScoringCalculator {
     // Additive efficiency: TST and efficiency scored separately then combined.
     // Avoids double-penalty because TST = TIB × SE already encodes efficiency.
     // REF: Buysse 1989 PSQI; A.3 review finding
-    fun computeDurationSubScore(
+    override fun computeDurationSubScore(
         durationMinutes: Int,
         efficiency: Float,
         goalSleepHours: Float,
@@ -92,11 +199,11 @@ object ScoringCalculator {
 
     // Age-banded saturation denominators prevent systematic penalisation of older users.
     // REF: Ohayon 2004 Sleep 27:1255; Boulos 2019 Lancet Respir Med 7:533
-    fun computeArchSubScore(
+    override fun computeArchSubScore(
         deepSleepMinutes: Int,
         remSleepMinutes: Int,
         durationMinutes: Int,
-        userAge: Int = 30,
+        userAge: Int,
     ): Float {
         require(durationMinutes >= 0)    { "durationMinutes must be >= 0" }
         require(deepSleepMinutes >= 0)   { "deepSleepMinutes must be >= 0" }
@@ -126,7 +233,7 @@ object ScoringCalculator {
     // Blended provisional sigma on ln-scale.
     // w = clamp((n - 7) / (60 - 7), 0, 1); at n<7 fully prior-driven; at n≥60 fully personal.
     // REF: Plews 2013b Sports Med; Schaffarczyk 2024; Kubios HRV practice
-    fun hrvSigma(lnHrvValues: List<Float>, sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior): Float {
+    override fun hrvSigma(lnHrvValues: List<Float>, sigmaPrior: Float): Float {
         val n = lnHrvValues.size
         val w = ((n - ScoringConstants.HRV_SIGMA_BLEND_MIN_N).toFloat() /
                  (ScoringConstants.HRV_SIGMA_BLEND_MAX_N - ScoringConstants.HRV_SIGMA_BLEND_MIN_N))
@@ -140,12 +247,12 @@ object ScoringCalculator {
     // sigmaHistory  = last 56 valid nights (long-term variance, blended with prior)
     // Display in the UI always uses raw ms; this value drives 0-100 scoring and colouring only.
     // REF: Plews 2013 Sports Med 43:773; Buchheit 2014 Front Physiol 5:73
-    fun computeHrvZScore(
+    override fun computeHrvZScore(
         currentRmssdMs: Float,
         muHistory: List<Float>,
         sigmaHistory: List<Float>,
-        sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior,
-        baselineOverride: Float? = null,
+        sigmaPrior: Float,
+        baselineOverride: Float?,
     ): Float? {
         if (currentRmssdMs <= 0f || (baselineOverride == null && muHistory.isEmpty())) return null
         val lnMuHistory    = muHistory.map    { ln(it.coerceAtLeast(0.001f)) }
@@ -160,7 +267,7 @@ object ScoringCalculator {
     // Piecewise HRV score: linear below z=1.5, soft saturation above.
     // Preserves sensitivity near baseline; avoids ceiling lock for very high HRV.
     // REF: spec §4.2; Bellenger 2017 Front Physiol
-    fun computeHrvScore(z: Float): Float {
+    override fun computeHrvScore(z: Float): Float {
         val adjustedZ = if (z > ScoringConstants.HRV_SCORE_SATURATION_Z)
             ScoringConstants.HRV_SCORE_SATURATION_Z +
                 ScoringConstants.HRV_SCORE_SATURATION_SLOPE * (z - ScoringConstants.HRV_SCORE_SATURATION_Z)
@@ -170,10 +277,10 @@ object ScoringCalculator {
 
     // RHR scored as Z-score vs. personal rolling baseline.
     // REF: Mishra 2020 Nat Biomed Eng; Buchheit 2014; Quer 2020 Nat Med
-    fun computeRhrZScore(
+    override fun computeRhrZScore(
         currentRhrBpm: Float,
         rhrHistory: List<Int>,
-        baselineOverride: Float? = null,
+        baselineOverride: Float?,
     ): Float? {
         if (rhrHistory.isEmpty() && baselineOverride == null) return null
         val mu    = baselineOverride ?: rhrHistory.median()
@@ -182,11 +289,11 @@ object ScoringCalculator {
         return (currentRhrBpm - mu) / sigma
     }
 
-    fun computeRestorationSubScore(
+    override fun computeRestorationSubScore(
         currentHrvMean: Float,
         muHrvHistory: List<Float>,
         sigmaHrvHistory: List<Float>,
-        sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior,
+        sigmaPrior: Float,
         currentNocturnalRhr: Float,
         rhrValues: List<Int>,
         rhrBaselineOverride: Float?,
@@ -202,26 +309,31 @@ object ScoringCalculator {
         return Restoration.WEIGHT_HRV_SCORE * hrvScore + Restoration.WEIGHT_RHR_SCORE * rhrScore
     }
 
-    fun computeSleepScore(
+    override fun computeSleepScore(
         durationMinutes: Int,
         efficiency: Float,
         deepSleepMinutes: Int,
         remSleepMinutes: Int,
         goalSleepHours: Float,
         sRest: Float,
-        userAge: Int = 30,
+        userAge: Int,
+        stagesSuspicious: Boolean,
     ): Float {
         require(durationMinutes >= 0) { "durationMinutes must be >= 0" }
         require(goalSleepHours > 0f)  { "goalSleepHours must be > 0" }
         val sDur  = computeDurationSubScore(durationMinutes, efficiency, goalSleepHours)
         val sArch = computeArchSubScore(deepSleepMinutes, remSleepMinutes, durationMinutes, userAge)
-        return Sleep.WEIGHT_DURATION * sDur + Sleep.WEIGHT_ARCHITECTURE * sArch + Sleep.WEIGHT_RESTORATION * sRest
+
+        val durationWeight = if (stagesSuspicious) 0.75f else Sleep.WEIGHT_DURATION
+        val archWeight = if (stagesSuspicious) 0.00f else Sleep.WEIGHT_ARCHITECTURE
+
+        return durationWeight * sDur + archWeight * sArch + Sleep.WEIGHT_RESTORATION * sRest
     }
 
     // 2-night consecutive confirmation required for OVERREACHING and ILLNESS_ONSET.
     // Single-night anomalies are common noise; two nights in a row signals a genuine state.
     // REF: Le Meur 2013 Med Sci Sports Exerc; Mishra 2020 Nat Biomed Eng
-    fun computeRecoveryFlags(
+    override fun computeRecoveryFlags(
         zLnHrv: Float?,
         zRhr: Float?,
         rhrDeltaBpm: Float?,
@@ -257,11 +369,11 @@ object ScoringCalculator {
         return flags
     }
 
-    fun computeReadinessScore(
+    override fun computeReadinessScore(
         sRest: Float,
         sleepScore: Float,
         loadScore: Float,
-        recoveryFlags: Set<RecoveryFlag> = emptySet(),
+        recoveryFlags: Set<RecoveryFlag>,
     ): Float {
         var rs = Readiness.WEIGHT_RESTORATION * sRest +
                  Readiness.WEIGHT_SLEEP * sleepScore +
@@ -283,7 +395,7 @@ object ScoringCalculator {
 
     // Pure function — moves late-nadir check out of ScoringRepository for testability.
     // REF: Trinder 2001 J Sleep Res 10:253 — last-third cutoff
-    fun isLateNadir(
+    override fun isLateNadir(
         minHrTimestampMs: Long,
         sessionStartMs: Long,
         durationMinutes: Int,
@@ -294,26 +406,14 @@ object ScoringCalculator {
                (sessionDurationMs * Restoration.LATE_NADIR_THRESHOLD)
     }
 
-    // Valid-night pipeline — validates raw inputs before they contribute to baselines.
-    // REF: Task Force 1996 Eur Heart J 17:354; Clifford 2006 Advanced Methods for ECG Analysis
-    data class NightValidationResult(
-        val rmssdValid: Boolean,
-        val rhrValid: Boolean,
-        val durationValid: Boolean,
-        val stagesValid: Boolean,
-        val stagesSuspicious: Boolean,
-    ) {
-        val canContributeToBaseline: Boolean
-            get() = rmssdValid && rhrValid && durationValid
-    }
-
-    fun validateNight(
+    override fun validateNight(
         rmssdMs: Float?,
         rhrBpm: Float?,
         durationMinutes: Int,
         deepMinutes: Int,
         remMinutes: Int,
-    ): NightValidationResult {
+        hrCoverageValid: Boolean,
+    ): ScoringCalculator.NightValidationResult {
         val rmssdValid = rmssdMs != null &&
                          rmssdMs in ScoringConstants.MIN_VALID_RMSSD_MS..ScoringConstants.MAX_VALID_RMSSD_MS
         val rhrValid   = rhrBpm == null ||
@@ -327,12 +427,14 @@ object ScoringCalculator {
         val stagesSuspicious = !stagesInvalid &&
                                (deepFrac + remFrac) > ScoringConstants.MAX_VALID_DEEP_REM_SUM
 
-        return NightValidationResult(
+        return ScoringCalculator.NightValidationResult(
             rmssdValid       = rmssdValid,
             rhrValid         = rhrValid,
             durationValid    = durationValid,
             stagesValid      = !stagesInvalid,
             stagesSuspicious = stagesSuspicious,
+            hrCoverageValid  = hrCoverageValid,
         )
     }
 }
+

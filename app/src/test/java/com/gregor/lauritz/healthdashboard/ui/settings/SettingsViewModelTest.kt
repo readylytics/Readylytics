@@ -18,8 +18,15 @@ import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
 import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -33,6 +40,7 @@ import dagger.hilt.android.testing.HiltTestApplication
 import javax.inject.Inject
 import androidx.work.WorkManager
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 @Config(application = HiltTestApplication::class)
@@ -40,6 +48,8 @@ class SettingsViewModelTest {
 
     @get:Rule
     val hiltRule = HiltAndroidRule(this)
+
+    private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var context: Context
 
@@ -81,8 +91,25 @@ class SettingsViewModelTest {
 
     @Before
     fun setup() {
+        Dispatchers.setMain(testDispatcher)
         context = InstrumentationRegistry.getInstrumentation().targetContext
+        
+        // Initialize WorkManager for tests since it's disabled in manifest
+        try {
+            val config = androidx.work.Configuration.Builder()
+                .setMinimumLoggingLevel(android.util.Log.DEBUG)
+                .build()
+            androidx.work.WorkManager.initialize(context, config)
+        } catch (e: IllegalStateException) {
+            // Already initialized
+        }
+
         hiltRule.inject()
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
@@ -103,13 +130,18 @@ class SettingsViewModelTest {
             workManager
         )
 
+        // Wait for initial load
+        viewModel.uiState.first { !it.isLoading }
+
         viewModel.onEvent(SettingsEvent.RetentionDaysEnabledChanged(false))
-        var state = viewModel.uiState.first()
+        
+        // Wait for state to update
+        val state = viewModel.uiState.first { !it.retentionDaysEnabled }
         assertFalse(state.retentionDaysEnabled)
 
         viewModel.onEvent(SettingsEvent.RetentionDaysEnabledChanged(true))
-        state = viewModel.uiState.first()
-        assertTrue(state.retentionDaysEnabled)
+        val state2 = viewModel.uiState.first { it.retentionDaysEnabled }
+        assertTrue(state2.retentionDaysEnabled)
     }
 
     @Test
@@ -130,13 +162,16 @@ class SettingsViewModelTest {
             workManager
         )
 
+        // Wait for initial load
+        viewModel.uiState.first { !it.isLoading }
+
         viewModel.onEvent(SettingsEvent.RetentionDaysChanged(500))
-        var state = viewModel.uiState.first()
+        val state = viewModel.uiState.first { it.retentionDays == 500 }
         assertEquals(500, state.retentionDays)
 
         viewModel.onEvent(SettingsEvent.RetentionDaysChanged(180))
-        state = viewModel.uiState.first()
-        assertEquals(180, state.retentionDays)
+        val state2 = viewModel.uiState.first { it.retentionDays == 180 }
+        assertEquals(180, state2.retentionDays)
     }
 
     @Test
@@ -157,7 +192,13 @@ class SettingsViewModelTest {
             workManager
         )
 
-        assertFalse(viewModel.uiState.first().isResyncing)
+        // Wait for initial load
+        viewModel.uiState.first { !it.isLoading }
+
+        assertFalse(viewModel.uiState.value.isResyncing)
         viewModel.onEvent(SettingsEvent.ResyncHealthConnect)
+        
+        val state = viewModel.uiState.first { it.isResyncing }
+        assertTrue(state.isResyncing)
     }
 }

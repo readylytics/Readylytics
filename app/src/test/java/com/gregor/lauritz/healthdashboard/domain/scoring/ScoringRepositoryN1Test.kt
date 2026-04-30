@@ -28,6 +28,7 @@ class ScoringRepositoryN1Test {
     private lateinit var workoutDao: WorkoutDao
     private lateinit var dailySummaryDao: DailySummaryDao
     private lateinit var prefsRepo: UserPreferencesRepository
+    private lateinit var scoringCalculator: ScoringCalculator
     private lateinit var repo: ScoringRepository
 
     private val baseMs = System.currentTimeMillis()
@@ -88,7 +89,8 @@ class ScoringRepositoryN1Test {
         coEvery { dailySummaryDao.getByDate(any()) } returns null
         coEvery { dailySummaryDao.upsert(any()) } returns Unit
 
-        repo = ScoringRepository(workoutDao, sleepSessionDao, heartRateDao, hrvDao, dailySummaryDao, prefsRepo)
+        scoringCalculator = ScoringCalculatorImpl()
+        repo = ScoringRepository(workoutDao, sleepSessionDao, heartRateDao, hrvDao, dailySummaryDao, prefsRepo, scoringCalculator)
     }
 
     @Test

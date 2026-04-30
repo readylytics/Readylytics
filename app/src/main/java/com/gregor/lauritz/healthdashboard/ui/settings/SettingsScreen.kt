@@ -905,25 +905,6 @@ private fun AdvancedSettingsSection(
             description = "Adjusts how quickly you earn PAI points. Default: 0.20.",
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        val profileLabel: (PhysiologyProfile) -> String = { profile ->
-            when (profile) {
-                PhysiologyProfile.ATHLETE      -> "Athlete (competitive / structured training)"
-                PhysiologyProfile.ACTIVE       -> "Active (regular exercise)"
-                PhysiologyProfile.GENERAL      -> "General population"
-                PhysiologyProfile.SEDENTARY    -> "Sedentary / low activity"
-                PhysiologyProfile.SHIFT_WORKER -> "Shift worker / irregular schedule"
-            }
-        }
-        DropdownPreferenceItem(
-            label = "Activity Profile",
-            selectedDisplayValue = profileLabel(uiState.physiologyProfile),
-            options = PhysiologyProfile.entries,
-            optionLabel = profileLabel,
-            onOptionSelected = { onEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
     }
 }
 
