@@ -61,10 +61,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
-import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
+import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
 import kotlinx.parcelize.Parcelize
 import java.text.DateFormat
 import java.util.Date
@@ -270,21 +270,9 @@ fun SettingsScreen(
                                 onExpandStateChange = { expandState = it }
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-                            val profileLabel: (PhysiologyProfile) -> String = { profile ->
-                                when (profile) {
-                                    PhysiologyProfile.ATHLETE      -> "Athlete (competitive / structured training)"
-                                    PhysiologyProfile.ACTIVE       -> "Active (regular exercise)"
-                                    PhysiologyProfile.GENERAL      -> "General population"
-                                    PhysiologyProfile.SEDENTARY    -> "Sedentary / low activity"
-                                    PhysiologyProfile.SHIFT_WORKER -> "Shift worker / irregular schedule"
-                                }
-                            }
-                            DropdownPreferenceItem(
-                                label = "Activity Profile",
-                                selectedDisplayValue = profileLabel(uiState.physiologyProfile),
-                                options = PhysiologyProfile.entries,
-                                optionLabel = profileLabel,
-                                onOptionSelected = { onEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
+                            PhysiologyProfilePicker(
+                                selectedProfile = uiState.physiologyProfile,
+                                onProfileSelected = { onEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                             Spacer(modifier = Modifier.height(12.dp))
