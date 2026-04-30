@@ -11,7 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import com.google.android.material.color.MaterialColors
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 
 data class ExtendedColors(
@@ -26,6 +28,10 @@ data class ExtendedColors(
     val neutralContainer: Color,
     val onNeutralContainer: Color,
 )
+
+fun Color.harmonizeWith(primary: Color): Color {
+    return Color(MaterialColors.harmonize(this.toArgb(), primary.toArgb()))
+}
 
 val LocalExtendedColors =
     staticCompositionLocalOf {
@@ -95,7 +101,7 @@ fun FitDashboardTheme(
             else -> LightColorScheme
         }
 
-    val extendedColors =
+    val baseExtended =
         if (darkTheme) {
             ExtendedColors(
                 success = SuccessGreenDark,
@@ -106,8 +112,8 @@ fun FitDashboardTheme(
                 onWarning = OnWarningOrangeDark,
                 warningContainer = WarningOrangeContainerDark,
                 onWarningContainer = OnWarningOrangeContainerDark,
-                neutralContainer = PrimaryContainerDark,
-                onNeutralContainer = OnPrimaryContainerDark,
+                neutralContainer = colorScheme.primaryContainer,
+                onNeutralContainer = colorScheme.onPrimaryContainer,
             )
         } else {
             ExtendedColors(
@@ -119,9 +125,22 @@ fun FitDashboardTheme(
                 onWarning = OnWarningOrangeLight,
                 warningContainer = WarningOrangeContainerLight,
                 onWarningContainer = OnWarningOrangeContainerLight,
-                neutralContainer = PrimaryContainerLight,
-                onNeutralContainer = OnPrimaryContainerLight,
+                neutralContainer = colorScheme.primaryContainer,
+                onNeutralContainer = colorScheme.onPrimaryContainer,
             )
+        }
+
+    val extendedColors =
+        if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val p = colorScheme.primary
+            baseExtended.copy(
+                success = baseExtended.success.harmonizeWith(p),
+                successContainer = baseExtended.successContainer.harmonizeWith(p),
+                warning = baseExtended.warning.harmonizeWith(p),
+                warningContainer = baseExtended.warningContainer.harmonizeWith(p),
+            )
+        } else {
+            baseExtended
         }
 
     CompositionLocalProvider(LocalExtendedColors provides extendedColors) {

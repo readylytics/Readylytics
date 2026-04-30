@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
 
 private data class StageSegment(
     val label: String,
@@ -36,9 +37,9 @@ fun SleepArchitectureBar(
     session: SleepSessionEntity?,
     modifier: Modifier = Modifier,
 ) {
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
-    val deepColor = if (isDark) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary
-    val remColor = MaterialTheme.colorScheme.tertiaryContainer
+    val extendedColors = LocalExtendedColors.current
+    val deepColor = extendedColors.success
+    val remColor = extendedColors.warning
     val lightSleep = MaterialTheme.colorScheme.outlineVariant
     val awakeColor = MaterialTheme.colorScheme.error
     val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
