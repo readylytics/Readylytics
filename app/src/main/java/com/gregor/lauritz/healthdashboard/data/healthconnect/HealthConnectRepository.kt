@@ -82,7 +82,7 @@ class HealthConnectRepository
                 } while (pageToken != null)
             } catch (e: SecurityException) {
                 // Permission was revoked between the permission check and this read.
-                // Surface as empty so callers can detect the missing data and re-prompt.
+                // Throwing allows the caller to catch the revocation and trigger a re-prompt.
                 throw HealthConnectPermissionRevokedException(e)
             }
             return all

@@ -36,7 +36,7 @@ android {
         buildConfigField(
             "String",
             "OAUTH_WEB_CLIENT_ID",
-            "\"YOUR_WEB_CLIENT_ID.apps.googleusercontent.com\"",
+            "\"${project.findProperty("OAUTH_WEB_CLIENT_ID") ?: "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com"}\"",
         )
     }
 
