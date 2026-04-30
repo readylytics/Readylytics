@@ -483,12 +483,13 @@ class ScoringRepository
             if (filtered.isEmpty()) return false
 
             val sleepDurationMs = sessionEndMs - sessionStartMs
-            val coverageMs = filtered.fold(0L) { acc, record ->
-                val nextTime = (filtered.dropWhile { it.timestampMs != record.timestampMs }
-                    .drop(1).firstOrNull()?.timestampMs) ?: (record.timestampMs + 60000L)
-                val coverage = minOf(nextTime - record.timestampMs, sleepDurationMs)
-                acc + coverage
+            val coverageMs = if (filtered.size > 1) {
+                filtered.zipWithNext { current, next -> next.timestampMs - current.timestampMs }.sum()
+            } else {
+                0L
             }
+            // Assuming the last record covers a 1-minute interval, matching the original logic's fallback.
+            val totalCoverage = (coverageMs + if (filtered.isNotEmpty()) 60000L else 0L).coerceAtMost(sleepDurationMs)
             val coveragePercent = (coverageMs.toFloat() / sleepDurationMs.toFloat()) * 100f
             return coveragePercent >= 70f
         }
