@@ -115,13 +115,21 @@ class BaselineComputer
         private suspend fun filterValidBaselineSessions(
             sessions: List<SleepSessionEntity>,
             assumeCoverageValid: Boolean = false,
-        ): List<String> =
-            sessions.filter { s ->
-                val samples = hrvDao.getSleepRmssdForSession(s.id)
+        ): List<String> {
+            if (sessions.isEmpty()) return emptyList()
+
+            val sessionIds = sessions.map { it.id }
+            val hrvMap = hrvDao.getSleepRmssdForSessionsMap(sessionIds)
+            val hrMap = heartRateDao.getAvgSleepHrForSessions(sessionIds)
+
+            return sessions.filter { s ->
+                val samples = hrvMap[s.id] ?: emptyList()
+                val avgHr = hrMap[s.id]
+
                 val validation = if (assumeCoverageValid) {
                     scoringCalculator.validateNight(
                         rmssdMs         = if (samples.isNotEmpty()) samples.mean() else null,
-                        rhrBpm          = heartRateDao.getAvgSleepHr(s.id)?.toFloat(),
+                        rhrBpm          = avgHr?.toFloat(),
                         durationMinutes = s.durationMinutes,
                         deepMinutes     = s.deepSleepMinutes,
                         remMinutes      = s.remSleepMinutes,
@@ -130,7 +138,7 @@ class BaselineComputer
                 } else {
                     scoringCalculator.validateNight(
                         rmssdMs         = if (samples.isNotEmpty()) samples.mean() else null,
-                        rhrBpm          = heartRateDao.getAvgSleepHr(s.id)?.toFloat(),
+                        rhrBpm          = avgHr?.toFloat(),
                         durationMinutes = s.durationMinutes,
                         deepMinutes     = s.deepSleepMinutes,
                         remMinutes      = s.remSleepMinutes,
@@ -139,6 +147,7 @@ class BaselineComputer
 
                 validation.canContributeToBaseline
             }.map { it.id }
+        }
 
         /**
          * HRV history windows + supporting session metadata returned from

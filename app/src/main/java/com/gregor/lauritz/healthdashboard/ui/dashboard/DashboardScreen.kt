@@ -42,6 +42,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
 import com.gregor.lauritz.healthdashboard.ui.components.StepsBar
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
+import com.gregor.lauritz.healthdashboard.ui.components.StatusLegend
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
 import java.time.LocalDate
@@ -235,6 +236,10 @@ fun DashboardScreen(
             }
 
             item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(16.dp)) }
+
+            item(key = "status_legend") {
+                StatusLegend()
+            }
         }
     }
 }

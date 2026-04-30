@@ -30,7 +30,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
@@ -41,6 +40,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
+import com.gregor.lauritz.healthdashboard.ui.components.StatusLegend
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
@@ -65,6 +65,7 @@ import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.core.common.data.ExtraStore
 import com.patrykandpatrick.vico.core.common.component.LineComponent
@@ -136,6 +137,10 @@ fun WorkoutsScreen(
                 onClick = { onWorkoutClick(workout.id) },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
+        }
+
+        item(key = "status_legend") {
+            StatusLegend()
         }
     }
 }
@@ -324,7 +329,8 @@ private fun AcwrChart(
     rangeDays: Int,
     modifier: Modifier = Modifier,
 ) {
-    val dotColor = MaterialTheme.colorScheme.primary
+    val ratioColor = MaterialTheme.colorScheme.primary
+    val trimpColor = MaterialTheme.colorScheme.outline
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
@@ -385,15 +391,27 @@ private fun AcwrChart(
         }
     }
 
-    val dotComponent = rememberShapeComponent(fill = fill(dotColor), shape = CorneredShape.Pill)
+    val dotComponent = rememberShapeComponent(fill = fill(ratioColor), shape = CorneredShape.Pill)
     val ratioLine =
         LineCartesianLayer.rememberLine(
-            fill = LineCartesianLayer.LineFill.single(fill(dotColor)),
+            fill = LineCartesianLayer.LineFill.single(fill(ratioColor)),
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
                     LineCartesianLayer.point(dotComponent, 6.dp),
                 ),
         )
+
+    val trimpColumn = rememberColumnCartesianLayer(
+        columnProvider = ColumnCartesianLayer.ColumnProvider.series(
+            LineComponent(
+                fill = fill(trimpColor),
+                thicknessDp = 8f,
+                shape = CorneredShape.Pill,
+            )
+        ),
+        rangeProvider = trimpRangeProvider,
+        verticalAxisPosition = Axis.Position.Vertical.Start,
+    )
 
     val trimpAxisItemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) }
     val ratioAxisItemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) }
@@ -401,10 +419,7 @@ private fun AcwrChart(
     CartesianChartHost(
         chart =
             rememberCartesianChart(
-                rememberColumnCartesianLayer(
-                    rangeProvider = trimpRangeProvider,
-                    verticalAxisPosition = Axis.Position.Vertical.Start,
-                ),
+                trimpColumn,
                 rememberLineCartesianLayer(
                     lineProvider = LineCartesianLayer.LineProvider.series(ratioLine),
                     rangeProvider = ratioRangeProvider,

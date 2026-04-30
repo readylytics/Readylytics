@@ -44,6 +44,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.SleepArchitectureBar
+import com.gregor.lauritz.healthdashboard.ui.components.StatusLegend
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
@@ -250,6 +251,10 @@ fun SleepScreen(
         }
 
         item(key = "spacer_bottom") { Spacer(Modifier.height(16.dp)) }
+
+        item(key = "status_legend") {
+            StatusLegend()
+        }
     }
 }
 

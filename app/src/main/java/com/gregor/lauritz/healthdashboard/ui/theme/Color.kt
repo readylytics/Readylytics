@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
@@ -39,3 +40,7 @@ val WarningOrangeLight = Color(0xFFF57C00) // Darker orange for light mode
 val WarningOrangeContainerLight = Color(0xFFFB8C00)
 val OnWarningOrangeLight = Color(0xFFFFFFFF)
 val OnWarningOrangeContainerLight = Color(0xFF4D2C00)
+
+fun Color.toHexCode(): String {
+    return String.format("#%06X", (0xFFFFFF and this.toArgb()))
+}
