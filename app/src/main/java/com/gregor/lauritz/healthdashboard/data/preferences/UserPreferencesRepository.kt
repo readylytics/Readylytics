@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.CorruptionException
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -78,10 +79,23 @@ class UserPreferencesRepository
             val PHYSIOLOGY_PROFILE = stringPreferencesKey("physiology_profile")
         }
 
+        private fun Int.toValidMaxHr() = coerceIn(100, 250)
+        private fun Int.toValidAge() = coerceIn(1, 120)
+        private fun Float.toValidHrvOptimal() = coerceIn(1.0f, 1.2f)
+        private fun Float.toValidHrvWarning() = coerceIn(0.8f, 1.0f)
+        private fun Float.toValidRhrOptimal() = coerceIn(0.8f, 1.0f)
+        private fun Float.toValidRhrWarning() = coerceIn(1.0f, 1.2f)
+        private fun Int.toValidRestMinutes() = coerceIn(0, 60)
+        private fun Float.toValidPaiScaling() = coerceIn(0.1f, 0.3f)
+        private fun Int.toValidStepGoal() = coerceIn(1000, 30000)
+        private fun Int.toValidRetentionDays() = coerceIn(180, 1095)
+        private fun Int.toValidConsistencyMinutes() = coerceIn(0, 90)
+        private fun Int.toValidConsistencyDays() = coerceIn(3, 30)
+
         val userPreferences: Flow<UserPreferences> =
             dataStore.data
                 .catch { e ->
-                    if (e is IOException) emit(emptyPreferences()) else throw e
+                    if (e is IOException || e is CorruptionException) emit(emptyPreferences()) else throw e
                 }.map { prefs ->
                     val maxHr = prefs[Keys.MAX_HEART_RATE] ?: SettingsDefaults.MAX_HEART_RATE
 
@@ -211,7 +225,7 @@ class UserPreferencesRepository
         }
 
         suspend fun updateMaxHeartRate(bpm: Int) {
-            dataStore.edit { it[Keys.MAX_HEART_RATE] = bpm.coerceIn(100, 250) }
+            dataStore.edit { it[Keys.MAX_HEART_RATE] = bpm.toValidMaxHr() }
         }
 
         suspend fun updateAutoCalculateMaxHr(enabled: Boolean) {
@@ -255,7 +269,7 @@ class UserPreferencesRepository
         }
 
         suspend fun updateAge(age: Int) {
-            dataStore.edit { it[Keys.AGE] = age.coerceIn(1, 120) }
+            dataStore.edit { it[Keys.AGE] = age.toValidAge() }
         }
 
         suspend fun updateBirthday(day: Int, month: Int, year: Int) {
@@ -269,7 +283,7 @@ class UserPreferencesRepository
                 prefs[Keys.BIRTH_YEAR] = safeYear
 
                 val age = Period.between(LocalDate.of(safeYear, safeMonth, safeDay), LocalDate.now()).years
-                prefs[Keys.AGE] = age.coerceIn(1, 120)
+                prefs[Keys.AGE] = age.toValidAge()
             }
         }
 
@@ -281,47 +295,47 @@ class UserPreferencesRepository
         }
 
         suspend fun updateHrvOptimalThreshold(value: Float) {
-            dataStore.edit { it[Keys.HRV_OPTIMAL_THRESHOLD] = value.coerceIn(1.0f, 1.2f) }
+            dataStore.edit { it[Keys.HRV_OPTIMAL_THRESHOLD] = value.toValidHrvOptimal() }
         }
 
         suspend fun updateHrvWarningThreshold(value: Float) {
-            dataStore.edit { it[Keys.HRV_WARNING_THRESHOLD] = value.coerceIn(0.8f, 1.0f) }
+            dataStore.edit { it[Keys.HRV_WARNING_THRESHOLD] = value.toValidHrvWarning() }
         }
 
         suspend fun updateRhrOptimalThreshold(value: Float) {
-            dataStore.edit { it[Keys.RHR_OPTIMAL_THRESHOLD] = value.coerceIn(0.8f, 1.0f) }
+            dataStore.edit { it[Keys.RHR_OPTIMAL_THRESHOLD] = value.toValidRhrOptimal() }
         }
 
         suspend fun updateRhrWarningThreshold(value: Float) {
-            dataStore.edit { it[Keys.RHR_WARNING_THRESHOLD] = value.coerceIn(1.0f, 1.2f) }
+            dataStore.edit { it[Keys.RHR_WARNING_THRESHOLD] = value.toValidRhrWarning() }
         }
 
         suspend fun updateRestingHrBeforeMinutes(minutes: Int) {
-            dataStore.edit { it[Keys.RESTING_HR_BEFORE_MINUTES] = minutes.coerceIn(0, 60) }
+            dataStore.edit { it[Keys.RESTING_HR_BEFORE_MINUTES] = minutes.toValidRestMinutes() }
         }
 
         suspend fun updateRestingHrAfterMinutes(minutes: Int) {
-            dataStore.edit { it[Keys.RESTING_HR_AFTER_MINUTES] = minutes.coerceIn(0, 60) }
+            dataStore.edit { it[Keys.RESTING_HR_AFTER_MINUTES] = minutes.toValidRestMinutes() }
         }
 
         suspend fun updateConsistencyThresholdMinutes(minutes: Int) {
-            dataStore.edit { it[Keys.CONSISTENCY_THRESHOLD_MINUTES] = minutes.coerceIn(0, 90) }
+            dataStore.edit { it[Keys.CONSISTENCY_THRESHOLD_MINUTES] = minutes.toValidConsistencyMinutes() }
         }
 
         suspend fun updateConsistencyEvaluationDays(days: Int) {
-            dataStore.edit { it[Keys.CONSISTENCY_EVALUATION_DAYS] = days.coerceIn(3, 30) }
+            dataStore.edit { it[Keys.CONSISTENCY_EVALUATION_DAYS] = days.toValidConsistencyDays() }
         }
 
         suspend fun updateConsistencyBaselineDays(days: Int) {
-            dataStore.edit { it[Keys.CONSISTENCY_BASELINE_DAYS] = days.coerceIn(3, 30) }
+            dataStore.edit { it[Keys.CONSISTENCY_BASELINE_DAYS] = days.toValidConsistencyDays() }
         }
 
         suspend fun updatePaiScalingFactor(value: Float) {
-            dataStore.edit { it[Keys.PAI_SCALING_FACTOR] = value.coerceIn(0.1f, 0.3f) }
+            dataStore.edit { it[Keys.PAI_SCALING_FACTOR] = value.toValidPaiScaling() }
         }
 
         suspend fun updateStepGoal(steps: Int) {
-            dataStore.edit { it[Keys.STEP_GOAL] = steps.coerceIn(1000, 30000) }
+            dataStore.edit { it[Keys.STEP_GOAL] = steps.toValidStepGoal() }
         }
 
         suspend fun updateRetentionDaysEnabled(enabled: Boolean) {
@@ -329,7 +343,7 @@ class UserPreferencesRepository
         }
 
         suspend fun updateRetentionDays(days: Int) {
-            dataStore.edit { it[Keys.RETENTION_DAYS] = days.coerceIn(180, 1095) }
+            dataStore.edit { it[Keys.RETENTION_DAYS] = days.toValidRetentionDays() }
         }
 
         suspend fun updateCollapseCloudData(collapsed: Boolean) {

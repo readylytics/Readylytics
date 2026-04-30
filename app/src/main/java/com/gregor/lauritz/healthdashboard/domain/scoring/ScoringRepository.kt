@@ -9,6 +9,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.domain.util.logD
 import com.gregor.lauritz.healthdashboard.domain.util.mean
 import com.gregor.lauritz.healthdashboard.domain.util.median
 import kotlinx.coroutines.Dispatchers
@@ -55,13 +56,13 @@ class ScoringRepository
                     ?: rhrBaselineValues.median().takeIf { it > 0f }
                     ?: 60f
 
-                android.util.Log.d("ScoringRepository", "PAI CALC START [$targetDate]")
+                logD("ScoringRepository") { "PAI CALC START [$targetDate]" }
 
                 // Calculate Daily PAI points from workouts (no sleep calibration needed)
                 val totalDuration = workoutDao.getTotalDurationMinutes(dayMidnightMs, nextDayMidnightMs) ?: 0
                 val weightedAvgHr = workoutDao.getWeightedAvgHr(dayMidnightMs, nextDayMidnightMs) ?: 0f
 
-                android.util.Log.d("ScoringRepository", "Workout Data - Duration: $totalDuration, WeightedAvgHr: $weightedAvgHr, RHR Baseline: $rhrBaselineValue, HR Max: $hrMax")
+                logD("ScoringRepository") { "Workout Data - Duration: $totalDuration, WeightedAvgHr: $weightedAvgHr, RHR Baseline: $rhrBaselineValue, HR Max: $hrMax" }
 
                 val dailyTrimpRaw = PaiCalculator.calculateDailyTrimp(
                     durationMinutes = totalDuration.toFloat(),
@@ -72,7 +73,7 @@ class ScoringRepository
                 )
                 val dailyPaiRaw = PaiCalculator.calculateDailyPai(dailyTrimpRaw, prefs.paiScalingFactor)
 
-                android.util.Log.d("ScoringRepository", "Result - DailyTrimpRaw: $dailyTrimpRaw, DailyPaiRaw: $dailyPaiRaw")
+                logD("ScoringRepository") { "Result - DailyTrimpRaw: $dailyTrimpRaw, DailyPaiRaw: $dailyPaiRaw" }
 
                 var summary = (dailySummaryDao.getByDate(dayMidnightMs) ?: DailySummaryEntity(dateMidnightMs = dayMidnightMs))
                     .copy(paiScore = dailyPaiRaw)
@@ -91,7 +92,7 @@ class ScoringRepository
                     val totalPaiSoFar = previousDays.sum()
                     val finalDailyPai = PaiCalculator.applyAccumulationMultiplier(dailyPaiRaw, totalPaiSoFar)
                     summary = summary.copy(paiScore = finalDailyPai, totalPai = totalPaiSoFar + finalDailyPai)
-                    android.util.Log.d("ScoringRepository", "PAI FINAL (uncalibrated) - FinalDaily: $finalDailyPai, Total: ${totalPaiSoFar + finalDailyPai}")
+                    logD("ScoringRepository") { "PAI FINAL (uncalibrated) - FinalDaily: $finalDailyPai, Total: ${totalPaiSoFar + finalDailyPai}" }
                     return@withContext summary
                 }
 
@@ -142,7 +143,7 @@ class ScoringRepository
                     totalPai = totalPaiSoFar + finalDailyPai
                 )
 
-                android.util.Log.d("ScoringRepository", "PAI FINAL - Adjusted: $adjustedDailyPai, PrevTotal: $totalPaiSoFar, FinalDaily: $finalDailyPai, Total: ${totalPaiSoFar + finalDailyPai}")
+                logD("ScoringRepository") { "PAI FINAL - Adjusted: $adjustedDailyPai, PrevTotal: $totalPaiSoFar, FinalDaily: $finalDailyPai, Total: ${totalPaiSoFar + finalDailyPai}" }
 
                 summary
             }
@@ -170,16 +171,14 @@ class ScoringRepository
             val sigmaHrvHistory = allSleepRmssd
 
             var sessionHrvSamples = hrvDao.getSleepRmssdForSession(session.id)
-            android.util.Log.d(
-                "ScoringRepository",
+            logD("ScoringRepository") {
                 "HRV session lookup [sessionId=${session.id}] startTime=${session.startTime} endTime=${session.endTime} samples=${sessionHrvSamples.size}"
-            )
+            }
             if (sessionHrvSamples.isEmpty()) {
                 sessionHrvSamples = hrvDao.getRmssdInTimeRange(session.startTime, session.endTime)
-                android.util.Log.d(
-                    "ScoringRepository",
+                logD("ScoringRepository") {
                     "HRV time-range fallback [start=${session.startTime} end=${session.endTime}] samples=${sessionHrvSamples.size}"
-                )
+                }
             }
             val currentHrvMean = sessionHrvSamples.mean()
             val currentNocturnalRhr = heartRateDao.getAvgSleepHr(session.id)

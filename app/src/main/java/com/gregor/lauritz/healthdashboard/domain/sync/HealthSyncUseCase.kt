@@ -10,12 +10,12 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
+import com.gregor.lauritz.healthdashboard.domain.util.logD
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -62,21 +62,19 @@ class HealthSyncUseCase
                     val exerciseRecords = hcRepo.readExerciseSessions(from, to)
                     val hrRecords = hcRepo.readHeartRateSamples(from, to)
                     val hrvRecords = hcRepo.readHrvSamples(from, to)
-                    android.util.Log.d(
-                        "HealthSyncUseCase",
+                    logD("HealthSyncUseCase") {
                         "Fetched HC: sleep=${sleepEntities.size} hrv=${hrvRecords.size} hr=${hrRecords.size} from=$from to=$to"
-                    )
+                    }
                     if (hrvRecords.isNotEmpty()) {
                         val newest = hrvRecords.maxByOrNull { it.time }?.time
                         val oldest = hrvRecords.minByOrNull { it.time }?.time
-                        android.util.Log.d("HealthSyncUseCase", "HRV time range in fetch: oldest=$oldest newest=$newest")
+                        logD("HealthSyncUseCase") { "HRV time range in fetch: oldest=$oldest newest=$newest" }
                     }
                     if (sleepEntities.isNotEmpty()) {
                         val latestSession = sleepEntities.maxByOrNull { it.endTime }
-                        android.util.Log.d(
-                            "HealthSyncUseCase",
+                        logD("HealthSyncUseCase") {
                             "Latest sleep session: id=${latestSession?.id} start=${latestSession?.startTime} end=${latestSession?.endTime}"
-                        )
+                        }
                     }
 
                     val thresholds = WorkoutMapper.zoneThresholds(
@@ -102,21 +100,22 @@ class HealthSyncUseCase
                     updateCalculatedMetrics(prefs)
 
                     val today = LocalDate.now(zoneId)
-                    val summariesToUpdate = mutableListOf<DailySummaryEntity>()
-                    repeat(windowDays) { i ->
+                    for (i in (windowDays - 1) downTo 0) {
                         val day = today.minusDays(i.toLong())
                         val dayStart = day.atStartOfDay(zoneId).toInstant()
                         val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
                         val steps = hcRepo.readSteps(dayStart, dayEnd)
+
                         // Run scoring first
                         val afterScoring = scoringRepository.computeDailySummary(day)
-                        summariesToUpdate.add(
-                            afterScoring.copy(
-                                stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt().takeIf { it > 0 }
-                            )
+                        val finalSummary = afterScoring.copy(
+                            stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt().takeIf { it > 0 }
                         )
+
+                        // Persist immediately so that the next day's calculation (which depends on previous days)
+                        // can find this summary in the database (critical for PAI accumulation).
+                        dailySummaryDao.upsert(finalSummary)
                     }
-                    dailySummaryDao.upsertAll(summariesToUpdate)
 
                     appConfigRepo.updateLastSyncTimestamp(System.currentTimeMillis())
                 }

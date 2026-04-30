@@ -53,7 +53,6 @@ object DatabaseModule {
                     }
                 },
             )
-            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
     @Provides

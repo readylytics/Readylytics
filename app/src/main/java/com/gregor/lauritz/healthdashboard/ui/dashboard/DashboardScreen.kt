@@ -296,16 +296,13 @@ private fun MetricCardGrid(
         rows.forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { card ->
-                    val onClick =
-                        remember(card.action, onNavigateToSleep, onNavigateToWorkouts, onNavigateToRhr) {
-                            when (card.action) {
-                                DashboardAction.NAVIGATE_SLEEP -> onNavigateToSleep
-                                DashboardAction.NAVIGATE_WORKOUTS -> onNavigateToWorkouts
-                                DashboardAction.NAVIGATE_RHR -> onNavigateToRhr
-                                DashboardAction.NAVIGATE_STEPS -> null
-                                null -> null
-                            }
-                        }
+                    val onClick = when (card.action) {
+                        DashboardAction.NAVIGATE_SLEEP -> onNavigateToSleep
+                        DashboardAction.NAVIGATE_WORKOUTS -> onNavigateToWorkouts
+                        DashboardAction.NAVIGATE_RHR -> onNavigateToRhr
+                        DashboardAction.NAVIGATE_STEPS -> null
+                        null -> null
+                    }
                     MetricCard(
                         title = card.title,
                         value = card.value,

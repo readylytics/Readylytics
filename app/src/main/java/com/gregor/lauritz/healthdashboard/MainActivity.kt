@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
                 val context = LocalContext.current
 
                 // Handle sync events (e.g., showing a Toast)
-                LaunchedEffect(viewModel.syncEvents) {
+                LaunchedEffect(Unit) {
                     viewModel.syncEvents.collectLatest { event ->
                         when (event) {
                             SyncEvent.SyncCompleted -> {

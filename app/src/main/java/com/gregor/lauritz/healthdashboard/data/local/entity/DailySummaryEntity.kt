@@ -1,9 +1,13 @@
 package com.gregor.lauritz.healthdashboard.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "daily_summaries")
+@Entity(
+    tableName = "daily_summaries",
+    indices = [Index(value = ["dateMidnightMs"])],
+)
 data class DailySummaryEntity(
     @PrimaryKey val dateMidnightMs: Long,
     val sleepScore: Float? = null,

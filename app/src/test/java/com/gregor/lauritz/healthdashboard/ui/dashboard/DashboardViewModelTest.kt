@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
@@ -51,10 +52,14 @@ class DashboardViewModelTest {
         val circadianRepo = mockk<CircadianConsistencyRepository> {
             every { resultFor(any()) } returns MutableStateFlow(CircadianConsistencyResult.Calibrating)
         }
+        val sleepDao = mockk<SleepSessionDao> {
+            every { observeFirstSessionEndingInRange(any(), any()) } returns MutableStateFlow(null)
+        }
         syncController = mockk()
 
         viewModel = DashboardViewModel(
             dailySummaryDao = dao,
+            sleepSessionDao = sleepDao,
             foregroundSyncController = syncController,
             selectedDateRepository = selectedDateRepo,
             prefsRepo = prefsRepo,

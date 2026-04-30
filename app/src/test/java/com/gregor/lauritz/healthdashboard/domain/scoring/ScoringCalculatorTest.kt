@@ -122,8 +122,8 @@ class DurationSubScoreTest {
 
     @Test
     fun `poor efficiency drags down score`() {
-        // TST_term=100, eff=60% → 40. 0.7*100 + 0.3*40 = 82
-        assertEquals(82f, ScoringCalculator.computeDurationSubScore(480, 60f, 8f), DELTA)
+        // TST_term=100, eff=60% → 15 (VERY_POOR). 0.7*100 + 0.3*15 = 74.5
+        assertEquals(74.5f, ScoringCalculator.computeDurationSubScore(480, 60f, 8f), DELTA)
     }
 }
 
@@ -269,9 +269,9 @@ class HrvZScoreTest {
 
 class SleepScoreIntegrationTest {
     @Test
-    fun `weighted sum of known sub-scores at age 30`() {
+    fun `weighted sum of known sub-scores at age 25`() {
         // sDur: TST=480min, goal=8h → TST_term=100; eff=85% → 85; 0.7*100+0.3*85 = 95.5
-        // sArch: deep=96/480=20%, rem=96/480=20%; age=30 → deepTarget=18%, remTarget=22%
+        // sArch: deep=96/480=20%, rem=96/480=20%; age=25 → deepTarget=18%, remTarget=22%
         //   deepComp = (0.20/0.18)→capped→100; remComp = (0.20/0.22)*100 = 90.9
         //   sArch = 0.5*100 + 0.5*90.9 = 95.45
         // SS = 0.50*95.5 + 0.25*95.45 + 0.25*75 = 47.75 + 23.86 + 18.75 = 90.36
@@ -282,7 +282,7 @@ class SleepScoreIntegrationTest {
             remSleepMinutes = 96,
             goalSleepHours = 8f,
             sRest = 75f,
-            userAge = 30,
+            userAge = 25,
         )
         assertEquals(90.36f, score, DELTA)
     }

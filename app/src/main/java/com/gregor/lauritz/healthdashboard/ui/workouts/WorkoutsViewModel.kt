@@ -9,7 +9,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
-import com.gregor.lauritz.healthdashboard.ui.sleep.truncateToDayMs
+import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -74,7 +74,7 @@ class WorkoutsViewModel
                         }
 
                     val displayFromMs = range.fromMs(date)
-                    val displayStartDayMs = truncateToDayMs(displayFromMs)
+                    val displayStartDayMs = displayFromMs.truncateToDayMs()
                     // Fetch extra history so chronic (42-day) window is valid from day 1 of the range.
                     val fetchFromMs = displayStartDayMs - TimeUnit.DAYS.toMillis(CHRONIC_DAYS.toLong())
 
@@ -101,7 +101,7 @@ class WorkoutsViewModel
                         val filteredWorkouts = allWorkouts.filter { it.startTime < selectedMidnightMs + TimeUnit.DAYS.toMillis(1) }
                         val trimpByDay: Map<Long, Float> =
                             filteredWorkouts
-                                .groupBy { truncateToDayMs(it.startTime) }
+                                .groupBy { it.startTime.truncateToDayMs() }
                                 .mapValues { (_, ws) -> ws.sumOf { it.trimp.toDouble() }.toFloat() }
 
                         val displayDayMidnights =
