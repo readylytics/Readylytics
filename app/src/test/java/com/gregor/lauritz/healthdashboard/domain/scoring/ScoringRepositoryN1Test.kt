@@ -79,9 +79,11 @@ class ScoringRepositoryN1Test {
         coEvery { hrvDao.getSleepRmssdForSession(any()) } returns listOf(60f, 60f)
         coEvery { hrvDao.getRmssdInTimeRange(any(), any()) } returns listOf(60f, 60f)
         coEvery { hrvDao.getSleepRmssdValuesForSessions(any()) } returns listOf(60f, 60f, 60f)
+        coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns emptyMap()
 
         coEvery { heartRateDao.getAvgSleepHrPerSession(any()) } returns listOf(55, 55, 55)
         coEvery { heartRateDao.getAvgSleepHr(any()) } returns 55
+        coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns emptyMap()
         coEvery { heartRateDao.getMinHrInRange(any(), any()) } returns 50
         coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
         coEvery { heartRateDao.getMinHrTimestamp(any()) } returns null
@@ -97,12 +99,19 @@ class ScoringRepositoryN1Test {
     fun `baseline calculation excludes invalid nights`() = runTest {
         val validSession = makeSleepSession("valid", 1)
         val shortSession = makeSleepSession("short", 2).copy(durationMinutes = 120) // 2h < 4h threshold
+        val sessions = listOf(validSession, shortSession)
         
-        coEvery { sleepSessionDao.getSince(any()) } returns listOf(validSession, shortSession)
+        coEvery { sleepSessionDao.getSince(any()) } returns sessions
         
+        // Mock bulk fetches for these specific sessions
+        coEvery { hrvDao.getSleepRmssdForSessionsMap(match { it.containsAll(listOf("valid", "short")) }) } returns 
+            mapOf("valid" to listOf(60f), "short" to listOf(60f))
+        coEvery { heartRateDao.getAvgSleepHrForSessions(match { it.containsAll(listOf("valid", "short")) }) } returns 
+            mapOf("valid" to 55, "short" to 55)
+            
         repo.computeAndPersistDailySummary(LocalDate.now())
         
-        // Should only fetch HRV samples for the valid session
+        // Should only fetch HRV samples for the valid session for baseline median
         coVerify { hrvDao.getSleepRmssdValuesForSessions(listOf("valid")) }
         coVerify(exactly = 0) { hrvDao.getSleepRmssdValuesForSessions(match { it.contains("short") }) }
     }
@@ -147,6 +156,27 @@ class ScoringRepositoryN1Test {
 
         // getMinHrInRange called only once — for the current session's personal window
         coVerify(exactly = 1) { heartRateDao.getMinHrInRange(any(), any()) }
+    }
+
+    @Test
+    fun `baseline validation uses bulk-fetch DAO methods instead of per-session calls`() = runTest {
+        val sessions = (1..5).map { makeSleepSession("s$it", it) }
+        coEvery { sleepSessionDao.getSince(any()) } returns sessions
+        
+        // Mock bulk responses for any session list
+        coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns sessions.associate { it.id to listOf(60f) }
+        coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns sessions.associate { it.id to 55 }
+        
+        repo.computeAndPersistDailySummary(LocalDate.now())
+        
+        // Verify bulk fetch was called (at least once for each step: computeHrvBaseline, computeHrvWindows)
+        coVerify(atLeast = 1) { hrvDao.getSleepRmssdForSessionsMap(any()) }
+        coVerify(atLeast = 1) { heartRateDao.getAvgSleepHrForSessions(any()) }
+        
+        // Verify legacy per-session methods were NOT called for historical sessions
+        // (They are still allowed for the single "today" session in calculateSleepMetrics)
+        coVerify(atMost = 1) { hrvDao.getSleepRmssdForSession(any()) }
+        coVerify(atMost = 1) { heartRateDao.getAvgSleepHr(any()) }
     }
 
     @Test

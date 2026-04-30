@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.MapColumn
 import androidx.room.Query
 import androidx.room.Upsert
 import com.gregor.lauritz.healthdashboard.data.local.entity.HrvRecordEntity
@@ -36,6 +37,13 @@ interface HrvDao {
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId = :sessionId",
     )
     suspend fun getSleepRmssdForSession(sessionId: String): List<Float>
+
+    @Query(
+        "SELECT sessionId, rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId IN (:sessionIds)",
+    )
+    suspend fun getSleepRmssdForSessionsMap(
+        sessionIds: List<String>,
+    ): Map<@MapColumn(columnName = "sessionId") String, List<@MapColumn(columnName = "rmssdMs") Float>>
 
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId IN (:sessionIds)",
