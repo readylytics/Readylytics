@@ -127,6 +127,43 @@ class DurationSubScoreTest {
     }
 }
 
+// ─── Night Validation ─────────────────────────────────────────────────────────
+
+class NightValidationTest {
+    @Test
+    fun `perfect night is valid`() {
+        val res = ScoringCalculator.validateNight(60f, 50f, 480, 60, 60)
+        assertTrue(res.rmssdValid)
+        assertTrue(res.rhrValid)
+        assertTrue(res.durationValid)
+        assertTrue(res.stagesValid)
+        assertTrue(res.canContributeToBaseline)
+    }
+
+    @Test
+    fun `short sleep cannot contribute to baseline`() {
+        // 3h sleep < 4h threshold
+        val res = ScoringCalculator.validateNight(60f, 50f, 180, 30, 30)
+        assertTrue(res.rmssdValid)
+        assertTrue(!res.durationValid)
+        assertTrue(!res.canContributeToBaseline)
+    }
+
+    @Test
+    fun `impossible deep sleep fraction is invalid`() {
+        // 50% deep > 40% threshold
+        val res = ScoringCalculator.validateNight(60f, 50f, 400, 201, 40)
+        assertTrue(!res.stagesValid)
+    }
+
+    @Test
+    fun `outlier RMSSD is invalid`() {
+        val res = ScoringCalculator.validateNight(300f, 50f, 400, 40, 40)
+        assertTrue(!res.rmssdValid)
+        assertTrue(!res.canContributeToBaseline)
+    }
+}
+
 // ─── Architecture sub-score (age-banded denominators) ─────────────────────────
 // REF: Ohayon 2004 Sleep 27:1255; Boulos 2019 Lancet Respir Med 7:533
 

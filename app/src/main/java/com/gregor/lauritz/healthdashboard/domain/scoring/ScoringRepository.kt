@@ -21,6 +21,7 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.ln
 import kotlin.math.roundToInt
 
 @Singleton
@@ -114,8 +115,21 @@ class ScoringRepository
                 summary = summary.copy(loadScore = loadScore, strainRatio = sr, totalTrimp = todayTrimp)
 
                 // Always compute and persist HRV baseline regardless of sleep session availability
+                // Only include samples from valid nights to avoid baseline pollution — REF: A.5 review
                 val baselineFromMs = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
-                val hrvBaselineValues = hrvDao.getSleepRmssdValues(baselineFromMs)
+                val historicalSessionsForBaseline = sleepSessionDao.getSince(baselineFromMs)
+                val validSessionIdsForBaseline = historicalSessionsForBaseline.filter { s ->
+                    val samples = hrvDao.getSleepRmssdForSession(s.id)
+                    ScoringCalculator.validateNight(
+                        rmssdMs         = if (samples.isNotEmpty()) samples.mean() else null,
+                        rhrBpm          = heartRateDao.getAvgSleepHr(s.id)?.toFloat(),
+                        durationMinutes = s.durationMinutes,
+                        deepMinutes     = s.deepSleepMinutes,
+                        remMinutes      = s.remSleepMinutes,
+                    ).canContributeToBaseline
+                }.map { it.id }
+
+                val hrvBaselineValues = hrvDao.getSleepRmssdValuesForSessions(validSessionIdsForBaseline)
                 val computedHrvBaseline = (prefs.hrvBaselineOverride
                     ?: hrvBaselineValues.median().takeIf { it > 0f })
                     ?.roundToInt()
@@ -165,10 +179,22 @@ class ScoringRepository
             val yesterdaySummary = dailySummaryDao.getByDate(yesterdayMidnightMs)
 
             // Separate mu (7-night) and sigma (56-night) HRV history windows
+            // Only include samples from valid nights to avoid baseline pollution — REF: A.5 review
             val sigmaWindowFromMs = dayMidnight.minus(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong(), ChronoUnit.DAYS).toEpochMilli()
-            val allSleepRmssd   = hrvDao.getSleepRmssdValues(sigmaWindowFromMs)
-            val muHrvHistory    = allSleepRmssd.takeLast(ScoringConstants.HRV_MU_WINDOW_DAYS)
-            val sigmaHrvHistory = allSleepRmssd
+            val historicalSessions = sleepSessionDao.getSince(sigmaWindowFromMs).filter { it.id != session.id }
+            val validHistoricalSessionIds = historicalSessions.filter { s ->
+                val samples = hrvDao.getSleepRmssdForSession(s.id)
+                ScoringCalculator.validateNight(
+                    rmssdMs         = if (samples.isNotEmpty()) samples.mean() else null,
+                    rhrBpm          = heartRateDao.getAvgSleepHr(s.id)?.toFloat(),
+                    durationMinutes = s.durationMinutes,
+                    deepMinutes     = s.deepSleepMinutes,
+                    remMinutes      = s.remSleepMinutes,
+                ).canContributeToBaseline
+            }.map { it.id }
+
+            val sigmaHrvHistory = hrvDao.getSleepRmssdValuesForSessions(validHistoricalSessionIds)
+            val muHrvHistory    = sigmaHrvHistory.takeLast(ScoringConstants.HRV_MU_WINDOW_DAYS)
 
             var sessionHrvSamples = hrvDao.getSleepRmssdForSession(session.id)
             logD("ScoringRepository") {
@@ -237,9 +263,18 @@ class ScoringRepository
             if (currentNocturnalRhr != null) {
                 rhrRatio = currentNocturnalRhr.toFloat() / (baselineRhrValue + 0.001f)
 
+                // Timezone jump detection — travel often shifts physiological nadir.
+                // REF: A.12 review — detect significant offset shifts vs. previous session.
+                val currentOffset = session.endZoneOffsetSeconds
+                val previousSession = historicalSessions.maxByOrNull { it.endTime }
+                val previousOffset = previousSession?.endZoneOffsetSeconds
+                val isTimezoneJump = currentOffset != null && previousOffset != null &&
+                                     kotlin.math.abs(currentOffset - previousOffset) > 7200
+
                 val minHrTimestamp = heartRateDao.getMinHrTimestamp(session.id)
-                val isLateNadir = minHrTimestamp != null &&
+                val isLateNadirRaw = minHrTimestamp != null &&
                     ScoringCalculator.isLateNadir(minHrTimestamp, session.startTime, session.durationMinutes)
+                val isLateNadir = isLateNadirRaw && !isTimezoneJump
 
                 val zHrv = if (sessionHrvSamples.isNotEmpty()) {
                     ScoringCalculator.computeHrvZScore(
@@ -249,6 +284,11 @@ class ScoringRepository
                         sigmaPrior       = sigmaPrior,
                         baselineOverride = prefs.hrvBaselineOverride,
                     )
+                } else null
+
+                val hrvSigma = if (sessionHrvSamples.isNotEmpty()) {
+                    val lnSigmaHistory = sigmaHrvHistory.map { ln(it.coerceAtLeast(0.001f)) }
+                    ScoringCalculator.hrvSigma(lnSigmaHistory, sigmaPrior)
                 } else null
 
                 val zRhr = ScoringCalculator.computeRhrZScore(
@@ -323,6 +363,10 @@ class ScoringRepository
                 zLnHrv            = persistedZLnHrv,
                 zRhr              = persistedZRhr,
                 recoveryFlags     = persistedFlags,
+                hrvSigma          = if (sessionHrvSamples.isNotEmpty()) {
+                    val lnSigmaHistory = sigmaHrvHistory.map { ln(it.coerceAtLeast(0.001f)) }
+                    ScoringCalculator.hrvSigma(lnSigmaHistory, sigmaPrior)
+                } else null,
             )
         }
     }

@@ -28,19 +28,31 @@ object ScoringCalculator {
         dailyTrimpList: List<Float>,
         seedFitnessLevel: Float = ScoringConstants.DEFAULT_FITNESS_LEVEL,
         windowDays: Long = ScoringConstants.CHRONIC_DAYS,
+    ): Float = computeEma(dailyTrimpList, seedFitnessLevel, windowDays)
+
+    fun computeAtlEma(
+        dailyTrimpList: List<Float>,
+        seedFatigueLevel: Float = ScoringConstants.DEFAULT_FITNESS_LEVEL,
+        windowDays: Long = ScoringConstants.ACUTE_DAYS,
+    ): Float = computeEma(dailyTrimpList, seedFatigueLevel, windowDays)
+
+    private fun computeEma(
+        data: List<Float>,
+        seed: Float,
+        windowDays: Long,
     ): Float {
-        val dataTenureDays = dailyTrimpList.size
+        val n = data.size
+        if (n < 7) return seed
 
-        if (dataTenureDays < 7) return seedFitnessLevel
-
-        val sma = dailyTrimpList.take(ScoringConstants.PROVISIONAL_DAYS).average().toFloat()
-        if (dataTenureDays <= ScoringConstants.PROVISIONAL_DAYS) return sma
+        // Initialize with SMA of the first 7 days to stabilize the start
+        val sma = data.take(7).average().toFloat()
+        if (n <= 7) return sma
 
         val alpha = 2f / (windowDays + 1f)
         var currentEma = sma
 
-        for (i in ScoringConstants.PROVISIONAL_DAYS until dailyTrimpList.size) {
-            currentEma = (dailyTrimpList[i] * alpha) + (currentEma * (1f - alpha))
+        for (i in 7 until data.size) {
+            currentEma = (data[i] * alpha) + (currentEma * (1f - alpha))
         }
 
         return currentEma

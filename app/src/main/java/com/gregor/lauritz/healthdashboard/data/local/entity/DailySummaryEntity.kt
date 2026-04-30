@@ -31,4 +31,5 @@ data class DailySummaryEntity(
     val zLnHrv: Float? = null,
     val zRhr: Float? = null,
     val recoveryFlags: String? = null,
+    val hrvSigma: Float? = null,
 )

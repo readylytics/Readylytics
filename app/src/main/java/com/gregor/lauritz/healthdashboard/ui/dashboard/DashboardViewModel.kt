@@ -297,6 +297,13 @@ class DashboardViewModel
                     } else {
                         append("\n\nNot enough data to calculate baseline.")
                     }
+                    val z = summary.zLnHrv
+                    val sigma = summary.hrvSigma
+                    if (z != null && sigma != null) {
+                        append("\n\nDiagnostics:")
+                        append("\n• Z-score: ${String.format(Locale.getDefault(), "%.2f", z)}")
+                        append("\n• σ (ln-scale): ${String.format(Locale.getDefault(), "%.3f", sigma)}")
+                    }
                 },
             )
         }
