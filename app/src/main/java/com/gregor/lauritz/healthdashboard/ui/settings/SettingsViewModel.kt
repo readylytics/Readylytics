@@ -77,6 +77,7 @@ data class SettingsUiState(
     val paiScalingFactor: Float = SettingsDefaults.PAI_SCALING_FACTOR,
     val stepGoal: Int = SettingsDefaults.STEP_GOAL,
     val appTheme: AppTheme = SettingsDefaults.APP_THEME,
+    val dynamicColorEnabled: Boolean = SettingsDefaults.DYNAMIC_COLOR_ENABLED,
     val isLoading: Boolean = true,
     val driveEmail: String? = SettingsDefaults.DRIVE_ACCOUNT_EMAIL,
     val backupSchedule: BackupSchedule = SettingsDefaults.BACKUP_SCHEDULE,
@@ -208,6 +209,10 @@ sealed interface SettingsEvent {
         val theme: AppTheme,
     ) : SettingsEvent
 
+    data class DynamicColorEnabledChanged(
+        val enabled: Boolean,
+    ) : SettingsEvent
+
     data object DriveSignIn : SettingsEvent
     data object DriveSignOut : SettingsEvent
     data class BackupScheduleChanged(val schedule: BackupSchedule) : SettingsEvent
@@ -251,6 +256,7 @@ class SettingsViewModel
         init {
             viewModelScope.launch {
                 prefsRepo.userPreferences.collect { prefs ->
+                    val dynamicColor = appConfigRepo.dynamicColorEnabled.first()
                     _uiState.update {
                         it.copy(
                             goalSleepHours = prefs.goalSleepHours,
@@ -288,6 +294,7 @@ class SettingsViewModel
                             paiScalingFactor = prefs.paiScalingFactor,
                             stepGoal = prefs.stepGoal,
                             appTheme = prefs.appTheme,
+                            dynamicColorEnabled = dynamicColor,
                             driveEmail = prefs.driveAccountEmail,
                             backupSchedule = prefs.backupSchedule,
                             lastBackupTimestamp = prefs.lastBackupTimestamp,
@@ -460,6 +467,12 @@ class SettingsViewModel
                 is SettingsEvent.AppThemeChanged ->
                     viewModelScope.launch {
                         appConfigRepo.updateAppTheme(event.theme)
+                    }
+
+                is SettingsEvent.DynamicColorEnabledChanged ->
+                    viewModelScope.launch {
+                        appConfigRepo.updateDynamicColorEnabled(event.enabled)
+                        _uiState.update { it.copy(dynamicColorEnabled = event.enabled) }
                     }
 
                 is SettingsEvent.DriveSignIn ->

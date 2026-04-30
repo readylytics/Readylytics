@@ -32,6 +32,7 @@ object SettingsDefaults {
     const val RESTING_HR_BEFORE_MINUTES = 5
     const val RESTING_HR_AFTER_MINUTES = 15
     val APP_THEME = AppTheme.SYSTEM
+    const val DYNAMIC_COLOR_ENABLED = true
     val DRIVE_ACCOUNT_EMAIL: String? = null
     val BACKUP_SCHEDULE = BackupSchedule.MANUAL
     const val LAST_BACKUP_TIMESTAMP = 0L

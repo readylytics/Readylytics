@@ -42,11 +42,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
+import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
 import java.time.LocalDate
 
 @Composable
 fun OnboardingScreen(
-    onGrantPermissionsClick: (birthDay: Int, birthMonth: Int, birthYear: Int, gender: String, physiologyProfile: PhysiologyProfile) -> Unit,
+    onGrantPermissionsClick: (birthDay: Int, birthMonth: Int, birthYear: Int, gender: String, physiologyProfile: PhysiologyProfile, dynamicColorEnabled: Boolean) -> Unit,
     onOpenSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
@@ -169,7 +170,7 @@ private fun FeatureItem(
 
 @Composable
 private fun ProfileSetupScreen(
-    onGrantPermissionsClick: (birthDay: Int, birthMonth: Int, birthYear: Int, gender: String, physiologyProfile: PhysiologyProfile) -> Unit,
+    onGrantPermissionsClick: (birthDay: Int, birthMonth: Int, birthYear: Int, gender: String, physiologyProfile: PhysiologyProfile, dynamicColorEnabled: Boolean) -> Unit,
     onOpenSettingsClick: () -> Unit,
 ) {
     var birthDay by remember { mutableStateOf(LocalDate.now().dayOfMonth.toString()) }
@@ -177,6 +178,7 @@ private fun ProfileSetupScreen(
     var birthYear by remember { mutableStateOf((LocalDate.now().year - 30).toString()) }
     var gender by remember { mutableStateOf("Other") }
     var physiologyProfile by remember { mutableStateOf(PhysiologyProfile.GENERAL) }
+    var dynamicColorEnabled by remember { mutableStateOf(true) }
 
     Column(
         modifier = Modifier
@@ -273,6 +275,23 @@ private fun ProfileSetupScreen(
             Text("Other", style = MaterialTheme.typography.bodyMedium)
         }
 
+        Spacer(Modifier.height(16.dp))
+
+        Text(
+            text = "Appearance",
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+
+        SettingsToggleItem(
+            label = "Dynamic Color",
+            description = "Use colors derived from your wallpaper (Android 12+)",
+            checked = dynamicColorEnabled,
+            onCheckedChange = { dynamicColorEnabled = it },
+            modifier = Modifier.fillMaxWidth()
+        )
+
         Spacer(Modifier.height(24.dp))
 
         Text(
@@ -303,6 +322,7 @@ private fun ProfileSetupScreen(
                     yearInt ?: 1990,
                     gender,
                     physiologyProfile,
+                    dynamicColorEnabled,
                 )
             },
             modifier = Modifier.fillMaxWidth(),

@@ -65,6 +65,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
+import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
 import kotlinx.parcelize.Parcelize
 import java.text.DateFormat
 import java.util.Date
@@ -290,7 +291,15 @@ fun SettingsScreen(
                         expanded = !uiState.collapseDisplay || shouldExpandSection("display"),
                         onExpandedChange = { onEvent(SettingsEvent.CollapseDisplayChanged(!it)) }
                     ) {
-                        AppThemeItem(uiState = uiState, onEvent = onEvent)
+                        Column {
+                            AppThemeItem(uiState = uiState, onEvent = onEvent)
+                            SettingsToggleItem(
+                                label = "Dynamic Color",
+                                description = "Use colors derived from your wallpaper (Android 12+)",
+                                checked = uiState.dynamicColorEnabled,
+                                onCheckedChange = { onEvent(SettingsEvent.DynamicColorEnabledChanged(it)) }
+                            )
+                        }
                     }
                     HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
                 }

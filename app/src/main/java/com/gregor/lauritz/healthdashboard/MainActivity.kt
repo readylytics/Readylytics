@@ -13,6 +13,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppNavHost
@@ -33,6 +34,9 @@ class MainActivity : ComponentActivity() {
     lateinit var prefsRepo: UserPreferencesRepository
 
     @Inject
+    lateinit var appConfigRepo: AppConfigRepository
+
+    @Inject
     lateinit var workerScheduler: WorkerScheduler
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,9 +44,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val prefs by prefsRepo.userPreferences.collectAsState(initial = null)
+            val dynamicColorPref by appConfigRepo.dynamicColorEnabled.collectAsState(initial = true)
             val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM
 
-            FitDashboardTheme(appTheme = appTheme) {
+            FitDashboardTheme(
+                appTheme = appTheme,
+                dynamicColor = dynamicColorPref
+            ) {
                 val viewModel: SyncViewModel = hiltViewModel()
                 val context = LocalContext.current
 
@@ -74,7 +82,8 @@ class MainActivity : ComponentActivity() {
                 AppNavHost(
                     viewModel = viewModel,
                     hcRepo = hcRepo,
-                    prefsRepo = prefsRepo
+                    prefsRepo = prefsRepo,
+                    appConfigRepo = appConfigRepo
                 )
             }
         }

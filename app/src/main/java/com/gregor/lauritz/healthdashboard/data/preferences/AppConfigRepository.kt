@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.data.preferences
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -20,6 +21,7 @@ class AppConfigRepository @Inject constructor(
         val SYNC_INTERVAL_HOURS = intPreferencesKey("sync_interval_hours")
         val LAST_SYNC_TIMESTAMP = longPreferencesKey("last_sync_timestamp")
         val APP_THEME = stringPreferencesKey("app_theme")
+        val DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("dynamic_color_enabled")
     }
 
     val syncPreference: Flow<SyncPreference> = dataStore.data.map { prefs ->
@@ -42,6 +44,10 @@ class AppConfigRepository @Inject constructor(
         } ?: SettingsDefaults.APP_THEME
     }
 
+    val dynamicColorEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[Keys.DYNAMIC_COLOR_ENABLED] ?: SettingsDefaults.DYNAMIC_COLOR_ENABLED
+    }
+
     suspend fun updateSyncPreference(preference: SyncPreference) {
         dataStore.edit { it[Keys.SYNC_PREFERENCE] = preference.name }
     }
@@ -56,5 +62,9 @@ class AppConfigRepository @Inject constructor(
 
     suspend fun updateAppTheme(theme: AppTheme) {
         dataStore.edit { it[Keys.APP_THEME] = theme.name }
+    }
+
+    suspend fun updateDynamicColorEnabled(enabled: Boolean) {
+        dataStore.edit { it[Keys.DYNAMIC_COLOR_ENABLED] = enabled }
     }
 }

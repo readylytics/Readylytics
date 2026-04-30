@@ -11,6 +11,7 @@ import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncUiState
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
 import androidx.compose.runtime.rememberCoroutineScope
@@ -20,7 +21,8 @@ import kotlinx.coroutines.launch
 fun OnboardingRoute(
     viewModel: SyncViewModel,
     hcRepo: HealthConnectRepository,
-    prefsRepo: UserPreferencesRepository, // Added prefsRepo
+    prefsRepo: UserPreferencesRepository,
+    appConfigRepo: AppConfigRepository,
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -37,11 +39,12 @@ fun OnboardingRoute(
         }
 
     OnboardingScreen(
-        onGrantPermissionsClick = { day, month, year, gender, physiologyProfile ->
+        onGrantPermissionsClick = { day, month, year, gender, physiologyProfile, dynamicColorEnabled ->
             scope.launch {
                 prefsRepo.updateBirthday(day, month, year)
                 prefsRepo.updateGender(gender)
                 prefsRepo.updatePhysiologyProfile(physiologyProfile)
+                appConfigRepo.updateDynamicColorEnabled(dynamicColorEnabled)
 
                 // Trigger permission request after saving profile
                 permissionLauncher.launch(permissions)
