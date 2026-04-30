@@ -25,7 +25,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
         WorkoutRecordEntity::class,
         DailySummaryEntity::class,
     ],
-    version = 11,
+    version = 12,
 )
 abstract class HealthDatabase : RoomDatabase() {
     abstract fun sleepSessionDao(): SleepSessionDao
@@ -220,6 +220,21 @@ abstract class HealthDatabase : RoomDatabase() {
 
                 override fun migrate(connection: SQLiteConnection) {
                     connection.execSQL("ALTER TABLE daily_summaries ADD COLUMN stepCount INTEGER")
+                }
+            }
+
+        val MIGRATION_11_12 =
+            object : Migration(11, 12) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE daily_summaries ADD COLUMN zLnHrv REAL")
+                    db.execSQL("ALTER TABLE daily_summaries ADD COLUMN zRhr REAL")
+                    db.execSQL("ALTER TABLE daily_summaries ADD COLUMN recoveryFlags TEXT")
+                }
+
+                override fun migrate(connection: SQLiteConnection) {
+                    connection.execSQL("ALTER TABLE daily_summaries ADD COLUMN zLnHrv REAL")
+                    connection.execSQL("ALTER TABLE daily_summaries ADD COLUMN zRhr REAL")
+                    connection.execSQL("ALTER TABLE daily_summaries ADD COLUMN recoveryFlags TEXT")
                 }
             }
     }

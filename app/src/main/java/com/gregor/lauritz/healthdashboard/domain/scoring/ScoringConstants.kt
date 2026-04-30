@@ -13,6 +13,28 @@ object ScoringConstants {
     // REF: Plews 2013b Sports Med 43:773; Kubios HRV — SD estimates require ≥30 readings; 60d is industry practice
     const val MATURE_DATA_TENURE_DAYS = 60
 
+    // HRV baseline windowing — REF: Plews 2013; Buchheit 2014
+    const val HRV_MU_WINDOW_DAYS    = 7
+    const val HRV_SIGMA_WINDOW_DAYS = 56
+    const val HRV_SIGMA_BLEND_MIN_N = 7
+    const val HRV_SIGMA_BLEND_MAX_N = 60
+
+    // Valid-night input bounds — REF: Clifford 2006; Task Force 1996
+    const val MIN_VALID_RMSSD_MS               = 5f
+    const val MAX_VALID_RMSSD_MS               = 250f
+    const val MIN_VALID_SLEEP_RHR              = 30f
+    const val MAX_VALID_SLEEP_RHR              = 100f
+    const val MIN_VALID_SLEEP_DURATION_MINUTES = 240
+
+    // Sleep-stage physiological plausibility bounds — wearables frequently report impossible values
+    const val MAX_VALID_DEEP_FRACTION = 0.40f
+    const val MAX_VALID_REM_FRACTION  = 0.45f
+    const val MAX_VALID_DEEP_REM_SUM  = 0.70f
+
+    // HRV score piecewise saturation — REF: spec §4.2; Bellenger 2017 Front Physiol
+    const val HRV_SCORE_SATURATION_Z     = 1.5f
+    const val HRV_SCORE_SATURATION_SLOPE = 0.25f
+
     // Defaults
     const val DEFAULT_FITNESS_LEVEL = 35f
     const val DEFAULT_GOAL_SLEEP_HOURS = 8f
@@ -73,9 +95,7 @@ object ScoringConstants {
         const val LATE_NADIR_PENALTY = 0.95f
         const val LATE_NADIR_THRESHOLD = 0.67f
 
-        // ln-scale σ floor and provisional CV
-        // REF: Plews 2014 Int J Sports Physiol Perform; Schaffarczyk 2024; Kubios practice
-        const val PROVISIONAL_CV_RULE = 0.15f
+        // ln-scale σ floor — REF: Plews 2014 Int J Sports Physiol Perform; Schaffarczyk 2024; Kubios practice
         const val MIN_LN_SIGMA = 0.04f
     }
 

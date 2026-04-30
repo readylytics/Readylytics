@@ -16,6 +16,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
+import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults
@@ -93,6 +94,7 @@ data class SettingsUiState(
     val collapseBaselinesThresholds: Boolean = SettingsDefaults.COLLAPSE_BASELINES_THRESHOLDS,
     val collapseDisplay: Boolean = SettingsDefaults.COLLAPSE_DISPLAY,
     val collapseAdvanced: Boolean = SettingsDefaults.COLLAPSE_ADVANCED,
+    val physiologyProfile: PhysiologyProfile = SettingsDefaults.PHYSIOLOGY_PROFILE,
 )
 
 sealed interface SettingsEvent {
@@ -222,6 +224,7 @@ sealed interface SettingsEvent {
     data class CollapseBaselinesThresholdsChanged(val collapsed: Boolean) : SettingsEvent
     data class CollapseDisplayChanged(val collapsed: Boolean) : SettingsEvent
     data class CollapseAdvancedChanged(val collapsed: Boolean) : SettingsEvent
+    data class PhysiologyProfileChanged(val profile: PhysiologyProfile) : SettingsEvent
 }
 
 @HiltViewModel
@@ -295,6 +298,7 @@ class SettingsViewModel
                             collapseBaselinesThresholds = prefs.collapseBaselinesThresholds,
                             collapseDisplay = prefs.collapseDisplay,
                             collapseAdvanced = prefs.collapseAdvanced,
+                            physiologyProfile = prefs.physiologyProfile,
                             isLoading = false,
                         )
                     }
@@ -575,6 +579,11 @@ class SettingsViewModel
                 is SettingsEvent.CollapseAdvancedChanged ->
                     viewModelScope.launch {
                         prefsRepo.updateCollapseAdvanced(event.collapsed)
+                    }
+                is SettingsEvent.PhysiologyProfileChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updatePhysiologyProfile(event.profile)
+                        scoringRepository.computeAndPersistDailySummary()
                     }
             }
         }

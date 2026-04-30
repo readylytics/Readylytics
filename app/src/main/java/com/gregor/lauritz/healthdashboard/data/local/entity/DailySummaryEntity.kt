@@ -24,4 +24,7 @@ data class DailySummaryEntity(
     val paiScore: Float? = null,
     val totalPai: Float? = null,
     val stepCount: Int? = null,
+    val zLnHrv: Float? = null,
+    val zRhr: Float? = null,
+    val recoveryFlags: String? = null,
 )

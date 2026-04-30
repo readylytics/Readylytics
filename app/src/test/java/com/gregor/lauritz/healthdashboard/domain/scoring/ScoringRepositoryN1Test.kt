@@ -7,6 +7,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import io.mockk.coEvery
@@ -56,7 +57,7 @@ class ScoringRepositoryN1Test {
         dailySummaryDao = mockk()
         prefsRepo = mockk()
 
-        every { prefsRepo.userPreferences } returns MutableStateFlow(UserPreferences())
+        every { prefsRepo.userPreferences } returns MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.GENERAL))
 
         // Provide enough sessions to pass the calibration guard (MIN_SESSIONS_FOR_CALIBRATION = 7)
         coEvery { sleepSessionDao.countSince(any()) } returns 10
@@ -73,7 +74,9 @@ class ScoringRepositoryN1Test {
         coEvery { workoutDao.getWeightedAvgHr(any(), any()) } returns 0f
 
         coEvery { hrvDao.getSleepRmssdValues(any()) } returns listOf(60f, 60f, 60f)
+        coEvery { hrvDao.getSleepRmssdValuesSince(any(), any()) } returns listOf(60f, 60f, 60f)
         coEvery { hrvDao.getSleepRmssdForSession(any()) } returns listOf(60f, 60f)
+        coEvery { hrvDao.getRmssdInTimeRange(any(), any()) } returns listOf(60f, 60f)
 
         coEvery { heartRateDao.getAvgSleepHrPerSession(any()) } returns listOf(55, 55, 55)
         coEvery { heartRateDao.getAvgSleepHr(any()) } returns 55

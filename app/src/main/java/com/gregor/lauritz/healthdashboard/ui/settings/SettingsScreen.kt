@@ -60,6 +60,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
+import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
@@ -881,6 +882,26 @@ private fun AdvancedSettingsSection(
             steps = 20, // (0.3 - 0.1) / 0.01 = 20
             displayValue = "%.2f".format(paiScaling),
             description = "Adjusts how quickly you earn PAI points. Default: 0.20.",
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        val profileLabel: (PhysiologyProfile) -> String = { profile ->
+            when (profile) {
+                PhysiologyProfile.ATHLETE      -> "Athlete (competitive / structured training)"
+                PhysiologyProfile.ACTIVE       -> "Active (regular exercise)"
+                PhysiologyProfile.GENERAL      -> "General population"
+                PhysiologyProfile.SEDENTARY    -> "Sedentary / low activity"
+                PhysiologyProfile.SHIFT_WORKER -> "Shift worker / irregular schedule"
+            }
+        }
+        DropdownPreferenceItem(
+            label = "Activity Profile",
+            selectedDisplayValue = profileLabel(uiState.physiologyProfile),
+            options = PhysiologyProfile.entries,
+            optionLabel = profileLabel,
+            onOptionSelected = { onEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
+            modifier = Modifier.padding(horizontal = 16.dp),
         )
     }
 }

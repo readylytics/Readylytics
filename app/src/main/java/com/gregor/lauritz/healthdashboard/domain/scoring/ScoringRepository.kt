@@ -122,7 +122,7 @@ class ScoringRepository
 
                 val session = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
                 if (session != null) {
-                    summary = calculateSleepMetrics(session, dayMidnight, prefs, summary, loadScore)
+                    summary = calculateSleepMetrics(session, dayMidnight, targetDate, prefs, summary, loadScore, zoneId)
                 }
 
                 // After readiness is calculated, adjust PAI and calculate rolling sum
@@ -150,13 +150,25 @@ class ScoringRepository
         private suspend fun calculateSleepMetrics(
             session: SleepSessionEntity,
             dayMidnight: Instant,
+            targetDate: LocalDate,
             prefs: UserPreferences,
             summary: DailySummaryEntity,
-            loadScore: Float
+            loadScore: Float,
+            zoneId: ZoneId,
         ): DailySummaryEntity = withContext(Dispatchers.Default) {
             val baselineFrom = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
-            val hrvValues = hrvDao.getSleepRmssdValues(baselineFrom)
             val rhrValues = heartRateDao.getAvgSleepHrPerSession(baselineFrom)
+
+            // Fetch yesterday's Z-scores for 2-night consecutive flag confirmation
+            val yesterdayMidnightMs = targetDate.minusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val yesterdaySummary = dailySummaryDao.getByDate(yesterdayMidnightMs)
+
+            // Separate mu (7-night) and sigma (56-night) HRV history windows
+            val sigmaWindowFromMs = dayMidnight.minus(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong(), ChronoUnit.DAYS).toEpochMilli()
+            val allSleepRmssd   = hrvDao.getSleepRmssdValues(sigmaWindowFromMs)
+            val muHrvHistory    = allSleepRmssd.takeLast(ScoringConstants.HRV_MU_WINDOW_DAYS)
+            val sigmaHrvHistory = allSleepRmssd
+
             var sessionHrvSamples = hrvDao.getSleepRmssdForSession(session.id)
             android.util.Log.d(
                 "ScoringRepository",
@@ -179,7 +191,6 @@ class ScoringRepository
             val minHrStartTime = session.endTime - beforeMs
             val minHrEndTime = session.endTime + afterMs
 
-            // Get current resting HR from our single nocturnal fetch if possible, or fallback to DAO
             val currentRestingHr = heartRateDao.getMinHrInRange(minHrStartTime, minHrEndTime)
 
             val sessions = sleepSessionDao.getSince(baselineFrom)
@@ -205,24 +216,58 @@ class ScoringRepository
                 currentRestingHr.toFloat() / restingHrBaseline.toFloat()
             } else null
 
+            // Validate current night for stage plausibility
+            val validation = ScoringCalculator.validateNight(
+                rmssdMs         = if (sessionHrvSamples.isNotEmpty()) currentHrvMean else null,
+                rhrBpm          = currentNocturnalRhr?.toFloat(),
+                durationMinutes = session.durationMinutes,
+                deepMinutes     = session.deepSleepMinutes,
+                remMinutes      = session.remSleepMinutes,
+            )
+            val stagesSuspicious = !validation.stagesValid || validation.stagesSuspicious
+
+            val sigmaPrior = prefs.physiologyProfile.lnSigmaPrior
+
             var rhrRatio: Float? = null
             var sleepScore: Float? = null
             var readinessScore: Float? = null
+            var persistedZLnHrv: Float? = null
+            var persistedZRhr: Float? = null
+            var persistedFlags: String? = null
 
             if (currentNocturnalRhr != null) {
                 rhrRatio = currentNocturnalRhr.toFloat() / (baselineRhrValue + 0.001f)
 
                 val minHrTimestamp = heartRateDao.getMinHrTimestamp(session.id)
-                val isLateNadir = minHrTimestamp != null && session.durationMinutes > 0 &&
-                    (minHrTimestamp - session.startTime) > (session.durationMinutes * 60 * 1000L * ScoringConstants.Restoration.LATE_NADIR_THRESHOLD)
+                val isLateNadir = minHrTimestamp != null &&
+                    ScoringCalculator.isLateNadir(minHrTimestamp, session.startTime, session.durationMinutes)
+
+                val zHrv = if (sessionHrvSamples.isNotEmpty()) {
+                    ScoringCalculator.computeHrvZScore(
+                        currentRmssdMs   = currentHrvMean,
+                        muHistory        = muHrvHistory,
+                        sigmaHistory     = sigmaHrvHistory,
+                        sigmaPrior       = sigmaPrior,
+                        baselineOverride = prefs.hrvBaselineOverride,
+                    )
+                } else null
+
+                val zRhr = ScoringCalculator.computeRhrZScore(
+                    currentRhrBpm    = currentNocturnalRhr.toFloat(),
+                    rhrHistory       = rhrValues,
+                    baselineOverride = prefs.rhrBaselineOverride,
+                )
+                val rhrDeltaBpm = currentNocturnalRhr.toFloat() - baselineRhrValue.toFloat()
 
                 var sRest = ScoringCalculator.computeRestorationSubScore(
-                    currentHrvMean = currentHrvMean,
-                    hrvValues = hrvValues,
+                    currentHrvMean      = currentHrvMean,
+                    muHrvHistory        = muHrvHistory,
+                    sigmaHrvHistory     = sigmaHrvHistory,
+                    sigmaPrior          = sigmaPrior,
                     currentNocturnalRhr = currentNocturnalRhr.toFloat(),
-                    rhrValues = rhrValues,
+                    rhrValues           = rhrValues,
                     rhrBaselineOverride = prefs.rhrBaselineOverride,
-                    hrvBaselineOverride = prefs.hrvBaselineOverride
+                    hrvBaselineOverride = prefs.hrvBaselineOverride,
                 )
 
                 if (isLateNadir) {
@@ -230,48 +275,55 @@ class ScoringRepository
                 }
 
                 sleepScore = ScoringCalculator.computeSleepScore(
-                    durationMinutes = session.durationMinutes,
-                    efficiency = session.efficiency,
+                    durationMinutes  = session.durationMinutes,
+                    efficiency       = session.efficiency,
                     deepSleepMinutes = session.deepSleepMinutes,
-                    remSleepMinutes = session.remSleepMinutes,
-                    goalSleepHours = prefs.goalSleepHours,
-                    sRest = sRest,
-                    userAge = prefs.age,
+                    remSleepMinutes  = session.remSleepMinutes,
+                    goalSleepHours   = prefs.goalSleepHours,
+                    sRest            = sRest,
+                    userAge          = prefs.age,
                 )
 
-                val zHrv = if (sessionHrvSamples.isNotEmpty()) {
-                    ScoringCalculator.computeHrvZScore(currentHrvMean, hrvValues, prefs.hrvBaselineOverride)
-                } else null
-
-                val zRhr = ScoringCalculator.computeRhrZScore(
-                    currentRhrBpm = currentNocturnalRhr.toFloat(),
-                    rhrHistory = rhrValues,
-                    baselineOverride = prefs.rhrBaselineOverride,
+                val recoveryFlags = ScoringCalculator.computeRecoveryFlags(
+                    zLnHrv           = zHrv,
+                    zRhr             = zRhr,
+                    rhrDeltaBpm      = rhrDeltaBpm,
+                    yesterdayZLnHrv  = yesterdaySummary?.zLnHrv,
+                    yesterdayZRhr    = yesterdaySummary?.zRhr,
+                    hrvMissing       = sessionHrvSamples.isEmpty(),
+                    stagesSuspicious = stagesSuspicious,
+                    isLateNadir      = isLateNadir,
+                    isCalibrating    = false,
                 )
-                val rhrDeltaBpm = currentNocturnalRhr.toFloat() - baselineRhrValue.toFloat()
 
                 readinessScore = ScoringCalculator.computeReadinessScore(
-                    sRest = sRest,
-                    sleepScore = sleepScore,
-                    loadScore = loadScore,
-                    zLnHrv = zHrv,
-                    zRhr = zRhr,
-                    rhrDeltaBpm = rhrDeltaBpm,
+                    sRest         = sRest,
+                    sleepScore    = sleepScore,
+                    loadScore     = loadScore,
+                    recoveryFlags = recoveryFlags,
                 )
+
+                persistedZLnHrv = zHrv
+                persistedZRhr   = zRhr
+                persistedFlags  = if (recoveryFlags.isNotEmpty())
+                    recoveryFlags.joinToString(",") { it.name } else null
             }
 
             return@withContext summary.copy(
-                sleepScore = sleepScore,
-                readinessScore = readinessScore,
-                nocturnalRhr = currentNocturnalRhr,
-                nocturnalHrv = if (sessionHrvSamples.isNotEmpty()) currentHrvMean.roundToInt() else null,
+                sleepScore        = sleepScore,
+                readinessScore    = readinessScore,
+                nocturnalRhr      = currentNocturnalRhr,
+                nocturnalHrv      = if (sessionHrvSamples.isNotEmpty()) currentHrvMean.roundToInt() else null,
                 sleepDurationMinutes = session.durationMinutes,
-                deepSleepPercent = if (session.durationMinutes > 0) session.deepSleepMinutes / session.durationMinutes.toFloat() * 100f else null,
-                remSleepPercent = if (session.durationMinutes > 0) session.remSleepMinutes / session.durationMinutes.toFloat() * 100f else null,
-                rhrRatio = rhrRatio,
-                restingHeartRate = currentRestingHr,
-                restingHrRatio = restingHrRatio,
-                restingHrBaseline = restingHrBaseline
+                deepSleepPercent  = if (session.durationMinutes > 0) session.deepSleepMinutes / session.durationMinutes.toFloat() * 100f else null,
+                remSleepPercent   = if (session.durationMinutes > 0) session.remSleepMinutes / session.durationMinutes.toFloat() * 100f else null,
+                rhrRatio          = rhrRatio,
+                restingHeartRate  = currentRestingHr,
+                restingHrRatio    = restingHrRatio,
+                restingHrBaseline = restingHrBaseline,
+                zLnHrv            = persistedZLnHrv,
+                zRhr              = persistedZRhr,
+                recoveryFlags     = persistedFlags,
             )
         }
     }

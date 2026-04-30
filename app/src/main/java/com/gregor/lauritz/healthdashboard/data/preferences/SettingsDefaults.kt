@@ -48,4 +48,5 @@ object SettingsDefaults {
     const val COLLAPSE_DISPLAY = true
     const val COLLAPSE_ADVANCED = true
     const val ABOUT_DISMISSED = false
+    val PHYSIOLOGY_PROFILE = PhysiologyProfile.GENERAL
 }

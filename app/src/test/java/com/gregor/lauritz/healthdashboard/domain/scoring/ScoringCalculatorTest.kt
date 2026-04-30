@@ -185,7 +185,7 @@ class RestorationSubScoreTest {
         // Z_hrv = 0, Z_rhr = 0 → 0.5*50 + 0.5*50 = 50
         val hrv = listOf(60f, 60f, 60f)
         val rhr = listOf(60, 60, 60)
-        assertEquals(50f, ScoringCalculator.computeRestorationSubScore(60f, hrv, 60f, rhr, null, null), DELTA)
+        assertEquals(50f, ScoringCalculator.computeRestorationSubScore(60f, hrv, hrv, currentNocturnalRhr = 60f, rhrValues = rhr, rhrBaselineOverride = null, hrvBaselineOverride = null), DELTA)
     }
 
     @Test
@@ -193,7 +193,7 @@ class RestorationSubScoreTest {
         // currentHrv > mean(history) → positive Z_hrv → higher restoration
         val hrv = listOf(40f, 40f, 40f, 40f, 40f)
         val rhr = listOf(60, 60, 60, 60, 60)
-        val score = ScoringCalculator.computeRestorationSubScore(60f, hrv, 60f, rhr, null, null)
+        val score = ScoringCalculator.computeRestorationSubScore(60f, hrv, hrv, currentNocturnalRhr = 60f, rhrValues = rhr, rhrBaselineOverride = null, hrvBaselineOverride = null)
         assertTrue("Score should be above 50 with HRV above baseline, was $score", score > 50f)
     }
 
@@ -202,7 +202,7 @@ class RestorationSubScoreTest {
         // currentRhr > baseline → positive Z_rhr → lower restoration
         val hrv = listOf(60f, 60f, 60f)
         val rhr = listOf(55, 55, 55, 55, 55, 55, 55, 55)
-        val score = ScoringCalculator.computeRestorationSubScore(60f, hrv, 70f, rhr, null, null)
+        val score = ScoringCalculator.computeRestorationSubScore(60f, hrv, hrv, currentNocturnalRhr = 70f, rhrValues = rhr, rhrBaselineOverride = null, hrvBaselineOverride = null)
         assertTrue("Score should be below 50 with elevated RHR, was $score", score < 50f)
     }
 
@@ -210,14 +210,14 @@ class RestorationSubScoreTest {
     fun `rhr override respected`() {
         // Override baseline=60, currentRhr=60 → Z_rhr=0; HRV at baseline → Z_hrv=0 → sRest=50
         val hrv = listOf(60f, 60f, 60f)
-        assertEquals(50f, ScoringCalculator.computeRestorationSubScore(60f, hrv, 60f, emptyList(), 60f, null), DELTA)
+        assertEquals(50f, ScoringCalculator.computeRestorationSubScore(60f, hrv, hrv, currentNocturnalRhr = 60f, rhrValues = emptyList(), rhrBaselineOverride = 60f, hrvBaselineOverride = null), DELTA)
     }
 
     @Test
     fun `hrv override respected`() {
         // Override baseline=60ms, currentHrv=60ms → Z_hrv=0; RHR at baseline → sRest=50
         val rhr = listOf(60, 60, 60)
-        assertEquals(50f, ScoringCalculator.computeRestorationSubScore(60f, emptyList(), 60f, rhr, null, 60f), DELTA)
+        assertEquals(50f, ScoringCalculator.computeRestorationSubScore(60f, emptyList(), emptyList(), currentNocturnalRhr = 60f, rhrValues = rhr, rhrBaselineOverride = null, hrvBaselineOverride = 60f), DELTA)
     }
 
     @Test
@@ -225,9 +225,9 @@ class RestorationSubScoreTest {
         // ln(k*x) - ln(k*mu) = ln(x) - ln(mu) → scaling history and today by same factor leaves Z unchanged
         val hrv = listOf(40f, 50f, 60f, 55f, 45f)
         val rhr = listOf(60, 60, 60, 60, 60)
-        val score1 = ScoringCalculator.computeRestorationSubScore(50f, hrv, 60f, rhr, null, null)
+        val score1 = ScoringCalculator.computeRestorationSubScore(50f, hrv, hrv, currentNocturnalRhr = 60f, rhrValues = rhr, rhrBaselineOverride = null, hrvBaselineOverride = null)
         val scaledHrv = hrv.map { it * 2f }
-        val score2 = ScoringCalculator.computeRestorationSubScore(100f, scaledHrv, 60f, rhr, null, null)
+        val score2 = ScoringCalculator.computeRestorationSubScore(100f, scaledHrv, scaledHrv, currentNocturnalRhr = 60f, rhrValues = rhr, rhrBaselineOverride = null, hrvBaselineOverride = null)
         assertEquals(score1, score2, DELTA)
     }
 }
@@ -236,14 +236,14 @@ class RestorationSubScoreTest {
 
 class HrvZScoreTest {
     @Test
-    fun `returns null when history is empty and no override`() {
-        assertNull(ScoringCalculator.computeHrvZScore(50f, emptyList(), null))
+    fun `returns null when muHistory is empty and no override`() {
+        assertNull(ScoringCalculator.computeHrvZScore(50f, emptyList(), emptyList(), baselineOverride = null))
     }
 
     @Test
     fun `z-score is zero when current equals historical mean`() {
         val history = List(10) { 50f }
-        val z = ScoringCalculator.computeHrvZScore(50f, history)
+        val z = ScoringCalculator.computeHrvZScore(50f, history, history)
         assertNotNull(z)
         assertEquals(0f, z!!, DELTA)
     }
@@ -251,7 +251,7 @@ class HrvZScoreTest {
     @Test
     fun `positive z-score when current above mean`() {
         val history = List(10) { 40f }
-        val z = ScoringCalculator.computeHrvZScore(60f, history)
+        val z = ScoringCalculator.computeHrvZScore(60f, history, history)
         assertNotNull(z)
         assertTrue("Z should be positive, was $z", z!! > 0f)
     }
@@ -259,7 +259,7 @@ class HrvZScoreTest {
     @Test
     fun `negative z-score when current below mean`() {
         val history = List(10) { 60f }
-        val z = ScoringCalculator.computeHrvZScore(40f, history)
+        val z = ScoringCalculator.computeHrvZScore(40f, history, history)
         assertNotNull(z)
         assertTrue("Z should be negative, was $z", z!! < 0f)
     }
