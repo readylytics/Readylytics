@@ -369,8 +369,9 @@ abstract class HealthDatabase : RoomDatabase() {
                                nocturnalRhr, nocturnalHrv, sleepDurationMinutes, deepSleepPercent,
                                remSleepPercent, totalTrimp, rhrRatio, hrvBaseline, restingHeartRate,
                                restingHrRatio, restingHrBaseline, paiScore, totalPai, stepCount,
-                               zLnHrv, zRhr, recoveryFlags, hrvSigma,
-                               zLnHrv, zRhr, hrvSigma, rollingMu, rhrDeltaBpm,
+                               zLnHrv, zRhr, recoveryFlags, NULL,
+                               zLnHrv, zRhr, NULL, rollingMu, rhrDeltaBpm,
+
                                COALESCE(isCalibrating, 0), COALESCE(stagesSuspicious, 0), COALESCE(lateNadir, 0), 0, 0,
                                hrvScoreContribution, rhrScoreContribution, durationScoreContribution, architectureScoreContribution, loadContribution,
                                rollingMu, rhrDeltaBpm, lateNadir, stagesSuspicious, isCalibrating,
