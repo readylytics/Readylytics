@@ -3,21 +3,16 @@ package com.gregor.lauritz.healthdashboard.ui.dashboard
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
-import com.gregor.lauritz.healthdashboard.domain.model.hrvStatus
-import com.gregor.lauritz.healthdashboard.domain.model.paiStatus
-import com.gregor.lauritz.healthdashboard.domain.model.restingHrStatus
-import com.gregor.lauritz.healthdashboard.domain.model.rhrStatus
-import com.gregor.lauritz.healthdashboard.domain.model.sleepDurationStatus
+import com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepository
+import com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase
+import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
-import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,21 +21,17 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import javax.inject.Inject
 
 @Immutable
 data class DashboardUiState(
-    val summary: DailySummaryEntity? = null,
+    val summary: DailySummary? = null,
     val selectedDate: LocalDate = LocalDate.now(),
     val isRefreshing: Boolean = false,
     val cardData: List<CardData> = emptyList(),
@@ -72,19 +63,19 @@ enum class DashboardAction {
 }
 
 private data class DashboardInputs(
-    val summary: DailySummaryEntity?,
+    val summary: DailySummary?,
     val prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences,
     val isRefreshing: Boolean,
     val circadian: CircadianConsistencyResult?,
-    val paiSummaries: List<DailySummaryEntity>,
+    val paiSummaries: List<DailySummary>,
 )
 
 @HiltViewModel
 class DashboardViewModel
     @Inject
     constructor(
-        private val dailySummaryDao: DailySummaryDao,
-        private val sleepSessionDao: SleepSessionDao,
+        private val dailySummaryRepository: DailySummaryRepository,
+        private val getDashboardDataUseCase: GetDashboardDataUseCase,
         private val foregroundSyncController: ForegroundSyncController,
         private val selectedDateRepository: SelectedDateRepository,
         prefsRepo: UserPreferencesRepository,
@@ -108,19 +99,19 @@ class DashboardViewModel
                     val summaryFlow =
                         if (date == today) {
                             val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                            dailySummaryDao.observeSince(todayMs).map { it.firstOrNull() }
+                            dailySummaryRepository.observeSince(todayMs).map { it.firstOrNull() }
                         } else {
                             val midnightMs =
                                 date
                                     .atStartOfDay(ZoneId.systemDefault())
                                     .toInstant()
                                     .toEpochMilli()
-                            flow { emit(dailySummaryDao.getByDate(midnightMs)) }
+                            dailySummaryRepository.observeByDate(midnightMs)
                         }
                     val paiFromMs = date.minusDays(6)
                         .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                    val paiBreakdownFlow = dailySummaryDao.observeSince(paiFromMs)
-                    val sessionFlow = sleepSessionDao.observeFirstSessionEndingInRange(
+                    val paiBreakdownFlow = dailySummaryRepository.observeSince(paiFromMs)
+                    val sessionFlow = dailySummaryRepository.observeFirstSessionEndingInRange(
                         fromMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli(),
                         toMs = date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli(),
                     )
@@ -136,22 +127,22 @@ class DashboardViewModel
                         },
                         sessionFlow
                     ) { inputs, session ->
-                        val data =
-                            calculateCardData(
-                                inputs.summary,
-                                inputs.prefs,
-                                date,
-                                session,
-                            )
+                        val cards = getDashboardDataUseCase.invoke(
+                            summary = inputs.summary,
+                            prefs = inputs.prefs,
+                            date = date,
+                            lastSleepSession = session,
+                            paiSummaries = inputs.paiSummaries,
+                        )
                         DashboardUiState(
                             summary = inputs.summary,
                             selectedDate = date,
                             isRefreshing = inputs.isRefreshing,
-                            cardData = data,
-                            cardRows = data.chunked(2),
+                            cardData = cards.mainCards,
+                            cardRows = cards.mainCards.chunked(2),
                             circadianConsistency = inputs.circadian,
-                            restingHrCard = inputs.summary?.let { restingHrCard(it, inputs.prefs) },
-                            paiDailyBreakdown = buildPaiBreakdown(date, inputs.paiSummaries),
+                            restingHrCard = cards.restingHrCard,
+                            paiDailyBreakdown = cards.paiDailyBreakdown,
                             stepCount = inputs.summary?.stepCount,
                             stepGoal = inputs.prefs.stepGoal,
                             lastSleepSession = session,
@@ -163,219 +154,7 @@ class DashboardViewModel
                     initialValue = DashboardUiState(),
                 )
 
-        private fun calculateCardData(
-            summary: DailySummaryEntity?,
-            prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences,
-            selectedDate: LocalDate,
-            lastSleepSession: SleepSessionEntity?,
-        ): List<CardData> {
-            if (summary == null) return emptyList()
-
-            return listOf(
-                sleepCard(summary, prefs),
-                hrvCard(summary, prefs),
-                paiCard(summary),
-                sleepDurationCard(summary, prefs, lastSleepSession),
-            )
-        }
-
-        private fun paiCard(summary: DailySummaryEntity): CardData {
-            val status = summary.paiStatus()
-            val value = summary.totalPai?.toInt()?.toString() ?: "—"
-
-            return CardData(
-                title = "Current PAI",
-                value = value,
-                unit = "",
-                status = status,
-                action = DashboardAction.NAVIGATE_WORKOUTS,
-                tooltip = buildString {
-                    append("Your 7-day rolling heart health score.\n")
-                    append("Based on how often and how hard you challenge your heart.\n\n")
-                    append("• 100+: Optimal\n")
-                    append("• 75-99: Neutral\n")
-                    append("• 50-74: Warning\n")
-                    append("• < 50: Poor")
-                }
-            )
-        }
-
-        private fun buildPaiBreakdown(
-            endDate: LocalDate,
-            summaries: List<DailySummaryEntity>,
-        ): List<Pair<String, Float>> {
-            val zoneId = ZoneId.systemDefault()
-            val fmt = DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
-            return (6 downTo 0).map { daysBack ->
-                val day = endDate.minusDays(daysBack.toLong())
-                val dayMs = day.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                val entry = summaries.firstOrNull { it.dateMidnightMs == dayMs }
-                day.format(fmt) to (entry?.paiScore ?: 0f)
-            }
-        }
-
-        private fun sleepCard(
-            summary: DailySummaryEntity,
-            prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-        ): CardData {
-            val rhrStatus = summary.rhrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold)
-            val rhrBaseline = summary.let { s ->
-                val ratio = s.rhrRatio
-                val rhr = s.nocturnalRhr
-                if (ratio != null && ratio > 0f && rhr != null) (rhr / ratio).toInt() else null
-            }
-            val rhrDiff = summary.let { s ->
-                val ratio = s.rhrRatio
-                val rhr = s.nocturnalRhr
-                if (ratio != null && ratio > 0f && rhr != null) {
-                    val baseline = (rhr / ratio).toInt()
-                    kotlin.math.abs(rhr - baseline)
-                } else null
-            }
-            val rhrArrow = if (rhrBaseline != null && summary.nocturnalRhr != null) {
-                when {
-                    summary.nocturnalRhr > rhrBaseline -> "↑"
-                    summary.nocturnalRhr < rhrBaseline -> "↓"
-                    else -> "="
-                }
-            } else null
-
-            return CardData(
-                title = "Sleep RHR",
-                value = summary.nocturnalRhr?.toString() ?: "—",
-                unit = "bpm",
-                status = rhrStatus,
-                action = DashboardAction.NAVIGATE_SLEEP,
-                tooltip = buildString {
-                    append("Average heart rate during sleep.\n")
-                    append("Target: lower or equal to your 30-day rolling average. ")
-                    append("(Lower = Recovered)")
-                    if (rhrBaseline != null && rhrArrow != null && rhrDiff != null) {
-                        append("\n\nBaseline: $rhrBaseline bpm $rhrArrow ($rhrDiff bpm)")
-                    } else {
-                        append("\n\nNot enough data to calculate baseline.")
-                    }
-                },
-            )
-        }
-
-        private fun hrvCard(
-            summary: DailySummaryEntity,
-            prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-        ): CardData {
-            val hrvStatus = summary.hrvStatus(prefs.hrvOptimalThreshold, prefs.hrvWarningThreshold)
-            val hrvBaseline = summary.hrvBaseline
-            val hrvDiff = summary.let { s ->
-                val baseline = s.hrvBaseline
-                val hrv = s.nocturnalHrv
-                if (baseline != null && hrv != null) kotlin.math.abs(hrv - baseline) else null
-            }
-            val hrvArrow = if (hrvBaseline != null && summary.nocturnalHrv != null) {
-                when {
-                    summary.nocturnalHrv > hrvBaseline -> "↑"
-                    summary.nocturnalHrv < hrvBaseline -> "↓"
-                    else -> "="
-                }
-            } else null
-
-            return CardData(
-                title = "Sleep HRV",
-                value = summary.nocturnalHrv?.toString() ?: "—",
-                unit = "ms",
-                status = hrvStatus,
-                action = DashboardAction.NAVIGATE_SLEEP,
-                tooltip = buildString {
-                    append("Variation between heartbeats in milliseconds.")
-                    append("\nTarget: Within or above your 30-day rolling average. ")
-                    append("(Higher = Recovered)")
-                    if (hrvBaseline != null) {
-                        if (hrvArrow != null && hrvDiff != null) {
-                            append("\n\nBaseline: $hrvBaseline ms $hrvArrow ($hrvDiff ms)")
-                        } else {
-                            append("\n\nBaseline: $hrvBaseline ms (today's HRV not yet available)")
-                        }
-                    } else {
-                        append("\n\nNot enough data to calculate baseline.")
-                    }
-                    val z = summary.zLnHrv
-                    val sigma = summary.hrvSigma
-                    if (z != null && sigma != null) {
-                        append("\n\nDiagnostics:")
-                        append("\n• Z-score: ${String.format(Locale.getDefault(), "%.2f", z)}")
-                        append("\n• σ (ln-scale): ${String.format(Locale.getDefault(), "%.3f", sigma)}")
-                    }
-                },
-            )
-        }
-
-        private fun sleepDurationCard(
-            summary: DailySummaryEntity,
-            prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences,
-            lastSleepSession: SleepSessionEntity?,
-        ): CardData {
-            val durationStatus = summary.sleepDurationStatus((prefs.goalSleepHours * 60).toInt())
-            val lastNightText = lastSleepSession?.let { session ->
-                val fmt = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
-                val zone = ZoneId.systemDefault()
-                val bed = Instant.ofEpochMilli(session.startTime).atZone(zone).format(fmt)
-                val wake = Instant.ofEpochMilli(session.endTime).atZone(zone).format(fmt)
-                "$bed→$wake"
-            }
-            return CardData(
-                title = "Sleep Duration",
-                value = formatSleepDuration(summary.sleepDurationMinutes),
-                unit = "",
-                status = durationStatus,
-                action = DashboardAction.NAVIGATE_SLEEP,
-                tooltip = buildString {
-                    append("Total time asleep last night.")
-                    val goal = formatSleepDuration((prefs.goalSleepHours * 60).toInt())
-                    append("\n\nGoal: $goal")
-                },
-            ).let {
-                if (lastNightText != null) it.copy(secondaryText = lastNightText) else it
-            }
-        }
-
-        private fun restingHrCard(
-            summary: DailySummaryEntity,
-            prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-        ): CardData {
-            val restingHrStatus = summary.restingHrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold)
-            return CardData(
-                title = "Resting HR",
-                value = summary.restingHeartRate?.toString() ?: "—",
-                unit = "bpm",
-                status = restingHrStatus,
-                action = DashboardAction.NAVIGATE_RHR,
-                tooltip = buildString {
-                    val rBaseline = summary.restingHrBaseline
-                    val rCurrent = summary.restingHeartRate
-                    if (rBaseline != null && rCurrent != null) {
-                        val diff = kotlin.math.abs(rCurrent - rBaseline)
-                        val arrow = when {
-                            rCurrent > rBaseline -> "↑"
-                            rCurrent < rBaseline -> "↓"
-                            else -> "="
-                        }
-                        append("Minimum heart rate captured within ")
-                        append("${prefs.restingHrBeforeMinutes}m before and ")
-                        append("${prefs.restingHrAfterMinutes}m after wake up.")
-                        append("\n\nBaseline: $rBaseline bpm $arrow ($diff bpm)")
-                    } else {
-                        append("Minimum heart rate captured around wake up time.")
-                        append("\n\nNot enough data to calculate baseline.")
-                    }
-                },
-            )
-        }
-
-        fun formatSleepDuration(minutes: Int?): String {
-            if (minutes == null) return "—"
-            val hours = minutes / 60
-            val mins = minutes % 60
-            return if (mins == 0) "${hours}h" else "${hours}h ${mins}m"
-        }
+        fun formatSleepDuration(minutes: Int?): String = getDashboardDataUseCase.formatSleepDuration(minutes)
 
         fun onRefresh() = viewModelScope.launch {
             _isRefreshing.value = true

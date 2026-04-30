@@ -92,7 +92,9 @@ class ScoringRepositoryN1Test {
         coEvery { dailySummaryDao.upsert(any()) } returns Unit
 
         scoringCalculator = ScoringCalculatorImpl()
-        repo = ScoringRepository(workoutDao, sleepSessionDao, heartRateDao, hrvDao, dailySummaryDao, prefsRepo, scoringCalculator)
+        val baselineComputer = BaselineComputer(heartRateDao, hrvDao, sleepSessionDao, scoringCalculator)
+        val computeSleepMetricsUseCase = ComputeSleepMetricsUseCase(baselineComputer, dailySummaryDao, hrvDao, heartRateDao, sleepSessionDao, scoringCalculator)
+        repo = ScoringRepository(workoutDao, sleepSessionDao, dailySummaryDao, prefsRepo, scoringCalculator, baselineComputer, computeSleepMetricsUseCase)
     }
 
     @Test

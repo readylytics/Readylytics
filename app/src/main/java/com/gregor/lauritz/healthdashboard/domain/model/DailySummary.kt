@@ -1,0 +1,31 @@
+package com.gregor.lauritz.healthdashboard.domain.model
+
+import java.time.LocalDate
+
+data class DailySummary(
+    val date: LocalDate,
+    val sleepScore: Float? = null,
+    val loadScore: Float? = null,
+    val readinessScore: Float? = null,
+    val strainRatio: Float? = null,
+    val nocturnalRhr: Int? = null,
+    val nocturnalHrv: Int? = null,
+    val sleepDurationMinutes: Int? = null,
+    val deepSleepPercent: Float? = null,
+    val remSleepPercent: Float? = null,
+    val totalTrimp: Float? = null,
+    val rhrRatio: Float? = null,
+    val hrvBaseline: Int? = null,
+    val restingHeartRate: Int? = null,
+    val restingHrRatio: Float? = null,
+    val restingHrBaseline: Int? = null,
+    val paiScore: Float? = null,
+    val totalPai: Float? = null,
+    val stepCount: Int? = null,
+    val zLnHrv: Float? = null,
+    val zRhr: Float? = null,
+    val recoveryFlags: Set<RecoveryFlag> = emptySet(),
+    val hrvSigma: Float? = null,
+    val readinessResult: ReadinessResult = ReadinessResult.EMPTY,
+    val sRest: Float? = null,
+)

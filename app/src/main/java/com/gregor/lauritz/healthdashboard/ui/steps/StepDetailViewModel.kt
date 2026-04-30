@@ -3,7 +3,8 @@ package com.gregor.lauritz.healthdashboard.ui.steps
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
+import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.time.Instant
 import java.time.LocalDate
@@ -24,7 +26,7 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 data class StepDetailUiState(
-    val latestSummary: DailySummaryEntity? = null,
+    val latestSummary: DailySummary? = null,
     val dailySteps: List<DailyDataPoint> = emptyList(),
     val stepGoal: Int = 10000,
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
@@ -50,17 +52,17 @@ class StepDetailViewModel @Inject constructor(
             val startDayMs = fromMs.truncateToDayMs()
 
             combine(
-                dailySummaryDao.observeLatest(),
-                dailySummaryDao.observeSince(fromMs),
+                dailySummaryDao.observeLatest().map { it?.let { DailySummaryMapper.toDomain(it) } },
+                dailySummaryDao.observeSince(fromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
                 prefsRepo.userPreferences
             ) { latest, history, prefs ->
                 val points = history
                     .filter { it.stepCount != null }
                     .map { summary ->
-                        val dayMs = summary.dateMidnightMs
+                        val d = summary.date
                         val dayOffset = ChronoUnit.DAYS.between(
                             Instant.ofEpochMilli(startDayMs).atZone(ZoneId.systemDefault()).toLocalDate(),
-                            Instant.ofEpochMilli(dayMs).atZone(ZoneId.systemDefault()).toLocalDate()
+                            d
                         ).toInt()
                         DailyDataPoint(dayOffset, summary.stepCount!!.toFloat())
                     }

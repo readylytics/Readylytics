@@ -5,6 +5,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Readin
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Restoration
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Sleep
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Strain
+import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
 import com.gregor.lauritz.healthdashboard.domain.util.mean
 import com.gregor.lauritz.healthdashboard.domain.util.median
 import com.gregor.lauritz.healthdashboard.domain.util.stdev

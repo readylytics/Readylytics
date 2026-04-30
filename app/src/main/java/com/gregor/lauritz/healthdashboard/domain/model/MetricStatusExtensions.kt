@@ -1,9 +1,8 @@
 package com.gregor.lauritz.healthdashboard.domain.model
 
-import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
 
-fun DailySummaryEntity.rhrStatus(
+fun DailySummary.rhrStatus(
     optimalThreshold: Float,
     warningThreshold: Float,
 ): MetricStatus {
@@ -17,7 +16,7 @@ fun DailySummaryEntity.rhrStatus(
     }
 }
 
-fun DailySummaryEntity.restingHrStatus(
+fun DailySummary.restingHrStatus(
     optimalThreshold: Float,
     warningThreshold: Float,
 ): MetricStatus {
@@ -38,7 +37,7 @@ fun DailySummaryEntity.restingHrStatus(
     }
 }
 
-fun DailySummaryEntity.hrvStatus(
+fun DailySummary.hrvStatus(
     optimalThreshold: Float,
     warningThreshold: Float,
 ): MetricStatus {
@@ -54,7 +53,7 @@ fun DailySummaryEntity.hrvStatus(
     }
 }
 
-fun DailySummaryEntity.sleepDurationStatus(goalMinutes: Int): MetricStatus {
+fun DailySummary.sleepDurationStatus(goalMinutes: Int): MetricStatus {
     if (sleepDurationMinutes == null || goalMinutes <= 0) return MetricStatus.CALIBRATING
     val ratio = sleepDurationMinutes.toFloat() / goalMinutes
     return when {
@@ -65,7 +64,7 @@ fun DailySummaryEntity.sleepDurationStatus(goalMinutes: Int): MetricStatus {
     }
 }
 
-fun DailySummaryEntity.paiStatus(): MetricStatus {
+fun DailySummary.paiStatus(): MetricStatus {
     val pai = totalPai ?: return MetricStatus.CALIBRATING
     return when {
         pai >= 100f -> MetricStatus.OPTIMAL

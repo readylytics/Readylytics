@@ -10,6 +10,8 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
@@ -34,7 +36,7 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 data class SleepUiState(
-    val latestSummary: DailySummaryEntity? = null,
+    val latestSummary: DailySummary? = null,
     val latestSession: SleepSessionEntity? = null,
     val dailyHrv: List<DailyDataPoint> = emptyList(),
     val dailyRhr: List<DailyDataPoint> = emptyList(),
@@ -54,7 +56,7 @@ fun SleepSessionEntity.efficiencyStatus(): MetricStatus =
         else -> MetricStatus.POOR
     }
 
-fun DailySummaryEntity.deepSleepStatus(): MetricStatus =
+fun DailySummary.deepSleepStatus(): MetricStatus =
     when (deepSleepPercent) {
         null -> MetricStatus.CALIBRATING
         in 25f..30f -> MetricStatus.NEUTRAL
@@ -63,7 +65,7 @@ fun DailySummaryEntity.deepSleepStatus(): MetricStatus =
         else -> MetricStatus.POOR
     }
 
-fun DailySummaryEntity.remSleepStatus(): MetricStatus =
+fun DailySummary.remSleepStatus(): MetricStatus =
     when (remSleepPercent) {
         null -> MetricStatus.CALIBRATING
         in 25f..30f -> MetricStatus.NEUTRAL
@@ -192,9 +194,10 @@ class SleepViewModel
                     val summaryFlow =
                         if (date == LocalDate.now(zoneId)) {
                             val todayMs = LocalDate.now(zoneId).atStartOfDay(zoneId).toInstant().toEpochMilli()
-                            dailySummaryDao.observeSince(todayMs).map { it.firstOrNull() }
+                            dailySummaryDao.observeSince(todayMs)
+                                .map { it.firstOrNull()?.let { DailySummaryMapper.toDomain(it) } }
                         } else {
-                            flow { emit(dailySummaryDao.getByDate(selectedMidnightMs)) }
+                            flow { emit(dailySummaryDao.getByDate(selectedMidnightMs)?.let { DailySummaryMapper.toDomain(it) }) }
                         }
 
                     combine(
@@ -208,10 +211,10 @@ class SleepViewModel
                         baselineHrvFlow,
                         baselineRhrFlow,
                     ) { flows ->
-                        val latestSummary = flows[0] as DailySummaryEntity?
+                        val latestSummary = flows[0] as DailySummary?
                         val latestSession = flows[1] as SleepSessionEntity?
                         @Suppress("UNCHECKED_CAST")
-                        val summaries = flows[2] as List<DailySummaryEntity>
+                        val summaries = (flows[2] as List<DailySummaryEntity>).map { DailySummaryMapper.toDomain(it) }
                         val prefs = flows[3] as com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
                         val bHrv = flows[4] as Float?
                         val bRhr = flows[5] as Int?
@@ -220,13 +223,13 @@ class SleepViewModel
 
                         val hrvPoints = summaries.mapNotNull { s ->
                             s.nocturnalHrv?.let { hrv ->
-                                val d = Instant.ofEpochMilli(s.dateMidnightMs).atZone(zoneId).toLocalDate()
+                                val d = s.date
                                 DailyDataPoint(dayOffset = ChronoUnit.DAYS.between(startLocalDate, d).toInt(), value = hrv.toFloat())
                             }
                         }
                         val rhrPoints = summaries.mapNotNull { s ->
                             s.nocturnalRhr?.let { rhr ->
-                                val d = Instant.ofEpochMilli(s.dateMidnightMs).atZone(zoneId).toLocalDate()
+                                val d = s.date
                                 DailyDataPoint(dayOffset = ChronoUnit.DAYS.between(startLocalDate, d).toInt(), value = rhr.toFloat())
                             }
                         }

@@ -4,7 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
+import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.Dispatchers
 import java.time.Instant
@@ -35,7 +37,7 @@ private const val ACUTE_DAYS = 7
 private const val CHRONIC_DAYS = 42
 
 data class WorkoutsUiState(
-    val latestSummary: DailySummaryEntity? = null,
+    val latestSummary: DailySummary? = null,
     val dailyTrimp: List<DailyDataPoint> = emptyList(),
     val dailyStrainRatio: List<DailyDataPoint> = emptyList(),
     val recentWorkouts: List<WorkoutRecordEntity> = emptyList(),
@@ -87,9 +89,9 @@ class WorkoutsViewModel
 
                     val summaryFlow =
                         if (date == LocalDate.now(zoneId)) {
-                            dailySummaryDao.observeLatest()
+                            dailySummaryDao.observeLatest().map { it?.let { DailySummaryMapper.toDomain(it) } }
                         } else {
-                            flow { emit(dailySummaryDao.getByDate(selectedMidnightMs)) }
+                            flow { emit(dailySummaryDao.getByDate(selectedMidnightMs)?.let { DailySummaryMapper.toDomain(it) }) }
                         }
 
                     val paiFromMs = date.minusDays(6)
@@ -97,7 +99,7 @@ class WorkoutsViewModel
                     combine(
                         summaryFlow,
                         workoutDao.observeSince(fetchFromMs),
-                        dailySummaryDao.observeSince(paiFromMs),
+                        dailySummaryDao.observeSince(paiFromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
                     ) { latest, allWorkouts, paiSummaries ->
                         val filteredWorkouts = allWorkouts.filter { it.startTime < selectedMidnightMs + TimeUnit.DAYS.toMillis(1) }
                         val trimpByDay: Map<Long, Float> =
@@ -166,14 +168,12 @@ class WorkoutsViewModel
 
         private fun buildPaiBreakdown(
             endDate: LocalDate,
-            summaries: List<DailySummaryEntity>,
+            summaries: List<DailySummary>,
         ): List<Pair<String, Float>> {
-            val zoneId = ZoneId.systemDefault()
             val fmt = DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
             return (6 downTo 0).map { daysBack ->
                 val day = endDate.minusDays(daysBack.toLong())
-                val dayMs = day.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                val entry = summaries.firstOrNull { it.dateMidnightMs == dayMs }
+                val entry = summaries.firstOrNull { it.date == day }
                 day.format(fmt) to (entry?.paiScore ?: 0f)
             }
         }

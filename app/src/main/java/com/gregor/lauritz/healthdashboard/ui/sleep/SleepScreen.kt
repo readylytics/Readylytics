@@ -31,8 +31,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.scoring.toStatus
@@ -261,7 +261,7 @@ fun SleepScreen(
 @Composable
 private fun SleepMetricGrid(
     session: SleepSessionEntity?,
-    summary: DailySummaryEntity?,
+    summary: DailySummary?,
     circadianResult: CircadianConsistencyResult,
     modifier: Modifier = Modifier,
 ) {

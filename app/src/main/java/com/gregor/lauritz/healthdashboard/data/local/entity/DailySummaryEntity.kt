@@ -4,7 +4,7 @@ import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.gregor.lauritz.healthdashboard.domain.scoring.ReadinessResult
+import com.gregor.lauritz.healthdashboard.domain.model.ReadinessResult
 
 @Entity(
     tableName = "daily_summaries",

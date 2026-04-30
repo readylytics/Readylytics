@@ -40,11 +40,15 @@ class DashboardViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
 
-        val dao = mockk<DailySummaryDao> {
-            every { observeLatest() } returns MutableStateFlow(null)
-            coEvery { getByDate(any()) } returns null
+        val dailySummaryRepo = mockk<com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepository> {
             every { observeSince(any()) } returns MutableStateFlow(emptyList())
+            every { observeByDate(any()) } returns MutableStateFlow(null)
+            every { observeFirstSessionEndingInRange(any(), any()) } returns MutableStateFlow(null)
         }
+        val getDashboardDataUseCase = mockk<com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase>(relaxed = true) {
+            every { formatSleepDuration(any()) } returns "8h 0m"
+        }
+        every { getDashboardDataUseCase(any(), any(), any(), any(), any()) } returns com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase.DashboardCards(emptyList(), null, emptyList())
         val prefsRepo = mockk<UserPreferencesRepository> {
             every { userPreferences } returns MutableStateFlow(UserPreferences())
         }
@@ -52,14 +56,11 @@ class DashboardViewModelTest {
         val circadianRepo = mockk<CircadianConsistencyRepository> {
             every { resultFor(any()) } returns MutableStateFlow(CircadianConsistencyResult.Calibrating)
         }
-        val sleepDao = mockk<SleepSessionDao> {
-            every { observeFirstSessionEndingInRange(any(), any()) } returns MutableStateFlow(null)
-        }
         syncController = mockk()
 
         viewModel = DashboardViewModel(
-            dailySummaryDao = dao,
-            sleepSessionDao = sleepDao,
+            dailySummaryRepository = dailySummaryRepo,
+            getDashboardDataUseCase = getDashboardDataUseCase,
             foregroundSyncController = syncController,
             selectedDateRepository = selectedDateRepo,
             prefsRepo = prefsRepo,

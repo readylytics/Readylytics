@@ -5,4 +5,22 @@
     <string name="tab_workouts">Workouts</string>
     <string name="tab_settings">Settings</string>
     <string name="sync_completed">Sync and recalculation completed</string>
+
+    <!-- Tooltips -->
+    <string name="tooltip_pai">Your 7-day rolling heart health score.\nBased on how often and how hard you challenge your heart.\n\n• 100+: Optimal\n• 75-99: Neutral\n• 50-74: Warning\n• &lt; 50: Poor</string>
+
+    <string name="tooltip_sleep_rhr">Average heart rate during sleep.\nTarget: lower or equal to your 30-day rolling average. (Lower = Recovered)</string>
+    <string name="tooltip_sleep_rhr_baseline">\n\nBaseline: %1$d bpm %2$s (%3$d bpm)</string>
+    <string name="tooltip_sleep_rhr_no_baseline">\n\nNot enough data to calculate baseline.</string>
+
+    <string name="tooltip_sleep_hrv">Variation between heartbeats in milliseconds.\nTarget: Within or above your 30-day rolling average. (Higher = Recovered)</string>
+    <string name="tooltip_sleep_hrv_baseline">\n\nBaseline: %1$d ms %2$s (%3$d ms)</string>
+    <string name="tooltip_sleep_hrv_baseline_no_today">\n\nBaseline: %1$d ms (today\'s HRV not yet available)</string>
+    <string name="tooltip_sleep_hrv_no_baseline">\n\nNot enough data to calculate baseline.</string>
+    <string name="tooltip_sleep_hrv_diagnostics">\n\nDiagnostics:\n• Z-score: %1$s\n• σ (ln-scale): %2$s</string>
+
+    <string name="tooltip_sleep_duration">Total time asleep last night.\n\nGoal: %1$s</string>
+
+    <string name="tooltip_resting_hr_baseline">Minimum heart rate captured within %1$dm before and %2$dm after wake up.\n\nBaseline: %3$d bpm %4$s (%5$d bpm)</string>
+    <string name="tooltip_resting_hr_no_baseline">Minimum heart rate captured around wake up time.\n\nNot enough data to calculate baseline.</string>
 </resources>

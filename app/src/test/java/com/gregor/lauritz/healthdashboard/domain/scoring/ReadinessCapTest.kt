@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

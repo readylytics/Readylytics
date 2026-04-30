@@ -17,6 +17,9 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -100,11 +103,20 @@ class HealthSyncUseCase
                     updateCalculatedMetrics(prefs)
 
                     val today = LocalDate.now(zoneId)
+                    val stepsMap: Map<LocalDate, Long> = coroutineScope {
+                        (windowDays - 1 downTo 0).map { i ->
+                            async {
+                                val day = today.minusDays(i.toLong())
+                                val dayStart = day.atStartOfDay(zoneId).toInstant()
+                                val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
+                                day to hcRepo.readSteps(dayStart, dayEnd)
+                            }
+                        }.awaitAll().toMap()
+                    }
+
                     for (i in (windowDays - 1) downTo 0) {
                         val day = today.minusDays(i.toLong())
-                        val dayStart = day.atStartOfDay(zoneId).toInstant()
-                        val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
-                        val steps = hcRepo.readSteps(dayStart, dayEnd)
+                        val steps = stepsMap[day] ?: 0L
 
                         // Run scoring first
                         val afterScoring = scoringRepository.computeDailySummary(day)

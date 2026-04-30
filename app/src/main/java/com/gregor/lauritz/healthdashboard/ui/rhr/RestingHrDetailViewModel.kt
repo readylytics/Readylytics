@@ -3,7 +3,8 @@ package com.gregor.lauritz.healthdashboard.ui.rhr
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
+import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
@@ -29,7 +30,7 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 data class RestingHrDetailUiState(
-    val latestSummary: DailySummaryEntity? = null,
+    val latestSummary: DailySummary? = null,
     val dailyRhr: List<DailyDataPoint> = emptyList(),
     val rhrBaseline: Float? = null,
     val rhrStatus: MetricStatus? = null,
@@ -56,17 +57,17 @@ class RestingHrDetailViewModel @Inject constructor(
             val startDayMs = fromMs.truncateToDayMs()
 
             combine(
-                dailySummaryDao.observeLatest(),
-                dailySummaryDao.observeSince(fromMs),
+                dailySummaryDao.observeLatest().map { it?.let { DailySummaryMapper.toDomain(it) } },
+                dailySummaryDao.observeSince(fromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
                 prefsRepo.userPreferences
             ) { latest, history, prefs ->
                 val points = history
                     .filter { it.restingHeartRate != null }
                     .map { summary ->
-                        val dayMs = summary.dateMidnightMs
+                        val d = summary.date
                         val dayOffset = ChronoUnit.DAYS.between(
                             Instant.ofEpochMilli(startDayMs).atZone(ZoneId.systemDefault()).toLocalDate(),
-                            Instant.ofEpochMilli(dayMs).atZone(ZoneId.systemDefault()).toLocalDate()
+                            d
                         ).toInt()
                         DailyDataPoint(dayOffset, summary.restingHeartRate!!.toFloat())
                     }

@@ -20,6 +20,10 @@ interface DailySummaryDao {
     fun _observeSince(fromMs: Long): Flow<List<DailySummaryEntity>>
     fun observeSince(fromMs: Long): Flow<List<DailySummaryEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
+    @Query("SELECT * FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
+    fun _observeByDate(dateMidnightMs: Long): Flow<DailySummaryEntity?>
+    fun observeByDate(dateMidnightMs: Long): Flow<DailySummaryEntity?> = _observeByDate(dateMidnightMs).distinctUntilChanged()
+
     @Upsert
     suspend fun upsert(summary: DailySummaryEntity)
 
