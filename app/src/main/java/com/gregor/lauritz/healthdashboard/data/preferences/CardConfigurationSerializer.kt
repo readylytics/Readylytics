@@ -6,6 +6,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 object CardConfigurationSerializer {
+    // ignoreUnknownKeys=true enables graceful handling of new properties in future app versions
+    // allowing older saved configs to load without errors when app adds new card types
     private val json = Json { ignoreUnknownKeys = true }
 
     fun serialize(configurations: List<CardConfiguration>): String {
@@ -13,7 +15,7 @@ object CardConfigurationSerializer {
         return try {
             json.encodeToString(configurations)
         } catch (e: SerializationException) {
-            // Return empty string if serialization fails to prevent data loss
+            // Return empty string on failure; ReorderableCardGrid will filter out missing cards
             ""
         }
     }
@@ -26,7 +28,7 @@ object CardConfigurationSerializer {
             try {
                 json.decodeFromString<List<CardConfiguration>>(jsonString)
             } catch (e: SerializationException) {
-                // Return empty list if deserialization fails; user can reset to defaults
+                // Return empty list on error; SettingsDefaults will provide default card layout
                 emptyList()
             }
         }

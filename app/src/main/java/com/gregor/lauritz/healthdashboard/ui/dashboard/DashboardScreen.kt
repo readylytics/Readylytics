@@ -161,8 +161,10 @@ fun DashboardScreen(
                             onNextDay = onNextDay,
                             modifier = Modifier.weight(1f),
                         )
+                        // Edit mode toggle button - shows manage icon to enter edit, check icon to exit
                         IconButton(
                             onClick = {
+                                // Only show bottom sheet when entering edit mode (not when exiting)
                                 if (!uiState.isManagingCards) {
                                     showCardManagement = true
                                 }

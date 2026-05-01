@@ -37,6 +37,8 @@ fun buildCardDataMap(
         )
     }
 
+    // HRV card is dynamically found from cardData based on title matching
+    // This approach handles cases where HRV data may not be available
     cardMap[CardId.HRV] = {
         val hrvCard = uiState.cardData.find { it.title.contains("HRV", ignoreCase = true) }
         if (hrvCard != null) {
@@ -51,6 +53,7 @@ fun buildCardDataMap(
         }
     }
 
+    // RHR card is pre-computed in uiState, only render if data is available
     cardMap[CardId.RHR] = {
         if (uiState.restingHrCard != null) {
             val card = uiState.restingHrCard
@@ -65,6 +68,7 @@ fun buildCardDataMap(
         }
     }
 
+    // Load Score is dynamically found from cardData, similar to HRV card lookup
     cardMap[CardId.LOAD_SCORE] = {
         val loadCard = uiState.cardData.find { it.title.contains("Load", ignoreCase = true) }
         if (loadCard != null) {

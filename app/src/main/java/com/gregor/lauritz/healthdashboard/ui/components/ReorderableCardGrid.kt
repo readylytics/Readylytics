@@ -76,21 +76,20 @@ fun ReorderableCardGrid(
                 },
                 onDragEnd = {
                     // Only process reorder if card was dragged to a different position
+                    // Both draggedIndex and targetIndex must be non-null and different
                     if (draggedIndex != null && targetIndex != null && targetIndex != draggedIndex) {
                         val newCards = visibleCards.toMutableList()
-                        if (draggedIndex != null && targetIndex != null) {
-                            // Move card from source to target position
-                            val draggedCard = newCards.removeAt(draggedIndex!!)
-                            newCards.add(targetIndex!!, draggedCard)
+                        // Safe to use !! here because outer if guarantees non-null values
+                        val draggedCard = newCards.removeAt(draggedIndex!!)
+                        newCards.add(targetIndex!!, draggedCard)
 
-                            // Update positions to reflect new order and persist to DataStore
-                            val updated = newCards.mapIndexed { i, config ->
-                                config.copy(position = i)
-                            }
-                            onCardReorder(updated)
+                        // Update positions to reflect new order and persist to DataStore
+                        val updated = newCards.mapIndexed { i, config ->
+                            config.copy(position = i)
                         }
+                        onCardReorder(updated)
                     }
-                    // Reset drag state
+                    // Reset drag state after drop is complete
                     draggedIndex = null
                     dragOffset = IntOffset.Zero
                     targetIndex = null
@@ -99,10 +98,12 @@ fun ReorderableCardGrid(
                     if (isEditing && draggedIndex != null && targetIndex != null) {
                         dragOffset += IntOffset(x.roundToInt(), y.roundToInt())
 
-                        // Calculate target index based on drag offset
-                        val cardHeight = 120 // approximate card height with spacing
+                        // Calculate target index based on drag offset to enable intuitive reordering
+                        // Estimated card height including vertical spacing (8.dp + card content)
+                        val cardHeight = 120
+                        // Require 50% of card height movement to trigger swap to provide steady feel
                         val movementThreshold = cardHeight / 2
-                        // Safe null-coalescing: targetIndex is guaranteed non-null due to guard clause above
+                        // Safe null-coalescing: targetIndex guaranteed non-null by guard clause at line 99
                         val currentTarget = targetIndex ?: return@onDrag
                         val newTargetIndex = if (dragOffset.y > movementThreshold && currentTarget < visibleCards.size - 1) {
                             currentTarget + 1
@@ -112,6 +113,7 @@ fun ReorderableCardGrid(
                             currentTarget
                         }
 
+                        // Reset offset when target changes to restart threshold detection
                         if (newTargetIndex != targetIndex) {
                             targetIndex = newTargetIndex
                             dragOffset = IntOffset.Zero
