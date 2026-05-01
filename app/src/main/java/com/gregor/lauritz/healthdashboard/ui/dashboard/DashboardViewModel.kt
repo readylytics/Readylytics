@@ -1,15 +1,19 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardManagementDelegate
 import com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase
+import com.gregor.lauritz.healthdashboard.domain.dashboard.ScreenType
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
@@ -21,12 +25,14 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.IOException
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -81,11 +87,15 @@ class DashboardViewModel
         private val getDashboardDataUseCase: GetDashboardDataUseCase,
         private val foregroundSyncController: ForegroundSyncController,
         private val selectedDateRepository: SelectedDateRepository,
-        prefsRepo: UserPreferencesRepository,
+        private val prefsRepo: UserPreferencesRepository,
+        private val cardConfigRepository: CardConfigurationRepository,
         circadianRepo: CircadianConsistencyRepository,
     ) : ViewModel() {
+        private const val TAG = "DashboardViewModel"
+
         private val _isRefreshing = MutableStateFlow(false)
-        private val _isManagingCards = MutableStateFlow(false)
+
+        private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
 
         val today: StateFlow<LocalDate> = selectedDateRepository.selectedDate
             .stateIn(
@@ -93,6 +103,8 @@ class DashboardViewModel
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = LocalDate.now(),
             )
+
+        val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
 
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
@@ -126,13 +138,14 @@ class DashboardViewModel
                             _isRefreshing,
                             circadianRepo.resultFor(date),
                             paiBreakdownFlow,
-                            _isManagingCards
+                            cardManagementDelegate.isManagingCards
                         ) { summary, prefs, refreshing, circadian, paiSummaries, isManaging ->
                             DashboardInputs(summary, prefs, refreshing, circadian, paiSummaries)
                                 to isManaging
                         },
+                        cardConfigRepository.dashboardCardConfigurations(),
                         sessionFlow
-                    ) { (inputs, isManaging), session ->
+                    ) { (inputs, isManaging), cardConfigs, session ->
                         val cards = getDashboardDataUseCase.invoke(
                             summary = inputs.summary,
                             prefs = inputs.prefs,
@@ -151,7 +164,7 @@ class DashboardViewModel
                             stepCount = inputs.summary?.stepCount,
                             stepGoal = inputs.prefs.stepGoal,
                             lastSleepSession = session,
-                            cardConfigurations = inputs.prefs.dashboardCardConfigurations,
+                            cardConfigurations = cardConfigs,
                             isManagingCards = isManaging,
                         )
                     }.flowOn(Dispatchers.Default)
@@ -167,8 +180,12 @@ class DashboardViewModel
             _isRefreshing.value = true
             try {
                 foregroundSyncController.triggerImmediateSync()
-            } catch (_: Exception) {
+            } catch (e: IOException) {
+                Log.w(TAG, "Sync network error during refresh", e)
                 // Sync errors are non-fatal for the UI — the state will update once data arrives
+            } catch (e: Exception) {
+                Log.e(TAG, "Unexpected sync error during refresh", e)
+                // Still treat as non-fatal; data will update when sync succeeds
             } finally {
                 _isRefreshing.value = false
             }
@@ -183,29 +200,26 @@ class DashboardViewModel
         }
 
         fun toggleCardManagement() {
-            _isManagingCards.value = !_isManagingCards.value
+            cardManagementDelegate.toggleCardManagement()
         }
 
-        fun onToggleCardVisibility(cardId: CardId) = viewModelScope.launch {
-            val current = uiState.value.cardConfigurations
-            val updated = prefsRepo.toggleCardVisibility(
-                current,
+        fun onToggleCardVisibility(cardId: CardId) {
+            cardManagementDelegate.onToggleCardVisibility(
+                ScreenType.DASHBOARD,
+                uiState.value.cardConfigurations,
                 cardId,
-                !current.find { it.cardId == cardId }?.isVisible.orFalse()
-            )
-            prefsRepo.updateDashboardCardConfigurations(updated)
-        }
-
-        fun onReorderCards(newOrder: List<CardConfiguration>) = viewModelScope.launch {
-            val updated = prefsRepo.reorderCards(uiState.value.cardConfigurations, newOrder)
-            prefsRepo.updateDashboardCardConfigurations(updated)
-        }
-
-        fun onResetToDefaults() = viewModelScope.launch {
-            prefsRepo.updateDashboardCardConfigurations(
-                com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults.DEFAULT_DASHBOARD_CARDS
             )
         }
 
-        private fun Boolean?.orFalse() = this ?: false
+        fun onReorderCards(newOrder: List<CardConfiguration>) {
+            cardManagementDelegate.onReorderCards(
+                ScreenType.DASHBOARD,
+                uiState.value.cardConfigurations,
+                newOrder,
+            )
+        }
+
+        fun onResetToDefaults() {
+            cardManagementDelegate.onResetToDefaults(ScreenType.DASHBOARD)
+        }
     }

@@ -4,9 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardManagementDelegate
+import com.gregor.lauritz.healthdashboard.domain.dashboard.ScreenType
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
@@ -19,6 +22,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.combine
@@ -62,10 +66,14 @@ class WorkoutsViewModel
         private val selectedDateRepository: SelectedDateRepository,
         private val scoringCalculator: ScoringCalculator,
         private val prefsRepo: UserPreferencesRepository,
+        private val cardConfigRepository: CardConfigurationRepository,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
-        private val _isManagingCards = MutableStateFlow(false)
+
+        private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
+
         val selectedRange = _selectedRange.asStateFlow()
+        val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
 
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
@@ -108,8 +116,9 @@ class WorkoutsViewModel
                         workoutDao.observeSince(fetchFromMs),
                         dailySummaryDao.observeSince(paiFromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
                         prefsRepo.userPreferences,
-                        _isManagingCards,
-                    ) { latest, allWorkouts, paiSummaries, prefs, isManaging ->
+                        cardManagementDelegate.isManagingCards,
+                        cardConfigRepository.workoutCardConfigurations(),
+                    ) { latest, allWorkouts, paiSummaries, prefs, isManaging, cardConfigs ->
                         val filteredWorkouts = allWorkouts.filter { it.startTime < selectedMidnightMs + TimeUnit.DAYS.toMillis(1) }
                         val trimpByDay: Map<Long, Float> =
                             filteredWorkouts
@@ -167,7 +176,7 @@ class WorkoutsViewModel
                             rangeStartMs = displayStartDayMs,
                             paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries),
                             todayPaiScore = latest?.paiScore,
-                            cardConfigurations = prefs.workoutCardConfigurations,
+                            cardConfigurations = cardConfigs,
                             isManagingCards = isManaging,
                         )
                     }.flowOn(Dispatchers.Default)
@@ -202,29 +211,26 @@ class WorkoutsViewModel
         }
 
         fun toggleCardManagement() {
-            _isManagingCards.value = !_isManagingCards.value
+            cardManagementDelegate.toggleCardManagement()
         }
 
-        fun onToggleCardVisibility(cardId: CardId) = viewModelScope.launch {
-            val current = uiState.value.cardConfigurations
-            val updated = prefsRepo.toggleCardVisibility(
-                current,
+        fun onToggleCardVisibility(cardId: CardId) {
+            cardManagementDelegate.onToggleCardVisibility(
+                ScreenType.WORKOUTS,
+                uiState.value.cardConfigurations,
                 cardId,
-                !current.find { it.cardId == cardId }?.isVisible.orFalse()
-            )
-            prefsRepo.updateWorkoutCardConfigurations(updated)
-        }
-
-        fun onReorderCards(newOrder: List<CardConfiguration>) = viewModelScope.launch {
-            val updated = prefsRepo.reorderCards(uiState.value.cardConfigurations, newOrder)
-            prefsRepo.updateWorkoutCardConfigurations(updated)
-        }
-
-        fun onResetToDefaults() = viewModelScope.launch {
-            prefsRepo.updateWorkoutCardConfigurations(
-                com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults.DEFAULT_WORKOUT_CARDS
             )
         }
 
-        private fun Boolean?.orFalse() = this ?: false
+        fun onReorderCards(newOrder: List<CardConfiguration>) {
+            cardManagementDelegate.onReorderCards(
+                ScreenType.WORKOUTS,
+                uiState.value.cardConfigurations,
+                newOrder,
+            )
+        }
+
+        fun onResetToDefaults() {
+            cardManagementDelegate.onResetToDefaults(ScreenType.WORKOUTS)
+        }
     }

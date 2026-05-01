@@ -8,10 +8,13 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardManagementDelegate
+import com.gregor.lauritz.healthdashboard.domain.dashboard.ScreenType
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
@@ -24,6 +27,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -87,11 +91,15 @@ class SleepViewModel
         private val hrvDao: HrvDao,
         private val heartRateDao: HeartRateDao,
         private val prefsRepo: UserPreferencesRepository,
+        private val cardConfigRepository: CardConfigurationRepository,
         private val selectedDateRepository: SelectedDateRepository,
         private val circadianRepo: CircadianConsistencyRepository,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
-        private val _isManagingCards = MutableStateFlow(false)
+
+        private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
+
+        val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
 
         /**
          * Baseline HRV (calculated from past 30 days, constant across all views).
@@ -215,6 +223,8 @@ class SleepViewModel
                         prefsRepo.userPreferences,
                         baselineHrvFlow,
                         baselineRhrFlow,
+                        cardManagementDelegate.isManagingCards,
+                        cardConfigRepository.sleepCardConfigurations(),
                     ) { flows ->
                         val latestSummary = flows[0] as DailySummary?
                         val latestSession = flows[1] as SleepSessionEntity?
@@ -223,6 +233,9 @@ class SleepViewModel
                         val prefs = flows[3] as com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
                         val bHrv = flows[4] as Float?
                         val bRhr = flows[5] as Int?
+                        val isManaging = flows[6] as Boolean
+                        @Suppress("UNCHECKED_CAST")
+                        val cardConfigs = flows[7] as List<CardConfiguration>
 
                         val startLocalDate = Instant.ofEpochMilli(startDayMs).atZone(zoneId).toLocalDate()
 
@@ -250,7 +263,8 @@ class SleepViewModel
                             selectedRange = range,
                             selectedDate = date,
                             rangeStartMs = startDayMs,
-                            cardConfigurations = prefs.sleepCardConfigurations,
+                            cardConfigurations = cardConfigs,
+                            isManagingCards = isManaging,
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(
@@ -279,30 +293,27 @@ class SleepViewModel
         }
 
         fun toggleCardManagement() {
-            _isManagingCards.value = !_isManagingCards.value
+            cardManagementDelegate.toggleCardManagement()
         }
 
-        fun onToggleCardVisibility(cardId: CardId) = viewModelScope.launch {
-            val current = uiState.value.cardConfigurations
-            val updated = prefsRepo.toggleCardVisibility(
-                current,
+        fun onToggleCardVisibility(cardId: CardId) {
+            cardManagementDelegate.onToggleCardVisibility(
+                ScreenType.SLEEP,
+                uiState.value.cardConfigurations,
                 cardId,
-                !current.find { it.cardId == cardId }?.isVisible.orFalse()
-            )
-            prefsRepo.updateSleepCardConfigurations(updated)
-        }
-
-        fun onReorderCards(newOrder: List<CardConfiguration>) = viewModelScope.launch {
-            val updated = prefsRepo.reorderCards(uiState.value.cardConfigurations, newOrder)
-            prefsRepo.updateSleepCardConfigurations(updated)
-        }
-
-        fun onResetToDefaults() = viewModelScope.launch {
-            prefsRepo.updateSleepCardConfigurations(
-                com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults.DEFAULT_SLEEP_CARDS
             )
         }
 
-        private fun Boolean?.orFalse() = this ?: false
+        fun onReorderCards(newOrder: List<CardConfiguration>) {
+            cardManagementDelegate.onReorderCards(
+                ScreenType.SLEEP,
+                uiState.value.cardConfigurations,
+                newOrder,
+            )
+        }
+
+        fun onResetToDefaults() {
+            cardManagementDelegate.onResetToDefaults(ScreenType.SLEEP)
+        }
     }
 

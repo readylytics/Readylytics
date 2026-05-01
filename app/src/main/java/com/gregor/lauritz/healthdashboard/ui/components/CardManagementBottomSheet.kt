@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.domain.dashboard.displayName
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,11 +104,7 @@ private fun CardManagementItem(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = card.cardId.name.replace("_", " ")
-                .split(" ")
-                .joinToString(" ") { word ->
-                    word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-                },
+            text = card.cardId.displayName(),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
