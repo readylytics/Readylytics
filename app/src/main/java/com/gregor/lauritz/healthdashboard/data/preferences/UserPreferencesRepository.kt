@@ -389,18 +389,22 @@ class UserPreferencesRepository
             dataStore.edit { it[Keys.PHYSIOLOGY_PROFILE] = profile.name }
         }
 
+        // Persist dashboard card configuration to DataStore
         suspend fun updateDashboardCardConfigurations(cards: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>) {
             dataStore.edit { it[Keys.DASHBOARD_CARDS] = CardConfigurationSerializer.serialize(cards) }
         }
 
+        // Persist sleep card configuration to DataStore
         suspend fun updateSleepCardConfigurations(cards: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>) {
             dataStore.edit { it[Keys.SLEEP_CARDS] = CardConfigurationSerializer.serialize(cards) }
         }
 
+        // Persist workout card configuration to DataStore
         suspend fun updateWorkoutCardConfigurations(cards: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>) {
             dataStore.edit { it[Keys.WORKOUT_CARDS] = CardConfigurationSerializer.serialize(cards) }
         }
 
+        // Toggle visibility of a specific card and return updated configuration list
         suspend fun toggleCardVisibility(
             cardConfigurations: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>,
             cardId: com.gregor.lauritz.healthdashboard.domain.dashboard.CardId,
@@ -411,6 +415,7 @@ class UserPreferencesRepository
             }
         }
 
+        // Update card positions after reordering; assigns sequential positions to maintain order
         suspend fun reorderCards(
             cardConfigurations: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>,
             newOrder: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>

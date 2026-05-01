@@ -18,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+// Visual indicator showing whether cards are in edit/reorder mode
+// Animates between primary and surface color schemes based on editing state
 @Composable
 fun EditModeIndicator(
     isEditing: Boolean,
@@ -53,7 +55,8 @@ fun EditModeIndicator(
     ) {
         Icon(
             imageVector = if (isEditing) Icons.Filled.Check else Icons.Outlined.Edit,
-            contentDescription = null,
+            // Provide accessibility description for screen readers
+            contentDescription = if (isEditing) "Currently in editing mode" else "Enter editing mode",
             tint = contentColor,
             modifier = Modifier.padding(2.dp),
         )

@@ -6,6 +6,9 @@ import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
 
+// Build a map of CardId to composable card content for the Dashboard screen
+// This factory method creates all available dashboard cards and maps them by ID
+// for use with the ReorderableCardGrid component
 fun buildCardDataMap(
     uiState: DashboardUiState,
     onNavigateToSleep: () -> Unit,

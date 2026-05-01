@@ -1,6 +1,5 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +29,9 @@ import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import kotlin.math.roundToInt
 
+// Grid component that supports drag-and-drop reordering of cards
+// Only visible cards (isVisible=true) are rendered and can be reordered
+// Provides visual feedback during drag (alpha, scale, elevation changes)
 @Composable
 fun ReorderableCardGrid(
     cardConfigurations: List<CardConfiguration>,
@@ -39,10 +41,14 @@ fun ReorderableCardGrid(
     onCardReorder: (List<CardConfiguration>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Tracks which card is currently being dragged
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
+    // Accumulates drag offset for visual feedback during drag
     var dragOffset by remember { mutableStateOf(IntOffset.Zero) }
+    // Tracks which card position would be the drop target
     var targetIndex by remember { mutableStateOf<Int?>(null) }
 
+    // Filter to show only visible cards, sorted by their position
     val visibleCards = cardConfigurations.filter { it.isVisible }.sortedBy { it.position }
 
     Column(
@@ -52,10 +58,12 @@ fun ReorderableCardGrid(
         visibleCards.forEachIndexed { index, card ->
             val isDragged = draggedIndex == index
             val isTarget = targetIndex == index && draggedIndex != null
+            // Only render cards that have content in the map
+            val cardContent = cardDataMap[card.cardId] ?: return@forEachIndexed
 
             ReorderableCardItem(
                 card = card,
-                content = cardDataMap[card.cardId],
+                content = cardContent,
                 isEditing = isEditing,
                 isDragged = isDragged,
                 isTarget = isTarget,
@@ -67,36 +75,41 @@ fun ReorderableCardGrid(
                     }
                 },
                 onDragEnd = {
+                    // Only process reorder if card was dragged to a different position
                     if (draggedIndex != null && targetIndex != null && targetIndex != draggedIndex) {
                         val newCards = visibleCards.toMutableList()
                         if (draggedIndex != null && targetIndex != null) {
+                            // Move card from source to target position
                             val draggedCard = newCards.removeAt(draggedIndex!!)
                             newCards.add(targetIndex!!, draggedCard)
 
-                            // Update positions and persist
+                            // Update positions to reflect new order and persist to DataStore
                             val updated = newCards.mapIndexed { i, config ->
                                 config.copy(position = i)
                             }
                             onCardReorder(updated)
                         }
                     }
+                    // Reset drag state
                     draggedIndex = null
                     dragOffset = IntOffset.Zero
                     targetIndex = null
                 },
                 onDrag = { x, y ->
-                    if (isEditing && draggedIndex != null) {
+                    if (isEditing && draggedIndex != null && targetIndex != null) {
                         dragOffset += IntOffset(x.roundToInt(), y.roundToInt())
 
                         // Calculate target index based on drag offset
                         val cardHeight = 120 // approximate card height with spacing
                         val movementThreshold = cardHeight / 2
-                        val newTargetIndex = if (dragOffset.y > movementThreshold && targetIndex!! < visibleCards.size - 1) {
-                            targetIndex!! + 1
-                        } else if (dragOffset.y < -movementThreshold && targetIndex!! > 0) {
-                            targetIndex!! - 1
+                        // Safe null-coalescing: targetIndex is guaranteed non-null due to guard clause above
+                        val currentTarget = targetIndex ?: return@onDrag
+                        val newTargetIndex = if (dragOffset.y > movementThreshold && currentTarget < visibleCards.size - 1) {
+                            currentTarget + 1
+                        } else if (dragOffset.y < -movementThreshold && currentTarget > 0) {
+                            currentTarget - 1
                         } else {
-                            targetIndex
+                            currentTarget
                         }
 
                         if (newTargetIndex != targetIndex) {
