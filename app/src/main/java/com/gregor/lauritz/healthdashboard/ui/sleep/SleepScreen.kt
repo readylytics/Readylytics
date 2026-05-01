@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -49,6 +50,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.CardManagementBottomSheet
 import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
+import com.gregor.lauritz.healthdashboard.ui.components.EditModeIndicator
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
@@ -131,29 +133,46 @@ fun SleepScreen(
         contentPadding = PaddingValues(vertical = 16.dp),
     ) {
         item(key = "date_switcher") {
-            androidx.compose.foundation.layout.Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
             ) {
-                DateSwitcher(
-                    selectedDate = uiState.selectedDate,
-                    onPreviousDay = onPreviousDay,
-                    onNextDay = onNextDay,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(
-                    onClick = {
-                        showCardManagement = true
-                        onToggleCardManagement()
-                    },
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Tune,
-                        contentDescription = "Manage cards",
-                        tint = MaterialTheme.colorScheme.primary,
+                    DateSwitcher(
+                        selectedDate = uiState.selectedDate,
+                        onPreviousDay = onPreviousDay,
+                        onNextDay = onNextDay,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(
+                        onClick = {
+                            if (!uiState.isManagingCards) {
+                                showCardManagement = true
+                            }
+                            onToggleCardManagement()
+                        },
+                    ) {
+                        Icon(
+                            imageVector = if (uiState.isManagingCards) {
+                                Icons.Filled.Check
+                            } else {
+                                Icons.Outlined.Tune
+                            },
+                            contentDescription = if (uiState.isManagingCards) "Done editing" else "Manage cards",
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                if (uiState.isManagingCards) {
+                    EditModeIndicator(
+                        isEditing = true,
+                        modifier = Modifier.padding(top = 8.dp),
                     )
                 }
             }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,6 +47,7 @@ import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.CardManagementBottomSheet
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
+import com.gregor.lauritz.healthdashboard.ui.components.EditModeIndicator
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
@@ -149,29 +151,46 @@ fun WorkoutsScreen(
         contentPadding = PaddingValues(vertical = 16.dp),
     ) {
         item(key = "date_switcher") {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
             ) {
-                DateSwitcher(
-                    selectedDate = uiState.selectedDate,
-                    onPreviousDay = onPreviousDay,
-                    onNextDay = onNextDay,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(
-                    onClick = {
-                        showCardManagement = true
-                        onToggleCardManagement()
-                    },
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Tune,
-                        contentDescription = "Manage cards",
-                        tint = MaterialTheme.colorScheme.primary,
+                    DateSwitcher(
+                        selectedDate = uiState.selectedDate,
+                        onPreviousDay = onPreviousDay,
+                        onNextDay = onNextDay,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(
+                        onClick = {
+                            if (!uiState.isManagingCards) {
+                                showCardManagement = true
+                            }
+                            onToggleCardManagement()
+                        },
+                    ) {
+                        Icon(
+                            imageVector = if (uiState.isManagingCards) {
+                                Icons.Filled.Check
+                            } else {
+                                Icons.Outlined.Tune
+                            },
+                            contentDescription = if (uiState.isManagingCards) "Done editing" else "Manage cards",
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                if (uiState.isManagingCards) {
+                    EditModeIndicator(
+                        isEditing = true,
+                        modifier = Modifier.padding(top = 8.dp),
                     )
                 }
             }
