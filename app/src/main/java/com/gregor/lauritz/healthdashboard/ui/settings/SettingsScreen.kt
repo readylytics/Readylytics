@@ -61,6 +61,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
+import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
@@ -274,6 +275,15 @@ fun SettingsScreen(
                             PhysiologyProfilePicker(
                                 selectedProfile = uiState.physiologyProfile,
                                 onProfileSelected = { onEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            SectionHeader("Circadian Consistency")
+                            CircadianThresholdSettingsSection(
+                                profile = uiState.physiologyProfile,
+                                currentOverride = uiState.circadianThresholdOverride,
+                                isShiftWorkerMode = uiState.physiologyProfile == PhysiologyProfile.SHIFT_WORKER,
+                                onOverrideChanged = { onEvent(SettingsEvent.CircadianThresholdOverrideChanged(it)) },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                             Spacer(modifier = Modifier.height(12.dp))

@@ -96,6 +96,7 @@ data class SettingsUiState(
     val collapseDisplay: Boolean = SettingsDefaults.COLLAPSE_DISPLAY,
     val collapseAdvanced: Boolean = SettingsDefaults.COLLAPSE_ADVANCED,
     val physiologyProfile: PhysiologyProfile = SettingsDefaults.PHYSIOLOGY_PROFILE,
+    val circadianThresholdOverride: Int? = null,
 )
 
 sealed interface SettingsEvent {
@@ -230,6 +231,8 @@ sealed interface SettingsEvent {
     data class CollapseDisplayChanged(val collapsed: Boolean) : SettingsEvent
     data class CollapseAdvancedChanged(val collapsed: Boolean) : SettingsEvent
     data class PhysiologyProfileChanged(val profile: PhysiologyProfile) : SettingsEvent
+
+    data class CircadianThresholdOverrideChanged(val minutes: Int?) : SettingsEvent
 }
 
 @HiltViewModel
@@ -306,6 +309,7 @@ class SettingsViewModel
                             collapseDisplay = prefs.collapseDisplay,
                             collapseAdvanced = prefs.collapseAdvanced,
                             physiologyProfile = prefs.physiologyProfile,
+                            circadianThresholdOverride = prefs.circadianThresholdOverride,
                             isLoading = false,
                         )
                     }
@@ -596,6 +600,12 @@ class SettingsViewModel
                 is SettingsEvent.PhysiologyProfileChanged ->
                     viewModelScope.launch {
                         prefsRepo.updatePhysiologyProfile(event.profile)
+                        scoringRepository.computeAndPersistDailySummary()
+                    }
+
+                is SettingsEvent.CircadianThresholdOverrideChanged ->
+                    viewModelScope.launch {
+                        prefsRepo.updateCircadianThresholdOverride(event.minutes)
                         scoringRepository.computeAndPersistDailySummary()
                     }
             }
