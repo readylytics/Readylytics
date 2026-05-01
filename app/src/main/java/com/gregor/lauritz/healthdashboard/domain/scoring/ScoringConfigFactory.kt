@@ -16,6 +16,7 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.security.MessageDigest
 
 @Singleton
 class ScoringConfigFactory @Inject constructor() {
@@ -39,8 +40,9 @@ class ScoringConfigFactory @Inject constructor() {
 
         val auditTrail = createAuditTrail(daysSinceInstall, currentDate)
 
-        // Hash only configuration parameters (excluding audit metadata) to ensure stable identifier
-        val paramsHash = listOf(restoration, sleepTargets, emergencyFlags, circadianConsistency).hashCode()
+        // Use SHA256 hash of configuration parameters for stable, deterministic identifier
+        // This ensures consistency across JVM versions and app updates
+        val paramsHash = computeConfigHash(restoration, sleepTargets, emergencyFlags, circadianConsistency)
 
         val config = ScoringConfig(
             restoration = restoration,
@@ -87,6 +89,24 @@ class ScoringConfigFactory @Inject constructor() {
 
     private fun createAuditTrail(daysSinceInstall: Int, currentDate: LocalDate): AuditTrail {
         return AuditTrailFactory.create(daysSinceInstall, currentDate)
+    }
+
+    private fun computeConfigHash(
+        restoration: RestorationWeights,
+        sleepTargets: SleepArchitectureTargets,
+        emergencyFlags: EmergencyFlagThresholds,
+        circadianConsistency: CircadianConsistencyConfig,
+    ): Int {
+        val paramsString = buildString {
+            append(restoration.toString())
+            append(sleepTargets.toString())
+            append(emergencyFlags.toString())
+            append(circadianConsistency.toString())
+        }
+        val hash = MessageDigest.getInstance("SHA-256").digest(paramsString.toByteArray())
+        return hash.take(4).foldIndexed(0) { i, acc, byte ->
+            acc or (byte.toInt() shl (i * 8))
+        }
     }
 
 }

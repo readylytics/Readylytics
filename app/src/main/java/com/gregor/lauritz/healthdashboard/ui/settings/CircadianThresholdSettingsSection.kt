@@ -276,6 +276,9 @@ private fun getProfileDefault(profile: PhysiologyProfile): Int {
         PhysiologyProfile.ACTIVE -> 30
         PhysiologyProfile.GENERAL -> 30
         PhysiologyProfile.SEDENTARY -> 45
-        PhysiologyProfile.SHIFT_WORKER -> 20 // Fallback, shouldn't be used in within-week mode
+        // SHIFT_WORKER: Only displayed if using standard rolling-anchor mode.
+        // In within-week mode, threshold is disabled (Int.MAX_VALUE in strategy).
+        // These defaults match the CircadianStrategy implementations.
+        PhysiologyProfile.SHIFT_WORKER -> 20
     }
 }

@@ -9,5 +9,6 @@ data class EmergencyFlagThresholds(
     // ILLNESS: HRV↓ + RHR↑ indicates illness onset or acute stress
     // REF: Mishra 2020 Nat Biomed Eng; Quer 2021 Nat Med
     val illnessZHrvThreshold: Float = -1.5f,
+    val illnessZRhrThreshold: Float = 2.0f,
     val illnessRhrDeltaBpm: Float = 5f,
 )

@@ -6,6 +6,8 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Restor
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Sleep
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Strain
 import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
+import com.gregor.lauritz.healthdashboard.domain.scoring.components.EmergencyFlagThresholds
+import com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargets
 import com.gregor.lauritz.healthdashboard.domain.util.mean
 import com.gregor.lauritz.healthdashboard.domain.util.median
 import com.gregor.lauritz.healthdashboard.domain.util.stdev
@@ -38,7 +40,7 @@ interface ScoringCalculator {
         remSleepMinutes: Int,
         durationMinutes: Int,
         userAge: Int = 30,
-        sleepTargets: com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargets? = null,
+        sleepTargets: SleepArchitectureTargets? = null,
     ): Float
     fun hrvSigma(lnHrvValues: List<Float>, sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior): Float
     fun computeHrvZScore(
@@ -360,7 +362,7 @@ class ScoringCalculatorImpl @Inject constructor() : ScoringCalculator {
         stagesSuspicious: Boolean,
         isLateNadir: Boolean,
         isCalibrating: Boolean,
-        emergencyFlags: com.gregor.lauritz.healthdashboard.domain.scoring.components.EmergencyFlagThresholds?,
+        emergencyFlags: EmergencyFlagThresholds?,
     ): Set<RecoveryFlag> {
         val flags = mutableSetOf<RecoveryFlag>()
         if (isCalibrating)    flags += RecoveryFlag.CALIBRATING
@@ -381,10 +383,10 @@ class ScoringCalculatorImpl @Inject constructor() : ScoringCalculator {
 
             val todayIllness = zLnHrv < thresholds.illnessZHrvThreshold &&
                                (rhrDeltaBpm != null && rhrDeltaBpm >= thresholds.illnessRhrDeltaBpm ||
-                                zRhr >= 2.0f)
+                                zRhr >= thresholds.illnessZRhrThreshold)
             val prevIllness  = yesterdayZLnHrv != null && yesterdayZRhr != null &&
                                yesterdayZLnHrv < thresholds.illnessZHrvThreshold &&
-                               yesterdayZRhr   >= 2.0f
+                               yesterdayZRhr   >= thresholds.illnessZRhrThreshold
             if (todayIllness && prevIllness) flags += RecoveryFlag.ILLNESS_ONSET
         }
         return flags
