@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.domain.scoring
 
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.domain.circadian.CircadianStrategyFactory
 import com.gregor.lauritz.healthdashboard.domain.scoring.components.AuditTrail
 import com.gregor.lauritz.healthdashboard.domain.scoring.components.AuditTrailFactory
 import com.gregor.lauritz.healthdashboard.domain.scoring.components.CircadianConsistencyConfig
@@ -38,18 +39,18 @@ class ScoringConfigFactory @Inject constructor() {
 
         val auditTrail = createAuditTrail(daysSinceInstall, currentDate)
 
+        // Hash only configuration parameters (excluding audit metadata) to ensure stable identifier
+        val paramsHash = listOf(restoration, sleepTargets, emergencyFlags, circadianConsistency).hashCode()
+
         val config = ScoringConfig(
             restoration = restoration,
             sleepTargets = sleepTargets,
             emergencyFlags = emergencyFlags,
             circadianConsistency = circadianConsistency,
-            auditTrail = auditTrail,
+            auditTrail = auditTrail.copy(configHashCode = paramsHash),
         )
 
-        // Update audit trail with actual config hash
-        return config.copy(
-            auditTrail = auditTrail.copy(configHashCode = config.hashCode()),
-        )
+        return config
     }
 
     private fun createRestorationWeights(profile: PhysiologyProfile): RestorationWeights {
@@ -73,12 +74,12 @@ class ScoringConfigFactory @Inject constructor() {
         evaluationDays: Int,
         baselineDays: Int,
     ): CircadianConsistencyConfig {
-        val useShiftWorkerMode = profile == PhysiologyProfile.SHIFT_WORKER
-        val threshold = circadianOverride ?: getProfileDefaultThreshold(profile)
+        val strategy = CircadianStrategyFactory.getStrategy(profile)
+        val threshold = strategy.determineThreshold(profile, circadianOverride)
 
         return CircadianConsistencyConfig(
             thresholdMinutes = threshold,
-            useShiftWorkerMode = useShiftWorkerMode,
+            useShiftWorkerMode = profile == PhysiologyProfile.SHIFT_WORKER,
             evaluationDays = evaluationDays,
             baselineDays = baselineDays,
         )
@@ -88,13 +89,4 @@ class ScoringConfigFactory @Inject constructor() {
         return AuditTrailFactory.create(daysSinceInstall, currentDate)
     }
 
-    private fun getProfileDefaultThreshold(profile: PhysiologyProfile): Int {
-        return when (profile) {
-            PhysiologyProfile.ATHLETE -> 20
-            PhysiologyProfile.ACTIVE -> 30
-            PhysiologyProfile.GENERAL -> 30
-            PhysiologyProfile.SEDENTARY -> 45
-            PhysiologyProfile.SHIFT_WORKER -> Int.MAX_VALUE // Disabled for shift workers
-        }
-    }
 }

@@ -4,8 +4,8 @@ import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 
 class ShiftWorkerCircadianStrategy : CircadianConsistencyStrategy {
     override fun determineThreshold(profile: PhysiologyProfile, override: Int?): Int {
-        // For shift workers, disable standard rolling-anchor consistency checking
-        // Instead use within-week (day-of-week) regularity logic
-        return Int.MAX_VALUE // Sentinel value indicating disabled standard threshold
+        // For shift workers, disable standard rolling-anchor consistency checking by default
+        // but allow manual override if provided.
+        return override ?: Int.MAX_VALUE
     }
 }
