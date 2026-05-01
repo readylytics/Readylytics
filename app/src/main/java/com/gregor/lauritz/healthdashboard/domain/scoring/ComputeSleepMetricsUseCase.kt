@@ -31,6 +31,7 @@ class ComputeSleepMetricsUseCase @Inject constructor(
     private val heartRateDao: HeartRateDao,
     private val sleepSessionDao: SleepSessionDao,
     private val scoringCalculator: ScoringCalculator,
+    private val scoringConfigFactory: ScoringConfigFactory,
 ) {
     suspend operator fun invoke(
         session: SleepSessionEntity,
@@ -41,6 +42,18 @@ class ComputeSleepMetricsUseCase @Inject constructor(
         loadScore: Float,
         zoneId: ZoneId,
     ): DailySummaryEntity {
+        // Build ScoringConfig from preferences and install date
+        val installDate = LocalDate.ofEpochDay(0) // TODO: Get actual install date from preferences/database
+        val scoringConfig = scoringConfigFactory.build(
+            userPreferences = prefs,
+            installDate = installDate,
+            currentDate = targetDate,
+            circadianOverride = null, // TODO: Add to UserPreferences
+        )
+        logD("ComputeSleepMetrics") {
+            "Config applied: hash=${scoringConfig.auditTrail.configHashCode}, phase=${scoringConfig.auditTrail.phaseName}, threshold=${scoringConfig.circadianConsistency.thresholdMinutes}"
+        }
+
         val rhrValues = baselineComputer.rhrHistory(dayMidnight)
 
         // Fetch yesterday's Z-scores for 2-night consecutive flag confirmation
@@ -185,6 +198,7 @@ class ComputeSleepMetricsUseCase @Inject constructor(
                 rhrValues           = rhrValues,
                 rhrBaselineOverride = prefs.rhrBaselineOverride,
                 hrvBaselineOverride = prefs.hrvBaselineOverride,
+                restorationWeights  = scoringConfig.restoration,
             )
 
             if (isLateNadir) {
@@ -200,6 +214,7 @@ class ComputeSleepMetricsUseCase @Inject constructor(
                 sRest            = sRest,
                 userAge          = prefs.age,
                 stagesSuspicious = stagesSuspicious,
+                sleepTargets     = scoringConfig.sleepTargets,
             )
 
             val totalValidHrvNights = validHistoricalSessionIds.size +
@@ -216,6 +231,7 @@ class ComputeSleepMetricsUseCase @Inject constructor(
                 stagesSuspicious = stagesSuspicious,
                 isLateNadir      = isLateNadir,
                 isCalibrating    = isCalibrating,
+                emergencyFlags   = scoringConfig.emergencyFlags,
             )
 
             readinessScore = scoringCalculator.computeReadinessScore(
@@ -243,6 +259,7 @@ class ComputeSleepMetricsUseCase @Inject constructor(
                 remSleepMinutes  = session.remSleepMinutes,
                 durationMinutes  = session.durationMinutes,
                 userAge          = prefs.age,
+                sleepTargets     = scoringConfig.sleepTargets,
             )
             readinessResult = ReadinessResult(
                 readinessScore = readinessScore,
@@ -268,6 +285,8 @@ class ComputeSleepMetricsUseCase @Inject constructor(
                     lateNadir       = isLateNadir,
                     hrvMissing      = sessionHrvSamples.isEmpty(),
                     timezoneJump    = isTimezoneJump,
+                    configHashCode  = scoringConfig.auditTrail.configHashCode,
+                    phaseName       = scoringConfig.auditTrail.phaseName,
                 ),
             )
         }
