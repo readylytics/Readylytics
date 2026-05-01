@@ -44,7 +44,7 @@ class ComputeSleepMetricsUseCase @Inject constructor(
     ): DailySummaryEntity {
         // Build ScoringConfig from preferences and install date
         val installDate = if (prefs.installDate > 0) {
-            LocalDate.ofEpochDay(prefs.installDate / (24 * 60 * 60 * 1000))
+            LocalDate.ofEpochDay(java.util.concurrent.TimeUnit.MILLISECONDS.toDays(prefs.installDate))
         } else {
             // Not yet initialized - use today as install date
             targetDate
