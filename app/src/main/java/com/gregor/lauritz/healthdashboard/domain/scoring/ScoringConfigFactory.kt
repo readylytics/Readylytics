@@ -103,7 +103,7 @@ class ScoringConfigFactory @Inject constructor() {
             append(emergencyFlags.toString())
             append(circadianConsistency.toString())
         }
-        val hash = MessageDigest.getInstance("SHA-256").digest(paramsString.toByteArray())
+        val hash = MessageDigest.getInstance("SHA-256").digest(paramsString.toByteArray(Charsets.UTF_8))
         return hash.take(4).foldIndexed(0) { i, acc, byte ->
             acc or ((byte.toInt() and 0xFF) shl (i * 8))
         }
