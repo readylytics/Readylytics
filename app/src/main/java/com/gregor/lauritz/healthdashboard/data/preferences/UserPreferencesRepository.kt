@@ -77,6 +77,9 @@ class UserPreferencesRepository
             val COLLAPSE_ADVANCED = booleanPreferencesKey("collapse_advanced")
             val ABOUT_DISMISSED = booleanPreferencesKey("about_dismissed")
             val PHYSIOLOGY_PROFILE = stringPreferencesKey("physiology_profile")
+            val INSTALL_DATE = longPreferencesKey("install_date")
+            val CIRCADIAN_THRESHOLD_OVERRIDE = intPreferencesKey("circadian_threshold_override")
+            val CIRCADIAN_THRESHOLD_OVERRIDE_SET = booleanPreferencesKey("circadian_threshold_override_set")
         }
 
         private fun Int.toValidMaxHr() = coerceIn(100, 250)
@@ -193,6 +196,13 @@ class UserPreferencesRepository
                         physiologyProfile = prefs[Keys.PHYSIOLOGY_PROFILE]
                             ?.let { runCatching { PhysiologyProfile.valueOf(it) }.getOrNull() }
                             ?: SettingsDefaults.PHYSIOLOGY_PROFILE,
+                        installDate = prefs[Keys.INSTALL_DATE] ?: SettingsDefaults.INSTALL_DATE,
+                        circadianThresholdOverride =
+                            if (prefs[Keys.CIRCADIAN_THRESHOLD_OVERRIDE_SET] == true) {
+                                prefs[Keys.CIRCADIAN_THRESHOLD_OVERRIDE]
+                            } else {
+                                SettingsDefaults.CIRCADIAN_THRESHOLD_OVERRIDE
+                            },
                     )
                 }
 
@@ -372,5 +382,21 @@ class UserPreferencesRepository
 
         suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) {
             dataStore.edit { it[Keys.PHYSIOLOGY_PROFILE] = profile.name }
+        }
+
+        suspend fun updateInstallDate(dateTimeMs: Long) {
+            dataStore.edit { it[Keys.INSTALL_DATE] = dateTimeMs }
+        }
+
+        suspend fun updateCircadianThresholdOverride(minutes: Int?) {
+            dataStore.edit { prefs ->
+                if (minutes != null) {
+                    prefs[Keys.CIRCADIAN_THRESHOLD_OVERRIDE] = minutes
+                    prefs[Keys.CIRCADIAN_THRESHOLD_OVERRIDE_SET] = true
+                } else {
+                    prefs.remove(Keys.CIRCADIAN_THRESHOLD_OVERRIDE)
+                    prefs.remove(Keys.CIRCADIAN_THRESHOLD_OVERRIDE_SET)
+                }
+            }
         }
     }

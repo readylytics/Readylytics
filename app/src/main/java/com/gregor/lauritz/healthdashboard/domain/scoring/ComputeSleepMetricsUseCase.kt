@@ -43,12 +43,17 @@ class ComputeSleepMetricsUseCase @Inject constructor(
         zoneId: ZoneId,
     ): DailySummaryEntity {
         // Build ScoringConfig from preferences and install date
-        val installDate = LocalDate.ofEpochDay(0) // TODO: Get actual install date from preferences/database
+        val installDate = if (prefs.installDate > 0) {
+            LocalDate.ofEpochDay(prefs.installDate / (24 * 60 * 60 * 1000))
+        } else {
+            // Not yet initialized - use today as install date
+            targetDate
+        }
         val scoringConfig = scoringConfigFactory.build(
             userPreferences = prefs,
             installDate = installDate,
             currentDate = targetDate,
-            circadianOverride = null, // TODO: Add to UserPreferences
+            circadianOverride = prefs.circadianThresholdOverride,
         )
         logD("ComputeSleepMetrics") {
             "Config applied: hash=${scoringConfig.auditTrail.configHashCode}, phase=${scoringConfig.auditTrail.phaseName}, threshold=${scoringConfig.circadianConsistency.thresholdMinutes}"

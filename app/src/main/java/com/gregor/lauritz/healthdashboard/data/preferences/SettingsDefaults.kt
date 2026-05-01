@@ -50,4 +50,6 @@ object SettingsDefaults {
     const val COLLAPSE_ADVANCED = true
     const val ABOUT_DISMISSED = false
     val PHYSIOLOGY_PROFILE = PhysiologyProfile.GENERAL
+    const val INSTALL_DATE = 0L // Set to System.currentTimeMillis() on first app run
+    val CIRCADIAN_THRESHOLD_OVERRIDE: Int? = null // null = use profile default
 }

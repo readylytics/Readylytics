@@ -51,4 +51,6 @@ data class UserPreferences(
     val collapseAdvanced: Boolean = SettingsDefaults.COLLAPSE_ADVANCED,
     val aboutDismissed: Boolean = SettingsDefaults.ABOUT_DISMISSED,
     val physiologyProfile: PhysiologyProfile = SettingsDefaults.PHYSIOLOGY_PROFILE,
+    val installDate: Long = SettingsDefaults.INSTALL_DATE,
+    val circadianThresholdOverride: Int? = SettingsDefaults.CIRCADIAN_THRESHOLD_OVERRIDE,
 )
