@@ -97,11 +97,27 @@ class ScoringConfigFactory @Inject constructor() {
         emergencyFlags: EmergencyFlagThresholds,
         circadianConsistency: CircadianConsistencyConfig,
     ): Int {
+        // Explicitly serialize config fields to avoid obfuscation issues with toString()
+        // Using field-by-field approach ensures hash remains stable across code obfuscation
         val paramsString = buildString {
-            append(restoration.toString())
-            append(sleepTargets.toString())
-            append(emergencyFlags.toString())
-            append(circadianConsistency.toString())
+            // RestorationWeights
+            append(restoration.hrvWeight).append("|")
+            append(restoration.rhrWeight).append("|")
+            // SleepArchitectureTargets
+            append(sleepTargets.targetDeepPercentage).append("|")
+            append(sleepTargets.targetRemPercentage).append("|")
+            append(sleepTargets.minDurationMinutes).append("|")
+            // EmergencyFlagThresholds
+            append(emergencyFlags.overreachingZHrvThreshold).append("|")
+            append(emergencyFlags.overreachingZRhrThreshold).append("|")
+            append(emergencyFlags.illnessZHrvThreshold).append("|")
+            append(emergencyFlags.illnessZRhrThreshold).append("|")
+            append(emergencyFlags.illnessRhrDeltaBpm).append("|")
+            // CircadianConsistencyConfig
+            append(circadianConsistency.thresholdMinutes).append("|")
+            append(circadianConsistency.useShiftWorkerMode).append("|")
+            append(circadianConsistency.evaluationDays).append("|")
+            append(circadianConsistency.baselineDays)
         }
         val hash = MessageDigest.getInstance("SHA-256").digest(paramsString.toByteArray(Charsets.UTF_8))
         return hash.take(4).foldIndexed(0) { i, acc, byte ->

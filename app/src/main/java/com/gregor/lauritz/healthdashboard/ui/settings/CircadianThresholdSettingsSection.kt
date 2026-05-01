@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
+import com.gregor.lauritz.healthdashboard.domain.circadian.CircadianThresholdDefaults
 
 @Composable
 fun CircadianThresholdSettingsSection(
@@ -32,7 +33,7 @@ fun CircadianThresholdSettingsSection(
     onOverrideChanged: (Int?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val profileDefault = getProfileDefault(profile)
+    val profileDefault = CircadianThresholdDefaults.getProfileDefault(profile)
     var useStandardRollingAnchor by remember {
         mutableStateOf(currentOverride != null || profile != PhysiologyProfile.SHIFT_WORKER)
     }
@@ -270,15 +271,3 @@ private fun ThresholdSlider(
     }
 }
 
-private fun getProfileDefault(profile: PhysiologyProfile): Int {
-    return when (profile) {
-        PhysiologyProfile.ATHLETE -> 20
-        PhysiologyProfile.ACTIVE -> 30
-        PhysiologyProfile.GENERAL -> 30
-        PhysiologyProfile.SEDENTARY -> 45
-        // SHIFT_WORKER: Only displayed if using standard rolling-anchor mode.
-        // In within-week mode, threshold is disabled (Int.MAX_VALUE in strategy).
-        // These defaults match the CircadianStrategy implementations.
-        PhysiologyProfile.SHIFT_WORKER -> 20
-    }
-}
