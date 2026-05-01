@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
@@ -46,6 +49,8 @@ data class WorkoutsUiState(
     val rangeStartMs: Long = System.currentTimeMillis(),
     val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val todayPaiScore: Float? = null,
+    val cardConfigurations: List<CardConfiguration> = emptyList(),
+    val isManagingCards: Boolean = false,
 )
 
 @HiltViewModel
@@ -56,8 +61,10 @@ class WorkoutsViewModel
         private val workoutDao: WorkoutDao,
         private val selectedDateRepository: SelectedDateRepository,
         private val scoringCalculator: ScoringCalculator,
+        private val prefsRepo: UserPreferencesRepository,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
+        private val _isManagingCards = MutableStateFlow(false)
         val selectedRange = _selectedRange.asStateFlow()
 
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -100,7 +107,9 @@ class WorkoutsViewModel
                         summaryFlow,
                         workoutDao.observeSince(fetchFromMs),
                         dailySummaryDao.observeSince(paiFromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
-                    ) { latest, allWorkouts, paiSummaries ->
+                        prefsRepo.userPreferences,
+                        _isManagingCards,
+                    ) { latest, allWorkouts, paiSummaries, prefs, isManaging ->
                         val filteredWorkouts = allWorkouts.filter { it.startTime < selectedMidnightMs + TimeUnit.DAYS.toMillis(1) }
                         val trimpByDay: Map<Long, Float> =
                             filteredWorkouts
@@ -158,6 +167,8 @@ class WorkoutsViewModel
                             rangeStartMs = displayStartDayMs,
                             paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries),
                             todayPaiScore = latest?.paiScore,
+                            cardConfigurations = prefs.workoutCardConfigurations,
+                            isManagingCards = isManaging,
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(
@@ -189,4 +200,31 @@ class WorkoutsViewModel
         fun onNextDay() {
             selectedDateRepository.selectNextDay()
         }
+
+        fun toggleCardManagement() {
+            _isManagingCards.value = !_isManagingCards.value
+        }
+
+        fun onToggleCardVisibility(cardId: CardId) = viewModelScope.launch {
+            val current = uiState.value.cardConfigurations
+            val updated = prefsRepo.toggleCardVisibility(
+                current,
+                cardId,
+                !current.find { it.cardId == cardId }?.isVisible.orFalse()
+            )
+            prefsRepo.updateWorkoutCardConfigurations(updated)
+        }
+
+        fun onReorderCards(newOrder: List<CardConfiguration>) = viewModelScope.launch {
+            val updated = prefsRepo.reorderCards(uiState.value.cardConfigurations, newOrder)
+            prefsRepo.updateWorkoutCardConfigurations(updated)
+        }
+
+        fun onResetToDefaults() = viewModelScope.launch {
+            prefsRepo.updateWorkoutCardConfigurations(
+                com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults.DEFAULT_WORKOUT_CARDS
+            )
+        }
+
+        private fun Boolean?.orFalse() = this ?: false
     }
