@@ -77,6 +77,9 @@ class UserPreferencesRepository
             val COLLAPSE_ADVANCED = booleanPreferencesKey("collapse_advanced")
             val ABOUT_DISMISSED = booleanPreferencesKey("about_dismissed")
             val PHYSIOLOGY_PROFILE = stringPreferencesKey("physiology_profile")
+            val DASHBOARD_CARDS = stringPreferencesKey("dashboard_cards")
+            val SLEEP_CARDS = stringPreferencesKey("sleep_cards")
+            val WORKOUT_CARDS = stringPreferencesKey("workout_cards")
         }
 
         private fun Int.toValidMaxHr() = coerceIn(100, 250)
@@ -193,6 +196,18 @@ class UserPreferencesRepository
                         physiologyProfile = prefs[Keys.PHYSIOLOGY_PROFILE]
                             ?.let { runCatching { PhysiologyProfile.valueOf(it) }.getOrNull() }
                             ?: SettingsDefaults.PHYSIOLOGY_PROFILE,
+                        dashboardCardConfigurations = prefs[Keys.DASHBOARD_CARDS]
+                            ?.let { CardConfigurationSerializer.deserialize(it) }
+                            ?.takeIf { it.isNotEmpty() }
+                            ?: SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
+                        sleepCardConfigurations = prefs[Keys.SLEEP_CARDS]
+                            ?.let { CardConfigurationSerializer.deserialize(it) }
+                            ?.takeIf { it.isNotEmpty() }
+                            ?: SettingsDefaults.DEFAULT_SLEEP_CARDS,
+                        workoutCardConfigurations = prefs[Keys.WORKOUT_CARDS]
+                            ?.let { CardConfigurationSerializer.deserialize(it) }
+                            ?.takeIf { it.isNotEmpty() }
+                            ?: SettingsDefaults.DEFAULT_WORKOUT_CARDS,
                     )
                 }
 
@@ -372,5 +387,36 @@ class UserPreferencesRepository
 
         suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) {
             dataStore.edit { it[Keys.PHYSIOLOGY_PROFILE] = profile.name }
+        }
+
+        suspend fun updateDashboardCardConfigurations(cards: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>) {
+            dataStore.edit { it[Keys.DASHBOARD_CARDS] = CardConfigurationSerializer.serialize(cards) }
+        }
+
+        suspend fun updateSleepCardConfigurations(cards: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>) {
+            dataStore.edit { it[Keys.SLEEP_CARDS] = CardConfigurationSerializer.serialize(cards) }
+        }
+
+        suspend fun updateWorkoutCardConfigurations(cards: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>) {
+            dataStore.edit { it[Keys.WORKOUT_CARDS] = CardConfigurationSerializer.serialize(cards) }
+        }
+
+        suspend fun toggleCardVisibility(
+            cardConfigurations: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>,
+            cardId: com.gregor.lauritz.healthdashboard.domain.dashboard.CardId,
+            visible: Boolean
+        ): List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration> {
+            return cardConfigurations.map { config ->
+                if (config.cardId == cardId) config.copy(isVisible = visible) else config
+            }
+        }
+
+        suspend fun reorderCards(
+            cardConfigurations: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>,
+            newOrder: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>
+        ): List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration> {
+            return newOrder.mapIndexed { index, config ->
+                config.copy(position = index)
+            }
         }
     }

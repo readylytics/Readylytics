@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
@@ -42,6 +44,8 @@ data class DashboardUiState(
     val stepCount: Int? = null,
     val stepGoal: Int = 10000,
     val lastSleepSession: SleepSessionEntity? = null,
+    val cardConfigurations: List<CardConfiguration> = emptyList(),
+    val isManagingCards: Boolean = false,
 )
 
 @Immutable
@@ -82,6 +86,7 @@ class DashboardViewModel
         circadianRepo: CircadianConsistencyRepository,
     ) : ViewModel() {
         private val _isRefreshing = MutableStateFlow(false)
+        private val _isManagingCards = MutableStateFlow(false)
 
         val today: StateFlow<LocalDate> = selectedDateRepository.selectedDate
             .stateIn(
@@ -121,12 +126,14 @@ class DashboardViewModel
                             prefsRepo.userPreferences,
                             _isRefreshing,
                             circadianRepo.resultFor(date),
-                            paiBreakdownFlow
-                        ) { summary, prefs, refreshing, circadian, paiSummaries ->
+                            paiBreakdownFlow,
+                            _isManagingCards
+                        ) { summary, prefs, refreshing, circadian, paiSummaries, isManaging ->
                             DashboardInputs(summary, prefs, refreshing, circadian, paiSummaries)
+                                to isManaging
                         },
                         sessionFlow
-                    ) { inputs, session ->
+                    ) { (inputs, isManaging), session ->
                         val cards = getDashboardDataUseCase.invoke(
                             summary = inputs.summary,
                             prefs = inputs.prefs,
@@ -146,6 +153,8 @@ class DashboardViewModel
                             stepCount = inputs.summary?.stepCount,
                             stepGoal = inputs.prefs.stepGoal,
                             lastSleepSession = session,
+                            cardConfigurations = inputs.prefs.dashboardCardConfigurations,
+                            isManagingCards = isManaging,
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(
@@ -174,4 +183,31 @@ class DashboardViewModel
         fun onNextDay() {
             selectedDateRepository.selectNextDay()
         }
+
+        fun toggleCardManagement() {
+            _isManagingCards.value = !_isManagingCards.value
+        }
+
+        fun onToggleCardVisibility(cardId: CardId) = viewModelScope.launch {
+            val current = uiState.value.cardConfigurations
+            val updated = prefsRepo.toggleCardVisibility(
+                current,
+                cardId,
+                !current.find { it.cardId == cardId }?.isVisible.orFalse()
+            )
+            prefsRepo.updateDashboardCardConfigurations(updated)
+        }
+
+        fun onReorderCards(newOrder: List<CardConfiguration>) = viewModelScope.launch {
+            val updated = prefsRepo.reorderCards(uiState.value.cardConfigurations, newOrder)
+            prefsRepo.updateDashboardCardConfigurations(updated)
+        }
+
+        fun onResetToDefaults() = viewModelScope.launch {
+            prefsRepo.updateDashboardCardConfigurations(
+                com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults.DEFAULT_DASHBOARD_CARDS
+            )
+        }
+
+        private fun Boolean?.orFalse() = this ?: false
     }

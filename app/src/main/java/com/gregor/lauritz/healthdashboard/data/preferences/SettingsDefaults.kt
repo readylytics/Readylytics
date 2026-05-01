@@ -1,5 +1,8 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+
 object SettingsDefaults {
     const val GOAL_SLEEP_HOURS = 8f
     val HRV_BASELINE_OVERRIDE: Float? = null
@@ -50,4 +53,35 @@ object SettingsDefaults {
     const val COLLAPSE_ADVANCED = true
     const val ABOUT_DISMISSED = false
     val PHYSIOLOGY_PROFILE = PhysiologyProfile.GENERAL
+
+    val DEFAULT_DASHBOARD_CARDS = listOf(
+        CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),
+        CardConfiguration(CardId.READINESS, isVisible = true, position = 1),
+        CardConfiguration(CardId.STEPS, isVisible = true, position = 2),
+        CardConfiguration(CardId.HRV, isVisible = true, position = 3),
+        CardConfiguration(CardId.RHR, isVisible = true, position = 4),
+        CardConfiguration(CardId.SLEEP_DURATION, isVisible = true, position = 5),
+        CardConfiguration(CardId.LOAD_SCORE, isVisible = true, position = 6),
+        CardConfiguration(CardId.STRAIN_RATIO, isVisible = false, position = 7),
+        CardConfiguration(CardId.RESTING_HR, isVisible = false, position = 8),
+        CardConfiguration(CardId.CIRCADIAN_CONSISTENCY, isVisible = false, position = 9),
+    )
+
+    val DEFAULT_SLEEP_CARDS = listOf(
+        CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),
+        CardConfiguration(CardId.SLEEP_DURATION, isVisible = true, position = 1),
+        CardConfiguration(CardId.SLEEP_ARCHITECTURE, isVisible = true, position = 2),
+        CardConfiguration(CardId.HRV, isVisible = true, position = 3),
+        CardConfiguration(CardId.RHR, isVisible = true, position = 4),
+        CardConfiguration(CardId.RECOVERY_INDEX, isVisible = false, position = 5),
+        CardConfiguration(CardId.CIRCADIAN_CONSISTENCY, isVisible = false, position = 6),
+    )
+
+    val DEFAULT_WORKOUT_CARDS = listOf(
+        CardConfiguration(CardId.READINESS, isVisible = true, position = 0),
+        CardConfiguration(CardId.LOAD_SCORE, isVisible = true, position = 1),
+        CardConfiguration(CardId.STRAIN_RATIO, isVisible = true, position = 2),
+        CardConfiguration(CardId.PAI_DAILY, isVisible = true, position = 3),
+        CardConfiguration(CardId.ACUTE_CHRONIC_RATIO, isVisible = false, position = 4),
+    )
 }

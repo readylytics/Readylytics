@@ -1,5 +1,7 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
+
 enum class BackupSchedule { MANUAL, DAILY, WEEKLY }
 
 data class UserPreferences(
@@ -51,4 +53,7 @@ data class UserPreferences(
     val collapseAdvanced: Boolean = SettingsDefaults.COLLAPSE_ADVANCED,
     val aboutDismissed: Boolean = SettingsDefaults.ABOUT_DISMISSED,
     val physiologyProfile: PhysiologyProfile = SettingsDefaults.PHYSIOLOGY_PROFILE,
+    val dashboardCardConfigurations: List<CardConfiguration> = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
+    val sleepCardConfigurations: List<CardConfiguration> = SettingsDefaults.DEFAULT_SLEEP_CARDS,
+    val workoutCardConfigurations: List<CardConfiguration> = SettingsDefaults.DEFAULT_WORKOUT_CARDS,
 )
