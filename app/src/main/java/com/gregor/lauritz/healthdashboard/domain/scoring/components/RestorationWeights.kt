@@ -13,5 +13,5 @@ data class RestorationWeights(
         get() = if (hrvWeight + rhrWeight == 0f) 0f else hrvWeight / (hrvWeight + rhrWeight)
 
     val rhrPercentage: Float
-        get() = if (hrvWeight + rhrWeight == 0f) 0f else rhrWeight / (hrvWeight + rhrWeight)
+        get() = rhrWeight / (hrvWeight + rhrWeight)
 }
