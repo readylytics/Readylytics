@@ -13,8 +13,11 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchite
 import com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargets
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import javax.inject.Inject
+import javax.inject.Singleton
 
-object ScoringConfigFactory {
+@Singleton
+class ScoringConfigFactory @Inject constructor() {
     fun build(
         userPreferences: UserPreferences,
         installDate: LocalDate,
