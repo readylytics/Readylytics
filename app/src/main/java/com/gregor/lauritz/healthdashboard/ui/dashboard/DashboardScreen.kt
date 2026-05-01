@@ -47,6 +47,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
 import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
+import com.gregor.lauritz.healthdashboard.ui.components.ReorderableCardGrid
 import com.gregor.lauritz.healthdashboard.ui.components.StepsBar
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
@@ -246,11 +247,19 @@ fun DashboardScreen(
                 }
             } else {
                 item(key = "metric_grid") {
-                    MetricCardGrid(
-                        rows = uiState.cardRows,
-                        onNavigateToSleep = onNavigateToSleep,
-                        onNavigateToWorkouts = onNavigateToWorkouts,
-                        onNavigateToRhr = onNavigateToRhr,
+                    ReorderableCardGrid(
+                        cardConfigurations = uiState.cardConfigurations,
+                        cardDataMap = buildCardDataMap(
+                            uiState = uiState,
+                            onNavigateToSleep = onNavigateToSleep,
+                            onNavigateToWorkouts = onNavigateToWorkouts,
+                            onNavigateToRhr = onNavigateToRhr,
+                        ),
+                        isEditing = uiState.isManagingCards,
+                        onCardRemove = { cardId ->
+                            onCardVisibilityChanged(cardId, false)
+                        },
+                        onCardReorder = onReorderCards,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }
@@ -341,42 +350,3 @@ private fun DashboardStepsCard(
     }
 }
 
-@Composable
-private fun MetricCardGrid(
-    rows: List<List<CardData>>,
-    onNavigateToSleep: () -> Unit,
-    onNavigateToWorkouts: () -> Unit,
-    onNavigateToRhr: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        rows.forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { card ->
-                    val onClick = when (card.action) {
-                        DashboardAction.NAVIGATE_SLEEP -> onNavigateToSleep
-                        DashboardAction.NAVIGATE_WORKOUTS -> onNavigateToWorkouts
-                        DashboardAction.NAVIGATE_RHR -> onNavigateToRhr
-                        DashboardAction.NAVIGATE_STEPS -> null
-                        null -> null
-                    }
-                    MetricCard(
-                        title = card.title,
-                        value = card.value,
-                        secondaryText = card.secondaryText ?: card.unit,
-                        status = card.status,
-                        onClick = onClick,
-                        tooltip = card.tooltip,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                if (row.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
