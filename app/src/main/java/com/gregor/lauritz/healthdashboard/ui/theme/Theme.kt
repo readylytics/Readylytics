@@ -9,10 +9,12 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.android.material.color.MaterialColors
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 
@@ -95,10 +97,10 @@ private val LightColorScheme =
 @Composable
 fun FitDashboardTheme(
     appTheme: AppTheme = AppTheme.SYSTEM,
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    viewModel: ThemeViewModel = hiltViewModel(),
     content: @Composable () -> Unit,
 ) {
+    val dynamicColor = viewModel.dynamicColorFlow.collectAsState(initial = true).value
     val darkTheme =
         when (appTheme) {
             AppTheme.LIGHT -> false

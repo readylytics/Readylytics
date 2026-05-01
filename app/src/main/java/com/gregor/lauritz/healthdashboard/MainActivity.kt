@@ -44,12 +44,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val prefs by prefsRepo.userPreferences.collectAsState(initial = null)
-            val dynamicColorPref by appConfigRepo.dynamicColorEnabled.collectAsState(initial = true)
             val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM
 
             FitDashboardTheme(
-                appTheme = appTheme,
-                dynamicColor = dynamicColorPref
+                appTheme = appTheme
             ) {
                 val viewModel: SyncViewModel = hiltViewModel()
                 val context = LocalContext.current

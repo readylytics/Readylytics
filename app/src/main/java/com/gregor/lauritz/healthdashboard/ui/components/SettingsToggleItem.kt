@@ -38,6 +38,6 @@ fun SettingsToggleItem(
                 colors = SwitchDefaults.colors()
             )
         },
-        modifier = modifier.clickable { onCheckedChange(!checked) }
+        modifier = modifier
     )
 }
