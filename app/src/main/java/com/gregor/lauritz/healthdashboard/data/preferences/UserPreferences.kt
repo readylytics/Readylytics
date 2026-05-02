@@ -52,5 +52,5 @@ data class UserPreferences(
     val aboutDismissed: Boolean = SettingsDefaults.ABOUT_DISMISSED,
     val physiologyProfile: PhysiologyProfile = SettingsDefaults.PHYSIOLOGY_PROFILE,
     val installDate: Long = SettingsDefaults.INSTALL_DATE,
-    val circadianThresholdOverride: Int? = SettingsDefaults.CIRCADIAN_THRESHOLD_OVERRIDE,
+    val circadianThresholdOverride: String? = SettingsDefaults.CIRCADIAN_THRESHOLD_OVERRIDE,
 )

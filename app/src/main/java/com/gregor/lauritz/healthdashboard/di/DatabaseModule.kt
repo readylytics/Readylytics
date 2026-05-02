@@ -4,19 +4,20 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
+import net.sqlcipher.database.SupportFactory
 import javax.inject.Singleton
 
 @Module
@@ -26,10 +27,13 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(
         @ApplicationContext context: Context,
-    ): HealthDatabase =
-        Room
+        encryptionManager: EncryptionManager,
+    ): HealthDatabase {
+        val factory = SupportFactory(encryptionManager.getDatabaseKey().toByteArray())
+        
+        return Room
             .databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
-            .setDriver(BundledSQLiteDriver())
+            .openHelperFactory(factory)
             .setQueryCoroutineContext(Dispatchers.IO)
             .addMigrations(
                 HealthDatabase.MIGRATION_1_2,
@@ -58,6 +62,7 @@ object DatabaseModule {
                 },
             )
             .build()
+    }
 
     @Provides
     fun provideSleepSessionDao(db: HealthDatabase): SleepSessionDao = db.sleepSessionDao()

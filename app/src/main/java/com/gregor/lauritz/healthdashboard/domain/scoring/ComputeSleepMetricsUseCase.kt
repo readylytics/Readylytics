@@ -8,6 +8,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import com.gregor.lauritz.healthdashboard.domain.model.ReadinessResult
 import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
 import com.gregor.lauritz.healthdashboard.domain.util.logD
@@ -32,6 +33,7 @@ class ComputeSleepMetricsUseCase @Inject constructor(
     private val sleepSessionDao: SleepSessionDao,
     private val scoringCalculator: ScoringCalculator,
     private val scoringConfigFactory: ScoringConfigFactory,
+    private val encryptionManager: EncryptionManager,
 ) {
     suspend operator fun invoke(
         session: SleepSessionEntity,
@@ -49,11 +51,16 @@ class ComputeSleepMetricsUseCase @Inject constructor(
             // Not yet initialized - use today as install date
             targetDate
         }
+
+        val decryptedOverride = prefs.circadianThresholdOverride?.let { encrypted ->
+            runCatching { encryptionManager.decrypt(encrypted).toInt() }.getOrNull()
+        }
+
         val scoringConfig = scoringConfigFactory.build(
             userPreferences = prefs,
             installDate = installDate,
             currentDate = targetDate,
-            circadianOverride = prefs.circadianThresholdOverride,
+            circadianOverride = decryptedOverride,
         )
         logD("ComputeSleepMetrics") {
             "Config applied: hash=${scoringConfig.auditTrail.configHashCode}, phase=${scoringConfig.auditTrail.phaseName}, threshold=${scoringConfig.circadianConsistency.thresholdMinutes}"

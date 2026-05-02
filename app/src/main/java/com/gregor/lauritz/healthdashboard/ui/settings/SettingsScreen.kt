@@ -123,7 +123,7 @@ fun SettingsRoute(
     SettingsScreen(uiState = uiState, onEvent = viewModel::onEvent, viewModel = viewModel, onNavigateToAbout = onNavigateToAbout)
 
     // Loading dialog during resync - appears on top of everything including tab bar
-    if (uiState.isResyncing) {
+    if (uiState.ui.isResyncing) {
         Dialog(
             onDismissRequest = {},
             properties = DialogProperties(
@@ -177,7 +177,7 @@ fun SettingsScreen(
         searchQuery.isNotBlank() && matchingSections.any { it.id == sectionId }
     }
 
-    if (uiState.showRestoreConfirmDialog) {
+    if (uiState.cloud.showRestoreConfirmDialog) {
         AlertDialog(
             onDismissRequest = { onEvent(SettingsEvent.RestoreDismissed) },
             title = { Text("Restore from Drive?") },
@@ -234,7 +234,7 @@ fun SettingsScreen(
                         Column {
                             SectionHeader("Cloud Backup")
                             CloudBackupSection(
-                                uiState = uiState,
+                                uiState = uiState.cloud,
                                 onEvent = onEvent,
                                 viewModel = viewModel,
                                 context = context,
@@ -259,36 +259,40 @@ fun SettingsScreen(
                     ) {
                         Column {
                             SectionHeader("Daily Step Goal")
-                            ActivitySettingsSection(uiState = uiState, onEvent = onEvent)
+                            ActivitySettingsSection(stepGoal = uiState.stepGoal, onEvent = onEvent)
                             Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Sleep")
-                            SleepSettingsSection(uiState = uiState, onEvent = onEvent)
+                            SleepSettingsSection(uiState = uiState.sleep, onEvent = onEvent)
                             Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Heart Rate Zones")
                             HeartRateZoneSection(
-                                uiState = uiState,
+                                uiState = uiState.heartRate,
+                                physiologyState = uiState.physiology,
                                 onEvent = onEvent,
                                 expandState = expandState,
                                 onExpandStateChange = { expandState = it }
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             PhysiologyProfilePicker(
-                                selectedProfile = uiState.physiologyProfile,
+                                selectedProfile = uiState.physiology.physiologyProfile,
                                 onProfileSelected = { onEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             SectionHeader("Circadian Consistency")
                             CircadianThresholdSettingsSection(
-                                profile = uiState.physiologyProfile,
-                                currentOverride = uiState.circadianThresholdOverride,
-                                isShiftWorkerMode = uiState.physiologyProfile == PhysiologyProfile.SHIFT_WORKER,
+                                profile = uiState.physiology.physiologyProfile,
+                                currentOverride = uiState.threshold.circadianThresholdOverride,
+                                isShiftWorkerMode = uiState.physiology.physiologyProfile == PhysiologyProfile.SHIFT_WORKER,
                                 onOverrideChanged = { onEvent(SettingsEvent.CircadianThresholdOverrideChanged(it)) },
+                                isLoading = uiState.threshold.isUpdatingThreshold,
+                                error = uiState.threshold.thresholdError,
+                                onErrorDismissed = { onEvent(SettingsEvent.DismissThresholdError) },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Thresholds")
-                            ThresholdSettingsSection(uiState = uiState, onEvent = onEvent)
+                            ThresholdSettingsSection(uiState = uiState.threshold, onEvent = onEvent)
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
@@ -302,11 +306,11 @@ fun SettingsScreen(
                         onExpandedChange = { onEvent(SettingsEvent.CollapseDisplayChanged(!it)) }
                     ) {
                         Column {
-                            AppThemeItem(uiState = uiState, onEvent = onEvent)
+                            AppThemeItem(uiState = uiState.ui, onEvent = onEvent)
                             SettingsToggleItem(
                                 label = "Dynamic Color",
                                 description = "Use colors derived from your wallpaper (Android 12+)",
-                                checked = uiState.dynamicColorEnabled,
+                                checked = uiState.ui.dynamicColorEnabled,
                                 onCheckedChange = { onEvent(SettingsEvent.DynamicColorEnabledChanged(it)) }
                             )
                         }
@@ -321,7 +325,11 @@ fun SettingsScreen(
                         expanded = !uiState.collapseAdvanced || shouldExpandSection("advanced"),
                         onExpandedChange = { onEvent(SettingsEvent.CollapseAdvancedChanged(!it)) }
                     ) {
-                        AdvancedSettingsSection(uiState = uiState, onEvent = onEvent)
+                        AdvancedSettingsSection(
+                            sleepState = uiState.sleep,
+                            paiScalingFactor = uiState.paiScalingFactor,
+                            onEvent = onEvent
+                        )
                     }
                 }
 
@@ -412,10 +420,10 @@ private fun DataManagementSection(
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Button(
                 onClick = { onEvent(SettingsEvent.ResyncHealthConnect) },
-                enabled = !uiState.isResyncing,
+                enabled = !uiState.ui.isResyncing,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                if (uiState.isResyncing) {
+                if (uiState.ui.isResyncing) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         color = MaterialTheme.colorScheme.onPrimary
@@ -435,8 +443,37 @@ private fun DataManagementSection(
 }
 
 @Composable
+private fun ActivitySettingsSection(
+    stepGoal: Int,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var currentStepGoal by remember(stepGoal) { mutableFloatStateOf(stepGoal.toFloat()) }
+
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Daily Step Goal", style = MaterialTheme.typography.bodyMedium)
+            MetricTooltip(description = "Target steps per day. Reaching this goal shows as Optimal on the dashboard.")
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "${currentStepGoal.roundToInt()} steps",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Slider(
+            value = currentStepGoal,
+            onValueChange = { currentStepGoal = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.StepGoalChanged(currentStepGoal.roundToInt())) },
+            valueRange = 1000f..30000f,
+            steps = 57,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
 private fun SleepSettingsSection(
-    uiState: SettingsUiState,
+    uiState: SleepSettingsState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
     var sleepGoalValue by remember(uiState.goalSleepHours) {
@@ -465,6 +502,55 @@ private fun SleepSettingsSection(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
+}
+
+@Composable
+private fun ThresholdSettingsSection(
+    uiState: ThresholdSettingsState,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    Column {
+        var hrvOptimal by remember(uiState.hrvOptimalThreshold) { mutableFloatStateOf(uiState.hrvOptimalThreshold) }
+        ThresholdSliderItem(
+            label = "HRV Optimal",
+            value = hrvOptimal,
+            onValueChange = { hrvOptimal = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.HrvOptimalThresholdChanged(hrvOptimal)) },
+            valueRange = 1.0f..1.2f,
+            description = "HRV ratio to baseline to be considered Optimal (e.g. 100-120%).",
+        )
+
+        var hrvWarning by remember(uiState.hrvWarningThreshold) { mutableFloatStateOf(uiState.hrvWarningThreshold) }
+        ThresholdSliderItem(
+            label = "HRV Warning",
+            value = hrvWarning,
+            onValueChange = { hrvWarning = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.HrvWarningThresholdChanged(hrvWarning)) },
+            valueRange = 0.8f..1.0f,
+            description = "HRV ratio to baseline to be considered Warning (e.g. 80-100%).",
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        var rhrOptimal by remember(uiState.rhrOptimalThreshold) { mutableFloatStateOf(uiState.rhrOptimalThreshold) }
+        ThresholdSliderItem(
+            label = "RHR Optimal",
+            value = rhrOptimal,
+            onValueChange = { rhrOptimal = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.RhrOptimalThresholdChanged(rhrOptimal)) },
+            valueRange = 0.8f..1.0f,
+            description = "RHR ratio to baseline to be considered Optimal (e.g. 80-100%).",
+        )
+
+        var rhrWarning by remember(uiState.rhrWarningThreshold) { mutableFloatStateOf(uiState.rhrWarningThreshold) }
+        ThresholdSliderItem(
+            label = "RHR Warning",
+            value = rhrWarning,
+            onValueChange = { rhrWarning = it },
+            onValueChangeFinished = { onEvent(SettingsEvent.RhrWarningThresholdChanged(rhrWarning)) },
+            valueRange = 1.0f..1.2f,
+            description = "RHR ratio to baseline to be considered Warning (e.g. 100-120%).",
+        )
 
         var consistencyWindow by remember(uiState.consistencyThresholdMinutes) {
             mutableFloatStateOf(uiState.consistencyThresholdMinutes.toFloat())
@@ -511,57 +597,9 @@ private fun SleepSettingsSection(
 }
 
 @Composable
-private fun ThresholdSettingsSection(
-    uiState: SettingsUiState,
-    onEvent: (SettingsEvent) -> Unit,
-) {
-    Column {
-        var hrvOptimal by remember(uiState.hrvOptimalThreshold) { mutableFloatStateOf(uiState.hrvOptimalThreshold) }
-        ThresholdSliderItem(
-            label = "HRV Optimal",
-            value = hrvOptimal,
-            onValueChange = { hrvOptimal = it },
-            onValueChangeFinished = { onEvent(SettingsEvent.HrvOptimalThresholdChanged(hrvOptimal)) },
-            valueRange = 1.0f..1.2f,
-            description = "HRV ratio to baseline to be considered Optimal (e.g. 100-120%).",
-        )
-
-        var hrvWarning by remember(uiState.hrvWarningThreshold) { mutableFloatStateOf(uiState.hrvWarningThreshold) }
-        ThresholdSliderItem(
-            label = "HRV Warning",
-            value = hrvWarning,
-            onValueChange = { hrvWarning = it },
-            onValueChangeFinished = { onEvent(SettingsEvent.HrvWarningThresholdChanged(hrvWarning)) },
-            valueRange = 0.8f..1.0f,
-            description = "HRV ratio to baseline to be considered Warning (e.g. 80-100%).",
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        var rhrOptimal by remember(uiState.rhrOptimalThreshold) { mutableFloatStateOf(uiState.rhrOptimalThreshold) }
-        ThresholdSliderItem(
-            label = "RHR Optimal",
-            value = rhrOptimal,
-            onValueChange = { rhrOptimal = it },
-            onValueChangeFinished = { onEvent(SettingsEvent.RhrOptimalThresholdChanged(rhrOptimal)) },
-            valueRange = 0.8f..1.0f,
-            description = "RHR ratio to baseline to be considered Optimal (e.g. 80-100%).",
-        )
-
-        var rhrWarning by remember(uiState.rhrWarningThreshold) { mutableFloatStateOf(uiState.rhrWarningThreshold) }
-        ThresholdSliderItem(
-            label = "RHR Warning",
-            value = rhrWarning,
-            onValueChange = { rhrWarning = it },
-            onValueChangeFinished = { onEvent(SettingsEvent.RhrWarningThresholdChanged(rhrWarning)) },
-            valueRange = 1.0f..1.2f,
-            description = "RHR ratio to baseline to be considered Warning (e.g. 100-120%).",
-        )
-    }
-}
-
-@Composable
 private fun HeartRateZoneSection(
-    uiState: SettingsUiState,
+    uiState: HeartRateZonesState,
+    physiologyState: PhysiologySettingsState,
     onEvent: (SettingsEvent) -> Unit,
     expandState: SettingsExpandState,
     onExpandStateChange: (SettingsExpandState) -> Unit,
@@ -569,14 +607,14 @@ private fun HeartRateZoneSection(
     var maxHrText by rememberSaveable(uiState.maxHeartRate) {
         mutableStateOf(uiState.maxHeartRate.toString())
     }
-    var birthDayText by rememberSaveable(uiState.birthDay) {
-        mutableStateOf(uiState.birthDay.toString())
+    var birthDayText by rememberSaveable(physiologyState.birthDay) {
+        mutableStateOf(physiologyState.birthDay.toString())
     }
-    var birthMonthText by rememberSaveable(uiState.birthMonth) {
-        mutableStateOf(uiState.birthMonth.toString())
+    var birthMonthText by rememberSaveable(physiologyState.birthMonth) {
+        mutableStateOf(physiologyState.birthMonth.toString())
     }
-    var birthYearText by rememberSaveable(uiState.birthYear) {
-        mutableStateOf(uiState.birthYear.toString())
+    var birthYearText by rememberSaveable(physiologyState.birthYear) {
+        mutableStateOf(physiologyState.birthYear.toString())
     }
 
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
@@ -659,13 +697,13 @@ private fun HeartRateZoneSection(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Age: ${uiState.age} (auto-calculated)",
+                    "Age: ${physiologyState.age} (auto-calculated)",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 GenderSelector(
-                    selectedGender = uiState.gender,
+                    selectedGender = physiologyState.gender,
                     expanded = expandState.genderExpanded,
                     onExpandedChange = { onExpandStateChange(expandState.copy(genderExpanded = it)) },
                     onGenderSelected = { onEvent(SettingsEvent.GenderChanged(it)) }
@@ -743,50 +781,22 @@ private fun HeartRateZoneSection(
 }
 
 @Composable
-private fun ActivitySettingsSection(
-    uiState: SettingsUiState,
-    onEvent: (SettingsEvent) -> Unit,
-) {
-    var stepGoal by remember(uiState.stepGoal) { mutableFloatStateOf(uiState.stepGoal.toFloat()) }
-
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Daily Step Goal", style = MaterialTheme.typography.bodyMedium)
-            MetricTooltip(description = "Target steps per day. Reaching this goal shows as Optimal on the dashboard.")
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "${stepGoal.roundToInt()} steps",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-        Slider(
-            value = stepGoal,
-            onValueChange = { stepGoal = it },
-            onValueChangeFinished = { onEvent(SettingsEvent.StepGoalChanged(stepGoal.roundToInt())) },
-            valueRange = 1000f..30000f,
-            steps = 57,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-}
-
-@Composable
 private fun AdvancedSettingsSection(
-    uiState: SettingsUiState,
+    sleepState: SleepSettingsState,
+    paiScalingFactor: Float,
     onEvent: (SettingsEvent) -> Unit,
 ) {
-    var hrvText by remember(uiState.hrvBaselineOverride) {
-        mutableStateOf(uiState.hrvBaselineOverride?.toInt()?.toString() ?: "")
+    var hrvText by remember(sleepState.hrvBaselineOverride) {
+        mutableStateOf(sleepState.hrvBaselineOverride?.toInt()?.toString() ?: "")
     }
-    var rhrText by remember(uiState.rhrBaselineOverride) {
-        mutableStateOf(uiState.rhrBaselineOverride?.toInt()?.toString() ?: "")
+    var rhrText by remember(sleepState.rhrBaselineOverride) {
+        mutableStateOf(sleepState.rhrBaselineOverride?.toInt()?.toString() ?: "")
     }
-    var beforeMinutesText by remember(uiState.restingHrBeforeMinutes) {
-        mutableStateOf(uiState.restingHrBeforeMinutes.toString())
+    var beforeMinutesText by remember(sleepState.restingHrBeforeMinutes) {
+        mutableStateOf(sleepState.restingHrBeforeMinutes.toString())
     }
-    var afterMinutesText by remember(uiState.restingHrAfterMinutes) {
-        mutableStateOf(uiState.restingHrAfterMinutes.toString())
+    var afterMinutesText by remember(sleepState.restingHrAfterMinutes) {
+        mutableStateOf(sleepState.restingHrAfterMinutes.toString())
     }
 
     Column {
@@ -900,7 +910,7 @@ private fun AdvancedSettingsSection(
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        var paiScaling by remember(uiState.paiScalingFactor) { mutableFloatStateOf(uiState.paiScalingFactor) }
+        var paiScaling by remember(paiScalingFactor) { mutableFloatStateOf(paiScalingFactor) }
         ThresholdSliderItem(
             label = "PAI Scaling Factor",
             value = paiScaling,
@@ -954,7 +964,7 @@ private fun HeartRateZonesDisplay(
 
 @Composable
 private fun ZoneEditingSection(
-    uiState: SettingsUiState,
+    uiState: HeartRateZonesState,
     onEvent: (SettingsEvent) -> Unit
 ) {
     var z1Min by rememberSaveable { mutableStateOf(uiState.zone1MinBpm.toString()) }
@@ -1141,7 +1151,7 @@ private fun GenderSelector(
 
 @Composable
 private fun AppThemeItem(
-    uiState: SettingsUiState,
+    uiState: UIState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
     DropdownPreferenceItem(
@@ -1261,7 +1271,7 @@ private val BackupSchedule.displayName: String
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CloudBackupSection(
-    uiState: SettingsUiState,
+    uiState: CloudBackupState,
     onEvent: (SettingsEvent) -> Unit,
     viewModel: SettingsViewModel,
     context: android.content.Context,
@@ -1377,7 +1387,7 @@ private fun CloudBackupSection(
 
 @Composable
 private fun BackupScheduleItem(
-    uiState: SettingsUiState,
+    uiState: CloudBackupState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
     DropdownPreferenceItem(
@@ -1388,4 +1398,40 @@ private fun BackupScheduleItem(
         optionLabel = { it.displayName },
         modifier = Modifier.fillMaxWidth(),
     )
+}
+
+@Composable
+private fun M3CollapsibleSection(
+    header: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Column {
+        TextButton(
+            onClick = { onExpandedChange(!expanded) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = header,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Filled.Clear else Icons.Filled.Search, // Placeholder icons
+                    contentDescription = if (expanded) "Collapse" else "Expand"
+                )
+            }
+        }
+        AnimatedVisibility(visible = expanded) {
+            content()
+        }
+    }
 }

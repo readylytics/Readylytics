@@ -77,6 +77,15 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                // Initialize installDate on first run (Issue: Install Date Initialization)
+                LaunchedEffect(Unit) {
+                    prefsRepo.userPreferences.collectLatest { prefs ->
+                        if (prefs.installDate == 0L) {
+                            prefsRepo.updateInstallDate(System.currentTimeMillis())
+                        }
+                    }
+                }
+
                 AppNavHost(
                     viewModel = viewModel,
                     hcRepo = hcRepo,

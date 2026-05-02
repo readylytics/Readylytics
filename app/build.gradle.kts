@@ -133,6 +133,10 @@ dependencies {
     implementation(libs.hilt.work)
     ksp(libs.hilt.work.compiler)
 
+    // Security
+    implementation(libs.google.tink.android)
+    implementation(libs.sqlcipher.android)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)

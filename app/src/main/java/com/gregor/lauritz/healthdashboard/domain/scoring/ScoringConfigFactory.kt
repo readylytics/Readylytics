@@ -12,6 +12,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.components.PhaseCalcula
 import com.gregor.lauritz.healthdashboard.domain.scoring.components.RestorationWeights
 import com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargetFactory
 import com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargets
+import com.gregor.lauritz.healthdashboard.util.SecureLogger
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
@@ -20,6 +21,14 @@ import java.security.MessageDigest
 
 @Singleton
 class ScoringConfigFactory @Inject constructor() {
+    companion object {
+        /**
+         * Configuration schema version.
+         * MUST be incremented when adding/removing fields from config classes.
+         */
+        private const val CONFIG_SCHEMA_VERSION = "1.0"
+    }
+
     fun build(
         userPreferences: UserPreferences,
         installDate: LocalDate,
@@ -100,13 +109,13 @@ class ScoringConfigFactory @Inject constructor() {
         // Explicitly serialize config fields to avoid obfuscation issues with toString()
         // Using field-by-field approach ensures hash remains stable across code obfuscation
         val paramsString = buildString {
+            append(CONFIG_SCHEMA_VERSION).append("|")
             // RestorationWeights
             append(restoration.hrvWeight).append("|")
             append(restoration.rhrWeight).append("|")
             // SleepArchitectureTargets
-            append(sleepTargets.targetDeepPercentage).append("|")
-            append(sleepTargets.targetRemPercentage).append("|")
-            append(sleepTargets.minDurationMinutes).append("|")
+            append(sleepTargets.deepPercentage).append("|")
+            append(sleepTargets.remPercentage).append("|")
             // EmergencyFlagThresholds
             append(emergencyFlags.overreachingZHrvThreshold).append("|")
             append(emergencyFlags.overreachingZRhrThreshold).append("|")
@@ -119,6 +128,10 @@ class ScoringConfigFactory @Inject constructor() {
             append(circadianConsistency.evaluationDays).append("|")
             append(circadianConsistency.baselineDays)
         }
+        
+        // Log only hash for debugging, never the actual params (Issue #6.1)
+        SecureLogger.debugEvent("Computing config hash (version: $CONFIG_SCHEMA_VERSION)")
+        
         val hash = MessageDigest.getInstance("SHA-256").digest(paramsString.toByteArray(Charsets.UTF_8))
         return hash.take(4).foldIndexed(0) { i, acc, byte ->
             acc or ((byte.toInt() and 0xFF) shl (i * 8))

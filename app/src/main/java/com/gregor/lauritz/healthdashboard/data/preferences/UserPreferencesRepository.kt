@@ -78,7 +78,7 @@ class UserPreferencesRepository
             val ABOUT_DISMISSED = booleanPreferencesKey("about_dismissed")
             val PHYSIOLOGY_PROFILE = stringPreferencesKey("physiology_profile")
             val INSTALL_DATE = longPreferencesKey("install_date")
-            val CIRCADIAN_THRESHOLD_OVERRIDE = intPreferencesKey("circadian_threshold_override")
+            val CIRCADIAN_THRESHOLD_OVERRIDE = stringPreferencesKey("circadian_threshold_override_encrypted")
             val CIRCADIAN_THRESHOLD_OVERRIDE_SET = booleanPreferencesKey("circadian_threshold_override_set")
         }
 
@@ -388,10 +388,10 @@ class UserPreferencesRepository
             dataStore.edit { it[Keys.INSTALL_DATE] = dateTimeMs }
         }
 
-        suspend fun updateCircadianThresholdOverride(minutes: Int?) {
+        suspend fun updateCircadianThresholdOverride(encryptedMinutes: String?) {
             dataStore.edit { prefs ->
-                if (minutes != null) {
-                    prefs[Keys.CIRCADIAN_THRESHOLD_OVERRIDE] = minutes
+                if (encryptedMinutes != null) {
+                    prefs[Keys.CIRCADIAN_THRESHOLD_OVERRIDE] = encryptedMinutes
                     prefs[Keys.CIRCADIAN_THRESHOLD_OVERRIDE_SET] = true
                 } else {
                     prefs.remove(Keys.CIRCADIAN_THRESHOLD_OVERRIDE)

@@ -35,3 +35,32 @@
 
 # Vico Charts
 -keep class com.patrykandpatrick.vico.** { *; }
+
+# Domain Scoring Components (Issue #3.2)
+# Keep these classes and their fields from obfuscation to ensure hash stability
+# CRITICAL: These are used for audit trail hashing and must not be renamed
+
+-keep class com.gregor.lauritz.healthdashboard.domain.scoring.components.RestorationWeights {
+    *** *;
+}
+
+-keep class com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargets {
+    *** *;
+}
+
+-keep class com.gregor.lauritz.healthdashboard.domain.scoring.components.EmergencyFlagThresholds {
+    *** *;
+}
+
+-keep class com.gregor.lauritz.healthdashboard.domain.scoring.components.CircadianConsistencyConfig {
+    *** *;
+}
+
+-keep class com.gregor.lauritz.healthdashboard.domain.scoring.components.AuditTrail {
+    *** *;
+}
+
+# Keep field names (required for hash computation)
+-keepclassmembers class com.gregor.lauritz.healthdashboard.domain.scoring.components.** {
+    *** *;
+}

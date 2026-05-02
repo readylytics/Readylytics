@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.platform.app.InstrumentationRegistry
+import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPreferences
 import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthManager
 import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupPreferencesRepository
@@ -89,6 +90,9 @@ class SettingsViewModelTest {
     @Inject
     lateinit var workManager: WorkManager
 
+    @Inject
+    lateinit var circadianThresholdPreferences: CircadianThresholdPreferences
+
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
@@ -127,11 +131,12 @@ class SettingsViewModelTest {
             restoreUseCase,
             userUseCase,
             workerScheduler,
-            workManager
+            workManager,
+            circadianThresholdPreferences
         )
 
         // Wait for initial load
-        viewModel.uiState.first { !it.isLoading }
+        viewModel.uiState.first { !it.ui.isLoading }
 
         viewModel.onEvent(SettingsEvent.RetentionDaysEnabledChanged(false))
         
@@ -159,11 +164,12 @@ class SettingsViewModelTest {
             restoreUseCase,
             userUseCase,
             workerScheduler,
-            workManager
+            workManager,
+            circadianThresholdPreferences
         )
 
         // Wait for initial load
-        viewModel.uiState.first { !it.isLoading }
+        viewModel.uiState.first { !it.ui.isLoading }
 
         viewModel.onEvent(SettingsEvent.RetentionDaysChanged(500))
         val state = viewModel.uiState.first { it.retentionDays == 500 }
@@ -189,16 +195,17 @@ class SettingsViewModelTest {
             restoreUseCase,
             userUseCase,
             workerScheduler,
-            workManager
+            workManager,
+            circadianThresholdPreferences
         )
 
         // Wait for initial load
-        viewModel.uiState.first { !it.isLoading }
+        viewModel.uiState.first { !it.ui.isLoading }
 
-        assertFalse(viewModel.uiState.value.isResyncing)
+        assertFalse(viewModel.uiState.value.ui.isResyncing)
         viewModel.onEvent(SettingsEvent.ResyncHealthConnect)
         
-        val state = viewModel.uiState.first { it.isResyncing }
-        assertTrue(state.isResyncing)
+        val state = viewModel.uiState.first { it.ui.isResyncing }
+        assertTrue(state.ui.isResyncing)
     }
 }

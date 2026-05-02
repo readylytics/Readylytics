@@ -25,6 +25,8 @@ googleid = "1.1.1"
 playServicesAuth = "21.3.0"
 workManager = "2.10.1"
 okhttp = "4.12.0"
+tink = "1.10.0"
+sqlcipher = "4.5.4"
 mockk = "1.13.17"
 robolectric = "4.14.1"
 androidxTestCore = "1.6.1"
@@ -77,6 +79,8 @@ mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
+google-tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
+sqlcipher-android = { group = "net.zetetic", name = "android-database-sqlcipher", version.ref = "sqlcipher" }
 material = { group = "com.google.android.material", name = "material", version = "1.12.0" }
 
 [plugins]
