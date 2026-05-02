@@ -54,7 +54,7 @@ class CardConfigurationRepository @Inject constructor(
         dataStore.edit { it[key] = CardConfigurationSerializer.serialize(cards) }
     }
 
-    suspend fun toggleCardVisibility(
+    fun toggleCardVisibility(
         cardConfigurations: List<CardConfiguration>,
         cardId: CardId,
         visible: Boolean,
@@ -69,7 +69,7 @@ class CardConfigurationRepository @Inject constructor(
         }
     }
 
-    suspend fun reorderCards(
+    fun reorderCards(
         cardConfigurations: List<CardConfiguration>,
         newOrder: List<CardConfiguration>,
     ): List<CardConfiguration> {
@@ -82,7 +82,13 @@ class CardConfigurationRepository @Inject constructor(
             "Reorder list size (${newOrder.size}) exceeds original configuration size (${cardConfigurations.size})"
         }
 
-        return newOrder.mapIndexed { index, config ->
+        // Preserve hidden cards by merging reordered visible cards with hidden ones
+        // This ensures hidden cards aren't permanently removed during reordering
+        val reorderedIds = newOrder.map { it.cardId }.toSet()
+        val hiddenCards = cardConfigurations.filter { it.cardId !in reorderedIds }
+
+        // Assign sequential positions: visible cards first (in new order), then hidden cards
+        return (newOrder + hiddenCards).mapIndexed { index, config ->
             config.copy(position = index)
         }
     }

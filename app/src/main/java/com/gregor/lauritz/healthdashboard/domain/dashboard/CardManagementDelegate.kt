@@ -24,11 +24,13 @@ class CardManagementDelegate(
         cardId: CardId,
     ) = viewModelScope.launch {
         val isCurrentlyVisible = currentConfigs.find { it.cardId == cardId }?.isVisible ?: false
+        // toggleCardVisibility is a pure function, no need to launch
         val updated = cardConfigRepository.toggleCardVisibility(
             currentConfigs,
             cardId,
             !isCurrentlyVisible
         )
+        // Only the persistence operation needs to be suspended
         cardConfigRepository.updateCardConfigurations(screenType, updated)
     }
 
@@ -37,7 +39,9 @@ class CardManagementDelegate(
         currentConfigs: List<CardConfiguration>,
         newOrder: List<CardConfiguration>,
     ) = viewModelScope.launch {
+        // reorderCards is a pure function, no need for suspension
         val updated = cardConfigRepository.reorderCards(currentConfigs, newOrder)
+        // Only the persistence operation needs to be suspended
         cardConfigRepository.updateCardConfigurations(screenType, updated)
     }
 

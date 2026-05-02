@@ -77,9 +77,7 @@ class UserPreferencesRepository
             val COLLAPSE_ADVANCED = booleanPreferencesKey("collapse_advanced")
             val ABOUT_DISMISSED = booleanPreferencesKey("about_dismissed")
             val PHYSIOLOGY_PROFILE = stringPreferencesKey("physiology_profile")
-            val DASHBOARD_CARDS = stringPreferencesKey("dashboard_cards")
-            val SLEEP_CARDS = stringPreferencesKey("sleep_cards")
-            val WORKOUT_CARDS = stringPreferencesKey("workout_cards")
+            // Card configuration keys moved to CardConfigurationRepository to consolidate card management logic
         }
 
         private fun Int.toValidMaxHr() = coerceIn(100, 250)
@@ -196,18 +194,11 @@ class UserPreferencesRepository
                         physiologyProfile = prefs[Keys.PHYSIOLOGY_PROFILE]
                             ?.let { runCatching { PhysiologyProfile.valueOf(it) }.getOrNull() }
                             ?: SettingsDefaults.PHYSIOLOGY_PROFILE,
-                        dashboardCardConfigurations = prefs[Keys.DASHBOARD_CARDS]
-                            ?.let { CardConfigurationSerializer.deserialize(it) }
-                            ?.takeIf { it.isNotEmpty() }
-                            ?: SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
-                        sleepCardConfigurations = prefs[Keys.SLEEP_CARDS]
-                            ?.let { CardConfigurationSerializer.deserialize(it) }
-                            ?.takeIf { it.isNotEmpty() }
-                            ?: SettingsDefaults.DEFAULT_SLEEP_CARDS,
-                        workoutCardConfigurations = prefs[Keys.WORKOUT_CARDS]
-                            ?.let { CardConfigurationSerializer.deserialize(it) }
-                            ?.takeIf { it.isNotEmpty() }
-                            ?: SettingsDefaults.DEFAULT_WORKOUT_CARDS,
+                        // Card configurations are now managed by CardConfigurationRepository
+                        // These defaults are used; actual values come from CardConfigurationRepository flow
+                        dashboardCardConfigurations = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
+                        sleepCardConfigurations = SettingsDefaults.DEFAULT_SLEEP_CARDS,
+                        workoutCardConfigurations = SettingsDefaults.DEFAULT_WORKOUT_CARDS,
                     )
                 }
 
@@ -389,39 +380,6 @@ class UserPreferencesRepository
             dataStore.edit { it[Keys.PHYSIOLOGY_PROFILE] = profile.name }
         }
 
-        // Persist dashboard card configuration to DataStore
-        suspend fun updateDashboardCardConfigurations(cards: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>) {
-            dataStore.edit { it[Keys.DASHBOARD_CARDS] = CardConfigurationSerializer.serialize(cards) }
-        }
-
-        // Persist sleep card configuration to DataStore
-        suspend fun updateSleepCardConfigurations(cards: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>) {
-            dataStore.edit { it[Keys.SLEEP_CARDS] = CardConfigurationSerializer.serialize(cards) }
-        }
-
-        // Persist workout card configuration to DataStore
-        suspend fun updateWorkoutCardConfigurations(cards: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>) {
-            dataStore.edit { it[Keys.WORKOUT_CARDS] = CardConfigurationSerializer.serialize(cards) }
-        }
-
-        // Toggle visibility of a specific card and return updated configuration list
-        suspend fun toggleCardVisibility(
-            cardConfigurations: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>,
-            cardId: com.gregor.lauritz.healthdashboard.domain.dashboard.CardId,
-            visible: Boolean
-        ): List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration> {
-            return cardConfigurations.map { config ->
-                if (config.cardId == cardId) config.copy(isVisible = visible) else config
-            }
-        }
-
-        // Update card positions after reordering; assigns sequential positions to maintain order
-        suspend fun reorderCards(
-            cardConfigurations: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>,
-            newOrder: List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>
-        ): List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration> {
-            return newOrder.mapIndexed { index, config ->
-                config.copy(position = index)
-            }
-        }
+        // Card configuration management moved to CardConfigurationRepository to consolidate logic
+        // and avoid violating the Single Source of Truth principle
     }
