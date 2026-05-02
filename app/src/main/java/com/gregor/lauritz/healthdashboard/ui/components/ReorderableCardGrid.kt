@@ -128,9 +128,8 @@ fun ReorderableCardGrid(
                 },
                 onRemove = { onCardRemove(card.cardId) },
                 onSizeChanged = { height ->
-                    cardHeights = cardHeights.toMutableMap().apply {
-                        this[card.cardId] = height
-                    }
+                    // Use immutable map extension to avoid temporary MutableMap allocation on every drag event
+                    cardHeights = cardHeights + (card.cardId to height)
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
