@@ -10,14 +10,12 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
-import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
-import net.sqlcipher.database.SupportFactory
 import javax.inject.Singleton
 
 @Module
@@ -27,13 +25,9 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(
         @ApplicationContext context: Context,
-        encryptionManager: EncryptionManager,
     ): HealthDatabase {
-        val factory = SupportFactory(encryptionManager.getDatabaseKey().toByteArray())
-        
-        return Room
-            .databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
-            .openHelperFactory(factory)
+        val builder = Room.databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
+            .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
             .setQueryCoroutineContext(Dispatchers.IO)
             .addMigrations(
                 HealthDatabase.MIGRATION_1_2,
@@ -56,12 +50,13 @@ object DatabaseModule {
                 object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
                         super.onOpen(db)
-                        db.execSQL("PRAGMA journal_mode = WAL")
                         db.execSQL("PRAGMA synchronous = NORMAL")
                     }
                 },
             )
-            .build()
+            .fallbackToDestructiveMigration(dropAllTables = true)
+
+        return builder.build()
     }
 
     @Provides

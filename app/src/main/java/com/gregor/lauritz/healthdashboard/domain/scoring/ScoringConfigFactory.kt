@@ -17,6 +17,7 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.nio.ByteBuffer
 import java.security.MessageDigest
 
 @Singleton
@@ -26,7 +27,7 @@ class ScoringConfigFactory @Inject constructor() {
          * Configuration schema version.
          * MUST be incremented when adding/removing fields from config classes.
          */
-        private const val CONFIG_SCHEMA_VERSION = "1.0"
+        private const val CONFIG_SCHEMA_VERSION = 2
     }
 
     fun build(
@@ -106,33 +107,53 @@ class ScoringConfigFactory @Inject constructor() {
         emergencyFlags: EmergencyFlagThresholds,
         circadianConsistency: CircadianConsistencyConfig,
     ): Int {
-        // Explicitly serialize config fields to avoid obfuscation issues with toString()
-        // Using field-by-field approach ensures hash remains stable across code obfuscation
-        val paramsString = buildString {
-            append(CONFIG_SCHEMA_VERSION).append("|")
-            // RestorationWeights
-            append(restoration.hrvWeight).append("|")
-            append(restoration.rhrWeight).append("|")
-            // SleepArchitectureTargets
-            append(sleepTargets.deepPercentage).append("|")
-            append(sleepTargets.remPercentage).append("|")
-            // EmergencyFlagThresholds
-            append(emergencyFlags.overreachingZHrvThreshold).append("|")
-            append(emergencyFlags.overreachingZRhrThreshold).append("|")
-            append(emergencyFlags.illnessZHrvThreshold).append("|")
-            append(emergencyFlags.illnessZRhrThreshold).append("|")
-            append(emergencyFlags.illnessRhrDeltaBpm).append("|")
-            // CircadianConsistencyConfig
-            append(circadianConsistency.thresholdMinutes).append("|")
-            append(circadianConsistency.useShiftWorkerMode).append("|")
-            append(circadianConsistency.evaluationDays).append("|")
-            append(circadianConsistency.baselineDays)
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteBuffer.allocate(4)
+
+        fun update(value: Int) {
+            buffer.clear()
+            buffer.putInt(value)
+            digest.update(buffer.array(), 0, 4)
         }
-        
-        // Log only hash for debugging, never the actual params (Issue #6.1)
+
+        fun update(value: Float) {
+            buffer.clear()
+            buffer.putFloat(value)
+            digest.update(buffer.array(), 0, 4)
+        }
+
+        fun update(value: Boolean) {
+            digest.update(if (value) 1.toByte() else 0.toByte())
+        }
+
+        // Schema version
+        update(CONFIG_SCHEMA_VERSION)
+
+        // RestorationWeights
+        update(restoration.hrvWeight)
+        update(restoration.rhrWeight)
+
+        // SleepArchitectureTargets
+        update(sleepTargets.deepPercentage)
+        update(sleepTargets.remPercentage)
+
+        // EmergencyFlagThresholds
+        update(emergencyFlags.overreachingZHrvThreshold)
+        update(emergencyFlags.overreachingZRhrThreshold)
+        update(emergencyFlags.illnessZHrvThreshold)
+        update(emergencyFlags.illnessZRhrThreshold)
+        update(emergencyFlags.illnessRhrDeltaBpm)
+
+        // CircadianConsistencyConfig
+        update(circadianConsistency.thresholdMinutes)
+        update(circadianConsistency.useShiftWorkerMode)
+        update(circadianConsistency.evaluationDays)
+        update(circadianConsistency.baselineDays)
+
+        // Log only hash for debugging
         SecureLogger.debugEvent("Computing config hash (version: $CONFIG_SCHEMA_VERSION)")
-        
-        val hash = MessageDigest.getInstance("SHA-256").digest(paramsString.toByteArray(Charsets.UTF_8))
+
+        val hash = digest.digest()
         return hash.take(4).foldIndexed(0) { i, acc, byte ->
             acc or ((byte.toInt() and 0xFF) shl (i * 8))
         }

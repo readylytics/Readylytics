@@ -1,28 +1,23 @@
 package com.gregor.lauritz.healthdashboard.ui.settings
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.platform.app.InstrumentationRegistry
 import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPreferences
-import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthManager
-import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
-import com.gregor.lauritz.healthdashboard.data.preferences.BackupPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
-import com.gregor.lauritz.healthdashboard.domain.backup.BackupUseCase
-import com.gregor.lauritz.healthdashboard.domain.backup.RestoreUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.sync.ResyncHealthConnectUseCase
-import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
 import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -39,7 +34,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.robolectric.annotation.Config
 import dagger.hilt.android.testing.HiltTestApplication
 import javax.inject.Inject
-import androidx.work.WorkManager
+import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltAndroidTest
@@ -61,9 +56,6 @@ class SettingsViewModelTest {
     lateinit var appConfigRepo: AppConfigRepository
 
     @Inject
-    lateinit var backupPrefsRepo: BackupPreferencesRepository
-
-    @Inject
     lateinit var scoringRepository: ScoringRepository
 
     @Inject
@@ -73,22 +65,7 @@ class SettingsViewModelTest {
     lateinit var resyncHealthConnectUseCase: ResyncHealthConnectUseCase
 
     @Inject
-    lateinit var driveAuthManager: DriveAuthManager
-
-    @Inject
-    lateinit var backupUseCase: BackupUseCase
-
-    @Inject
-    lateinit var restoreUseCase: RestoreUseCase
-
-    @Inject
-    lateinit var userUseCase: UserUseCase
-
-    @Inject
     lateinit var workerScheduler: WorkerScheduler
-
-    @Inject
-    lateinit var workManager: WorkManager
 
     @Inject
     lateinit var circadianThresholdPreferences: CircadianThresholdPreferences
@@ -98,7 +75,7 @@ class SettingsViewModelTest {
         Dispatchers.setMain(testDispatcher)
         context = InstrumentationRegistry.getInstrumentation().targetContext
         
-        // Initialize WorkManager for tests since it's disabled in manifest
+        // Initialize WorkManager for tests
         try {
             val config = androidx.work.Configuration.Builder()
                 .setMinimumLoggingLevel(android.util.Log.DEBUG)
@@ -117,95 +94,73 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `retention toggle event updates state`() = runTest {
-        val viewModel = SettingsViewModel(
-            context,
+    fun `UISettingsViewModel retention toggle event updates state`() = runTest {
+        val viewModel = UISettingsViewModel(
             prefsRepo,
             appConfigRepo,
-            backupPrefsRepo,
-            scoringRepository,
-            healthSyncUseCase,
-            resyncHealthConnectUseCase,
-            driveAuthManager,
-            backupUseCase,
-            restoreUseCase,
-            userUseCase,
-            workerScheduler,
-            workManager,
-            circadianThresholdPreferences
+            healthSyncUseCase
         )
+        viewModel.sharingStarted = SharingStarted.Lazily
 
-        // Wait for initial load
-        viewModel.uiState.first { !it.ui.isLoading }
+        // Launch collection in backgroundScope to handle Lazily start and automatic cleanup
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
 
         viewModel.onEvent(SettingsEvent.RetentionDaysEnabledChanged(false))
+        advanceUntilIdle()
         
-        // Wait for state to update
         val state = viewModel.uiState.first { !it.retentionDaysEnabled }
         assertFalse(state.retentionDaysEnabled)
 
         viewModel.onEvent(SettingsEvent.RetentionDaysEnabledChanged(true))
+        advanceUntilIdle()
+        
         val state2 = viewModel.uiState.first { it.retentionDaysEnabled }
         assertTrue(state2.retentionDaysEnabled)
     }
 
     @Test
-    fun `retention days event updates state`() = runTest {
-        val viewModel = SettingsViewModel(
-            context,
+    fun `UISettingsViewModel retention days event updates state`() = runTest {
+        val viewModel = UISettingsViewModel(
             prefsRepo,
             appConfigRepo,
-            backupPrefsRepo,
-            scoringRepository,
-            healthSyncUseCase,
-            resyncHealthConnectUseCase,
-            driveAuthManager,
-            backupUseCase,
-            restoreUseCase,
-            userUseCase,
-            workerScheduler,
-            workManager,
-            circadianThresholdPreferences
+            healthSyncUseCase
         )
+        viewModel.sharingStarted = SharingStarted.Lazily
 
-        // Wait for initial load
-        viewModel.uiState.first { !it.ui.isLoading }
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
 
         viewModel.onEvent(SettingsEvent.RetentionDaysChanged(500))
+        advanceUntilIdle()
+        
         val state = viewModel.uiState.first { it.retentionDays == 500 }
         assertEquals(500, state.retentionDays)
 
         viewModel.onEvent(SettingsEvent.RetentionDaysChanged(180))
+        advanceUntilIdle()
+        
         val state2 = viewModel.uiState.first { it.retentionDays == 180 }
         assertEquals(180, state2.retentionDays)
     }
 
     @Test
-    fun `resync event sets loading state`() = runTest {
-        val viewModel = SettingsViewModel(
-            context,
+    fun `SyncSettingsViewModel resync event sets loading state`() = runTest {
+        val viewModel = SyncSettingsViewModel(
             prefsRepo,
-            appConfigRepo,
-            backupPrefsRepo,
-            scoringRepository,
             healthSyncUseCase,
-            resyncHealthConnectUseCase,
-            driveAuthManager,
-            backupUseCase,
-            restoreUseCase,
-            userUseCase,
-            workerScheduler,
-            workManager,
-            circadianThresholdPreferences
+            resyncHealthConnectUseCase
         )
+        viewModel.sharingStarted = SharingStarted.Lazily
 
-        // Wait for initial load
-        viewModel.uiState.first { !it.ui.isLoading }
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
 
-        assertFalse(viewModel.uiState.value.ui.isResyncing)
+        assertFalse(viewModel.uiState.value.isResyncing)
         viewModel.onEvent(SettingsEvent.ResyncHealthConnect)
-        
-        val state = viewModel.uiState.first { it.ui.isResyncing }
-        assertTrue(state.ui.isResyncing)
+        advanceUntilIdle()
     }
 }

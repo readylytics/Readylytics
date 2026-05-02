@@ -115,15 +115,45 @@ fun sectionMatches(section: SettingsSectionMetadata, query: String): Boolean {
 
 @Composable
 fun SettingsRoute(
-    viewModel: SettingsViewModel = hiltViewModel(),
+    thresholdViewModel: ThresholdSettingsViewModel = hiltViewModel(),
+    sleepViewModel: SleepSettingsViewModel = hiltViewModel(),
+    physiologyViewModel: PhysiologySettingsViewModel = hiltViewModel(),
+    heartRateViewModel: HeartRateZonesViewModel = hiltViewModel(),
+    cloudViewModel: CloudBackupViewModel = hiltViewModel(),
+    syncViewModel: SyncSettingsViewModel = hiltViewModel(),
+    uiViewModel: UISettingsViewModel = hiltViewModel(),
     onNavigateToAbout: () -> Unit = {},
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val thresholdState by thresholdViewModel.consolidatedState.collectAsStateWithLifecycle()
+    val sleepState by sleepViewModel.uiState.collectAsStateWithLifecycle()
+    val physiologyState by physiologyViewModel.uiState.collectAsStateWithLifecycle()
+    val heartRateState by heartRateViewModel.uiState.collectAsStateWithLifecycle()
+    val cloudState by cloudViewModel.uiState.collectAsStateWithLifecycle()
+    val syncState by syncViewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by uiViewModel.uiState.collectAsStateWithLifecycle()
 
-    SettingsScreen(uiState = uiState, onEvent = viewModel::onEvent, viewModel = viewModel, onNavigateToAbout = onNavigateToAbout)
+    val context = LocalContext.current
 
-    // Loading dialog during resync - appears on top of everything including tab bar
-    if (uiState.ui.isResyncing) {
+    SettingsScreen(
+        thresholdState = thresholdState,
+        sleepState = sleepState,
+        physiologyState = physiologyState,
+        heartRateState = heartRateState,
+        cloudState = cloudState,
+        syncState = syncState,
+        uiState = uiState,
+        onThresholdEvent = thresholdViewModel::onEvent,
+        onSleepEvent = sleepViewModel::onEvent,
+        onPhysiologyEvent = physiologyViewModel::onEvent,
+        onHeartRateEvent = heartRateViewModel::onEvent,
+        onCloudEvent = { cloudViewModel.onEvent(it, context) },
+        onSyncEvent = syncViewModel::onEvent,
+        onUIEvent = uiViewModel::onEvent,
+        onNavigateToAbout = onNavigateToAbout
+    )
+
+    // Loading dialog during resync
+    if (syncState.isResyncing) {
         Dialog(
             onDismissRequest = {},
             properties = DialogProperties(
@@ -151,22 +181,26 @@ fun SettingsRoute(
     }
 }
 
-// Settings grouped into 4 collapsible sections:
-// 1. Cloud & Data: Cloud Backup, Data Management, Health Connect Sync
-// 2. Baselines & Thresholds: Daily Step Goal, Sleep, Heart Rate Zones, Thresholds
-// 3. Display: Appearance
-// 4. Advanced: Advanced (baseline overrides, PAI scaling, resting HR timing)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    uiState: SettingsUiState,
-    onEvent: (SettingsEvent) -> Unit,
-    viewModel: SettingsViewModel,
+    thresholdState: ThresholdSettingsState,
+    sleepState: SleepSettingsState,
+    physiologyState: PhysiologySettingsState,
+    heartRateState: HeartRateZonesState,
+    cloudState: CloudBackupState,
+    syncState: SyncSettingsState,
+    uiState: UIState,
+    onThresholdEvent: (SettingsEvent) -> Unit,
+    onSleepEvent: (SettingsEvent) -> Unit,
+    onPhysiologyEvent: (SettingsEvent) -> Unit,
+    onHeartRateEvent: (SettingsEvent) -> Unit,
+    onCloudEvent: (SettingsEvent) -> Unit,
+    onSyncEvent: (SettingsEvent) -> Unit,
+    onUIEvent: (SettingsEvent) -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToAbout: () -> Unit = {},
 ) {
-    val context = LocalContext.current
     var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
@@ -177,18 +211,18 @@ fun SettingsScreen(
         searchQuery.isNotBlank() && matchingSections.any { it.id == sectionId }
     }
 
-    if (uiState.cloud.showRestoreConfirmDialog) {
+    if (cloudState.showRestoreConfirmDialog) {
         AlertDialog(
-            onDismissRequest = { onEvent(SettingsEvent.RestoreDismissed) },
+            onDismissRequest = { onCloudEvent(SettingsEvent.RestoreDismissed) },
             title = { Text("Restore from Drive?") },
             text = {
                 Text("This will replace all local health data and restart the app. This cannot be undone.")
             },
             confirmButton = {
-                Button(onClick = { onEvent(SettingsEvent.RestoreConfirmed) }) { Text("Restore") }
+                Button(onClick = { onCloudEvent(SettingsEvent.RestoreConfirmed) }) { Text("Restore") }
             },
             dismissButton = {
-                TextButton(onClick = { onEvent(SettingsEvent.RestoreDismissed) }) { Text("Cancel") }
+                TextButton(onClick = { onCloudEvent(SettingsEvent.RestoreDismissed) }) { Text("Cancel") }
             },
         )
     }
@@ -229,22 +263,20 @@ fun SettingsScreen(
                     M3CollapsibleSection(
                         header = "Cloud & Data",
                         expanded = !uiState.collapseCloudData || shouldExpandSection("cloud_data_sync"),
-                        onExpandedChange = { onEvent(SettingsEvent.CollapseCloudDataChanged(!it)) }
+                        onExpandedChange = { onUIEvent(SettingsEvent.SectionCollapseChanged(SettingsSection.CLOUD_DATA, !it)) }
                     ) {
                         Column {
                             SectionHeader("Cloud Backup")
                             CloudBackupSection(
-                                uiState = uiState.cloud,
-                                onEvent = onEvent,
-                                viewModel = viewModel,
-                                context = context,
+                                uiState = cloudState,
+                                onEvent = onCloudEvent,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Data Management")
-                            DataManagementSection(uiState = uiState, onEvent = onEvent)
+                            DataManagementSection(uiState = uiState, onEvent = onUIEvent, onSyncEvent = onSyncEvent)
                             Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Health Connect")
-                            SyncSettingsSection(uiState = uiState, onEvent = onEvent)
+                            SyncSettingsSection(uiState = syncState, onEvent = onSyncEvent)
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
@@ -255,44 +287,45 @@ fun SettingsScreen(
                     M3CollapsibleSection(
                         header = "Baselines & Thresholds",
                         expanded = !uiState.collapseBaselinesThresholds || shouldExpandSection("baselines_thresholds"),
-                        onExpandedChange = { onEvent(SettingsEvent.CollapseBaselinesThresholdsChanged(!it)) }
+                        onExpandedChange = { onUIEvent(SettingsEvent.SectionCollapseChanged(SettingsSection.BASELINES_THRESHOLDS, !it)) }
                     ) {
                         Column {
                             SectionHeader("Daily Step Goal")
-                            ActivitySettingsSection(stepGoal = uiState.stepGoal, onEvent = onEvent)
+                            ActivitySettingsSection(stepGoal = uiState.stepGoal, onEvent = onUIEvent)
                             Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Sleep")
-                            SleepSettingsSection(uiState = uiState.sleep, onEvent = onEvent)
+                            SleepSettingsSection(uiState = sleepState, onEvent = onSleepEvent)
                             Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Heart Rate Zones")
                             HeartRateZoneSection(
-                                uiState = uiState.heartRate,
-                                physiologyState = uiState.physiology,
-                                onEvent = onEvent,
+                                uiState = heartRateState,
+                                physiologyState = physiologyState,
+                                onEvent = onHeartRateEvent,
+                                onPhysiologyEvent = onPhysiologyEvent,
                                 expandState = expandState,
                                 onExpandStateChange = { expandState = it }
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             PhysiologyProfilePicker(
-                                selectedProfile = uiState.physiology.physiologyProfile,
-                                onProfileSelected = { onEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
+                                selectedProfile = physiologyState.physiologyProfile,
+                                onProfileSelected = { onPhysiologyEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             SectionHeader("Circadian Consistency")
                             CircadianThresholdSettingsSection(
-                                profile = uiState.physiology.physiologyProfile,
-                                currentOverride = uiState.threshold.circadianThresholdOverride,
-                                isShiftWorkerMode = uiState.physiology.physiologyProfile == PhysiologyProfile.SHIFT_WORKER,
-                                onOverrideChanged = { onEvent(SettingsEvent.CircadianThresholdOverrideChanged(it)) },
-                                isLoading = uiState.threshold.isUpdatingThreshold,
-                                error = uiState.threshold.thresholdError,
-                                onErrorDismissed = { onEvent(SettingsEvent.DismissThresholdError) },
+                                profile = physiologyState.physiologyProfile,
+                                currentOverride = thresholdState.circadianThresholdOverride,
+                                isShiftWorkerMode = physiologyState.physiologyProfile == PhysiologyProfile.SHIFT_WORKER,
+                                onOverrideChanged = { onThresholdEvent(SettingsEvent.CircadianThresholdOverrideChanged(it)) },
+                                isLoading = thresholdState.isUpdatingThreshold,
+                                error = thresholdState.thresholdError,
+                                onErrorDismissed = { onThresholdEvent(SettingsEvent.DismissThresholdError) },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Thresholds")
-                            ThresholdSettingsSection(uiState = uiState.threshold, onEvent = onEvent)
+                            ThresholdSettingsSection(uiState = thresholdState, onEvent = onThresholdEvent)
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
@@ -303,15 +336,15 @@ fun SettingsScreen(
                     M3CollapsibleSection(
                         header = "Display",
                         expanded = !uiState.collapseDisplay || shouldExpandSection("display"),
-                        onExpandedChange = { onEvent(SettingsEvent.CollapseDisplayChanged(!it)) }
+                        onExpandedChange = { onUIEvent(SettingsEvent.SectionCollapseChanged(SettingsSection.DISPLAY, !it)) }
                     ) {
                         Column {
-                            AppThemeItem(uiState = uiState.ui, onEvent = onEvent)
+                            AppThemeItem(uiState = uiState, onEvent = onUIEvent)
                             SettingsToggleItem(
                                 label = "Dynamic Color",
                                 description = "Use colors derived from your wallpaper (Android 12+)",
-                                checked = uiState.ui.dynamicColorEnabled,
-                                onCheckedChange = { onEvent(SettingsEvent.DynamicColorEnabledChanged(it)) }
+                                checked = uiState.dynamicColorEnabled,
+                                onCheckedChange = { onUIEvent(SettingsEvent.DynamicColorEnabledChanged(it)) }
                             )
                         }
                     }
@@ -323,12 +356,13 @@ fun SettingsScreen(
                     M3CollapsibleSection(
                         header = "Advanced",
                         expanded = !uiState.collapseAdvanced || shouldExpandSection("advanced"),
-                        onExpandedChange = { onEvent(SettingsEvent.CollapseAdvancedChanged(!it)) }
+                        onExpandedChange = { onUIEvent(SettingsEvent.SectionCollapseChanged(SettingsSection.ADVANCED, !it)) }
                     ) {
                         AdvancedSettingsSection(
-                            sleepState = uiState.sleep,
+                            sleepState = sleepState,
                             paiScalingFactor = uiState.paiScalingFactor,
-                            onEvent = onEvent
+                            onEvent = onSleepEvent,
+                            onUIEvent = onUIEvent
                         )
                     }
                 }
@@ -355,7 +389,7 @@ fun SettingsScreen(
 
 @Composable
 private fun SyncSettingsSection(
-    uiState: SettingsUiState,
+    uiState: SyncSettingsState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
     Column {
@@ -368,8 +402,9 @@ private fun SyncSettingsSection(
 
 @Composable
 private fun DataManagementSection(
-    uiState: SettingsUiState,
+    uiState: UIState,
     onEvent: (SettingsEvent) -> Unit,
+    onSyncEvent: (SettingsEvent) -> Unit,
 ) {
     var retentionDays by remember(uiState.retentionDays) {
         mutableFloatStateOf(uiState.retentionDays.toFloat())
@@ -419,11 +454,11 @@ private fun DataManagementSection(
 
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Button(
-                onClick = { onEvent(SettingsEvent.ResyncHealthConnect) },
-                enabled = !uiState.ui.isResyncing,
+                onClick = { onSyncEvent(SettingsEvent.ResyncHealthConnect) },
+                enabled = !uiState.isResyncing,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                if (uiState.ui.isResyncing) {
+                if (uiState.isResyncing) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         color = MaterialTheme.colorScheme.onPrimary
@@ -601,6 +636,7 @@ private fun HeartRateZoneSection(
     uiState: HeartRateZonesState,
     physiologyState: PhysiologySettingsState,
     onEvent: (SettingsEvent) -> Unit,
+    onPhysiologyEvent: (SettingsEvent) -> Unit,
     expandState: SettingsExpandState,
     onExpandStateChange: (SettingsExpandState) -> Unit,
 ) {
@@ -652,7 +688,7 @@ private fun HeartRateZoneSection(
                             val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
                             val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
                             if (d in 1..31 && m in 1..12 && y in 1900..9999) {
-                                onEvent(SettingsEvent.BirthdayChanged(d, m, y))
+                                onPhysiologyEvent(SettingsEvent.BirthdayChanged(d, m, y))
                             }
                         },
                         label = { Text("Day") },
@@ -669,7 +705,7 @@ private fun HeartRateZoneSection(
                             val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
                             val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
                             if (d in 1..31 && m in 1..12 && y in 1900..9999) {
-                                onEvent(SettingsEvent.BirthdayChanged(d, m, y))
+                                onPhysiologyEvent(SettingsEvent.BirthdayChanged(d, m, y))
                             }
                         },
                         label = { Text("Month") },
@@ -686,7 +722,7 @@ private fun HeartRateZoneSection(
                             val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
                             val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
                             if (d in 1..31 && m in 1..12 && y in 1900..9999) {
-                                onEvent(SettingsEvent.BirthdayChanged(d, m, y))
+                                onPhysiologyEvent(SettingsEvent.BirthdayChanged(d, m, y))
                             }
                         },
                         label = { Text("Year") },
@@ -706,7 +742,7 @@ private fun HeartRateZoneSection(
                     selectedGender = physiologyState.gender,
                     expanded = expandState.genderExpanded,
                     onExpandedChange = { onExpandStateChange(expandState.copy(genderExpanded = it)) },
-                    onGenderSelected = { onEvent(SettingsEvent.GenderChanged(it)) }
+                    onGenderSelected = { onPhysiologyEvent(SettingsEvent.GenderChanged(it)) }
                 )
             }
         }
@@ -785,6 +821,7 @@ private fun AdvancedSettingsSection(
     sleepState: SleepSettingsState,
     paiScalingFactor: Float,
     onEvent: (SettingsEvent) -> Unit,
+    onUIEvent: (SettingsEvent) -> Unit,
 ) {
     var hrvText by remember(sleepState.hrvBaselineOverride) {
         mutableStateOf(sleepState.hrvBaselineOverride?.toInt()?.toString() ?: "")
@@ -915,7 +952,7 @@ private fun AdvancedSettingsSection(
             label = "PAI Scaling Factor",
             value = paiScaling,
             onValueChange = { paiScaling = it },
-            onValueChangeFinished = { onEvent(SettingsEvent.PaiScalingFactorChanged(paiScaling)) },
+            onValueChangeFinished = { onUIEvent(SettingsEvent.PaiScalingFactorChanged(paiScaling)) },
             valueRange = 0.1f..0.3f,
             steps = 20, // (0.3 - 0.1) / 0.01 = 20
             displayValue = "%.2f".format(paiScaling),
@@ -1166,7 +1203,7 @@ private fun AppThemeItem(
 
 @Composable
 private fun SyncPreferenceItem(
-    uiState: SettingsUiState,
+    uiState: SyncSettingsState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
     DropdownPreferenceItem(
@@ -1181,7 +1218,7 @@ private fun SyncPreferenceItem(
 
 @Composable
 private fun SyncIntervalItem(
-    uiState: SettingsUiState,
+    uiState: SyncSettingsState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
     DropdownPreferenceItem(
@@ -1273,10 +1310,8 @@ private val BackupSchedule.displayName: String
 private fun CloudBackupSection(
     uiState: CloudBackupState,
     onEvent: (SettingsEvent) -> Unit,
-    viewModel: SettingsViewModel,
-    context: android.content.Context,
 ) {
-    val signedIn = uiState.driveEmail != null
+    val signedIn = uiState.driveAccountEmail != null
 
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
         // Account row
@@ -1287,7 +1322,7 @@ private fun CloudBackupSection(
             Column(modifier = Modifier.weight(1f)) {
                 Text("Google Account", style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    text = uiState.driveEmail ?: "Not connected",
+                    text = uiState.driveAccountEmail ?: "Not connected",
                     style = MaterialTheme.typography.bodySmall,
                     color =
                         if (signedIn) {
@@ -1298,11 +1333,11 @@ private fun CloudBackupSection(
                 )
             }
             if (signedIn) {
-                TextButton(onClick = { viewModel.signOut(context) }) {
+                TextButton(onClick = { onEvent(SettingsEvent.DriveSignOut) }) {
                     Text("Sign Out")
                 }
             } else {
-                TextButton(onClick = { viewModel.signIn(context) }) {
+                TextButton(onClick = { onEvent(SettingsEvent.DriveSignIn) }) {
                     Text("Sign In")
                 }
             }
@@ -1398,40 +1433,4 @@ private fun BackupScheduleItem(
         optionLabel = { it.displayName },
         modifier = Modifier.fillMaxWidth(),
     )
-}
-
-@Composable
-private fun M3CollapsibleSection(
-    header: String,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
-    content: @Composable () -> Unit,
-) {
-    Column {
-        TextButton(
-            onClick = { onExpandedChange(!expanded) },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = header,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Icon(
-                    imageVector = if (expanded) Icons.Filled.Clear else Icons.Filled.Search, // Placeholder icons
-                    contentDescription = if (expanded) "Collapse" else "Expand"
-                )
-            }
-        }
-        AnimatedVisibility(visible = expanded) {
-            content()
-        }
-    }
 }

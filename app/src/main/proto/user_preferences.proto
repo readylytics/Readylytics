@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+package com.gregor.lauritz.healthdashboard.data.preferences;
+
+option java_package = "com.gregor.lauritz.healthdashboard.data.preferences";
+option java_multiple_files = true;
+option java_outer_classname = "UserPreferencesProtoFile";
+
+enum SyncPreferenceProto {
+    SYNC_NEVER = 0;
+    SYNC_ALWAYS = 1;
+    SYNC_BY_TIME = 2;
+}
+
+enum AppThemeProto {
+    THEME_SYSTEM = 0;
+    THEME_LIGHT = 1;
+    THEME_DARK = 2;
+}
+
+enum BackupScheduleProto {
+    BACKUP_MANUAL = 0;
+    BACKUP_DAILY = 1;
+    BACKUP_WEEKLY = 2;
+}
+
+enum PhysiologyProfileProto {
+    PROFILE_GENERAL = 0;
+    PROFILE_ATHLETE = 1;
+    PROFILE_ACTIVE = 2;
+    PROFILE_SEDENTARY = 3;
+    PROFILE_SHIFT_WORKER = 4;
+}
+
+message UserPreferencesProto {
+    float goal_sleep_hours = 1;
+    
+    oneof hrv_baseline_override_oneof {
+        float hrv_baseline_override = 2;
+    }
+    oneof rhr_baseline_override_oneof {
+        float rhr_baseline_override = 3;
+    }
+    
+    SyncPreferenceProto sync_preference = 4;
+    
+    int32 sync_interval_hours = 5;
+    int64 last_sync_timestamp = 6;
+    int32 max_heart_rate = 7;
+    bool auto_calculate_max_hr = 8;
+    bool manual_zone_editing = 9;
+    
+    float zone_1_min_percent = 10;
+    float zone_1_max_percent = 11;
+    float zone_2_max_percent = 12;
+    float zone_3_max_percent = 13;
+    float zone_4_max_percent = 14;
+    
+    int32 zone_1_min_bpm = 15;
+    int32 zone_1_max_bpm = 16;
+    int32 zone_2_max_bpm = 17;
+    int32 zone_3_max_bpm = 18;
+    int32 zone_4_max_bpm = 19;
+    
+    int32 age = 20;
+    int32 birth_day = 21;
+    int32 birth_month = 22;
+    int32 birth_year = 23;
+    
+    oneof gender_oneof {
+        string gender = 24;
+    }
+    
+    float hrv_optimal_threshold = 25;
+    float hrv_warning_threshold = 26;
+    float rhr_optimal_threshold = 27;
+    float rhr_warning_threshold = 28;
+    
+    int32 resting_hr_before_minutes = 29;
+    int32 resting_hr_after_minutes = 30;
+    
+    AppThemeProto app_theme = 31;
+    bool dynamic_color_enabled = 51;
+    
+    oneof drive_account_email_oneof {
+        string drive_account_email = 32;
+    }
+    
+    BackupScheduleProto backup_schedule = 33;
+    
+    int64 last_backup_timestamp = 34;
+    int32 consistency_threshold_minutes = 35;
+    int32 consistency_evaluation_days = 36;
+    int32 consistency_baseline_days = 37;
+    
+    float pai_scaling_factor = 38;
+    int32 step_goal = 39;
+    
+    bool retention_days_enabled = 40;
+    int32 retention_days = 41;
+    
+    bool collapse_cloud_data = 42;
+    bool collapse_health_connect = 43;
+    bool collapse_baselines_thresholds = 44;
+    bool collapse_display = 45;
+    bool collapse_advanced = 46;
+    
+    bool about_dismissed = 47;
+    
+    PhysiologyProfileProto physiology_profile = 48;
+    
+    int64 install_date = 49;
+    
+    oneof circadian_threshold_override_oneof {
+        string circadian_threshold_override = 50;
+    }
+}
