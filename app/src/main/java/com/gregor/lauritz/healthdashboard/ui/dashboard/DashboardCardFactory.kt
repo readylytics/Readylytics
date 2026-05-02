@@ -37,10 +37,8 @@ fun buildCardDataMap(
         )
     }
 
-    // HRV card is dynamically found from cardData based on title matching
-    // This approach handles cases where HRV data may not be available
     cardMap[CardId.HRV] = {
-        val hrvCard = uiState.cardData.find { it.title.contains("HRV", ignoreCase = true) }
+        val hrvCard = uiState.cardDataMap[CardId.HRV]
         if (hrvCard != null) {
             MetricCard(
                 title = hrvCard.title,
@@ -53,24 +51,22 @@ fun buildCardDataMap(
         }
     }
 
-    // RHR card is pre-computed in uiState, only render if data is available
     cardMap[CardId.RHR] = {
-        if (uiState.restingHrCard != null) {
-            val card = uiState.restingHrCard
+        val rhrCard = uiState.cardDataMap[CardId.RHR]
+        if (rhrCard != null) {
             MetricCard(
-                title = card.title,
-                value = card.value,
-                secondaryText = card.unit,
-                status = card.status,
-                onClick = onNavigateToRhr,
-                tooltip = card.tooltip,
+                title = rhrCard.title,
+                value = rhrCard.value,
+                secondaryText = rhrCard.unit,
+                status = rhrCard.status,
+                onClick = onNavigateToSleep,
+                tooltip = rhrCard.tooltip,
             )
         }
     }
 
-    // Load Score is dynamically found from cardData, similar to HRV card lookup
     cardMap[CardId.LOAD_SCORE] = {
-        val loadCard = uiState.cardData.find { it.title.contains("Load", ignoreCase = true) }
+        val loadCard = uiState.cardDataMap[CardId.LOAD_SCORE]
         if (loadCard != null) {
             MetricCard(
                 title = loadCard.title,
@@ -84,7 +80,7 @@ fun buildCardDataMap(
     }
 
     cardMap[CardId.STRAIN_RATIO] = {
-        val strainCard = uiState.cardData.find { it.title.contains("Strain", ignoreCase = true) }
+        val strainCard = uiState.cardDataMap[CardId.STRAIN_RATIO]
         if (strainCard != null) {
             MetricCard(
                 title = strainCard.title,
@@ -98,7 +94,7 @@ fun buildCardDataMap(
     }
 
     cardMap[CardId.SLEEP_DURATION] = {
-        val durationCard = uiState.cardData.find { it.title.contains("Duration", ignoreCase = true) }
+        val durationCard = uiState.cardDataMap[CardId.SLEEP_DURATION]
         if (durationCard != null) {
             MetricCard(
                 title = durationCard.title,
@@ -107,6 +103,20 @@ fun buildCardDataMap(
                 status = durationCard.status,
                 onClick = onNavigateToSleep,
                 tooltip = durationCard.tooltip,
+            )
+        }
+    }
+
+    cardMap[CardId.RESTING_HR] = {
+        if (uiState.restingHrCard != null) {
+            val card = uiState.restingHrCard
+            MetricCard(
+                title = card.title,
+                value = card.value,
+                secondaryText = card.unit,
+                status = card.status,
+                onClick = onNavigateToRhr,
+                tooltip = card.tooltip,
             )
         }
     }

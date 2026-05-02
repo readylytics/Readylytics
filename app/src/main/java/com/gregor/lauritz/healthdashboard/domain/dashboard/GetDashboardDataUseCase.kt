@@ -26,7 +26,7 @@ class GetDashboardDataUseCase @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     data class DashboardCards(
-        val mainCards: List<CardData>,
+        val cardDataMap: Map<CardId, CardData>,
         val restingHrCard: CardData?,
         val paiDailyBreakdown: List<Pair<String, Float>>,
     )
@@ -38,12 +38,12 @@ class GetDashboardDataUseCase @Inject constructor(
         lastSleepSession: SleepSessionEntity?,
         paiSummaries: List<DailySummary>,
     ): DashboardCards {
-        val mainCards = calculateCardData(summary, prefs, date, lastSleepSession)
+        val cardDataMap = calculateCardData(summary, prefs, date, lastSleepSession)
         val restingHrCard = summary?.let { restingHrCard(it, prefs) }
         val paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries)
 
         return DashboardCards(
-            mainCards = mainCards,
+            cardDataMap = cardDataMap,
             restingHrCard = restingHrCard,
             paiDailyBreakdown = paiDailyBreakdown,
         )
@@ -54,14 +54,14 @@ class GetDashboardDataUseCase @Inject constructor(
         prefs: UserPreferences,
         selectedDate: LocalDate,
         lastSleepSession: SleepSessionEntity?,
-    ): List<CardData> {
-        if (summary == null) return emptyList()
+    ): Map<CardId, CardData> {
+        if (summary == null) return emptyMap()
 
-        return listOf(
-            sleepCard(summary, prefs),
-            hrvCard(summary, prefs),
-            paiCard(summary),
-            sleepDurationCard(summary, prefs, lastSleepSession),
+        return mapOf(
+            CardId.RHR to sleepCard(summary, prefs),
+            CardId.HRV to hrvCard(summary, prefs),
+            CardId.PAI_DAILY to paiCard(summary),
+            CardId.SLEEP_DURATION to sleepDurationCard(summary, prefs, lastSleepSession),
         )
     }
 
