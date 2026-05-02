@@ -117,7 +117,8 @@ dependencies {
     implementation(libs.room.runtime)
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
-    implementation(libs.androidx.sqlite.bundled)
+    implementation(libs.sqlcipher.android)
+    implementation(libs.androidx.sqlite)
 
     // DataStore
     implementation(libs.androidx.datastore.preferences)

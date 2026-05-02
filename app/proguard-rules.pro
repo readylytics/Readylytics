@@ -36,6 +36,10 @@
 # Vico Charts
 -keep class com.patrykandpatrick.vico.** { *; }
 
+# SQLCipher
+-keep class net.zetetic.** { *; }
+-keep class net.zetetic.database.sqlcipher.** { *; }
+
 # Domain Scoring Components (Issue #3.2)
 # Keep these classes and their fields from obfuscation to ensure hash stability
 # CRITICAL: These are used for audit trail hashing and must not be renamed
