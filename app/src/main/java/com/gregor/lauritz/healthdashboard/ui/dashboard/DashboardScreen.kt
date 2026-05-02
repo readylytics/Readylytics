@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.scoring.toStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
@@ -285,13 +286,15 @@ fun DashboardScreen(
                     )
                 }
                 item(key = "bottom_cards") {
-                    if (uiState.restingHrCard != null || uiState.circadianConsistency != null) {
+                    val restingHrVisible = uiState.cardConfigurations.find { it.cardId == CardId.RESTING_HR }?.isVisible ?: false
+                    val circadianVisible = uiState.cardConfigurations.find { it.cardId == CardId.CIRCADIAN_CONSISTENCY }?.isVisible ?: false
+                    if ((uiState.restingHrCard != null && !restingHrVisible) || (uiState.circadianConsistency != null && !circadianVisible)) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             modifier = Modifier.padding(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            if (uiState.restingHrCard != null) {
+                            if (uiState.restingHrCard != null && !restingHrVisible) {
                                 val card = uiState.restingHrCard
                                 MetricCard(
                                     title = card.title,
@@ -306,7 +309,7 @@ fun DashboardScreen(
                                 Spacer(modifier = Modifier.weight(1f))
                             }
 
-                            if (uiState.circadianConsistency != null) {
+                            if (uiState.circadianConsistency != null && !circadianVisible) {
                                 CircadianConsistencyCard(
                                     result = uiState.circadianConsistency,
                                     onClick = onNavigateToSleep,

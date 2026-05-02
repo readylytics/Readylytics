@@ -48,18 +48,21 @@ fun ReorderableCardGrid(
     // Tracks which card position would be the drop target
     var targetIndex by remember { mutableStateOf<Int?>(null) }
 
-    // Filter to show only visible cards, sorted by their position
-    val visibleCards = cardConfigurations.filter { it.isVisible }.sortedBy { it.position }
+    // Filter to show only visible cards that have content, sorted by their position
+    val displayableCards = remember(cardConfigurations, cardDataMap) {
+        cardConfigurations
+            .filter { it.isVisible && cardDataMap.containsKey(it.cardId) }
+            .sortedBy { it.position }
+    }
 
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        visibleCards.forEachIndexed { index, card ->
+        displayableCards.forEachIndexed { index, card ->
             val isDragged = draggedIndex == index
             val isTarget = targetIndex == index && draggedIndex != null
-            // Only render cards that have content in the map
-            val cardContent = cardDataMap[card.cardId] ?: return@forEachIndexed
+            val cardContent = cardDataMap[card.cardId]!!
 
             ReorderableCardItem(
                 card = card,
@@ -78,7 +81,7 @@ fun ReorderableCardGrid(
                     // Only process reorder if card was dragged to a different position
                     // Both draggedIndex and targetIndex must be non-null and different
                     if (draggedIndex != null && targetIndex != null && targetIndex != draggedIndex) {
-                        val newCards = visibleCards.toMutableList()
+                        val newCards = displayableCards.toMutableList()
                         // Safe to use !! here because outer if guarantees non-null values
                         val draggedCard = newCards.removeAt(draggedIndex!!)
                         newCards.add(targetIndex!!, draggedCard)
@@ -105,7 +108,7 @@ fun ReorderableCardGrid(
                         val movementThreshold = cardHeight / 2
                         // Safe null-coalescing: targetIndex guaranteed non-null by guard clause at line 99
                         val currentTarget = targetIndex ?: return@onDrag
-                        val newTargetIndex = if (dragOffset.y > movementThreshold && currentTarget < visibleCards.size - 1) {
+                        val newTargetIndex = if (dragOffset.y > movementThreshold && currentTarget < displayableCards.size - 1) {
                             currentTarget + 1
                         } else if (dragOffset.y < -movementThreshold && currentTarget > 0) {
                             currentTarget - 1
@@ -167,8 +170,14 @@ private fun ReorderableCardItem(
                 if (isEditing) {
                     Modifier.pointerInput(Unit) {
                         detectDragGestures(
-                            onDragStart = { onDragStart() },
-                            onDragEnd = { onDragEnd() },
+                            onDragStart = {
+                                currentDragOffset = IntOffset.Zero
+                                onDragStart()
+                            },
+                            onDragEnd = {
+                                onDragEnd()
+                                currentDragOffset = IntOffset.Zero
+                            },
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 currentDragOffset += IntOffset(
