@@ -120,5 +120,5 @@ fun buildCardDataMap(
         }
     }
 
-    return cardMap.filterValues { it != null }
+    return cardMap
 }
