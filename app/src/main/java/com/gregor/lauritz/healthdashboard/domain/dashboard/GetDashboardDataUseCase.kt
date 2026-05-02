@@ -24,6 +24,7 @@ import javax.inject.Singleton
 @Singleton
 class GetDashboardDataUseCase @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase,
 ) {
     data class DashboardCards(
         val cardDataMap: Map<CardId, CardData>,
@@ -57,12 +58,22 @@ class GetDashboardDataUseCase @Inject constructor(
     ): Map<CardId, CardData> {
         if (summary == null) return emptyMap()
 
-        return mapOf(
+        val mapBuilder = mutableMapOf<CardId, CardData>(
             CardId.RHR to sleepCard(summary, prefs),
             CardId.HRV to hrvCard(summary, prefs),
             CardId.PAI_DAILY to paiCard(summary),
             CardId.SLEEP_DURATION to sleepDurationCard(summary, prefs, lastSleepSession),
         )
+
+        val metrics = getWorkoutMetricsUseCase(summary)
+        if (metrics.loadScoreCard != null) {
+            mapBuilder[CardId.LOAD_SCORE] = metrics.loadScoreCard
+        }
+        if (metrics.strainRatioCard != null) {
+            mapBuilder[CardId.STRAIN_RATIO] = metrics.strainRatioCard
+        }
+
+        return mapBuilder.toMap()
     }
 
     private fun paiCard(summary: DailySummary): CardData {

@@ -1,10 +1,13 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
+import com.gregor.lauritz.healthdashboard.ui.components.StepsCard
 
 // Build a map of CardId to composable card content for the Dashboard screen
 // This factory method creates all available dashboard cards and maps them by ID
@@ -14,6 +17,7 @@ fun buildCardDataMap(
     onNavigateToSleep: () -> Unit,
     onNavigateToWorkouts: () -> Unit,
     onNavigateToRhr: () -> Unit,
+    onNavigateToSteps: () -> Unit = {},
 ): Map<CardId, @Composable () -> Unit> {
     val cardMap = mutableMapOf<CardId, @Composable () -> Unit>()
 
@@ -34,6 +38,15 @@ fun buildCardDataMap(
             label = "Readiness",
             onClick = onNavigateToWorkouts,
             tooltipDescription = "Preparation for stress based on recent load & recovery.\n\n• 85–100: Peak\n• 30–69: Moderate\n• < 30: Rest",
+        )
+    }
+
+    cardMap[CardId.STEPS] = {
+        StepsCard(
+            stepCount = uiState.stepCount,
+            stepGoal = uiState.stepGoal,
+            onClick = onNavigateToSteps,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 

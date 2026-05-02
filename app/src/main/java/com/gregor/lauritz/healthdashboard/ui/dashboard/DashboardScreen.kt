@@ -62,16 +62,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private const val SLEEP_TOOLTIP = "Total quality of rest based on duration and cycles.\n\n" +
-    "• 80–100: Optimal\n" +
-    "• 60–79: Fair\n" +
-    "• < 60: Poor"
-
-private const val READINESS_TOOLTIP = "Preparation for stress based on recent load & recovery.\n\n" +
-    "• 85–100: Peak\n" +
-    "• 30–69: Moderate\n" +
-    "• < 30: Rest"
-
 @Composable
 fun DashboardRoute(
     onNavigateToSleep: () -> Unit,
@@ -192,42 +182,6 @@ fun DashboardScreen(
                 }
             }
 
-            item(key = "hero_scores") {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    M3ScoreDial(
-                        score = summary?.sleepScore,
-                        label = "Sleep Score",
-                        onClick = onNavigateToSleep,
-                        tooltipDescription = SLEEP_TOOLTIP,
-                    )
-                    M3ScoreDial(
-                        score = summary?.readinessScore,
-                        label = "Readiness",
-                        onClick = onNavigateToWorkouts,
-                        tooltipDescription = READINESS_TOOLTIP,
-                    )
-                }
-            }
-
-            item(key = "spacer_hero") { Spacer(modifier = Modifier.height(8.dp)) }
-
-            item(key = "steps_card") {
-                DashboardStepsCard(
-                    stepCount = uiState.stepCount,
-                    stepGoal = uiState.stepGoal,
-                    onClick = onNavigateToSteps,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
-
-            item(key = "spacer_steps") { Spacer(modifier = Modifier.height(8.dp)) }
 
             item(key = "section_label") {
                 val sectionLabel =
@@ -276,6 +230,7 @@ fun DashboardScreen(
                             onNavigateToSleep = onNavigateToSleep,
                             onNavigateToWorkouts = onNavigateToWorkouts,
                             onNavigateToRhr = onNavigateToRhr,
+                            onNavigateToSteps = onNavigateToSteps,
                         ),
                         isEditing = uiState.isManagingCards,
                         onCardRemove = { cardId ->
@@ -328,48 +283,6 @@ fun DashboardScreen(
             item(key = "status_legend") {
                 StatusLegend()
             }
-        }
-    }
-}
-
-
-@Composable
-private fun DashboardStepsCard(
-    stepCount: Int?,
-    stepGoal: Int,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth().semantics { role = Role.Button },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "Daily Steps",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = "Goal: ${java.text.NumberFormat.getNumberInstance().format(stepGoal)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            StepsBar(
-                stepCount = stepCount,
-                stepGoal = stepGoal,
-            )
         }
     }
 }
