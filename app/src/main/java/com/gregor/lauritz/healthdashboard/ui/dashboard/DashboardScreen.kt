@@ -241,38 +241,20 @@ fun DashboardScreen(
                     )
                 }
                 item(key = "bottom_cards") {
-                    val restingHrVisible = uiState.cardConfigurations.find { it.cardId == CardId.RESTING_HR }?.isVisible ?: false
                     val circadianVisible = uiState.cardConfigurations.find { it.cardId == CardId.CIRCADIAN_CONSISTENCY }?.isVisible ?: false
-                    if ((uiState.restingHrCard != null && !restingHrVisible) || (uiState.circadianConsistency != null && !circadianVisible)) {
+                    if (uiState.circadianConsistency != null && !circadianVisible) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            if (uiState.restingHrCard != null && !restingHrVisible) {
-                                val card = uiState.restingHrCard
-                                MetricCard(
-                                    title = card.title,
-                                    value = card.value,
-                                    secondaryText = card.unit,
-                                    status = card.status,
-                                    onClick = onNavigateToRhr,
-                                    tooltip = card.tooltip,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            } else {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-
-                            if (uiState.circadianConsistency != null && !circadianVisible) {
-                                CircadianConsistencyCard(
-                                    result = uiState.circadianConsistency,
-                                    onClick = onNavigateToSleep,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            } else {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
+                            CircadianConsistencyCard(
+                                result = uiState.circadianConsistency,
+                                onClick = onNavigateToSleep,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         }
                     }
                 }

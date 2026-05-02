@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.onSizeChanged
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -47,6 +48,8 @@ fun ReorderableCardGrid(
     var dragOffset by remember { mutableStateOf(IntOffset.Zero) }
     // Tracks which card position would be the drop target
     var targetIndex by remember { mutableStateOf<Int?>(null) }
+    // Store measured heights of cards for accurate drag-and-drop calculations
+    var cardHeights by remember { mutableStateOf<Map<CardId, Int>>(emptyMap()) }
 
     // Filter to show only visible cards that have content, sorted by their position
     val displayableCards = remember(cardConfigurations, cardDataMap) {
@@ -101,13 +104,13 @@ fun ReorderableCardGrid(
                     if (isEditing && draggedIndex != null && targetIndex != null) {
                         dragOffset += IntOffset(x.roundToInt(), y.roundToInt())
 
-                        // Calculate target index based on drag offset to enable intuitive reordering
-                        // Estimated card height including vertical spacing (8.dp + card content)
-                        val cardHeight = 120
+                        val currentTarget = targetIndex ?: return@onDrag
+                        val draggedCard = displayableCards.getOrNull(currentTarget)
+                        // Use measured card height, or default to 130 (including spacing) if not yet measured
+                        val cardHeight = draggedCard?.let { cardHeights[it.cardId] } ?: 130
                         // Require 50% of card height movement to trigger swap to provide steady feel
                         val movementThreshold = cardHeight / 2
-                        // Safe null-coalescing: targetIndex guaranteed non-null by guard clause at line 99
-                        val currentTarget = targetIndex ?: return@onDrag
+
                         val newTargetIndex = if (dragOffset.y > movementThreshold && currentTarget < displayableCards.size - 1) {
                             currentTarget + 1
                         } else if (dragOffset.y < -movementThreshold && currentTarget > 0) {
@@ -124,6 +127,11 @@ fun ReorderableCardGrid(
                     }
                 },
                 onRemove = { onCardRemove(card.cardId) },
+                onSizeChanged = { height ->
+                    cardHeights = cardHeights.toMutableMap().apply {
+                        this[card.cardId] = height
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -141,12 +149,16 @@ private fun ReorderableCardItem(
     onDragEnd: () -> Unit,
     onDrag: (Float, Float) -> Unit,
     onRemove: () -> Unit,
+    onSizeChanged: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var currentDragOffset by remember { mutableStateOf(IntOffset.Zero) }
 
     Box(
         modifier = modifier
+            .onSizeChanged { size ->
+                onSizeChanged(size.height)
+            }
             .then(
                 if (isDragged) {
                     Modifier

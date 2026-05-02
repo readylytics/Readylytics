@@ -28,7 +28,6 @@ class GetDashboardDataUseCase @Inject constructor(
 ) {
     data class DashboardCards(
         val cardDataMap: Map<CardId, CardData>,
-        val restingHrCard: CardData?,
         val paiDailyBreakdown: List<Pair<String, Float>>,
     )
 
@@ -40,12 +39,10 @@ class GetDashboardDataUseCase @Inject constructor(
         paiSummaries: List<DailySummary>,
     ): DashboardCards {
         val cardDataMap = calculateCardData(summary, prefs, date, lastSleepSession)
-        val restingHrCard = summary?.let { restingHrCard(it, prefs) }
         val paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries)
 
         return DashboardCards(
             cardDataMap = cardDataMap,
-            restingHrCard = restingHrCard,
             paiDailyBreakdown = paiDailyBreakdown,
         )
     }
@@ -59,10 +56,11 @@ class GetDashboardDataUseCase @Inject constructor(
         if (summary == null) return emptyMap()
 
         val mapBuilder = mutableMapOf<CardId, CardData>(
-            CardId.RHR to sleepCard(summary, prefs),
+            CardId.SLEEP_RHR to sleepCard(summary, prefs),
             CardId.HRV to hrvCard(summary, prefs),
             CardId.PAI_DAILY to paiCard(summary),
             CardId.SLEEP_DURATION to sleepDurationCard(summary, prefs, lastSleepSession),
+            CardId.RESTING_HR to restingHrCard(summary, prefs),
         )
 
         val metrics = getWorkoutMetricsUseCase(summary)

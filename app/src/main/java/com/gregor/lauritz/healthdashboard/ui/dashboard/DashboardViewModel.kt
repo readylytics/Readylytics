@@ -159,7 +159,7 @@ class DashboardViewModel
                             isRefreshing = inputs.isRefreshing,
                             cardDataMap = cards.cardDataMap,
                             circadianConsistency = inputs.circadian,
-                            restingHrCard = cards.restingHrCard,
+                            restingHrCard = cards.cardDataMap[CardId.RESTING_HR],
                             paiDailyBreakdown = cards.paiDailyBreakdown,
                             stepCount = inputs.summary?.stepCount,
                             stepGoal = inputs.prefs.stepGoal,

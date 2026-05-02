@@ -14,7 +14,7 @@ enum class CardId {
     READINESS,
     STEPS,
     HRV,
-    RHR,
+    SLEEP_RHR,
     SLEEP_DURATION,
     SLEEP_ARCHITECTURE,
     LOAD_SCORE,

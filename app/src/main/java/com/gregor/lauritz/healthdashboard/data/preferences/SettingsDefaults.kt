@@ -59,7 +59,7 @@ object SettingsDefaults {
         CardConfiguration(CardId.READINESS, isVisible = true, position = 1),
         CardConfiguration(CardId.STEPS, isVisible = true, position = 2),
         CardConfiguration(CardId.HRV, isVisible = true, position = 3),
-        CardConfiguration(CardId.RHR, isVisible = true, position = 4),
+        CardConfiguration(CardId.SLEEP_RHR, isVisible = true, position = 4),
         CardConfiguration(CardId.SLEEP_DURATION, isVisible = true, position = 5),
         CardConfiguration(CardId.LOAD_SCORE, isVisible = true, position = 6),
         CardConfiguration(CardId.STRAIN_RATIO, isVisible = false, position = 7),
@@ -72,7 +72,7 @@ object SettingsDefaults {
         CardConfiguration(CardId.SLEEP_DURATION, isVisible = true, position = 1),
         CardConfiguration(CardId.SLEEP_ARCHITECTURE, isVisible = true, position = 2),
         CardConfiguration(CardId.HRV, isVisible = true, position = 3),
-        CardConfiguration(CardId.RHR, isVisible = true, position = 4),
+        CardConfiguration(CardId.SLEEP_RHR, isVisible = true, position = 4),
         CardConfiguration(CardId.RECOVERY_INDEX, isVisible = false, position = 5),
         CardConfiguration(CardId.CIRCADIAN_CONSISTENCY, isVisible = false, position = 6),
     )

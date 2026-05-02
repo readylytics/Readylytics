@@ -5,7 +5,7 @@ fun CardId.displayName(): String = when (this) {
     CardId.READINESS -> "Readiness"
     CardId.STEPS -> "Steps"
     CardId.HRV -> "Heart Rate Variability"
-    CardId.RHR -> "Resting Heart Rate"
+    CardId.SLEEP_RHR -> "Sleep RHR"
     CardId.SLEEP_DURATION -> "Sleep Duration"
     CardId.SLEEP_ARCHITECTURE -> "Sleep Architecture"
     CardId.LOAD_SCORE -> "Load Score"

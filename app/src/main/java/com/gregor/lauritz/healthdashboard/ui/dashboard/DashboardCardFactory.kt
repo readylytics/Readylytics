@@ -64,16 +64,16 @@ fun buildCardDataMap(
         }
     }
 
-    cardMap[CardId.RHR] = {
-        val rhrCard = uiState.cardDataMap[CardId.RHR]
-        if (rhrCard != null) {
+    cardMap[CardId.SLEEP_RHR] = {
+        val sleepRhrCard = uiState.cardDataMap[CardId.SLEEP_RHR]
+        if (sleepRhrCard != null) {
             MetricCard(
-                title = rhrCard.title,
-                value = rhrCard.value,
-                secondaryText = rhrCard.unit,
-                status = rhrCard.status,
+                title = sleepRhrCard.title,
+                value = sleepRhrCard.value,
+                secondaryText = sleepRhrCard.unit,
+                status = sleepRhrCard.status,
                 onClick = onNavigateToSleep,
-                tooltip = rhrCard.tooltip,
+                tooltip = sleepRhrCard.tooltip,
             )
         }
     }
@@ -116,6 +116,20 @@ fun buildCardDataMap(
                 status = durationCard.status,
                 onClick = onNavigateToSleep,
                 tooltip = durationCard.tooltip,
+            )
+        }
+    }
+
+    cardMap[CardId.PAI_DAILY] = {
+        val paiCard = uiState.cardDataMap[CardId.PAI_DAILY]
+        if (paiCard != null) {
+            MetricCard(
+                title = paiCard.title,
+                value = paiCard.value,
+                secondaryText = paiCard.unit,
+                status = paiCard.status,
+                onClick = onNavigateToWorkouts,
+                tooltip = paiCard.tooltip,
             )
         }
     }
