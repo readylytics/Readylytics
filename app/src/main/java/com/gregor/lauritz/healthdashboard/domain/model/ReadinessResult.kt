@@ -52,6 +52,8 @@ data class ReadinessResult(
         val lateNadir: Boolean = false,
         val hrvMissing: Boolean = false,
         val timezoneJump: Boolean = false,
+        val configHashCode: Int? = null,
+        val phaseName: String? = null,
     )
 
     companion object {

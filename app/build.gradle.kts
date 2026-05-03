@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.androidx.room)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.protobuf)
     id("kotlin-parcelize")
 }
 
@@ -74,6 +75,27 @@ ktlint {
     version.set("1.5.0")
 }
 
+protobuf {
+    protoc {
+        artifact =
+            libs.protobuf.protoc
+                .get()
+                .toString()
+    }
+    generateProtoTasks {
+        all().forEach { task ->
+            task.builtins {
+                register("java") {
+                    option("lite")
+                }
+                register("kotlin") {
+                    option("lite")
+                }
+            }
+        }
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -95,10 +117,13 @@ dependencies {
     implementation(libs.room.runtime)
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
-    implementation(libs.androidx.sqlite.bundled)
+    implementation(libs.sqlcipher.android)
+    implementation(libs.androidx.sqlite)
 
     // DataStore
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.datastore)
+    implementation(libs.protobuf.kotlin.lite)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
@@ -132,6 +157,10 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.hilt.work)
     ksp(libs.hilt.work.compiler)
+
+    // Security
+    implementation(libs.google.tink.android)
+    implementation(libs.androidx.security.crypto)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

@@ -2,10 +2,8 @@ package com.gregor.lauritz.healthdashboard.data.preferences
 
 import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.preferencesDataStoreFile
+import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.dataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.CoroutineScope
@@ -22,16 +20,16 @@ import org.junit.runner.RunWith
 class UserPreferencesRepositoryTest {
 
     private lateinit var context: Context
-    private lateinit var dataStore: DataStore<Preferences>
+    private lateinit var dataStore: DataStore<UserPreferencesProto>
     private lateinit var repository: UserPreferencesRepository
 
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
-        dataStore = PreferenceDataStoreFactory.create(
-            corruptionHandler = androidx.datastore.core.handlers.ReplaceFileCorruptionHandler { emptyPreferences() },
+        dataStore = DataStoreFactory.create(
+            serializer = UserPreferencesSerializer,
             scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-            produceFile = { context.preferencesDataStoreFile("test_prefs") }
+            produceFile = { context.dataStoreFile("test_prefs.pb") }
         )
         repository = UserPreferencesRepository(dataStore)
     }

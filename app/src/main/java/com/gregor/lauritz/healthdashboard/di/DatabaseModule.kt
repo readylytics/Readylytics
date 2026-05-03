@@ -4,13 +4,13 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import com.gregor.lauritz.healthdashboard.data.security.SqlCipherKeyManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,10 +26,14 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(
         @ApplicationContext context: Context,
-    ): HealthDatabase =
-        Room
-            .databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
-            .setDriver(BundledSQLiteDriver())
+        sqlCipherKeyManager: SqlCipherKeyManager,
+    ): HealthDatabase {
+        val dbFile = context.getDatabasePath("health_dashboard.db")
+        sqlCipherKeyManager.migrateIfNeeded(dbFile)
+
+        val builder = Room.databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
+            .openHelperFactory(sqlCipherKeyManager.getOrCreateFactory())
+            .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
             .setQueryCoroutineContext(Dispatchers.IO)
             .addMigrations(
                 HealthDatabase.MIGRATION_1_2,
@@ -52,12 +56,13 @@ object DatabaseModule {
                 object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
                         super.onOpen(db)
-                        db.execSQL("PRAGMA journal_mode = WAL")
                         db.execSQL("PRAGMA synchronous = NORMAL")
                     }
                 },
             )
-            .build()
+
+        return builder.build()
+    }
 
     @Provides
     fun provideSleepSessionDao(db: HealthDatabase): SleepSessionDao = db.sleepSessionDao()
