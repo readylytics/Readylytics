@@ -8,6 +8,8 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileInputStream
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.security.KeyStore
 import java.security.SecureRandom
 import javax.crypto.Cipher
@@ -27,7 +29,11 @@ class SqlCipherKeyManager @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     init {
-        System.loadLibrary("sqlcipher")
+        try {
+            System.loadLibrary("sqlcipher")
+        } catch (e: UnsatisfiedLinkError) {
+            throw RuntimeException("Failed to load sqlcipher native library. Ensure SQLCipher is properly integrated.", e)
+        }
     }
 
     private val prefs by lazy {
@@ -86,8 +92,12 @@ class SqlCipherKeyManager @Inject constructor(
             db.execSQL("DETACH DATABASE encrypted")
             db.close()
 
-            dbFile.delete()
-            tempFile.renameTo(dbFile)
+            Files.move(
+                tempFile.toPath(),
+                dbFile.toPath(),
+                StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING,
+            )
 
             File("${dbFile.absolutePath}-wal").delete()
             File("${dbFile.absolutePath}-shm").delete()
@@ -144,7 +154,7 @@ class SqlCipherKeyManager @Inject constructor(
         prefs.edit()
             .putString(PREF_ENCRYPTED_KEY, Base64.encodeToString(encryptedKey, Base64.NO_WRAP))
             .putString(PREF_IV, Base64.encodeToString(iv, Base64.NO_WRAP))
-            .apply()
+            .commit()
     }
 
     private fun decryptKey(): ByteArray {

@@ -52,6 +52,7 @@ data class UserPreferences(
     val aboutDismissed: Boolean = SettingsDefaults.ABOUT_DISMISSED,
     val physiologyProfile: PhysiologyProfile = SettingsDefaults.PHYSIOLOGY_PROFILE,
     val installDate: Long = SettingsDefaults.INSTALL_DATE,
+    /** Encrypted ciphertext via EncryptionManager. DO NOT use as plaintext. Decrypt before reading. */
     val circadianThresholdOverride: String? = SettingsDefaults.CIRCADIAN_THRESHOLD_OVERRIDE,
     val dynamicColorEnabled: Boolean = SettingsDefaults.DYNAMIC_COLOR_ENABLED,
 )
