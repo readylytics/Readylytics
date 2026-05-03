@@ -1,12 +1,6 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -14,57 +8,47 @@ import javax.inject.Singleton
 
 @Singleton
 class AppConfigRepository @Inject constructor(
-    private val dataStore: DataStore<Preferences>
+    private val dataStore: DataStore<UserPreferencesProto>
 ) {
-    private object Keys {
-        val SYNC_PREFERENCE = stringPreferencesKey("sync_preference")
-        val SYNC_INTERVAL_HOURS = intPreferencesKey("sync_interval_hours")
-        val LAST_SYNC_TIMESTAMP = longPreferencesKey("last_sync_timestamp")
-        val APP_THEME = stringPreferencesKey("app_theme")
-        val DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("dynamic_color_enabled")
+    val syncPreference: Flow<SyncPreference> = dataStore.data.map { 
+        SyncPreference.valueOf(it.syncPreference.name.removePrefix("SYNC_"))
     }
 
-    val syncPreference: Flow<SyncPreference> = dataStore.data.map { prefs ->
-        prefs[Keys.SYNC_PREFERENCE]?.let {
-            runCatching { SyncPreference.valueOf(it) }.getOrNull()
-        } ?: SettingsDefaults.SYNC_PREFERENCE
+    val syncIntervalHours: Flow<Int> = dataStore.data.map { it.syncIntervalHours }
+
+    val lastSyncTimestamp: Flow<Long> = dataStore.data.map { it.lastSyncTimestamp }
+
+    val appTheme: Flow<AppTheme> = dataStore.data.map { 
+        AppTheme.valueOf(it.appTheme.name.removePrefix("THEME_"))
     }
 
-    val syncIntervalHours: Flow<Int> = dataStore.data.map { prefs ->
-        prefs[Keys.SYNC_INTERVAL_HOURS] ?: SettingsDefaults.SYNC_INTERVAL_HOURS
-    }
-
-    val lastSyncTimestamp: Flow<Long> = dataStore.data.map { prefs ->
-        prefs[Keys.LAST_SYNC_TIMESTAMP] ?: SettingsDefaults.LAST_SYNC_TIMESTAMP
-    }
-
-    val appTheme: Flow<AppTheme> = dataStore.data.map { prefs ->
-        prefs[Keys.APP_THEME]?.let {
-            runCatching { AppTheme.valueOf(it) }.getOrNull()
-        } ?: SettingsDefaults.APP_THEME
-    }
-
-    val dynamicColorEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[Keys.DYNAMIC_COLOR_ENABLED] ?: SettingsDefaults.DYNAMIC_COLOR_ENABLED
-    }
+    val dynamicColorEnabled: Flow<Boolean> = dataStore.data.map { it.dynamicColorEnabled }
 
     suspend fun updateSyncPreference(preference: SyncPreference) {
-        dataStore.edit { it[Keys.SYNC_PREFERENCE] = preference.name }
+        dataStore.updateData { 
+            it.toBuilder()
+                .setSyncPreference(SyncPreferenceProto.valueOf("SYNC_${preference.name}"))
+                .build()
+        }
     }
 
     suspend fun updateSyncIntervalHours(hours: Int) {
-        dataStore.edit { it[Keys.SYNC_INTERVAL_HOURS] = hours.coerceIn(1, 24) }
+        dataStore.updateData { it.toBuilder().setSyncIntervalHours(hours).build() }
     }
 
     suspend fun updateLastSyncTimestamp(timestampMs: Long) {
-        dataStore.edit { it[Keys.LAST_SYNC_TIMESTAMP] = timestampMs }
+        dataStore.updateData { it.toBuilder().setLastSyncTimestamp(timestampMs).build() }
     }
 
     suspend fun updateAppTheme(theme: AppTheme) {
-        dataStore.edit { it[Keys.APP_THEME] = theme.name }
+        dataStore.updateData { 
+            it.toBuilder()
+                .setAppTheme(AppThemeProto.valueOf("THEME_${theme.name}"))
+                .build()
+        }
     }
 
     suspend fun updateDynamicColorEnabled(enabled: Boolean) {
-        dataStore.edit { it[Keys.DYNAMIC_COLOR_ENABLED] = enabled }
+        dataStore.updateData { it.toBuilder().setDynamicColorEnabled(enabled).build() }
     }
 }

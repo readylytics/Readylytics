@@ -8,6 +8,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import com.gregor.lauritz.healthdashboard.domain.model.ReadinessResult
 import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
 import com.gregor.lauritz.healthdashboard.domain.util.logD
@@ -31,6 +32,8 @@ class ComputeSleepMetricsUseCase @Inject constructor(
     private val heartRateDao: HeartRateDao,
     private val sleepSessionDao: SleepSessionDao,
     private val scoringCalculator: ScoringCalculator,
+    private val scoringConfigFactory: ScoringConfigFactory,
+    private val encryptionManager: EncryptionManager,
 ) {
     suspend operator fun invoke(
         session: SleepSessionEntity,
@@ -41,6 +44,28 @@ class ComputeSleepMetricsUseCase @Inject constructor(
         loadScore: Float,
         zoneId: ZoneId,
     ): DailySummaryEntity {
+        // Build ScoringConfig from preferences and install date
+        val installDate = if (prefs.installDate > 0) {
+            LocalDate.ofEpochDay(java.util.concurrent.TimeUnit.MILLISECONDS.toDays(prefs.installDate))
+        } else {
+            // Not yet initialized - use today as install date
+            targetDate
+        }
+
+        val decryptedOverride = prefs.circadianThresholdOverride?.let { encrypted ->
+            runCatching { encryptionManager.decrypt(encrypted).toInt() }.getOrNull()
+        }
+
+        val scoringConfig = scoringConfigFactory.build(
+            userPreferences = prefs,
+            installDate = installDate,
+            currentDate = targetDate,
+            circadianOverride = decryptedOverride,
+        )
+        logD("ComputeSleepMetrics") {
+            "Config applied: hash=${scoringConfig.auditTrail.configHashCode}, phase=${scoringConfig.auditTrail.phaseName}, threshold=${scoringConfig.circadianConsistency.thresholdMinutes}"
+        }
+
         val rhrValues = baselineComputer.rhrHistory(dayMidnight)
 
         // Fetch yesterday's Z-scores for 2-night consecutive flag confirmation
@@ -185,6 +210,7 @@ class ComputeSleepMetricsUseCase @Inject constructor(
                 rhrValues           = rhrValues,
                 rhrBaselineOverride = prefs.rhrBaselineOverride,
                 hrvBaselineOverride = prefs.hrvBaselineOverride,
+                restorationWeights  = scoringConfig.restoration,
             )
 
             if (isLateNadir) {
@@ -200,6 +226,7 @@ class ComputeSleepMetricsUseCase @Inject constructor(
                 sRest            = sRest,
                 userAge          = prefs.age,
                 stagesSuspicious = stagesSuspicious,
+                sleepTargets     = scoringConfig.sleepTargets,
             )
 
             val totalValidHrvNights = validHistoricalSessionIds.size +
@@ -216,6 +243,7 @@ class ComputeSleepMetricsUseCase @Inject constructor(
                 stagesSuspicious = stagesSuspicious,
                 isLateNadir      = isLateNadir,
                 isCalibrating    = isCalibrating,
+                emergencyFlags   = scoringConfig.emergencyFlags,
             )
 
             readinessScore = scoringCalculator.computeReadinessScore(
@@ -243,6 +271,7 @@ class ComputeSleepMetricsUseCase @Inject constructor(
                 remSleepMinutes  = session.remSleepMinutes,
                 durationMinutes  = session.durationMinutes,
                 userAge          = prefs.age,
+                sleepTargets     = scoringConfig.sleepTargets,
             )
             readinessResult = ReadinessResult(
                 readinessScore = readinessScore,
@@ -268,6 +297,8 @@ class ComputeSleepMetricsUseCase @Inject constructor(
                     lateNadir       = isLateNadir,
                     hrvMissing      = sessionHrvSamples.isEmpty(),
                     timezoneJump    = isTimezoneJump,
+                    configHashCode  = scoringConfig.auditTrail.configHashCode,
+                    phaseName       = scoringConfig.auditTrail.phaseName,
                 ),
             )
         }

@@ -53,6 +53,9 @@ object SettingsDefaults {
     const val COLLAPSE_ADVANCED = true
     const val ABOUT_DISMISSED = false
     val PHYSIOLOGY_PROFILE = PhysiologyProfile.GENERAL
+    const val INSTALL_DATE = 0L // Set to System.currentTimeMillis() on first app run
+    val CIRCADIAN_THRESHOLD_OVERRIDE: String? = null // null = use profile default
+    const val DYNAMIC_COLOR_ENABLED = true
 
     val DEFAULT_DASHBOARD_CARDS = listOf(
         CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),

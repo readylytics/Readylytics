@@ -10,6 +10,8 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
+import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConfigFactory
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -93,7 +95,18 @@ class ScoringRepositoryN1Test {
 
         scoringCalculator = ScoringCalculatorImpl()
         val baselineComputer = BaselineComputer(heartRateDao, hrvDao, sleepSessionDao, scoringCalculator)
-        val computeSleepMetricsUseCase = ComputeSleepMetricsUseCase(baselineComputer, dailySummaryDao, hrvDao, heartRateDao, sleepSessionDao, scoringCalculator)
+        val scoringConfigFactory = ScoringConfigFactory() // Real factory is fine as it's pure logic mostly
+        val encryptionManager = mockk<EncryptionManager>(relaxed = true)
+        val computeSleepMetricsUseCase = ComputeSleepMetricsUseCase(
+            baselineComputer, 
+            dailySummaryDao, 
+            hrvDao, 
+            heartRateDao, 
+            sleepSessionDao, 
+            scoringCalculator,
+            scoringConfigFactory,
+            encryptionManager
+        )
         repo = ScoringRepository(workoutDao, sleepSessionDao, dailySummaryDao, prefsRepo, scoringCalculator, baselineComputer, computeSleepMetricsUseCase)
     }
 

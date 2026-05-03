@@ -6,6 +6,8 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Restor
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Sleep
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Strain
 import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
+import com.gregor.lauritz.healthdashboard.domain.scoring.components.EmergencyFlagThresholds
+import com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargets
 import com.gregor.lauritz.healthdashboard.domain.util.mean
 import com.gregor.lauritz.healthdashboard.domain.util.median
 import com.gregor.lauritz.healthdashboard.domain.util.stdev
@@ -38,6 +40,7 @@ interface ScoringCalculator {
         remSleepMinutes: Int,
         durationMinutes: Int,
         userAge: Int = 30,
+        sleepTargets: SleepArchitectureTargets? = null,
     ): Float
     fun hrvSigma(lnHrvValues: List<Float>, sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior): Float
     fun computeHrvZScore(
@@ -62,6 +65,7 @@ interface ScoringCalculator {
         rhrValues: List<Int>,
         rhrBaselineOverride: Float?,
         hrvBaselineOverride: Float?,
+        restorationWeights: com.gregor.lauritz.healthdashboard.domain.scoring.components.RestorationWeights? = null,
     ): Float
     fun computeSleepScore(
         durationMinutes: Int,
@@ -72,6 +76,7 @@ interface ScoringCalculator {
         sRest: Float,
         userAge: Int = 30,
         stagesSuspicious: Boolean = false,
+        sleepTargets: com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargets? = null,
     ): Float
     fun computeRecoveryFlags(
         zLnHrv: Float?,
@@ -83,6 +88,7 @@ interface ScoringCalculator {
         stagesSuspicious: Boolean,
         isLateNadir: Boolean,
         isCalibrating: Boolean,
+        emergencyFlags: com.gregor.lauritz.healthdashboard.domain.scoring.components.EmergencyFlagThresholds? = null,
     ): Set<RecoveryFlag>
     fun computeReadinessScore(
         sRest: Float,
@@ -205,6 +211,7 @@ class ScoringCalculatorImpl @Inject constructor() : ScoringCalculator {
         remSleepMinutes: Int,
         durationMinutes: Int,
         userAge: Int,
+        sleepTargets: com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargets?,
     ): Float {
         require(durationMinutes >= 0)    { "durationMinutes must be >= 0" }
         require(deepSleepMinutes >= 0)   { "deepSleepMinutes must be >= 0" }
@@ -212,8 +219,13 @@ class ScoringCalculatorImpl @Inject constructor() : ScoringCalculator {
         if (durationMinutes == 0) return 0f
         val deepPct = deepSleepMinutes / durationMinutes.toFloat()
         val remPct  = remSleepMinutes  / durationMinutes.toFloat()
-        val deepComponent = (deepPct / deepSleepTarget(userAge)).coerceAtMost(1f) * 100f
-        val remComponent  = (remPct  / remSleepTarget(userAge)).coerceAtMost(1f) * 100f
+        val (deepTarget, remTarget) = if (sleepTargets != null) {
+            Pair(sleepTargets.deepPercentage, sleepTargets.remPercentage)
+        } else {
+            Pair(deepSleepTarget(userAge), remSleepTarget(userAge))
+        }
+        val deepComponent = (deepPct / deepTarget).coerceAtMost(1f) * 100f
+        val remComponent  = (remPct  / remTarget).coerceAtMost(1f) * 100f
         return Sleep.WEIGHT_DEEP_COMPONENT * deepComponent + Sleep.WEIGHT_REM_COMPONENT * remComponent
     }
 
@@ -299,6 +311,7 @@ class ScoringCalculatorImpl @Inject constructor() : ScoringCalculator {
         rhrValues: List<Int>,
         rhrBaselineOverride: Float?,
         hrvBaselineOverride: Float?,
+        restorationWeights: com.gregor.lauritz.healthdashboard.domain.scoring.components.RestorationWeights?,
     ): Float {
         val zHrv     = computeHrvZScore(currentHrvMean, muHrvHistory, sigmaHrvHistory, sigmaPrior, hrvBaselineOverride) ?: 0f
         val hrvScore = computeHrvScore(zHrv)
@@ -307,7 +320,11 @@ class ScoringCalculatorImpl @Inject constructor() : ScoringCalculator {
         val zRhr     = computeRhrZScore(currentNocturnalRhr, rhrValues, rhrBaselineOverride) ?: 0f
         val rhrScore = (50f - 25f * zRhr).coerceIn(0f, 100f)
 
-        return Restoration.WEIGHT_HRV_SCORE * hrvScore + Restoration.WEIGHT_RHR_SCORE * rhrScore
+        return if (restorationWeights != null) {
+            restorationWeights.hrvWeight * hrvScore + restorationWeights.rhrWeight * rhrScore
+        } else {
+            Restoration.WEIGHT_HRV_SCORE * hrvScore + Restoration.WEIGHT_RHR_SCORE * rhrScore
+        }
     }
 
     override fun computeSleepScore(
@@ -319,11 +336,12 @@ class ScoringCalculatorImpl @Inject constructor() : ScoringCalculator {
         sRest: Float,
         userAge: Int,
         stagesSuspicious: Boolean,
+        sleepTargets: com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargets?,
     ): Float {
         require(durationMinutes >= 0) { "durationMinutes must be >= 0" }
         require(goalSleepHours > 0f)  { "goalSleepHours must be > 0" }
         val sDur  = computeDurationSubScore(durationMinutes, efficiency, goalSleepHours)
-        val sArch = computeArchSubScore(deepSleepMinutes, remSleepMinutes, durationMinutes, userAge)
+        val sArch = computeArchSubScore(deepSleepMinutes, remSleepMinutes, durationMinutes, userAge, sleepTargets)
 
         val durationWeight = if (stagesSuspicious) 0.75f else Sleep.WEIGHT_DURATION
         val archWeight = if (stagesSuspicious) 0.00f else Sleep.WEIGHT_ARCHITECTURE
@@ -344,6 +362,7 @@ class ScoringCalculatorImpl @Inject constructor() : ScoringCalculator {
         stagesSuspicious: Boolean,
         isLateNadir: Boolean,
         isCalibrating: Boolean,
+        emergencyFlags: EmergencyFlagThresholds?,
     ): Set<RecoveryFlag> {
         val flags = mutableSetOf<RecoveryFlag>()
         if (isCalibrating)    flags += RecoveryFlag.CALIBRATING
@@ -351,20 +370,23 @@ class ScoringCalculatorImpl @Inject constructor() : ScoringCalculator {
         if (stagesSuspicious) flags += RecoveryFlag.STAGES_MISSING
         if (isLateNadir)      flags += RecoveryFlag.NADIR_DELAYED
 
+        // Use provided thresholds or fall back to defaults
+        val thresholds = emergencyFlags ?: EmergencyFlagThresholds()
+
         if (zLnHrv != null && zRhr != null) {
-            val todayOverreaching = zLnHrv > Readiness.OVERREACHING_Z_HRV_THRESHOLD &&
-                                    zRhr   < Readiness.OVERREACHING_Z_RHR_THRESHOLD
+            val todayOverreaching = zLnHrv > thresholds.overreachingZHrvThreshold &&
+                                    zRhr   < thresholds.overreachingZRhrThreshold
             val prevOverreaching  = yesterdayZLnHrv != null && yesterdayZRhr != null &&
-                                    yesterdayZLnHrv > Readiness.OVERREACHING_Z_HRV_THRESHOLD &&
-                                    yesterdayZRhr   < Readiness.OVERREACHING_Z_RHR_THRESHOLD
+                                    yesterdayZLnHrv > thresholds.overreachingZHrvThreshold &&
+                                    yesterdayZRhr   < thresholds.overreachingZRhrThreshold
             if (todayOverreaching && prevOverreaching) flags += RecoveryFlag.OVERREACHING
 
-            val todayIllness = zLnHrv < Readiness.ILLNESS_Z_HRV_THRESHOLD &&
-                               (rhrDeltaBpm != null && rhrDeltaBpm >= Readiness.ILLNESS_RHR_DELTA_BPM ||
-                                zRhr >= 2.0f)
+            val todayIllness = zLnHrv < thresholds.illnessZHrvThreshold &&
+                               (rhrDeltaBpm != null && rhrDeltaBpm >= thresholds.illnessRhrDeltaBpm ||
+                                zRhr >= thresholds.illnessZRhrThreshold)
             val prevIllness  = yesterdayZLnHrv != null && yesterdayZRhr != null &&
-                               yesterdayZLnHrv < Readiness.ILLNESS_Z_HRV_THRESHOLD &&
-                               yesterdayZRhr   >= 2.0f
+                               yesterdayZLnHrv < thresholds.illnessZHrvThreshold &&
+                               yesterdayZRhr   >= thresholds.illnessZRhrThreshold
             if (todayIllness && prevIllness) flags += RecoveryFlag.ILLNESS_ONSET
         }
         return flags

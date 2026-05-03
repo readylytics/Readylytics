@@ -35,3 +35,12 @@
 
 # Vico Charts
 -keep class com.patrykandpatrick.vico.** { *; }
+
+# SQLCipher
+-keep class net.zetetic.** { *; }
+-keep class net.zetetic.database.sqlcipher.** { *; }
+
+# Domain Scoring Components
+# Hash computation uses direct Kotlin value access (not reflection),
+# so field name obfuscation does not affect hash stability.
+# Component classes are retained by Hilt's @Keep annotations.
