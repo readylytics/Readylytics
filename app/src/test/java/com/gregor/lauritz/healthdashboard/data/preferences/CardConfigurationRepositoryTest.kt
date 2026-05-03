@@ -1,110 +1,64 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
-import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
+import androidx.datastore.core.DataStore
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.domain.dashboard.ScreenType
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runTest
+import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class CardConfigurationRepositoryTest {
+    private val dataStore = mockk<DataStore<CardConfigurationsProto>>(relaxed = true)
+    private lateinit var repository: CardConfigurationRepository
 
-    @Test
-    fun toggleCardVisibility_validCardId_togglesVisibility() {
-        val configs = listOf(
-            CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),
-            CardConfiguration(CardId.READINESS, isVisible = false, position = 1),
-        )
-
-        // Test the synchronous method directly
-        val result = CardConfigurationSerializer.deserialize(
-            CardConfigurationSerializer.serialize(configs)
-        )
-
-        // Verify serialization preserves visibility
-        assertEquals(true, result[0].isVisible)
-        assertEquals(false, result[1].isVisible)
+    @Before
+    fun setup() {
+        repository = CardConfigurationRepository(dataStore)
     }
 
     @Test
-    fun toggleCardVisibility_invalidCardId_throwsException() {
-        val configs = listOf(
-            CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),
-        )
+    fun dashboardCardConfigurations_returnsMappedDomainModels() = runTest {
+        val proto = CardConfigurationsProto.newBuilder()
+            .addDashboardCards(CardConfigurationProto.newBuilder()
+                .setCardId(CardId.SLEEP_SCORE.name)
+                .setIsVisible(true)
+                .setPosition(0)
+                .build())
+            .build()
+        
+        every { dataStore.data } returns flowOf(proto)
 
-        // Verify validation would throw
-        assertFailsWith<IllegalArgumentException> {
-            validateCardIdExists(configs, CardId.READINESS)
-        }
-    }
-
-    @Test
-    fun reorderCards_validOrder_assignsSequentialPositions() {
-        val configs = listOf(
-            CardConfiguration(CardId.SLEEP_SCORE, position = 0),
-            CardConfiguration(CardId.READINESS, position = 1),
-            CardConfiguration(CardId.HRV, position = 2),
-        )
-        val newOrder = listOf(
-            configs[2],  // HRV
-            configs[0],  // SLEEP_SCORE
-            configs[1],  // READINESS
-        )
-
-        val result = newOrder.mapIndexed { index, config ->
-            config.copy(position = index)
-        }
-
-        assertEquals(3, result.size)
-        assertEquals(CardId.HRV, result[0].cardId)
+        val result = repository.dashboardCardConfigurations().first()
+        
+        assertEquals(1, result.size)
+        assertEquals(CardId.SLEEP_SCORE, result[0].cardId)
+        assertTrue(result[0].isVisible)
         assertEquals(0, result[0].position)
-        assertEquals(CardId.SLEEP_SCORE, result[1].cardId)
-        assertEquals(1, result[1].position)
-        assertEquals(CardId.READINESS, result[2].cardId)
-        assertEquals(2, result[2].position)
     }
 
     @Test
-    fun reorderCards_invalidCardId_throwsException() {
-        val configs = listOf(
-            CardConfiguration(CardId.SLEEP_SCORE, position = 0),
-        )
-        val newOrder = listOf(
-            CardConfiguration(CardId.READINESS, position = 0),  // Not in original
-        )
+    fun updateCardConfigurations_updatesCorrectProtoField() = runTest {
+        val capturedUpdate = slot<suspend (CardConfigurationsProto) -> CardConfigurationsProto>()
+        coEvery { dataStore.updateData(capture(capturedUpdate)) } returns CardConfigurationsProto.getDefaultInstance()
 
-        assertFailsWith<IllegalArgumentException> {
-            validateCardIdsInOrder(configs, newOrder)
-        }
-    }
-
-    @Test
-    fun reorderCards_sizeExceedsOriginal_throwsException() {
-        val configs = listOf(
-            CardConfiguration(CardId.SLEEP_SCORE, position = 0),
-        )
-        val newOrder = listOf(
-            CardConfiguration(CardId.SLEEP_SCORE, position = 0),
-            CardConfiguration(CardId.READINESS, position = 1),  // Duplicate/extra
+        val newConfigs = listOf(
+            com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration(CardId.READINESS, isVisible = true, position = 0)
         )
 
-        assertFailsWith<IllegalArgumentException> {
-            require(newOrder.size <= configs.size) {
-                "Reorder list size exceeds original"
-            }
-        }
-    }
+        repository.updateCardConfigurations(ScreenType.DASHBOARD, newConfigs)
 
-    // Helper functions to simulate repository logic
-    private fun validateCardIdExists(configs: List<CardConfiguration>, cardId: CardId) {
-        require(configs.any { it.cardId == cardId }) {
-            "Card $cardId not found in configurations"
-        }
-    }
+        val initialProto = CardConfigurationsProto.getDefaultInstance()
+        val updatedProto = capturedUpdate.captured(initialProto)
 
-    private fun validateCardIdsInOrder(configs: List<CardConfiguration>, newOrder: List<CardConfiguration>) {
-        val validIds = configs.map { it.cardId }.toSet()
-        require(newOrder.all { it.cardId in validIds }) {
-            "Invalid card IDs in reorder request"
-        }
+        assertEquals(1, updatedProto.dashboardCardsCount)
+        assertEquals(CardId.READINESS.name, updatedProto.getDashboardCards(0).cardId)
     }
 }

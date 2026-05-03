@@ -53,16 +53,10 @@ data class UserPreferences(
     val collapseAdvanced: Boolean = SettingsDefaults.COLLAPSE_ADVANCED,
     val aboutDismissed: Boolean = SettingsDefaults.ABOUT_DISMISSED,
     val physiologyProfile: PhysiologyProfile = SettingsDefaults.PHYSIOLOGY_PROFILE,
-<<<<<<< HEAD
-    val dashboardCardConfigurations: List<CardConfiguration> = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
-    val sleepCardConfigurations: List<CardConfiguration> = SettingsDefaults.DEFAULT_SLEEP_CARDS,
-    val workoutCardConfigurations: List<CardConfiguration> = SettingsDefaults.DEFAULT_WORKOUT_CARDS,
-=======
     val installDate: Long = SettingsDefaults.INSTALL_DATE,
     /** Encrypted ciphertext via EncryptionManager. DO NOT use as plaintext. Decrypt before reading. */
     val circadianThresholdOverride: String? = SettingsDefaults.CIRCADIAN_THRESHOLD_OVERRIDE,
     val dynamicColorEnabled: Boolean = SettingsDefaults.DYNAMIC_COLOR_ENABLED,
->>>>>>> 3467fd831699baf2aab0d917af35fae6b759f28c
 )
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
@@ -118,8 +112,5 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         installDate = installDate,
         circadianThresholdOverride = if (hasCircadianThresholdOverride()) circadianThresholdOverride else null,
         dynamicColorEnabled = dynamicColorEnabled,
-        dashboardCardConfigurations = SettingsDefaults.DEFAULT_DASHBOARD_CARDS,
-        sleepCardConfigurations = SettingsDefaults.DEFAULT_SLEEP_CARDS,
-        workoutCardConfigurations = SettingsDefaults.DEFAULT_WORKOUT_CARDS,
     )
 }

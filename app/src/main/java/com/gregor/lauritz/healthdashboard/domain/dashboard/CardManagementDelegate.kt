@@ -22,15 +22,9 @@ class CardManagementDelegate(
         screenType: ScreenType,
         currentConfigs: List<CardConfiguration>,
         cardId: CardId,
+        visible: Boolean,
     ) = viewModelScope.launch {
-        val isCurrentlyVisible = currentConfigs.find { it.cardId == cardId }?.isVisible ?: false
-        // toggleCardVisibility is a pure function, no need to launch
-        val updated = cardConfigRepository.toggleCardVisibility(
-            currentConfigs,
-            cardId,
-            !isCurrentlyVisible
-        )
-        // Only the persistence operation needs to be suspended
+        val updated = toggleCardVisibility(currentConfigs, cardId, visible)
         cardConfigRepository.updateCardConfigurations(screenType, updated)
     }
 
@@ -39,9 +33,7 @@ class CardManagementDelegate(
         currentConfigs: List<CardConfiguration>,
         newOrder: List<CardConfiguration>,
     ) = viewModelScope.launch {
-        // reorderCards is a pure function, no need for suspension
-        val updated = cardConfigRepository.reorderCards(currentConfigs, newOrder)
-        // Only the persistence operation needs to be suspended
+        val updated = reorderCards(currentConfigs, newOrder)
         cardConfigRepository.updateCardConfigurations(screenType, updated)
     }
 
@@ -54,5 +46,39 @@ class CardManagementDelegate(
             ScreenType.WORKOUTS -> com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults.DEFAULT_WORKOUT_CARDS
         }
         cardConfigRepository.updateCardConfigurations(screenType, defaults)
+    }
+
+    private fun toggleCardVisibility(
+        cardConfigurations: List<CardConfiguration>,
+        cardId: CardId,
+        visible: Boolean,
+    ): List<CardConfiguration> {
+        require(cardConfigurations.any { it.cardId == cardId }) {
+            "Card $cardId not found in configurations"
+        }
+
+        return cardConfigurations.map { config ->
+            if (config.cardId == cardId) config.copy(isVisible = visible) else config
+        }
+    }
+
+    private fun reorderCards(
+        cardConfigurations: List<CardConfiguration>,
+        newOrder: List<CardConfiguration>,
+    ): List<CardConfiguration> {
+        val validIds = cardConfigurations.map { it.cardId }.toSet()
+        require(newOrder.all { it.cardId in validIds }) {
+            "Invalid card IDs in reorder request: ${newOrder.map { it.cardId }.toSet() - validIds}"
+        }
+        require(newOrder.size <= cardConfigurations.size) {
+            "Reorder list size (${newOrder.size}) exceeds original configuration size (${cardConfigurations.size})"
+        }
+
+        val reorderedIds = newOrder.map { it.cardId }.toSet()
+        val hiddenCards = cardConfigurations.filter { it.cardId !in reorderedIds }
+
+        return (newOrder + hiddenCards).mapIndexed { index, config ->
+            config.copy(position = index)
+        }
     }
 }

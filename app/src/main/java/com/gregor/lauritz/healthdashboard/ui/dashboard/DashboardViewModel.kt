@@ -91,7 +91,6 @@ class DashboardViewModel
         private val cardConfigRepository: CardConfigurationRepository,
         circadianRepo: CircadianConsistencyRepository,
     ) : ViewModel() {
-        private const val TAG = "DashboardViewModel"
 
         private val _isRefreshing = MutableStateFlow(false)
 
@@ -131,21 +130,22 @@ class DashboardViewModel
                         fromMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli(),
                         toMs = date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli(),
                     )
+                    val basicInputsFlow = combine(
+                        summaryFlow,
+                        prefsRepo.userPreferences,
+                        _isRefreshing,
+                        circadianRepo.resultFor(date),
+                        paiBreakdownFlow,
+                    ) { summary, prefs, refreshing, circadian, paiSummaries ->
+                        DashboardInputs(summary, prefs, refreshing, circadian, paiSummaries)
+                    }
+
                     combine(
-                        combine(
-                            summaryFlow,
-                            prefsRepo.userPreferences,
-                            _isRefreshing,
-                            circadianRepo.resultFor(date),
-                            paiBreakdownFlow,
-                            cardManagementDelegate.isManagingCards
-                        ) { summary, prefs, refreshing, circadian, paiSummaries, isManaging ->
-                            DashboardInputs(summary, prefs, refreshing, circadian, paiSummaries)
-                                to isManaging
-                        },
+                        basicInputsFlow,
+                        cardManagementDelegate.isManagingCards,
                         cardConfigRepository.dashboardCardConfigurations(),
                         sessionFlow
-                    ) { (inputs, isManaging), cardConfigs, session ->
+                    ) { inputs, isManaging, cardConfigs, session ->
                         val cards = getDashboardDataUseCase.invoke(
                             summary = inputs.summary,
                             prefs = inputs.prefs,
@@ -203,11 +203,12 @@ class DashboardViewModel
             cardManagementDelegate.toggleCardManagement()
         }
 
-        fun onToggleCardVisibility(cardId: CardId) {
+        fun onToggleCardVisibility(cardId: CardId, visible: Boolean) {
             cardManagementDelegate.onToggleCardVisibility(
                 ScreenType.DASHBOARD,
                 uiState.value.cardConfigurations,
                 cardId,
+                visible,
             )
         }
 
@@ -221,5 +222,9 @@ class DashboardViewModel
 
         fun onResetToDefaults() {
             cardManagementDelegate.onResetToDefaults(ScreenType.DASHBOARD)
+        }
+
+        companion object {
+            private const val TAG = "DashboardViewModel"
         }
     }

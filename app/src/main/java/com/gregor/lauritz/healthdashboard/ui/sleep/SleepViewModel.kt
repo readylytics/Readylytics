@@ -56,6 +56,13 @@ data class SleepUiState(
     val isManagingCards: Boolean = false,
 )
 
+private data class SleepData(
+    val latestSummary: DailySummary?,
+    val latestSession: SleepSessionEntity?,
+    val summaries: List<DailySummary>,
+    val prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+)
+
 fun SleepSessionEntity.efficiencyStatus(): MetricStatus =
     when {
         efficiency >= 85f -> MetricStatus.OPTIMAL
@@ -213,29 +220,26 @@ class SleepViewModel
                             flow { emit(dailySummaryDao.getByDate(selectedMidnightMs)?.let { DailySummaryMapper.toDomain(it) }) }
                         }
 
-                    combine(
+                    val dataFlow = combine(
                         summaryFlow,
                         sleepSessionDao.observeFirstSessionEndingInRange(
                             selectedMidnightMs,
                             nextDayMidnightMs,
                         ),
-                        dailySummaryDao.observeSince(fromMs),
+                        dailySummaryDao.observeSince(fromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
                         prefsRepo.userPreferences,
+                    ) { latestSummary, latestSession, summaries, prefs ->
+                        SleepData(latestSummary, latestSession, summaries, prefs)
+                    }
+
+                    combine(
+                        dataFlow,
                         baselineHrvFlow,
                         baselineRhrFlow,
                         cardManagementDelegate.isManagingCards,
                         cardConfigRepository.sleepCardConfigurations(),
-                    ) { flows ->
-                        val latestSummary = flows[0] as DailySummary?
-                        val latestSession = flows[1] as SleepSessionEntity?
-                        @Suppress("UNCHECKED_CAST")
-                        val summaries = (flows[2] as List<DailySummaryEntity>).map { DailySummaryMapper.toDomain(it) }
-                        val prefs = flows[3] as com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-                        val bHrv = flows[4] as Float?
-                        val bRhr = flows[5] as Int?
-                        val isManaging = flows[6] as Boolean
-                        @Suppress("UNCHECKED_CAST")
-                        val cardConfigs = flows[7] as List<CardConfiguration>
+                    ) { data, bHrv, bRhr, isManaging, cardConfigs ->
+                        val (latestSummary, latestSession, summaries, prefs) = data
 
                         val startLocalDate = Instant.ofEpochMilli(startDayMs).atZone(zoneId).toLocalDate()
 
@@ -296,11 +300,12 @@ class SleepViewModel
             cardManagementDelegate.toggleCardManagement()
         }
 
-        fun onToggleCardVisibility(cardId: CardId) {
+        fun onToggleCardVisibility(cardId: CardId, visible: Boolean) {
             cardManagementDelegate.onToggleCardVisibility(
                 ScreenType.SLEEP,
                 uiState.value.cardConfigurations,
                 cardId,
+                visible,
             )
         }
 

@@ -6,7 +6,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class CardConfigurationSerializerTest {
+class LegacyCardConfigurationSerializerTest {
 
     @Test
     fun serialize_validConfigurations_returnsJsonString() {
@@ -15,7 +15,7 @@ class CardConfigurationSerializerTest {
             CardConfiguration(CardId.READINESS, isVisible = false, position = 1),
         )
 
-        val json = CardConfigurationSerializer.serialize(configs)
+        val json = LegacyCardConfigurationSerializer.serialize(configs)
 
         assertTrue(json.isNotEmpty())
         assertTrue(json.contains("SLEEP_SCORE"))
@@ -24,7 +24,7 @@ class CardConfigurationSerializerTest {
 
     @Test
     fun serialize_emptyList_returnsEmptyJson() {
-        val json = CardConfigurationSerializer.serialize(emptyList())
+        val json = LegacyCardConfigurationSerializer.serialize(emptyList())
         assertEquals("[]", json)
     }
 
@@ -32,7 +32,7 @@ class CardConfigurationSerializerTest {
     fun deserialize_validJson_returnsCardConfigurations() {
         val json = """[{"cardId":"SLEEP_SCORE","isVisible":true,"position":0},{"cardId":"READINESS","isVisible":false,"position":1}]"""
 
-        val result = CardConfigurationSerializer.deserialize(json)
+        val result = LegacyCardConfigurationSerializer.deserialize(json)
 
         assertEquals(2, result.size)
         assertEquals(CardId.SLEEP_SCORE, result[0].cardId)
@@ -45,13 +45,13 @@ class CardConfigurationSerializerTest {
 
     @Test
     fun deserialize_emptyString_returnsEmptyList() {
-        val result = CardConfigurationSerializer.deserialize("")
+        val result = LegacyCardConfigurationSerializer.deserialize("")
         assertEquals(emptyList(), result)
     }
 
     @Test
     fun deserialize_invalidJson_returnsEmptyList() {
-        val result = CardConfigurationSerializer.deserialize("{invalid json")
+        val result = LegacyCardConfigurationSerializer.deserialize("{invalid json")
         assertEquals(emptyList(), result)
     }
 
@@ -59,7 +59,7 @@ class CardConfigurationSerializerTest {
     fun deserialize_withUnknownFields_ignoresAndParses() {
         val json = """[{"cardId":"SLEEP_SCORE","isVisible":true,"position":0,"unknownField":"value"}]"""
 
-        val result = CardConfigurationSerializer.deserialize(json)
+        val result = LegacyCardConfigurationSerializer.deserialize(json)
 
         assertEquals(1, result.size)
         assertEquals(CardId.SLEEP_SCORE, result[0].cardId)
@@ -70,11 +70,11 @@ class CardConfigurationSerializerTest {
         val original = listOf(
             CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),
             CardConfiguration(CardId.HRV, isVisible = false, position = 1),
-            CardConfiguration(CardId.RHR, isVisible = true, position = 2),
+            CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 2),
         )
 
-        val json = CardConfigurationSerializer.serialize(original)
-        val deserialized = CardConfigurationSerializer.deserialize(json)
+        val json = LegacyCardConfigurationSerializer.serialize(original)
+        val deserialized = LegacyCardConfigurationSerializer.deserialize(json)
 
         assertEquals(original, deserialized)
     }

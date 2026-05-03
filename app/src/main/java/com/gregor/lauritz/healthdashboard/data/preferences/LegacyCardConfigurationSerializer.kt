@@ -6,8 +6,8 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-object CardConfigurationSerializer {
-    private const val TAG = "CardConfigurationSerializer"
+object LegacyCardConfigurationSerializer {
+    private const val TAG = "LegacyCardConfigurationSerializer"
 
     // ignoreUnknownKeys=true enables graceful handling of new properties in future app versions
     // allowing older saved configs to load without errors when app adds new card types

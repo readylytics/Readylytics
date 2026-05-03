@@ -57,6 +57,13 @@ data class WorkoutsUiState(
     val isManagingCards: Boolean = false,
 )
 
+private data class WorkoutData(
+    val latestSummary: DailySummary?,
+    val allWorkouts: List<WorkoutRecordEntity>,
+    val paiSummaries: List<DailySummary>,
+    val prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+)
+
 @HiltViewModel
 class WorkoutsViewModel
     @Inject
@@ -111,14 +118,23 @@ class WorkoutsViewModel
 
                     val paiFromMs = date.minusDays(6)
                         .atStartOfDay(zoneId).toInstant().toEpochMilli()
-                    combine(
+
+                    val dataFlow = combine(
                         summaryFlow,
                         workoutDao.observeSince(fetchFromMs),
                         dailySummaryDao.observeSince(paiFromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
                         prefsRepo.userPreferences,
+                    ) { latest, allWorkouts, paiSummaries, prefs ->
+                        WorkoutData(latest, allWorkouts, paiSummaries, prefs)
+                    }
+
+                    combine(
+                        dataFlow,
                         cardManagementDelegate.isManagingCards,
                         cardConfigRepository.workoutCardConfigurations(),
-                    ) { latest, allWorkouts, paiSummaries, prefs, isManaging, cardConfigs ->
+                    ) { data, isManaging, cardConfigs ->
+                        val (latest, allWorkouts, paiSummaries, prefs) = data
+
                         val filteredWorkouts = allWorkouts.filter { it.startTime < selectedMidnightMs + TimeUnit.DAYS.toMillis(1) }
                         val trimpByDay: Map<Long, Float> =
                             filteredWorkouts
@@ -214,11 +230,12 @@ class WorkoutsViewModel
             cardManagementDelegate.toggleCardManagement()
         }
 
-        fun onToggleCardVisibility(cardId: CardId) {
+        fun onToggleCardVisibility(cardId: CardId, visible: Boolean) {
             cardManagementDelegate.onToggleCardVisibility(
                 ScreenType.WORKOUTS,
                 uiState.value.cardConfigurations,
                 cardId,
+                visible,
             )
         }
 
