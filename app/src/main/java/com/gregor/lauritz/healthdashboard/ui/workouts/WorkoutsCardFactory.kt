@@ -11,5 +11,5 @@ fun buildWorkoutsCardDataMap(
     // Add workouts-specific cards here based on actual Workouts screen implementation
     // For now, these are placeholders - you'll customize based on your actual cards
 
-    return cardMap.filterValues { it != null }
+    return cardMap.filterValues { true }
 }

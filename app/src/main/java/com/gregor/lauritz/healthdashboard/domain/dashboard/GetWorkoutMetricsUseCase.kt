@@ -34,7 +34,7 @@ class GetWorkoutMetricsUseCase @Inject constructor(
 
     private fun createStrainRatioCard(strainRatio: Float): CardData {
         val status = strainRatio.strainRatioStatus()
-        val value = String.format("%.1fx", strainRatio)
+        val value = String.format("%.2f", strainRatio)
 
         return CardData(
             title = "Strain Ratio",

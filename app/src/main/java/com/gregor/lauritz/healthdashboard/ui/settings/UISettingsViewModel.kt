@@ -74,7 +74,6 @@ class UISettingsViewModel @Inject constructor(
                         SettingsSection.BASELINES_THRESHOLDS -> prefsRepo.updateCollapseBaselinesThresholds(collapsed = event.collapsed)
                         SettingsSection.DISPLAY -> prefsRepo.updateCollapseDisplay(collapsed = event.collapsed)
                         SettingsSection.ADVANCED -> prefsRepo.updateCollapseAdvanced(collapsed = event.collapsed)
-                        else -> {}
                     }
                 }
             SettingsEvent.AboutDismissed ->
