@@ -53,7 +53,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
 import java.time.Instant
 import java.time.ZoneId
-import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
+import com.gregor.lauritz.healthdashboard.ui.theme.LocalStatusColors
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
@@ -195,13 +195,13 @@ private fun WorkoutHeader(workout: WorkoutRecordEntity) {
 @Composable
 private fun ZoneBreakdownCard(workout: WorkoutRecordEntity) {
     val totalMinutes = workout.durationMinutes.toFloat().coerceAtLeast(1f)
-    val extendedColors = LocalExtendedColors.current
+    val statusColors = LocalStatusColors.current
     val zones =
         listOf(
-            Triple("Zone 5", workout.zone5Minutes, MaterialTheme.colorScheme.error),
-            Triple("Zone 4", workout.zone4Minutes, extendedColors.warning),
-            Triple("Zone 3", workout.zone3Minutes, extendedColors.success),
-            Triple("Zone 2", workout.zone2Minutes, MaterialTheme.colorScheme.secondary),
+            Triple("Zone 5", workout.zone5Minutes, statusColors.poor),
+            Triple("Zone 4", workout.zone4Minutes, statusColors.warning),
+            Triple("Zone 3", workout.zone3Minutes, statusColors.optimal),
+            Triple("Zone 2", workout.zone2Minutes, statusColors.neutral),
             Triple("Zone 1", workout.zone1Minutes, MaterialTheme.colorScheme.onSurfaceVariant),
         )
     Card(modifier = Modifier.fillMaxWidth()) {
