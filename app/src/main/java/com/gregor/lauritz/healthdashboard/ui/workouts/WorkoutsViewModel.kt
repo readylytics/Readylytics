@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
@@ -16,6 +17,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.combine
@@ -48,6 +50,13 @@ data class WorkoutsUiState(
     val todayPaiScore: Float? = null,
 )
 
+private data class WorkoutData(
+    val latestSummary: DailySummary?,
+    val allWorkouts: List<WorkoutRecordEntity>,
+    val paiSummaries: List<DailySummary>,
+    val prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+)
+
 @HiltViewModel
 class WorkoutsViewModel
     @Inject
@@ -56,8 +65,10 @@ class WorkoutsViewModel
         private val workoutDao: WorkoutDao,
         private val selectedDateRepository: SelectedDateRepository,
         private val scoringCalculator: ScoringCalculator,
+        private val prefsRepo: UserPreferencesRepository,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
+
         val selectedRange = _selectedRange.asStateFlow()
 
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -96,11 +107,19 @@ class WorkoutsViewModel
 
                     val paiFromMs = date.minusDays(6)
                         .atStartOfDay(zoneId).toInstant().toEpochMilli()
-                    combine(
+
+                    val dataFlow = combine(
                         summaryFlow,
                         workoutDao.observeSince(fetchFromMs),
                         dailySummaryDao.observeSince(paiFromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
-                    ) { latest, allWorkouts, paiSummaries ->
+                        prefsRepo.userPreferences,
+                    ) { latest, allWorkouts, paiSummaries, prefs ->
+                        WorkoutData(latest, allWorkouts, paiSummaries, prefs)
+                    }
+
+                    dataFlow.map { data ->
+                        val (latest, allWorkouts, paiSummaries, prefs) = data
+
                         val filteredWorkouts = allWorkouts.filter { it.startTime < selectedMidnightMs + TimeUnit.DAYS.toMillis(1) }
                         val trimpByDay: Map<Long, Float> =
                             filteredWorkouts

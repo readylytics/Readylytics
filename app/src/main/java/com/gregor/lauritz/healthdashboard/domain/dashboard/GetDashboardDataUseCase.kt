@@ -6,11 +6,14 @@ import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.efficiencyStatus
 import com.gregor.lauritz.healthdashboard.domain.model.hrvStatus
 import com.gregor.lauritz.healthdashboard.domain.model.paiStatus
 import com.gregor.lauritz.healthdashboard.domain.model.restingHrStatus
 import com.gregor.lauritz.healthdashboard.domain.model.rhrStatus
 import com.gregor.lauritz.healthdashboard.domain.model.sleepDurationStatus
+import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
 import com.gregor.lauritz.healthdashboard.ui.dashboard.CardData
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardAction
 import java.time.Instant
@@ -24,10 +27,10 @@ import javax.inject.Singleton
 @Singleton
 class GetDashboardDataUseCase @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase,
 ) {
     data class DashboardCards(
-        val mainCards: List<CardData>,
-        val restingHrCard: CardData?,
+        val cardDataMap: Map<CardId, CardData>,
         val paiDailyBreakdown: List<Pair<String, Float>>,
     )
 
@@ -38,13 +41,11 @@ class GetDashboardDataUseCase @Inject constructor(
         lastSleepSession: SleepSessionEntity?,
         paiSummaries: List<DailySummary>,
     ): DashboardCards {
-        val mainCards = calculateCardData(summary, prefs, date, lastSleepSession)
-        val restingHrCard = summary?.let { restingHrCard(it, prefs) }
+        val cardDataMap = calculateCardData(summary, prefs, date, lastSleepSession)
         val paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries)
 
         return DashboardCards(
-            mainCards = mainCards,
-            restingHrCard = restingHrCard,
+            cardDataMap = cardDataMap,
             paiDailyBreakdown = paiDailyBreakdown,
         )
     }
@@ -54,23 +55,47 @@ class GetDashboardDataUseCase @Inject constructor(
         prefs: UserPreferences,
         selectedDate: LocalDate,
         lastSleepSession: SleepSessionEntity?,
-    ): List<CardData> {
-        if (summary == null) return emptyList()
+    ): Map<CardId, CardData> {
+        if (summary == null) return emptyMap()
 
-        return listOf(
-            sleepCard(summary, prefs),
-            hrvCard(summary, prefs),
-            paiCard(summary),
-            sleepDurationCard(summary, prefs, lastSleepSession),
+        val mapBuilder = mutableMapOf<CardId, CardData>(
+            CardId.SLEEP_RHR to sleepCard(summary, prefs),
+            CardId.HRV to hrvCard(summary, prefs),
+            CardId.PAI_DAILY to paiCard(summary),
+            CardId.SLEEP_DURATION to sleepDurationCard(summary, prefs, lastSleepSession),
+            CardId.RESTING_HR to restingHrCard(summary, prefs),
+            CardId.SLEEP_EFFICIENCY to sleepEfficiencyCard(lastSleepSession),
+        )
+
+        val metrics = getWorkoutMetricsUseCase(summary)
+        if (metrics.strainRatioCard != null) {
+            mapBuilder[CardId.STRAIN_RATIO] = metrics.strainRatioCard
+        }
+
+        return mapBuilder.toMap()
+    }
+
+    private fun sleepEfficiencyCard(lastSleepSession: SleepSessionEntity?): CardData {
+        val efficiencyStatus = lastSleepSession?.efficiencyStatus() ?: MetricStatus.CALIBRATING
+        val efficiency = lastSleepSession?.efficiency?.roundToPercentInt()?.toString() ?: "—"
+
+        return CardData(
+            title = "Sleep Efficiency",
+            value = if (efficiency == "—") efficiency else "$efficiency%",
+            unit = "",
+            status = efficiencyStatus,
+            action = DashboardAction.NAVIGATE_SLEEP,
+            tooltip = "The percentage of time actually asleep while in bed. (Goal: >85%).",
+            secondaryText = "Goal: >85%"
         )
     }
 
     private fun paiCard(summary: DailySummary): CardData {
         val status = summary.paiStatus()
-        val value = summary.totalPai?.toInt()?.toString() ?: "—"
+        val value = summary.totalPai?.roundToPercentInt()?.toString() ?: "—"
 
         return CardData(
-            title = "Current PAI",
+            title = "PAI Score",
             value = value,
             unit = "",
             status = status,

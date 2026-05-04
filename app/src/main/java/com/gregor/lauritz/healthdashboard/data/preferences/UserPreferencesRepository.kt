@@ -272,4 +272,7 @@ class UserPreferencesRepository
         suspend fun updateLastBackupTimestamp(timestamp: Long) {
             dataStore.updateData { it.toBuilder().setLastBackupTimestamp(timestamp).build() }
         }
+
+        // Card configuration management moved to CardConfigurationRepository to consolidate logic
+        // and avoid violating the Single Source of Truth principle
     }

@@ -1,5 +1,8 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+
 object SettingsDefaults {
     const val GOAL_SLEEP_HOURS = 8f
     val HRV_BASELINE_OVERRIDE: Float? = null
@@ -52,4 +55,18 @@ object SettingsDefaults {
     val PHYSIOLOGY_PROFILE = PhysiologyProfile.GENERAL
     const val INSTALL_DATE = 0L // Set to System.currentTimeMillis() on first app run
     val CIRCADIAN_THRESHOLD_OVERRIDE: String? = null // null = use profile default
+
+    val DEFAULT_DASHBOARD_CARDS = listOf(
+        CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),
+        CardConfiguration(CardId.READINESS, isVisible = true, position = 1),
+        CardConfiguration(CardId.STEPS, isVisible = true, position = 2),
+        CardConfiguration(CardId.HRV, isVisible = true, position = 3),
+        CardConfiguration(CardId.SLEEP_RHR, isVisible = true, position = 4),
+        CardConfiguration(CardId.SLEEP_DURATION, isVisible = true, position = 5),
+        CardConfiguration(CardId.PAI_DAILY, isVisible = true, position = 6),
+        CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 7),
+        CardConfiguration(CardId.CIRCADIAN_CONSISTENCY, isVisible = true, position = 8),
+        CardConfiguration(CardId.STRAIN_RATIO, isVisible = false, position = 9),
+        CardConfiguration(CardId.SLEEP_EFFICIENCY, isVisible = true, position = 10),
+    )
 }

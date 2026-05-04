@@ -26,7 +26,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -102,6 +104,7 @@ fun WorkoutsScreen(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
+
     // Explicitly persist scroll state across navigation
     rememberSaveable(saver = androidx.compose.foundation.lazy.LazyListState.Saver) {
         listState
@@ -113,11 +116,18 @@ fun WorkoutsScreen(
         contentPadding = PaddingValues(vertical = 16.dp),
     ) {
         item(key = "date_switcher") {
-            DateSwitcher(
-                selectedDate = uiState.selectedDate,
-                onPreviousDay = onPreviousDay,
-                onNextDay = onNextDay,
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+            ) {
+                DateSwitcher(
+                    selectedDate = uiState.selectedDate,
+                    onPreviousDay = onPreviousDay,
+                    onNextDay = onNextDay,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
 
         item(key = "hero_section") {

@@ -1,10 +1,13 @@
 package com.gregor.lauritz.healthdashboard.domain.util
 
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
  * Extension functions for list math operations to improve readability and reusability.
  */
+
+fun Float.roundToPercentInt(): Int = this.roundToInt()
 
 fun List<Float>.mean(): Float {
     if (isEmpty()) return 0f

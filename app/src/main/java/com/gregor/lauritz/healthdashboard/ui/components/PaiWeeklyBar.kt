@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
 
 // 100 PAI fills 75% of the bar width
 private const val BAR_MAX = 100f / 0.75f
@@ -97,7 +98,7 @@ fun PaiWeeklyBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "${totalPai.toInt()} PAI",
+                text = "${totalPai.roundToPercentInt()} PAI",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = fillColor,
@@ -145,7 +146,7 @@ private fun PaiDayLegendItem(
             color = onSurfaceVariant,
         )
         Text(
-            text = if (pai > 0f) pai.toInt().toString() else "-",
+            text = if (pai > 0f) pai.roundToPercentInt().toString() else "-",
             style = MaterialTheme.typography.labelSmall,
             color = onSurfaceVariant,
         )

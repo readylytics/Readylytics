@@ -6,7 +6,6 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
@@ -22,6 +21,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -48,31 +48,12 @@ data class SleepUiState(
     val rangeStartMs: Long = System.currentTimeMillis(),
 )
 
-fun SleepSessionEntity.efficiencyStatus(): MetricStatus =
-    when {
-        efficiency >= 85f -> MetricStatus.OPTIMAL
-        efficiency >= 80f -> MetricStatus.NEUTRAL
-        efficiency >= 70f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
-
-fun DailySummary.deepSleepStatus(): MetricStatus =
-    when (deepSleepPercent) {
-        null -> MetricStatus.CALIBRATING
-        in 25f..30f -> MetricStatus.NEUTRAL
-        in 15f..25f -> MetricStatus.OPTIMAL
-        in 10f..15f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
-
-fun DailySummary.remSleepStatus(): MetricStatus =
-    when (remSleepPercent) {
-        null -> MetricStatus.CALIBRATING
-        in 25f..30f -> MetricStatus.NEUTRAL
-        in 20f..25f -> MetricStatus.OPTIMAL
-        in 15f..20f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
+private data class SleepData(
+    val latestSummary: DailySummary?,
+    val lastSession: SleepSessionEntity?,
+    val summaries: List<DailySummary>,
+    val prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+)
 
 @HiltViewModel
 class SleepViewModel
@@ -200,24 +181,24 @@ class SleepViewModel
                             flow { emit(dailySummaryDao.getByDate(selectedMidnightMs)?.let { DailySummaryMapper.toDomain(it) }) }
                         }
 
-                    combine(
+                    val dataFlow = combine(
                         summaryFlow,
                         sleepSessionDao.observeFirstSessionEndingInRange(
                             selectedMidnightMs,
                             nextDayMidnightMs,
                         ),
-                        dailySummaryDao.observeSince(fromMs),
+                        dailySummaryDao.observeSince(fromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
                         prefsRepo.userPreferences,
+                    ) { latestSummary, latestSession, summaries, prefs ->
+                        SleepData(latestSummary, latestSession, summaries, prefs)
+                    }
+
+                    combine(
+                        dataFlow,
                         baselineHrvFlow,
                         baselineRhrFlow,
-                    ) { flows ->
-                        val latestSummary = flows[0] as DailySummary?
-                        val latestSession = flows[1] as SleepSessionEntity?
-                        @Suppress("UNCHECKED_CAST")
-                        val summaries = (flows[2] as List<DailySummaryEntity>).map { DailySummaryMapper.toDomain(it) }
-                        val prefs = flows[3] as com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-                        val bHrv = flows[4] as Float?
-                        val bRhr = flows[5] as Int?
+                    ) { data, bHrv, bRhr ->
+                        val (latestSummary, latestSession, summaries, prefs) = data
 
                         val startLocalDate = Instant.ofEpochMilli(startDayMs).atZone(zoneId).toLocalDate()
 
@@ -272,4 +253,3 @@ class SleepViewModel
             selectedDateRepository.selectNextDay()
         }
     }
-

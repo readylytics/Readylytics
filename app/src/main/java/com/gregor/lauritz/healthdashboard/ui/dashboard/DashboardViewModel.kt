@@ -1,11 +1,16 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardManagementDelegate
 import com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
@@ -19,12 +24,14 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.IOException
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -34,14 +41,15 @@ data class DashboardUiState(
     val summary: DailySummary? = null,
     val selectedDate: LocalDate = LocalDate.now(),
     val isRefreshing: Boolean = false,
-    val cardData: List<CardData> = emptyList(),
-    val cardRows: List<List<CardData>> = emptyList(),
+    val cardDataMap: Map<CardId, CardData> = emptyMap(),
     val circadianConsistency: CircadianConsistencyResult? = null,
     val restingHrCard: CardData? = null,
     val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val stepCount: Int? = null,
     val stepGoal: Int = 10000,
     val lastSleepSession: SleepSessionEntity? = null,
+    val cardConfigurations: List<CardConfiguration> = emptyList(),
+    val isManagingCards: Boolean = false,
 )
 
 @Immutable
@@ -78,10 +86,14 @@ class DashboardViewModel
         private val getDashboardDataUseCase: GetDashboardDataUseCase,
         private val foregroundSyncController: ForegroundSyncController,
         private val selectedDateRepository: SelectedDateRepository,
-        prefsRepo: UserPreferencesRepository,
+        private val prefsRepo: UserPreferencesRepository,
+        private val cardConfigRepository: CardConfigurationRepository,
         circadianRepo: CircadianConsistencyRepository,
     ) : ViewModel() {
+
         private val _isRefreshing = MutableStateFlow(false)
+
+        private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
 
         val today: StateFlow<LocalDate> = selectedDateRepository.selectedDate
             .stateIn(
@@ -89,6 +101,8 @@ class DashboardViewModel
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = LocalDate.now(),
             )
+
+        val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
 
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
@@ -115,18 +129,22 @@ class DashboardViewModel
                         fromMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli(),
                         toMs = date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli(),
                     )
+                    val basicInputsFlow = combine(
+                        summaryFlow,
+                        prefsRepo.userPreferences,
+                        _isRefreshing,
+                        circadianRepo.resultFor(date),
+                        paiBreakdownFlow,
+                    ) { summary, prefs, refreshing, circadian, paiSummaries ->
+                        DashboardInputs(summary, prefs, refreshing, circadian, paiSummaries)
+                    }
+
                     combine(
-                        combine(
-                            summaryFlow,
-                            prefsRepo.userPreferences,
-                            _isRefreshing,
-                            circadianRepo.resultFor(date),
-                            paiBreakdownFlow
-                        ) { summary, prefs, refreshing, circadian, paiSummaries ->
-                            DashboardInputs(summary, prefs, refreshing, circadian, paiSummaries)
-                        },
+                        basicInputsFlow,
+                        cardManagementDelegate.isManagingCards,
+                        cardConfigRepository.dashboardCardConfigurations(),
                         sessionFlow
-                    ) { inputs, session ->
+                    ) { inputs, isManaging, cardConfigs, session ->
                         val cards = getDashboardDataUseCase.invoke(
                             summary = inputs.summary,
                             prefs = inputs.prefs,
@@ -138,14 +156,15 @@ class DashboardViewModel
                             summary = inputs.summary,
                             selectedDate = date,
                             isRefreshing = inputs.isRefreshing,
-                            cardData = cards.mainCards,
-                            cardRows = cards.mainCards.chunked(2),
+                            cardDataMap = cards.cardDataMap,
                             circadianConsistency = inputs.circadian,
-                            restingHrCard = cards.restingHrCard,
+                            restingHrCard = cards.cardDataMap[CardId.RESTING_HR],
                             paiDailyBreakdown = cards.paiDailyBreakdown,
                             stepCount = inputs.summary?.stepCount,
                             stepGoal = inputs.prefs.stepGoal,
                             lastSleepSession = session,
+                            cardConfigurations = cardConfigs,
+                            isManagingCards = isManaging,
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(
@@ -160,8 +179,12 @@ class DashboardViewModel
             _isRefreshing.value = true
             try {
                 foregroundSyncController.triggerImmediateSync()
-            } catch (_: Exception) {
+            } catch (e: IOException) {
+                Log.w(TAG, "Sync network error during refresh", e)
                 // Sync errors are non-fatal for the UI — the state will update once data arrives
+            } catch (e: Exception) {
+                Log.e(TAG, "Unexpected sync error during refresh", e)
+                // Still treat as non-fatal; data will update when sync succeeds
             } finally {
                 _isRefreshing.value = false
             }
@@ -173,5 +196,32 @@ class DashboardViewModel
 
         fun onNextDay() {
             selectedDateRepository.selectNextDay()
+        }
+
+        fun toggleCardManagement() {
+            cardManagementDelegate.toggleCardManagement()
+        }
+
+        fun onToggleCardVisibility(cardId: CardId, visible: Boolean) {
+            cardManagementDelegate.onToggleCardVisibility(
+                uiState.value.cardConfigurations,
+                cardId,
+                visible,
+            )
+        }
+
+        fun onReorderCards(newOrder: List<CardConfiguration>) {
+            cardManagementDelegate.onReorderCards(
+                uiState.value.cardConfigurations,
+                newOrder,
+            )
+        }
+
+        fun onResetToDefaults() {
+            cardManagementDelegate.onResetToDefaults()
+        }
+
+        companion object {
+            private const val TAG = "DashboardViewModel"
         }
     }

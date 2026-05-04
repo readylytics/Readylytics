@@ -48,9 +48,12 @@ class DashboardViewModelTest {
         val getDashboardDataUseCase = mockk<com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase>(relaxed = true) {
             every { formatSleepDuration(any()) } returns "8h 0m"
         }
-        every { getDashboardDataUseCase(any(), any(), any(), any(), any()) } returns com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase.DashboardCards(emptyList(), null, emptyList())
+        every { getDashboardDataUseCase(any(), any(), any(), any(), any()) } returns com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase.DashboardCards(emptyMap(), emptyList())
         val prefsRepo = mockk<UserPreferencesRepository> {
             every { userPreferences } returns MutableStateFlow(UserPreferences())
+        }
+        val cardConfigRepository = mockk<com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository> {
+            every { dashboardCardConfigurations() } returns MutableStateFlow(emptyList())
         }
         val selectedDateRepo = SelectedDateRepository()
         val circadianRepo = mockk<CircadianConsistencyRepository> {
@@ -64,6 +67,7 @@ class DashboardViewModelTest {
             foregroundSyncController = syncController,
             selectedDateRepository = selectedDateRepo,
             prefsRepo = prefsRepo,
+            cardConfigRepository = cardConfigRepository,
             circadianRepo = circadianRepo,
         )
     }

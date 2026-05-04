@@ -1,6 +1,32 @@
 package com.gregor.lauritz.healthdashboard.domain.model
 
+import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
+
+fun SleepSessionEntity.efficiencyStatus(): MetricStatus =
+    when {
+        efficiency >= 85f -> MetricStatus.OPTIMAL
+        efficiency >= 80f -> MetricStatus.NEUTRAL
+        efficiency >= 70f -> MetricStatus.WARNING
+        else -> MetricStatus.POOR
+    }
+
+fun DailySummary.deepSleepStatus(): MetricStatus =
+    when (deepSleepPercent) {
+        null -> MetricStatus.CALIBRATING
+        in 25f..30f -> MetricStatus.NEUTRAL
+        in 15f..25f -> MetricStatus.OPTIMAL
+        in 10f..15f -> MetricStatus.NEUTRAL
+        else -> MetricStatus.WARNING
+    }
+
+fun DailySummary.remSleepStatus(): MetricStatus =
+    when (remSleepPercent) {
+        null -> MetricStatus.CALIBRATING
+        in 20f..25f -> MetricStatus.OPTIMAL
+        in 15f..20f -> MetricStatus.NEUTRAL
+        else -> MetricStatus.WARNING
+    }
 
 fun DailySummary.rhrStatus(
     optimalThreshold: Float,

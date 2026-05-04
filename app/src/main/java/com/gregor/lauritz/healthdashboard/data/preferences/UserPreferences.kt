@@ -1,5 +1,7 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
+
 enum class BackupSchedule { MANUAL, DAILY, WEEKLY }
 
 data class UserPreferences(

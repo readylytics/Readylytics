@@ -7,6 +7,7 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStoreFile
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -29,6 +30,44 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DataStoreModule {
+    @Provides
+    @Singleton
+    fun provideCardConfigurationsDataStore(
+        @ApplicationContext context: Context,
+    ): DataStore<CardConfigurationsProto> =
+        DataStoreFactory.create(
+            serializer = CardConfigurationsSerializer,
+            corruptionHandler = ReplaceFileCorruptionHandler {
+                CardConfigurationsSerializer.defaultValue
+            },
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            migrations = listOf(
+                object : DataMigration<CardConfigurationsProto> {
+                    private val oldFile = context.preferencesDataStoreFile("card_configurations")
+
+                    override suspend fun shouldMigrate(currentData: CardConfigurationsProto): Boolean {
+                        return oldFile.exists()
+                    }
+
+                    override suspend fun migrate(currentData: CardConfigurationsProto): CardConfigurationsProto {
+                        val oldDataStore = PreferenceDataStoreFactory.create(produceFile = { oldFile })
+                        val prefs = oldDataStore.data.first()
+                        
+                        return CardConfigurationsProto.newBuilder().apply {
+                            prefs[stringPreferencesKey("dashboard_cards")]?.let { json ->
+                                addAllDashboardCards(LegacyCardConfigurationSerializer.deserialize(json).map { CardConfigurationMapper.toProto(it) })
+                            }
+                        }.build()
+                    }
+
+                    override suspend fun cleanUp() {
+                        oldFile.delete()
+                    }
+                }
+            ),
+            produceFile = { context.dataStoreFile("card_configurations.pb") },
+        )
+
     @Provides
     @Singleton
     fun provideUserPreferencesDataStore(
