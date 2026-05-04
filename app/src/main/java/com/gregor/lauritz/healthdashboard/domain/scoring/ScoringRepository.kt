@@ -29,6 +29,8 @@ class ScoringRepository
         private val scoringCalculator: ScoringCalculator,
         private val baselineComputer: BaselineComputer,
         private val computeSleepMetricsUseCase: ComputeSleepMetricsUseCase,
+        private val scoringConfigFactory: ScoringConfigFactory,
+        private val heartRateDao: com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao,
     ) {
         suspend fun computeAndPersistDailySummary(targetDate: LocalDate = LocalDate.now()) {
             val summary = computeDailySummary(targetDate)
@@ -44,7 +46,11 @@ class ScoringRepository
                 val nextDayMidnightMs = nextDayMidnight.toEpochMilli()
 
                 val prefs = prefsRepo.userPreferences.first()
-                val hrMax = if (prefs.autoCalculateMaxHr) HeartRateFormulas.estimateMaxHr(prefs.age).toFloat() else prefs.maxHeartRate.toFloat()
+                val hrMax = if (prefs.autoCalculateMaxHr) {
+                    HeartRateFormulas.estimateMaxHr(prefs.age).toFloat()
+                } else {
+                    prefs.maxHeartRate.toFloat()
+                }
 
                 val rhrBaselineValues = baselineComputer.rhrHistory(dayMidnight)
                 val rhrBaselineValue = baselineComputer.resolveBaselineRhrBpm(
@@ -52,27 +58,56 @@ class ScoringRepository
                     rhrBaselineOverride = prefs.rhrBaselineOverride,
                 )
 
+                // Audit: No fallback values for HR_max or RHR_baseline
+                if (hrMax <= 0f) throw IllegalStateException("HR Max is missing or invalid")
+                if (rhrBaselineValue <= 0f) throw IllegalStateException("RHR Baseline is missing or invalid")
+
+                val scoringConfig = scoringConfigFactory.build(
+                    userPreferences = prefs,
+                    installDate = LocalDate.now().minusDays(30), // Fallback install date if needed
+                    currentDate = targetDate
+                )
+
                 logD("ScoringRepository") { "PAI CALC START [$targetDate]" }
 
-                // Calculate Daily PAI points from workouts (no sleep calibration needed)
-                val totalDuration = workoutDao.getTotalDurationMinutes(dayMidnightMs, nextDayMidnightMs) ?: 0
-                val weightedAvgHr = workoutDao.getWeightedAvgHr(dayMidnightMs, nextDayMidnightMs) ?: 0f
+                // Task 2d: Calculate raw TRIMP from HR samples with HR filter
+                val workouts = workoutDao.getWorkoutsInRange(dayMidnightMs, nextDayMidnightMs)
+                var dailyTrimpRaw = 0f
+                
+                workouts.forEach { workout ->
+                    val workoutHrSamples = heartRateDao.getByTimeRange(workout.startTime, workout.endTime)
+                        .filter { it.recordType == "EXERCISE" }
+                        .sortedBy { it.timestampMs }
 
-                logD("ScoringRepository") { "Workout Data - Duration: $totalDuration, WeightedAvgHr: $weightedAvgHr, RHR Baseline: $rhrBaselineValue, HR Max: $hrMax" }
+                    if (workoutHrSamples.isNotEmpty()) {
+                        workoutHrSamples.forEachIndexed { index, sample ->
+                            val nextMs = if (index < workoutHrSamples.lastIndex) {
+                                workoutHrSamples[index + 1].timestampMs
+                            } else {
+                                // Use workout end time for the last sample
+                                workout.endTime
+                            }
+                            val durationMinutes = (nextMs - sample.timestampMs) / 60_000f
+                            
+                            if (durationMinutes > 0f) {
+                                dailyTrimpRaw += PaiCalculator.calculateDailyTrimp(
+                                    durationMinutes = durationMinutes,
+                                    hrAvg = sample.beatsPerMinute.toFloat(),
+                                    rhrBaseline = rhrBaselineValue,
+                                    hrMax = hrMax,
+                                    gender = prefs.gender
+                                )
+                            }
+                        }
+                    }
+                }
 
-                val dailyTrimpRaw = PaiCalculator.calculateDailyTrimp(
-                    durationMinutes = totalDuration.toFloat(),
-                    hrAvg = weightedAvgHr,
-                    rhrBaseline = rhrBaselineValue,
-                    hrMax = hrMax,
-                    gender = prefs.gender
-                )
-                val dailyPaiRaw = PaiCalculator.calculateDailyPai(dailyTrimpRaw, prefs.paiScalingFactor)
+                val dailyPaiBeforeReadiness = PaiCalculator.calculateDailyPai(dailyTrimpRaw, scoringConfig.paiScalingFactor)
 
-                logD("ScoringRepository") { "Result - DailyTrimpRaw: $dailyTrimpRaw, DailyPaiRaw: $dailyPaiRaw" }
+                logD("ScoringRepository") { "Result - DailyTrimpRaw: $dailyTrimpRaw, DailyPaiBeforeReadiness: $dailyPaiBeforeReadiness" }
 
                 var summary = (dailySummaryDao.getByDate(dayMidnightMs) ?: DailySummaryEntity(dateMidnightMs = dayMidnightMs))
-                    .copy(paiScore = dailyPaiRaw)
+                    .copy(paiScore = dailyPaiBeforeReadiness)
 
                 // Sleep calibration check — guard strain/sleep/readiness metrics only
                 val calibrationFrom = dayMidnight.minus(ScoringConstants.CHRONIC_DAYS, ChronoUnit.DAYS).toEpochMilli()
@@ -81,9 +116,19 @@ class ScoringRepository
                 if (!isCalibrated) {
                     // Persist PAI-only partial summary and skip sleep/strain scoring
                     val totalPaiSoFar = fetchPreviousDaysPaiTotal(targetDate)
-                    val finalDailyPai = PaiCalculator.applyAccumulationMultiplier(dailyPaiRaw, totalPaiSoFar)
+                    val finalDailyPai = PaiCalculator.applyAccumulationMultiplier(dailyPaiBeforeReadiness, totalPaiSoFar)
                     summary = summary.copy(paiScore = finalDailyPai, totalPai = totalPaiSoFar + finalDailyPai)
                     logD("ScoringRepository") { "PAI FINAL (uncalibrated) - FinalDaily: $finalDailyPai, Total: ${totalPaiSoFar + finalDailyPai}" }
+                    
+                    // Task 3: Telemetry
+                    val updatedAudit = scoringConfig.auditTrail.copy(
+                        appliedSf = scoringConfig.paiScalingFactor,
+                        physiologyProfile = prefs.physiologyProfile.name,
+                        paiTotalPre = totalPaiSoFar,
+                        paiTotalPost = summary.totalPai
+                    )
+                    logD("ScoringConfig") { "Telemetry: $updatedAudit" }
+                    
                     return@withContext summary
                 }
 
@@ -120,18 +165,29 @@ class ScoringRepository
                     summary = computeSleepMetricsUseCase(session, dayMidnight, targetDate, prefs, summary, loadScore, zoneId)
                 }
 
-                // After readiness is calculated, adjust PAI and calculate rolling sum
-                val adjustedDailyPai = PaiCalculator.adjustForReadiness(summary.paiScore ?: 0f, summary.readinessScore)
+                // Task 2d: Apply SF in the PAI Calculation
+                // Order: 1. TRIMP (already done) -> 2. Readiness (S_rec) -> 3. Scaling Factor -> 4. Logarithmic Decay
+                val adjustedDailyPai = PaiCalculator.adjustForReadiness(dailyTrimpRaw, summary.readinessScore)
+                val scaledDailyPai = adjustedDailyPai * scoringConfig.paiScalingFactor
 
                 val totalPaiSoFar = fetchPreviousDaysPaiTotal(targetDate)
-                val finalDailyPai = PaiCalculator.applyAccumulationMultiplier(adjustedDailyPai, totalPaiSoFar)
+                val finalDailyPai = PaiCalculator.applyAccumulationMultiplier(scaledDailyPai, totalPaiSoFar)
 
                 summary = summary.copy(
                     paiScore = finalDailyPai,
                     totalPai = totalPaiSoFar + finalDailyPai
                 )
 
-                logD("ScoringRepository") { "PAI FINAL - Adjusted: $adjustedDailyPai, PrevTotal: $totalPaiSoFar, FinalDaily: $finalDailyPai, Total: ${totalPaiSoFar + finalDailyPai}" }
+                logD("ScoringRepository") { "PAI FINAL - Adjusted: $adjustedDailyPai, Scaled: $scaledDailyPai, PrevTotal: $totalPaiSoFar, FinalDaily: $finalDailyPai, Total: ${totalPaiSoFar + finalDailyPai}" }
+
+                // Task 3: Telemetry
+                val updatedAudit = scoringConfig.auditTrail.copy(
+                    appliedSf = scoringConfig.paiScalingFactor,
+                    physiologyProfile = prefs.physiologyProfile.name,
+                    paiTotalPre = totalPaiSoFar,
+                    paiTotalPost = summary.totalPai
+                )
+                logD("ScoringConfig") { "Telemetry: $updatedAudit" }
 
                 summary
             }

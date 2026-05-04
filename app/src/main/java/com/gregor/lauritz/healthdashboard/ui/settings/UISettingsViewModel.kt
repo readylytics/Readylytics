@@ -56,7 +56,10 @@ class UISettingsViewModel @Inject constructor(
             is SettingsEvent.DynamicColorEnabledChanged ->
                 viewModelScope.launch { appConfigRepo.updateDynamicColorEnabled(enabled = event.enabled) }
             is SettingsEvent.PaiScalingFactorChanged ->
-                viewModelScope.launch { prefsRepo.updatePaiScalingFactor(value = event.value) }
+                viewModelScope.launch {
+                    prefsRepo.updatePaiScalingFactor(value = event.value)
+                    healthSyncUseCase.sync()
+                }
             is SettingsEvent.StepGoalChanged ->
                 viewModelScope.launch {
                     prefsRepo.updateStepGoal(steps = event.steps)

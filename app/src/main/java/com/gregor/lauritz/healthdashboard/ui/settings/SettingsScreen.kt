@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -362,6 +363,7 @@ fun SettingsScreen(
                             sleepState = sleepState,
                             paiScalingFactor = uiState.paiScalingFactor,
                             onEvent = onSleepEvent,
+                            onPhysiologyEvent = onPhysiologyEvent,
                             onUIEvent = onUIEvent
                         )
                     }
@@ -821,6 +823,7 @@ private fun AdvancedSettingsSection(
     sleepState: SleepSettingsState,
     paiScalingFactor: Float,
     onEvent: (SettingsEvent) -> Unit,
+    onPhysiologyEvent: (SettingsEvent) -> Unit,
     onUIEvent: (SettingsEvent) -> Unit,
 ) {
     var hrvText by remember(sleepState.hrvBaselineOverride) {
@@ -953,6 +956,7 @@ private fun AdvancedSettingsSection(
             value = paiScaling,
             onValueChange = { paiScaling = it },
             onValueChangeFinished = { onUIEvent(SettingsEvent.PaiScalingFactorChanged(paiScaling)) },
+            onReset = { onPhysiologyEvent(SettingsEvent.ResetPaiScalingFactor) },
             valueRange = 0.1f..0.3f,
             steps = 20, // (0.3 - 0.1) / 0.01 = 20
             displayValue = "%.2f".format(paiScaling),
@@ -1241,6 +1245,7 @@ private fun ThresholdSliderItem(
     steps: Int = ((valueRange.endInclusive - valueRange.start) * 100).roundToInt() - 1,
     displayValue: String = "${(value * 100).roundToInt()}%",
     onValueChangeFinished: (() -> Unit)? = null,
+    onReset: (() -> Unit)? = null,
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1252,6 +1257,18 @@ private fun ThresholdSliderItem(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
+            if (onReset != null) {
+                IconButton(
+                    onClick = onReset,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = "Reset to default",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
         }
         Slider(
             value = value,

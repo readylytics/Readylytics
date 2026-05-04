@@ -1,8 +1,20 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import kotlin.math.exp
 
 object PaiCalculator {
+
+    fun getDefaultPaiScalingFactor(profile: PhysiologyProfile): Float {
+        return when (profile) {
+            PhysiologyProfile.ATHLETE -> 0.15f
+            PhysiologyProfile.ACTIVE -> 0.18f
+            PhysiologyProfile.GENERAL -> 0.20f
+            PhysiologyProfile.SEDENTARY -> 0.25f
+            PhysiologyProfile.SHIFT_WORKER -> 0.20f
+        }
+    }
+
     /**
      * Phase III: Daily TRIMP Calculation (Td) using sex-specific Banister model.
      */
@@ -17,6 +29,8 @@ object PaiCalculator {
         if (hrr <= 0) return 0f
 
         val hrR = (hrAvg - rhrBaseline) / hrr
+        // Filter: Exclude HR samples where HR < (RHR_baseline + 5)
+        if (hrAvg < (rhrBaseline + 5)) return 0f
         if (hrR <= 0) return 0f
 
         val isMale = gender != "Female" // Default to Male if not Female

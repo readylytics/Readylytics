@@ -44,6 +44,9 @@ interface WorkoutDao {
         tzOffsetMs: Long
     ): List<Float>
 
+    @Query("SELECT * FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs ORDER BY startTime ASC")
+    suspend fun getWorkoutsInRange(fromMs: Long, toMs: Long): List<WorkoutRecordEntity>
+
     @Query("SELECT MIN(startTime) FROM workout_records")
     suspend fun getEarliestWorkoutTimestamp(): Long?
 

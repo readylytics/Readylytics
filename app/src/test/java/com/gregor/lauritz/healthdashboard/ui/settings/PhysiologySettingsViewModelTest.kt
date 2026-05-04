@@ -1,0 +1,56 @@
+package com.gregor.lauritz.healthdashboard.ui.settings
+
+import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
+import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
+import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
+import io.mockk.coVerify
+import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class PhysiologySettingsViewModelTest {
+
+    private val testDispatcher = StandardTestDispatcher()
+    private val prefsRepo = mockk<UserPreferencesRepository>(relaxed = true)
+    private val userUseCase = mockk<UserUseCase>(relaxed = true)
+    private val healthSyncUseCase = mockk<HealthSyncUseCase>(relaxed = true)
+    
+    private lateinit var viewModel: PhysiologySettingsViewModel
+
+    @Before
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+        viewModel = PhysiologySettingsViewModel(prefsRepo, userUseCase, healthSyncUseCase)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `PhysiologyProfileChanged event updates profile, PAI scaling factor, and triggers sync`() = runTest {
+        val newProfile = PhysiologyProfile.ATHLETE
+        val expectedScalingFactor = PaiCalculator.getDefaultPaiScalingFactor(newProfile)
+
+        viewModel.onEvent(SettingsEvent.PhysiologyProfileChanged(newProfile))
+        advanceUntilIdle()
+
+        coVerify { prefsRepo.updatePhysiologyProfile(newProfile) }
+        coVerify { prefsRepo.updatePaiScalingFactor(expectedScalingFactor) }
+        coVerify { healthSyncUseCase.sync() }
+    }
+}

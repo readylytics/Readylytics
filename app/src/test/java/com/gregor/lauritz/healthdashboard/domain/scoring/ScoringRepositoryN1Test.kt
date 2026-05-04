@@ -107,7 +107,87 @@ class ScoringRepositoryN1Test {
             scoringConfigFactory,
             encryptionManager
         )
-        repo = ScoringRepository(workoutDao, sleepSessionDao, dailySummaryDao, prefsRepo, scoringCalculator, baselineComputer, computeSleepMetricsUseCase)
+        repo = ScoringRepository(
+            workoutDao, 
+            sleepSessionDao, 
+            dailySummaryDao, 
+            prefsRepo, 
+            scoringCalculator, 
+            baselineComputer, 
+            computeSleepMetricsUseCase,
+            scoringConfigFactory,
+            heartRateDao
+        )
+
+        coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
+    }
+
+    @Test
+    fun `profile differentiation produces different PAI gains`() = runTest {
+        val today = LocalDate.now()
+        val dayMidnight = today.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val nextDayMidnight = today.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+        // 1-hour workout at 150 bpm
+        val workout = com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity(
+            id = "w1",
+            startTime = dayMidnight + 3600000,
+            endTime = dayMidnight + 7200000,
+            exerciseType = "RUN",
+            durationMinutes = 60,
+            zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 60f, zone5Minutes = 0f,
+            trimp = 100f,
+            avgHr = 150
+        )
+        coEvery { workoutDao.getWorkoutsInRange(dayMidnight, nextDayMidnight) } returns listOf(workout)
+        
+        // HR Samples for the workout
+        val samples = (0 until 60).map { i ->
+            com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity(
+                id = "s$i",
+                timestampMs = workout.startTime + i * 60000L,
+                beatsPerMinute = 150,
+                recordType = "EXERCISE",
+                sessionId = "w1"
+            )
+        }
+        coEvery { heartRateDao.getByTimeRange(workout.startTime, workout.endTime) } returns samples
+
+        val capturedSummaries = mutableListOf<DailySummaryEntity>()
+        coEvery { dailySummaryDao.upsert(capture(capturedSummaries)) } returns Unit
+
+        // Profile: ATHLETE (SF=0.15)
+        every { prefsRepo.userPreferences } returns MutableStateFlow(
+            UserPreferences(
+                physiologyProfile = PhysiologyProfile.ATHLETE,
+                paiScalingFactor = 0.15f,
+                maxHeartRate = 190,
+                age = 30,
+                gender = "Male"
+            )
+        )
+        
+        repo.computeAndPersistDailySummary(today)
+
+        // Profile: SEDENTARY (SF=0.25)
+        every { prefsRepo.userPreferences } returns MutableStateFlow(
+            UserPreferences(
+                physiologyProfile = PhysiologyProfile.SEDENTARY,
+                paiScalingFactor = 0.25f,
+                maxHeartRate = 190,
+                age = 30,
+                gender = "Male"
+            )
+        )
+        
+        repo.computeAndPersistDailySummary(today)
+
+        coVerify(exactly = 2) { dailySummaryDao.upsert(any()) }
+        
+        val athletePai = capturedSummaries[0].paiScore ?: 0f
+        val sedentaryPai = capturedSummaries[1].paiScore ?: 0f
+
+        assert(athletePai < sedentaryPai) { "Athlete ($athletePai) should earn fewer points than Sedentary ($sedentaryPai)" }
     }
 
     @Test

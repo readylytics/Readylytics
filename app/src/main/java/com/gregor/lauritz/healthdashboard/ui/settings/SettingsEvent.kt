@@ -30,6 +30,7 @@ sealed interface SettingsEvent {
     data class ConsistencyEvaluationDaysChanged(val days: Int) : SettingsEvent
     data class ConsistencyBaselineDaysChanged(val days: Int) : SettingsEvent
     data class PaiScalingFactorChanged(val value: Float) : SettingsEvent
+    data object ResetPaiScalingFactor : SettingsEvent
     data class StepGoalChanged(val steps: Int) : SettingsEvent
     data class AppThemeChanged(val theme: AppTheme) : SettingsEvent
     data class DynamicColorEnabledChanged(val enabled: Boolean) : SettingsEvent

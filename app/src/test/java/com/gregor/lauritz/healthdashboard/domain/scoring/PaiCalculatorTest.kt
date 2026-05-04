@@ -1,9 +1,35 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PaiCalculatorTest {
+
+    @Test
+    fun `getDefaultPaiScalingFactor returns correct values for all profiles`() {
+        assertEquals(0.15f, PaiCalculator.getDefaultPaiScalingFactor(PhysiologyProfile.ATHLETE), 0.001f)
+        assertEquals(0.18f, PaiCalculator.getDefaultPaiScalingFactor(PhysiologyProfile.ACTIVE), 0.001f)
+        assertEquals(0.20f, PaiCalculator.getDefaultPaiScalingFactor(PhysiologyProfile.GENERAL), 0.001f)
+        assertEquals(0.25f, PaiCalculator.getDefaultPaiScalingFactor(PhysiologyProfile.SEDENTARY), 0.001f)
+        assertEquals(0.20f, PaiCalculator.getDefaultPaiScalingFactor(PhysiologyProfile.SHIFT_WORKER), 0.001f)
+    }
+
+    @Test
+    fun `calculateDailyTrimp excludes samples below RHR plus 5`() {
+        val duration = 40f
+        val rhr = 60f
+        val hrMax = 190f
+        val gender = "Male"
+
+        // HR = 64 (less than 60 + 5)
+        val result = PaiCalculator.calculateDailyTrimp(duration, 64f, rhr, hrMax, gender)
+        assertEquals(0f, result, 0.001f)
+
+        // HR = 66 (more than 60 + 5)
+        val resultAbove = PaiCalculator.calculateDailyTrimp(duration, 66f, rhr, hrMax, gender)
+        assert(resultAbove > 0f)
+    }
 
     @Test
     fun `calculateDailyTrimp matches Banister model for Men`() {

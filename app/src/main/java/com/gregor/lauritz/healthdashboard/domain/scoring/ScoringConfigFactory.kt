@@ -59,6 +59,7 @@ class ScoringConfigFactory @Inject constructor() {
             sleepTargets = sleepTargets,
             emergencyFlags = emergencyFlags,
             circadianConsistency = circadianConsistency,
+            paiScalingFactor = userPreferences.paiScalingFactor,
             auditTrail = auditTrail.copy(configHashCode = paramsHash),
         )
 

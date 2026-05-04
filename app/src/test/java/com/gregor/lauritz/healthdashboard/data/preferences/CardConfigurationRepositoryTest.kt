@@ -37,7 +37,7 @@ class CardConfigurationRepositoryTest {
 
         val result = repository.dashboardCardConfigurations().first()
         
-        assertEquals(1, result.size)
+        assertEquals(SettingsDefaults.DEFAULT_DASHBOARD_CARDS.size, result.size)
         assertEquals(CardId.SLEEP_SCORE, result[0].cardId)
         assertTrue(result[0].isVisible)
         assertEquals(0, result[0].position)

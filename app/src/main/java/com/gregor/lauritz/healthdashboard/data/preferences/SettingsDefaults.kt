@@ -42,7 +42,11 @@ object SettingsDefaults {
     const val CONSISTENCY_THRESHOLD_MINUTES = 30
     const val CONSISTENCY_EVALUATION_DAYS = 7
     const val CONSISTENCY_BASELINE_DAYS = 14
-    const val PAI_SCALING_FACTOR = 0.2f
+    /**
+     * Authoritative runtime value for PAI scaling. 
+     * Initialized from PhysiologyProfile default, but user overrides are persistent.
+     */
+    const val PAI_SCALING_FACTOR = 0.20f
     const val STEP_GOAL = 10000
     const val RETENTION_DAYS_ENABLED = true
     const val RETENTION_DAYS = 365
