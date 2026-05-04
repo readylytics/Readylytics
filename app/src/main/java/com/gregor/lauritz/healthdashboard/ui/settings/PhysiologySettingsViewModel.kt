@@ -55,8 +55,6 @@ class PhysiologySettingsViewModel @Inject constructor(
             is SettingsEvent.PhysiologyProfileChanged ->
                 viewModelScope.launch {
                     prefsRepo.updatePhysiologyProfile(profile = event.profile)
-                    val defaultFactor = PaiCalculator.getDefaultPaiScalingFactor(event.profile)
-                    prefsRepo.updatePaiScalingFactor(defaultFactor)
                     healthSyncUseCase.sync()
                 }
             SettingsEvent.ResetPaiScalingFactor ->

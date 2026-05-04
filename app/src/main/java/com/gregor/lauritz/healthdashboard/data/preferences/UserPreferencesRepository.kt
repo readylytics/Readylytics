@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import java.io.IOException
 import java.time.LocalDate
 import java.time.Period
@@ -214,9 +215,11 @@ class UserPreferencesRepository
         }
 
         suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) {
+            val newPaiFactor = PaiCalculator.getDefaultPaiScalingFactor(profile)
             dataStore.updateData {
                 it.toBuilder()
                     .setPhysiologyProfile(PhysiologyProfileProto.valueOf("PROFILE_${profile.name}"))
+                    .setPaiScalingFactor(newPaiFactor)
                     .build()
             }
         }
