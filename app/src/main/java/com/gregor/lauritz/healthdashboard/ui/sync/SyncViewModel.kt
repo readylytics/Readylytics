@@ -4,12 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.data.healthconnect.PermissionStatus
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -36,9 +38,13 @@ class SyncViewModel
     constructor(
         private val hcRepo: HealthConnectRepository,
         private val foregroundSyncController: ForegroundSyncController,
+        private val prefsRepo: UserPreferencesRepository,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<SyncUiState>(SyncUiState.CheckingPermissions)
         val uiState: StateFlow<SyncUiState> = _uiState.asStateFlow()
+
+        val userPreferences = prefsRepo.userPreferences
+        val requiredPermissions = hcRepo.requiredPermissions
 
         private val _syncEvents = Channel<SyncEvent>()
         val syncEvents = _syncEvents.receiveAsFlow()
@@ -47,6 +53,15 @@ class SyncViewModel
             viewModelScope.launch {
                 foregroundSyncController.syncCompletedEvent.collect {
                     _syncEvents.send(SyncEvent.SyncCompleted)
+                }
+            }
+
+            // Initialize installDate if it's 0L
+            viewModelScope.launch {
+                userPreferences.collectLatest { prefs ->
+                    if (prefs.installDate == 0L) {
+                        prefsRepo.updateInstallDate(System.currentTimeMillis())
+                    }
                 }
             }
         }

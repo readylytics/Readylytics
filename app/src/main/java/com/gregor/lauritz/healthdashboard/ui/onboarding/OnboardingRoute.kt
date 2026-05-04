@@ -9,46 +9,41 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
-import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncUiState
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun OnboardingRoute(
-    viewModel: SyncViewModel,
-    hcRepo: HealthConnectRepository,
-    prefsRepo: UserPreferencesRepository,
-    appConfigRepo: AppConfigRepository,
+    syncViewModel: SyncViewModel,
+    onboardingViewModel: OnboardingViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val permissions = remember { hcRepo.requiredPermissions }
-    val scope = rememberCoroutineScope()
+    val uiState by syncViewModel.uiState.collectAsStateWithLifecycle()
+    val permissions = remember { syncViewModel.requiredPermissions }
 
     val permissionLauncher =
         rememberLauncherForActivityResult(
             contract = PermissionController.createRequestPermissionResultContract(),
         ) { granted ->
             if (granted.containsAll(permissions)) {
-                viewModel.onPermissionsGranted()
+                syncViewModel.onPermissionsGranted()
             }
         }
 
     OnboardingScreen(
         onGrantPermissionsClick = { day, month, year, gender, physiologyProfile, dynamicColorEnabled ->
-            scope.launch {
-                prefsRepo.updateBirthday(day, month, year)
-                prefsRepo.updateGender(gender)
-                prefsRepo.updatePhysiologyProfile(physiologyProfile)
-                appConfigRepo.updateDynamicColorEnabled(dynamicColorEnabled)
-
-                // Trigger permission request after saving profile
-                permissionLauncher.launch(permissions)
-            }
+            onboardingViewModel.saveProfile(
+                day = day,
+                month = month,
+                year = year,
+                gender = gender,
+                physiologyProfile = physiologyProfile,
+                dynamicColorEnabled = dynamicColorEnabled,
+                onComplete = {
+                    permissionLauncher.launch(permissions)
+                }
+            )
         },
         onOpenSettingsClick = {
             val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)

@@ -9,47 +9,38 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
-import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppNavHost
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncEvent
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
-import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    @Inject
-    lateinit var hcRepo: HealthConnectRepository
-
-    @Inject
-    lateinit var prefsRepo: UserPreferencesRepository
-
-    @Inject
-    lateinit var appConfigRepo: AppConfigRepository
-
-    @Inject
-    lateinit var workerScheduler: WorkerScheduler
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         setContent {
-            val prefs by prefsRepo.userPreferences.collectAsState(initial = null)
+            val viewModel: SyncViewModel = hiltViewModel()
+            val prefs by viewModel.userPreferences.collectAsState(initial = null)
+
+            // Keep splash screen on until preferences are loaded to prevent theme flash
+            splashScreen.setKeepOnScreenCondition { prefs == null }
+
             val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM
 
             FitDashboardTheme(
                 appTheme = appTheme
             ) {
-                val viewModel: SyncViewModel = hiltViewModel()
                 val context = LocalContext.current
 
                 // Handle sync events (e.g., showing a Toast)
@@ -68,30 +59,14 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // Trigger permission check every time the activity comes to the foreground,
-                // not just on first composition — handles the case where the user grants
-                // permissions in HC settings and then returns to the app.
+                // Trigger permission check every time the activity comes to the foreground
                 LaunchedEffect(Unit) {
                     repeatOnLifecycle(Lifecycle.State.STARTED) {
                         viewModel.onAppForeground()
                     }
                 }
 
-                // Initialize installDate on first run (Issue: Install Date Initialization)
-                LaunchedEffect(Unit) {
-                    prefsRepo.userPreferences.collectLatest { prefs ->
-                        if (prefs.installDate == 0L) {
-                            prefsRepo.updateInstallDate(System.currentTimeMillis())
-                        }
-                    }
-                }
-
-                AppNavHost(
-                    viewModel = viewModel,
-                    hcRepo = hcRepo,
-                    prefsRepo = prefsRepo,
-                    appConfigRepo = appConfigRepo
-                )
+                AppNavHost(viewModel = viewModel)
             }
         }
     }

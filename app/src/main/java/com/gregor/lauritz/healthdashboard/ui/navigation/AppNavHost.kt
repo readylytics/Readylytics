@@ -17,26 +17,20 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
-import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
 import com.gregor.lauritz.healthdashboard.ui.about.AboutScreen
+import com.gregor.lauritz.healthdashboard.ui.about.AboutViewModel
 import com.gregor.lauritz.healthdashboard.ui.onboarding.OnboardingRoute
 import com.gregor.lauritz.healthdashboard.ui.scaffold.MainScaffold
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncUiState
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
-import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavHost(
     viewModel: SyncViewModel = hiltViewModel(),
-    hcRepo: HealthConnectRepository,
-    prefsRepo: UserPreferencesRepository,
-    appConfigRepo: AppConfigRepository,
     navController: NavHostController = rememberNavController(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val userPrefs by prefsRepo.userPreferences.collectAsStateWithLifecycle(initialValue = null)
+    val userPrefs by viewModel.userPreferences.collectAsStateWithLifecycle(initialValue = null)
 
     LaunchedEffect(uiState, userPrefs) {
         val prefs = userPrefs ?: return@LaunchedEffect
@@ -82,11 +76,10 @@ fun AppNavHost(
         }
 
         composable<AppDestination.About> {
-            val scope = rememberCoroutineScope()
+            val aboutViewModel: AboutViewModel = hiltViewModel()
             AboutScreen(
                 onDismiss = {
-                    scope.launch {
-                        prefsRepo.updateAboutDismissed(true)
+                    aboutViewModel.dismissAbout {
                         navController.navigate(AppDestination.Onboarding) {
                             popUpTo(AppDestination.About) { inclusive = true }
                         }
@@ -97,10 +90,7 @@ fun AppNavHost(
 
         composable<AppDestination.Onboarding> {
             OnboardingRoute(
-                viewModel = viewModel,
-                hcRepo = hcRepo,
-                prefsRepo = prefsRepo,
-                appConfigRepo = appConfigRepo
+                syncViewModel = viewModel
             )
         }
 
