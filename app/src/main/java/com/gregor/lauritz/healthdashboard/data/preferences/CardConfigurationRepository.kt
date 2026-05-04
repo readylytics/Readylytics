@@ -2,9 +2,13 @@ package com.gregor.lauritz.healthdashboard.data.preferences
 
 import androidx.datastore.core.DataStore
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -13,6 +17,8 @@ import javax.inject.Singleton
 class CardConfigurationRepository @Inject constructor(
     private val dataStore: DataStore<CardConfigurationsProto>,
 ) {
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     fun dashboardCardConfigurations(): Flow<List<CardConfiguration>> =
         dataStore.data
             .catch { exception ->
@@ -38,7 +44,14 @@ class CardConfigurationRepository @Inject constructor(
                     val appended = missingDefaults.mapIndexed { index, config ->
                         config.copy(position = maxPos + 1 + index)
                     }
-                    stored + appended
+                    val merged = stored + appended
+                    
+                    // Persist back to storage immediately so we don't re-calculate on next emission
+                    repositoryScope.launch {
+                        updateDashboardCardConfigurations(merged)
+                    }
+                    
+                    merged
                 }
             }
 
