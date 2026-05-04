@@ -138,4 +138,14 @@ class CircadianConsistencyRepositoryTest {
         val result = repo.resultFor(LocalDate.now()).first() as CircadianConsistencyResult.Ready
         assertEquals(45, result.thresholdMinutes)
     }
+
+    @Test
+    fun `emits MissingData when baseline is met but no session for anchorDate exists`() = runTest {
+        val sessions = (1 until 14).map { i -> // Skip today (i=0)
+            fakeSleepSession(id = "s$i", bedHour = 23, wakeHour = 7, daysAgo = i)
+        }
+        val repo = buildRepo(sessions)
+        val result = repo.resultFor(LocalDate.now()).first()
+        assertTrue("Expected MissingData, got $result", result is CircadianConsistencyResult.MissingData)
+    }
 }

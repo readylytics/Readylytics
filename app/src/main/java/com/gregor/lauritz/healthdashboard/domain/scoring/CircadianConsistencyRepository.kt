@@ -21,6 +21,7 @@ private const val NAP_THRESHOLD_MINUTES = 180
 
 sealed class CircadianConsistencyResult {
     data object Calibrating : CircadianConsistencyResult()
+    data object MissingData : CircadianConsistencyResult()
     data class Ready(
         val score: Float,
         val medianBedtimeMinutes: Int,
@@ -32,6 +33,7 @@ sealed class CircadianConsistencyResult {
 fun CircadianConsistencyResult.toStatus(): MetricStatus =
     when (this) {
         is CircadianConsistencyResult.Calibrating -> MetricStatus.CALIBRATING
+        is CircadianConsistencyResult.MissingData -> MetricStatus.CALIBRATING
         is CircadianConsistencyResult.Ready -> when {
             score >= 80f -> MetricStatus.OPTIMAL
             score >= 60f -> MetricStatus.NEUTRAL
@@ -63,13 +65,14 @@ class CircadianConsistencyRepository
                 val fromMs = anchorMs - 60L * 24 * 60 * 60 * 1000L
                 sleepSessionDao.observeSince(fromMs).map { sessions ->
                     val filtered = sessions.filter { it.endTime < anchorMs }
-                    compute(filtered, prefs)
+                    compute(filtered, prefs, anchorDate)
                 }
             }
 
         private fun compute(
             sessions: List<SleepSessionEntity>,
             prefs: UserPreferences,
+            anchorDate: LocalDate,
         ): CircadianConsistencyResult {
             val threshold = prefs.consistencyThresholdMinutes
             val evalCount = prefs.consistencyEvaluationDays
@@ -84,6 +87,14 @@ class CircadianConsistencyRepository
 
             if (baselineSessions.size < MIN_BASELINE_SESSIONS) {
                 return CircadianConsistencyResult.Calibrating
+            }
+
+            val startOfDayMs = anchorDate
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant().toEpochMilli()
+            val latestSessionEndTime = validSessions.firstOrNull()?.endTime
+            if (latestSessionEndTime == null || latestSessionEndTime < startOfDayMs) {
+                return CircadianConsistencyResult.MissingData
             }
 
             val medianBed = baselineSessions.map { normalizeMinutes(it.startTime) }.median()

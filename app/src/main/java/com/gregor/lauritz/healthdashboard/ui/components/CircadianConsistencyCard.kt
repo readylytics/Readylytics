@@ -37,17 +37,20 @@ fun CircadianConsistencyCard(
 
     val scoreText = when (result) {
         is CircadianConsistencyResult.Calibrating -> "Calibrating"
+        is CircadianConsistencyResult.MissingData -> "—"
         is CircadianConsistencyResult.Ready -> "${result.score.roundToPercentInt()}%"
     }
     val windowText = when (result) {
-        is CircadianConsistencyResult.Calibrating -> null
+        is CircadianConsistencyResult.Calibrating,
+        is CircadianConsistencyResult.MissingData -> null
         is CircadianConsistencyResult.Ready ->
             "Median: ${result.medianBedtimeMinutes.toTimeString()}→${result.medianWakeMinutes.toTimeString()}"
     }
 
     val tooltipText = remember(result) {
         val thresholdMinutes = when (result) {
-            is CircadianConsistencyResult.Calibrating -> 30
+            is CircadianConsistencyResult.Calibrating,
+            is CircadianConsistencyResult.MissingData -> 30
             is CircadianConsistencyResult.Ready -> result.thresholdMinutes
         }
         circadianTooltipText(thresholdMinutes)
