@@ -24,7 +24,7 @@ class CardConfigurationRepository @Inject constructor(
                 }
             }
             .map { proto ->
-                proto.dashboardCardsList.map { CardConfigurationMapper.toDomain(it) }
+                proto.dashboardCardsList.mapNotNull { CardConfigurationMapper.toDomain(it) }
             }
 
     fun sleepCardConfigurations(): Flow<List<CardConfiguration>> =
@@ -37,7 +37,7 @@ class CardConfigurationRepository @Inject constructor(
                 }
             }
             .map { proto ->
-                proto.sleepCardsList.map { CardConfigurationMapper.toDomain(it) }
+                proto.sleepCardsList.mapNotNull { CardConfigurationMapper.toDomain(it) }
             }
 
     fun workoutCardConfigurations(): Flow<List<CardConfiguration>> =
@@ -50,7 +50,7 @@ class CardConfigurationRepository @Inject constructor(
                 }
             }
             .map { proto ->
-                proto.workoutCardsList.map { CardConfigurationMapper.toDomain(it) }
+                proto.workoutCardsList.mapNotNull { CardConfigurationMapper.toDomain(it) }
             }
 
     suspend fun updateCardConfigurations(

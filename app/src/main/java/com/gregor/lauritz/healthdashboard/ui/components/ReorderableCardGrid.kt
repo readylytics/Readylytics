@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -76,6 +77,11 @@ fun rememberReorderableCardState(): ReorderableCardState {
     return remember { ReorderableCardState() }
 }
 
+// Full-width card IDs that should span entire width instead of 50%
+private val FULL_WIDTH_CARDS = setOf(
+    CardId.STEPS,
+)
+
 // Grid component that supports drag-and-drop reordering of cards
 // Only visible cards (isVisible=true) are rendered and can be reordered
 // Provides visual feedback during drag (alpha, scale, elevation changes)
@@ -100,73 +106,153 @@ fun ReorderableCardGrid(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        displayableCards.forEachIndexed { index, card ->
-            val isDragged = state.draggedIndex == index
-            val isTarget = state.targetIndex == index && state.draggedIndex != null
-            val cardContent = cardDataMap[card.cardId]!!
+        var cardIndex = 0
+        while (cardIndex < displayableCards.size) {
+            val card = displayableCards[cardIndex]
 
-            ReorderableCardItem(
-                card = card,
-                content = cardContent,
-                isEditing = isEditing,
-                isDragged = isDragged,
-                isTarget = isTarget,
-                onDragStart = {
-                    if (isEditing) {
-                        state.onDragStart(index)
-                    }
-                },
-                onDragEnd = {
-                    // Only process reorder if card was dragged to a different position
-                    val draggedIdx = state.draggedIndex
-                    val targetIdx = state.targetIndex
-                    if (draggedIdx != null && targetIdx != null && targetIdx != draggedIdx) {
-                        val newCards = displayableCards.toMutableList()
-                        val draggedCard = newCards.removeAt(draggedIdx)
-                        newCards.add(targetIdx, draggedCard)
-
-                        // Update positions to reflect new order and persist to DataStore
-                        val updated = newCards.mapIndexed { i, config ->
-                            config.copy(position = i)
+            if (card.cardId in FULL_WIDTH_CARDS) {
+                // Full-width card
+                renderCardItem(
+                    card = card,
+                    linearIndex = cardIndex,
+                    cardDataMap = cardDataMap,
+                    isEditing = isEditing,
+                    state = state,
+                    displayableCards = displayableCards,
+                    onCardRemove = onCardRemove,
+                    onCardReorder = onCardReorder,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                cardIndex++
+            } else {
+                // Try to pair with next card
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (cardIndex < displayableCards.size) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            renderCardItem(
+                                card = displayableCards[cardIndex],
+                                linearIndex = cardIndex,
+                                cardDataMap = cardDataMap,
+                                isEditing = isEditing,
+                                state = state,
+                                displayableCards = displayableCards,
+                                onCardRemove = onCardRemove,
+                                onCardReorder = onCardReorder,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         }
-                        onCardReorder(updated)
+                        cardIndex++
                     }
-                    state.onDragEnd()
-                },
-                onDrag = { x, y ->
-                    if (isEditing && state.draggedIndex != null && state.targetIndex != null) {
-                        state.dragOffset += IntOffset(x.roundToInt(), y.roundToInt())
 
-                        val currentTarget = state.targetIndex!!
-                        val draggedCard = displayableCards.getOrNull(currentTarget)
-                        // Use measured card height, or default to 130 (including spacing) if not yet measured
-                        val cardHeight = draggedCard?.let { state.cardHeights[it.cardId] } ?: 130
-                        // Require 50% of card height movement to trigger swap to provide steady feel
-                        val movementThreshold = cardHeight / 2
-
-                        val newTargetIndex = if (state.dragOffset.y > movementThreshold && currentTarget < displayableCards.size - 1) {
-                            currentTarget + 1
-                        } else if (state.dragOffset.y < -movementThreshold && currentTarget > 0) {
-                            currentTarget - 1
-                        } else {
-                            currentTarget
+                    if (cardIndex < displayableCards.size && displayableCards[cardIndex].cardId !in FULL_WIDTH_CARDS) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            renderCardItem(
+                                card = displayableCards[cardIndex],
+                                linearIndex = cardIndex,
+                                cardDataMap = cardDataMap,
+                                isEditing = isEditing,
+                                state = state,
+                                displayableCards = displayableCards,
+                                onCardRemove = onCardRemove,
+                                onCardReorder = onCardReorder,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         }
-
-                        // Reset offset when target changes to restart threshold detection
-                        if (newTargetIndex != state.targetIndex) {
-                            state.targetIndex = newTargetIndex
-                            state.dragOffset = IntOffset.Zero
-                        }
+                        cardIndex++
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
                     }
-                },
-                onRemove = { onCardRemove(card.cardId) },
-                onHeightChanged = { height ->
-                    state.updateHeight(card.cardId, height)
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun renderCardItem(
+    card: CardConfiguration,
+    linearIndex: Int,
+    cardDataMap: Map<CardId, @Composable () -> Unit>,
+    isEditing: Boolean,
+    state: ReorderableCardState,
+    displayableCards: List<CardConfiguration>,
+    onCardRemove: (CardId) -> Unit,
+    onCardReorder: (List<CardConfiguration>) -> Unit,
+    modifier: Modifier,
+) {
+    val isDragged = state.draggedIndex == linearIndex
+    val isTarget = state.targetIndex == linearIndex && state.draggedIndex != null
+    val cardContent = cardDataMap[card.cardId]!!
+
+    // Center gauges (SLEEP_SCORE, READINESS)
+    val wrappedContent: @Composable () -> Unit = if (card.cardId in setOf(CardId.SLEEP_SCORE, CardId.READINESS)) {
+        @Composable {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                cardContent()
+            }
+        }
+    } else {
+        cardContent
+    }
+
+    ReorderableCardItem(
+        card = card,
+        content = wrappedContent,
+        isEditing = isEditing,
+        isDragged = isDragged,
+        isTarget = isTarget,
+        onDragStart = {
+            if (isEditing) {
+                state.onDragStart(linearIndex)
+            }
+        },
+        onDragEnd = {
+            val draggedIdx = state.draggedIndex
+            val targetIdx = state.targetIndex
+            if (draggedIdx != null && targetIdx != null && targetIdx != draggedIdx) {
+                val newCards = displayableCards.toMutableList()
+                val draggedCard = newCards.removeAt(draggedIdx)
+                newCards.add(targetIdx, draggedCard)
+
+                val updated = newCards.mapIndexed { i, config ->
+                    config.copy(position = i)
+                }
+                onCardReorder(updated)
+            }
+            state.onDragEnd()
+        },
+        onDrag = { x, y ->
+            if (isEditing && state.draggedIndex != null && state.targetIndex != null) {
+                state.dragOffset += IntOffset(x.roundToInt(), y.roundToInt())
+
+                val currentTarget = state.targetIndex!!
+                val draggedCard = displayableCards.getOrNull(currentTarget)
+                val cardHeight = draggedCard?.let { state.cardHeights[it.cardId] } ?: 130
+                val movementThreshold = cardHeight / 2
+
+                val newTargetIndex = if (state.dragOffset.y > movementThreshold && currentTarget < displayableCards.size - 1) {
+                    currentTarget + 1
+                } else if (state.dragOffset.y < -movementThreshold && currentTarget > 0) {
+                    currentTarget - 1
+                } else {
+                    currentTarget
+                }
+
+                if (newTargetIndex != state.targetIndex) {
+                    state.targetIndex = newTargetIndex
+                    state.dragOffset = IntOffset.Zero
+                }
+            }
+        },
+        onRemove = { onCardRemove(card.cardId) },
+        onHeightChanged = { height ->
+            state.updateHeight(card.cardId, height)
+        },
+        modifier = modifier,
+    )
 }
 
 @Composable

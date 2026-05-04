@@ -15,20 +15,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -48,11 +44,13 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRes
 import com.gregor.lauritz.healthdashboard.domain.scoring.toStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import com.gregor.lauritz.healthdashboard.ui.components.CardManagementBottomSheet
 import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.EditModeIndicator
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
+import com.gregor.lauritz.healthdashboard.ui.components.ReorderableCardGrid
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.SleepArchitectureBar
@@ -115,6 +113,12 @@ fun SleepScreen(
     val sheetState = rememberModalBottomSheetState()
     var showCardManagement by remember { mutableStateOf(false) }
 
+    val sleepCardDataMap = buildSleepCardDataMap(
+        session = uiState.latestSession,
+        summary = uiState.latestSummary,
+        circadianResult = circadianConsistency,
+    )
+
     if (showCardManagement) {
         CardManagementBottomSheet(
             cards = uiState.cardConfigurations,
@@ -138,37 +142,12 @@ fun SleepScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
             ) {
-                androidx.compose.foundation.layout.Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    DateSwitcher(
-                        selectedDate = uiState.selectedDate,
-                        onPreviousDay = onPreviousDay,
-                        onNextDay = onNextDay,
-                        modifier = Modifier.weight(1f),
-                    )
-                    IconButton(
-                        onClick = {
-                            if (!uiState.isManagingCards) {
-                                showCardManagement = true
-                            }
-                            onToggleCardManagement()
-                        },
-                    ) {
-                        Icon(
-                            imageVector = if (uiState.isManagingCards) {
-                                Icons.Filled.Check
-                            } else {
-                                Icons.Outlined.Tune
-                            },
-                            contentDescription = if (uiState.isManagingCards) "Done editing" else "Manage cards",
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
+                DateSwitcher(
+                    selectedDate = uiState.selectedDate,
+                    onPreviousDay = onPreviousDay,
+                    onNextDay = onNextDay,
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 if (uiState.isManagingCards) {
                     EditModeIndicator(
                         isEditing = true,
@@ -179,26 +158,29 @@ fun SleepScreen(
         }
 
         item(key = "score_dial") {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                val sleepScoreTooltip = remember {
-                    buildString {
-                        append("Total quality of rest based on duration and cycles.\n\n")
-                        append("• 80–100: Optimal\n")
-                        append("• 60–79: Fair\n")
-                        append("• < 60: Poor")
+            val sleepScoreVisible = uiState.cardConfigurations.find { it.cardId == CardId.SLEEP_SCORE }?.isVisible != false
+            if (sleepScoreVisible) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val sleepScoreTooltip = remember {
+                        buildString {
+                            append("Total quality of rest based on duration and cycles.\n\n")
+                            append("• 80–100: Optimal\n")
+                            append("• 60–79: Fair\n")
+                            append("• < 60: Poor")
+                        }
                     }
+                    M3ScoreDial(
+                        score = uiState.latestSummary?.sleepScore,
+                        label = "Sleep Score",
+                        tooltipDescription = sleepScoreTooltip,
+                    )
                 }
-                M3ScoreDial(
-                    score = uiState.latestSummary?.sleepScore,
-                    label = "Sleep Score",
-                    tooltipDescription = sleepScoreTooltip,
-                )
             }
         }
 
@@ -317,10 +299,14 @@ fun SleepScreen(
         item(key = "metrics_grid") {
             SectionHeader(title = "Metrics")
             Spacer(Modifier.height(8.dp))
-            SleepMetricGrid(
-                session = uiState.latestSession,
-                summary = uiState.latestSummary,
-                circadianResult = circadianConsistency,
+            ReorderableCardGrid(
+                cardConfigurations = uiState.cardConfigurations,
+                cardDataMap = sleepCardDataMap,
+                isEditing = uiState.isManagingCards,
+                onCardRemove = { cardId ->
+                    onCardVisibilityChanged(cardId, false)
+                },
+                onCardReorder = onReorderCards,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
@@ -330,68 +316,76 @@ fun SleepScreen(
         item(key = "status_legend") {
             StatusLegend()
         }
+
+        item(key = "customize_button") {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                TextButton(
+                    onClick = {
+                        if (!uiState.isManagingCards) {
+                            showCardManagement = true
+                        }
+                        onToggleCardManagement()
+                    },
+                ) {
+                    Text(
+                        text = if (uiState.isManagingCards) "Done" else "Customize",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun SleepMetricGrid(
+private fun buildSleepCardDataMap(
     session: SleepSessionEntity?,
     summary: DailySummary?,
     circadianResult: CircadianConsistencyResult,
-    modifier: Modifier = Modifier,
-) {
+): Map<CardId, @Composable () -> Unit> {
     val efficiencyStatus = session?.efficiencyStatus() ?: MetricStatus.CALIBRATING
     val deepStatus = summary?.deepSleepStatus() ?: MetricStatus.CALIBRATING
     val remStatus = summary?.remSleepStatus() ?: MetricStatus.CALIBRATING
 
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+    return mapOf(
+        CardId.CIRCADIAN_CONSISTENCY to @Composable {
             CircadianConsistencyCard(
                 result = circadianResult,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
             )
+        },
+        CardId.SLEEP_DURATION to @Composable {
             MetricCard(
                 title = "Sleep Efficiency",
                 value = session?.let { "${it.efficiency.roundToInt()}%" } ?: "—",
                 secondaryText = "Goal: >85%",
                 status = efficiencyStatus,
-                tooltip ="The percentage of time actually asleep while in bed. (Goal: >85%).",
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
+                tooltip = "The percentage of time actually asleep while in bed. (Goal: >85%).",
             )
-        }
-        Row(
-            modifier = Modifier.height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        },
+        CardId.SLEEP_ARCHITECTURE to @Composable {
             MetricCard(
                 title = "Deep Sleep",
                 value = summary?.deepSleepPercent?.let { "${it.toInt()}%" } ?: "—",
                 secondaryText = "Target: 15–25%",
                 status = deepStatus,
-                tooltip ="Time in Stage 3 (Physical repair). Target: 15–25% of total sleep.",
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
+                tooltip = "Time in Stage 3 (Physical repair). Target: 15–25% of total sleep.",
             )
+        },
+        CardId.HRV to @Composable {
             MetricCard(
                 title = "REM Sleep",
                 value = summary?.remSleepPercent?.let { "${it.toInt()}%" } ?: "—",
                 secondaryText = "Target: 20–25%",
                 status = remStatus,
-                tooltip ="Time in Rapid Eye Movement. Target: 20–25% of total sleep.",
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
+                tooltip = "Time in Rapid Eye Movement. Target: 20–25% of total sleep.",
             )
-        }
-    }
+        },
+    )
 }
 
 

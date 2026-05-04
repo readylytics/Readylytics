@@ -4,9 +4,14 @@ import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 
 object CardConfigurationMapper {
-    fun toDomain(proto: CardConfigurationProto): CardConfiguration {
+    fun toDomain(proto: CardConfigurationProto): CardConfiguration? {
+        val cardId = try {
+            CardId.valueOf(proto.cardId)
+        } catch (e: IllegalArgumentException) {
+            return null
+        }
         return CardConfiguration(
-            cardId = CardId.valueOf(proto.cardId),
+            cardId = cardId,
             isVisible = proto.isVisible,
             position = proto.position
         )

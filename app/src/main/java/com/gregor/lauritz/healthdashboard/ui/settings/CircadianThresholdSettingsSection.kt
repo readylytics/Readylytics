@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -264,15 +265,14 @@ private fun ThresholdSlider(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                TextButton(
+                IconButton(
                     onClick = onReset,
-                    modifier = Modifier
-                        .height(32.dp)
-                        .padding(0.dp),
+                    modifier = Modifier.size(32.dp),
                 ) {
-                    Text(
-                        "Reset",
-                        style = MaterialTheme.typography.labelSmall,
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = "Reset to default",
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                 }
             }

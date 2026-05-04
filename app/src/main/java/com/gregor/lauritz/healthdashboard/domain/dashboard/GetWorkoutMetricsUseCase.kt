@@ -15,7 +15,6 @@ class GetWorkoutMetricsUseCase @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     data class WorkoutMetrics(
-        val loadScoreCard: CardData?,
         val strainRatioCard: CardData?,
     )
 
@@ -23,32 +22,14 @@ class GetWorkoutMetricsUseCase @Inject constructor(
         summary: DailySummary?,
     ): WorkoutMetrics {
         if (summary == null) {
-            return WorkoutMetrics(null, null)
-        }
-
-        val loadScoreCard = summary.loadScore?.let { loadScore ->
-            createLoadScoreCard(loadScore)
+            return WorkoutMetrics(null)
         }
 
         val strainRatioCard = summary.strainRatio?.let { strainRatio ->
             createStrainRatioCard(strainRatio)
         }
 
-        return WorkoutMetrics(loadScoreCard, strainRatioCard)
-    }
-
-    private fun createLoadScoreCard(loadScore: Float): CardData {
-        val status = loadScore.loadScoreStatus()
-        val value = loadScore.toInt().toString()
-
-        return CardData(
-            title = "Load Score",
-            value = value,
-            unit = "",
-            status = status,
-            action = DashboardAction.NAVIGATE_WORKOUTS,
-            tooltip = context.getString(R.string.tooltip_load_score),
-        )
+        return WorkoutMetrics(strainRatioCard)
     }
 
     private fun createStrainRatioCard(strainRatio: Float): CardData {
@@ -63,15 +44,6 @@ class GetWorkoutMetricsUseCase @Inject constructor(
             action = DashboardAction.NAVIGATE_WORKOUTS,
             tooltip = context.getString(R.string.tooltip_strain_ratio),
         )
-    }
-
-    private fun Float.loadScoreStatus(): MetricStatus {
-        return when {
-            this >= 85f -> MetricStatus.OPTIMAL
-            this >= 60f -> MetricStatus.NEUTRAL
-            this >= 40f -> MetricStatus.WARNING
-            else -> MetricStatus.POOR
-        }
     }
 
     private fun Float.strainRatioStatus(): MetricStatus {

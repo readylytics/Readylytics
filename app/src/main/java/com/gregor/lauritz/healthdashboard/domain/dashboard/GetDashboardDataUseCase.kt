@@ -64,9 +64,6 @@ class GetDashboardDataUseCase @Inject constructor(
         )
 
         val metrics = getWorkoutMetricsUseCase(summary)
-        if (metrics.loadScoreCard != null) {
-            mapBuilder[CardId.LOAD_SCORE] = metrics.loadScoreCard
-        }
         if (metrics.strainRatioCard != null) {
             mapBuilder[CardId.STRAIN_RATIO] = metrics.strainRatioCard
         }

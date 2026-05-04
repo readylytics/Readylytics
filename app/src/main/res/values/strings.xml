@@ -24,6 +24,5 @@
     <string name="tooltip_resting_hr_baseline">Minimum heart rate captured within %1$dm before and %2$dm after wake up.\n\nBaseline: %3$d bpm %4$s (%5$d bpm)</string>
     <string name="tooltip_resting_hr_no_baseline">Minimum heart rate captured around wake up time.\n\nNot enough data to calculate baseline.</string>
 
-    <string name="tooltip_load_score">Training load quality based on recent workout intensity.\n\n• 85-100: Optimal load\n• 60-84: Moderate load\n• 40-59: High load (monitor recovery)\n• &lt;40: Excessive load (risk of overtraining)</string>
     <string name="tooltip_strain_ratio">Ratio of acute to chronic training load.\nIndicates if training is sustainable.\n\n• 0.8-1.3: Optimal balance\n• &lt;0.8: Under-training\n• &gt;1.3: Overtraining risk</string>
 </resources>

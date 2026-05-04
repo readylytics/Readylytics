@@ -1,12 +1,23 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
+import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
+import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
 import com.gregor.lauritz.healthdashboard.ui.components.StepsCard
 
 // Build a map of CardId to composable card content for the Dashboard screen
@@ -58,7 +69,7 @@ fun buildCardDataMap(
                 value = hrvCard.value,
                 secondaryText = hrvCard.unit,
                 status = hrvCard.status,
-                onClick = null,
+                onClick = onNavigateToRhr,
                 tooltip = hrvCard.tooltip,
             )
         }
@@ -78,20 +89,6 @@ fun buildCardDataMap(
         }
     }
 
-    cardMap[CardId.LOAD_SCORE] = {
-        val loadCard = uiState.cardDataMap[CardId.LOAD_SCORE]
-        if (loadCard != null) {
-            MetricCard(
-                title = loadCard.title,
-                value = loadCard.value,
-                secondaryText = loadCard.unit,
-                status = loadCard.status,
-                onClick = null,
-                tooltip = loadCard.tooltip,
-            )
-        }
-    }
-
     cardMap[CardId.STRAIN_RATIO] = {
         val strainCard = uiState.cardDataMap[CardId.STRAIN_RATIO]
         if (strainCard != null) {
@@ -100,7 +97,7 @@ fun buildCardDataMap(
                 value = strainCard.value,
                 secondaryText = strainCard.unit,
                 status = strainCard.status,
-                onClick = null,
+                onClick = onNavigateToWorkouts,
                 tooltip = strainCard.tooltip,
             )
         }
@@ -123,14 +120,33 @@ fun buildCardDataMap(
     cardMap[CardId.PAI_DAILY] = {
         val paiCard = uiState.cardDataMap[CardId.PAI_DAILY]
         if (paiCard != null) {
-            MetricCard(
-                title = paiCard.title,
-                value = paiCard.value,
-                secondaryText = paiCard.unit,
-                status = paiCard.status,
+            Card(
                 onClick = onNavigateToWorkouts,
-                tooltip = paiCard.tooltip,
-            )
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { role = Role.Button }
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = paiCard.title,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        MetricTooltip(description = paiCard.tooltip)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    PaiWeeklyBar(
+                        dailyBreakdown = uiState.paiDailyBreakdown,
+                        totalPai = summary?.totalPai ?: 0f,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
         }
     }
 

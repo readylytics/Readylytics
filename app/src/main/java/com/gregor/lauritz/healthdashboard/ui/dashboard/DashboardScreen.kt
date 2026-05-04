@@ -23,6 +23,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -140,70 +141,15 @@ fun DashboardScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        DateSwitcher(
-                            selectedDate = uiState.selectedDate,
-                            onPreviousDay = onPreviousDay,
-                            onNextDay = onNextDay,
-                            modifier = Modifier.weight(1f),
-                        )
-                        // Edit mode toggle button - shows manage icon to enter edit, check icon to exit
-                        IconButton(
-                            onClick = {
-                                // Only show bottom sheet when entering edit mode (not when exiting)
-                                if (!uiState.isManagingCards) {
-                                    showCardManagement = true
-                                }
-                                onToggleCardManagement()
-                            },
-                        ) {
-                            Icon(
-                                imageVector = if (uiState.isManagingCards) {
-                                    Icons.Filled.Check
-                                } else {
-                                    Icons.Outlined.Tune
-                                },
-                                contentDescription = if (uiState.isManagingCards) "Done editing" else "Manage cards",
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
-                    if (uiState.isManagingCards) {
-                        EditModeIndicator(
-                            isEditing = true,
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
-                    }
+                    DateSwitcher(
+                        selectedDate = uiState.selectedDate,
+                        onPreviousDay = onPreviousDay,
+                        onNextDay = onNextDay,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
 
-
-            item(key = "section_label") {
-                val sectionLabel =
-                    remember(uiState.selectedDate, today) {
-                        when (uiState.selectedDate) {
-                            today -> "Last Night"
-                            today.minusDays(1) -> "Night of Yesterday"
-                            else -> {
-                                val pattern =
-                                    DateTimeFormatter
-                                        .ofPattern("EEE MMM d", Locale.getDefault())
-                                "Night of ${uiState.selectedDate.format(pattern)}"
-                            }
-                        }
-                    }
-                Text(
-                    text = sectionLabel,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-            }
 
             if (summary == null && (uiState.selectedDate < today)) {
                 item(key = "no_data_placeholder") {
@@ -240,30 +186,35 @@ fun DashboardScreen(
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }
-                item(key = "bottom_cards") {
-                    val circadianVisible = uiState.cardConfigurations.find { it.cardId == CardId.CIRCADIAN_CONSISTENCY }?.isVisible ?: false
-                    if (uiState.circadianConsistency != null && !circadianVisible) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircadianConsistencyCard(
-                                result = uiState.circadianConsistency,
-                                onClick = onNavigateToSleep,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                    }
-                }
-            }
+}
 
             item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(16.dp)) }
 
             item(key = "status_legend") {
                 StatusLegend()
+            }
+
+            item(key = "customize_button") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TextButton(
+                        onClick = {
+                            if (!uiState.isManagingCards) {
+                                showCardManagement = true
+                            }
+                            onToggleCardManagement()
+                        },
+                    ) {
+                        Text(
+                            text = if (uiState.isManagingCards) "Done" else "Customize",
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
             }
         }
     }

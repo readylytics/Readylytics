@@ -8,7 +8,6 @@ fun CardId.displayName(): String = when (this) {
     CardId.SLEEP_RHR -> "Sleep RHR"
     CardId.SLEEP_DURATION -> "Sleep Duration"
     CardId.SLEEP_ARCHITECTURE -> "Sleep Architecture"
-    CardId.LOAD_SCORE -> "Load Score"
     CardId.STRAIN_RATIO -> "Strain Ratio"
     CardId.PAI_DAILY -> "PAI Daily"
     CardId.CIRCADIAN_CONSISTENCY -> "Circadian Consistency"
