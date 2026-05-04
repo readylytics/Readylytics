@@ -57,12 +57,6 @@ object DataStoreModule {
                             prefs[stringPreferencesKey("dashboard_cards")]?.let { json ->
                                 addAllDashboardCards(LegacyCardConfigurationSerializer.deserialize(json).map { CardConfigurationMapper.toProto(it) })
                             }
-                            prefs[stringPreferencesKey("sleep_cards")]?.let { json ->
-                                addAllSleepCards(LegacyCardConfigurationSerializer.deserialize(json).map { CardConfigurationMapper.toProto(it) })
-                            }
-                            prefs[stringPreferencesKey("workout_cards")]?.let { json ->
-                                addAllWorkoutCards(LegacyCardConfigurationSerializer.deserialize(json).map { CardConfigurationMapper.toProto(it) })
-                            }
                         }.build()
                     }
 

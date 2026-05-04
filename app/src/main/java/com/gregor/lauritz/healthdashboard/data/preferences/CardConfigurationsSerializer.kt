@@ -9,8 +9,6 @@ import java.io.OutputStream
 object CardConfigurationsSerializer : Serializer<CardConfigurationsProto> {
     override val defaultValue: CardConfigurationsProto = CardConfigurationsProto.newBuilder()
         .addAllDashboardCards(SettingsDefaults.DEFAULT_DASHBOARD_CARDS.map { CardConfigurationMapper.toProto(it) })
-        .addAllSleepCards(SettingsDefaults.DEFAULT_SLEEP_CARDS.map { CardConfigurationMapper.toProto(it) })
-        .addAllWorkoutCards(SettingsDefaults.DEFAULT_WORKOUT_CARDS.map { CardConfigurationMapper.toProto(it) })
         .build()
 
     override suspend fun readFrom(input: InputStream): CardConfigurationsProto {

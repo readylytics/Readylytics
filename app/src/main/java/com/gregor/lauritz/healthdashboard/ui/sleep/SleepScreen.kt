@@ -40,17 +40,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.deepSleepStatus
+import com.gregor.lauritz.healthdashboard.domain.model.efficiencyStatus
+import com.gregor.lauritz.healthdashboard.domain.model.remSleepStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
+import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
 import com.gregor.lauritz.healthdashboard.domain.scoring.toStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
-import com.gregor.lauritz.healthdashboard.ui.components.CardManagementBottomSheet
 import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
-import com.gregor.lauritz.healthdashboard.ui.components.EditModeIndicator
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
-import com.gregor.lauritz.healthdashboard.ui.components.ReorderableCardGrid
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.SleepArchitectureBar
@@ -60,13 +61,11 @@ import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
-import kotlinx.coroutines.launch
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.math.roundToInt
 
 @Composable
 fun SleepRoute(
@@ -85,10 +84,6 @@ fun SleepRoute(
         onRangeSelected = viewModel::onRangeSelected,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
-        onToggleCardManagement = viewModel::toggleCardManagement,
-        onCardVisibilityChanged = viewModel::onToggleCardVisibility,
-        onReorderCards = viewModel::onReorderCards,
-        onResetToDefaults = viewModel::onResetToDefaults,
     )
 }
 
@@ -102,35 +97,9 @@ fun SleepScreen(
     onRangeSelected: (TimeRange) -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
-    onToggleCardManagement: () -> Unit = {},
-    onCardVisibilityChanged: (com.gregor.lauritz.healthdashboard.domain.dashboard.CardId, Boolean) -> Unit = { _, _ -> },
-    onReorderCards: (List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>) -> Unit = {},
-    onResetToDefaults: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val chartScrollState = rememberVicoScrollState()
-    val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState()
-    var showCardManagement by remember { mutableStateOf(false) }
-
-    val sleepCardDataMap = buildSleepCardDataMap(
-        session = uiState.latestSession,
-        summary = uiState.latestSummary,
-        circadianResult = circadianConsistency,
-    )
-
-    if (showCardManagement) {
-        CardManagementBottomSheet(
-            cards = uiState.cardConfigurations,
-            onCardVisibilityChanged = onCardVisibilityChanged,
-            onResetToDefaults = onResetToDefaults,
-            onDismiss = {
-                scope.launch { sheetState.hide() }
-                showCardManagement = false
-            },
-            sheetState = sheetState,
-        )
-    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -148,39 +117,30 @@ fun SleepScreen(
                     onNextDay = onNextDay,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                if (uiState.isManagingCards) {
-                    EditModeIndicator(
-                        isEditing = true,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                }
             }
         }
 
         item(key = "score_dial") {
-            val sleepScoreVisible = uiState.cardConfigurations.find { it.cardId == CardId.SLEEP_SCORE }?.isVisible != false
-            if (sleepScoreVisible) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    val sleepScoreTooltip = remember {
-                        buildString {
-                            append("Total quality of rest based on duration and cycles.\n\n")
-                            append("• 80–100: Optimal\n")
-                            append("• 60–79: Fair\n")
-                            append("• < 60: Poor")
-                        }
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                val sleepScoreTooltip = remember {
+                    buildString {
+                        append("Total quality of rest based on duration and cycles.\n\n")
+                        append("• 80–100: Optimal\n")
+                        append("• 60–79: Fair\n")
+                        append("• < 60: Poor")
                     }
-                    M3ScoreDial(
-                        score = uiState.latestSummary?.sleepScore,
-                        label = "Sleep Score",
-                        tooltipDescription = sleepScoreTooltip,
-                    )
                 }
+                M3ScoreDial(
+                    score = uiState.latestSummary?.sleepScore,
+                    label = "Sleep Score",
+                    tooltipDescription = sleepScoreTooltip,
+                )
             }
         }
 
@@ -296,18 +256,16 @@ fun SleepScreen(
 
         item(key = "spacer_rhr") { Spacer(Modifier.height(24.dp)) }
 
-        item(key = "metrics_grid") {
+        item(key = "metrics_header") {
             SectionHeader(title = "Metrics")
             Spacer(Modifier.height(8.dp))
-            ReorderableCardGrid(
-                cardConfigurations = uiState.cardConfigurations,
-                cardDataMap = sleepCardDataMap,
-                isEditing = uiState.isManagingCards,
-                onCardRemove = { cardId ->
-                    onCardVisibilityChanged(cardId, false)
-                },
-                onCardReorder = onReorderCards,
-                modifier = Modifier.padding(horizontal = 16.dp),
+        }
+
+        item(key = "metrics_grid") {
+            MetricsGrid(
+                uiState = uiState,
+                circadianResult = circadianConsistency,
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
         }
 
@@ -316,78 +274,74 @@ fun SleepScreen(
         item(key = "status_legend") {
             StatusLegend()
         }
-
-        item(key = "customize_button") {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                TextButton(
-                    onClick = {
-                        if (!uiState.isManagingCards) {
-                            showCardManagement = true
-                        }
-                        onToggleCardManagement()
-                    },
-                ) {
-                    Text(
-                        text = if (uiState.isManagingCards) "Done" else "Customize",
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            }
-        }
     }
 }
 
 @Composable
-private fun buildSleepCardDataMap(
-    session: SleepSessionEntity?,
-    summary: DailySummary?,
+private fun MetricsGrid(
+    uiState: SleepUiState,
     circadianResult: CircadianConsistencyResult,
-): Map<CardId, @Composable () -> Unit> {
+    modifier: Modifier = Modifier,
+) {
+    val session = uiState.latestSession
+    val summary = uiState.latestSummary
+
     val efficiencyStatus = session?.efficiencyStatus() ?: MetricStatus.CALIBRATING
     val deepStatus = summary?.deepSleepStatus() ?: MetricStatus.CALIBRATING
     val remStatus = summary?.remSleepStatus() ?: MetricStatus.CALIBRATING
 
-    return mapOf(
-        CardId.CIRCADIAN_CONSISTENCY to @Composable {
-            CircadianConsistencyCard(
-                result = circadianResult,
-            )
-        },
-        CardId.SLEEP_DURATION to @Composable {
-            MetricCard(
-                title = "Sleep Efficiency",
-                value = session?.let { "${it.efficiency.roundToInt()}%" } ?: "—",
-                secondaryText = "Goal: >85%",
-                status = efficiencyStatus,
-                tooltip = "The percentage of time actually asleep while in bed. (Goal: >85%).",
-            )
-        },
-        CardId.SLEEP_ARCHITECTURE to @Composable {
-            MetricCard(
-                title = "Deep Sleep",
-                value = summary?.deepSleepPercent?.let { "${it.toInt()}%" } ?: "—",
-                secondaryText = "Target: 15–25%",
-                status = deepStatus,
-                tooltip = "Time in Stage 3 (Physical repair). Target: 15–25% of total sleep.",
-            )
-        },
-        CardId.HRV to @Composable {
-            MetricCard(
-                title = "REM Sleep",
-                value = summary?.remSleepPercent?.let { "${it.toInt()}%" } ?: "—",
-                secondaryText = "Target: 20–25%",
-                status = remStatus,
-                tooltip = "Time in Rapid Eye Movement. Target: 20–25% of total sleep.",
-            )
-        },
-    )
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                CircadianConsistencyCard(
+                    result = circadianResult,
+                    onClick = null,
+                )
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                MetricCard(
+                    title = "Sleep Efficiency",
+                    value = session?.let { "${it.efficiency.roundToPercentInt()}%" } ?: "—",
+                    secondaryText = "Goal: >85%",
+                    status = efficiencyStatus,
+                    tooltip = "The percentage of time actually asleep while in bed. (Goal: >85%).",
+                    onClick = null,
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                MetricCard(
+                    title = "Deep Sleep",
+                    value = summary?.deepSleepPercent?.let { "${it.roundToPercentInt()}%" } ?: "—",
+                    secondaryText = "Target: 15–25%",
+                    status = deepStatus,
+                    tooltip = "Time in Stage 3 (Physical repair). Target: 15–25% of total sleep.",
+                    onClick = null,
+                )
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                MetricCard(
+                    title = "REM Sleep",
+                    value = summary?.remSleepPercent?.let { "${it.roundToPercentInt()}%" } ?: "—",
+                    secondaryText = "Target: 20–25%",
+                    status = remStatus,
+                    tooltip = "Time in Rapid Eye Movement. Target: 20–25% of total sleep.",
+                    onClick = null,
+                )
+            }
+        }
+    }
 }
-
 
 private data class MetricCardData(
     val title: String,

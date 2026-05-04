@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.scoring.toStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
+import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
 
 @Composable
 fun CircadianConsistencyCard(
@@ -36,7 +37,7 @@ fun CircadianConsistencyCard(
 
     val scoreText = when (result) {
         is CircadianConsistencyResult.Calibrating -> "Calibrating"
-        is CircadianConsistencyResult.Ready -> "${result.score.toInt()}%"
+        is CircadianConsistencyResult.Ready -> "${result.score.roundToPercentInt()}%"
     }
     val windowText = when (result) {
         is CircadianConsistencyResult.Calibrating -> null

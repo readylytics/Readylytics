@@ -2,7 +2,6 @@ package com.gregor.lauritz.healthdashboard.data.preferences
 
 import androidx.datastore.core.DataStore
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
-import com.gregor.lauritz.healthdashboard.domain.dashboard.ScreenType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -24,47 +23,32 @@ class CardConfigurationRepository @Inject constructor(
                 }
             }
             .map { proto ->
-                proto.dashboardCardsList.mapNotNull { CardConfigurationMapper.toDomain(it) }
-            }
-
-    fun sleepCardConfigurations(): Flow<List<CardConfiguration>> =
-        dataStore.data
-            .catch { exception ->
-                if (exception is IOException) {
-                    emit(CardConfigurationsSerializer.defaultValue)
+                val stored = proto.dashboardCardsList.mapNotNull { CardConfigurationMapper.toDomain(it) }
+                val defaults = SettingsDefaults.DEFAULT_DASHBOARD_CARDS
+                
+                // Merge: keep stored configs, but append any new default cards that aren't in stored yet
+                val storedIds = stored.map { it.cardId }.toSet()
+                val missingDefaults = defaults.filter { it.cardId !in storedIds }
+                
+                if (missingDefaults.isEmpty()) {
+                    stored
                 } else {
-                    throw exception
+                    // Append missing defaults at the end with incremented positions
+                    val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
+                    val appended = missingDefaults.mapIndexed { index, config ->
+                        config.copy(position = maxPos + 1 + index)
+                    }
+                    stored + appended
                 }
             }
-            .map { proto ->
-                proto.sleepCardsList.mapNotNull { CardConfigurationMapper.toDomain(it) }
-            }
 
-    fun workoutCardConfigurations(): Flow<List<CardConfiguration>> =
-        dataStore.data
-            .catch { exception ->
-                if (exception is IOException) {
-                    emit(CardConfigurationsSerializer.defaultValue)
-                } else {
-                    throw exception
-                }
-            }
-            .map { proto ->
-                proto.workoutCardsList.mapNotNull { CardConfigurationMapper.toDomain(it) }
-            }
-
-    suspend fun updateCardConfigurations(
-        screenType: ScreenType,
+    suspend fun updateDashboardCardConfigurations(
         cards: List<CardConfiguration>,
     ) {
         dataStore.updateData { current ->
             val builder = current.toBuilder()
             val protoCards = cards.map { CardConfigurationMapper.toProto(it) }
-            when (screenType) {
-                ScreenType.DASHBOARD -> builder.clearDashboardCards().addAllDashboardCards(protoCards)
-                ScreenType.SLEEP -> builder.clearSleepCards().addAllSleepCards(protoCards)
-                ScreenType.WORKOUTS -> builder.clearWorkoutCards().addAllWorkoutCards(protoCards)
-            }
+            builder.clearDashboardCards().addAllDashboardCards(protoCards)
             builder.build()
         }
     }

@@ -67,22 +67,6 @@ object SettingsDefaults {
         CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 7),
         CardConfiguration(CardId.CIRCADIAN_CONSISTENCY, isVisible = true, position = 8),
         CardConfiguration(CardId.STRAIN_RATIO, isVisible = false, position = 9),
-    )
-
-    val DEFAULT_SLEEP_CARDS = listOf(
-        CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),
-        CardConfiguration(CardId.SLEEP_DURATION, isVisible = true, position = 1),
-        CardConfiguration(CardId.SLEEP_ARCHITECTURE, isVisible = true, position = 2),
-        CardConfiguration(CardId.HRV, isVisible = true, position = 3),
-        CardConfiguration(CardId.SLEEP_RHR, isVisible = true, position = 4),
-        CardConfiguration(CardId.RECOVERY_INDEX, isVisible = false, position = 5),
-        CardConfiguration(CardId.CIRCADIAN_CONSISTENCY, isVisible = false, position = 6),
-    )
-
-    val DEFAULT_WORKOUT_CARDS = listOf(
-        CardConfiguration(CardId.READINESS, isVisible = true, position = 0),
-        CardConfiguration(CardId.STRAIN_RATIO, isVisible = true, position = 1),
-        CardConfiguration(CardId.PAI_DAILY, isVisible = true, position = 2),
-        CardConfiguration(CardId.ACUTE_CHRONIC_RATIO, isVisible = false, position = 3),
+        CardConfiguration(CardId.SLEEP_EFFICIENCY, isVisible = true, position = 10),
     )
 }

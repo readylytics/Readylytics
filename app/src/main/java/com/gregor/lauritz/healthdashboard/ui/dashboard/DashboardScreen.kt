@@ -177,6 +177,7 @@ fun DashboardScreen(
                             onNavigateToWorkouts = onNavigateToWorkouts,
                             onNavigateToRhr = onNavigateToRhr,
                             onNavigateToSteps = onNavigateToSteps,
+                            isEditing = uiState.isManagingCards,
                         ),
                         isEditing = uiState.isManagingCards,
                         onCardRemove = { cardId ->

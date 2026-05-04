@@ -6,15 +6,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -25,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -168,6 +175,49 @@ fun ReorderableCardGrid(
                 }
             }
         }
+
+        // Deletion Drop Zone at the bottom when editing
+        if (isEditing) {
+            Spacer(modifier = Modifier.height(16.dp))
+            val isHovered = state.targetIndex == displayableCards.size
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp),
+                color = if (isHovered) {
+                    MaterialTheme.colorScheme.errorContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                },
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = null,
+                        tint = if (isHovered) {
+                            MaterialTheme.colorScheme.onErrorContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Drop here to remove",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isHovered) {
+                            MaterialTheme.colorScheme.onErrorContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -212,15 +262,20 @@ private fun renderCardItem(
         onDragEnd = {
             val draggedIdx = state.draggedIndex
             val targetIdx = state.targetIndex
-            if (draggedIdx != null && targetIdx != null && targetIdx != draggedIdx) {
-                val newCards = displayableCards.toMutableList()
-                val draggedCard = newCards.removeAt(draggedIdx)
-                newCards.add(targetIdx, draggedCard)
+            if (draggedIdx != null && targetIdx != null) {
+                if (targetIdx == displayableCards.size) {
+                    // Dropped in delete zone
+                    onCardRemove(displayableCards[draggedIdx].cardId)
+                } else if (targetIdx != draggedIdx) {
+                    val newCards = displayableCards.toMutableList()
+                    val draggedCard = newCards.removeAt(draggedIdx)
+                    newCards.add(targetIdx, draggedCard)
 
-                val updated = newCards.mapIndexed { i, config ->
-                    config.copy(position = i)
+                    val updated = newCards.mapIndexed { i, config ->
+                        config.copy(position = i)
+                    }
+                    onCardReorder(updated)
                 }
-                onCardReorder(updated)
             }
             state.onDragEnd()
         },
@@ -233,7 +288,8 @@ private fun renderCardItem(
                 val cardHeight = draggedCard?.let { state.cardHeights[it.cardId] } ?: 130
                 val movementThreshold = cardHeight / 2
 
-                val newTargetIndex = if (state.dragOffset.y > movementThreshold && currentTarget < displayableCards.size - 1) {
+                val maxIndex = displayableCards.size
+                val newTargetIndex = if (state.dragOffset.y > movementThreshold && currentTarget < maxIndex) {
                     currentTarget + 1
                 } else if (state.dragOffset.y < -movementThreshold && currentTarget > 0) {
                     currentTarget - 1
@@ -340,19 +396,6 @@ private fun ReorderableCardItem(
             Box(modifier = Modifier.weight(1f)) {
                 if (content != null) {
                     content()
-                }
-            }
-
-            if (isEditing) {
-                IconButton(
-                    onClick = onRemove,
-                    modifier = Modifier.padding(4.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Remove card",
-                        tint = MaterialTheme.colorScheme.error,
-                    )
                 }
             }
         }

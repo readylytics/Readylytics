@@ -15,27 +15,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,9 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
-import com.gregor.lauritz.healthdashboard.ui.components.CardManagementBottomSheet
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
-import com.gregor.lauritz.healthdashboard.ui.components.EditModeIndicator
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
@@ -57,7 +47,6 @@ import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
-import kotlinx.coroutines.launch
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberEnd
@@ -101,10 +90,6 @@ fun WorkoutsRoute(
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
         onWorkoutClick = onWorkoutClick,
-        onToggleCardManagement = viewModel::toggleCardManagement,
-        onCardVisibilityChanged = viewModel::onToggleCardVisibility,
-        onReorderCards = viewModel::onReorderCards,
-        onResetToDefaults = viewModel::onResetToDefaults,
     )
 }
 
@@ -116,29 +101,9 @@ fun WorkoutsScreen(
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onWorkoutClick: (String) -> Unit,
-    onToggleCardManagement: () -> Unit = {},
-    onCardVisibilityChanged: (com.gregor.lauritz.healthdashboard.domain.dashboard.CardId, Boolean) -> Unit = { _, _ -> },
-    onReorderCards: (List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>) -> Unit = {},
-    onResetToDefaults: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState()
-    var showCardManagement by remember { mutableStateOf(false) }
-
-    if (showCardManagement) {
-        CardManagementBottomSheet(
-            cards = uiState.cardConfigurations,
-            onCardVisibilityChanged = onCardVisibilityChanged,
-            onResetToDefaults = onResetToDefaults,
-            onDismiss = {
-                scope.launch { sheetState.hide() }
-                showCardManagement = false
-            },
-            sheetState = sheetState,
-        )
-    }
 
     // Explicitly persist scroll state across navigation
     rememberSaveable(saver = androidx.compose.foundation.lazy.LazyListState.Saver) {
@@ -156,43 +121,12 @@ fun WorkoutsScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    DateSwitcher(
-                        selectedDate = uiState.selectedDate,
-                        onPreviousDay = onPreviousDay,
-                        onNextDay = onNextDay,
-                        modifier = Modifier.weight(1f),
-                    )
-                    IconButton(
-                        onClick = {
-                            if (!uiState.isManagingCards) {
-                                showCardManagement = true
-                            }
-                            onToggleCardManagement()
-                        },
-                    ) {
-                        Icon(
-                            imageVector = if (uiState.isManagingCards) {
-                                Icons.Filled.Check
-                            } else {
-                                Icons.Outlined.Tune
-                            },
-                            contentDescription = if (uiState.isManagingCards) "Done editing" else "Manage cards",
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-                if (uiState.isManagingCards) {
-                    EditModeIndicator(
-                        isEditing = true,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                }
+                DateSwitcher(
+                    selectedDate = uiState.selectedDate,
+                    onPreviousDay = onPreviousDay,
+                    onNextDay = onNextDay,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
 

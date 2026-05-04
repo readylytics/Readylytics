@@ -19,33 +19,25 @@ class CardManagementDelegate(
     }
 
     fun onToggleCardVisibility(
-        screenType: ScreenType,
         currentConfigs: List<CardConfiguration>,
         cardId: CardId,
         visible: Boolean,
     ) = viewModelScope.launch {
         val updated = toggleCardVisibility(currentConfigs, cardId, visible)
-        cardConfigRepository.updateCardConfigurations(screenType, updated)
+        cardConfigRepository.updateDashboardCardConfigurations(updated)
     }
 
     fun onReorderCards(
-        screenType: ScreenType,
         currentConfigs: List<CardConfiguration>,
         newOrder: List<CardConfiguration>,
     ) = viewModelScope.launch {
         val updated = reorderCards(currentConfigs, newOrder)
-        cardConfigRepository.updateCardConfigurations(screenType, updated)
+        cardConfigRepository.updateDashboardCardConfigurations(updated)
     }
 
-    fun onResetToDefaults(
-        screenType: ScreenType,
-    ) = viewModelScope.launch {
-        val defaults = when (screenType) {
-            ScreenType.DASHBOARD -> com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults.DEFAULT_DASHBOARD_CARDS
-            ScreenType.SLEEP -> com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults.DEFAULT_SLEEP_CARDS
-            ScreenType.WORKOUTS -> com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults.DEFAULT_WORKOUT_CARDS
-        }
-        cardConfigRepository.updateCardConfigurations(screenType, defaults)
+    fun onResetToDefaults() = viewModelScope.launch {
+        val defaults = com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults.DEFAULT_DASHBOARD_CARDS
+        cardConfigRepository.updateDashboardCardConfigurations(defaults)
     }
 
     private fun toggleCardVisibility(

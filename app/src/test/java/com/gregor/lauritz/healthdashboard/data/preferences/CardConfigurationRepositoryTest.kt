@@ -2,7 +2,6 @@ package com.gregor.lauritz.healthdashboard.data.preferences
 
 import androidx.datastore.core.DataStore
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
-import com.gregor.lauritz.healthdashboard.domain.dashboard.ScreenType
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -45,7 +44,7 @@ class CardConfigurationRepositoryTest {
     }
 
     @Test
-    fun updateCardConfigurations_updatesCorrectProtoField() = runTest {
+    fun updateDashboardCardConfigurations_updatesCorrectProtoField() = runTest {
         val capturedUpdate = slot<suspend (CardConfigurationsProto) -> CardConfigurationsProto>()
         coEvery { dataStore.updateData(capture(capturedUpdate)) } returns CardConfigurationsProto.getDefaultInstance()
 
@@ -53,7 +52,7 @@ class CardConfigurationRepositoryTest {
             com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration(CardId.READINESS, isVisible = true, position = 0)
         )
 
-        repository.updateCardConfigurations(ScreenType.DASHBOARD, newConfigs)
+        repository.updateDashboardCardConfigurations(newConfigs)
 
         val initialProto = CardConfigurationsProto.getDefaultInstance()
         val updatedProto = capturedUpdate.captured(initialProto)

@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
 
 @Composable
 fun M3ScoreDial(
@@ -63,7 +64,7 @@ fun M3ScoreDial(
         label = "dial_progress_$label",
     )
 
-    val scoreText = displayText ?: (score?.toInt()?.toString() ?: "—")
+    val scoreText = displayText ?: (score?.roundToPercentInt()?.toString() ?: "—")
     val semanticDesc = "$label: $scoreText"
 
     Box(

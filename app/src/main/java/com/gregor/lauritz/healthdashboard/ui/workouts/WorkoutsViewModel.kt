@@ -4,12 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
-import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
-import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
-import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
-import com.gregor.lauritz.healthdashboard.domain.dashboard.CardManagementDelegate
-import com.gregor.lauritz.healthdashboard.domain.dashboard.ScreenType
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
@@ -53,8 +48,6 @@ data class WorkoutsUiState(
     val rangeStartMs: Long = System.currentTimeMillis(),
     val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val todayPaiScore: Float? = null,
-    val cardConfigurations: List<CardConfiguration> = emptyList(),
-    val isManagingCards: Boolean = false,
 )
 
 private data class WorkoutData(
@@ -73,14 +66,10 @@ class WorkoutsViewModel
         private val selectedDateRepository: SelectedDateRepository,
         private val scoringCalculator: ScoringCalculator,
         private val prefsRepo: UserPreferencesRepository,
-        private val cardConfigRepository: CardConfigurationRepository,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
 
-        private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
-
         val selectedRange = _selectedRange.asStateFlow()
-        val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
 
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
@@ -128,11 +117,7 @@ class WorkoutsViewModel
                         WorkoutData(latest, allWorkouts, paiSummaries, prefs)
                     }
 
-                    combine(
-                        dataFlow,
-                        cardManagementDelegate.isManagingCards,
-                        cardConfigRepository.workoutCardConfigurations(),
-                    ) { data, isManaging, cardConfigs ->
+                    dataFlow.map { data ->
                         val (latest, allWorkouts, paiSummaries, prefs) = data
 
                         val filteredWorkouts = allWorkouts.filter { it.startTime < selectedMidnightMs + TimeUnit.DAYS.toMillis(1) }
@@ -192,8 +177,6 @@ class WorkoutsViewModel
                             rangeStartMs = displayStartDayMs,
                             paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries),
                             todayPaiScore = latest?.paiScore,
-                            cardConfigurations = cardConfigs,
-                            isManagingCards = isManaging,
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(
@@ -224,30 +207,5 @@ class WorkoutsViewModel
 
         fun onNextDay() {
             selectedDateRepository.selectNextDay()
-        }
-
-        fun toggleCardManagement() {
-            cardManagementDelegate.toggleCardManagement()
-        }
-
-        fun onToggleCardVisibility(cardId: CardId, visible: Boolean) {
-            cardManagementDelegate.onToggleCardVisibility(
-                ScreenType.WORKOUTS,
-                uiState.value.cardConfigurations,
-                cardId,
-                visible,
-            )
-        }
-
-        fun onReorderCards(newOrder: List<CardConfiguration>) {
-            cardManagementDelegate.onReorderCards(
-                ScreenType.WORKOUTS,
-                uiState.value.cardConfigurations,
-                newOrder,
-            )
-        }
-
-        fun onResetToDefaults() {
-            cardManagementDelegate.onResetToDefaults(ScreenType.WORKOUTS)
         }
     }

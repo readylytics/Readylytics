@@ -6,15 +6,9 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
-import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
-import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
-import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
-import com.gregor.lauritz.healthdashboard.domain.dashboard.CardManagementDelegate
-import com.gregor.lauritz.healthdashboard.domain.dashboard.ScreenType
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
@@ -52,42 +46,14 @@ data class SleepUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val goalSleepMinutes: Int = 480,
     val rangeStartMs: Long = System.currentTimeMillis(),
-    val cardConfigurations: List<CardConfiguration> = emptyList(),
-    val isManagingCards: Boolean = false,
 )
 
 private data class SleepData(
     val latestSummary: DailySummary?,
-    val latestSession: SleepSessionEntity?,
+    val lastSession: SleepSessionEntity?,
     val summaries: List<DailySummary>,
     val prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 )
-
-fun SleepSessionEntity.efficiencyStatus(): MetricStatus =
-    when {
-        efficiency >= 85f -> MetricStatus.OPTIMAL
-        efficiency >= 80f -> MetricStatus.NEUTRAL
-        efficiency >= 70f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
-
-fun DailySummary.deepSleepStatus(): MetricStatus =
-    when (deepSleepPercent) {
-        null -> MetricStatus.CALIBRATING
-        in 25f..30f -> MetricStatus.NEUTRAL
-        in 15f..25f -> MetricStatus.OPTIMAL
-        in 10f..15f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
-
-fun DailySummary.remSleepStatus(): MetricStatus =
-    when (remSleepPercent) {
-        null -> MetricStatus.CALIBRATING
-        in 25f..30f -> MetricStatus.NEUTRAL
-        in 20f..25f -> MetricStatus.OPTIMAL
-        in 15f..20f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
 
 @HiltViewModel
 class SleepViewModel
@@ -98,15 +64,10 @@ class SleepViewModel
         private val hrvDao: HrvDao,
         private val heartRateDao: HeartRateDao,
         private val prefsRepo: UserPreferencesRepository,
-        private val cardConfigRepository: CardConfigurationRepository,
         private val selectedDateRepository: SelectedDateRepository,
         private val circadianRepo: CircadianConsistencyRepository,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
-
-        private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
-
-        val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
 
         /**
          * Baseline HRV (calculated from past 30 days, constant across all views).
@@ -236,9 +197,7 @@ class SleepViewModel
                         dataFlow,
                         baselineHrvFlow,
                         baselineRhrFlow,
-                        cardManagementDelegate.isManagingCards,
-                        cardConfigRepository.sleepCardConfigurations(),
-                    ) { data, bHrv, bRhr, isManaging, cardConfigs ->
+                    ) { data, bHrv, bRhr ->
                         val (latestSummary, latestSession, summaries, prefs) = data
 
                         val startLocalDate = Instant.ofEpochMilli(startDayMs).atZone(zoneId).toLocalDate()
@@ -267,8 +226,6 @@ class SleepViewModel
                             selectedRange = range,
                             selectedDate = date,
                             rangeStartMs = startDayMs,
-                            cardConfigurations = cardConfigs,
-                            isManagingCards = isManaging,
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(
@@ -295,30 +252,4 @@ class SleepViewModel
         fun onNextDay() {
             selectedDateRepository.selectNextDay()
         }
-
-        fun toggleCardManagement() {
-            cardManagementDelegate.toggleCardManagement()
-        }
-
-        fun onToggleCardVisibility(cardId: CardId, visible: Boolean) {
-            cardManagementDelegate.onToggleCardVisibility(
-                ScreenType.SLEEP,
-                uiState.value.cardConfigurations,
-                cardId,
-                visible,
-            )
-        }
-
-        fun onReorderCards(newOrder: List<CardConfiguration>) {
-            cardManagementDelegate.onReorderCards(
-                ScreenType.SLEEP,
-                uiState.value.cardConfigurations,
-                newOrder,
-            )
-        }
-
-        fun onResetToDefaults() {
-            cardManagementDelegate.onResetToDefaults(ScreenType.SLEEP)
-        }
     }
-

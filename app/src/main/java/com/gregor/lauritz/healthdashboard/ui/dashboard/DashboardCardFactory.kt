@@ -29,6 +29,7 @@ fun buildCardDataMap(
     onNavigateToWorkouts: () -> Unit,
     onNavigateToRhr: () -> Unit,
     onNavigateToSteps: () -> Unit = {},
+    isEditing: Boolean = false,
 ): Map<CardId, @Composable () -> Unit> {
     val cardMap = mutableMapOf<CardId, @Composable () -> Unit>()
 
@@ -38,7 +39,7 @@ fun buildCardDataMap(
         M3ScoreDial(
             score = summary?.sleepScore,
             label = "Sleep Score",
-            onClick = onNavigateToSleep,
+            onClick = if (isEditing) ({}) else onNavigateToSleep,
             tooltipDescription = "Total quality of rest based on duration and cycles.\n\n• 80–100: Optimal\n• 60–79: Fair\n• < 60: Poor",
         )
     }
@@ -47,7 +48,7 @@ fun buildCardDataMap(
         M3ScoreDial(
             score = summary?.readinessScore,
             label = "Readiness",
-            onClick = onNavigateToWorkouts,
+            onClick = if (isEditing) ({}) else onNavigateToWorkouts,
             tooltipDescription = "Preparation for stress based on recent load & recovery.\n\n• 85–100: Peak\n• 30–69: Moderate\n• < 30: Rest",
         )
     }
@@ -56,7 +57,7 @@ fun buildCardDataMap(
         StepsCard(
             stepCount = uiState.stepCount,
             stepGoal = uiState.stepGoal,
-            onClick = onNavigateToSteps,
+            onClick = if (isEditing) ({}) else onNavigateToSteps,
             modifier = Modifier.fillMaxWidth(),
         )
     }
@@ -69,7 +70,7 @@ fun buildCardDataMap(
                 value = hrvCard.value,
                 secondaryText = hrvCard.unit,
                 status = hrvCard.status,
-                onClick = onNavigateToRhr,
+                onClick = if (isEditing) null else onNavigateToSleep,
                 tooltip = hrvCard.tooltip,
             )
         }
@@ -83,7 +84,7 @@ fun buildCardDataMap(
                 value = sleepRhrCard.value,
                 secondaryText = sleepRhrCard.unit,
                 status = sleepRhrCard.status,
-                onClick = onNavigateToSleep,
+                onClick = if (isEditing) null else onNavigateToSleep,
                 tooltip = sleepRhrCard.tooltip,
             )
         }
@@ -97,7 +98,7 @@ fun buildCardDataMap(
                 value = strainCard.value,
                 secondaryText = strainCard.unit,
                 status = strainCard.status,
-                onClick = onNavigateToWorkouts,
+                onClick = if (isEditing) null else onNavigateToWorkouts,
                 tooltip = strainCard.tooltip,
             )
         }
@@ -109,10 +110,24 @@ fun buildCardDataMap(
             MetricCard(
                 title = durationCard.title,
                 value = durationCard.value,
-                secondaryText = durationCard.unit,
+                secondaryText = durationCard.secondaryText ?: durationCard.unit,
                 status = durationCard.status,
-                onClick = onNavigateToSleep,
+                onClick = if (isEditing) null else onNavigateToSleep,
                 tooltip = durationCard.tooltip,
+            )
+        }
+    }
+
+    cardMap[CardId.SLEEP_EFFICIENCY] = {
+        val efficiencyCard = uiState.cardDataMap[CardId.SLEEP_EFFICIENCY]
+        if (efficiencyCard != null) {
+            MetricCard(
+                title = efficiencyCard.title,
+                value = efficiencyCard.value,
+                secondaryText = efficiencyCard.secondaryText ?: efficiencyCard.unit,
+                status = efficiencyCard.status,
+                onClick = if (isEditing) null else onNavigateToSleep,
+                tooltip = efficiencyCard.tooltip,
             )
         }
     }
@@ -120,33 +135,14 @@ fun buildCardDataMap(
     cardMap[CardId.PAI_DAILY] = {
         val paiCard = uiState.cardDataMap[CardId.PAI_DAILY]
         if (paiCard != null) {
-            Card(
-                onClick = onNavigateToWorkouts,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .semantics { role = Role.Button }
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = paiCard.title,
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                        MetricTooltip(description = paiCard.tooltip)
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    PaiWeeklyBar(
-                        dailyBreakdown = uiState.paiDailyBreakdown,
-                        totalPai = summary?.totalPai ?: 0f,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
+            MetricCard(
+                title = paiCard.title,
+                value = paiCard.value,
+                secondaryText = paiCard.unit,
+                status = paiCard.status,
+                onClick = if (isEditing) null else onNavigateToWorkouts,
+                tooltip = paiCard.tooltip,
+            )
         }
     }
 
@@ -158,7 +154,7 @@ fun buildCardDataMap(
                 value = card.value,
                 secondaryText = card.unit,
                 status = card.status,
-                onClick = onNavigateToRhr,
+                onClick = if (isEditing) null else onNavigateToRhr,
                 tooltip = card.tooltip,
             )
         }
@@ -168,7 +164,7 @@ fun buildCardDataMap(
         if (uiState.circadianConsistency != null) {
             CircadianConsistencyCard(
                 result = uiState.circadianConsistency,
-                onClick = onNavigateToSleep,
+                onClick = if (isEditing) ({}) else onNavigateToSleep,
             )
         }
     }

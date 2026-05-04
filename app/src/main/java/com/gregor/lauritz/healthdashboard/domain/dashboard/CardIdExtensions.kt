@@ -14,4 +14,5 @@ fun CardId.displayName(): String = when (this) {
     CardId.RESTING_HR -> "Resting HR"
     CardId.RECOVERY_INDEX -> "Recovery Index"
     CardId.ACUTE_CHRONIC_RATIO -> "Acute/Chronic Ratio"
+    CardId.SLEEP_EFFICIENCY -> "Sleep Efficiency"
 }

@@ -13,7 +13,6 @@ import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardManagementDelegate
 import com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase
-import com.gregor.lauritz.healthdashboard.domain.dashboard.ScreenType
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
@@ -205,7 +204,6 @@ class DashboardViewModel
 
         fun onToggleCardVisibility(cardId: CardId, visible: Boolean) {
             cardManagementDelegate.onToggleCardVisibility(
-                ScreenType.DASHBOARD,
                 uiState.value.cardConfigurations,
                 cardId,
                 visible,
@@ -214,14 +212,13 @@ class DashboardViewModel
 
         fun onReorderCards(newOrder: List<CardConfiguration>) {
             cardManagementDelegate.onReorderCards(
-                ScreenType.DASHBOARD,
                 uiState.value.cardConfigurations,
                 newOrder,
             )
         }
 
         fun onResetToDefaults() {
-            cardManagementDelegate.onResetToDefaults(ScreenType.DASHBOARD)
+            cardManagementDelegate.onResetToDefaults()
         }
 
         companion object {
