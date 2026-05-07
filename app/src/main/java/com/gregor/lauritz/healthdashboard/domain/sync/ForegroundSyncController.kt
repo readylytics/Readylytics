@@ -1,8 +1,12 @@
 package com.gregor.lauritz.healthdashboard.domain.sync
 
-import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
-import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import android.content.Context
+import android.content.Intent
 import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
+import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectPermissionRevokedException
+import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.widgets.receiver.WidgetUpdateBroadcastReceiver
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -18,6 +22,7 @@ import javax.inject.Singleton
 class ForegroundSyncController
     @Inject
     constructor(
+        private val context: Context,
         private val settingsRepo: SettingsRepository,
         private val syncUseCase: HealthSyncUseCase,
     ) {
@@ -90,6 +95,7 @@ class ForegroundSyncController
                 com.gregor.lauritz.healthdashboard.domain.util
                     .logD("ForegroundSyncController") { "Sync success" }
                 _syncCompletedEvent.emit(Unit)
+                sendWidgetUpdateBroadcast()
             } catch (e: Exception) {
                 com.gregor.lauritz.healthdashboard.domain.util
                     .logD("ForegroundSyncController") { "Sync failed: ${e.message}" }
@@ -97,5 +103,10 @@ class ForegroundSyncController
                 _isSyncing.value = false
                 syncMutex.unlock()
             }
+        }
+
+        private fun sendWidgetUpdateBroadcast() {
+            val intent = Intent(WidgetUpdateBroadcastReceiver.ACTION_SYNC_COMPLETE)
+            context.sendBroadcast(intent)
         }
     }

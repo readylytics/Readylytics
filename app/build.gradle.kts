@@ -149,6 +149,10 @@ dependencies {
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
 
+    // Glance widgets
+    implementation(libs.androidx.glance)
+    implementation(libs.androidx.glance.appwidget)
+
     // Google Drive backup
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services)

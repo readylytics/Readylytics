@@ -26,4 +26,15 @@
     <string name="tooltip_resting_hr_no_baseline">Minimum heart rate captured around wake up time.\n\nNot enough data to calculate baseline.</string>
 
     <string name="tooltip_strain_ratio">Ratio of acute to chronic training load.\nIndicates if training is sustainable.\n\n• 0.8-1.3: Optimal balance\n• &lt;0.8: Under-training\n• &gt;1.3: Overtraining risk</string>
+
+    <!-- Widget strings -->
+    <string name="widget_small_description">Display a single health metric (HRV, RHR, Sleep Score, etc.)</string>
+    <string name="widget_medium_description">Display two metrics side-by-side or step progress</string>
+    <string name="widget_large_description">Display a compact dashboard with four metrics</string>
+    <string name="widget_loading">Loading…</string>
+    <string name="widget_calibrating">Calibrating…</string>
+    <string name="widget_no_data">No recent data</string>
+    <string name="widget_configure">Configure</string>
+    <string name="widget_refresh">Refresh</string>
+    <string name="widget_updated_ago">Updated %1$s ago</string>
 </resources>
