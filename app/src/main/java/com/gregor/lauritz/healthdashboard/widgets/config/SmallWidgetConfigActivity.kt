@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,25 +18,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.data.repository.SmallWidgetConfig
-import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * Configuration activity for small widget (1x2).
@@ -43,14 +42,8 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class SmallWidgetConfigActivity : ComponentActivity() {
-    @Inject
-    lateinit var configRepository: WidgetConfigurationRepository
-
+    private val viewModel: SmallWidgetConfigViewModel by viewModels()
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
-    private var selectedMetric by mutableStateOf(MetricType.HRV)
-    private var showTrend by mutableStateOf(true)
-    private var showTimestamp by mutableStateOf(true)
-    private var showMetricSelector by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,86 +63,142 @@ class SmallWidgetConfigActivity : ComponentActivity() {
 
         setContent {
             FitDashboardTheme {
-                Scaffold { padding ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(padding)
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(24.dp),
-                    ) {
-                        // Header
-                        Text(
-                            text = "Configure Small Widget",
-                            style = MaterialTheme.typography.headlineMedium,
-                        )
+                val state by viewModel.state.collectAsStateWithLifecycle()
 
-                        // Metric Selection
-                        MetricSelectionCard(
-                            selectedMetric = selectedMetric,
-                            onSelectClick = { showMetricSelector = true },
-                        )
-
-                        // Options
-                        OptionSwitchCard(
-                            label = "Show Trend Indicator",
-                            description = "Display ↑ or ↓ symbol",
-                            checked = showTrend,
-                            onCheckedChange = { showTrend = it },
-                        )
-
-                        OptionSwitchCard(
-                            label = "Show Timestamp",
-                            description = "Display 'Updated 2h ago'",
-                            checked = showTimestamp,
-                            onCheckedChange = { showTimestamp = it },
-                        )
-
-                        // Spacer
-                        Box(modifier = Modifier.weight(1f))
-
-                        // Save Button
-                        Button(
-                            onClick = { saveConfig() },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("Save Configuration")
+                LaunchedEffect(state.isSaved) {
+                    if (state.isSaved) {
+                        val resultValue = Intent().apply {
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
                         }
+                        setResult(Activity.RESULT_OK, resultValue)
+                        finish()
                     }
                 }
 
-                // Metric Selector Bottom Sheet
-                MetricSelectorBottomSheet(
-                    isVisible = showMetricSelector,
-                    selectedMetric = selectedMetric,
-                    onMetricSelected = { selectedMetric = it },
-                    onDismiss = { showMetricSelector = false },
-                    title = "Select Metric to Display",
+                SmallWidgetConfigScreen(
+                    state = state,
+                    onMetricSelected = viewModel::updateMetric,
+                    onTrendToggled = viewModel::updateShowTrend,
+                    onTimestampToggled = viewModel::updateShowTimestamp,
+                    onSave = viewModel::saveConfiguration,
+                    onErrorDismissed = viewModel::clearError,
                 )
             }
         }
     }
+}
 
-    private fun saveConfig() {
-        MainScope().launch {
-            configRepository.saveSmallWidgetConfig(
-                widgetId,
-                SmallWidgetConfig(
-                    widgetId = widgetId,
-                    metricType = selectedMetric.name,
-                    showTrend = showTrend,
-                    showTimestamp = showTimestamp,
-                ),
+@Composable
+private fun SmallWidgetConfigScreen(
+    state: SmallWidgetConfigState,
+    onMetricSelected: (MetricType) -> Unit,
+    onTrendToggled: (Boolean) -> Unit,
+    onTimestampToggled: (Boolean) -> Unit,
+    onSave: () -> Unit,
+    onErrorDismissed: () -> Unit,
+) {
+    var showMetricSelector by androidx.compose.runtime.mutableStateOf(false)
+
+    Scaffold { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            // Header
+            Text(
+                text = "Configure Small Widget",
+                style = MaterialTheme.typography.headlineMedium,
             )
 
-            // Return success
-            val resultValue = Intent().apply {
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            // Error message
+            if (state.error != null) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.errorContainer,
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = state.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = onErrorDismissed) {
+                            Text("Dismiss")
+                        }
+                    }
+                }
             }
-            setResult(Activity.RESULT_OK, resultValue)
-            finish()
+
+            // Loading state
+            if (state.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+                return@Scaffold
+            }
+
+            // Metric Selection
+            MetricSelectionCard(
+                selectedMetric = state.selectedMetric,
+                onSelectClick = { showMetricSelector = true },
+            )
+
+            // Options
+            OptionSwitchCard(
+                label = "Show Trend Indicator",
+                description = "Display ↑ or ↓ symbol",
+                checked = state.showTrend,
+                onCheckedChange = onTrendToggled,
+            )
+
+            OptionSwitchCard(
+                label = "Show Timestamp",
+                description = "Display 'Updated 2h ago'",
+                checked = state.showTimestamp,
+                onCheckedChange = onTimestampToggled,
+            )
+
+            // Spacer
+            Box(modifier = Modifier.weight(1f))
+
+            // Save Button
+            Button(
+                onClick = onSave,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.isLoading,
+            ) {
+                Text("Save Configuration")
+            }
         }
     }
+
+    // Metric Selector Bottom Sheet
+    MetricSelectorBottomSheet(
+        isVisible = showMetricSelector,
+        selectedMetric = state.selectedMetric,
+        onMetricSelected = { metric ->
+            onMetricSelected(metric)
+            showMetricSelector = false
+        },
+        onDismiss = { showMetricSelector = false },
+        title = "Select Metric to Display",
+    )
 }
 
 @Composable
