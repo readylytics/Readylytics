@@ -143,6 +143,15 @@
             </intent-filter>
         </receiver>
 
+        <!-- Widget deletion broadcast receiver -->
+        <receiver
+            android:name=".widgets.receiver.WidgetDeletionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_DELETED" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"

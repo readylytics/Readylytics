@@ -58,6 +58,7 @@ class HealthDashboardApplication :
             workerScheduler.scheduleBackupWorker(schedule)
             workerScheduler.scheduleBirthdayWorker()
             workerScheduler.scheduleDataCleanupWorker()
+            workerScheduler.scheduleWidgetUpdateWorker()
         }
     }
 
