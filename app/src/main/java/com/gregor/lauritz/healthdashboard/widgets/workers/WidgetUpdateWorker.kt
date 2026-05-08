@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.widgets.workers
 
 import android.content.Context
+import android.util.Log
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -21,6 +22,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import java.util.concurrent.TimeUnit
 
+private const val TAG = "WidgetUpdateWorker"
+
 /**
  * Periodic worker that updates all widgets daily at 6 AM.
  * Ensures widgets stay fresh even if app hasn't synced recently.
@@ -38,6 +41,9 @@ class WidgetUpdateWorker(
     lateinit var configRepository: WidgetConfigurationRepository
 
     override suspend fun doWork(): Result {
+        var successCount = 0
+        var failureCount = 0
+
         return try {
             val glanceManager = GlanceAppWidgetManager(applicationContext)
 
@@ -53,12 +59,15 @@ class WidgetUpdateWorker(
                             widgetDataRepository,
                             configRepository,
                         )
+                        successCount++
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.e(TAG, "Failed to update small widget $widgetId", e)
+                        failureCount++
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Failed to update small widgets", e)
+                failureCount++
             }
 
             // Update medium widgets
@@ -73,12 +82,15 @@ class WidgetUpdateWorker(
                             widgetDataRepository,
                             configRepository,
                         )
+                        successCount++
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.e(TAG, "Failed to update medium widget $widgetId", e)
+                        failureCount++
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Failed to update medium widgets", e)
+                failureCount++
             }
 
             // Update large widgets
@@ -93,17 +105,25 @@ class WidgetUpdateWorker(
                             widgetDataRepository,
                             configRepository,
                         )
+                        successCount++
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.e(TAG, "Failed to update large widget $widgetId", e)
+                        failureCount++
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Failed to update large widgets", e)
+                failureCount++
             }
 
-            Result.success()
+            Log.i(TAG, "Widget update completed: $successCount success, $failureCount failures")
+            if (failureCount > 0 && successCount == 0) {
+                Result.retry()
+            } else {
+                Result.success()
+            }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Widget update worker failed", e)
             Result.retry()
         }
     }

@@ -4,12 +4,15 @@ import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetType
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "WidgetDeletionReceiver"
 
 /**
  * Broadcast receiver that handles widget deletion events.
@@ -33,13 +36,17 @@ class WidgetDeletionReceiver : BroadcastReceiver() {
         )
 
         if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+            val result = goAsync()
             MainScope().launch {
                 try {
                     configRepository.deleteWidgetConfig(widgetId, WidgetType.SMALL)
                     configRepository.deleteWidgetConfig(widgetId, WidgetType.MEDIUM)
                     configRepository.deleteWidgetConfig(widgetId, WidgetType.LARGE)
+                    Log.d(TAG, "Deleted config for widget $widgetId")
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e(TAG, "Failed to delete widget config for $widgetId", e)
+                } finally {
+                    result.finish()
                 }
             }
         }
