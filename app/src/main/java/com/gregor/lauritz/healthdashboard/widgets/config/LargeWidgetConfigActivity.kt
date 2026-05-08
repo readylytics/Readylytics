@@ -7,17 +7,37 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.repository.LargeWidgetConfig
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
+import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.MainScope
@@ -34,12 +54,12 @@ class LargeWidgetConfigActivity : ComponentActivity() {
     lateinit var configRepository: WidgetConfigurationRepository
 
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+    private var selectedCardIds by mutableStateOf(defaultCardIds())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Get widget ID from intent
         widgetId = intent?.getIntExtra(
             AppWidgetManager.EXTRA_APPWIDGET_ID,
             AppWidgetManager.INVALID_APPWIDGET_ID,
@@ -54,31 +74,59 @@ class LargeWidgetConfigActivity : ComponentActivity() {
         setContent {
             FitDashboardTheme {
                 Scaffold { padding ->
-                    Column(
+                    LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(padding)
-                            .padding(16.dp)
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
                     ) {
-                        Text(
-                            text = "Select Cards for Dashboard Widget",
-                            style = MaterialTheme.typography.headlineSmall
-                        )
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = "Configure Large Widget",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                )
+                                Text(
+                                    text = "Select up to 4 metrics to display in a 2x2 grid",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
 
-                        Text(
-                            text = "Choose up to 4 metrics to display",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
+                        item {
+                            CardSelectionSection(
+                                selectedCardIds = selectedCardIds,
+                                onCardToggle = { cardId ->
+                                    selectedCardIds = if (selectedCardIds.contains(cardId)) {
+                                        selectedCardIds - cardId
+                                    } else if (selectedCardIds.size < 4) {
+                                        selectedCardIds + cardId
+                                    } else {
+                                        selectedCardIds
+                                    }
+                                },
+                            )
+                        }
 
-                        // TODO: Add card selection UI (checkboxes or chips, max 4)
-                        // TODO: Show preview of selected cards
+                        item {
+                            SelectedCardsPreview(
+                                selectedCardIds = selectedCardIds,
+                            )
+                        }
 
-                        Button(
-                            onClick = { saveConfig() },
-                            modifier = Modifier.padding(top = 16.dp)
-                        ) {
-                            Text("Save Configuration")
+                        item {
+                            Button(
+                                onClick = { saveConfig() },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Save Configuration")
+                            }
+                        }
+
+                        item {
+                            Box(modifier = Modifier.height(16.dp))
                         }
                     }
                 }
@@ -92,11 +140,10 @@ class LargeWidgetConfigActivity : ComponentActivity() {
                 widgetId,
                 LargeWidgetConfig(
                     widgetId = widgetId,
-                    cardIds = emptyList(), // TODO: Get selected card IDs
-                )
+                    cardIds = selectedCardIds,
+                ),
             )
 
-            // Return success
             val resultValue = Intent().apply {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
             }
@@ -104,4 +151,201 @@ class LargeWidgetConfigActivity : ComponentActivity() {
             finish()
         }
     }
+
+    private fun defaultCardIds() = listOf(
+        "SLEEP_SCORE",
+        "READINESS",
+        "HRV",
+        "STEPS",
+    )
 }
+
+@Composable
+private fun CardSelectionSection(
+    selectedCardIds: List<String>,
+    onCardToggle: (String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = "Available Metrics",
+            style = MaterialTheme.typography.labelLarge,
+        )
+
+        val availableCards = listOf(
+            CardOption("SLEEP_SCORE", "Sleep Score", "Overall sleep quality"),
+            CardOption("READINESS", "Readiness", "Daily readiness score"),
+            CardOption("HRV", "HRV", "Heart rate variability"),
+            CardOption("RHR", "RHR", "Resting heart rate"),
+            CardOption("RECOVERY", "Recovery", "Recovery percentage"),
+            CardOption("STEPS", "Steps", "Daily step count"),
+            CardOption("SLEEP_DURATION", "Sleep Duration", "Total sleep time"),
+            CardOption("SLEEP_EFFICIENCY", "Sleep Efficiency", "Sleep quality ratio"),
+            CardOption("STRESS", "Stress", "Daily stress level"),
+            CardOption("BODY_BATTERY", "Body Battery", "Energy level"),
+            CardOption("PAI", "PAI", "Personal Activity Index"),
+            CardOption("STRAIN_RATIO", "Strain Ratio", "Training load ratio"),
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(availableCards) { card ->
+                CardSelectionItem(
+                    card = card,
+                    isSelected = selectedCardIds.contains(card.id),
+                    isDisabled = !selectedCardIds.contains(card.id) && selectedCardIds.size >= 4,
+                    onToggle = { onCardToggle(card.id) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CardSelectionItem(
+    card: CardOption,
+    isSelected: Boolean,
+    isDisabled: Boolean,
+    onToggle: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !isDisabled, onClick = onToggle),
+        shape = MaterialTheme.shapes.medium,
+        color = when {
+            isSelected -> MaterialTheme.colorScheme.primaryContainer
+            isDisabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        },
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = card.displayName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (isDisabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    else MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = card.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isDisabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onToggle() },
+                enabled = !isDisabled,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectedCardsPreview(
+    selectedCardIds: List<String>,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Preview (${selectedCardIds.size}/4 selected)",
+                style = MaterialTheme.typography.labelLarge,
+            )
+
+            if (selectedCardIds.isEmpty()) {
+                Text(
+                    text = "No cards selected. Select at least 1 metric.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    repeat(2) { row ->
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(
+                                    MaterialTheme.colorScheme.surface,
+                                    MaterialTheme.shapes.small,
+                                )
+                                .padding(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            repeat(2) { col ->
+                                val index = row * 2 + col
+                                if (index < selectedCardIds.size) {
+                                    PreviewCard(cardId = selectedCardIds[index])
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(
+                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                                MaterialTheme.shapes.small,
+                                            )
+                                            .padding(8.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            text = "Empty",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PreviewCard(cardId: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                MaterialTheme.shapes.small,
+            )
+            .padding(8.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Text(
+            text = cardId,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+private data class CardOption(
+    val id: String,
+    val displayName: String,
+    val description: String,
+)
