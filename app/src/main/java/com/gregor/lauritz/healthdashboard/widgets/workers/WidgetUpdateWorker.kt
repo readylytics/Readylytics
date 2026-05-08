@@ -14,6 +14,8 @@ import javax.inject.Inject
 /**
  * Periodic worker that updates all widgets daily.
  * Ensures widgets stay fresh even if app hasn't synced recently.
+ *
+ * Scheduled daily at 6 AM. Updates all widgets with latest data from Room.
  */
 class WidgetUpdateWorker(
     context: Context,
@@ -21,6 +23,8 @@ class WidgetUpdateWorker(
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         return try {
+            // This will be completed in Phase 7 when we integrate with repositories
+            // For now, just trigger a basic update
             val glanceAppWidgetManager = GlanceAppWidgetManager(applicationContext)
             glanceAppWidgetManager.updateAll(ReadylyticsAppWidget::class.java)
             Result.success()
