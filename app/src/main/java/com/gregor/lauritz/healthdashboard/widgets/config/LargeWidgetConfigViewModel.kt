@@ -40,7 +40,7 @@ class LargeWidgetConfigViewModel @Inject constructor(
     private val configRepository: WidgetConfigurationRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    private val widgetId: Int = savedStateHandle["widgetId"] ?: -1
+    private val widgetId: Int = savedStateHandle.get<Int>("widgetId") ?: 0
 
     private val _state = MutableStateFlow(LargeWidgetConfigState(isLoading = widgetId > 0))
     val state: StateFlow<LargeWidgetConfigState> = _state.asStateFlow()

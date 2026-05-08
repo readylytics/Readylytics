@@ -27,12 +27,19 @@ class SmallWidgetConfigViewModel @Inject constructor(
     private val configRepository: WidgetConfigurationRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    private val widgetId: Int = savedStateHandle["widgetId"] ?: return
+    private val widgetId: Int = savedStateHandle.get<Int>("widgetId") ?: 0
 
     private val _state = MutableStateFlow(SmallWidgetConfigState(isLoading = true))
     val state: StateFlow<SmallWidgetConfigState> = _state.asStateFlow()
 
     init {
+        if (widgetId == 0) {
+            _state.value = _state.value.copy(
+                isLoading = false,
+                error = "Invalid widget ID",
+            )
+            return
+        }
         loadConfiguration()
     }
 

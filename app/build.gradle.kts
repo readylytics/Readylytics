@@ -23,7 +23,7 @@ android {
 
     defaultConfig {
         applicationId = "com.gregor.lauritz.healthdashboard"
-        minSdk = 35
+        minSdk = 26
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
