@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,26 +19,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.data.repository.MediumWidgetConfig
-import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetMode
 import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * Configuration activity for medium widget (1x4).
@@ -45,15 +46,8 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class MediumWidgetConfigActivity : ComponentActivity() {
-    @Inject
-    lateinit var configRepository: WidgetConfigurationRepository
-
+    private val viewModel: MediumWidgetConfigViewModel by viewModels()
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
-    private var selectedMode by mutableStateOf(WidgetMode.DUAL_METRIC)
-    private var metric1 by mutableStateOf(MetricType.HRV)
-    private var metric2 by mutableStateOf(MetricType.RHR)
-    private var showMetric1Selector by mutableStateOf(false)
-    private var showMetric2Selector by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,91 +67,151 @@ class MediumWidgetConfigActivity : ComponentActivity() {
 
         setContent {
             FitDashboardTheme {
-                Scaffold { padding ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(padding)
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(24.dp),
-                    ) {
-                        // Header
-                        Text(
-                            text = "Configure Medium Widget",
-                            style = MaterialTheme.typography.headlineMedium,
-                        )
+                val state by viewModel.state.collectAsStateWithLifecycle()
 
-                        // Mode Selection
-                        ModeSelectionSection(
-                            selectedMode = selectedMode,
-                            onModeChange = { selectedMode = it },
-                        )
-
-                        // Metric Selection (only for dual metric mode)
-                        if (selectedMode == WidgetMode.DUAL_METRIC) {
-                            MetricSelectionSection(
-                                metric1 = metric1,
-                                metric2 = metric2,
-                                onMetric1Click = { showMetric1Selector = true },
-                                onMetric2Click = { showMetric2Selector = true },
-                            )
-                        } else {
-                            StepsProgressDescription()
+                LaunchedEffect(state.isSaved) {
+                    if (state.isSaved) {
+                        val resultValue = Intent().apply {
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
                         }
-
-                        // Spacer
-                        Box(modifier = Modifier.weight(1f))
-
-                        // Save Button
-                        Button(
-                            onClick = { saveConfig() },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("Save Configuration")
-                        }
+                        setResult(Activity.RESULT_OK, resultValue)
+                        finish()
                     }
                 }
 
-                // Metric Selectors
-                MetricSelectorBottomSheet(
-                    isVisible = showMetric1Selector,
-                    selectedMetric = metric1,
-                    onMetricSelected = { metric1 = it },
-                    onDismiss = { showMetric1Selector = false },
-                    title = "Select First Metric",
-                )
-
-                MetricSelectorBottomSheet(
-                    isVisible = showMetric2Selector,
-                    selectedMetric = metric2,
-                    onMetricSelected = { metric2 = it },
-                    onDismiss = { showMetric2Selector = false },
-                    title = "Select Second Metric",
+                MediumWidgetConfigScreen(
+                    state = state,
+                    onModeChange = viewModel::updateMode,
+                    onMetric1Change = viewModel::updateMetric1,
+                    onMetric2Change = viewModel::updateMetric2,
+                    onSave = viewModel::saveConfiguration,
+                    onErrorDismissed = viewModel::clearError,
                 )
             }
         }
     }
+}
 
-    private fun saveConfig() {
-        MainScope().launch {
-            configRepository.saveMediumWidgetConfig(
-                widgetId,
-                MediumWidgetConfig(
-                    widgetId = widgetId,
-                    mode = selectedMode.name,
-                    metric1 = if (selectedMode == WidgetMode.DUAL_METRIC) metric1.name else null,
-                    metric2 = if (selectedMode == WidgetMode.DUAL_METRIC) metric2.name else null,
-                ),
+@Composable
+private fun MediumWidgetConfigScreen(
+    state: MediumWidgetConfigState,
+    onModeChange: (WidgetMode) -> Unit,
+    onMetric1Change: (MetricType) -> Unit,
+    onMetric2Change: (MetricType) -> Unit,
+    onSave: () -> Unit,
+    onErrorDismissed: () -> Unit,
+) {
+    var showMetric1Selector by mutableStateOf(false)
+    var showMetric2Selector by mutableStateOf(false)
+
+    Scaffold { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            // Header
+            Text(
+                text = "Configure Medium Widget",
+                style = MaterialTheme.typography.headlineMedium,
             )
 
-            // Return success
-            val resultValue = Intent().apply {
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            // Error message
+            if (state.error != null) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.errorContainer,
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = state.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = onErrorDismissed) {
+                            Text("Dismiss")
+                        }
+                    }
+                }
             }
-            setResult(Activity.RESULT_OK, resultValue)
-            finish()
+
+            // Loading state
+            if (state.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+                return@Scaffold
+            }
+
+            // Mode Selection
+            ModeSelectionSection(
+                selectedMode = state.mode,
+                onModeChange = onModeChange,
+            )
+
+            // Metric Selection (only for dual metric mode)
+            if (state.mode == WidgetMode.DUAL_METRIC) {
+                MetricSelectionSection(
+                    metric1 = state.metric1,
+                    metric2 = state.metric2,
+                    onMetric1Click = { showMetric1Selector = true },
+                    onMetric2Click = { showMetric2Selector = true },
+                )
+            } else {
+                StepsProgressDescription()
+            }
+
+            // Spacer
+            Box(modifier = Modifier.weight(1f))
+
+            // Save Button
+            Button(
+                onClick = onSave,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.isLoading,
+            ) {
+                Text("Save Configuration")
+            }
         }
     }
+
+    // Metric Selectors
+    MetricSelectorBottomSheet(
+        isVisible = showMetric1Selector,
+        selectedMetric = state.metric1,
+        onMetricSelected = { metric ->
+            onMetric1Change(metric)
+            showMetric1Selector = false
+        },
+        onDismiss = { showMetric1Selector = false },
+        title = "Select First Metric",
+    )
+
+    MetricSelectorBottomSheet(
+        isVisible = showMetric2Selector,
+        selectedMetric = state.metric2,
+        onMetricSelected = { metric ->
+            onMetric2Change(metric)
+            showMetric2Selector = false
+        },
+        onDismiss = { showMetric2Selector = false },
+        title = "Select Second Metric",
+    )
 }
 
 @Composable

@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,26 +24,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.data.repository.LargeWidgetConfig
-import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * Configuration activity for large widget (2x4).
@@ -50,11 +50,8 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class LargeWidgetConfigActivity : ComponentActivity() {
-    @Inject
-    lateinit var configRepository: WidgetConfigurationRepository
-
+    private val viewModel: LargeWidgetConfigViewModel by viewModels()
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
-    private var selectedCardIds by mutableStateOf(defaultCardIds())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,91 +70,130 @@ class LargeWidgetConfigActivity : ComponentActivity() {
 
         setContent {
             FitDashboardTheme {
-                Scaffold { padding ->
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(padding)
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                val state by viewModel.state.collectAsStateWithLifecycle()
+
+                LaunchedEffect(state.isSaved) {
+                    if (state.isSaved) {
+                        val resultValue = Intent().apply {
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                        }
+                        setResult(Activity.RESULT_OK, resultValue)
+                        finish()
+                    }
+                }
+
+                LargeWidgetConfigScreen(
+                    state = state,
+                    onCardToggle = viewModel::toggleCard,
+                    onSave = viewModel::saveConfiguration,
+                    onErrorDismissed = viewModel::clearError,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LargeWidgetConfigScreen(
+    state: LargeWidgetConfigState,
+    onCardToggle: (String) -> Unit,
+    onSave: () -> Unit,
+    onErrorDismissed: () -> Unit,
+) {
+    Scaffold { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Configure Large Widget",
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
+                    Text(
+                        text = "Select up to 4 metrics to display in a 2x2 grid",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            // Error message
+            if (state.error != null) {
+                item {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.errorContainer,
                     ) {
-                        item {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    text = "Configure Large Widget",
-                                    style = MaterialTheme.typography.headlineMedium,
-                                )
-                                Text(
-                                    text = "Select up to 4 metrics to display in a 2x2 grid",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-
-                        item {
-                            CardSelectionSection(
-                                selectedCardIds = selectedCardIds,
-                                onCardToggle = { cardId ->
-                                    selectedCardIds = if (selectedCardIds.contains(cardId)) {
-                                        selectedCardIds - cardId
-                                    } else if (selectedCardIds.size < 4) {
-                                        selectedCardIds + cardId
-                                    } else {
-                                        selectedCardIds
-                                    }
-                                },
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = state.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.weight(1f),
                             )
-                        }
-
-                        item {
-                            SelectedCardsPreview(
-                                selectedCardIds = selectedCardIds,
-                            )
-                        }
-
-                        item {
-                            Button(
-                                onClick = { saveConfig() },
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text("Save Configuration")
+                            TextButton(onClick = onErrorDismissed) {
+                                Text("Dismiss")
                             }
-                        }
-
-                        item {
-                            Box(modifier = Modifier.height(16.dp))
                         }
                     }
                 }
             }
-        }
-    }
 
-    private fun saveConfig() {
-        MainScope().launch {
-            configRepository.saveLargeWidgetConfig(
-                widgetId,
-                LargeWidgetConfig(
-                    widgetId = widgetId,
-                    cardIds = selectedCardIds,
-                ),
-            )
-
-            val resultValue = Intent().apply {
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            // Loading state
+            if (state.isLoading) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+                return@Scaffold
             }
-            setResult(Activity.RESULT_OK, resultValue)
-            finish()
+
+            item {
+                CardSelectionSection(
+                    selectedCardIds = state.selectedCardIds,
+                    onCardToggle = onCardToggle,
+                )
+            }
+
+            item {
+                SelectedCardsPreview(
+                    selectedCardIds = state.selectedCardIds,
+                )
+            }
+
+            item {
+                Button(
+                    onClick = onSave,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isLoading,
+                ) {
+                    Text("Save Configuration")
+                }
+            }
+
+            item {
+                Box(modifier = Modifier.height(16.dp))
+            }
         }
     }
-
-    private fun defaultCardIds() = listOf(
-        "SLEEP_SCORE",
-        "READINESS",
-        "HRV",
-        "STEPS",
-    )
 }
 
 @Composable
