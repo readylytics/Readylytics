@@ -101,41 +101,53 @@ object SmallWidgetUpdater {
         type: MetricType,
         summary: com.gregor.lauritz.healthdashboard.domain.model.DailySummary,
     ): Pair<Double, MetricStatus> {
-        // Extract metric value and status from summary
-        // This maps to the exact same logic as dashboard
         return when (type) {
             MetricType.HRV -> {
-                val value = summary.nocturnalHrv.toDouble()
+                val value = summary.nocturnalHrv?.toDouble() ?: return 0.0 to MetricStatus.CALIBRATING
                 val status = summary.diagnostics?.hrvStatus ?: MetricStatus.CALIBRATING
                 value to status
             }
             MetricType.RHR -> {
-                val value = summary.nocturnalRhr.toDouble()
+                val value = summary.nocturnalRhr?.toDouble() ?: return 0.0 to MetricStatus.CALIBRATING
                 val status = summary.diagnostics?.rhrStatus ?: MetricStatus.CALIBRATING
                 value to status
             }
             MetricType.SLEEP_SCORE -> {
-                val value = summary.sleepScore.toDouble()
+                val value = summary.sleepScore?.toDouble() ?: return 0.0 to MetricStatus.CALIBRATING
                 val status = if (value > 0) MetricStatus.OPTIMAL else MetricStatus.CALIBRATING
                 value to status
             }
             MetricType.READINESS -> {
-                val value = summary.readinessScore.toDouble()
+                val value = summary.readinessScore?.toDouble() ?: return 0.0 to MetricStatus.CALIBRATING
+                val status = if (value > 0) MetricStatus.OPTIMAL else MetricStatus.CALIBRATING
+                value to status
+            }
+            MetricType.RECOVERY -> {
+                val value = summary.readinessScore?.toDouble() ?: return 0.0 to MetricStatus.CALIBRATING
                 val status = if (value > 0) MetricStatus.OPTIMAL else MetricStatus.CALIBRATING
                 value to status
             }
             MetricType.SLEEP_DURATION -> {
-                val value = (summary.sleepDurationMinutes / 60.0) // Convert to hours
-                val status = MetricStatus.NEUTRAL
-                value to status
+                val minutes = summary.sleepDurationMinutes ?: return 0.0 to MetricStatus.CALIBRATING
+                val value = minutes / 60.0
+                value to MetricStatus.NEUTRAL
+            }
+            MetricType.SLEEP_EFFICIENCY -> {
+                val efficiency = (summary.deepSleepPercent?.plus(summary.remSleepPercent ?: 0f) ?: 0f).toDouble()
+                val status = when {
+                    efficiency > 85 -> MetricStatus.OPTIMAL
+                    efficiency > 70 -> MetricStatus.NEUTRAL
+                    efficiency > 50 -> MetricStatus.WARNING
+                    else -> MetricStatus.CALIBRATING
+                }
+                efficiency to status
             }
             MetricType.STEPS -> {
-                val value = summary.stepCount.toDouble()
-                val status = MetricStatus.NEUTRAL
-                value to status
+                val value = summary.stepCount?.toDouble() ?: return 0.0 to MetricStatus.NEUTRAL
+                value to MetricStatus.NEUTRAL
             }
             MetricType.PAI -> {
-                val value = summary.paiScore.toDouble()
+                val value = summary.paiScore?.toDouble() ?: return 0.0 to MetricStatus.CALIBRATING
                 val status = when {
                     value >= 100 -> MetricStatus.OPTIMAL
                     value >= 75 -> MetricStatus.NEUTRAL
@@ -145,17 +157,32 @@ object SmallWidgetUpdater {
                 value to status
             }
             MetricType.STRAIN_RATIO -> {
-                val value = summary.strainRatio
+                val value = summary.strainRatio ?: return 0.0 to MetricStatus.CALIBRATING
                 val status = when {
-                    value in 0.8..1.3 -> MetricStatus.OPTIMAL
+                    value in 0.8f..1.3f -> MetricStatus.OPTIMAL
                     value < 0.8 -> MetricStatus.WARNING
-                    else -> MetricStatus.WARNING // Overtraining
+                    else -> MetricStatus.WARNING
                 }
-                value to status
+                value.toDouble() to status
             }
-            else -> {
-                // Unsupported metric in summary, return placeholder
-                0.0 to MetricStatus.CALIBRATING
+            MetricType.BODY_BATTERY -> {
+                val value = summary.readinessScore?.toDouble() ?: return 0.0 to MetricStatus.CALIBRATING
+                value to if (value > 50) MetricStatus.OPTIMAL else MetricStatus.WARNING
+            }
+            MetricType.STRESS -> {
+                return 0.0 to MetricStatus.CALIBRATING
+            }
+            MetricType.CIRCADIAN_CONSISTENCY -> {
+                return 0.0 to MetricStatus.CALIBRATING
+            }
+            MetricType.VO2_MAX -> {
+                return 0.0 to MetricStatus.CALIBRATING
+            }
+            MetricType.WEIGHT -> {
+                return 0.0 to MetricStatus.CALIBRATING
+            }
+            MetricType.CALORIES -> {
+                return 0.0 to MetricStatus.CALIBRATING
             }
         }
     }
