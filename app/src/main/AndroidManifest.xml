@@ -121,6 +121,19 @@
                 android:resource="@xml/widget_medium_info" />
         </receiver>
 
+        <!-- Large Widget (2x4) Receiver -->
+        <receiver
+            android:name=".widgets.glance.LargeWidget"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_large_info" />
+        </receiver>
+
         <!-- Widget update broadcast receiver -->
         <receiver
             android:name=".widgets.receiver.WidgetUpdateBroadcastReceiver"

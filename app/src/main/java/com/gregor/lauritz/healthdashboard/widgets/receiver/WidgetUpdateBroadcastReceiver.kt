@@ -8,6 +8,8 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository
+import com.gregor.lauritz.healthdashboard.widgets.glance.LargeWidget
+import com.gregor.lauritz.healthdashboard.widgets.glance.LargeWidgetUpdater
 import com.gregor.lauritz.healthdashboard.widgets.glance.MediumWidget
 import com.gregor.lauritz.healthdashboard.widgets.glance.MediumWidgetUpdater
 import com.gregor.lauritz.healthdashboard.widgets.glance.SmallWidget
@@ -80,6 +82,27 @@ class WidgetUpdateBroadcastReceiver : BroadcastReceiver() {
                     }
                 }
                 glanceManager.updateAll(MediumWidget::class.java)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            // Update large widgets
+            try {
+                val largeWidgetIds = glanceManager.getGlanceIds(LargeWidget::class.java)
+                largeWidgetIds.forEach { glanceId ->
+                    val widgetId = glanceId.hashCode()
+                    try {
+                        LargeWidgetUpdater.updateLargeWidget(
+                            context,
+                            widgetId,
+                            widgetDataRepository,
+                            configRepository,
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                glanceManager.updateAll(LargeWidget::class.java)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
