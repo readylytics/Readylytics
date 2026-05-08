@@ -8,6 +8,8 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository
+import com.gregor.lauritz.healthdashboard.widgets.glance.MediumWidget
+import com.gregor.lauritz.healthdashboard.widgets.glance.MediumWidgetUpdater
 import com.gregor.lauritz.healthdashboard.widgets.glance.SmallWidget
 import com.gregor.lauritz.healthdashboard.widgets.glance.SmallWidgetUpdater
 import dagger.hilt.android.AndroidEntryPoint
@@ -40,27 +42,47 @@ class WidgetUpdateBroadcastReceiver : BroadcastReceiver() {
         MainScope().launch {
             val glanceManager = GlanceAppWidgetManager(context)
 
-            // Get all widget IDs for the app
-            val widgetIds = glanceManager.getGlanceIds(SmallWidget::class.java)
-
-            // Update each widget
-            widgetIds.forEach { glanceId ->
-                val widgetId = glanceId.hashCode()
-                try {
-                    SmallWidgetUpdater.updateSmallWidget(
-                        context,
-                        widgetId,
-                        widgetDataRepository,
-                        configRepository,
-                    )
-                } catch (e: Exception) {
-                    // Log but don't crash
-                    e.printStackTrace()
+            // Update small widgets
+            try {
+                val smallWidgetIds = glanceManager.getGlanceIds(SmallWidget::class.java)
+                smallWidgetIds.forEach { glanceId ->
+                    val widgetId = glanceId.hashCode()
+                    try {
+                        SmallWidgetUpdater.updateSmallWidget(
+                            context,
+                            widgetId,
+                            widgetDataRepository,
+                            configRepository,
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
+                glanceManager.updateAll(SmallWidget::class.java)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
 
-            // Trigger recomposition
-            glanceManager.updateAll(SmallWidget::class.java)
+            // Update medium widgets
+            try {
+                val mediumWidgetIds = glanceManager.getGlanceIds(MediumWidget::class.java)
+                mediumWidgetIds.forEach { glanceId ->
+                    val widgetId = glanceId.hashCode()
+                    try {
+                        MediumWidgetUpdater.updateMediumWidget(
+                            context,
+                            widgetId,
+                            widgetDataRepository,
+                            configRepository,
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                glanceManager.updateAll(MediumWidget::class.java)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
