@@ -37,4 +37,6 @@
     <string name="widget_configure">Configure</string>
     <string name="widget_refresh">Refresh</string>
     <string name="widget_updated_ago">Updated %1$s ago</string>
+    <string name="widget_sync_permission_label">Widget Sync Permission</string>
+    <string name="widget_sync_permission_description">Allows the system to trigger widget updates on data sync completion</string>
 </resources>

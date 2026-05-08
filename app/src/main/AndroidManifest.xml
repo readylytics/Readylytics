@@ -17,6 +17,13 @@
     <uses-permission android:name="com.google.android.apps.healthdata.permission.READ_EXERCISE" />
     <uses-permission android:name="com.google.android.apps.healthdata.permission.READ_STEPS" />
 
+    <!-- Custom permissions for widget system security -->
+    <permission
+        android:name="com.gregor.lauritz.healthdashboard.WIDGET_SYNC_PERMISSION"
+        android:protectionLevel="internal"
+        android:label="@string/widget_sync_permission_label"
+        android:description="@string/widget_sync_permission_description" />
+
     <!-- Required on Android 11+ so the HC package is visible to our app -->
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
@@ -137,7 +144,8 @@
         <!-- Widget update broadcast receiver -->
         <receiver
             android:name=".widgets.receiver.WidgetUpdateBroadcastReceiver"
-            android:exported="false">
+            android:exported="false"
+            android:permission="com.gregor.lauritz.healthdashboard.WIDGET_SYNC_PERMISSION">
             <intent-filter>
                 <action android:name="com.gregor.lauritz.healthdashboard.SYNC_COMPLETE" />
             </intent-filter>
