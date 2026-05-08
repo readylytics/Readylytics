@@ -3,7 +3,6 @@ package com.gregor.lauritz.healthdashboard.widgets.glance
 import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository
@@ -12,10 +11,6 @@ import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import kotlinx.coroutines.flow.first
 
 private const val TAG = "LargeWidgetUpdater"
-
-private val Context.glanceLargeWidgetDataStore by preferencesDataStore(
-    name = "glance_large_widget_data"
-)
 
 /**
  * Helper to update large widget state from data sources.
@@ -62,27 +57,43 @@ object LargeWidgetUpdater {
         cardIds: List<String>,
         summary: com.gregor.lauritz.healthdashboard.domain.model.DailySummary,
     ) {
-        context.glanceLargeWidgetDataStore.edit { preferences ->
+        WidgetDataStoreProvider.getDataStore(context).edit { preferences ->
             cardIds.forEachIndexed { index, cardId ->
-                val cardNum = index + 1
                 try {
                     val (value, status, cardType) = extractCardData(cardId, summary)
 
-                    preferences[LargeWidgetData.createStringKey(widgetId, "card${cardNum}_type")] =
-                        cardType
-                    preferences[LargeWidgetData.createStringKey(widgetId, "card${cardNum}_metric")] =
-                        cardId
-                    preferences[LargeWidgetData.createDoubleKey(widgetId, "card${cardNum}_value")] =
-                        value
-                    preferences[LargeWidgetData.createStringKey(widgetId, "card${cardNum}_status")] =
-                        status.name
+                    when (index) {
+                        0 -> {
+                            preferences[LargeWidgetKeys.card1Type(widgetId)] = cardType
+                            preferences[LargeWidgetKeys.card1Metric(widgetId)] = cardId
+                            preferences[LargeWidgetKeys.card1Value(widgetId)] = value
+                            preferences[LargeWidgetKeys.card1Status(widgetId)] = status.name
+                        }
+                        1 -> {
+                            preferences[LargeWidgetKeys.card2Type(widgetId)] = cardType
+                            preferences[LargeWidgetKeys.card2Metric(widgetId)] = cardId
+                            preferences[LargeWidgetKeys.card2Value(widgetId)] = value
+                            preferences[LargeWidgetKeys.card2Status(widgetId)] = status.name
+                        }
+                        2 -> {
+                            preferences[LargeWidgetKeys.card3Type(widgetId)] = cardType
+                            preferences[LargeWidgetKeys.card3Metric(widgetId)] = cardId
+                            preferences[LargeWidgetKeys.card3Value(widgetId)] = value
+                            preferences[LargeWidgetKeys.card3Status(widgetId)] = status.name
+                        }
+                        3 -> {
+                            preferences[LargeWidgetKeys.card4Type(widgetId)] = cardType
+                            preferences[LargeWidgetKeys.card4Metric(widgetId)] = cardId
+                            preferences[LargeWidgetKeys.card4Value(widgetId)] = value
+                            preferences[LargeWidgetKeys.card4Status(widgetId)] = status.name
+                        }
+                    }
                 } catch (e: Exception) {
-                    // Skip invalid cards
+                    Log.e(TAG, "Failed to save card $index for widget $widgetId", e)
                 }
             }
 
-            preferences[LargeWidgetData.createLongKey(widgetId, "last_update")] =
-                System.currentTimeMillis()
+            preferences[LargeWidgetKeys.lastUpdate(widgetId)] = System.currentTimeMillis()
         }
 
         GlanceAppWidgetManager(context).updateAll(LargeWidget::class.java)
@@ -93,8 +104,8 @@ object LargeWidgetUpdater {
         widgetId: Int,
         error: String,
     ) {
-        context.glanceLargeWidgetDataStore.edit { preferences ->
-            preferences[LargeWidgetData.createStringKey(widgetId, "error")] = error
+        WidgetDataStoreProvider.getDataStore(context).edit { preferences ->
+            preferences[LargeWidgetKeys.error(widgetId)] = error
         }
 
         GlanceAppWidgetManager(context).updateAll(LargeWidget::class.java)
@@ -107,7 +118,7 @@ object LargeWidgetUpdater {
         // Determine card type and extract data
         val metricType = try {
             MetricType.valueOf(cardId)
-        } catch (e: Exception) {
+        } catch (e: IllegalArgumentException) {
             return Triple(0.0, MetricStatus.CALIBRATING, "METRIC")
         }
 

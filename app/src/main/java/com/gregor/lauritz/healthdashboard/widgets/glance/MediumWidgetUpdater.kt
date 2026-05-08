@@ -3,7 +3,6 @@ package com.gregor.lauritz.healthdashboard.widgets.glance
 import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository
@@ -13,10 +12,7 @@ import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import kotlinx.coroutines.flow.first
 
 private const val TAG = "MediumWidgetUpdater"
-
-private val Context.glanceMediumWidgetDataStore by preferencesDataStore(
-    name = "glance_medium_widget_data"
-)
+private const val DEFAULT_STEPS_GOAL = 10000L
 
 /**
  * Helper to update medium widget state from data sources.
@@ -36,7 +32,7 @@ object MediumWidgetUpdater {
 
             val mode = try {
                 WidgetMode.valueOf(config.mode)
-            } catch (e: Exception) {
+            } catch (e: IllegalArgumentException) {
                 WidgetMode.DUAL_METRIC
             }
 
@@ -70,37 +66,28 @@ object MediumWidgetUpdater {
     ) {
         val metric1Type = try {
             MetricType.valueOf(config.metric1 ?: "HRV")
-        } catch (e: Exception) {
+        } catch (e: IllegalArgumentException) {
             MetricType.HRV
         }
 
         val metric2Type = try {
             MetricType.valueOf(config.metric2 ?: "RHR")
-        } catch (e: Exception) {
+        } catch (e: IllegalArgumentException) {
             MetricType.RHR
         }
 
         val (metric1Value, metric1Status) = WidgetMetricExtractor.extractMetricData(metric1Type, summary)
         val (metric2Value, metric2Status) = WidgetMetricExtractor.extractMetricData(metric2Type, summary)
 
-        context.glanceMediumWidgetDataStore.edit { preferences ->
-            val widgetIdStr = widgetId.toString()
-            preferences[MediumWidgetData.createModeKey(widgetId, "mode")] =
-                WidgetMode.DUAL_METRIC.name
-            preferences[MediumWidgetData.createModeKey(widgetId, "metric1_type")] =
-                metric1Type.name
-            preferences[MediumWidgetData.createDoubleKey(widgetId, "metric1_value")] =
-                metric1Value
-            preferences[MediumWidgetData.createModeKey(widgetId, "metric1_status")] =
-                metric1Status.name
-            preferences[MediumWidgetData.createModeKey(widgetId, "metric2_type")] =
-                metric2Type.name
-            preferences[MediumWidgetData.createDoubleKey(widgetId, "metric2_value")] =
-                metric2Value
-            preferences[MediumWidgetData.createModeKey(widgetId, "metric2_status")] =
-                metric2Status.name
-            preferences[MediumWidgetData.createLongKey(widgetId, "last_update")] =
-                System.currentTimeMillis()
+        WidgetDataStoreProvider.getDataStore(context).edit { preferences ->
+            preferences[MediumWidgetKeys.mode(widgetId)] = WidgetMode.DUAL_METRIC.name
+            preferences[MediumWidgetKeys.metric1Type(widgetId)] = metric1Type.name
+            preferences[MediumWidgetKeys.metric1Value(widgetId)] = metric1Value
+            preferences[MediumWidgetKeys.metric1Status(widgetId)] = metric1Status.name
+            preferences[MediumWidgetKeys.metric2Type(widgetId)] = metric2Type.name
+            preferences[MediumWidgetKeys.metric2Value(widgetId)] = metric2Value
+            preferences[MediumWidgetKeys.metric2Status(widgetId)] = metric2Status.name
+            preferences[MediumWidgetKeys.lastUpdate(widgetId)] = System.currentTimeMillis()
         }
 
         GlanceAppWidgetManager(context).updateAll(MediumWidget::class.java)
@@ -112,16 +99,12 @@ object MediumWidgetUpdater {
         summary: com.gregor.lauritz.healthdashboard.domain.model.DailySummary,
     ) {
         val currentSteps = (summary.stepCount ?: 0).toLong()
-        val goalSteps = 10000L
 
-        context.glanceMediumWidgetDataStore.edit { preferences ->
-            preferences[MediumWidgetData.createModeKey(widgetId, "mode")] =
-                WidgetMode.STEPS_PROGRESS.name
-            preferences[MediumWidgetData.createLongKey(widgetId, "current_steps")] =
-                currentSteps
-            preferences[MediumWidgetData.createLongKey(widgetId, "goal_steps")] = goalSteps
-            preferences[MediumWidgetData.createLongKey(widgetId, "last_update")] =
-                System.currentTimeMillis()
+        WidgetDataStoreProvider.getDataStore(context).edit { preferences ->
+            preferences[MediumWidgetKeys.mode(widgetId)] = WidgetMode.STEPS_PROGRESS.name
+            preferences[MediumWidgetKeys.currentSteps(widgetId)] = currentSteps
+            preferences[MediumWidgetKeys.goalSteps(widgetId)] = DEFAULT_STEPS_GOAL
+            preferences[MediumWidgetKeys.lastUpdate(widgetId)] = System.currentTimeMillis()
         }
 
         GlanceAppWidgetManager(context).updateAll(MediumWidget::class.java)
@@ -132,10 +115,9 @@ object MediumWidgetUpdater {
         widgetId: Int,
         error: String,
     ) {
-        context.glanceMediumWidgetDataStore.edit { preferences ->
-            preferences[MediumWidgetData.createModeKey(widgetId, "error")] = error
-            preferences[MediumWidgetData.createModeKey(widgetId, "mode")] =
-                WidgetMode.DUAL_METRIC.name
+        WidgetDataStoreProvider.getDataStore(context).edit { preferences ->
+            preferences[MediumWidgetKeys.error(widgetId)] = error
+            preferences[MediumWidgetKeys.mode(widgetId)] = WidgetMode.DUAL_METRIC.name
         }
 
         GlanceAppWidgetManager(context).updateAll(MediumWidget::class.java)
