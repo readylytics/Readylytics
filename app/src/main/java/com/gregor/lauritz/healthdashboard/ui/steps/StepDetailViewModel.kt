@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
@@ -37,7 +37,7 @@ data class StepDetailUiState(
 class StepDetailViewModel @Inject constructor(
     private val dailySummaryDao: DailySummaryDao,
     private val selectedDateRepository: SelectedDateRepository,
-    private val prefsRepo: UserPreferencesRepository,
+    private val settingsRepo: SettingsRepository,
 ) : ViewModel() {
 
     private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
@@ -54,7 +54,7 @@ class StepDetailViewModel @Inject constructor(
             combine(
                 dailySummaryDao.observeLatest().map { it?.let { DailySummaryMapper.toDomain(it) } },
                 dailySummaryDao.observeSince(fromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
-                prefsRepo.userPreferences
+                settingsRepo.userPreferences
             ) { latest, history, prefs ->
                 val points = history
                     .filter { it.stepCount != null }

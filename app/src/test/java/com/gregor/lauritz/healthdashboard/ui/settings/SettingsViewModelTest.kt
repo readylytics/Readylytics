@@ -3,7 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 import android.content.Context
 import androidx.test.platform.app.InstrumentationRegistry
 import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPreferences
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.sync.ResyncHealthConnectUseCase
@@ -34,7 +34,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.robolectric.annotation.Config
 import dagger.hilt.android.testing.HiltTestApplication
 import javax.inject.Inject
-import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltAndroidTest
@@ -50,10 +49,7 @@ class SettingsViewModelTest {
     private lateinit var context: Context
 
     @Inject
-    lateinit var prefsRepo: UserPreferencesRepository
-
-    @Inject
-    lateinit var appConfigRepo: AppConfigRepository
+    lateinit var settingsRepo: SettingsRepository
 
     @Inject
     lateinit var scoringRepository: ScoringRepository
@@ -96,8 +92,7 @@ class SettingsViewModelTest {
     @Test
     fun `UISettingsViewModel retention toggle event updates state`() = runTest {
         val viewModel = UISettingsViewModel(
-            prefsRepo,
-            appConfigRepo,
+            settingsRepo,
             healthSyncUseCase
         )
         viewModel.sharingStarted = SharingStarted.Lazily
@@ -123,8 +118,7 @@ class SettingsViewModelTest {
     @Test
     fun `UISettingsViewModel retention days event updates state`() = runTest {
         val viewModel = UISettingsViewModel(
-            prefsRepo,
-            appConfigRepo,
+            settingsRepo,
             healthSyncUseCase
         )
         viewModel.sharingStarted = SharingStarted.Lazily
@@ -149,7 +143,7 @@ class SettingsViewModelTest {
     @Test
     fun `SyncSettingsViewModel resync event sets loading state`() = runTest {
         val viewModel = SyncSettingsViewModel(
-            prefsRepo,
+            settingsRepo,
             healthSyncUseCase,
             resyncHealthConnectUseCase
         )

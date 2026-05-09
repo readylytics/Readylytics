@@ -3,7 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPreferences
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.circadian.CircadianThresholdValue
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,13 +19,13 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ThresholdSettingsViewModel @Inject constructor(
-    private val prefsRepo: UserPreferencesRepository,
+    private val settingsRepo: SettingsRepository,
     private val scoringRepository: ScoringRepository,
     private val circadianThresholdPreferences: CircadianThresholdPreferences,
 ) : ViewModel() {
 
     val uiState: StateFlow<ThresholdSettingsState> = combine(
-        prefsRepo.userPreferences,
+        settingsRepo.userPreferences,
         circadianThresholdPreferences.overrideMinutesFlow
     ) { prefs, decryptedOverride ->
         ThresholdSettingsState(
@@ -73,19 +73,19 @@ class ThresholdSettingsViewModel @Inject constructor(
     fun onEvent(event: SettingsEvent) {
         when (event) {
             is SettingsEvent.HrvOptimalThresholdChanged ->
-                viewModelScope.launch { prefsRepo.updateHrvOptimalThreshold(value = event.value) }
+                viewModelScope.launch { settingsRepo.updateHrvOptimalThreshold(value = event.value) }
             is SettingsEvent.HrvWarningThresholdChanged ->
-                viewModelScope.launch { prefsRepo.updateHrvWarningThreshold(value = event.value) }
+                viewModelScope.launch { settingsRepo.updateHrvWarningThreshold(value = event.value) }
             is SettingsEvent.RhrOptimalThresholdChanged ->
-                viewModelScope.launch { prefsRepo.updateRhrOptimalThreshold(value = event.value) }
+                viewModelScope.launch { settingsRepo.updateRhrOptimalThreshold(value = event.value) }
             is SettingsEvent.RhrWarningThresholdChanged ->
-                viewModelScope.launch { prefsRepo.updateRhrWarningThreshold(value = event.value) }
+                viewModelScope.launch { settingsRepo.updateRhrWarningThreshold(value = event.value) }
             is SettingsEvent.ConsistencyThresholdChanged ->
-                viewModelScope.launch { prefsRepo.updateConsistencyThresholdMinutes(minutes = event.minutes) }
+                viewModelScope.launch { settingsRepo.updateConsistencyThresholdMinutes(minutes = event.minutes) }
             is SettingsEvent.ConsistencyEvaluationDaysChanged ->
-                viewModelScope.launch { prefsRepo.updateConsistencyEvaluationDays(days = event.days) }
+                viewModelScope.launch { settingsRepo.updateConsistencyEvaluationDays(days = event.days) }
             is SettingsEvent.ConsistencyBaselineDaysChanged ->
-                viewModelScope.launch { prefsRepo.updateConsistencyBaselineDays(days = event.days) }
+                viewModelScope.launch { settingsRepo.updateConsistencyBaselineDays(days = event.days) }
             is SettingsEvent.CircadianThresholdOverrideChanged -> {
                 viewModelScope.launch {
                     val previousValue = consolidatedState.value.circadianThresholdOverride

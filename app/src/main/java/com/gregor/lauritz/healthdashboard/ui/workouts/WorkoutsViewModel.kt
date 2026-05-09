@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
@@ -65,7 +65,7 @@ class WorkoutsViewModel
         private val workoutDao: WorkoutDao,
         private val selectedDateRepository: SelectedDateRepository,
         private val scoringCalculator: ScoringCalculator,
-        private val prefsRepo: UserPreferencesRepository,
+        private val settingsRepo: SettingsRepository,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
 
@@ -112,7 +112,7 @@ class WorkoutsViewModel
                         summaryFlow,
                         workoutDao.observeSince(fetchFromMs),
                         dailySummaryDao.observeSince(paiFromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
-                        prefsRepo.userPreferences,
+                        settingsRepo.userPreferences,
                     ) { latest, allWorkouts, paiSummaries, prefs ->
                         WorkoutData(latest, allWorkouts, paiSummaries, prefs)
                     }

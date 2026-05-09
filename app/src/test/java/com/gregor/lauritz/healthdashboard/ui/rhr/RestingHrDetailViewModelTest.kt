@@ -3,7 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.rhr
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import io.mockk.every
@@ -31,7 +31,7 @@ class RestingHrDetailViewModelTest {
 
     private lateinit var viewModel: RestingHrDetailViewModel
     private lateinit var dao: DailySummaryDao
-    private lateinit var prefsRepo: UserPreferencesRepository
+    private lateinit var settingsRepo: SettingsRepository
     private lateinit var selectedDateRepo: SelectedDateRepository
 
     @Before
@@ -42,7 +42,7 @@ class RestingHrDetailViewModelTest {
             every { observeLatest() } returns MutableStateFlow(null)
             every { observeSince(any()) } returns MutableStateFlow(emptyList())
         }
-        prefsRepo = mockk {
+        settingsRepo = mockk {
             every { userPreferences } returns MutableStateFlow(UserPreferences())
         }
         selectedDateRepo = SelectedDateRepository()
@@ -50,7 +50,7 @@ class RestingHrDetailViewModelTest {
         viewModel = RestingHrDetailViewModel(
             dailySummaryDao = dao,
             selectedDateRepository = selectedDateRepo,
-            prefsRepo = prefsRepo,
+            settingsRepo = settingsRepo,
         )
     }
 

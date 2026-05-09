@@ -35,6 +35,15 @@ object ScoringConstants {
     const val HRV_SCORE_SATURATION_Z     = 1.5f
     const val HRV_SCORE_SATURATION_SLOPE = 0.25f
 
+    object Workout {
+        // Heart Rate Recovery (HRR) Thresholds — REF: Cole 1999 NEJM; Shetler 2001 J Am Coll Cardiol
+        // Abnormal: <12 bpm (clinical), but for fitness enthusiasts 18/35 are common healthy benchmarks
+        const val HRR_1MIN_OPTIMAL_THRESHOLD = 18
+        const val HRR_2MIN_OPTIMAL_THRESHOLD = 35
+        
+        const val HRR_TOLERANCE_SECONDS = 15L
+    }
+
     // Defaults
     const val DEFAULT_FITNESS_LEVEL = 35f
     const val DEFAULT_GOAL_SLEEP_HOURS = 8f

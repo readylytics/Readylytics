@@ -9,7 +9,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConfigFactory
 import io.mockk.coEvery
@@ -29,7 +29,7 @@ class ScoringRepositoryN1Test {
     private lateinit var hrvDao: HrvDao
     private lateinit var workoutDao: WorkoutDao
     private lateinit var dailySummaryDao: DailySummaryDao
-    private lateinit var prefsRepo: UserPreferencesRepository
+    private lateinit var settingsRepo: SettingsRepository
     private lateinit var scoringCalculator: ScoringCalculator
     private lateinit var repo: ScoringRepository
 
@@ -58,9 +58,9 @@ class ScoringRepositoryN1Test {
         hrvDao = mockk()
         workoutDao = mockk()
         dailySummaryDao = mockk()
-        prefsRepo = mockk()
+        settingsRepo = mockk()
 
-        every { prefsRepo.userPreferences } returns MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.GENERAL))
+        every { settingsRepo.userPreferences } returns MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.GENERAL))
 
         // Provide enough sessions to pass the calibration guard (MIN_SESSIONS_FOR_CALIBRATION = 7)
         coEvery { sleepSessionDao.countSince(any()) } returns 10
@@ -111,7 +111,7 @@ class ScoringRepositoryN1Test {
             workoutDao, 
             sleepSessionDao, 
             dailySummaryDao, 
-            prefsRepo, 
+            settingsRepo, 
             scoringCalculator, 
             baselineComputer, 
             computeSleepMetricsUseCase,
@@ -157,7 +157,7 @@ class ScoringRepositoryN1Test {
         coEvery { dailySummaryDao.upsert(capture(capturedSummaries)) } returns Unit
 
         // Profile: ATHLETE (SF=0.15)
-        every { prefsRepo.userPreferences } returns MutableStateFlow(
+        every { settingsRepo.userPreferences } returns MutableStateFlow(
             UserPreferences(
                 physiologyProfile = PhysiologyProfile.ATHLETE,
                 paiScalingFactor = 0.15f,
@@ -170,7 +170,7 @@ class ScoringRepositoryN1Test {
         repo.computeAndPersistDailySummary(today)
 
         // Profile: SEDENTARY (SF=0.25)
-        every { prefsRepo.userPreferences } returns MutableStateFlow(
+        every { settingsRepo.userPreferences } returns MutableStateFlow(
             UserPreferences(
                 physiologyProfile = PhysiologyProfile.SEDENTARY,
                 paiScalingFactor = 0.25f,

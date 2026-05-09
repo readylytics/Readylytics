@@ -2,7 +2,7 @@ package com.gregor.lauritz.healthdashboard.domain.scoring
 
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -71,9 +71,9 @@ class CircadianConsistencyRepositoryTest {
             override suspend fun deleteBeforeTimestamp(beforeMs: Long) = throw UnsupportedOperationException()
             override suspend fun deleteAll() = throw UnsupportedOperationException()
         }
-        val prefsRepo = mockk<UserPreferencesRepository>()
-        every { prefsRepo.userPreferences } returns MutableStateFlow(prefs)
-        return CircadianConsistencyRepository(dao, prefsRepo)
+        val settingsRepo = mockk<SettingsRepository>()
+        every { settingsRepo.userPreferences } returns MutableStateFlow(prefs)
+        return CircadianConsistencyRepository(dao, settingsRepo)
     }
 
     @Test

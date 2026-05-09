@@ -10,9 +10,8 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
-import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
@@ -40,8 +39,7 @@ class HealthSyncUseCase
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
         private val dailySummaryDao: DailySummaryDao,
-        private val prefsRepo: UserPreferencesRepository,
-        private val appConfigRepo: AppConfigRepository,
+        private val settingsRepo: SettingsRepository,
         private val scoringRepository: ScoringRepository,
     ) {
     private val syncMutex = Mutex()
@@ -59,7 +57,7 @@ class HealthSyncUseCase
                             .atStartOfDay(zoneId)
                             .toInstant()
 
-                    val prefs = prefsRepo.userPreferences.first()
+                    val prefs = settingsRepo.userPreferences.first()
 
                     val sleepEntities = hcRepo.readSleepSessions(from, to).map { SleepDataMapper.mapSleepSession(it) }
                     val exerciseRecords = hcRepo.readExerciseSessions(from, to)
@@ -129,7 +127,7 @@ class HealthSyncUseCase
                         dailySummaryDao.upsert(finalSummary)
                     }
 
-                    appConfigRepo.updateLastSyncTimestamp(System.currentTimeMillis())
+                    settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
                 }
             }
         }
@@ -141,7 +139,7 @@ class HealthSyncUseCase
         if (prefs.autoCalculateMaxHr) {
             val calculatedMaxHr = HeartRateFormulas.estimateMaxHr(prefs.age)
             if (calculatedMaxHr != prefs.maxHeartRate) {
-                prefsRepo.updateMaxHeartRate(calculatedMaxHr)
+                settingsRepo.updateMaxHeartRate(calculatedMaxHr)
             }
         }
     }

@@ -3,7 +3,7 @@ package com.gregor.lauritz.healthdashboard.domain.scoring
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -54,11 +54,11 @@ class CircadianConsistencyRepository
     @Inject
     constructor(
         private val sleepSessionDao: SleepSessionDao,
-        private val prefsRepo: UserPreferencesRepository,
+        private val settingsRepo: SettingsRepository,
     ) {
         @OptIn(ExperimentalCoroutinesApi::class)
         fun resultFor(anchorDate: LocalDate): Flow<CircadianConsistencyResult> =
-            prefsRepo.userPreferences.flatMapLatest { prefs ->
+            settingsRepo.userPreferences.flatMapLatest { prefs ->
                 val anchorMs = anchorDate.plusDays(1)
                     .atStartOfDay(ZoneId.systemDefault())
                     .toInstant().toEpochMilli()

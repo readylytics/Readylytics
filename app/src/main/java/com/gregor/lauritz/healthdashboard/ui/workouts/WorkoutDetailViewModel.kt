@@ -7,9 +7,11 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
+import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -75,7 +77,12 @@ class WorkoutDetailViewModel
 
         fun loadWorkout(workoutId: String) {
             viewModelScope.launch {
-                val workout = workoutDao.getById(workoutId) ?: return@launch
+                _uiState.update { it.copy(isLoading = true) }
+                val workout = workoutDao.getById(workoutId)
+                if (workout == null) {
+                    _uiState.update { it.copy(isLoading = false) }
+                    return@launch
+                }
 
                 val start = Instant.ofEpochMilli(workout.startTime)
                 val end = Instant.ofEpochMilli(workout.endTime)
@@ -117,36 +124,44 @@ class WorkoutDetailViewModel
                     label to pai
                 }
 
+                var hr1Min: Int? = null
+                var hr2Min: Int? = null
+                var hr3Min: Int? = null
+
                 if (endHr != null) {
-                    val hrByMinute = (1..3).map { minute ->
-                        val to = workoutEndInstant.plus(minute.toLong(), ChronoUnit.MINUTES)
-                        allSamples.lastOrNull { it.timestamp > workoutEndInstant && it.timestamp <= to }?.bpm
+                    val recoverySamples = allSamples.filter { it.timestamp > workoutEndInstant }
+                    
+                    fun findRecoveryHr(minutes: Int): Int? {
+                        val target = workoutEndInstant.plus(minutes.toLong(), ChronoUnit.MINUTES)
+                        val toleranceSeconds = ScoringConstants.Workout.HRR_TOLERANCE_SECONDS
+                        return recoverySamples
+                            .filter { sample -> 
+                                val diff = java.time.Duration.between(sample.timestamp, target).abs().seconds
+                                diff <= toleranceSeconds
+                            }
+                            .minByOrNull { sample -> 
+                                java.time.Duration.between(sample.timestamp, target).abs().toMillis()
+                            }?.bpm
                     }
-                    val (hr1Min, hr2Min, hr3Min) = hrByMinute
-                    _uiState.value =
-                        WorkoutDetailUiState(
-                            workout = workout,
-                            hrSamples = allSamples,
-                            hrChartData = chartData,
-                            durationMinutes = durationMinutes,
-                            hrr1Min = hr1Min?.let { endHr - it },
-                            hrr2Min = hr2Min?.let { endHr - it },
-                            hrr3Min = hr3Min?.let { endHr - it },
-                            totalPai = summary?.totalPai,
-                            paiDailyBreakdown = paiBreakdown,
-                            isLoading = false,
-                        )
-                } else {
-                    _uiState.value =
-                        WorkoutDetailUiState(
-                            workout = workout,
-                            hrSamples = allSamples,
-                            hrChartData = chartData,
-                            durationMinutes = durationMinutes,
-                            totalPai = summary?.totalPai,
-                            paiDailyBreakdown = paiBreakdown,
-                            isLoading = false,
-                        )
+
+                    hr1Min = findRecoveryHr(1)
+                    hr2Min = findRecoveryHr(2)
+                    hr3Min = findRecoveryHr(3)
+                }
+
+                _uiState.update {
+                    it.copy(
+                        workout = workout,
+                        hrSamples = allSamples,
+                        hrChartData = chartData,
+                        durationMinutes = durationMinutes,
+                        hrr1Min = if (endHr != null && hr1Min != null) endHr - hr1Min else null,
+                        hrr2Min = if (endHr != null && hr2Min != null) endHr - hr2Min else null,
+                        hrr3Min = if (endHr != null && hr3Min != null) endHr - hr3Min else null,
+                        totalPai = summary?.totalPai,
+                        paiDailyBreakdown = paiBreakdown,
+                        isLoading = false,
+                    )
                 }
             }
         }

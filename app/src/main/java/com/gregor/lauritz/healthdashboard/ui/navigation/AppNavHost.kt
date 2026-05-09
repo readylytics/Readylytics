@@ -7,9 +7,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -17,6 +17,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.ui.about.AboutScreen
 import com.gregor.lauritz.healthdashboard.ui.about.AboutViewModel
 import com.gregor.lauritz.healthdashboard.ui.onboarding.OnboardingRoute
@@ -97,7 +98,7 @@ fun AppNavHost(
         composable<AppDestination.Unavailable> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "Health Connect is not installed on this device.\nPlease install it from the Play Store.",
+                    text = stringResource(R.string.health_connect_unavailable_message),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.error,
                 )

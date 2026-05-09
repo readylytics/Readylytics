@@ -19,7 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -27,12 +27,12 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class PrivacyRationaleActivity : ComponentActivity() {
     @Inject
-    lateinit var prefsRepo: UserPreferencesRepository
+    lateinit var settingsRepo: SettingsRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val prefs by prefsRepo.userPreferences.collectAsState(initial = null)
+            val prefs by settingsRepo.userPreferences.collectAsState(initial = null)
             val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM
 
             FitDashboardTheme(appTheme = appTheme) {

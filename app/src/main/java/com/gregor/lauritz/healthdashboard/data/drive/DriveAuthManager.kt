@@ -11,8 +11,7 @@ import com.google.android.gms.common.api.Scope
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.gregor.lauritz.healthdashboard.BuildConfig
-import com.gregor.lauritz.healthdashboard.data.preferences.BackupPreferencesRepository
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -34,11 +33,10 @@ private const val DRIVE_APPDATA_SCOPE = "https://www.googleapis.com/auth/drive.a
 class DriveAuthManager
     @Inject
     constructor(
-        private val prefsRepo: UserPreferencesRepository,
-        private val backupPrefsRepo: BackupPreferencesRepository,
+        private val settingsRepo: SettingsRepository,
     ) {
         fun observeAuthState(): Flow<DriveAuthState> =
-            prefsRepo.userPreferences.map { prefs ->
+            settingsRepo.userPreferences.map { prefs ->
                 val email = prefs.driveAccountEmail
                 if (email != null) DriveAuthState.SignedIn(email) else DriveAuthState.SignedOut
             }
@@ -73,7 +71,7 @@ class DriveAuthManager
                             throw IllegalStateException("No email returned from Google Sign-In")
                         }
 
-                    backupPrefsRepo.updateDriveAccountEmail(email)
+                    settingsRepo.updateDriveAccountEmail(email)
                     DriveAuthState.SignedIn(email)
                 }
             }
@@ -109,6 +107,6 @@ class DriveAuthManager
         suspend fun signOut(context: Context) {
             val credentialManager = CredentialManager.create(context)
             credentialManager.clearCredentialState(ClearCredentialStateRequest())
-            backupPrefsRepo.updateDriveAccountEmail(null)
+            settingsRepo.updateDriveAccountEmail(null)
         }
     }

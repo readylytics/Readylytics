@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.MainActivity
 import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthManager
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupUseCase
 import com.gregor.lauritz.healthdashboard.domain.backup.RestoreUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,7 +22,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CloudBackupViewModel @Inject constructor(
-    private val prefsRepo: UserPreferencesRepository,
+    private val settingsRepo: SettingsRepository,
     private val driveAuthManager: DriveAuthManager,
     private val backupUseCase: BackupUseCase,
     private val restoreUseCase: RestoreUseCase,
@@ -31,7 +31,7 @@ class CloudBackupViewModel @Inject constructor(
     private val transientState = MutableStateFlow(TransientBackupState())
 
     val uiState: StateFlow<CloudBackupState> = combine(
-        prefsRepo.userPreferences,
+        settingsRepo.userPreferences,
         transientState
     ) { prefs, transient ->
         CloudBackupState(
@@ -105,11 +105,11 @@ class CloudBackupViewModel @Inject constructor(
                 transientState.update { it.copy(showRestoreConfirmDialog = false, pendingRestoreDir = null) }
             }
             is SettingsEvent.BackupScheduleChanged ->
-                viewModelScope.launch { prefsRepo.updateBackupSchedule(schedule = event.schedule) }
+                viewModelScope.launch { settingsRepo.updateBackupSchedule(schedule = event.schedule) }
             SettingsEvent.DriveSignOut -> {
                 viewModelScope.launch {
                     driveAuthManager.signOut(context = context)
-                    prefsRepo.updateDriveAccountEmail(email = null)
+                    settingsRepo.updateDriveAccountEmail(email = null)
                 }
             }
             SettingsEvent.DriveSignIn -> {

@@ -10,8 +10,7 @@ import androidx.work.Configuration
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.data.healthconnect.PermissionStatus
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
-import com.gregor.lauritz.healthdashboard.data.preferences.BackupPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.HiltAndroidApp
@@ -35,10 +34,7 @@ class HealthDashboardApplication :
     lateinit var foregroundSyncController: ForegroundSyncController
 
     @Inject
-    lateinit var prefsRepository: UserPreferencesRepository
-
-    @Inject
-    lateinit var backupPrefsRepository: BackupPreferencesRepository
+    lateinit var settingsRepo: SettingsRepository
 
     @Inject
     lateinit var workerScheduler: WorkerScheduler
@@ -58,7 +54,7 @@ class HealthDashboardApplication :
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
 
         appScope.launch(Dispatchers.IO) {
-            val schedule = backupPrefsRepository.backupSchedule.first()
+            val schedule = settingsRepo.backupSchedule.first()
             workerScheduler.scheduleBackupWorker(schedule)
             workerScheduler.scheduleBirthdayWorker()
             workerScheduler.scheduleDataCleanupWorker()

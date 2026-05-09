@@ -2,7 +2,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,12 +18,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class PhysiologySettingsViewModel @Inject constructor(
-    private val prefsRepo: UserPreferencesRepository,
+    private val settingsRepo: SettingsRepository,
     private val userUseCase: UserUseCase,
     private val healthSyncUseCase: HealthSyncUseCase,
 ) : ViewModel() {
 
-    val uiState: StateFlow<PhysiologySettingsState> = prefsRepo.userPreferences.map { prefs ->
+    val uiState: StateFlow<PhysiologySettingsState> = settingsRepo.userPreferences.map { prefs ->
         PhysiologySettingsState(
             physiologyProfile = prefs.physiologyProfile,
             age = prefs.age,
@@ -48,20 +48,20 @@ class PhysiologySettingsViewModel @Inject constructor(
             }
             is SettingsEvent.GenderChanged -> {
                 viewModelScope.launch {
-                    prefsRepo.updateGender(gender = event.gender)
+                    settingsRepo.updateGender(gender = event.gender)
                     healthSyncUseCase.sync()
                 }
             }
             is SettingsEvent.PhysiologyProfileChanged ->
                 viewModelScope.launch {
-                    prefsRepo.updatePhysiologyProfile(profile = event.profile)
+                    settingsRepo.updatePhysiologyProfile(profile = event.profile)
                     healthSyncUseCase.sync()
                 }
             SettingsEvent.ResetPaiScalingFactor ->
                 viewModelScope.launch {
-                    val currentProfile = prefsRepo.userPreferences.first().physiologyProfile
+                    val currentProfile = settingsRepo.userPreferences.first().physiologyProfile
                     val defaultFactor = PaiCalculator.getDefaultPaiScalingFactor(currentProfile)
-                    prefsRepo.updatePaiScalingFactor(defaultFactor)
+                    settingsRepo.updatePaiScalingFactor(defaultFactor)
                     healthSyncUseCase.sync()
                 }
             else -> {}

@@ -4,7 +4,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.model.ReadinessResult
 import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
@@ -25,7 +25,7 @@ class ScoringRepository
         private val workoutDao: WorkoutDao,
         private val sleepSessionDao: SleepSessionDao,
         private val dailySummaryDao: DailySummaryDao,
-        private val prefsRepo: UserPreferencesRepository,
+        private val settingsRepo: SettingsRepository,
         private val scoringCalculator: ScoringCalculator,
         private val baselineComputer: BaselineComputer,
         private val computeSleepMetricsUseCase: ComputeSleepMetricsUseCase,
@@ -45,7 +45,7 @@ class ScoringRepository
                 val dayMidnightMs = dayMidnight.toEpochMilli()
                 val nextDayMidnightMs = nextDayMidnight.toEpochMilli()
 
-                val prefs = prefsRepo.userPreferences.first()
+                val prefs = settingsRepo.userPreferences.first()
                 val hrMax = if (prefs.autoCalculateMaxHr) {
                     HeartRateFormulas.estimateMaxHr(prefs.age).toFloat()
                 } else {

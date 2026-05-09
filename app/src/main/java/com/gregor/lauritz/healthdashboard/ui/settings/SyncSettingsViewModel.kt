@@ -2,9 +2,8 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.sync.ResyncHealthConnectUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +17,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SyncSettingsViewModel @Inject constructor(
-    private val prefsRepo: UserPreferencesRepository,
+    private val settingsRepo: SettingsRepository,
     private val healthSyncUseCase: HealthSyncUseCase,
     private val resyncHealthConnectUseCase: ResyncHealthConnectUseCase,
 ) : ViewModel() {
@@ -30,7 +29,7 @@ class SyncSettingsViewModel @Inject constructor(
 
     val uiState: StateFlow<SyncSettingsState> by lazy {
         combine(
-            prefsRepo.userPreferences,
+            settingsRepo.userPreferences,
             _isResyncing
         ) { prefs, isResyncing ->
             SyncSettingsState(
@@ -49,7 +48,7 @@ class SyncSettingsViewModel @Inject constructor(
         when (event) {
             is SettingsEvent.SyncPreferenceChanged -> {
                 viewModelScope.launch {
-                    prefsRepo.updateSyncPreference(pref = event.pref)
+                    settingsRepo.updateSyncPreference(pref = event.pref)
                     if (event.pref == SyncPreference.ALWAYS) {
                         healthSyncUseCase.sync()
                     }
@@ -57,7 +56,7 @@ class SyncSettingsViewModel @Inject constructor(
             }
             is SettingsEvent.SyncIntervalChanged -> {
                 viewModelScope.launch {
-                    prefsRepo.updateSyncIntervalHours(hours = event.hours)
+                    settingsRepo.updateSyncIntervalHours(hours = event.hours)
                 }
             }
             SettingsEvent.ResyncHealthConnect -> {

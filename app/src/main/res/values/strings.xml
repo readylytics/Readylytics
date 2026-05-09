@@ -5,6 +5,7 @@
     <string name="tab_workouts">Workouts</string>
     <string name="tab_settings">Settings</string>
     <string name="sync_completed">Sync and recalculation completed</string>
+    <string name="health_connect_unavailable_message">Health Connect is not installed on this device.\nPlease install it from the Play Store.</string>
 
     <!-- Tooltips -->
     <string name="tooltip_pai">Your 7-day rolling heart health score.\nBased on how often and how hard you challenge your heart.\n\n• 100+: Optimal\n• 75-99: Neutral\n• 50-74: Warning\n• &lt; 50: Poor</string>

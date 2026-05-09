@@ -7,7 +7,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
@@ -63,7 +63,7 @@ class SleepViewModel
         private val sleepSessionDao: SleepSessionDao,
         private val hrvDao: HrvDao,
         private val heartRateDao: HeartRateDao,
-        private val prefsRepo: UserPreferencesRepository,
+        private val settingsRepo: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
         private val circadianRepo: CircadianConsistencyRepository,
     ) : ViewModel() {
@@ -188,7 +188,7 @@ class SleepViewModel
                             nextDayMidnightMs,
                         ),
                         dailySummaryDao.observeSince(fromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
-                        prefsRepo.userPreferences,
+                        settingsRepo.userPreferences,
                     ) { latestSummary, latestSession, summaries, prefs ->
                         SleepData(latestSummary, latestSession, summaries, prefs)
                     }

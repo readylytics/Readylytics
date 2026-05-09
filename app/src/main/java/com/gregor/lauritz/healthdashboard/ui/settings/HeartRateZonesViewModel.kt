@@ -2,7 +2,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,12 +15,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HeartRateZonesViewModel @Inject constructor(
-    private val prefsRepo: UserPreferencesRepository,
+    private val settingsRepo: SettingsRepository,
     private val userUseCase: UserUseCase,
     private val healthSyncUseCase: HealthSyncUseCase,
 ) : ViewModel() {
 
-    val uiState: StateFlow<HeartRateZonesState> = prefsRepo.userPreferences.map { prefs ->
+    val uiState: StateFlow<HeartRateZonesState> = settingsRepo.userPreferences.map { prefs ->
         HeartRateZonesState(
             maxHeartRate = prefs.maxHeartRate,
             autoCalculateMaxHr = prefs.autoCalculateMaxHr,
@@ -48,14 +48,14 @@ class HeartRateZonesViewModel @Inject constructor(
                 val value = event.text.toIntOrNull()
                 if (value != null) {
                     viewModelScope.launch {
-                        prefsRepo.updateMaxHeartRate(bpm = value)
+                        settingsRepo.updateMaxHeartRate(bpm = value)
                         healthSyncUseCase.sync()
                     }
                 }
             }
             is SettingsEvent.AutoCalculateMaxHrChanged -> {
                 viewModelScope.launch {
-                    prefsRepo.updateAutoCalculateMaxHr(enabled = event.enabled)
+                    settingsRepo.updateAutoCalculateMaxHr(enabled = event.enabled)
                     if (event.enabled) {
                         userUseCase.calculateAndSetMaxHr()
                     }
@@ -63,12 +63,12 @@ class HeartRateZonesViewModel @Inject constructor(
             }
             is SettingsEvent.ManualZoneEditingChanged -> {
                 viewModelScope.launch {
-                    prefsRepo.updateManualZoneEditing(enabled = event.enabled)
+                    settingsRepo.updateManualZoneEditing(enabled = event.enabled)
                 }
             }
             is SettingsEvent.ZonePercentagesChanged -> {
                 viewModelScope.launch {
-                    prefsRepo.updateZonePercentages(
+                    settingsRepo.updateZonePercentages(
                         z1Min = event.z1Min,
                         z1Max = event.z1Max,
                         z2Max = event.z2Max,
@@ -80,7 +80,7 @@ class HeartRateZonesViewModel @Inject constructor(
             }
             is SettingsEvent.ZoneBpmsChanged -> {
                 viewModelScope.launch {
-                    prefsRepo.updateZoneBpms(
+                    settingsRepo.updateZoneBpms(
                         z1Min = event.z1Min,
                         z1Max = event.z1Max,
                         z2Max = event.z2Max,

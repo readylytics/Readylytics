@@ -9,7 +9,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -27,11 +27,11 @@ class DataCleanupWorker
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
         private val dailySummaryDao: DailySummaryDao,
-        private val prefsRepo: UserPreferencesRepository,
+        private val settingsRepo: SettingsRepository,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
             return runCatching {
-                val prefs = prefsRepo.userPreferences.first()
+                val prefs = settingsRepo.userPreferences.first()
                 if (!prefs.retentionDaysEnabled) {
                     return Result.success()
                 }

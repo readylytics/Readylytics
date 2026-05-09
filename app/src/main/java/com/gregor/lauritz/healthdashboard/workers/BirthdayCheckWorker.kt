@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -17,10 +17,10 @@ class BirthdayCheckWorker
     constructor(
         @Assisted context: Context,
         @Assisted params: WorkerParameters,
-        private val prefsRepo: UserPreferencesRepository,
+        private val settingsRepo: SettingsRepository,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
-            val prefs = prefsRepo.userPreferences.first()
+            val prefs = settingsRepo.userPreferences.first()
             // Skip if birthday was never configured (all still at defaults)
             if (prefs.birthYear == 1994 && prefs.birthMonth == 1 && prefs.birthDay == 1) {
                 return Result.success()
@@ -30,7 +30,7 @@ class BirthdayCheckWorker
                 LocalDate.now(),
             ).years
             if (newAge != prefs.age) {
-                prefsRepo.updateAge(newAge)
+                settingsRepo.updateAge(newAge)
             }
             return Result.success()
         }

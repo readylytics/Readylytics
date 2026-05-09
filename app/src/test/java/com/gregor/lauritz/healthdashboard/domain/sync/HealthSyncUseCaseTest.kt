@@ -7,9 +7,8 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
-import com.gregor.lauritz.healthdashboard.data.preferences.AppConfigRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import io.mockk.coEvery
 import io.mockk.coVerifyOrder
@@ -29,8 +28,7 @@ class HealthSyncUseCaseTest {
     private val hrvDao = mockk<HrvDao>(relaxed = true)
     private val workoutDao = mockk<WorkoutDao>(relaxed = true)
     private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
-    private val prefsRepo = mockk<UserPreferencesRepository>(relaxed = true)
-    private val appConfigRepo = mockk<AppConfigRepository>(relaxed = true)
+    private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val scoringRepository = mockk<ScoringRepository>(relaxed = true)
 
     private lateinit var useCase: HealthSyncUseCase
@@ -39,9 +37,9 @@ class HealthSyncUseCaseTest {
     fun setup() {
         useCase = HealthSyncUseCase(
             hcRepo, sleepDao, heartRateDao, hrvDao, workoutDao,
-            dailySummaryDao, prefsRepo, appConfigRepo, scoringRepository
+            dailySummaryDao, settingsRepo, scoringRepository
         )
-        every { prefsRepo.userPreferences } returns flowOf(UserPreferences())
+        every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
     }
 
     @Test

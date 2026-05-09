@@ -2,9 +2,10 @@ package com.gregor.lauritz.healthdashboard.ui.sync
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectPermissionRevokedException
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.data.healthconnect.PermissionStatus
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -38,13 +40,14 @@ class SyncViewModel
     constructor(
         private val hcRepo: HealthConnectRepository,
         private val foregroundSyncController: ForegroundSyncController,
-        private val prefsRepo: UserPreferencesRepository,
+        private val settingsRepo: SettingsRepository,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<SyncUiState>(SyncUiState.CheckingPermissions)
         val uiState: StateFlow<SyncUiState> = _uiState.asStateFlow()
 
-        val userPreferences = prefsRepo.userPreferences
+        val userPreferences = settingsRepo.userPreferences
         val requiredPermissions = hcRepo.requiredPermissions
+        val isSyncing = foregroundSyncController.isSyncing
 
         private val _syncEvents = Channel<SyncEvent>()
         val syncEvents = _syncEvents.receiveAsFlow()
@@ -60,36 +63,60 @@ class SyncViewModel
             viewModelScope.launch {
                 userPreferences.collectLatest { prefs ->
                     if (prefs.installDate == 0L) {
-                        prefsRepo.updateInstallDate(System.currentTimeMillis())
+                        settingsRepo.updateInstallDate(System.currentTimeMillis())
                     }
+                }
+            }
+        }
+
+        fun triggerManualSync() {
+            viewModelScope.launch {
+                try {
+                    foregroundSyncController.triggerImmediateSync()
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    _uiState.update { SyncUiState.NeedsPermissions }
+                } catch (e: Exception) {
+                    _uiState.update { SyncUiState.Error(e.message ?: "Sync failed") }
                 }
             }
         }
 
         fun onAppForeground() {
             viewModelScope.launch {
-                _uiState.value = SyncUiState.CheckingPermissions
-                when (val status = hcRepo.checkPermissions()) {
-                    is PermissionStatus.Granted -> {
-                        _uiState.value = SyncUiState.PermissionsGranted
-                        foregroundSyncController
-                            .evaluateAndSync()
+                _uiState.update { SyncUiState.CheckingPermissions }
+                try {
+                    when (val status = hcRepo.checkPermissions()) {
+                        is PermissionStatus.Granted -> {
+                            _uiState.update { SyncUiState.PermissionsGranted }
+                            foregroundSyncController
+                                .evaluateAndSync()
+                        }
+                        is PermissionStatus.Missing -> {
+                            _uiState.update { SyncUiState.NeedsPermissions }
+                        }
+                        is PermissionStatus.Unavailable -> {
+                            _uiState.update { SyncUiState.Unavailable }
+                        }
                     }
-                    is PermissionStatus.Missing -> {
-                        _uiState.value = SyncUiState.NeedsPermissions
-                    }
-                    is PermissionStatus.Unavailable -> {
-                        _uiState.value = SyncUiState.Unavailable
-                    }
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    _uiState.update { SyncUiState.NeedsPermissions }
+                } catch (e: Exception) {
+                    _uiState.update { SyncUiState.Error(e.message ?: "Permission check failed") }
                 }
             }
         }
 
         fun onPermissionsGranted() {
             viewModelScope.launch {
-                _uiState.value = SyncUiState.SyncingCatchUp
-                foregroundSyncController.triggerImmediateSync()
-                _uiState.value = SyncUiState.PermissionsGranted
+                _uiState.update { SyncUiState.SyncingCatchUp }
+                try {
+                    foregroundSyncController.triggerImmediateSync()
+                    _uiState.update { SyncUiState.PermissionsGranted }
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    _uiState.update { SyncUiState.NeedsPermissions }
+                } catch (e: Exception) {
+                    _uiState.update { SyncUiState.Error(e.message ?: "Post-permission sync failed") }
+                }
             }
         }
     }

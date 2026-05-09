@@ -9,12 +9,12 @@ import javax.inject.Inject
 class DataStoreCircadianThresholdPreferences
     @Inject
     constructor(
-        private val userPreferencesRepository: UserPreferencesRepository,
+        private val settingsRepo: SettingsRepository,
         private val encryptionManager: EncryptionManager,
     ) : CircadianThresholdPreferences {
     
     override val overrideMinutesFlow: Flow<Int?> by lazy {
-        userPreferencesRepository.userPreferences.map { prefs ->
+        settingsRepo.userPreferences.map { prefs ->
             prefs.circadianThresholdOverride?.let { encrypted ->
                 runCatching { 
                     encryptionManager.decrypt(encrypted).toInt() 
@@ -22,7 +22,7 @@ class DataStoreCircadianThresholdPreferences
                     SecureLogger.error("Failed to decrypt circadian threshold override", e)
                     // If decryption fails, the key might be invalid or rotated.
                     // We clear the override to allow the app to recover to defaults.
-                    userPreferencesRepository.updateCircadianThresholdOverride(null)
+                    settingsRepo.updateCircadianThresholdOverride(null)
                 }.getOrNull()
             }
         }
@@ -30,7 +30,7 @@ class DataStoreCircadianThresholdPreferences
 
     override suspend fun setOverride(minutes: Int?) {
         val encrypted = minutes?.let { encryptionManager.encrypt(it.toString()) }
-        userPreferencesRepository.updateCircadianThresholdOverride(encrypted)
+        settingsRepo.updateCircadianThresholdOverride(encrypted)
     }
 
     override val isEncrypted: Boolean = true

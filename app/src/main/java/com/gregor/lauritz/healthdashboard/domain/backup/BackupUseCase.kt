@@ -5,8 +5,7 @@ import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthManager
 import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthState
 import com.gregor.lauritz.healthdashboard.data.drive.GoogleDriveRepository
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
-import com.gregor.lauritz.healthdashboard.data.preferences.BackupPreferencesRepository
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -27,8 +26,7 @@ class BackupUseCase
         private val driveAuthManager: DriveAuthManager,
         private val driveRepository: GoogleDriveRepository,
         private val healthDatabase: HealthDatabase,
-        private val prefsRepo: UserPreferencesRepository,
-        private val backupPrefsRepo: BackupPreferencesRepository,
+        private val settingsRepo: SettingsRepository,
     ) {
         suspend fun execute(): Result<Unit> =
             withContext(Dispatchers.IO) {
@@ -64,7 +62,7 @@ class BackupUseCase
 
                         // Upload first so an upload failure keeps the previous backup intact
                         val uploadedId = driveRepository.uploadBackup(accessToken, zipFile)
-                        backupPrefsRepo.updateLastBackupTimestamp(System.currentTimeMillis())
+                        settingsRepo.updateLastBackupTimestamp(System.currentTimeMillis())
 
                         // Prune old backups, keeping the one we just uploaded plus one previous version
                         val existing = driveRepository.listBackupFiles(accessToken)
@@ -80,7 +78,7 @@ class BackupUseCase
             }
 
         private suspend fun exportPreferencesToJson(): String {
-            val prefs = prefsRepo.userPreferences.first()
+            val prefs = settingsRepo.userPreferences.first()
             val json = JSONObject()
             json.put("goalSleepHours", prefs.goalSleepHours)
             json.put("hrvBaselineOverride", prefs.hrvBaselineOverride ?: JSONObject.NULL)

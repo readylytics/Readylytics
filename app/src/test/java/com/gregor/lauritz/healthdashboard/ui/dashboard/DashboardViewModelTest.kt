@@ -3,7 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.dashboard
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
@@ -49,7 +49,7 @@ class DashboardViewModelTest {
             every { formatSleepDuration(any()) } returns "8h 0m"
         }
         every { getDashboardDataUseCase(any(), any(), any(), any(), any()) } returns com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase.DashboardCards(emptyMap(), emptyList())
-        val prefsRepo = mockk<UserPreferencesRepository> {
+        val settingsRepo = mockk<SettingsRepository> {
             every { userPreferences } returns MutableStateFlow(UserPreferences())
         }
         val cardConfigRepository = mockk<com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository> {
@@ -66,7 +66,7 @@ class DashboardViewModelTest {
             getDashboardDataUseCase = getDashboardDataUseCase,
             foregroundSyncController = syncController,
             selectedDateRepository = selectedDateRepo,
-            prefsRepo = prefsRepo,
+            settingsRepo = settingsRepo,
             cardConfigRepository = cardConfigRepository,
             circadianRepo = circadianRepo,
         )

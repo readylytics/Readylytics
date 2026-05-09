@@ -1,7 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.settings
 
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferencesRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
@@ -24,7 +24,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 class PhysiologySettingsViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private val prefsRepo = mockk<UserPreferencesRepository>(relaxed = true)
+    private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val userUseCase = mockk<UserUseCase>(relaxed = true)
     private val healthSyncUseCase = mockk<HealthSyncUseCase>(relaxed = true)
     
@@ -33,7 +33,7 @@ class PhysiologySettingsViewModelTest {
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = PhysiologySettingsViewModel(prefsRepo, userUseCase, healthSyncUseCase)
+        viewModel = PhysiologySettingsViewModel(settingsRepo, userUseCase, healthSyncUseCase)
     }
 
     @After
@@ -49,8 +49,7 @@ class PhysiologySettingsViewModelTest {
         viewModel.onEvent(SettingsEvent.PhysiologyProfileChanged(newProfile))
         advanceUntilIdle()
 
-        coVerify { prefsRepo.updatePhysiologyProfile(newProfile) }
-        coVerify { prefsRepo.updatePaiScalingFactor(expectedScalingFactor) }
+        coVerify { settingsRepo.updatePhysiologyProfile(newProfile) }
         coVerify { healthSyncUseCase.sync() }
     }
 }

@@ -17,11 +17,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class UserPreferencesRepositoryTest {
+class SettingsRepositoryTest {
 
     private lateinit var context: Context
     private lateinit var dataStore: DataStore<UserPreferencesProto>
-    private lateinit var repository: UserPreferencesRepository
+    private lateinit var repository: SettingsRepository
 
     @Before
     fun setup() {
@@ -29,9 +29,9 @@ class UserPreferencesRepositoryTest {
         dataStore = DataStoreFactory.create(
             serializer = UserPreferencesSerializer,
             scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-            produceFile = { context.dataStoreFile("test_prefs.pb") }
+            produceFile = { context.dataStoreFile("test_settings.pb") }
         )
-        repository = UserPreferencesRepository(dataStore)
+        repository = SettingsRepository(dataStore)
     }
 
     @Test
@@ -84,5 +84,22 @@ class UserPreferencesRepositoryTest {
     fun `default retention enabled is true`() = runTest {
         val prefs = repository.userPreferences.first()
         assertEquals(true, prefs.retentionDaysEnabled)
+    }
+
+    @Test
+    fun `default dynamic color enabled is true`() = runTest {
+        val enabled = repository.dynamicColorEnabled.first()
+        assertEquals(true, enabled)
+    }
+
+    @Test
+    fun `dynamic color enabled toggle works`() = runTest {
+        repository.updateDynamicColorEnabled(false)
+        var enabled = repository.dynamicColorEnabled.first()
+        assertEquals(false, enabled)
+
+        repository.updateDynamicColorEnabled(true)
+        enabled = repository.dynamicColorEnabled.first()
+        assertEquals(true, enabled)
     }
 }
