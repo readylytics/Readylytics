@@ -86,7 +86,12 @@ class RestingHrDetailViewModelTest {
         val state = viewModel.uiState.first { it.latestSummary != null }
 
         assertEquals(60, state.latestSummary?.restingHeartRate)
-        assertEquals(1, state.dailyRhr.size)
-        assertEquals(60f, state.dailyRhr[0].value)
+        assertEquals(7, state.dailyRhr.size)  // Padded to 7 days
+        // Today is at offset 6 (7-day range: start is today-6 days)
+        assertEquals(60f, state.dailyRhr[6].value)
+        // Check other days are null
+        for (i in 0 until 6) {
+            assertEquals(null, state.dailyRhr[i].value)
+        }
     }
 }

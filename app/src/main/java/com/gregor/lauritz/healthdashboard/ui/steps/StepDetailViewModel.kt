@@ -10,6 +10,7 @@ import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
+import com.gregor.lauritz.healthdashboard.ui.common.padToRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,6 +68,7 @@ class StepDetailViewModel @Inject constructor(
                         DailyDataPoint(dayOffset, summary.stepCount!!.toFloat())
                     }
                     .sortedBy { it.dayOffset }
+                    .padToRange(range.days)
 
                 StepDetailUiState(
                     latestSummary = latest,

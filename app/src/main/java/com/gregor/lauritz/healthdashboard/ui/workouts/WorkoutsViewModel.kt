@@ -141,9 +141,7 @@ class WorkoutsViewModel
 
                         displayDayMidnights.forEachIndexed { i, dayMidnight ->
                             val trimp = trimpByDay[dayMidnight]
-                            if (trimp != null && trimp > 0f) {
-                                dailyTrimp.add(DailyDataPoint(dayOffset = i, value = trimp))
-                            }
+                            dailyTrimp.add(DailyDataPoint(dayOffset = i, value = if (trimp != null && trimp > 0f) trimp else null))
 
                             val currentDayDate = Instant.ofEpochMilli(dayMidnight).atZone(zoneId).toLocalDate()
                             val acuteFrom = currentDayDate.minusDays((ACUTE_DAYS - 1).toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli()
@@ -159,12 +157,14 @@ class WorkoutsViewModel
                                     0
                                 }
 
-                            if (dataTenureDays >= 7 && chronicTrimpList.isNotEmpty()) {
+                            val sr = if (dataTenureDays >= 7 && chronicTrimpList.isNotEmpty()) {
                                 val ctl = scoringCalculator.computeCtlEma(chronicTrimpList)
                                 val atl = acuteSum / ACUTE_DAYS.toFloat()
-                                val sr = scoringCalculator.computeStrainRatio(atl, ctl)
-                                dailyStrainRatio.add(DailyDataPoint(dayOffset = i, value = sr))
+                                scoringCalculator.computeStrainRatio(atl, ctl)
+                            } else {
+                                null
                             }
+                            dailyStrainRatio.add(DailyDataPoint(dayOffset = i, value = sr))
                         }
 
                         WorkoutsUiState(

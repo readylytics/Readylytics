@@ -16,6 +16,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRes
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
+import com.gregor.lauritz.healthdashboard.ui.common.padToRange
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -207,13 +208,13 @@ class SleepViewModel
                                 val d = s.date
                                 DailyDataPoint(dayOffset = ChronoUnit.DAYS.between(startLocalDate, d).toInt(), value = hrv.toFloat())
                             }
-                        }
+                        }.sortedBy { it.dayOffset }.padToRange(range.days)
                         val rhrPoints = summaries.mapNotNull { s ->
                             s.nocturnalRhr?.let { rhr ->
                                 val d = s.date
                                 DailyDataPoint(dayOffset = ChronoUnit.DAYS.between(startLocalDate, d).toInt(), value = rhr.toFloat())
                             }
-                        }
+                        }.sortedBy { it.dayOffset }.padToRange(range.days)
 
                         SleepUiState(
                             latestSummary = latestSummary,
@@ -235,8 +236,9 @@ class SleepViewModel
                 )
 
         private fun calculateMedian(points: List<DailyDataPoint>): Float? {
-            if (points.isEmpty()) return null
-            val sorted = points.map { it.value }.sorted()
+            val values = points.mapNotNull { it.value }
+            if (values.isEmpty()) return null
+            val sorted = values.sorted()
             val mid = sorted.size / 2
             return if (sorted.size % 2 == 0) (sorted[mid - 1] + sorted[mid]) / 2f else sorted[mid]
         }

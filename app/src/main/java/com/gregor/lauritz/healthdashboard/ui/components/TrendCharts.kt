@@ -88,16 +88,17 @@ fun TrendChart(
     scrollState: VicoScrollState = rememberVicoScrollState(),
     modifier: Modifier = Modifier,
 ) {
-    if (points.isEmpty()) {
+    if (points.none { it.value != null }) {
         EmptyChartPlaceholder(modifier = modifier)
         return
     }
 
     val calculatedBaseline =
         remember(points) {
-            val sorted = points.map { it.value }.sorted()
-            val mid = sorted.size / 2
-            if (sorted.size % 2 == 0) (sorted[mid - 1] + sorted[mid]) / 2f else sorted[mid]
+            val values = points.mapNotNull { it.value }.sorted()
+            if (values.isEmpty()) return@remember 0f
+            val mid = values.size / 2
+            if (values.size % 2 == 0) (values[mid - 1] + values[mid]) / 2f else values[mid]
         }
 
     // Use provided baseline if available, otherwise fall back to calculated baseline
@@ -105,10 +106,10 @@ fun TrendChart(
 
     val (minY, maxY) =
         remember(points) {
-            if (points.isEmpty()) return@remember 0.0 to 0.0
-            val (lo, hi) = points.fold(Float.MAX_VALUE to -Float.MAX_VALUE) { (accLo, accHi), p ->
-                minOf(accLo, p.value) to maxOf(accHi, p.value)
-            }
+            val values = points.mapNotNull { it.value }
+            if (values.isEmpty()) return@remember 0.0 to 0.0
+            val lo = values.minOrNull() ?: 0f
+            val hi = values.maxOrNull() ?: 0f
             (lo * 0.9f).toDouble() to (hi * 1.1f).toDouble()
         }
 
@@ -123,16 +124,27 @@ fun TrendChart(
 
     LaunchedEffect(points) {
         modelProducer.runTransaction {
+            val validPoints = points.filter { it.value != null }
             lineSeries {
                 series(
-                    x = points.map { it.dayOffset },
-                    y = points.map { it.value },
+                    x = validPoints.map { it.dayOffset },
+                    y = validPoints.map { it.value!! },
                 )
             }
         }
     }
 
-    val rangeProvider = remember(minY, maxY) { CartesianLayerRangeProvider.fixed(minY = minY, maxY = maxY) }
+    // Note: Vico scroll positioning is handled through initial rememberVicoScrollState
+    // Auto-scroll on range change would require accessing internal Vico APIs
+
+    val rangeProvider = remember(minY, maxY, rangeDays) {
+        CartesianLayerRangeProvider.fixed(
+            minX = 0.0,
+            maxX = (rangeDays - 1).toDouble(),
+            minY = minY,
+            maxY = maxY,
+        )
+    }
     val dotComponent = rememberShapeComponent(fill = fill(dotColor), shape = CorneredShape.Pill)
     val line =
         LineCartesianLayer.rememberLine(

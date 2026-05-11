@@ -350,8 +350,11 @@ private fun AcwrChart(
     val modelProducer = remember { CartesianChartModelProducer() }
 
     val trimpRangeProvider =
-        remember(trimpPoints) {
+        remember(trimpPoints, rangeDays) {
             object : CartesianLayerRangeProvider {
+                override fun getMinX(minX: Double, maxX: Double, extraStore: ExtraStore) = 0.0
+                override fun getMaxX(minX: Double, maxX: Double, extraStore: ExtraStore) = (rangeDays - 1).toDouble()
+
                 override fun getMaxY(
                     minY: Double,
                     maxY: Double,
@@ -367,8 +370,11 @@ private fun AcwrChart(
         }
 
     val ratioRangeProvider =
-        remember(ratioPoints) {
+        remember(ratioPoints, rangeDays) {
             object : CartesianLayerRangeProvider {
+                override fun getMinX(minX: Double, maxX: Double, extraStore: ExtraStore) = 0.0
+                override fun getMaxX(minX: Double, maxX: Double, extraStore: ExtraStore) = (rangeDays - 1).toDouble()
+
                 override fun getMaxY(
                     minY: Double,
                     maxY: Double,
@@ -385,18 +391,25 @@ private fun AcwrChart(
 
     val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
 
-    val trimpX = remember(trimpPoints) { trimpPoints.map { it.dayOffset } }
-    val trimpY = remember(trimpPoints) { trimpPoints.map { it.value } }
-    val ratioX = remember(ratioPoints) { ratioPoints.map { it.dayOffset } }
-    val ratioY = remember(ratioPoints) { ratioPoints.map { it.value } }
-
-    LaunchedEffect(trimpX, trimpY, ratioX, ratioY) {
+    LaunchedEffect(trimpPoints, ratioPoints) {
         modelProducer.runTransaction {
-            if (trimpX.isNotEmpty()) {
-                columnSeries { series(x = trimpX, y = trimpY) }
+            val validTrimp = trimpPoints.filter { it.value != null }
+            if (validTrimp.isNotEmpty()) {
+                columnSeries {
+                    series(
+                        x = validTrimp.map { it.dayOffset },
+                        y = validTrimp.map { it.value!! },
+                    )
+                }
             }
-            if (ratioX.isNotEmpty()) {
-                lineSeries { series(x = ratioX, y = ratioY) }
+            val validRatio = ratioPoints.filter { it.value != null }
+            if (validRatio.isNotEmpty()) {
+                lineSeries {
+                    series(
+                        x = validRatio.map { it.dayOffset },
+                        y = validRatio.map { it.value!! },
+                    )
+                }
             }
         }
     }

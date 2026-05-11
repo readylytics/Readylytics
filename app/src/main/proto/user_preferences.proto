@@ -114,4 +114,15 @@ message UserPreferencesProto {
     oneof circadian_threshold_override_oneof {
         string circadian_threshold_override = 50;
     }
+
+    TrimpMethodProto trimp_method = 52;
+    float cheng_beta = 53;
+    float itrimp_b = 54;
+    float pai_calibration = 55;
+}
+
+enum TrimpMethodProto {
+    TRIMP_BANISTER = 0;
+    TRIMP_ITRIMP = 1;
+    TRIMP_CHENG = 2;
 }

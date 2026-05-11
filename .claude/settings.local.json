@@ -10,7 +10,15 @@
       "Bash(./gradlew assembleDebug -x test)",
       "Bash(./gradlew compileDebugKotlin -x lintVitalRelease)",
       "Bash(./gradlew testDebugUnitTest -x lintVitalRelease)",
-      "Bash(./gradlew testDebugUnitTest --tests \"*Workout*\")"
+      "Bash(./gradlew testDebugUnitTest --tests \"*Workout*\")",
+      "Bash(./gradlew testDebugUnitTest --no-daemon)",
+      "Bash(Select-Object FullName)",
+      "Bash(cd /tmp)",
+      "Bash(jar xf *)",
+      "Read(//tmp/**)",
+      "Bash(./gradlew compileDebugKotlin testDebugUnitTest --no-daemon)",
+      "Bash(./gradlew -q compileDebugKotlin)",
+      "Bash(./gradlew testDebugUnitTest -q)"
     ]
   }
 }
