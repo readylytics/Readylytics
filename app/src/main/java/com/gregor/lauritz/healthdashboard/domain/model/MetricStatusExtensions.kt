@@ -11,6 +11,16 @@ fun SleepSessionEntity.efficiencyStatus(): MetricStatus =
         else -> MetricStatus.POOR
     }
 
+fun SleepSessionSummary.efficiencyStatus(): MetricStatus {
+    val eff = efficiency ?: return MetricStatus.CALIBRATING
+    return when {
+        eff >= 85f -> MetricStatus.OPTIMAL
+        eff >= 80f -> MetricStatus.NEUTRAL
+        eff >= 70f -> MetricStatus.WARNING
+        else -> MetricStatus.POOR
+    }
+}
+
 fun DailySummary.deepSleepStatus(): MetricStatus =
     when (deepSleepPercent) {
         null -> MetricStatus.CALIBRATING

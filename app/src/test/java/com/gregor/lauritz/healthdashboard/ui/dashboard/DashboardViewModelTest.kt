@@ -98,12 +98,4 @@ class DashboardViewModelTest {
         assertFalse(viewModel.uiState.value.isRefreshing)
     }
 
-    @Test
-    fun `today is initialised from ViewModel not composable`() = runTest {
-        val today = viewModel.today.first()
-        assertTrue(
-            "ViewModel today should be today or earlier",
-            !today.isAfter(LocalDate.now()),
-        )
-    }
 }

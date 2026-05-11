@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.map
 import java.io.IOException
 import java.time.LocalDate
 import java.time.Period
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -244,6 +245,20 @@ class SettingsRepository
                     .setPhysiologyProfile(PhysiologyProfileProto.valueOf("PROFILE_${profile.name}"))
                     .setPaiScalingFactor(newPaiFactor)
                     .build()
+            }
+        }
+
+        suspend fun updateInstallDate(date: LocalDate) {
+            dataStore.updateData { it.toBuilder().setInstallDate(date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()).build() }
+        }
+
+        suspend fun initializeInstallDateIfUnset() {
+            dataStore.updateData { proto ->
+                if (proto.installDate == 0L) {
+                    proto.toBuilder().setInstallDate(System.currentTimeMillis()).build()
+                } else {
+                    proto
+                }
             }
         }
 

@@ -3,7 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
-import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
+import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

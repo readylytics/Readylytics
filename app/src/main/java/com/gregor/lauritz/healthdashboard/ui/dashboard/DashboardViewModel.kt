@@ -15,6 +15,7 @@ import com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepositor
 import com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.SleepSessionSummary
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
@@ -57,13 +58,6 @@ class DashboardViewModel
     ) : ViewModel() {
 
         private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
-
-        val today: StateFlow<LocalDate> = selectedDateRepository.selectedDate
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = LocalDate.now(),
-            )
 
         val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
 
@@ -108,11 +102,16 @@ class DashboardViewModel
                         sessionFlow,
                         foregroundSyncController.isSyncing,
                     ) { inputs, isManaging, cardConfigs, session, isSyncing ->
+                        val sessionSummary = session?.let { SleepSessionSummary(
+                            efficiency = it.efficiency,
+                            startTime = it.startTime,
+                            endTime = it.endTime,
+                        ) }
                         val cards = getDashboardDataUseCase.invoke(
                             summary = inputs.summary,
                             prefs = inputs.prefs,
                             date = date,
-                            lastSleepSession = session,
+                            lastSleepSession = sessionSummary,
                             paiSummaries = inputs.paiSummaries,
                         )
                         DashboardUiState(
@@ -124,7 +123,7 @@ class DashboardViewModel
                             paiDailyBreakdown = cards.paiDailyBreakdown,
                             stepCount = inputs.summary?.stepCount,
                             stepGoal = inputs.prefs.stepGoal,
-                            lastSleepSession = session,
+                            lastSleepSession = sessionSummary,
                             cardConfigurations = cardConfigs,
                             isManagingCards = isManaging,
                             isRefreshing = isSyncing,
@@ -176,9 +175,13 @@ class DashboardViewModel
                     foregroundSyncController.triggerImmediateSync()
                 } catch (e: Exception) {
                     Log.e(TAG, "Refresh failed", e)
+                    _errorMessage.value = e.message ?: "Sync failed"
                 }
             }
         }
+
+        private val _errorMessage = MutableStateFlow<String?>(null)
+        val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
         companion object {
             internal const val TAG = "DashboardViewModel"
@@ -195,11 +198,12 @@ data class DashboardUiState(
     val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val stepCount: Int? = null,
     val stepGoal: Int = 10000,
-    val lastSleepSession: SleepSessionEntity? = null,
+    val lastSleepSession: SleepSessionSummary? = null,
     val cardConfigurations: List<CardConfiguration> = emptyList(),
     val isManagingCards: Boolean = false,
     val isRefreshing: Boolean = false,
     val isCalibrating: Boolean = false,
+    val errorMessage: String? = null,
 )
 
 @Immutable

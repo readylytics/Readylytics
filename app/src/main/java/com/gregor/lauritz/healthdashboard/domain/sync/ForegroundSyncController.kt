@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.sync
 
+import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectPermissionRevokedException
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository

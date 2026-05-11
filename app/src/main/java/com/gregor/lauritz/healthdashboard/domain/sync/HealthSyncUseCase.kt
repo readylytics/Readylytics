@@ -1,4 +1,4 @@
-package com.gregor.lauritz.healthdashboard.domain.sync
+package com.gregor.lauritz.healthdashboard.data.sync
 
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HeartRateMapper
@@ -12,6 +12,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.domain.model.RecordType
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
@@ -107,10 +108,10 @@ class HealthSyncUseCase
                     }
                     val hrvEntities = HrvMapper.mapToEntities(hrvRecords, sleepEntities)
 
-                    val (sleepHrv, restingHrv) = hrvEntities.partition { it.recordType == "SLEEP" }
+                    val (sleepHrv, restingHrv) = hrvEntities.partition { it.recordType == RecordType.SLEEP.name }
                     logD("HealthSyncUseCase") { "HRV classified: sleep=${sleepHrv.size} resting=${restingHrv.size}" }
                     logD("HealthSyncUseCase") {
-                        "HR entities: ${hrEntities.size} sleep=${hrEntities.count { it.recordType == "SLEEP" }}"
+                        "HR entities: ${hrEntities.size} sleep=${hrEntities.count { it.recordType == RecordType.SLEEP.name }}"
                     }
 
                     sleepDao.upsertAll(sleepEntities)
@@ -138,8 +139,9 @@ class HealthSyncUseCase
 
                         // Run scoring first
                         val afterScoring = scoringRepository.computeDailySummary(day)
+                        val stepCountInt = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                         val finalSummary = afterScoring.copy(
-                            stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt().takeIf { it > 0 }
+                            stepCount = stepCountInt
                         )
 
                         // Persist immediately so that the next day's calculation (which depends on previous days)

@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
-import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
+import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch

@@ -33,7 +33,7 @@ object PaiCalculator {
         if (hrAvg < (rhrBaseline + 5)) return 0f
         if (hrR <= 0) return 0f
 
-        val isMale = gender != "Female" // Default to Male if not Female
+        val isMale = gender?.equals("Female", ignoreCase = true) != true
 
         val a = if (isMale) 0.64f else 0.86f
         val b = if (isMale) 1.92f else 1.67f
@@ -62,17 +62,17 @@ object PaiCalculator {
         var accumulated = totalPaiSoFar
         var result = 0f
         // Tier 1: 0–50 → 1.0×
-        if (accumulated < 50f) {
-            val used = remaining.coerceAtMost(50f - accumulated)
+        if (accumulated < ScoringConstants.Pai.TIER1_THRESHOLD) {
+            val used = remaining.coerceAtMost(ScoringConstants.Pai.TIER1_THRESHOLD - accumulated)
             result += used; accumulated += used; remaining -= used
         }
         // Tier 2: 50–100 → 0.5×
-        if (remaining > 0f && accumulated < 100f) {
-            val used = remaining.coerceAtMost(100f - accumulated)
-            result += used * 0.5f; accumulated += used; remaining -= used
+        if (remaining > 0f && accumulated < ScoringConstants.Pai.TIER2_THRESHOLD) {
+            val used = remaining.coerceAtMost(ScoringConstants.Pai.TIER2_THRESHOLD - accumulated)
+            result += used * ScoringConstants.Pai.TIER2_MULTIPLIER; accumulated += used; remaining -= used
         }
         // Tier 3: 100+ → 0.25×
-        if (remaining > 0f) result += remaining * 0.25f
+        if (remaining > 0f) result += remaining * ScoringConstants.Pai.TIER3_MULTIPLIER
         return result
     }
 

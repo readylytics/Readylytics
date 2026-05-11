@@ -124,4 +124,12 @@ object ScoringConstants {
         const val ILLNESS_RHR_DELTA_BPM = 5f
         const val ILLNESS_MAX_SCORE = 50f
     }
+
+    object Pai {
+        const val DAILY_CAP = 75f
+        const val TIER1_THRESHOLD = 50f
+        const val TIER2_THRESHOLD = 100f
+        const val TIER2_MULTIPLIER = 0.5f
+        const val TIER3_MULTIPLIER = 0.25f
+    }
 }

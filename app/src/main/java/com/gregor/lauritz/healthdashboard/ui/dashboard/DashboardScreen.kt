@@ -71,10 +71,8 @@ fun DashboardRoute(
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val today by viewModel.today.collectAsStateWithLifecycle()
     DashboardScreen(
         uiState = uiState,
-        today = today,
         onRefresh = viewModel::onRefresh,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
@@ -93,7 +91,6 @@ fun DashboardRoute(
 @Composable
 fun DashboardScreen(
     uiState: DashboardUiState,
-    today: LocalDate,
     onRefresh: () -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
@@ -154,7 +151,7 @@ fun DashboardScreen(
             }
         }
 
-        if (summary == null && (uiState.selectedDate < today)) {
+        if (summary == null && (uiState.selectedDate < LocalDate.now())) {
             item(key = "no_data_placeholder") {
                 Box(
                     modifier =

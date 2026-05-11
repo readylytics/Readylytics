@@ -8,6 +8,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.model.ReadinessResult
+import com.gregor.lauritz.healthdashboard.domain.model.RecordType
 import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.BaselineComputer
@@ -71,9 +72,10 @@ class ScoringRepositoryImpl
                 if (hrMax <= 0f) throw IllegalStateException("HR Max is missing or invalid")
                 if (rhrBaselineValue <= 0f) throw IllegalStateException("RHR Baseline is missing or invalid")
 
+                val installDateFromPrefs = LocalDate.ofEpochDay(prefs.installDate / 86400000)
                 val scoringConfig = scoringConfigFactory.build(
                     userPreferences = prefs,
-                    installDate = LocalDate.now().minusDays(30),
+                    installDate = installDateFromPrefs,
                     currentDate = targetDate
                 )
 
@@ -84,7 +86,7 @@ class ScoringRepositoryImpl
                 
                 workouts.forEach { workout ->
                     val workoutHrSamples = heartRateDao.getByTimeRange(workout.startTime, workout.endTime)
-                        .filter { it.recordType == "EXERCISE" }
+                        .filter { it.recordType == RecordType.EXERCISE.name }
                         .sortedBy { it.timestampMs }
 
                     if (workoutHrSamples.isNotEmpty()) {
@@ -120,7 +122,7 @@ class ScoringRepositoryImpl
                 val isCalibrated = sleepSessionDao.countSince(calibrationFrom) >= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
 
                 if (!isCalibrated) {
-                    val totalPaiSoFar = fetchPreviousDaysPaiTotal(targetDate)
+                    val totalPaiSoFar = sumPaiScoreLastSixDays(targetDate)
                     val finalDailyPai = PaiCalculator.applyAccumulationMultiplier(dailyPaiBeforeReadiness, totalPaiSoFar)
                     summary = summary.copy(paiScore = finalDailyPai, totalPai = totalPaiSoFar + finalDailyPai)
                     logD("ScoringRepository") { "PAI FINAL (uncalibrated) - FinalDaily: $finalDailyPai, Total: ${totalPaiSoFar + finalDailyPai}" }
@@ -188,7 +190,7 @@ class ScoringRepositoryImpl
                 val adjustedDailyPai = PaiCalculator.adjustForReadiness(dailyTrimpRaw, summary.readinessScore)
                 val scaledDailyPai = adjustedDailyPai * scoringConfig.paiScalingFactor
 
-                val totalPaiSoFar = fetchPreviousDaysPaiTotal(targetDate)
+                val totalPaiSoFar = sumPaiScoreLastSixDays(targetDate)
                 val finalDailyPai = PaiCalculator.applyAccumulationMultiplier(scaledDailyPai, totalPaiSoFar)
 
                 summary = summary.copy(
@@ -228,7 +230,7 @@ class ScoringRepositoryImpl
             )
         }
 
-        private suspend fun fetchPreviousDaysPaiTotal(targetDate: LocalDate): Float {
+        private suspend fun sumPaiScoreLastSixDays(targetDate: LocalDate): Float {
             val zoneIdSystem = ZoneId.systemDefault()
             val previousDays = (1..6).map { i ->
                 targetDate.minusDays(i.toLong()).atStartOfDay(zoneIdSystem).toInstant().toEpochMilli()

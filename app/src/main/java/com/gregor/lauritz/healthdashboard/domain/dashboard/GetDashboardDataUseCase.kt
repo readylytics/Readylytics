@@ -3,10 +3,10 @@ package com.gregor.lauritz.healthdashboard.domain.dashboard
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.gregor.lauritz.healthdashboard.R
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.SleepSessionSummary
 import com.gregor.lauritz.healthdashboard.domain.model.efficiencyStatus
 import com.gregor.lauritz.healthdashboard.domain.model.hrvStatus
 import com.gregor.lauritz.healthdashboard.domain.model.paiStatus
@@ -38,7 +38,7 @@ class GetDashboardDataUseCase @Inject constructor(
         summary: DailySummary?,
         prefs: UserPreferences,
         date: LocalDate,
-        lastSleepSession: SleepSessionEntity?,
+        lastSleepSession: SleepSessionSummary?,
         paiSummaries: List<DailySummary>,
     ): DashboardCards {
         val cardDataMap = calculateCardData(summary, prefs, date, lastSleepSession)
@@ -54,7 +54,7 @@ class GetDashboardDataUseCase @Inject constructor(
         summary: DailySummary?,
         prefs: UserPreferences,
         selectedDate: LocalDate,
-        lastSleepSession: SleepSessionEntity?,
+        lastSleepSession: SleepSessionSummary?,
     ): Map<CardId, CardData> {
         if (summary == null) return emptyMap()
 
@@ -73,7 +73,7 @@ class GetDashboardDataUseCase @Inject constructor(
         return mapBuilder.toMap()
     }
 
-    private fun sleepEfficiencyCard(lastSleepSession: SleepSessionEntity?): CardData {
+    private fun sleepEfficiencyCard(lastSleepSession: SleepSessionSummary?): CardData {
         val efficiencyStatus = lastSleepSession?.efficiencyStatus() ?: MetricStatus.CALIBRATING
         val efficiency = lastSleepSession?.efficiency?.roundToPercentInt()?.toString() ?: "—"
 
@@ -211,7 +211,7 @@ class GetDashboardDataUseCase @Inject constructor(
     private fun sleepDurationCard(
         summary: DailySummary,
         prefs: UserPreferences,
-        lastSleepSession: SleepSessionEntity?,
+        lastSleepSession: SleepSessionSummary?,
     ): CardData {
         val durationStatus = summary.sleepDurationStatus((prefs.goalSleepHours * 60).toInt())
         val lastNightText = lastSleepSession?.let { session ->
