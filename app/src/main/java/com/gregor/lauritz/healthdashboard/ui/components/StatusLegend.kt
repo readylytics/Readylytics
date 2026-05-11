@@ -3,10 +3,9 @@ package com.gregor.lauritz.healthdashboard.ui.components
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,7 +35,6 @@ import androidx.compose.ui.unit.dp
 
 data class StatusItem(val label: String, val color: Color)
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StatusLegend(modifier: Modifier = Modifier) {
     var isExpanded by rememberSaveable { mutableStateOf(value = false) }
@@ -89,13 +87,23 @@ fun StatusLegend(modifier: Modifier = Modifier) {
             // Collapsible Content
             if (isExpanded) {
                 HorizontalDivider(color = colorScheme.outlineVariant)
-                FlowRow(
+                // Using a simpler layout to avoid FlowRow binary compatibility issues in some environments
+                Column(
                     modifier = Modifier.padding(12.dp),
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items.forEach { item ->
-                        LegendItemRow(item)
+                    val chunks = items.chunked(2)
+                    chunks.forEach { chunk ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            chunk.forEach { item ->
+                                Box(modifier = Modifier.weight(1f)) {
+                                    LegendItemRow(item)
+                                }
+                            }
+                        }
                     }
                 }
             }

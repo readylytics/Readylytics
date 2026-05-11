@@ -144,6 +144,16 @@ fun DashboardScreen(
             }
         }
 
+        if (uiState.isCalibrating) {
+            item(key = "calibration_banner") {
+                CalibrationBanner(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+        }
+
         if (summary == null && (uiState.selectedDate < today)) {
             item(key = "no_data_placeholder") {
                 Box(

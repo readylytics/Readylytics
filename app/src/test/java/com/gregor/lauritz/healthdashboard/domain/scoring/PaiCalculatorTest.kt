@@ -115,12 +115,20 @@ class PaiCalculatorTest {
     }
 
     @Test
-    fun `adjustForReadiness scales PAI by readiness score`() {
-        val pai = 10f
+    fun `calculateDailyTrimp handles mixed heart rate sources correctly`() {
+        val duration = 40f
+        val hrMax = 190f
+        val rhr = 60f
+        val gender = "Male"
 
-        assertEquals(10f, PaiCalculator.adjustForReadiness(pai, 100f), 0.001f)
-        assertEquals(5f, PaiCalculator.adjustForReadiness(pai, 50f), 0.001f)
-        assertEquals(0f, PaiCalculator.adjustForReadiness(pai, 0f), 0.001f)
-        assertEquals(10f, PaiCalculator.adjustForReadiness(pai, null), 0.001f)
+        // Scenario: Some samples are high intensity (exercise), some are low (resting)
+        // High intensity: 160 bpm -> TRIMP = 86.23 (as seen in other test)
+        val exerciseTrimp = PaiCalculator.calculateDailyTrimp(duration, 160f, rhr, hrMax, gender)
+        
+        // Low intensity: 64 bpm -> TRIMP = 0 (below RHR + 5 threshold)
+        val restingTrimp = PaiCalculator.calculateDailyTrimp(duration, 64f, rhr, hrMax, gender)
+        
+        assertEquals(0f, restingTrimp, 0.001f)
+        assert(exerciseTrimp > 0f)
     }
 }

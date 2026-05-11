@@ -84,6 +84,7 @@ fun TrendChart(
     rangeDays: Int,
     baselineUnit: String,
     baseline: Float? = null,
+    showBaseline: Boolean = true,
     scrollState: VicoScrollState = rememberVicoScrollState(),
     modifier: Modifier = Modifier,
 ) {
@@ -163,12 +164,12 @@ fun TrendChart(
                         guideline = guidelineComponent,
                     ),
                 decorations =
-                    listOf(
+                    if (showBaseline) listOf(
                         HorizontalLine(
                             y = { baselineValue.roundToInt().toDouble() },
                             line = LineComponent(fill = fill(baselineColor), thicknessDp = 1f),
                         ),
-                    ),
+                    ) else emptyList(),
             ),
         modelProducer = modelProducer,
         scrollState = scrollState,
@@ -176,12 +177,14 @@ fun TrendChart(
         modifier = modifier.fillMaxWidth().height(180.dp),
     )
 
-    Spacer(Modifier.height(6.dp))
-    BaselineLegend(
-        value = baselineValue,
-        unit = baselineUnit,
-        color = baselineColor,
-    )
+    if (showBaseline) {
+        Spacer(Modifier.height(6.dp))
+        BaselineLegend(
+            value = baselineValue,
+            unit = baselineUnit,
+            color = baselineColor,
+        )
+    }
 }
 
 @Composable

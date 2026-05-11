@@ -128,6 +128,7 @@ class DashboardViewModel
                             cardConfigurations = cardConfigs,
                             isManagingCards = isManaging,
                             isRefreshing = isSyncing,
+                            isCalibrating = inputs.summary?.isCalibrating ?: false,
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(
@@ -198,6 +199,7 @@ data class DashboardUiState(
     val cardConfigurations: List<CardConfiguration> = emptyList(),
     val isManagingCards: Boolean = false,
     val isRefreshing: Boolean = false,
+    val isCalibrating: Boolean = false,
 )
 
 @Immutable

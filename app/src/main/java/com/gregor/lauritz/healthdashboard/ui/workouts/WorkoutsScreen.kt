@@ -193,7 +193,7 @@ private fun HeroSection(
                 label = "Strain Ratio",
                 maxScore = 2.0f,
                 status = strainStatus,
-                displayText = strainRatio?.let { "%.2f".format(it) },
+                displayText = strainRatio?.let { "%.2f".format(it) } ?: "—",
                 tooltipDescription = strainTooltip,
             )
             M3ScoreDial(

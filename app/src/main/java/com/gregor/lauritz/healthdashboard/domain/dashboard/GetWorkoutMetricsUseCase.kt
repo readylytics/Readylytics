@@ -25,9 +25,15 @@ class GetWorkoutMetricsUseCase @Inject constructor(
             return WorkoutMetrics(null)
         }
 
-        val strainRatioCard = summary.strainRatio?.let { strainRatio ->
-            createStrainRatioCard(strainRatio)
-        }
+        val strainRatioCard = summary.strainRatio?.let { createStrainRatioCard(it) }
+            ?: CardData(
+                title = "Strain Ratio",
+                value = "—",
+                unit = "",
+                status = MetricStatus.CALIBRATING,
+                action = DashboardAction.NAVIGATE_WORKOUTS,
+                tooltip = context.getString(R.string.tooltip_strain_ratio),
+            )
 
         return WorkoutMetrics(strainRatioCard)
     }

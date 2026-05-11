@@ -68,9 +68,7 @@ class GetDashboardDataUseCase @Inject constructor(
         )
 
         val metrics = getWorkoutMetricsUseCase(summary)
-        if (metrics.strainRatioCard != null) {
-            mapBuilder[CardId.STRAIN_RATIO] = metrics.strainRatioCard
-        }
+        metrics.strainRatioCard?.let { mapBuilder[CardId.STRAIN_RATIO] = it }
 
         return mapBuilder.toMap()
     }
@@ -262,7 +260,7 @@ class GetDashboardDataUseCase @Inject constructor(
         
         return CardData(
             title = "Resting HR",
-            value = summary.restingHeartRate?.toString() ?: "—",
+            value = (summary.restingHeartRate ?: summary.nocturnalRhr)?.toString() ?: "—",
             unit = "bpm",
             status = restingHrStatus,
             action = DashboardAction.NAVIGATE_RHR,

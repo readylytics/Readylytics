@@ -68,9 +68,9 @@ class RollingWindowTest {
         val yesterdayMs = today.minusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
 
         workoutDao.upsertAll(listOf(
-            WorkoutRecordEntity(id = "1", startTime = todayMs + 1000, endTime = todayMs + 2000, exerciseType = "Running", durationMinutes = 10, trimp = 10f),
-            WorkoutRecordEntity(id = "2", startTime = todayMs + 5000, endTime = todayMs + 6000, exerciseType = "Running", durationMinutes = 10, trimp = 15f),
-            WorkoutRecordEntity(id = "3", startTime = yesterdayMs + 1000, endTime = yesterdayMs + 2000, exerciseType = "Running", durationMinutes = 10, trimp = 20f)
+            WorkoutRecordEntity(id = "1", startTime = todayMs + 1000, endTime = todayMs + 2000, exerciseType = "Running", durationMinutes = 10, trimp = 10f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0),
+            WorkoutRecordEntity(id = "2", startTime = todayMs + 5000, endTime = todayMs + 6000, exerciseType = "Running", durationMinutes = 10, trimp = 15f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0),
+            WorkoutRecordEntity(id = "3", startTime = yesterdayMs + 1000, endTime = yesterdayMs + 2000, exerciseType = "Running", durationMinutes = 10, trimp = 20f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0)
         ))
 
         val result = workoutDao.getDailyTrimp(yesterdayMs, todayMs + 86400000, tzOffsetMs)

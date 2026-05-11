@@ -1,6 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.sync
 
-import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectPermissionRevokedException
+import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectPermissionRevokedException
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -27,45 +27,45 @@ class ForegroundSyncController
         val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
         suspend fun evaluateAndSync() {
+            com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "evaluateAndSync called" }
             val prefs = settingsRepo.userPreferences.first()
             when (prefs.syncPreference) {
-                SyncPreference.NEVER -> return
+                SyncPreference.NEVER -> {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "Sync disabled by user preference" }
+                    return
+                }
                 SyncPreference.ALWAYS -> {
-                    _isSyncing.value = true
-                    try {
-                        if (prefs.lastSyncTimestamp == 0L) {
-                            syncUseCase.catchUpSync()
-                        } else {
-                            syncUseCase.sync()
-                        }
-                        _syncCompletedEvent.emit(Unit)
-                    } finally {
-                        _isSyncing.value = false
-                    }
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "Sync type: ALWAYS" }
+                    executeSync(isFirstSync = prefs.lastSyncTimestamp == 0L)
                 }
                 SyncPreference.BY_TIME -> {
                     val intervalMs = prefs.syncIntervalHours * 3_600_000L
-                    if (System.currentTimeMillis() - prefs.lastSyncTimestamp > intervalMs) {
-                        _isSyncing.value = true
-                        try {
-                            if (prefs.lastSyncTimestamp == 0L) {
-                                syncUseCase.catchUpSync()
-                            } else {
-                                syncUseCase.sync()
-                            }
-                            _syncCompletedEvent.emit(Unit)
-                        } finally {
-                            _isSyncing.value = false
-                        }
+                    val timeSinceLast = System.currentTimeMillis() - prefs.lastSyncTimestamp
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "Sync type: BY_TIME. Time since last: ${timeSinceLast/1000}s, Interval: ${intervalMs/1000}s" }
+                    if (timeSinceLast > intervalMs) {
+                        executeSync(isFirstSync = prefs.lastSyncTimestamp == 0L)
+                    } else {
+                        com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "Sync skipped: interval not met" }
                     }
                 }
             }
         }
 
         suspend fun triggerImmediateSync() {
+            com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "triggerImmediateSync called" }
+            executeSync(isFirstSync = true)
+        }
+
+        private suspend fun executeSync(isFirstSync: Boolean) {
             _isSyncing.value = true
             try {
-                syncUseCase.catchUpSync()
+                if (isFirstSync) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "Running catch-up sync..." }
+                    syncUseCase.catchUpSync().getOrThrow()
+                } else {
+                    syncUseCase.sync().getOrThrow()
+                }
+                com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "Sync success" }
                 _syncCompletedEvent.emit(Unit)
             } finally {
                 _isSyncing.value = false

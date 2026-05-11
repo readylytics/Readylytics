@@ -28,4 +28,5 @@ data class DailySummary(
     val hrvSigma: Float? = null,
     val readinessResult: ReadinessResult = ReadinessResult.EMPTY,
     val sRest: Float? = null,
+    val isCalibrating: Boolean = false,
 )

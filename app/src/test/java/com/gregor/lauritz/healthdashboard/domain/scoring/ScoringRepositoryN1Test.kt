@@ -10,8 +10,9 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.repository.ScoringRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
-import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConfigFactory
+import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -107,16 +108,17 @@ class ScoringRepositoryN1Test {
             scoringConfigFactory,
             encryptionManager
         )
-        repo = ScoringRepository(
-            workoutDao, 
-            sleepSessionDao, 
-            dailySummaryDao, 
-            settingsRepo, 
-            scoringCalculator, 
-            baselineComputer, 
+        repo = ScoringRepositoryImpl(
+            workoutDao,
+            sleepSessionDao,
+            dailySummaryDao,
+            settingsRepo,
+            scoringCalculator,
+            baselineComputer,
             computeSleepMetricsUseCase,
             scoringConfigFactory,
-            heartRateDao
+            heartRateDao,
+            hrvDao,
         )
 
         coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()

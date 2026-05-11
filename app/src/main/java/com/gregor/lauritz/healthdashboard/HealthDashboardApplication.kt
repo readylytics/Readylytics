@@ -7,8 +7,8 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
-import com.gregor.lauritz.healthdashboard.data.healthconnect.PermissionStatus
+import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.PermissionStatus
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController

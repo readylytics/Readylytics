@@ -90,7 +90,7 @@ fun RestingHrDetailScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     M3ScoreDial(
-                        score = uiState.latestSummary?.restingHeartRate?.toFloat(),
+                        score = (uiState.latestSummary?.restingHeartRate ?: uiState.latestSummary?.nocturnalRhr)?.toFloat(),
                         label = "Resting HR",
                         maxScore = 120f,
                         status = uiState.rhrStatus,
@@ -135,6 +135,7 @@ fun RestingHrDetailScreen(
                         rangeDays = uiState.selectedRange.days,
                         baselineUnit = "bpm",
                         baseline = uiState.rhrBaseline,
+                        showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),
                         scrollState = chartScrollState,
                     )
                 }

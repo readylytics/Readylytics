@@ -1,6 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.sync
 
-import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HeartRateMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HrvMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.SleepDataMapper
@@ -12,7 +12,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +48,7 @@ class HealthSyncUseCase
         syncMutex.withLock {
             withContext(Dispatchers.IO) {
                 runCatching {
+                    logD("HealthSyncUseCase") { "Starting sync (window=$windowDays days)..." }
                     val to = Instant.now()
                     val zoneId = ZoneId.systemDefault()
                     val from =
@@ -59,12 +60,25 @@ class HealthSyncUseCase
 
                     val prefs = settingsRepo.userPreferences.first()
 
-                    val sleepEntities = hcRepo.readSleepSessions(from, to).map { SleepDataMapper.mapSleepSession(it) }
+                    logD("HealthSyncUseCase") { "Reading records from Health Connect..." }
+                    val sleepSessions = hcRepo.readSleepSessions(from, to)
+                    val sleepEntities = sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
                     val exerciseRecords = hcRepo.readExerciseSessions(from, to)
                     val hrRecords = hcRepo.readHeartRateSamples(from, to)
                     val hrvRecords = hcRepo.readHrvSamples(from, to)
+
+                    val totalSleepStages = sleepSessions.sumOf { it.stages.size }
+                    val hrSampleCounts = hrRecords.map { it.samples.size }
                     logD("HealthSyncUseCase") {
-                        "Fetched HC: sleep=${sleepEntities.size} hrv=${hrvRecords.size} hr=${hrRecords.size} from=$from to=$to"
+                        "Fetched HC: sleep=${sleepEntities.size} stages=$totalSleepStages " +
+                            "hrv_rmssd=${hrvRecords.size} " +
+                            "hr_records=${hrRecords.size} hr_total_samples=${hrSampleCounts.sum()} " +
+                            "from=$from to=$to"
+                    }
+
+                    if (hrRecords.isNotEmpty()) {
+                        val sources = hrRecords.map { it.metadata.dataOrigin.packageName }.distinct()
+                        logD("HealthSyncUseCase") { "HR Sources: $sources per_record_samples=$hrSampleCounts" }
                     }
                     if (hrvRecords.isNotEmpty()) {
                         val newest = hrvRecords.maxByOrNull { it.time }?.time
@@ -92,6 +106,12 @@ class HealthSyncUseCase
                         WorkoutMapper.mapExerciseSession(session, hrBySession[session.metadata.id] ?: emptyList(), thresholds)
                     }
                     val hrvEntities = HrvMapper.mapToEntities(hrvRecords, sleepEntities)
+
+                    val (sleepHrv, restingHrv) = hrvEntities.partition { it.recordType == "SLEEP" }
+                    logD("HealthSyncUseCase") { "HRV classified: sleep=${sleepHrv.size} resting=${restingHrv.size}" }
+                    logD("HealthSyncUseCase") {
+                        "HR entities: ${hrEntities.size} sleep=${hrEntities.count { it.recordType == "SLEEP" }}"
+                    }
 
                     sleepDao.upsertAll(sleepEntities)
                     workoutDao.upsertAll(workoutEntities)

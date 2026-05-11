@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.circadian.CircadianThresholdValue
-import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

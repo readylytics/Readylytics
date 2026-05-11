@@ -62,14 +62,14 @@ class RestingHrDetailViewModel @Inject constructor(
                 settingsRepo.userPreferences
             ) { latest, history, prefs ->
                 val points = history
-                    .filter { it.restingHeartRate != null }
+                    .filter { it.restingHeartRate != null || it.nocturnalRhr != null }
                     .map { summary ->
                         val d = summary.date
                         val dayOffset = ChronoUnit.DAYS.between(
                             Instant.ofEpochMilli(startDayMs).atZone(ZoneId.systemDefault()).toLocalDate(),
                             d
                         ).toInt()
-                        DailyDataPoint(dayOffset, summary.restingHeartRate!!.toFloat())
+                        DailyDataPoint(dayOffset, (summary.restingHeartRate ?: summary.nocturnalRhr)!!.toFloat())
                     }
                     .sortedBy { it.dayOffset }
 

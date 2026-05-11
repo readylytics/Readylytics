@@ -1,6 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.sync
 
-import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
@@ -11,6 +11,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
@@ -61,6 +62,24 @@ class HealthSyncUseCaseTest {
             dailySummaryDao.upsert(any())
             scoringRepository.computeDailySummary(day2)
             dailySummaryDao.upsert(any())
+        }
+    }
+
+    @Test
+    fun `sync fetches and upserts all heart-related record types`() = runTest {
+        coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+        
+        // Mock non-empty returns to ensure mapping logic is triggered
+        coEvery { hcRepo.readHeartRateSamples(any(), any()) } returns listOf(mockk(relaxed = true))
+        coEvery { hcRepo.readHrvSamples(any(), any()) } returns listOf(mockk(relaxed = true))
+
+        useCase.sync()
+
+        coVerify {
+            hcRepo.readHeartRateSamples(any(), any())
+            hcRepo.readHrvSamples(any(), any())
+            heartRateDao.upsertAll(any())
+            hrvDao.upsertAll(any())
         }
     }
 }

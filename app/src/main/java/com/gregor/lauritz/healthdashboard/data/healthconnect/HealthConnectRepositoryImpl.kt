@@ -6,11 +6,15 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectPermissionRevokedException
+import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.PermissionStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,25 +22,13 @@ import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
-class HealthConnectPermissionRevokedException(cause: SecurityException) : Exception("Health Connect permissions were revoked", cause)
-
-sealed interface PermissionStatus {
-    data object Granted : PermissionStatus
-
-    data object Unavailable : PermissionStatus
-
-    data class Missing(
-        val missing: Set<String>,
-    ) : PermissionStatus
-}
-
 @Singleton
-class HealthConnectRepository
+class HealthConnectRepositoryImpl
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
-    ) {
-        val requiredPermissions: Set<String> =
+    ) : HealthConnectRepository {
+        override val criticalPermissions: Set<String> =
             setOf(
                 HealthPermission.getReadPermission(SleepSessionRecord::class),
                 HealthPermission.getReadPermission(HeartRateRecord::class),
@@ -45,20 +37,38 @@ class HealthConnectRepository
                 HealthPermission.getReadPermission(StepsRecord::class),
             )
 
-        val client: HealthConnectClient by lazy {
+        override val requiredPermissions: Set<String> = criticalPermissions +
+            setOf("android.permission.health.READ_HEALTH_DATA_HISTORY")
+
+        private val client: HealthConnectClient by lazy {
             HealthConnectClient.getOrCreate(context)
         }
 
-        fun isAvailable(): Boolean = HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
+        override fun isAvailable(): Boolean = HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
 
-        suspend fun checkPermissions(): PermissionStatus =
+        override suspend fun checkPermissions(): PermissionStatus =
             withContext(Dispatchers.IO) {
-                if (!isAvailable()) return@withContext PermissionStatus.Unavailable
-                val granted = client.permissionController.getGrantedPermissions()
+                com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") { "Checking permissions..." }
+                if (!isAvailable()) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") { "SDK not available" }
+                    return@withContext PermissionStatus.Unavailable
+                }
+                val granted = try {
+                    client.permissionController.getGrantedPermissions()
+                } catch (e: Exception) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logE("HealthConnectRepository", e) { "Failed to get granted permissions" }
+                    throw e
+                }
+                com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") { "Granted permissions: $granted" }
+                com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") { "Required permissions: $requiredPermissions" }
+
                 if (granted.containsAll(requiredPermissions)) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") { "All required permissions granted" }
                     PermissionStatus.Granted
                 } else {
-                    PermissionStatus.Missing(requiredPermissions - granted)
+                    val missing = requiredPermissions - granted
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") { "Missing permissions: $missing" }
+                    PermissionStatus.Missing(missing)
                 }
             }
 
@@ -81,14 +91,12 @@ class HealthConnectRepository
                     pageToken = response.pageToken
                 } while (pageToken != null)
             } catch (e: SecurityException) {
-                // Permission was revoked between the permission check and this read.
-                // Throwing allows the caller to catch the revocation and trigger a re-prompt.
                 throw HealthConnectPermissionRevokedException(e)
             }
             return all
         }
 
-        suspend fun readSleepSessions(
+        override suspend fun readSleepSessions(
             from: Instant,
             to: Instant,
         ): List<SleepSessionRecord> =
@@ -96,7 +104,7 @@ class HealthConnectRepository
                 readAllPages<SleepSessionRecord>(from, to)
             }
 
-        suspend fun readHeartRateSamples(
+        override suspend fun readHeartRateSamples(
             from: Instant,
             to: Instant,
         ): List<HeartRateRecord> =
@@ -104,7 +112,15 @@ class HealthConnectRepository
                 readAllPages<HeartRateRecord>(from, to)
             }
 
-        suspend fun readHrvSamples(
+        override suspend fun readRestingHeartRateSamples(
+            from: Instant,
+            to: Instant,
+        ): List<RestingHeartRateRecord> =
+            withContext(Dispatchers.IO) {
+                readAllPages<RestingHeartRateRecord>(from, to)
+            }
+
+        override suspend fun readHrvSamples(
             from: Instant,
             to: Instant,
         ): List<HeartRateVariabilityRmssdRecord> =
@@ -112,7 +128,7 @@ class HealthConnectRepository
                 readAllPages<HeartRateVariabilityRmssdRecord>(from, to)
             }
 
-        suspend fun readExerciseSessions(
+        override suspend fun readExerciseSessions(
             from: Instant,
             to: Instant,
         ): List<ExerciseSessionRecord> =
@@ -120,7 +136,7 @@ class HealthConnectRepository
                 readAllPages<ExerciseSessionRecord>(from, to)
             }
 
-        suspend fun readSteps(
+        override suspend fun readSteps(
             from: Instant,
             to: Instant,
         ): Long =

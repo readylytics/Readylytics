@@ -26,13 +26,20 @@ fun OnboardingRoute(
         rememberLauncherForActivityResult(
             contract = PermissionController.createRequestPermissionResultContract(),
         ) { granted ->
+            com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") { "Permission result received. Granted: $granted" }
             if (granted.containsAll(permissions)) {
+                com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") { "All requested permissions granted by user" }
                 syncViewModel.onPermissionsGranted()
+            } else {
+                val missing = permissions - granted
+                com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") { "User denied some permissions: $missing" }
+                syncViewModel.onPermissionsDenied()
             }
         }
 
     OnboardingScreen(
         onGrantPermissionsClick = { day, month, year, gender, physiologyProfile, dynamicColorEnabled ->
+            com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") { "Grant Access clicked. Saving profile first..." }
             onboardingViewModel.saveProfile(
                 day = day,
                 month = month,
@@ -41,6 +48,7 @@ fun OnboardingRoute(
                 physiologyProfile = physiologyProfile,
                 dynamicColorEnabled = dynamicColorEnabled,
                 onComplete = {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") { "Profile saved. Launching HC permissions: $permissions" }
                     permissionLauncher.launch(permissions)
                 }
             )

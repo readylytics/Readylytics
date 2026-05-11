@@ -230,6 +230,7 @@ fun SleepScreen(
                     rangeDays = uiState.selectedRange.days,
                     baselineUnit = "ms",
                     baseline = baselineHrv,
+                    showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),
                     scrollState = chartScrollState,
                 )
             }
@@ -249,6 +250,7 @@ fun SleepScreen(
                     rangeDays = uiState.selectedRange.days,
                     baselineUnit = "bpm",
                     baseline = baselineRhr?.toFloat(),
+                    showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),
                     scrollState = chartScrollState,
                 )
             }

@@ -52,7 +52,8 @@ object DailySummaryMapper {
                 contributors = entity.contributors,
                 diagnostics = entity.diagnostics
             ),
-            sRest = entity.sRest
+            sRest = entity.sRest,
+            isCalibrating = entity.isCalibrating ?: false,
         )
     }
 

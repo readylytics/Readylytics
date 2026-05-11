@@ -10,9 +10,16 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+import com.gregor.lauritz.healthdashboard.data.repository.ScoringRepositoryImpl
+import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
+
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class ScoringModule {
+    @Binds
+    @Singleton
+    abstract fun bindScoringRepository(impl: ScoringRepositoryImpl): ScoringRepository
+
     @Binds
     @Singleton
     abstract fun bindScoringCalculator(impl: ScoringCalculatorImpl): ScoringCalculator
