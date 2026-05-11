@@ -128,7 +128,7 @@ fun TrendChart(
             lineSeries {
                 series(
                     x = validPoints.map { it.dayOffset },
-                    y = validPoints.map { it.value!! },
+                    y = validPoints.mapNotNull { it.value },
                 )
             }
         }

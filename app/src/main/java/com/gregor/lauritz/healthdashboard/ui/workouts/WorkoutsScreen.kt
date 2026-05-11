@@ -398,7 +398,7 @@ private fun AcwrChart(
                 columnSeries {
                     series(
                         x = validTrimp.map { it.dayOffset },
-                        y = validTrimp.map { it.value!! },
+                        y = validTrimp.mapNotNull { it.value },
                     )
                 }
             }
@@ -407,7 +407,7 @@ private fun AcwrChart(
                 lineSeries {
                     series(
                         x = validRatio.map { it.dayOffset },
-                        y = validRatio.map { it.value!! },
+                        y = validRatio.mapNotNull { it.value },
                     )
                 }
             }
