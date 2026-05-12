@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.domain.scoring
 
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import kotlin.math.exp
+import kotlin.math.pow
 
 object PaiCalculator {
 
@@ -16,29 +17,53 @@ object PaiCalculator {
     }
 
     /**
-     * Phase III: Daily TRIMP Calculation (Td) using sex-specific Banister model.
+     * Phase III: Daily TRIMP Calculation using the selected training load model.
+     * Banister is the default. Cheng (LT-TRIMP) and iTRIMP are fitness-adaptive alternatives.
+     * All params after [gender] have defaults so existing call sites remain compatible.
      */
     fun calculateDailyTrimp(
         durationMinutes: Float,
         hrAvg: Float,
         rhrBaseline: Float,
         hrMax: Float,
-        gender: String?
+        gender: String?,
+        trimpModel: TrimpModel = TrimpModel.BANISTER,
+        banisterMultiplier: Float = 1.0f,
+        chengBeta: Float = 0.09f,
+        itrimB: Float = 2.1f,
     ): Float {
         val hrr = hrMax - rhrBaseline
         if (hrr <= 0) return 0f
 
         val hrR = (hrAvg - rhrBaseline) / hrr
-        // Filter: Exclude HR samples where HR < (RHR_baseline + 5)
         if (hrAvg < (rhrBaseline + 5)) return 0f
         if (hrR <= 0) return 0f
 
-        val isMale = gender?.equals("Female", ignoreCase = true) != true
-
-        val a = if (isMale) 0.64f else 0.86f
-        val b = if (isMale) 1.92f else 1.67f
-
-        return durationMinutes * hrR * a * exp(b * hrR)
+        return when (trimpModel) {
+            TrimpModel.BANISTER -> {
+                val isMale = gender?.equals("Female", ignoreCase = true) != true
+                val a = if (isMale) 0.64f else 0.86f
+                val b = if (isMale) 1.92f else 1.67f
+                durationMinutes * hrR * a * exp(b * hrR) * banisterMultiplier
+            }
+            TrimpModel.CHENG -> {
+                // LT-TRIMP (Cheng): Piecewise logic with Lactate Threshold (LT) at 85% HRR
+                // K1 = 0.006/sec (0.36/min), K2 = 0.012/sec (0.72/min)
+                // REF: paiesque reference
+                val ltThreshold = 0.85f
+                val weight = if (hrR < ltThreshold) {
+                    0.36f // Linear weight below LT
+                } else {
+                    0.72f * exp(chengBeta * hrR) // Exponential weight at/above LT
+                }
+                durationMinutes * hrR * weight * 3.2f
+            }
+            TrimpModel.I_TRIMP -> {
+                // iTRIMP: Exponential weighting instead of power law
+                // REF: paiesque reference; Manzi et al. 2009
+                durationMinutes * hrR * exp(itrimB * hrR) * 0.48f
+            }
+        }
     }
 
     /**

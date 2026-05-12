@@ -123,7 +123,7 @@ class DeleteByTimestampTest {
                 zone4Minutes = 10f,
                 zone5Minutes = 10f,
                 trimp = 100f,
-                avgHr = 150
+                avgHr = 150f
             ),
             WorkoutRecordEntity(
                 id = "new",
@@ -137,7 +137,7 @@ class DeleteByTimestampTest {
                 zone4Minutes = 10f,
                 zone5Minutes = 10f,
                 trimp = 100f,
-                avgHr = 150
+                avgHr = 150f
             )
         ))
 

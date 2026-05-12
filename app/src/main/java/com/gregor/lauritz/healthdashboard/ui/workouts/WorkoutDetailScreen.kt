@@ -49,12 +49,13 @@ import com.gregor.lauritz.healthdashboard.ui.common.DateFormatUtils
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
-import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
+import com.gregor.lauritz.healthdashboard.ui.components.containerColor
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
-import java.time.Instant
-import java.time.ZoneId
 import com.gregor.lauritz.healthdashboard.ui.theme.LocalStatusColors
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import java.time.Instant
+import java.time.ZoneId
+import kotlin.math.roundToInt
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
@@ -136,7 +137,7 @@ fun WorkoutDetailScreen(
             ) {
                 MetricCard(
                     title = "Training Load",
-                    value = workout.trimp.roundToInt().toString(),
+                    value = (uiState.computedTrimp ?: workout.trimp.roundToInt()).toString(),
                     secondaryText = "TRIMP",
                     status = MetricStatus.NEUTRAL,
                     tooltip = "Total training impulse - measures training intensity and duration.",
@@ -144,7 +145,7 @@ fun WorkoutDetailScreen(
                 )
                 MetricCard(
                     title = "Avg Pulse",
-                    value = if (workout.avgHr > 0) workout.avgHr.toString() else "--",
+                    value = if (workout.avgHr > 0) workout.avgHr.roundToInt().toString() else "--",
                     secondaryText = "BPM",
                     status = MetricStatus.NEUTRAL,
                     tooltip = "Average heart rate during the workout.",

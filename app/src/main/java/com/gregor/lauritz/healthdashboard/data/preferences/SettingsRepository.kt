@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.data.preferences
 
 import androidx.datastore.core.DataStore
 import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
+import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -30,6 +31,9 @@ class SettingsRepository
         private fun Int.toValidRetentionDays() = coerceIn(180, 1095)
         private fun Int.toValidConsistencyMinutes() = coerceIn(0, 90)
         private fun Int.toValidConsistencyDays() = coerceIn(3, 30)
+        private fun Float.toValidBanisterMultiplier() = coerceIn(0.5f, 2.5f)
+        private fun Float.toValidChengBeta() = coerceIn(0.04f, 0.12f)
+        private fun Float.toValidItrimB() = coerceIn(1.0f, 4.5f)
 
         /**
          * The primary flow of user preferences.
@@ -244,8 +248,35 @@ class SettingsRepository
                 it.toBuilder()
                     .setPhysiologyProfile(PhysiologyProfileProto.valueOf("PROFILE_${profile.name}"))
                     .setPaiScalingFactor(newPaiFactor)
+                    .setPaiCalibration(profile.banisterMultiplier)
+                    .setChengBeta(profile.defaultChengBeta)
+                    .setItrimpB(profile.defaultItrimB)
                     .build()
             }
+        }
+
+        suspend fun updateTrimpModel(model: TrimpModel) {
+            dataStore.updateData {
+                it.toBuilder().setTrimpMethod(
+                    when (model) {
+                        TrimpModel.BANISTER -> TrimpMethodProto.TRIMP_BANISTER
+                        TrimpModel.I_TRIMP -> TrimpMethodProto.TRIMP_ITRIMP
+                        TrimpModel.CHENG -> TrimpMethodProto.TRIMP_CHENG
+                    }
+                ).build()
+            }
+        }
+
+        suspend fun updateBanisterMultiplier(value: Float) {
+            dataStore.updateData { it.toBuilder().setPaiCalibration(value.toValidBanisterMultiplier()).build() }
+        }
+
+        suspend fun updateChengBeta(value: Float) {
+            dataStore.updateData { it.toBuilder().setChengBeta(value.toValidChengBeta()).build() }
+        }
+
+        suspend fun updateItrimB(value: Float) {
+            dataStore.updateData { it.toBuilder().setItrimpB(value.toValidItrimB()).build() }
         }
 
         suspend fun updateInstallDate(date: LocalDate) {

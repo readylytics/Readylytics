@@ -131,4 +131,64 @@ class PaiCalculatorTest {
         assertEquals(0f, restingTrimp, 0.001f)
         assert(exerciseTrimp > 0f)
     }
+
+    @Test
+    fun `calculateDailyTrimp matches iTRIMP model`() {
+        val duration = 40f
+        val hrAvg = 160f
+        val rhr = 60f
+        val hrMax = 190f
+        val gender = "Male"
+        val itrimB = 2.1f
+
+        // HRr = 0.7692
+        // Td = 40 * 0.7692 * exp(2.1 * 0.7692) * 0.48
+        // Td = 30.769 * 5.0295 * 0.48 = 74.28
+
+        val result = PaiCalculator.calculateDailyTrimp(
+            duration, hrAvg, rhr, hrMax, gender,
+            trimpModel = TrimpModel.I_TRIMP,
+            itrimB = itrimB
+        )
+        assertEquals(74.28f, result, 0.1f)
+    }
+
+    @Test
+    fun `calculateDailyTrimp matches Cheng model below LT`() {
+        val duration = 40f
+        val hrAvg = 160f
+        val rhr = 60f
+        val hrMax = 190f
+        val gender = "Male"
+
+        // HRr = 0.7692 (Below LT=0.85)
+        // Td = 40 * 0.7692 * 0.36 * 3.2 = 35.45
+
+        val result = PaiCalculator.calculateDailyTrimp(
+            duration, hrAvg, rhr, hrMax, gender,
+            trimpModel = TrimpModel.CHENG
+        )
+        assertEquals(35.45f, result, 0.1f)
+    }
+
+    @Test
+    fun `calculateDailyTrimp matches Cheng model above LT`() {
+        val duration = 40f
+        val hrAvg = 180f
+        val rhr = 60f
+        val hrMax = 190f
+        val gender = "Male"
+        val chengBeta = 0.09f
+
+        // HRr = 0.9231 (Above LT=0.85)
+        // Td = 40 * 0.9231 * 0.72 * exp(0.09 * 0.9231) * 3.2
+        // Td = 26.585 * 1.0866 * 3.2 = 92.44
+
+        val result = PaiCalculator.calculateDailyTrimp(
+            duration, hrAvg, rhr, hrMax, gender,
+            trimpModel = TrimpModel.CHENG,
+            chengBeta = chengBeta
+        )
+        assertEquals(92.44f, result, 0.1f)
+    }
 }

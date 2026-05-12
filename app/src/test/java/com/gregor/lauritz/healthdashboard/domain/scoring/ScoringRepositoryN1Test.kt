@@ -73,6 +73,7 @@ class ScoringRepositoryN1Test {
         coEvery { sleepSessionDao.getSince(any()) } returns historicSessions + todaySession
 
         coEvery { workoutDao.getDailyTrimp(any(), any(), any()) } returns emptyList()
+        coEvery { workoutDao.getDailyTrmpByEpochDay(any(), any(), any()) } returns emptyMap()
         coEvery { workoutDao.getTotalTrimp(any(), any()) } returns 0f
         coEvery { workoutDao.getTotalDurationMinutes(any(), any()) } returns 0
         coEvery { workoutDao.getWeightedAvgHr(any(), any()) } returns 0f
@@ -90,20 +91,24 @@ class ScoringRepositoryN1Test {
         coEvery { heartRateDao.getMinHrInRange(any(), any()) } returns 50
         coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
         coEvery { heartRateDao.getMinHrTimestamp(any()) } returns null
+        coEvery { heartRateDao.getSleepHrSampleCount(any()) } returns 300
+        coEvery { heartRateDao.getSleepHrSampleAtOffset(any(), any()) } returns 50
+        coEvery { heartRateDao.getSleepHrSamplesForSession(any()) } returns listOf(48, 50, 52, 54, 56, 58, 60)
 
         coEvery { dailySummaryDao.getByDate(any()) } returns null
         coEvery { dailySummaryDao.upsert(any()) } returns Unit
+        coEvery { workoutDao.upsertAll(any()) } returns Unit
 
         scoringCalculator = ScoringCalculatorImpl()
         val baselineComputer = BaselineComputer(heartRateDao, hrvDao, sleepSessionDao, scoringCalculator)
         val scoringConfigFactory = ScoringConfigFactory() // Real factory is fine as it's pure logic mostly
         val encryptionManager = mockk<EncryptionManager>(relaxed = true)
         val computeSleepMetricsUseCase = ComputeSleepMetricsUseCase(
-            baselineComputer, 
-            dailySummaryDao, 
-            hrvDao, 
-            heartRateDao, 
-            sleepSessionDao, 
+            baselineComputer,
+            dailySummaryDao,
+            hrvDao,
+            heartRateDao,
+            sleepSessionDao,
             scoringCalculator,
             scoringConfigFactory,
             encryptionManager
@@ -139,10 +144,10 @@ class ScoringRepositoryN1Test {
             durationMinutes = 60,
             zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 60f, zone5Minutes = 0f,
             trimp = 100f,
-            avgHr = 150
+            avgHr = 150f
         )
         coEvery { workoutDao.getWorkoutsInRange(dayMidnight, nextDayMidnight) } returns listOf(workout)
-        
+
         // HR Samples for the workout
         val samples = (0 until 60).map { i ->
             com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity(
@@ -168,7 +173,7 @@ class ScoringRepositoryN1Test {
                 gender = "Male"
             )
         )
-        
+
         repo.computeAndPersistDailySummary(today)
 
         // Profile: SEDENTARY (SF=0.25)
@@ -181,11 +186,11 @@ class ScoringRepositoryN1Test {
                 gender = "Male"
             )
         )
-        
+
         repo.computeAndPersistDailySummary(today)
 
         coVerify(exactly = 2) { dailySummaryDao.upsert(any()) }
-        
+
         val athletePai = capturedSummaries[0].paiScore ?: 0f
         val sedentaryPai = capturedSummaries[1].paiScore ?: 0f
 
@@ -197,17 +202,17 @@ class ScoringRepositoryN1Test {
         val validSession = makeSleepSession("valid", 1)
         val shortSession = makeSleepSession("short", 2).copy(durationMinutes = 120) // 2h < 4h threshold
         val sessions = listOf(validSession, shortSession)
-        
+
         coEvery { sleepSessionDao.getSince(any()) } returns sessions
-        
+
         // Mock bulk fetches for these specific sessions
-        coEvery { hrvDao.getSleepRmssdForSessionsMap(match { it.containsAll(listOf("valid", "short")) }) } returns 
+        coEvery { hrvDao.getSleepRmssdForSessionsMap(match { it.containsAll(listOf("valid", "short")) }) } returns
             mapOf("valid" to listOf(60f), "short" to listOf(60f))
-        coEvery { heartRateDao.getAvgSleepHrForSessions(match { it.containsAll(listOf("valid", "short")) }) } returns 
+        coEvery { heartRateDao.getAvgSleepHrForSessions(match { it.containsAll(listOf("valid", "short")) }) } returns
             mapOf("valid" to 55, "short" to 55)
-            
+
         repo.computeAndPersistDailySummary(LocalDate.now())
-        
+
         // Should only fetch HRV samples for the valid session for baseline median
         coVerify { hrvDao.getSleepRmssdValuesForSessions(listOf("valid")) }
         coVerify(exactly = 0) { hrvDao.getSleepRmssdValuesForSessions(match { it.contains("short") }) }
@@ -224,10 +229,10 @@ class ScoringRepositoryN1Test {
             startZoneOffsetSeconds = -18000, // UTC-5 (e.g. travel from NY to London)
             endZoneOffsetSeconds = -18000
         )
-        
+
         coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns todaySession
         coEvery { sleepSessionDao.getSince(any()) } returns listOf(todaySession, prevSession)
-        
+
         // Mock a late nadir timestamp (e.g. 80% into the session)
         val sessionDurationMs = todaySession.durationMinutes * 60 * 1000L
         val lateNadirTs = todaySession.startTime + (sessionDurationMs * 0.8).toLong()
@@ -238,7 +243,7 @@ class ScoringRepositoryN1Test {
         // Capture persisted summary and check flags
         val summarySlot = io.mockk.slot<DailySummaryEntity>()
         coVerify { dailySummaryDao.upsert(capture(summarySlot)) }
-        
+
         val flags = summarySlot.captured.recoveryFlags ?: ""
         // NADIR_DELAYED should be suppressed due to the timezone jump
         assert(!flags.contains("NADIR_DELAYED")) { "NADIR_DELAYED should be suppressed during travel, but found in flags: $flags" }
@@ -259,17 +264,17 @@ class ScoringRepositoryN1Test {
     fun `baseline validation uses bulk-fetch DAO methods instead of per-session calls`() = runTest {
         val sessions = (1..5).map { makeSleepSession("s$it", it) }
         coEvery { sleepSessionDao.getSince(any()) } returns sessions
-        
+
         // Mock bulk responses for any session list
         coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns sessions.associate { it.id to listOf(60f) }
         coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns sessions.associate { it.id to 55 }
-        
+
         repo.computeAndPersistDailySummary(LocalDate.now())
-        
+
         // Verify bulk fetch was called (at least once for each step: computeHrvBaseline, computeHrvWindows)
         coVerify(atLeast = 1) { hrvDao.getSleepRmssdForSessionsMap(any()) }
         coVerify(atLeast = 1) { heartRateDao.getAvgSleepHrForSessions(any()) }
-        
+
         // Verify legacy per-session methods were NOT called for historical sessions
         // (They are still allowed for the single "today" session in calculateSleepMetrics)
         coVerify(atMost = 1) { hrvDao.getSleepRmssdForSession(any()) }

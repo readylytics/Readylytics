@@ -40,6 +40,7 @@ object WorkoutMapper {
         session: ExerciseSessionRecord,
         hrSamples: List<HeartRateRecordEntity>,
         thresholds: IntArray,
+        trimp: Float = 0f
     ): WorkoutRecordEntity {
         val zoneMinutes = FloatArray(5)
 
@@ -61,18 +62,12 @@ object WorkoutMapper {
             }
         }
 
-        val trimp =
-            zoneMinutes
-                .zip(
-                    ZONE_WEIGHTS.toList(),
-                ).sumOf { (minutes, weight) -> (minutes * weight).toDouble() }
-                .toFloat()
         val durationMinutes = ((session.endTime.toEpochMilli() - session.startTime.toEpochMilli()) / 60_000L).toInt()
 
         val avgHr = if (sessionSamples.isNotEmpty()) {
-            sessionSamples.map { it.beatsPerMinute }.average().roundToInt()
+            sessionSamples.map { it.beatsPerMinute }.average().toFloat()
         } else {
-            0
+            0f
         }
 
         return WorkoutRecordEntity(

@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
+import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
+import kotlinx.coroutines.flow.first
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,6 +38,10 @@ class UISettingsViewModel @Inject constructor(
                 collapseDisplay = prefs.collapseDisplay,
                 collapseAdvanced = prefs.collapseAdvanced,
                 aboutDismissed = prefs.aboutDismissed,
+                trimpModel = prefs.trimpModel,
+                banisterMultiplier = prefs.banisterMultiplier,
+                chengBeta = prefs.chengBeta,
+                itrimB = prefs.itrimB,
             )
         }.stateIn(
             scope = viewModelScope,
@@ -76,6 +82,35 @@ class UISettingsViewModel @Inject constructor(
                 }
             SettingsEvent.AboutDismissed ->
                 viewModelScope.launch { settingsRepo.updateAboutDismissed(dismissed = true) }
+            is SettingsEvent.TrimpModelChanged ->
+                viewModelScope.launch {
+                    settingsRepo.updateTrimpModel(event.model)
+                    healthSyncUseCase.sync()
+                }
+            is SettingsEvent.BanisterMultiplierChanged ->
+                viewModelScope.launch {
+                    settingsRepo.updateBanisterMultiplier(event.value)
+                    healthSyncUseCase.sync()
+                }
+            is SettingsEvent.ChengBetaChanged ->
+                viewModelScope.launch {
+                    settingsRepo.updateChengBeta(event.value)
+                    healthSyncUseCase.sync()
+                }
+            is SettingsEvent.ItrimBChanged ->
+                viewModelScope.launch {
+                    settingsRepo.updateItrimB(event.value)
+                    healthSyncUseCase.sync()
+                }
+            SettingsEvent.ResetTrimpToProfileDefaults ->
+                viewModelScope.launch {
+                    val profile = settingsRepo.userPreferences.first().physiologyProfile
+                    settingsRepo.updateTrimpModel(TrimpModel.BANISTER)
+                    settingsRepo.updateBanisterMultiplier(profile.banisterMultiplier)
+                    settingsRepo.updateChengBeta(profile.defaultChengBeta)
+                    settingsRepo.updateItrimB(profile.defaultItrimB)
+                    healthSyncUseCase.sync()
+                }
             else -> {}
         }
     }

@@ -5,6 +5,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults
+import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import java.io.File
 
 data class ThresholdSettingsState(
@@ -80,6 +81,10 @@ data class UIState(
     val collapseDisplay: Boolean = SettingsDefaults.COLLAPSE_DISPLAY,
     val collapseAdvanced: Boolean = SettingsDefaults.COLLAPSE_ADVANCED,
     val aboutDismissed: Boolean = SettingsDefaults.ABOUT_DISMISSED,
+    val trimpModel: TrimpModel = SettingsDefaults.TRIMP_MODEL,
+    val banisterMultiplier: Float = PhysiologyProfile.GENERAL.banisterMultiplier,
+    val chengBeta: Float = PhysiologyProfile.GENERAL.defaultChengBeta,
+    val itrimB: Float = PhysiologyProfile.GENERAL.defaultItrimB,
 )
 
 data class SyncSettingsState(

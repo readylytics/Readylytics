@@ -42,6 +42,7 @@ class HealthSyncUseCase
         private val dailySummaryDao: DailySummaryDao,
         private val settingsRepo: SettingsRepository,
         private val scoringRepository: ScoringRepository,
+        private val computeWorkoutTrimpUseCase: com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase,
     ) {
     private val syncMutex = Mutex()
 
@@ -104,8 +105,30 @@ class HealthSyncUseCase
                     val hrEntities = HeartRateMapper.mapToEntities(hrRecords, sleepEntities, initialWorkouts)
                     val hrBySession = hrEntities.filter { it.sessionId != null }.groupBy { it.sessionId }
                     val workoutEntities = exerciseRecords.map { session ->
-                        WorkoutMapper.mapExerciseSession(session, hrBySession[session.metadata.id] ?: emptyList(), thresholds)
+                        val sessionSamples = hrBySession[session.metadata.id] ?: emptyList()
+                        val trimpSamples = sessionSamples.map {
+                            com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase.HeartRateSample(
+                                Instant.ofEpochMilli(it.timestampMs),
+                                it.beatsPerMinute
+                            )
+                        }
+
+                        val workoutDate = session.startTime.atZone(zoneId).toLocalDate()
+                        val midnight = workoutDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                        val existingSummary = dailySummaryDao.getByDate(midnight)
+                        val rhrBaseline = existingSummary?.restingHrBaseline?.toFloat()
+
+                        val calculatedTrimp = computeWorkoutTrimpUseCase.execute(
+                            workoutStartTime = session.startTime.toEpochMilli(),
+                            workoutEndTime = session.endTime.toEpochMilli(),
+                            workoutAvgHr = if (sessionSamples.isNotEmpty()) sessionSamples.map { it.beatsPerMinute }.average().toFloat() else 0f,
+                            samples = trimpSamples,
+                            prefs = prefs,
+                            restingHrBaseline = rhrBaseline
+                        )
+                        WorkoutMapper.mapExerciseSession(session, sessionSamples, thresholds, calculatedTrimp)
                     }
+
                     val hrvEntities = HrvMapper.mapToEntities(hrvRecords, sleepEntities)
 
                     val (sleepHrv, restingHrv) = hrvEntities.partition { it.recordType == RecordType.SLEEP.name }

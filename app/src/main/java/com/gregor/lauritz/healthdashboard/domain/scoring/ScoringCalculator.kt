@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.domain.scoring
 
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Readiness
+import java.time.LocalDate
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Restoration
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Sleep
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Strain
@@ -96,11 +97,24 @@ interface ScoringCalculator {
         loadScore: Float,
         recoveryFlags: Set<RecoveryFlag> = emptySet(),
     ): Float
+
     fun isLateNadir(
         minHrTimestampMs: Long,
         sessionStartMs: Long,
         durationMinutes: Int,
     ): Boolean
+
+    fun computeCtlEmaWithDecay(
+        dailyTrimpByDate: Map<LocalDate, Float>,
+        rangeEnd: LocalDate,
+        windowDays: Long = ScoringConstants.CHRONIC_DAYS,
+    ): Float
+
+    fun computeAtlEmaWithDecay(
+        dailyTrimpByDate: Map<LocalDate, Float>,
+        rangeEnd: LocalDate,
+        windowDays: Long = ScoringConstants.ACUTE_DAYS,
+    ): Float
 
     data class NightValidationResult(
         val rmssdValid: Boolean,
@@ -427,6 +441,36 @@ class ScoringCalculatorImpl @Inject constructor() : ScoringCalculator {
         val sessionDurationMs = durationMinutes * 60 * 1000L
         return (minHrTimestampMs - sessionStartMs) >
                (sessionDurationMs * Restoration.LATE_NADIR_THRESHOLD)
+    }
+
+    override fun computeCtlEmaWithDecay(
+        dailyTrimpByDate: Map<LocalDate, Float>,
+        rangeEnd: LocalDate,
+        windowDays: Long,
+    ): Float = computeEmaWithDecay(dailyTrimpByDate, windowDays, rangeEnd)
+
+    override fun computeAtlEmaWithDecay(
+        dailyTrimpByDate: Map<LocalDate, Float>,
+        rangeEnd: LocalDate,
+        windowDays: Long,
+    ): Float = computeEmaWithDecay(dailyTrimpByDate, windowDays, rangeEnd)
+
+    private fun computeEmaWithDecay(
+        dailyTrimpByDate: Map<LocalDate, Float>,
+        windowDays: Long,
+        rangeEnd: LocalDate,
+    ): Float {
+        if (dailyTrimpByDate.isEmpty()) return ScoringConstants.DEFAULT_FITNESS_LEVEL
+        val rangeStart = rangeEnd.minusDays(windowDays - 1)
+        val alpha = 2.0 / (windowDays + 1)
+        var ewma = (dailyTrimpByDate[rangeStart] ?: 0.0).toDouble()
+        var date = rangeStart.plusDays(1)
+        while (!date.isAfter(rangeEnd)) {
+            val trimp = (dailyTrimpByDate[date] ?: 0.0).toDouble()
+            ewma = trimp * alpha + ewma * (1.0 - alpha)
+            date = date.plusDays(1)
+        }
+        return ewma.toFloat()
     }
 
     override fun validateNight(

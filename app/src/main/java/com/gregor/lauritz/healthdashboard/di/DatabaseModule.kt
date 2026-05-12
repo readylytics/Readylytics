@@ -51,6 +51,7 @@ object DatabaseModule {
                 HealthDatabase.MIGRATION_13_14,
                 HealthDatabase.MIGRATION_14_15,
                 HealthDatabase.MIGRATION_15_16,
+                HealthDatabase.MIGRATION_16_17,
             )
             .addCallback(
                 object : RoomDatabase.Callback() {

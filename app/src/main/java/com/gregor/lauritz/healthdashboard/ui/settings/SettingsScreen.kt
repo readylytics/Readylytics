@@ -64,6 +64,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
@@ -362,6 +363,10 @@ fun SettingsScreen(
                         AdvancedSettingsSection(
                             sleepState = sleepState,
                             paiScalingFactor = uiState.paiScalingFactor,
+                            trimpModel = uiState.trimpModel,
+                            banisterMultiplier = uiState.banisterMultiplier,
+                            chengBeta = uiState.chengBeta,
+                            itrimB = uiState.itrimB,
                             onEvent = onSleepEvent,
                             onPhysiologyEvent = onPhysiologyEvent,
                             onUIEvent = onUIEvent
@@ -818,10 +823,15 @@ private fun HeartRateZoneSection(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AdvancedSettingsSection(
     sleepState: SleepSettingsState,
     paiScalingFactor: Float,
+    trimpModel: TrimpModel,
+    banisterMultiplier: Float,
+    chengBeta: Float,
+    itrimB: Float,
     onEvent: (SettingsEvent) -> Unit,
     onPhysiologyEvent: (SettingsEvent) -> Unit,
     onUIEvent: (SettingsEvent) -> Unit,
@@ -958,10 +968,102 @@ private fun AdvancedSettingsSection(
             onValueChangeFinished = { onUIEvent(SettingsEvent.PaiScalingFactorChanged(paiScaling)) },
             onReset = { onPhysiologyEvent(SettingsEvent.ResetPaiScalingFactor) },
             valueRange = 0.1f..0.3f,
-            steps = 20, // (0.3 - 0.1) / 0.01 = 20
+            steps = 20,
             displayValue = "%.2f".format(paiScaling),
             description = "Adjusts how quickly you earn PAI points. Default: 0.20.",
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "Training Load Model",
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        val trimpModelOptions = listOf(
+            TrimpModel.BANISTER to "Banister",
+            TrimpModel.CHENG to "Cheng LT-TRIMP",
+            TrimpModel.I_TRIMP to "iTRIMP",
+        )
+        val selectedModelLabel = trimpModelOptions.firstOrNull { it.first == trimpModel }?.second ?: "Banister"
+        var trimpDropdownExpanded by remember { mutableStateOf(false) }
+        ExposedDropdownMenuBox(
+            expanded = trimpDropdownExpanded,
+            onExpandedChange = { trimpDropdownExpanded = !trimpDropdownExpanded },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+        ) {
+            OutlinedTextField(
+                value = selectedModelLabel,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Training Load Model") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = trimpDropdownExpanded) },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth(),
+            )
+            ExposedDropdownMenu(
+                expanded = trimpDropdownExpanded,
+                onDismissRequest = { trimpDropdownExpanded = false },
+            ) {
+                trimpModelOptions.forEach { (model, label) ->
+                    DropdownMenuItem(
+                        text = { Text(label) },
+                        onClick = {
+                            onUIEvent(SettingsEvent.TrimpModelChanged(model))
+                            trimpDropdownExpanded = false
+                        },
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        when (trimpModel) {
+            TrimpModel.BANISTER -> {
+                var multiplier by remember(banisterMultiplier) { mutableFloatStateOf(banisterMultiplier) }
+                ThresholdSliderItem(
+                    label = "Banister Multiplier",
+                    value = multiplier,
+                    onValueChange = { multiplier = it },
+                    onValueChangeFinished = { onUIEvent(SettingsEvent.BanisterMultiplierChanged(multiplier)) },
+                    onReset = { onUIEvent(SettingsEvent.ResetTrimpToProfileDefaults) },
+                    valueRange = 0.5f..2.5f,
+                    steps = 40,
+                    displayValue = "%.2f".format(multiplier),
+                    description = "Sedentary=1.75, Active=1.35, Athlete=1.00.",
+                )
+            }
+            TrimpModel.CHENG -> {
+                var beta by remember(chengBeta) { mutableFloatStateOf(chengBeta) }
+                ThresholdSliderItem(
+                    label = "Cheng Beta",
+                    value = beta,
+                    onValueChange = { beta = it },
+                    onValueChangeFinished = { onUIEvent(SettingsEvent.ChengBetaChanged(beta)) },
+                    onReset = { onUIEvent(SettingsEvent.ResetTrimpToProfileDefaults) },
+                    valueRange = 0.04f..0.12f,
+                    steps = 16,
+                    displayValue = "%.3f".format(beta),
+                    description = "Sedentary=0.11, Active=0.09, Athlete=0.07.",
+                )
+            }
+            TrimpModel.I_TRIMP -> {
+                var b by remember(itrimB) { mutableFloatStateOf(itrimB) }
+                ThresholdSliderItem(
+                    label = "iTRIMP B Factor",
+                    value = b,
+                    onValueChange = { b = it },
+                    onValueChangeFinished = { onUIEvent(SettingsEvent.ItrimBChanged(b)) },
+                    onReset = { onUIEvent(SettingsEvent.ResetTrimpToProfileDefaults) },
+                    valueRange = 1.0f..4.5f,
+                    steps = 35,
+                    displayValue = "%.1f".format(b),
+                    description = "Sedentary=1.5, Active=2.1, Athlete=2.9.",
+                )
+            }
+        }
 
     }
 }

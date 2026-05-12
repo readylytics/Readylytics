@@ -13,4 +13,8 @@ data class ScoringConfig(
     val circadianConsistency: CircadianConsistencyConfig,
     val paiScalingFactor: Float,
     val auditTrail: AuditTrail,
+    val trimpModel: TrimpModel,
+    val banisterMultiplier: Float,
+    val chengBeta: Float,
+    val itrimB: Float,
 )

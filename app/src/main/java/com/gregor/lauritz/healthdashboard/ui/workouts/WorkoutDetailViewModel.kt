@@ -7,10 +7,15 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
+import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
+import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -36,6 +41,7 @@ data class WorkoutDetailUiState(
     val hrr3Min: Int? = null,
     val totalPai: Float? = null,
     val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
+    val computedTrimp: Int? = null,
     val isLoading: Boolean = true,
 )
 
@@ -47,6 +53,8 @@ class WorkoutDetailViewModel
         private val hcRepo: HealthConnectRepository,
         private val heartRateDao: HeartRateDao,
         private val dailySummaryDao: DailySummaryDao,
+        private val settingsRepo: SettingsRepository,
+        private val computeWorkoutTrimpUseCase: com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(WorkoutDetailUiState())
         val uiState = _uiState.asStateFlow()
@@ -130,16 +138,16 @@ class WorkoutDetailViewModel
 
                 if (endHr != null) {
                     val recoverySamples = allSamples.filter { it.timestamp > workoutEndInstant }
-                    
+
                     fun findRecoveryHr(minutes: Int): Int? {
                         val target = workoutEndInstant.plus(minutes.toLong(), ChronoUnit.MINUTES)
                         val toleranceSeconds = ScoringConstants.Workout.HRR_TOLERANCE_SECONDS
                         return recoverySamples
-                            .filter { sample -> 
+                            .filter { sample ->
                                 val diff = java.time.Duration.between(sample.timestamp, target).abs().seconds
                                 diff <= toleranceSeconds
                             }
-                            .minByOrNull { sample -> 
+                            .minByOrNull { sample ->
                                 java.time.Duration.between(sample.timestamp, target).abs().toMillis()
                             }?.bpm
                     }
@@ -148,6 +156,18 @@ class WorkoutDetailViewModel
                     hr2Min = findRecoveryHr(2)
                     hr3Min = findRecoveryHr(3)
                 }
+
+                val prefs = settingsRepo.userPreferences.first()
+                val workoutSamples = allSamples.filter { it.timestamp <= workoutEndInstant }.sortedBy { it.timestamp }
+
+                val computedTrimp = computeWorkoutTrimpUseCase.execute(
+                    workoutStartTime = workout.startTime,
+                    workoutEndTime = workout.endTime,
+                    workoutAvgHr = workout.avgHr,
+                    samples = workoutSamples.map { com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase.HeartRateSample(it.timestamp, it.bpm) },
+                    prefs = prefs,
+                    restingHrBaseline = summary?.restingHrBaseline?.toFloat()
+                )
 
                 _uiState.update {
                     it.copy(
@@ -160,6 +180,7 @@ class WorkoutDetailViewModel
                         hrr3Min = if (endHr != null && hr3Min != null) endHr - hr3Min else null,
                         totalPai = summary?.totalPai,
                         paiDailyBreakdown = paiBreakdown,
+                        computedTrimp = computedTrimp.roundToInt().takeIf { it > 0 },
                         isLoading = false,
                     )
                 }

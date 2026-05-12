@@ -4,6 +4,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 
 sealed interface SettingsEvent {
     data class GoalSleepHoursChanged(val hours: Float) : SettingsEvent
@@ -55,6 +56,11 @@ sealed interface SettingsEvent {
     data class CircadianThresholdOverrideChanged(val minutes: Int?) : SettingsEvent
     data object DismissThresholdError : SettingsEvent
     data object AboutDismissed : SettingsEvent
+    data class TrimpModelChanged(val model: TrimpModel) : SettingsEvent
+    data class BanisterMultiplierChanged(val value: Float) : SettingsEvent
+    data class ChengBetaChanged(val value: Float) : SettingsEvent
+    data class ItrimBChanged(val value: Float) : SettingsEvent
+    data object ResetTrimpToProfileDefaults : SettingsEvent
 }
 
 enum class SettingsSection {

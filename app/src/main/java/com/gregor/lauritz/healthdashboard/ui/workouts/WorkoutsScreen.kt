@@ -141,10 +141,10 @@ fun WorkoutsScreen(
             SectionHeader(title = "History")
         }
 
-        items(uiState.recentWorkouts, key = { it.id }) { workout ->
+        items(uiState.recentWorkouts, key = { it.workout.id }) { item ->
             WorkoutHistoryItem(
-                workout = workout,
-                onClick = { onWorkoutClick(workout.id) },
+                item = item,
+                onClick = { onWorkoutClick(item.workout.id) },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
         }
@@ -496,10 +496,11 @@ private fun EmptyChartPlaceholder(modifier: Modifier = Modifier) {
 
 @Composable
 private fun WorkoutHistoryItem(
-    workout: WorkoutRecordEntity,
+    item: WorkoutDisplayItem,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val workout = item.workout
     val displayType = exerciseTypeToDisplayName(workout.exerciseType)
     val dateStr = remember(workout.startTime) {
         val fmt = java.time.format.DateTimeFormatter.ofPattern("(dd.MM)", Locale.getDefault())
@@ -525,7 +526,7 @@ private fun WorkoutHistoryItem(
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    text = "${workout.durationMinutes} min  ·  TRIMP ${workout.trimp.roundToInt()}  ·  ${if (workout.avgHr > 0) "${workout.avgHr} bpm" else "-- bpm"}",
+                    text = "${workout.durationMinutes} min  ·  TRIMP ${item.computedTrimp.roundToInt()}  ·  ${if (workout.avgHr > 0) "${workout.avgHr.roundToInt()} bpm" else "-- bpm"}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

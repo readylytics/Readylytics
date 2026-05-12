@@ -160,7 +160,7 @@ dependencies {
     // WorkManager + Hilt integration
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.hilt.work)
-    // ksp(libs.hilt.work.compiler)
+    ksp(libs.hilt.work.compiler)
 
     // Security
     implementation(libs.google.tink.android)

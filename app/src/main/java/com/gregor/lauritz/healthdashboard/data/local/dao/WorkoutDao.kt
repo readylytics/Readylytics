@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.MapColumn
 import androidx.room.Query
 import androidx.room.Upsert
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
@@ -43,6 +44,17 @@ interface WorkoutDao {
         toMs: Long,
         tzOffsetMs: Long
     ): List<Float>
+
+    @Query(
+        "SELECT (startTime + :tzOffsetMs) / 86400000 AS epochDay, SUM(trimp) AS dailyTrimp " +
+            "FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs " +
+            "GROUP BY epochDay ORDER BY epochDay ASC",
+    )
+    suspend fun getDailyTrmpByEpochDay(
+        fromMs: Long,
+        toMs: Long,
+        tzOffsetMs: Long,
+    ): Map<@MapColumn(columnName = "epochDay") Long, @MapColumn(columnName = "dailyTrimp") Float>
 
     @Query("SELECT * FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs ORDER BY startTime ASC")
     suspend fun getWorkoutsInRange(fromMs: Long, toMs: Long): List<WorkoutRecordEntity>

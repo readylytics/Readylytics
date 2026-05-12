@@ -61,6 +61,10 @@ class ScoringConfigFactory @Inject constructor() {
             circadianConsistency = circadianConsistency,
             paiScalingFactor = userPreferences.paiScalingFactor,
             auditTrail = auditTrail.copy(configHashCode = paramsHash),
+            trimpModel = userPreferences.trimpModel,
+            banisterMultiplier = userPreferences.banisterMultiplier,
+            chengBeta = userPreferences.chengBeta,
+            itrimB = userPreferences.itrimB,
         )
 
         return config

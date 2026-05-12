@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.data.preferences
 
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 
 object SettingsDefaults {
     const val GOAL_SLEEP_HOURS = 8f
@@ -59,6 +60,7 @@ object SettingsDefaults {
     val PHYSIOLOGY_PROFILE = PhysiologyProfile.GENERAL
     const val INSTALL_DATE = 0L // Set to System.currentTimeMillis() on first app run
     val CIRCADIAN_THRESHOLD_OVERRIDE: String? = null // null = use profile default
+    val TRIMP_MODEL = TrimpModel.BANISTER
 
     val DEFAULT_DASHBOARD_CARDS = listOf(
         CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),

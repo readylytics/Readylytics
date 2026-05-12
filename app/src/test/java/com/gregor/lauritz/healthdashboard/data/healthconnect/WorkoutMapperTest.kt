@@ -53,7 +53,7 @@ class WorkoutMapperTest {
 
         assertEquals("test_session", result.id)
         assertEquals(60, result.durationMinutes)
-        assertEquals(150, result.avgHr)
+        assertEquals(150f, result.avgHr, 0.001f)
         
         // Zone 2 weight = 2.0. Duration = 30 min. TRIMP = 60
         // Zone 4 weight = 4.0. Duration = 30 min. TRIMP = 120
@@ -107,7 +107,7 @@ class WorkoutMapperTest {
         val result = WorkoutMapper.mapExerciseSession(session, hrSamples, thresholds)
 
         // Average HR: (140 + 142 + 150) / 3 = 144
-        assertEquals(144, result.avgHr)
+        assertEquals(144f, result.avgHr, 0.001f)
         assert(result.trimp > 0)
     }
 }

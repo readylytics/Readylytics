@@ -43,9 +43,9 @@ class RollingWindowTest {
         val twoDaysAgoMs = today.minusDays(2).atStartOfDay(zoneId).toInstant().toEpochMilli()
 
         workoutDao.upsertAll(listOf(
-            WorkoutRecordEntity(id = "1", startTime = todayMs, endTime = todayMs + 1000, exerciseType = "Running", durationMinutes = 10, trimp = 10f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0),
-            WorkoutRecordEntity(id = "2", startTime = yesterdayMs, endTime = yesterdayMs + 1000, exerciseType = "Running", durationMinutes = 10, trimp = 20f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0),
-            WorkoutRecordEntity(id = "3", startTime = twoDaysAgoMs, endTime = twoDaysAgoMs + 1000, exerciseType = "Running", durationMinutes = 10, trimp = 30f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0)
+            WorkoutRecordEntity(id = "1", startTime = todayMs, endTime = todayMs + 1000, exerciseType = "Running", durationMinutes = 10, trimp = 10f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0f),
+            WorkoutRecordEntity(id = "2", startTime = yesterdayMs, endTime = yesterdayMs + 1000, exerciseType = "Running", durationMinutes = 10, trimp = 20f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0f),
+            WorkoutRecordEntity(id = "3", startTime = twoDaysAgoMs, endTime = twoDaysAgoMs + 1000, exerciseType = "Running", durationMinutes = 10, trimp = 30f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0f)
         ))
 
         // 7-day window (includes all)
@@ -68,9 +68,9 @@ class RollingWindowTest {
         val yesterdayMs = today.minusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
 
         workoutDao.upsertAll(listOf(
-            WorkoutRecordEntity(id = "1", startTime = todayMs + 1000, endTime = todayMs + 2000, exerciseType = "Running", durationMinutes = 10, trimp = 10f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0),
-            WorkoutRecordEntity(id = "2", startTime = todayMs + 5000, endTime = todayMs + 6000, exerciseType = "Running", durationMinutes = 10, trimp = 15f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0),
-            WorkoutRecordEntity(id = "3", startTime = yesterdayMs + 1000, endTime = yesterdayMs + 2000, exerciseType = "Running", durationMinutes = 10, trimp = 20f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0)
+            WorkoutRecordEntity(id = "1", startTime = todayMs + 1000, endTime = todayMs + 2000, exerciseType = "Running", durationMinutes = 10, trimp = 10f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0f),
+            WorkoutRecordEntity(id = "2", startTime = todayMs + 5000, endTime = todayMs + 6000, exerciseType = "Running", durationMinutes = 10, trimp = 15f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0f),
+            WorkoutRecordEntity(id = "3", startTime = yesterdayMs + 1000, endTime = yesterdayMs + 2000, exerciseType = "Running", durationMinutes = 10, trimp = 20f, zone1Minutes = 0f, zone2Minutes = 0f, zone3Minutes = 0f, zone4Minutes = 0f, zone5Minutes = 0f, avgHr = 0f)
         ))
 
         val result = workoutDao.getDailyTrimp(yesterdayMs, todayMs + 86400000, tzOffsetMs)

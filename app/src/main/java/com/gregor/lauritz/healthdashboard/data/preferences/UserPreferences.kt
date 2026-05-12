@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
+import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 
 enum class BackupSchedule { MANUAL, DAILY, WEEKLY }
 
@@ -57,9 +58,14 @@ data class UserPreferences(
     /** Encrypted ciphertext via EncryptionManager. DO NOT use as plaintext. Decrypt before reading. */
     val circadianThresholdOverride: String? = SettingsDefaults.CIRCADIAN_THRESHOLD_OVERRIDE,
     val dynamicColorEnabled: Boolean = SettingsDefaults.DYNAMIC_COLOR_ENABLED,
+    val trimpModel: TrimpModel = SettingsDefaults.TRIMP_MODEL,
+    val banisterMultiplier: Float = PhysiologyProfile.GENERAL.banisterMultiplier,
+    val chengBeta: Float = PhysiologyProfile.GENERAL.defaultChengBeta,
+    val itrimB: Float = PhysiologyProfile.GENERAL.defaultItrimB,
 )
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
+    val profile = PhysiologyProfile.valueOf(physiologyProfile.name.removePrefix("PROFILE_"))
     return UserPreferences(
         goalSleepHours = goalSleepHours,
         hrvBaselineOverride = if (hasHrvBaselineOverride()) hrvBaselineOverride else null,
@@ -108,9 +114,17 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         collapseDisplay = collapseDisplay,
         collapseAdvanced = collapseAdvanced,
         aboutDismissed = aboutDismissed,
-        physiologyProfile = PhysiologyProfile.valueOf(physiologyProfile.name.removePrefix("PROFILE_")),
+        physiologyProfile = profile,
         installDate = installDate,
         circadianThresholdOverride = if (hasCircadianThresholdOverride()) circadianThresholdOverride else null,
         dynamicColorEnabled = dynamicColorEnabled,
+        trimpModel = when (trimpMethod) {
+            TrimpMethodProto.TRIMP_ITRIMP -> TrimpModel.I_TRIMP
+            TrimpMethodProto.TRIMP_CHENG -> TrimpModel.CHENG
+            else -> TrimpModel.BANISTER
+        },
+        banisterMultiplier = if (paiCalibration > 0f) paiCalibration else profile.banisterMultiplier,
+        chengBeta = if (this.chengBeta > 0f) this.chengBeta else profile.defaultChengBeta,
+        itrimB = if (itrimpB > 0f) itrimpB else profile.defaultItrimB,
     )
 }

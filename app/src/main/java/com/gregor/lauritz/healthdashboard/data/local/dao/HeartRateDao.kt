@@ -41,6 +41,26 @@ interface HeartRateDao {
     suspend fun getAvgSleepHrPerSession(fromMs: Long): List<Int>
 
     @Query(
+        "SELECT beatsPerMinute FROM heart_rate_records " +
+            "WHERE sessionId = :sessionId AND recordType = 'SLEEP' " +
+            "ORDER BY beatsPerMinute ASC",
+    )
+    suspend fun getSleepHrSamplesForSession(sessionId: String): List<Int>
+
+    @Query(
+        "SELECT COUNT(*) FROM heart_rate_records " +
+            "WHERE sessionId = :sessionId AND recordType = 'SLEEP'",
+    )
+    suspend fun getSleepHrSampleCount(sessionId: String): Int
+
+    @Query(
+        "SELECT beatsPerMinute FROM heart_rate_records " +
+            "WHERE sessionId = :sessionId AND recordType = 'SLEEP' " +
+            "ORDER BY beatsPerMinute ASC LIMIT 1 OFFSET :offset",
+    )
+    suspend fun getSleepHrSampleAtOffset(sessionId: String, offset: Int): Int?
+
+    @Query(
         "SELECT MIN(beatsPerMinute) FROM heart_rate_records " +
             "WHERE timestampMs >= :startTimeMs AND timestampMs <= :endTimeMs",
     )

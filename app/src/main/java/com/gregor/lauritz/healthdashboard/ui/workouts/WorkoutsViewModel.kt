@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.workouts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
@@ -12,7 +13,10 @@ import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
+import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
+import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
+import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,14 +39,16 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
-private const val ACUTE_DAYS = 7
-private const val CHRONIC_DAYS = 42
+data class WorkoutDisplayItem(
+    val workout: WorkoutRecordEntity,
+    val computedTrimp: Float,
+)
 
 data class WorkoutsUiState(
     val latestSummary: DailySummary? = null,
     val dailyTrimp: List<DailyDataPoint> = emptyList(),
     val dailyStrainRatio: List<DailyDataPoint> = emptyList(),
-    val recentWorkouts: List<WorkoutRecordEntity> = emptyList(),
+    val recentWorkouts: List<WorkoutDisplayItem> = emptyList(),
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val selectedDate: LocalDate = LocalDate.now(),
     val rangeStartMs: Long = System.currentTimeMillis(),
@@ -53,6 +59,7 @@ data class WorkoutsUiState(
 private data class WorkoutData(
     val latestSummary: DailySummary?,
     val allWorkouts: List<WorkoutRecordEntity>,
+    val trimpSummaries: List<DailySummary>,
     val paiSummaries: List<DailySummary>,
     val prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 )
@@ -63,9 +70,11 @@ class WorkoutsViewModel
     constructor(
         private val dailySummaryDao: DailySummaryDao,
         private val workoutDao: WorkoutDao,
+        private val heartRateDao: HeartRateDao,
         private val selectedDateRepository: SelectedDateRepository,
         private val scoringCalculator: ScoringCalculator,
         private val settingsRepo: SettingsRepository,
+        private val computeWorkoutTrimpUseCase: com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
 
@@ -90,7 +99,7 @@ class WorkoutsViewModel
                     val displayFromMs = range.fromMs(date)
                     val displayStartDayMs = displayFromMs.truncateToDayMs()
                     // Fetch extra history so chronic (42-day) window is valid from day 1 of the range.
-                    val fetchFromMs = displayStartDayMs - TimeUnit.DAYS.toMillis(CHRONIC_DAYS.toLong())
+                    val fetchFromMs = displayStartDayMs - TimeUnit.DAYS.toMillis(ScoringConstants.CHRONIC_DAYS)
 
                     val selectedMidnightMs =
                         date
@@ -111,20 +120,24 @@ class WorkoutsViewModel
                     val dataFlow = combine(
                         summaryFlow,
                         workoutDao.observeSince(fetchFromMs),
+                        dailySummaryDao.observeSince(fetchFromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
                         dailySummaryDao.observeSince(paiFromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
                         settingsRepo.userPreferences,
-                    ) { latest, allWorkouts, paiSummaries, prefs ->
-                        WorkoutData(latest, allWorkouts, paiSummaries, prefs)
+                    ) { latest, allWorkouts, trimpSummaries, paiSummaries, prefs ->
+                        WorkoutData(latest, allWorkouts, trimpSummaries, paiSummaries, prefs)
                     }
 
-                    dataFlow.map { data ->
-                        val (latest, allWorkouts, paiSummaries, prefs) = data
+                    dataFlow.flatMapLatest { data ->
+                        flow {
+                            val (latest, allWorkouts, trimpSummaries, paiSummaries, prefs) = data
 
-                        val filteredWorkouts = allWorkouts.filter { it.startTime < selectedMidnightMs + TimeUnit.DAYS.toMillis(1) }
+                            val filteredWorkouts = allWorkouts.filter { it.startTime < selectedMidnightMs + TimeUnit.DAYS.toMillis(1) }
                         val trimpByDay: Map<Long, Float> =
-                            filteredWorkouts
-                                .groupBy { it.startTime.truncateToDayMs() }
-                                .mapValues { (_, ws) -> ws.sumOf { it.trimp.toDouble() }.toFloat() }
+                            trimpSummaries
+                                .associate { summary ->
+                                    val dayMs = summary.date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                                    dayMs to (summary.totalTrimp ?: 0f)
+                                }
 
                         val displayDayMidnights =
                             buildList<Long> {
@@ -144,8 +157,8 @@ class WorkoutsViewModel
                             dailyTrimp.add(DailyDataPoint(dayOffset = i, value = if (trimp != null && trimp > 0f) trimp else null))
 
                             val currentDayDate = Instant.ofEpochMilli(dayMidnight).atZone(zoneId).toLocalDate()
-                            val acuteFrom = currentDayDate.minusDays((ACUTE_DAYS - 1).toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli()
-                            val chronicFrom = currentDayDate.minusDays((CHRONIC_DAYS - 1).toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli()
+                            val acuteFrom = currentDayDate.minusDays(ScoringConstants.ACUTE_DAYS - 1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+                            val chronicFrom = currentDayDate.minusDays(ScoringConstants.CHRONIC_DAYS - 1).atStartOfDay(zoneId).toInstant().toEpochMilli()
 
                             val acuteSum = trimpByDay.filterKeys { it in acuteFrom..dayMidnight }.values.sum()
                             val chronicTrimpList = trimpByDay.filterKeys { it in chronicFrom..dayMidnight }.values.toList()
@@ -159,7 +172,7 @@ class WorkoutsViewModel
 
                             val sr = if (dataTenureDays >= 7 && chronicTrimpList.isNotEmpty()) {
                                 val ctl = scoringCalculator.computeCtlEma(chronicTrimpList)
-                                val atl = acuteSum / ACUTE_DAYS.toFloat()
+                                val atl = acuteSum / ScoringConstants.ACUTE_DAYS.toFloat()
                                 scoringCalculator.computeStrainRatio(atl, ctl)
                             } else {
                                 null
@@ -167,19 +180,55 @@ class WorkoutsViewModel
                             dailyStrainRatio.add(DailyDataPoint(dayOffset = i, value = sr))
                         }
 
+                        val summaryByDate = trimpSummaries.associateBy { it.date }
+
+                        val recentWorkouts = filteredWorkouts.filter { it.startTime >= displayFromMs }
+
+                        // Batch load HR samples for all recent workouts
+                        val samplesByWorkoutId = mutableMapOf<String, List<com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase.HeartRateSample>>()
+                        for (workout in recentWorkouts) {
+                            val samples = heartRateDao.getByTimeRange(workout.startTime, workout.endTime)
+                            samplesByWorkoutId[workout.id] = samples.map {
+                                com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase.HeartRateSample(
+                                    timestamp = java.time.Instant.ofEpochMilli(it.timestampMs),
+                                    bpm = it.beatsPerMinute
+                                )
+                            }
+                        }
+
+                        val recentItems = recentWorkouts
+                            .map { workout ->
+                                val workoutDate = Instant.ofEpochMilli(workout.startTime).atZone(zoneId).toLocalDate()
+                                val rhrBaseline = summaryByDate[workoutDate]?.restingHrBaseline?.toFloat()
+                                val samples = samplesByWorkoutId[workout.id] ?: emptyList()
+
+                                val computedTrimp = computeWorkoutTrimpUseCase.execute(
+                                    workoutStartTime = workout.startTime,
+                                    workoutEndTime = workout.endTime,
+                                    workoutAvgHr = workout.avgHr,
+                                    samples = samples,
+                                    prefs = prefs,
+                                    restingHrBaseline = rhrBaseline,
+                                    storedTrimp = workout.trimp
+                                )
+                                WorkoutDisplayItem(workout, computedTrimp)
+                            }
+
                         WorkoutsUiState(
                             latestSummary = latest,
                             dailyTrimp = dailyTrimp,
                             dailyStrainRatio = dailyStrainRatio,
-                            recentWorkouts = filteredWorkouts.filter { it.startTime >= displayFromMs },
+                            recentWorkouts = recentItems,
                             selectedRange = range,
                             selectedDate = date,
                             rangeStartMs = displayStartDayMs,
                             paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries),
                             todayPaiScore = latest?.paiScore,
-                        )
-                    }.flowOn(Dispatchers.Default)
-                }.stateIn(
+                        ).also { emit(it) }
+                        }
+                    }
+                }.flowOn(Dispatchers.Default)
+                .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
                     initialValue = WorkoutsUiState(),

@@ -63,6 +63,40 @@ class BaselineComputer
             (rhrBaselineOverride ?: rhrValues.median()).roundToInt()
 
         /**
+         * Computes the RHR baseline using intra-session adaptive percentiles.
+         * Finds the true physiological nadir rather than the session-average median.
+         * Percentile adapts to sensor data density to avoid noise artifacts.
+         * Falls back to [ScoringConstants.DEFAULT_RHR_BPM] when data is insufficient.
+         */
+        suspend fun computeAdaptiveBaselineRhrBpm(
+            dayMidnight: Instant,
+            rhrBaselineOverride: Float?,
+        ): Float {
+            if (rhrBaselineOverride != null) return rhrBaselineOverride
+
+            val baselineFromMs = dayMidnight
+                .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
+                .toEpochMilli()
+            val sessions = sleepSessionDao.getSince(baselineFromMs)
+            val validIds = filterValidBaselineSessions(sessions)
+
+            val nadirs = validIds.mapNotNull { sessionId ->
+                val count = heartRateDao.getSleepHrSampleCount(sessionId)
+                if (count < 10) return@mapNotNull null
+                val idx = when {
+                    count >= 300 -> (count * 0.05).toInt()
+                    count >= 150 -> (count * 0.08).toInt()
+                    count >= 75  -> (count * 0.10).toInt()
+                    else         -> (count * 0.15).toInt()
+                }.coerceIn(0, count - 1)
+                heartRateDao.getSleepHrSampleAtOffset(sessionId, idx)?.toFloat()
+            }
+
+            return if (nadirs.isEmpty()) ScoringConstants.DEFAULT_RHR_BPM
+            else nadirs.map { it.roundToInt() }.median()
+        }
+
+        /**
          * Computed HRV baseline (median of valid-night RMSSD values within
          * [ScoringConstants.BASELINE_DAYS]) honoring user override.
          * Returns null when no valid samples and no override exist.
