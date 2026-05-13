@@ -162,15 +162,27 @@ abstract class HealthDatabase : RoomDatabase() {
         val MIGRATION_7_8 =
             object : Migration(7, 8) {
                 override fun migrate(db: SupportSQLiteDatabase) {
-                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)")
-                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType` ON `heart_rate_records` (`recordType`)")
-                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId` ON `heart_rate_records` (`sessionId`)")
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType` ON `heart_rate_records` (`recordType`)",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId` ON `heart_rate_records` (`sessionId`)",
+                    )
                 }
 
                 override fun migrate(connection: SQLiteConnection) {
-                    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)")
-                    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType` ON `heart_rate_records` (`recordType`)")
-                    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId` ON `heart_rate_records` (`sessionId`)")
+                    connection.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)",
+                    )
+                    connection.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType` ON `heart_rate_records` (`recordType`)",
+                    )
+                    connection.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId` ON `heart_rate_records` (`sessionId`)",
+                    )
                 }
             }
 
@@ -392,6 +404,7 @@ abstract class HealthDatabase : RoomDatabase() {
                     sql.forEach { connection.execSQL(it) }
                 }
             }
+
         // Migrate WorkoutRecordEntity avgHr from Int to Float
         val MIGRATION_16_17 =
             object : Migration(16, 17) {
@@ -439,4 +452,3 @@ abstract class HealthDatabase : RoomDatabase() {
             }
     }
 }
-

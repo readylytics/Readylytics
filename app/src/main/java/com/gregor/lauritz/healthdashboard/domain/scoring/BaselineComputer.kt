@@ -33,9 +33,10 @@ class BaselineComputer
          * window ending at [dayMidnight]. Used as the personal RHR history for z-scores.
          */
         suspend fun rhrHistory(dayMidnight: Instant): List<Int> {
-            val baselineFromMs = dayMidnight
-                .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
-                .toEpochMilli()
+            val baselineFromMs =
+                dayMidnight
+                    .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
+                    .toEpochMilli()
             return heartRateDao.getAvgSleepHrPerSession(baselineFromMs)
         }
 
@@ -59,8 +60,7 @@ class BaselineComputer
         fun resolveBaselineRhrRounded(
             rhrValues: List<Int>,
             rhrBaselineOverride: Float?,
-        ): Int =
-            (rhrBaselineOverride ?: rhrValues.median()).roundToInt()
+        ): Int = (rhrBaselineOverride ?: rhrValues.median()).roundToInt()
 
         /**
          * Computes the RHR baseline using intra-session adaptive percentiles.
@@ -74,26 +74,32 @@ class BaselineComputer
         ): Float {
             if (rhrBaselineOverride != null) return rhrBaselineOverride
 
-            val baselineFromMs = dayMidnight
-                .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
-                .toEpochMilli()
+            val baselineFromMs =
+                dayMidnight
+                    .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
+                    .toEpochMilli()
             val sessions = sleepSessionDao.getSince(baselineFromMs)
             val validIds = filterValidBaselineSessions(sessions)
 
-            val nadirs = validIds.mapNotNull { sessionId ->
-                val count = heartRateDao.getSleepHrSampleCount(sessionId)
-                if (count < 10) return@mapNotNull null
-                val idx = when {
-                    count >= 300 -> (count * 0.05).toInt()
-                    count >= 150 -> (count * 0.08).toInt()
-                    count >= 75  -> (count * 0.10).toInt()
-                    else         -> (count * 0.15).toInt()
-                }.coerceIn(0, count - 1)
-                heartRateDao.getSleepHrSampleAtOffset(sessionId, idx)?.toFloat()
-            }
+            val nadirs =
+                validIds.mapNotNull { sessionId ->
+                    val count = heartRateDao.getSleepHrSampleCount(sessionId)
+                    if (count < 10) return@mapNotNull null
+                    val idx =
+                        when {
+                            count >= 300 -> (count * 0.05).toInt()
+                            count >= 150 -> (count * 0.08).toInt()
+                            count >= 75 -> (count * 0.10).toInt()
+                            else -> (count * 0.15).toInt()
+                        }.coerceIn(0, count - 1)
+                    heartRateDao.getSleepHrSampleAtOffset(sessionId, idx)?.toFloat()
+                }
 
-            return if (nadirs.isEmpty()) ScoringConstants.DEFAULT_RHR_BPM
-            else nadirs.map { it.roundToInt() }.median()
+            return if (nadirs.isEmpty()) {
+                ScoringConstants.DEFAULT_RHR_BPM
+            } else {
+                nadirs.map { it.roundToInt() }.median()
+            }
         }
 
         /**
@@ -105,15 +111,17 @@ class BaselineComputer
             dayMidnight: Instant,
             hrvBaselineOverride: Float?,
         ): Int? {
-            val baselineFromMs = dayMidnight
-                .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
-                .toEpochMilli()
+            val baselineFromMs =
+                dayMidnight
+                    .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
+                    .toEpochMilli()
             val historicalSessions = sleepSessionDao.getSince(baselineFromMs)
             val validIds = filterValidBaselineSessions(historicalSessions)
             val hrvBaselineValues = hrvDao.getSleepRmssdValuesForSessions(validIds)
-            return (hrvBaselineOverride
-                ?: hrvBaselineValues.median().takeIf { it > 0f })
-                ?.roundToInt()
+            return (
+                hrvBaselineOverride
+                    ?: hrvBaselineValues.median().takeIf { it > 0f }
+            )?.roundToInt()
         }
 
         /**
@@ -129,12 +137,14 @@ class BaselineComputer
             dayMidnight: Instant,
             excludeSessionId: String?,
         ): HrvWindows {
-            val sigmaWindowFromMs = dayMidnight
-                .minus(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong(), ChronoUnit.DAYS)
-                .toEpochMilli()
-            val historicalSessions = sleepSessionDao
-                .getSince(sigmaWindowFromMs)
-                .filter { it.id != excludeSessionId }
+            val sigmaWindowFromMs =
+                dayMidnight
+                    .minus(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong(), ChronoUnit.DAYS)
+                    .toEpochMilli()
+            val historicalSessions =
+                sleepSessionDao
+                    .getSince(sigmaWindowFromMs)
+                    .filter { it.id != excludeSessionId }
             val validIds = filterValidBaselineSessions(historicalSessions, assumeCoverageValid = true)
             val sigmaHistory = hrvDao.getSleepRmssdValuesForSessions(validIds)
             val muHistory = sigmaHistory.takeLast(ScoringConstants.HRV_MU_WINDOW_DAYS)
@@ -156,31 +166,33 @@ class BaselineComputer
             val hrvMap = hrvDao.getSleepRmssdForSessionsMap(sessionIds)
             val hrMap = heartRateDao.getAvgSleepHrForSessions(sessionIds)
 
-            return sessions.filter { s ->
-                val samples = hrvMap[s.id] ?: emptyList()
-                val avgHr = hrMap[s.id]
+            return sessions
+                .filter { s ->
+                    val samples = hrvMap[s.id] ?: emptyList()
+                    val avgHr = hrMap[s.id]
 
-                val validation = if (assumeCoverageValid) {
-                    scoringCalculator.validateNight(
-                        rmssdMs         = if (samples.isNotEmpty()) samples.mean() else null,
-                        rhrBpm          = avgHr?.toFloat(),
-                        durationMinutes = s.durationMinutes,
-                        deepMinutes     = s.deepSleepMinutes,
-                        remMinutes      = s.remSleepMinutes,
-                        hrCoverageValid = true,
-                    )
-                } else {
-                    scoringCalculator.validateNight(
-                        rmssdMs         = if (samples.isNotEmpty()) samples.mean() else null,
-                        rhrBpm          = avgHr?.toFloat(),
-                        durationMinutes = s.durationMinutes,
-                        deepMinutes     = s.deepSleepMinutes,
-                        remMinutes      = s.remSleepMinutes,
-                    )
-                }
+                    val validation =
+                        if (assumeCoverageValid) {
+                            scoringCalculator.validateNight(
+                                rmssdMs = if (samples.isNotEmpty()) samples.mean() else null,
+                                rhrBpm = avgHr?.toFloat(),
+                                durationMinutes = s.durationMinutes,
+                                deepMinutes = s.deepSleepMinutes,
+                                remMinutes = s.remSleepMinutes,
+                                hrCoverageValid = true,
+                            )
+                        } else {
+                            scoringCalculator.validateNight(
+                                rmssdMs = if (samples.isNotEmpty()) samples.mean() else null,
+                                rhrBpm = avgHr?.toFloat(),
+                                durationMinutes = s.durationMinutes,
+                                deepMinutes = s.deepSleepMinutes,
+                                remMinutes = s.remSleepMinutes,
+                            )
+                        }
 
-                validation.canContributeToBaseline
-            }.map { it.id }
+                    validation.canContributeToBaseline
+                }.map { it.id }
         }
 
         /**

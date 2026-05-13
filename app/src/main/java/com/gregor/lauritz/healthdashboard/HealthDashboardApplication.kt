@@ -1,26 +1,24 @@
 package com.gregor.lauritz.healthdashboard
 
 import android.app.Application
+import androidx.hilt.work.HiltWorkerFactory
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
-import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
-import com.gregor.lauritz.healthdashboard.domain.repository.PermissionStatus
-import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.HiltAndroidApp
-import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @HiltAndroidApp
 class HealthDashboardApplication :
@@ -43,9 +41,11 @@ class HealthDashboardApplication :
     lateinit var workerFactory: HiltWorkerFactory
 
     override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder()
-            .setWorkerFactory(workerFactory)
-            .build()
+        get() =
+            Configuration
+                .Builder()
+                .setWorkerFactory(workerFactory)
+                .build()
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 

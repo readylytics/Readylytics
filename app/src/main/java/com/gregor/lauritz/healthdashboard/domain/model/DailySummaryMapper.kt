@@ -2,22 +2,23 @@ package com.gregor.lauritz.healthdashboard.domain.model
 
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 
 object DailySummaryMapper {
     fun toDomain(entity: DailySummaryEntity): DailySummary {
-        val date = Instant.ofEpochMilli(entity.dateMidnightMs)
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate()
-            
-        val flags: Set<RecoveryFlag> = entity.recoveryFlags
-            ?.split(',')
-            ?.mapNotNull { token ->
-                runCatching { RecoveryFlag.valueOf(token.trim()) }.getOrNull()
-            }
-            ?.toSet()
-            ?: emptySet()
+        val date =
+            Instant
+                .ofEpochMilli(entity.dateMidnightMs)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+
+        val flags: Set<RecoveryFlag> =
+            entity.recoveryFlags
+                ?.split(',')
+                ?.mapNotNull { token ->
+                    runCatching { RecoveryFlag.valueOf(token.trim()) }.getOrNull()
+                }?.toSet()
+                ?: emptySet()
 
         return DailySummary(
             date = date,
@@ -43,23 +44,28 @@ object DailySummaryMapper {
             zRhr = entity.zRhr,
             recoveryFlags = flags,
             hrvSigma = entity.hrvSigma,
-            readinessResult = ReadinessResult(
-                readinessScore = entity.readinessScore,
-                sleepScore = entity.sleepScore,
-                loadScore = entity.loadScore,
-                sRest = entity.sRest,
-                recoveryFlags = flags,
-                contributors = entity.contributors,
-                diagnostics = entity.diagnostics
-            ),
+            readinessResult =
+                ReadinessResult(
+                    readinessScore = entity.readinessScore,
+                    sleepScore = entity.sleepScore,
+                    loadScore = entity.loadScore,
+                    sRest = entity.sRest,
+                    recoveryFlags = flags,
+                    contributors = entity.contributors,
+                    diagnostics = entity.diagnostics,
+                ),
             sRest = entity.sRest,
             isCalibrating = entity.isCalibrating ?: false,
         )
     }
 
     fun toEntity(domain: DailySummary): DailySummaryEntity {
-        val midnightMs = domain.date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        
+        val midnightMs =
+            domain.date
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+
         return DailySummaryEntity(
             dateMidnightMs = midnightMs,
             sleepScore = domain.sleepScore,
@@ -82,12 +88,16 @@ object DailySummaryMapper {
             stepCount = domain.stepCount,
             zLnHrv = domain.zLnHrv,
             zRhr = domain.zRhr,
-            recoveryFlags = if (domain.recoveryFlags.isNotEmpty()) 
-                domain.recoveryFlags.joinToString(",") { it.name } else null,
+            recoveryFlags =
+                if (domain.recoveryFlags.isNotEmpty()) {
+                    domain.recoveryFlags.joinToString(",") { it.name }
+                } else {
+                    null
+                },
             hrvSigma = domain.hrvSigma,
             diagnostics = domain.readinessResult.diagnostics,
             contributors = domain.readinessResult.contributors,
-            sRest = domain.sRest
+            sRest = domain.sRest,
         )
     }
 }

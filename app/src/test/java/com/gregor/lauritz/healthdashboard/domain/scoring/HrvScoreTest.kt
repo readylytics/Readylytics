@@ -62,7 +62,10 @@ class HrvScoreTest {
     fun `slope above z=1_5 is shallower than below`() {
         val slopeBelow = calculator.computeHrvScore(1.5f) - calculator.computeHrvScore(0.5f)
         val slopeAbove = calculator.computeHrvScore(2.5f) - calculator.computeHrvScore(1.5f)
-        assertTrue("Slope above 1.5 ($slopeAbove) should be less than slope below ($slopeBelow)", slopeAbove < slopeBelow)
+        assertTrue(
+            "Slope above 1.5 ($slopeAbove) should be less than slope below ($slopeBelow)",
+            slopeAbove < slopeBelow,
+        )
     }
 
     @Test

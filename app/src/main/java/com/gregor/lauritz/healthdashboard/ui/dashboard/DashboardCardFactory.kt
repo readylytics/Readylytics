@@ -1,23 +1,12 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
-import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
-import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
 import com.gregor.lauritz.healthdashboard.ui.components.StepsCard
 
 // Build a map of CardId to composable card content for the Dashboard screen
@@ -40,7 +29,8 @@ fun buildCardDataMap(
             score = summary?.sleepScore,
             label = "Sleep Score",
             onClick = if (isEditing) ({}) else onNavigateToSleep,
-            tooltipDescription = "Total quality of rest based on duration and cycles.\n\n• 80–100: Optimal\n• 60–79: Fair\n• < 60: Poor",
+            tooltipDescription =
+                "Total quality of rest based on duration and cycles.\n\n• 80–100: Optimal\n• 60–79: Fair\n• < 60: Poor",
         )
     }
 
@@ -49,7 +39,8 @@ fun buildCardDataMap(
             score = summary?.readinessScore,
             label = "Readiness",
             onClick = if (isEditing) ({}) else onNavigateToWorkouts,
-            tooltipDescription = "Preparation for stress based on recent load & recovery.\n\n• 85–100: Peak\n• 30–69: Moderate\n• < 30: Rest",
+            tooltipDescription =
+                "Preparation for stress based on recent load & recovery.\n\n• 85–100: Peak\n• 30–69: Moderate\n• < 30: Rest",
         )
     }
 

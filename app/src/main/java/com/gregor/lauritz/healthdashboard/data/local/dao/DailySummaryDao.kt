@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 interface DailySummaryDao {
     @Query("SELECT * FROM daily_summaries ORDER BY dateMidnightMs DESC LIMIT 1")
     fun _observeLatest(): Flow<DailySummaryEntity?>
+
     fun observeLatest(): Flow<DailySummaryEntity?> = _observeLatest().distinctUntilChanged()
 
     @Query(
@@ -18,11 +19,14 @@ interface DailySummaryDao {
             "ORDER BY dateMidnightMs DESC",
     )
     fun _observeSince(fromMs: Long): Flow<List<DailySummaryEntity>>
+
     fun observeSince(fromMs: Long): Flow<List<DailySummaryEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
     @Query("SELECT * FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
     fun _observeByDate(dateMidnightMs: Long): Flow<DailySummaryEntity?>
-    fun observeByDate(dateMidnightMs: Long): Flow<DailySummaryEntity?> = _observeByDate(dateMidnightMs).distinctUntilChanged()
+
+    fun observeByDate(dateMidnightMs: Long): Flow<DailySummaryEntity?> =
+        _observeByDate(dateMidnightMs).distinctUntilChanged()
 
     @Upsert
     suspend fun upsert(summary: DailySummaryEntity)

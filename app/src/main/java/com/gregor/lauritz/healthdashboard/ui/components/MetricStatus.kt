@@ -26,13 +26,12 @@ fun MetricStatus.onContainerColor(): Color =
     }
 
 @Composable
-fun MetricStatus.gaugeColor(): Color {
-    return when (this) {
+fun MetricStatus.gaugeColor(): Color =
+    when (this) {
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.outline
         MetricStatus.WARNING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f)
         else -> this.onContainerColor()
     }
-}
 
 @Composable
 fun MetricStatus.contentColor(): Color =

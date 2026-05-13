@@ -1,7 +1,6 @@
 package com.gregor.lauritz.healthdashboard.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Query
 import androidx.room.Upsert
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
@@ -12,10 +11,12 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 interface SleepSessionDao {
     @Query("SELECT * FROM sleep_sessions WHERE startTime >= :fromMs ORDER BY startTime DESC")
     fun _observeSince(fromMs: Long): Flow<List<SleepSessionEntity>>
+
     fun observeSince(fromMs: Long): Flow<List<SleepSessionEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
     @Query("SELECT * FROM sleep_sessions ORDER BY startTime DESC LIMIT 1")
     fun _observeLatest(): Flow<SleepSessionEntity?>
+
     fun observeLatest(): Flow<SleepSessionEntity?> = _observeLatest().distinctUntilChanged()
 
     @Query("SELECT * FROM sleep_sessions ORDER BY startTime DESC LIMIT 1")
@@ -45,7 +46,11 @@ interface SleepSessionDao {
         fromMs: Long,
         toMs: Long,
     ): Flow<SleepSessionEntity?>
-    fun observeFirstSessionEndingInRange(fromMs: Long, toMs: Long): Flow<SleepSessionEntity?> = _observeFirstSessionEndingInRange(fromMs, toMs).distinctUntilChanged()
+
+    fun observeFirstSessionEndingInRange(
+        fromMs: Long,
+        toMs: Long,
+    ): Flow<SleepSessionEntity?> = _observeFirstSessionEndingInRange(fromMs, toMs).distinctUntilChanged()
 
     @Query("DELETE FROM sleep_sessions WHERE endTime < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int

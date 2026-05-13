@@ -12,7 +12,10 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
-data class DriveFile(val id: String, val name: String)
+data class DriveFile(
+    val id: String,
+    val name: String,
+)
 
 @Singleton
 class GoogleDriveRepository
@@ -91,4 +94,6 @@ class GoogleDriveRepository
         }
     }
 
-class DriveApiException(message: String) : Exception(message)
+class DriveApiException(
+    message: String,
+) : Exception(message)

@@ -25,14 +25,15 @@ data class StatusColors(
     val poor: Color,
 )
 
-val LocalStatusColors = staticCompositionLocalOf {
-    StatusColors(
-        optimal = Color(0xFF2E7D32),
-        neutral = Color(0xFF1976D2),
-        warning = Color(0xFFED6C02),
-        poor = Color.Red
-    )
-}
+val LocalStatusColors =
+    staticCompositionLocalOf {
+        StatusColors(
+            optimal = Color(0xFF2E7D32),
+            neutral = Color(0xFF1976D2),
+            warning = Color(0xFFED6C02),
+            poor = Color.Red,
+        )
+    }
 
 data class ExtendedColors(
     val success: Color,
@@ -47,9 +48,7 @@ data class ExtendedColors(
     val onNeutralContainer: Color,
 )
 
-fun Color.harmonizeWith(primary: Color): Color {
-    return Color(MaterialColors.harmonize(this.toArgb(), primary.toArgb()))
-}
+fun Color.harmonizeWith(primary: Color): Color = Color(MaterialColors.harmonize(this.toArgb(), primary.toArgb()))
 
 val LocalExtendedColors =
     staticCompositionLocalOf {
@@ -119,30 +118,31 @@ fun FitDashboardTheme(
             else -> LightColorScheme
         }
 
-    val semanticColors = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        StatusColors(
-            optimal = colorScheme.primary,
-            neutral = colorScheme.secondary,
-            warning = colorScheme.tertiary,
-            poor = colorScheme.error
-        )
-    } else {
-        if (darkTheme) {
+    val semanticColors =
+        if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             StatusColors(
-                optimal = SuccessGreenDark,
-                neutral = Color(0xFFD1E4FF), // M3 Blue 80
-                warning = WarningOrangeDark,
-                poor = colorScheme.error
+                optimal = colorScheme.primary,
+                neutral = colorScheme.secondary,
+                warning = colorScheme.tertiary,
+                poor = colorScheme.error,
             )
         } else {
-            StatusColors(
-                optimal = SuccessGreenLight,
-                neutral = Color(0xFF0061A4), // M3 Blue 40
-                warning = WarningOrangeLight,
-                poor = colorScheme.error
-            )
+            if (darkTheme) {
+                StatusColors(
+                    optimal = SuccessGreenDark,
+                    neutral = Color(0xFFD1E4FF), // M3 Blue 80
+                    warning = WarningOrangeDark,
+                    poor = colorScheme.error,
+                )
+            } else {
+                StatusColors(
+                    optimal = SuccessGreenLight,
+                    neutral = Color(0xFF0061A4), // M3 Blue 40
+                    warning = WarningOrangeLight,
+                    poor = colorScheme.error,
+                )
+            }
         }
-    }
 
     val baseExtended =
         if (darkTheme) {
@@ -188,7 +188,7 @@ fun FitDashboardTheme(
 
     CompositionLocalProvider(
         LocalExtendedColors provides extendedColors,
-        LocalStatusColors provides semanticColors
+        LocalStatusColors provides semanticColors,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

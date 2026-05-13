@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 interface HrvDao {
     @Query("SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
     fun _observeSince(fromMs: Long): Flow<List<HrvRecordEntity>>
+
     fun observeSince(fromMs: Long): Flow<List<HrvRecordEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
     @Query(
@@ -19,7 +20,9 @@ interface HrvDao {
             "ORDER BY timestampMs ASC",
     )
     fun _observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordEntity>>
-    fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordEntity>> = _observeSleepHrvSince(fromMs).distinctUntilChanged()
+
+    fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordEntity>> =
+        _observeSleepHrvSince(fromMs).distinctUntilChanged()
 
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +
@@ -31,7 +34,10 @@ interface HrvDao {
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +
             "ORDER BY timestampMs DESC LIMIT :limit",
     )
-    suspend fun getSleepRmssdValuesSince(fromMs: Long, limit: Int): List<Float>
+    suspend fun getSleepRmssdValuesSince(
+        fromMs: Long,
+        limit: Int,
+    ): List<Float>
 
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId = :sessionId",
@@ -43,7 +49,14 @@ interface HrvDao {
     )
     suspend fun getSleepRmssdForSessionsMap(
         sessionIds: List<String>,
-    ): Map<@MapColumn(columnName = "sessionId") String, List<@MapColumn(columnName = "rmssdMs") Float>>
+    ): Map<
+        @MapColumn(columnName = "sessionId")
+        String,
+        List<
+            @MapColumn(columnName = "rmssdMs")
+            Float,
+        >,
+    >
 
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId IN (:sessionIds)",
@@ -53,7 +66,10 @@ interface HrvDao {
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE timestampMs >= :fromMs AND timestampMs <= :toMs",
     )
-    suspend fun getRmssdInTimeRange(fromMs: Long, toMs: Long): List<Float>
+    suspend fun getRmssdInTimeRange(
+        fromMs: Long,
+        toMs: Long,
+    ): List<Float>
 
     @Upsert
     suspend fun upsertAll(records: List<HrvRecordEntity>)

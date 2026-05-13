@@ -146,6 +146,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     // Vico charts
+    implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
 
     // Google Drive backup

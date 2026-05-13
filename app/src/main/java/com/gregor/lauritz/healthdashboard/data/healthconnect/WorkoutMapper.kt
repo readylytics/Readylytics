@@ -3,7 +3,6 @@ package com.gregor.lauritz.healthdashboard.data.healthconnect
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
-import kotlin.math.roundToInt
 
 object WorkoutMapper {
     private val ZONE_WEIGHTS = floatArrayOf(1f, 2f, 3f, 4f, 5f)
@@ -13,7 +12,7 @@ object WorkoutMapper {
         z1Max: Int = 114,
         z2Max: Int = 133,
         z3Max: Int = 152,
-        z4Max: Int = 171
+        z4Max: Int = 171,
     ): IntArray =
         intArrayOf(
             z1Min,
@@ -40,7 +39,7 @@ object WorkoutMapper {
         session: ExerciseSessionRecord,
         hrSamples: List<HeartRateRecordEntity>,
         thresholds: IntArray,
-        trimp: Float = 0f
+        trimp: Float = 0f,
     ): WorkoutRecordEntity {
         val zoneMinutes = FloatArray(5)
 
@@ -50,11 +49,12 @@ object WorkoutMapper {
                 .sortedBy { it.timestampMs }
 
         sessionSamples.forEachIndexed { index, sample ->
-            val nextMs = if (index < sessionSamples.lastIndex) {
-                sessionSamples[index + 1].timestampMs
-            } else {
-                session.endTime.toEpochMilli()
-            }
+            val nextMs =
+                if (index < sessionSamples.lastIndex) {
+                    sessionSamples[index + 1].timestampMs
+                } else {
+                    session.endTime.toEpochMilli()
+                }
             val durationMinutes = (nextMs - sample.timestampMs) / 60_000f
             val zone = zoneIndex(sample.beatsPerMinute, thresholds)
             if (zone >= 0) {
@@ -64,11 +64,12 @@ object WorkoutMapper {
 
         val durationMinutes = ((session.endTime.toEpochMilli() - session.startTime.toEpochMilli()) / 60_000L).toInt()
 
-        val avgHr = if (sessionSamples.isNotEmpty()) {
-            sessionSamples.map { it.beatsPerMinute }.average().toFloat()
-        } else {
-            0f
-        }
+        val avgHr =
+            if (sessionSamples.isNotEmpty()) {
+                sessionSamples.map { it.beatsPerMinute }.average().toFloat()
+            } else {
+                0f
+            }
 
         return WorkoutRecordEntity(
             id = session.metadata.id,

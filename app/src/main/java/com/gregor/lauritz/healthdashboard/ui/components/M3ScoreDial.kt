@@ -81,11 +81,12 @@ fun M3ScoreDial(
             trackColor = trackColor,
         )
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            val textStyle = if (scoreText.length >= 5) {
-                MaterialTheme.typography.headlineMedium
-            } else {
-                MaterialTheme.typography.displaySmall
-            }
+            val textStyle =
+                if (scoreText.length >= 5) {
+                    MaterialTheme.typography.headlineMedium
+                } else {
+                    MaterialTheme.typography.displaySmall
+                }
             Text(
                 text = scoreText,
                 style = textStyle,

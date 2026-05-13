@@ -1,27 +1,16 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -33,34 +22,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
-import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
-import com.gregor.lauritz.healthdashboard.domain.scoring.toStatus
-import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
 import com.gregor.lauritz.healthdashboard.ui.components.CardManagementBottomSheet
-import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
-import com.gregor.lauritz.healthdashboard.ui.components.EditModeIndicator
-import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
-import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
-import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
 import com.gregor.lauritz.healthdashboard.ui.components.ReorderableCardGrid
-import com.gregor.lauritz.healthdashboard.ui.components.StepsBar
-import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
-import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.StatusLegend
-import com.gregor.lauritz.healthdashboard.ui.components.containerColor
-import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun DashboardRoute(
@@ -128,9 +98,10 @@ fun DashboardScreen(
     ) {
         item(key = "date_switcher") {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
             ) {
                 DateSwitcher(
                     selectedDate = uiState.selectedDate,
@@ -144,9 +115,10 @@ fun DashboardScreen(
         if (uiState.isCalibrating) {
             item(key = "calibration_banner") {
                 CalibrationBanner(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
         }
@@ -155,9 +127,9 @@ fun DashboardScreen(
             item(key = "no_data_placeholder") {
                 Box(
                     modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 48.dp),
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 48.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -171,14 +143,15 @@ fun DashboardScreen(
             item(key = "metric_grid") {
                 ReorderableCardGrid(
                     cardConfigurations = uiState.cardConfigurations,
-                    cardDataMap = buildCardDataMap(
-                        uiState = uiState,
-                        onNavigateToSleep = onNavigateToSleep,
-                        onNavigateToWorkouts = onNavigateToWorkouts,
-                        onNavigateToRhr = onNavigateToRhr,
-                        onNavigateToSteps = onNavigateToSteps,
-                        isEditing = uiState.isManagingCards,
-                    ),
+                    cardDataMap =
+                        buildCardDataMap(
+                            uiState = uiState,
+                            onNavigateToSleep = onNavigateToSleep,
+                            onNavigateToWorkouts = onNavigateToWorkouts,
+                            onNavigateToRhr = onNavigateToRhr,
+                            onNavigateToSteps = onNavigateToSteps,
+                            isEditing = uiState.isManagingCards,
+                        ),
                     isEditing = uiState.isManagingCards,
                     onCardRemove = { cardId ->
                         onCardVisibilityChanged(cardId, false)
@@ -197,9 +170,10 @@ fun DashboardScreen(
 
         item(key = "customize_button") {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 TextButton(

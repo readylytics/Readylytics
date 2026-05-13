@@ -5,7 +5,8 @@ import java.time.ZoneId
 
 fun Long.truncateToDayMs(): Long {
     val zoneId = ZoneId.systemDefault()
-    return Instant.ofEpochMilli(this)
+    return Instant
+        .ofEpochMilli(this)
         .atZone(zoneId)
         .toLocalDate()
         .atStartOfDay(zoneId)

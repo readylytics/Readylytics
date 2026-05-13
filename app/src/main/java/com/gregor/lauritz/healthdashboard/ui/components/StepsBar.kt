@@ -44,15 +44,18 @@ fun StepsBar(
             val barHeight = size.height
             val radius = barHeight / 2f
 
-            val clipPath = Path().apply {
-                addRoundRect(
-                    RoundRect(
-                        left = 0f, top = 0f,
-                        right = totalWidth, bottom = barHeight,
-                        cornerRadius = CornerRadius(radius),
+            val clipPath =
+                Path().apply {
+                    addRoundRect(
+                        RoundRect(
+                            left = 0f,
+                            top = 0f,
+                            right = totalWidth,
+                            bottom = barHeight,
+                            cornerRadius = CornerRadius(radius),
+                        ),
                     )
-                )
-            }
+                }
 
             clipPath(clipPath) {
                 drawRect(color = trackColor, topLeft = Offset(0f, 0f), size = Size(totalWidth, barHeight))

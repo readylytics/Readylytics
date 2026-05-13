@@ -20,19 +20,33 @@ class SettingsRepository
         private val dataStore: DataStore<UserPreferencesProto>,
     ) {
         private fun Int.toValidMaxHr() = coerceIn(100, 250)
+
         private fun Int.toValidAge() = coerceIn(1, 120)
+
         private fun Float.toValidHrvOptimal() = coerceIn(1.0f, 1.2f)
+
         private fun Float.toValidHrvWarning() = coerceIn(0.8f, 1.0f)
+
         private fun Float.toValidRhrOptimal() = coerceIn(0.8f, 1.0f)
+
         private fun Float.toValidRhrWarning() = coerceIn(1.0f, 1.2f)
+
         private fun Int.toValidRestMinutes() = coerceIn(0, 60)
+
         private fun Float.toValidPaiScaling() = coerceIn(0.1f, 0.3f)
+
         private fun Int.toValidStepGoal() = coerceIn(1000, 30000)
+
         private fun Int.toValidRetentionDays() = coerceIn(180, 1095)
+
         private fun Int.toValidConsistencyMinutes() = coerceIn(0, 90)
+
         private fun Int.toValidConsistencyDays() = coerceIn(3, 30)
+
         private fun Float.toValidBanisterMultiplier() = coerceIn(0.5f, 2.5f)
+
         private fun Float.toValidChengBeta() = coerceIn(0.04f, 0.12f)
+
         private fun Float.toValidItrimB() = coerceIn(1.0f, 4.5f)
 
         /**
@@ -105,10 +119,11 @@ class SettingsRepository
             z1Max: Float,
             z2Max: Float,
             z3Max: Float,
-            z4Max: Float
+            z4Max: Float,
         ) {
             dataStore.updateData {
-                it.toBuilder()
+                it
+                    .toBuilder()
                     .setZone1MinPercent(z1Min)
                     .setZone1MaxPercent(z1Max)
                     .setZone2MaxPercent(z2Max)
@@ -123,10 +138,11 @@ class SettingsRepository
             z1Max: Int,
             z2Max: Int,
             z3Max: Int,
-            z4Max: Int
+            z4Max: Int,
         ) {
             dataStore.updateData {
-                it.toBuilder()
+                it
+                    .toBuilder()
                     .setZone1MinBpm(z1Min)
                     .setZone1MaxBpm(z1Max)
                     .setZone2MaxBpm(z2Max)
@@ -140,14 +156,19 @@ class SettingsRepository
             dataStore.updateData { it.toBuilder().setAge(age.toValidAge()).build() }
         }
 
-        suspend fun updateBirthday(day: Int, month: Int, year: Int) {
+        suspend fun updateBirthday(
+            day: Int,
+            month: Int,
+            year: Int,
+        ) {
             val safeDay = day.coerceIn(1, 31)
             val safeMonth = month.coerceIn(1, 12)
             val safeYear = year.coerceIn(1900, LocalDate.now().year)
 
             dataStore.updateData {
                 val age = Period.between(LocalDate.of(safeYear, safeMonth, safeDay), LocalDate.now()).years
-                it.toBuilder()
+                it
+                    .toBuilder()
                     .setBirthDay(safeDay)
                     .setBirthMonth(safeMonth)
                     .setBirthYear(safeYear)
@@ -191,7 +212,13 @@ class SettingsRepository
         }
 
         suspend fun updateConsistencyThresholdMinutes(minutes: Int) {
-            dataStore.updateData { it.toBuilder().setConsistencyThresholdMinutes(minutes.toValidConsistencyMinutes()).build() }
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setConsistencyThresholdMinutes(
+                        minutes.toValidConsistencyMinutes(),
+                    ).build()
+            }
         }
 
         suspend fun updateConsistencyEvaluationDays(days: Int) {
@@ -245,7 +272,8 @@ class SettingsRepository
         suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) {
             val newPaiFactor = PaiCalculator.getDefaultPaiScalingFactor(profile)
             dataStore.updateData {
-                it.toBuilder()
+                it
+                    .toBuilder()
                     .setPhysiologyProfile(PhysiologyProfileProto.valueOf("PROFILE_${profile.name}"))
                     .setPaiScalingFactor(newPaiFactor)
                     .setPaiCalibration(profile.banisterMultiplier)
@@ -257,13 +285,15 @@ class SettingsRepository
 
         suspend fun updateTrimpModel(model: TrimpModel) {
             dataStore.updateData {
-                it.toBuilder().setTrimpMethod(
-                    when (model) {
-                        TrimpModel.BANISTER -> TrimpMethodProto.TRIMP_BANISTER
-                        TrimpModel.I_TRIMP -> TrimpMethodProto.TRIMP_ITRIMP
-                        TrimpModel.CHENG -> TrimpMethodProto.TRIMP_CHENG
-                    }
-                ).build()
+                it
+                    .toBuilder()
+                    .setTrimpMethod(
+                        when (model) {
+                            TrimpModel.BANISTER -> TrimpMethodProto.TRIMP_BANISTER
+                            TrimpModel.I_TRIMP -> TrimpMethodProto.TRIMP_ITRIMP
+                            TrimpModel.CHENG -> TrimpMethodProto.TRIMP_CHENG
+                        },
+                    ).build()
             }
         }
 
@@ -280,7 +310,13 @@ class SettingsRepository
         }
 
         suspend fun updateInstallDate(date: LocalDate) {
-            dataStore.updateData { it.toBuilder().setInstallDate(date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()).build() }
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setInstallDate(
+                        date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                    ).build()
+            }
         }
 
         suspend fun initializeInstallDateIfUnset() {
@@ -299,7 +335,8 @@ class SettingsRepository
 
         suspend fun updateSyncPreference(pref: SyncPreference) {
             dataStore.updateData {
-                it.toBuilder()
+                it
+                    .toBuilder()
                     .setSyncPreference(SyncPreferenceProto.valueOf("SYNC_${pref.name}"))
                     .build()
             }
@@ -339,7 +376,8 @@ class SettingsRepository
 
         suspend fun updateBackupSchedule(schedule: BackupSchedule) {
             dataStore.updateData {
-                it.toBuilder()
+                it
+                    .toBuilder()
                     .setBackupSchedule(BackupScheduleProto.valueOf("BACKUP_${schedule.name}"))
                     .build()
             }
@@ -351,7 +389,8 @@ class SettingsRepository
 
         suspend fun updateAppTheme(theme: AppTheme) {
             dataStore.updateData {
-                it.toBuilder()
+                it
+                    .toBuilder()
                     .setAppTheme(AppThemeProto.valueOf("THEME_${theme.name}"))
                     .build()
             }

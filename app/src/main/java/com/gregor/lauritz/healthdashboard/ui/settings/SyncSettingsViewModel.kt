@@ -10,63 +10,66 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class SyncSettingsViewModel @Inject constructor(
-    private val settingsRepo: SettingsRepository,
-    private val healthSyncUseCase: HealthSyncUseCase,
-    private val resyncHealthConnectUseCase: ResyncHealthConnectUseCase,
-) : ViewModel() {
+class SyncSettingsViewModel
+    @Inject
+    constructor(
+        private val settingsRepo: SettingsRepository,
+        private val healthSyncUseCase: HealthSyncUseCase,
+        private val resyncHealthConnectUseCase: ResyncHealthConnectUseCase,
+    ) : ViewModel() {
+        private val _isResyncing = MutableStateFlow(false)
+        val isResyncing: StateFlow<Boolean> = _isResyncing.asStateFlow()
 
-    private val _isResyncing = MutableStateFlow(false)
+        // Internal property to allow overriding in tests
+        var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
 
-    // Internal property to allow overriding in tests
-    var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
-
-    val uiState: StateFlow<SyncSettingsState> by lazy {
-        combine(
-            settingsRepo.userPreferences,
-            _isResyncing
-        ) { prefs, isResyncing ->
-            SyncSettingsState(
-                syncPreference = prefs.syncPreference,
-                syncIntervalHours = prefs.syncIntervalHours,
-                isResyncing = isResyncing
+        val uiState: StateFlow<SyncSettingsState> by lazy {
+            combine(
+                settingsRepo.userPreferences,
+                _isResyncing,
+            ) { prefs, isResyncing ->
+                SyncSettingsState(
+                    syncPreference = prefs.syncPreference,
+                    syncIntervalHours = prefs.syncIntervalHours,
+                    isResyncing = isResyncing,
+                )
+            }.stateIn(
+                scope = viewModelScope,
+                started = sharingStarted,
+                initialValue = SyncSettingsState(),
             )
-        }.stateIn(
-            scope = viewModelScope,
-            started = sharingStarted,
-            initialValue = SyncSettingsState()
-        )
-    }
+        }
 
-    fun onEvent(event: SettingsEvent) {
-        when (event) {
-            is SettingsEvent.SyncPreferenceChanged -> {
-                viewModelScope.launch {
-                    settingsRepo.updateSyncPreference(pref = event.pref)
-                    if (event.pref == SyncPreference.ALWAYS) {
-                        healthSyncUseCase.sync()
+        fun onEvent(event: SettingsEvent) {
+            when (event) {
+                is SettingsEvent.SyncPreferenceChanged -> {
+                    viewModelScope.launch {
+                        settingsRepo.updateSyncPreference(pref = event.pref)
+                        if (event.pref == SyncPreference.ALWAYS) {
+                            healthSyncUseCase.sync()
+                        }
                     }
                 }
-            }
-            is SettingsEvent.SyncIntervalChanged -> {
-                viewModelScope.launch {
-                    settingsRepo.updateSyncIntervalHours(hours = event.hours)
+                is SettingsEvent.SyncIntervalChanged -> {
+                    viewModelScope.launch {
+                        settingsRepo.updateSyncIntervalHours(hours = event.hours)
+                    }
                 }
-            }
-            SettingsEvent.ResyncHealthConnect -> {
-                viewModelScope.launch {
-                    _isResyncing.value = true
-                    resyncHealthConnectUseCase.execute()
-                    _isResyncing.value = false
+                SettingsEvent.ResyncHealthConnect -> {
+                    viewModelScope.launch {
+                        _isResyncing.value = true
+                        resyncHealthConnectUseCase.execute()
+                        _isResyncing.value = false
+                    }
                 }
+                else -> {}
             }
-            else -> {}
         }
     }
-}

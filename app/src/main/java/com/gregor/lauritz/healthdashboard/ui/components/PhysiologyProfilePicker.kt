@@ -9,14 +9,14 @@ fun PhysiologyProfilePicker(
     selectedProfile: PhysiologyProfile,
     onProfileSelected: (PhysiologyProfile) -> Unit,
     modifier: Modifier = Modifier,
-    label: String = "Activity Profile"
+    label: String = "Activity Profile",
 ) {
     val profileLabel: (PhysiologyProfile) -> String = { profile ->
         when (profile) {
-            PhysiologyProfile.ATHLETE      -> "Athlete (competitive / structured training)"
-            PhysiologyProfile.ACTIVE       -> "Active (regular exercise)"
-            PhysiologyProfile.GENERAL      -> "General population"
-            PhysiologyProfile.SEDENTARY    -> "Sedentary / low activity"
+            PhysiologyProfile.ATHLETE -> "Athlete (competitive / structured training)"
+            PhysiologyProfile.ACTIVE -> "Active (regular exercise)"
+            PhysiologyProfile.GENERAL -> "General population"
+            PhysiologyProfile.SEDENTARY -> "Sedentary / low activity"
             PhysiologyProfile.SHIFT_WORKER -> "Shift worker / irregular schedule"
         }
     }

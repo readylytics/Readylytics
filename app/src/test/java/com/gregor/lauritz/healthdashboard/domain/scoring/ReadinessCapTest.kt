@@ -49,8 +49,13 @@ class ReadinessCapTest {
     @Test
     fun `score already below cap is not lifted`() {
         // If the raw score is 30, overreaching cap of 70 must not raise it
-        val score = readiness(sRest = 20f, sleepScore = 20f, loadScore = 20f,
-                              flags = setOf(RecoveryFlag.OVERREACHING))
+        val score =
+            readiness(
+                sRest = 20f,
+                sleepScore = 20f,
+                loadScore = 20f,
+                flags = setOf(RecoveryFlag.OVERREACHING),
+            )
         assertTrue("Cap must not lift a low score, was $score", score <= 70f)
         // 0.4*20+0.3*20+0.3*20 = 20 → still 20 after cap
         assertEquals(20f, score, DELTA)
@@ -58,12 +63,13 @@ class ReadinessCapTest {
 
     @Test
     fun `non-capping flags do not affect readiness score`() {
-        val flagsOnly = setOf(
-            RecoveryFlag.CALIBRATING,
-            RecoveryFlag.HRV_MISSING,
-            RecoveryFlag.STAGES_MISSING,
-            RecoveryFlag.NADIR_DELAYED,
-        )
+        val flagsOnly =
+            setOf(
+                RecoveryFlag.CALIBRATING,
+                RecoveryFlag.HRV_MISSING,
+                RecoveryFlag.STAGES_MISSING,
+                RecoveryFlag.NADIR_DELAYED,
+            )
         assertEquals(baseUncapped, readiness(flags = flagsOnly), DELTA)
     }
 

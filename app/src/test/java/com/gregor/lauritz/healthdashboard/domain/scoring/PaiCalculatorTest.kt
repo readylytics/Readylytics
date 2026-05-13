@@ -5,7 +5,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PaiCalculatorTest {
-
     @Test
     fun `getDefaultPaiScalingFactor returns correct values for all profiles`() {
         assertEquals(0.15f, PaiCalculator.getDefaultPaiScalingFactor(PhysiologyProfile.ATHLETE), 0.001f)
@@ -98,7 +97,7 @@ class PaiCalculatorTest {
         val dailyPai = 10f
 
         assertEquals(10f, PaiCalculator.applyAccumulationMultiplier(dailyPai, 40f), 0.001f) // tier 1: 10×1.0
-        assertEquals(5f, PaiCalculator.applyAccumulationMultiplier(dailyPai, 60f), 0.001f)  // tier 2: 10×0.5
+        assertEquals(5f, PaiCalculator.applyAccumulationMultiplier(dailyPai, 60f), 0.001f) // tier 2: 10×0.5
         assertEquals(2.5f, PaiCalculator.applyAccumulationMultiplier(dailyPai, 110f), 0.001f) // tier 3: 10×0.25
     }
 
@@ -124,10 +123,10 @@ class PaiCalculatorTest {
         // Scenario: Some samples are high intensity (exercise), some are low (resting)
         // High intensity: 160 bpm -> TRIMP = 86.23 (as seen in other test)
         val exerciseTrimp = PaiCalculator.calculateDailyTrimp(duration, 160f, rhr, hrMax, gender)
-        
+
         // Low intensity: 64 bpm -> TRIMP = 0 (below RHR + 5 threshold)
         val restingTrimp = PaiCalculator.calculateDailyTrimp(duration, 64f, rhr, hrMax, gender)
-        
+
         assertEquals(0f, restingTrimp, 0.001f)
         assert(exerciseTrimp > 0f)
     }
@@ -145,11 +144,16 @@ class PaiCalculatorTest {
         // Td = 40 * 0.7692 * exp(2.1 * 0.7692) * 0.48
         // Td = 30.769 * 5.0295 * 0.48 = 74.28
 
-        val result = PaiCalculator.calculateDailyTrimp(
-            duration, hrAvg, rhr, hrMax, gender,
-            trimpModel = TrimpModel.I_TRIMP,
-            itrimB = itrimB
-        )
+        val result =
+            PaiCalculator.calculateDailyTrimp(
+                duration,
+                hrAvg,
+                rhr,
+                hrMax,
+                gender,
+                trimpModel = TrimpModel.I_TRIMP,
+                itrimB = itrimB,
+            )
         assertEquals(74.28f, result, 0.1f)
     }
 
@@ -164,10 +168,15 @@ class PaiCalculatorTest {
         // HRr = 0.7692 (Below LT=0.85)
         // Td = 40 * 0.7692 * 0.36 * 3.2 = 35.45
 
-        val result = PaiCalculator.calculateDailyTrimp(
-            duration, hrAvg, rhr, hrMax, gender,
-            trimpModel = TrimpModel.CHENG
-        )
+        val result =
+            PaiCalculator.calculateDailyTrimp(
+                duration,
+                hrAvg,
+                rhr,
+                hrMax,
+                gender,
+                trimpModel = TrimpModel.CHENG,
+            )
         assertEquals(35.45f, result, 0.1f)
     }
 
@@ -184,11 +193,16 @@ class PaiCalculatorTest {
         // Td = 40 * 0.9231 * 0.72 * exp(0.09 * 0.9231) * 3.2
         // Td = 26.585 * 1.0866 * 3.2 = 92.44
 
-        val result = PaiCalculator.calculateDailyTrimp(
-            duration, hrAvg, rhr, hrMax, gender,
-            trimpModel = TrimpModel.CHENG,
-            chengBeta = chengBeta
-        )
+        val result =
+            PaiCalculator.calculateDailyTrimp(
+                duration,
+                hrAvg,
+                rhr,
+                hrMax,
+                gender,
+                trimpModel = TrimpModel.CHENG,
+                chengBeta = chengBeta,
+            )
         assertEquals(92.44f, result, 0.1f)
     }
 }

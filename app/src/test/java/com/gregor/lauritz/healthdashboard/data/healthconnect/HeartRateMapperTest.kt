@@ -11,31 +11,32 @@ import org.junit.Test
 import java.time.Instant
 
 class HeartRateMapperTest {
-
     private val sleepStartMs = Instant.parse("2026-05-09T22:00:00Z").toEpochMilli()
     private val sleepEndMs = Instant.parse("2026-05-10T06:00:00Z").toEpochMilli()
-    private val sleepSession = SleepSessionEntity(
-        id = "sleep_1",
-        startTime = sleepStartMs,
-        endTime = sleepEndMs,
-        durationMinutes = 480,
-        efficiency = 0.9f,
-        deepSleepMinutes = 90,
-        remSleepMinutes = 120,
-        lightSleepMinutes = 240,
-        awakeMinutes = 30,
-    )
+    private val sleepSession =
+        SleepSessionEntity(
+            id = "sleep_1",
+            startTime = sleepStartMs,
+            endTime = sleepEndMs,
+            durationMinutes = 480,
+            efficiency = 0.9f,
+            deepSleepMinutes = 90,
+            remSleepMinutes = 120,
+            lightSleepMinutes = 240,
+            awakeMinutes = 30,
+        )
 
     // --- mapRestingToEntities ---
 
     @Test
     fun `mapRestingToEntities classifies record during sleep as SLEEP`() {
         val ts = Instant.parse("2026-05-10T02:00:00Z")
-        val record = mockk<RestingHeartRateRecord> {
-            every { metadata.id } returns "r1"
-            every { time } returns ts
-            every { beatsPerMinute } returns 55L
-        }
+        val record =
+            mockk<RestingHeartRateRecord> {
+                every { metadata.id } returns "r1"
+                every { time } returns ts
+                every { beatsPerMinute } returns 55L
+            }
 
         val result = HeartRateMapper.mapRestingToEntities(listOf(record), listOf(sleepSession))
 
@@ -49,11 +50,12 @@ class HeartRateMapperTest {
     @Test
     fun `mapRestingToEntities classifies record outside sleep as RESTING`() {
         val ts = Instant.parse("2026-05-09T12:00:00Z")
-        val record = mockk<RestingHeartRateRecord> {
-            every { metadata.id } returns "r2"
-            every { time } returns ts
-            every { beatsPerMinute } returns 60L
-        }
+        val record =
+            mockk<RestingHeartRateRecord> {
+                every { metadata.id } returns "r2"
+                every { time } returns ts
+                every { beatsPerMinute } returns 60L
+            }
 
         val result = HeartRateMapper.mapRestingToEntities(listOf(record), listOf(sleepSession))
 
@@ -72,10 +74,11 @@ class HeartRateMapperTest {
 
     @Test
     fun `mapToEntities handles empty samples list gracefully`() {
-        val record = mockk<HeartRateRecord> {
-            every { metadata.id } returns "rec_empty"
-            every { samples } returns emptyList()
-        }
+        val record =
+            mockk<HeartRateRecord> {
+                every { metadata.id } returns "rec_empty"
+                every { samples } returns emptyList()
+            }
 
         val result = HeartRateMapper.mapToEntities(listOf(record), emptyList(), emptyList())
 
@@ -89,22 +92,26 @@ class HeartRateMapperTest {
         val sample1Time = Instant.parse("2026-05-10T03:00:00Z")
         val sample2Time = Instant.parse("2026-05-10T01:00:00Z")
 
-        val sample1 = mockk<HeartRateRecord.Sample> {
-            every { time } returns sample1Time
-            every { beatsPerMinute } returns 60L
-        }
-        val sample2 = mockk<HeartRateRecord.Sample> {
-            every { time } returns sample2Time
-            every { beatsPerMinute } returns 65L
-        }
-        val recordA = mockk<HeartRateRecord> {
-            every { metadata.id } returns "recA"
-            every { samples } returns listOf(sample1)
-        }
-        val recordB = mockk<HeartRateRecord> {
-            every { metadata.id } returns "recB"
-            every { samples } returns listOf(sample2)
-        }
+        val sample1 =
+            mockk<HeartRateRecord.Sample> {
+                every { time } returns sample1Time
+                every { beatsPerMinute } returns 60L
+            }
+        val sample2 =
+            mockk<HeartRateRecord.Sample> {
+                every { time } returns sample2Time
+                every { beatsPerMinute } returns 65L
+            }
+        val recordA =
+            mockk<HeartRateRecord> {
+                every { metadata.id } returns "recA"
+                every { samples } returns listOf(sample1)
+            }
+        val recordB =
+            mockk<HeartRateRecord> {
+                every { metadata.id } returns "recB"
+                every { samples } returns listOf(sample2)
+            }
 
         val result = HeartRateMapper.mapToEntities(listOf(recordA, recordB), listOf(sleepSession), emptyList())
 
@@ -118,18 +125,21 @@ class HeartRateMapperTest {
     fun `mapToEntities generates unique IDs per sample using record id and timestamp`() {
         val t1 = Instant.parse("2026-05-10T02:00:00Z")
         val t2 = Instant.parse("2026-05-10T02:01:00Z")
-        val s1 = mockk<HeartRateRecord.Sample> {
-            every { time } returns t1
-            every { beatsPerMinute } returns 60L
-        }
-        val s2 = mockk<HeartRateRecord.Sample> {
-            every { time } returns t2
-            every { beatsPerMinute } returns 62L
-        }
-        val record = mockk<HeartRateRecord> {
-            every { metadata.id } returns "rec_1"
-            every { samples } returns listOf(s1, s2)
-        }
+        val s1 =
+            mockk<HeartRateRecord.Sample> {
+                every { time } returns t1
+                every { beatsPerMinute } returns 60L
+            }
+        val s2 =
+            mockk<HeartRateRecord.Sample> {
+                every { time } returns t2
+                every { beatsPerMinute } returns 62L
+            }
+        val record =
+            mockk<HeartRateRecord> {
+                every { metadata.id } returns "rec_1"
+                every { samples } returns listOf(s1, s2)
+            }
 
         val result = HeartRateMapper.mapToEntities(listOf(record), emptyList(), emptyList())
 
@@ -141,14 +151,16 @@ class HeartRateMapperTest {
     @Test
     fun `mapToEntities classifies sample outside any session as RESTING`() {
         val ts = Instant.parse("2026-05-09T14:00:00Z")
-        val sample = mockk<HeartRateRecord.Sample> {
-            every { time } returns ts
-            every { beatsPerMinute } returns 72L
-        }
-        val record = mockk<HeartRateRecord> {
-            every { metadata.id } returns "rec_r"
-            every { samples } returns listOf(sample)
-        }
+        val sample =
+            mockk<HeartRateRecord.Sample> {
+                every { time } returns ts
+                every { beatsPerMinute } returns 72L
+            }
+        val record =
+            mockk<HeartRateRecord> {
+                every { metadata.id } returns "rec_r"
+                every { samples } returns listOf(sample)
+            }
 
         val result = HeartRateMapper.mapToEntities(listOf(record), listOf(sleepSession), emptyList())
 

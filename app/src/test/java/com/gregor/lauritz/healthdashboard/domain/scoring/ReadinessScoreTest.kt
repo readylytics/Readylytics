@@ -12,11 +12,12 @@ class ReadinessScoreTest {
 
     @Test
     fun `readiness score is 100 for ideal inputs`() {
-        val score = calculator.computeReadinessScore(
-            sRest = 100f,
-            sleepScore = 100f,
-            loadScore = 100f,
-        )
+        val score =
+            calculator.computeReadinessScore(
+                sRest = 100f,
+                sleepScore = 100f,
+                loadScore = 100f,
+            )
         assertEquals(100f, score, DELTA)
     }
 
@@ -40,24 +41,26 @@ class ReadinessScoreTest {
     @Test
     fun `overreaching cap is applied when flag is present`() {
         // OVERREACHING flag → score capped at 70
-        val score = calculator.computeReadinessScore(
-            sRest = 100f,
-            sleepScore = 100f,
-            loadScore = 100f,
-            recoveryFlags = setOf(RecoveryFlag.OVERREACHING),
-        )
+        val score =
+            calculator.computeReadinessScore(
+                sRest = 100f,
+                sleepScore = 100f,
+                loadScore = 100f,
+                recoveryFlags = setOf(RecoveryFlag.OVERREACHING),
+            )
         assertEquals(70f, score, DELTA)
     }
 
     @Test
     fun `illness cap is applied when flag is present`() {
         // ILLNESS_ONSET flag → score capped at 50
-        val score = calculator.computeReadinessScore(
-            sRest = 100f,
-            sleepScore = 100f,
-            loadScore = 100f,
-            recoveryFlags = setOf(RecoveryFlag.ILLNESS_ONSET),
-        )
+        val score =
+            calculator.computeReadinessScore(
+                sRest = 100f,
+                sleepScore = 100f,
+                loadScore = 100f,
+                recoveryFlags = setOf(RecoveryFlag.ILLNESS_ONSET),
+            )
         assertEquals(50f, score, DELTA)
     }
 

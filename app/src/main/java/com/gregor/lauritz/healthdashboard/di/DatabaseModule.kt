@@ -31,36 +31,37 @@ object DatabaseModule {
         val dbFile = context.getDatabasePath("health_dashboard.db")
         sqlCipherKeyManager.migrateIfNeeded(dbFile)
 
-        val builder = Room.databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
-            .openHelperFactory(sqlCipherKeyManager.getOrCreateFactory())
-            .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-            .setQueryCoroutineContext(Dispatchers.IO)
-            .addMigrations(
-                HealthDatabase.MIGRATION_1_2,
-                HealthDatabase.MIGRATION_2_3,
-                HealthDatabase.MIGRATION_3_4,
-                HealthDatabase.MIGRATION_4_5,
-                HealthDatabase.MIGRATION_5_6,
-                HealthDatabase.MIGRATION_6_7,
-                HealthDatabase.MIGRATION_7_8,
-                HealthDatabase.MIGRATION_8_9,
-                HealthDatabase.MIGRATION_9_10,
-                HealthDatabase.MIGRATION_10_11,
-                HealthDatabase.MIGRATION_11_12,
-                HealthDatabase.MIGRATION_12_13,
-                HealthDatabase.MIGRATION_13_14,
-                HealthDatabase.MIGRATION_14_15,
-                HealthDatabase.MIGRATION_15_16,
-                HealthDatabase.MIGRATION_16_17,
-            )
-            .addCallback(
-                object : RoomDatabase.Callback() {
-                    override fun onOpen(db: SupportSQLiteDatabase) {
-                        super.onOpen(db)
-                        db.execSQL("PRAGMA synchronous = NORMAL")
-                    }
-                },
-            )
+        val builder =
+            Room
+                .databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
+                .openHelperFactory(sqlCipherKeyManager.getOrCreateFactory())
+                .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+                .setQueryCoroutineContext(Dispatchers.IO)
+                .addMigrations(
+                    HealthDatabase.MIGRATION_1_2,
+                    HealthDatabase.MIGRATION_2_3,
+                    HealthDatabase.MIGRATION_3_4,
+                    HealthDatabase.MIGRATION_4_5,
+                    HealthDatabase.MIGRATION_5_6,
+                    HealthDatabase.MIGRATION_6_7,
+                    HealthDatabase.MIGRATION_7_8,
+                    HealthDatabase.MIGRATION_8_9,
+                    HealthDatabase.MIGRATION_9_10,
+                    HealthDatabase.MIGRATION_10_11,
+                    HealthDatabase.MIGRATION_11_12,
+                    HealthDatabase.MIGRATION_12_13,
+                    HealthDatabase.MIGRATION_13_14,
+                    HealthDatabase.MIGRATION_14_15,
+                    HealthDatabase.MIGRATION_15_16,
+                    HealthDatabase.MIGRATION_16_17,
+                ).addCallback(
+                    object : RoomDatabase.Callback() {
+                        override fun onOpen(db: SupportSQLiteDatabase) {
+                            super.onOpen(db)
+                            db.execSQL("PRAGMA synchronous = NORMAL")
+                        }
+                    },
+                )
 
         return builder.build()
     }

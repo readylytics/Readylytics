@@ -10,29 +10,30 @@ object ScoringConstants {
     const val ACUTE_DAYS = 7L
     const val CHRONIC_DAYS = 42L
     const val BASELINE_DAYS = 30L
+
     // REF: Plews 2013b Sports Med 43:773; Kubios HRV — SD estimates require ≥30 readings; 60d is industry practice
     const val MATURE_DATA_TENURE_DAYS = 60
 
     // HRV baseline windowing — REF: Plews 2013; Buchheit 2014
-    const val HRV_MU_WINDOW_DAYS    = 7
+    const val HRV_MU_WINDOW_DAYS = 7
     const val HRV_SIGMA_WINDOW_DAYS = 56
     const val HRV_SIGMA_BLEND_MIN_N = 7
     const val HRV_SIGMA_BLEND_MAX_N = 60
 
     // Valid-night input bounds — REF: Clifford 2006; Task Force 1996
-    const val MIN_VALID_RMSSD_MS               = 5f
-    const val MAX_VALID_RMSSD_MS               = 250f
-    const val MIN_VALID_SLEEP_RHR              = 30f
-    const val MAX_VALID_SLEEP_RHR              = 100f
+    const val MIN_VALID_RMSSD_MS = 5f
+    const val MAX_VALID_RMSSD_MS = 250f
+    const val MIN_VALID_SLEEP_RHR = 30f
+    const val MAX_VALID_SLEEP_RHR = 100f
     const val MIN_VALID_SLEEP_DURATION_MINUTES = 240
 
     // Sleep-stage physiological plausibility bounds — wearables frequently report impossible values
     const val MAX_VALID_DEEP_FRACTION = 0.40f
-    const val MAX_VALID_REM_FRACTION  = 0.45f
-    const val MAX_VALID_DEEP_REM_SUM  = 0.70f
+    const val MAX_VALID_REM_FRACTION = 0.45f
+    const val MAX_VALID_DEEP_REM_SUM = 0.70f
 
     // HRV score piecewise saturation — REF: spec §4.2; Bellenger 2017 Front Physiol
-    const val HRV_SCORE_SATURATION_Z     = 1.5f
+    const val HRV_SCORE_SATURATION_Z = 1.5f
     const val HRV_SCORE_SATURATION_SLOPE = 0.25f
 
     object Workout {
@@ -52,8 +53,10 @@ object ScoringConstants {
 
     object Strain {
         const val OPTIMAL_SWEET_SPOT_SCORE = 100f
+
         // REF: Gabbett 2016 BJSM; Windt & Gabbett 2018 BJSM — upper bound widened from 1.2 to 1.3
         const val SR_SWEET_SPOT_MAX = 1.3f
+
         // Smooth quadratic decay for SR > sweet spot; no artificial floor — REF: A.4 review
         const val QUADRATIC_PENALTY_K = 2.5f
     }
@@ -82,13 +85,13 @@ object ScoringConstants {
         // Age-banded deep/REM saturation denominators
         // REF: Ohayon 2004 Sleep 27:1255; Boulos 2019 Lancet Respir Med 7:533
         const val DEEP_TARGET_UNDER_30 = 0.18f
-        const val DEEP_TARGET_30_49    = 0.16f
-        const val DEEP_TARGET_50_64    = 0.14f
-        const val DEEP_TARGET_65_PLUS  = 0.12f
-        const val REM_TARGET_UNDER_30  = 0.22f
-        const val REM_TARGET_30_49     = 0.21f
-        const val REM_TARGET_50_64     = 0.20f
-        const val REM_TARGET_65_PLUS   = 0.18f
+        const val DEEP_TARGET_30_49 = 0.16f
+        const val DEEP_TARGET_50_64 = 0.14f
+        const val DEEP_TARGET_65_PLUS = 0.12f
+        const val REM_TARGET_UNDER_30 = 0.22f
+        const val REM_TARGET_30_49 = 0.21f
+        const val REM_TARGET_50_64 = 0.20f
+        const val REM_TARGET_65_PLUS = 0.18f
 
         const val DURATION_OPTIMAL_RATIO = 0.9f
         const val DURATION_NEUTRAL_RATIO = 0.8f

@@ -7,13 +7,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class LegacyCardConfigurationSerializerTest {
-
     @Test
     fun serialize_validConfigurations_returnsJsonString() {
-        val configs = listOf(
-            CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),
-            CardConfiguration(CardId.READINESS, isVisible = false, position = 1),
-        )
+        val configs =
+            listOf(
+                CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),
+                CardConfiguration(CardId.READINESS, isVisible = false, position = 1),
+            )
 
         val json = LegacyCardConfigurationSerializer.serialize(configs)
 
@@ -30,7 +30,11 @@ class LegacyCardConfigurationSerializerTest {
 
     @Test
     fun deserialize_validJson_returnsCardConfigurations() {
-        val json = """[{"cardId":"SLEEP_SCORE","isVisible":true,"position":0},{"cardId":"READINESS","isVisible":false,"position":1}]"""
+        val json =
+            """
+                |[{"cardId":"SLEEP_SCORE","isVisible":true,"position":0},
+                |{"cardId":"READINESS","isVisible":false,"position":1}]
+            """.trimMargin()
 
         val result = LegacyCardConfigurationSerializer.deserialize(json)
 
@@ -67,11 +71,12 @@ class LegacyCardConfigurationSerializerTest {
 
     @Test
     fun roundTrip_serializeAndDeserialize_preservesData() {
-        val original = listOf(
-            CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),
-            CardConfiguration(CardId.HRV, isVisible = false, position = 1),
-            CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 2),
-        )
+        val original =
+            listOf(
+                CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),
+                CardConfiguration(CardId.HRV, isVisible = false, position = 1),
+                CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 2),
+            )
 
         val json = LegacyCardConfigurationSerializer.serialize(original)
         val deserialized = LegacyCardConfigurationSerializer.deserialize(json)

@@ -11,18 +11,19 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class MainScaffoldTest {
-
     @get:Rule
     val composeRule = createComposeRule()
 
     @Test
-    fun `navigation bar items exist`() {
+    fun navigationBarItemsExist() {
         composeRule.setContent {
             MainScaffold()
         }
 
         // Check if at least one tab exists (Dashboard is usually the first)
-        composeRule.onAllNodesWithContentDescription("Dashboard", substring = true).onFirst()
+        composeRule
+            .onAllNodesWithContentDescription("Dashboard", substring = true)
+            .onFirst()
             .assertIsEnabled()
     }
 }

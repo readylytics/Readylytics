@@ -9,9 +9,21 @@ class WorkoutDetailScreenTest {
         // This is equivalent to ceil(durationMinutes / 5.0)
         // Number of labels (including 0) is roughly (durationMinutes / spacing) + 1
 
-        val testCases = listOf(
-            5, 10, 15, 20, 25, 30, 45, 60, 90, 120, 300, 1440
-        )
+        val testCases =
+            listOf(
+                5,
+                10,
+                15,
+                20,
+                25,
+                30,
+                45,
+                60,
+                90,
+                120,
+                300,
+                1440,
+            )
 
         testCases.forEach { durationMinutes ->
             val spacing = maxOf(1, (durationMinutes + 4) / 5)

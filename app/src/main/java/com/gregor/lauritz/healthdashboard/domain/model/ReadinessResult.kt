@@ -57,14 +57,15 @@ data class ReadinessResult(
     )
 
     companion object {
-        val EMPTY: ReadinessResult = ReadinessResult(
-            readinessScore = null,
-            sleepScore = null,
-            loadScore = null,
-            sRest = null,
-            recoveryFlags = emptySet(),
-            contributors = Contributors(),
-            diagnostics = Diagnostics(),
-        )
+        val EMPTY: ReadinessResult =
+            ReadinessResult(
+                readinessScore = null,
+                sleepScore = null,
+                loadScore = null,
+                sRest = null,
+                recoveryFlags = emptySet(),
+                contributors = Contributors(),
+                diagnostics = Diagnostics(),
+            )
     }
 }

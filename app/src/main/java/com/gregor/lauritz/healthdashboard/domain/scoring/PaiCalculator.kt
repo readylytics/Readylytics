@@ -2,19 +2,16 @@ package com.gregor.lauritz.healthdashboard.domain.scoring
 
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import kotlin.math.exp
-import kotlin.math.pow
 
 object PaiCalculator {
-
-    fun getDefaultPaiScalingFactor(profile: PhysiologyProfile): Float {
-        return when (profile) {
+    fun getDefaultPaiScalingFactor(profile: PhysiologyProfile): Float =
+        when (profile) {
             PhysiologyProfile.ATHLETE -> 0.15f
             PhysiologyProfile.ACTIVE -> 0.18f
             PhysiologyProfile.GENERAL -> 0.20f
             PhysiologyProfile.SEDENTARY -> 0.25f
             PhysiologyProfile.SHIFT_WORKER -> 0.20f
         }
-    }
 
     /**
      * Phase III: Daily TRIMP Calculation using the selected training load model.
@@ -51,11 +48,12 @@ object PaiCalculator {
                 // K1 = 0.006/sec (0.36/min), K2 = 0.012/sec (0.72/min)
                 // REF: paiesque reference
                 val ltThreshold = 0.85f
-                val weight = if (hrR < ltThreshold) {
-                    0.36f // Linear weight below LT
-                } else {
-                    0.72f * exp(chengBeta * hrR) // Exponential weight at/above LT
-                }
+                val weight =
+                    if (hrR < ltThreshold) {
+                        0.36f // Linear weight below LT
+                    } else {
+                        0.72f * exp(chengBeta * hrR) // Exponential weight at/above LT
+                    }
                 durationMinutes * hrR * weight * 3.2f
             }
             TrimpModel.I_TRIMP -> {
@@ -71,7 +69,7 @@ object PaiCalculator {
      */
     fun calculateDailyPai(
         dailyTrimp: Float,
-        scalingFactor: Float
+        scalingFactor: Float,
     ): Float {
         val paiD = dailyTrimp * scalingFactor
         return paiD.coerceAtMost(75f) // Daily Cap
@@ -81,7 +79,10 @@ object PaiCalculator {
      * Phase IV.B: Non-Linear Accumulation (Logarithmic Decay)
      * Splits daily PAI across tier boundaries instead of applying a single multiplier.
      */
-    fun applyAccumulationMultiplier(dailyPai: Float, totalPaiSoFar: Float): Float {
+    fun applyAccumulationMultiplier(
+        dailyPai: Float,
+        totalPaiSoFar: Float,
+    ): Float {
         if (dailyPai <= 0f) return 0f
         var remaining = dailyPai
         var accumulated = totalPaiSoFar
@@ -89,12 +90,16 @@ object PaiCalculator {
         // Tier 1: 0–50 → 1.0×
         if (accumulated < ScoringConstants.Pai.TIER1_THRESHOLD) {
             val used = remaining.coerceAtMost(ScoringConstants.Pai.TIER1_THRESHOLD - accumulated)
-            result += used; accumulated += used; remaining -= used
+            result += used
+            accumulated += used
+            remaining -= used
         }
         // Tier 2: 50–100 → 0.5×
         if (remaining > 0f && accumulated < ScoringConstants.Pai.TIER2_THRESHOLD) {
             val used = remaining.coerceAtMost(ScoringConstants.Pai.TIER2_THRESHOLD - accumulated)
-            result += used * ScoringConstants.Pai.TIER2_MULTIPLIER; accumulated += used; remaining -= used
+            result += used * ScoringConstants.Pai.TIER2_MULTIPLIER
+            accumulated += used
+            remaining -= used
         }
         // Tier 3: 100+ → 0.25×
         if (remaining > 0f) result += remaining * ScoringConstants.Pai.TIER3_MULTIPLIER
@@ -104,7 +109,10 @@ object PaiCalculator {
     /**
      * Phase IV.C: Readiness Integration
      */
-    fun adjustForReadiness(paiD: Float, readinessScore: Float?): Float {
+    fun adjustForReadiness(
+        paiD: Float,
+        readinessScore: Float?,
+    ): Float {
         if (readinessScore == null) return paiD
         return paiD * (readinessScore / 100f)
     }

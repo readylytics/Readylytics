@@ -5,7 +5,7 @@ package com.gregor.lauritz.healthdashboard.domain.circadian
  * Ensures threshold is within safe physiological bounds: 0-90 minutes.
  */
 data class CircadianThresholdValue(
-    val minutes: Int
+    val minutes: Int,
 ) {
     init {
         require(minutes in VALID_RANGE) {
@@ -29,14 +29,14 @@ data class CircadianThresholdValue(
             } else {
                 runCatching { CircadianThresholdValue(minutes) }
             }
-        
+
         /**
          * Create with validation and error recovery.
          * Returns nearest valid value if input is out of range.
          */
         fun createOrClamp(minutes: Int?): CircadianThresholdValue? =
-            minutes?.let { 
-                CircadianThresholdValue(it.coerceIn(VALID_RANGE)) 
+            minutes?.let {
+                CircadianThresholdValue(it.coerceIn(VALID_RANGE))
             }
     }
 }

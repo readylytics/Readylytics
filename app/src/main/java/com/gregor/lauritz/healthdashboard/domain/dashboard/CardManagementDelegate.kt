@@ -35,10 +35,11 @@ class CardManagementDelegate(
         cardConfigRepository.updateDashboardCardConfigurations(updated)
     }
 
-    fun onResetToDefaults() = viewModelScope.launch {
-        val defaults = com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults.DEFAULT_DASHBOARD_CARDS
-        cardConfigRepository.updateDashboardCardConfigurations(defaults)
-    }
+    fun onResetToDefaults() =
+        viewModelScope.launch {
+            val defaults = com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults.DEFAULT_DASHBOARD_CARDS
+            cardConfigRepository.updateDashboardCardConfigurations(defaults)
+        }
 
     private fun toggleCardVisibility(
         cardConfigurations: List<CardConfiguration>,

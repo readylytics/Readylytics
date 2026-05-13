@@ -1,7 +1,5 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
-import com.gregor.lauritz.healthdashboard.domain.model.ReadinessResult
-
 @Deprecated(
     message = "Use ReadinessResult.Diagnostics instead.",
     replaceWith = ReplaceWith("ReadinessResult.Diagnostics"),

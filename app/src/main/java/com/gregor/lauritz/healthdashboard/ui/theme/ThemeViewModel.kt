@@ -7,8 +7,10 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 @HiltViewModel
-class ThemeViewModel @Inject constructor(
-    private val settingsRepo: SettingsRepository
-) : ViewModel() {
-    val dynamicColorFlow: Flow<Boolean> = settingsRepo.dynamicColorEnabled
-}
+class ThemeViewModel
+    @Inject
+    constructor(
+        private val settingsRepo: SettingsRepository,
+    ) : ViewModel() {
+        val dynamicColorFlow: Flow<Boolean> = settingsRepo.dynamicColorEnabled
+    }

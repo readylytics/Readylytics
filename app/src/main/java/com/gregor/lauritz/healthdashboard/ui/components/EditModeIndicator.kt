@@ -26,30 +26,32 @@ fun EditModeIndicator(
     modifier: Modifier = Modifier,
 ) {
     val backgroundColor by animateColorAsState(
-        targetValue = if (isEditing) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant
-        },
-        label = "Edit mode background"
+        targetValue =
+            if (isEditing) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
+        label = "Edit mode background",
     )
 
     val contentColor by animateColorAsState(
-        targetValue = if (isEditing) {
-            MaterialTheme.colorScheme.onPrimaryContainer
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-        },
-        label = "Edit mode content"
+        targetValue =
+            if (isEditing) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        label = "Edit mode content",
     )
 
     Row(
-        modifier = modifier
-            .background(
-                color = backgroundColor,
-                shape = RoundedCornerShape(20.dp)
-            )
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier =
+            modifier
+                .background(
+                    color = backgroundColor,
+                    shape = RoundedCornerShape(20.dp),
+                ).padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

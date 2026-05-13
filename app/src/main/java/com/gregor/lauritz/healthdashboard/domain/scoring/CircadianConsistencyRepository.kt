@@ -2,8 +2,8 @@ package com.gregor.lauritz.healthdashboard.domain.scoring
 
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -21,7 +21,9 @@ private const val NAP_THRESHOLD_MINUTES = 180
 
 sealed class CircadianConsistencyResult {
     data object Calibrating : CircadianConsistencyResult()
+
     data object MissingData : CircadianConsistencyResult()
+
     data class Ready(
         val score: Float,
         val medianBedtimeMinutes: Int,
@@ -34,12 +36,13 @@ fun CircadianConsistencyResult.toStatus(): MetricStatus =
     when (this) {
         is CircadianConsistencyResult.Calibrating -> MetricStatus.CALIBRATING
         is CircadianConsistencyResult.MissingData -> MetricStatus.CALIBRATING
-        is CircadianConsistencyResult.Ready -> when {
-            score >= 80f -> MetricStatus.OPTIMAL
-            score >= 60f -> MetricStatus.NEUTRAL
-            score >= 40f -> MetricStatus.WARNING
-            else -> MetricStatus.POOR
-        }
+        is CircadianConsistencyResult.Ready ->
+            when {
+                score >= 80f -> MetricStatus.OPTIMAL
+                score >= 60f -> MetricStatus.NEUTRAL
+                score >= 40f -> MetricStatus.WARNING
+                else -> MetricStatus.POOR
+            }
     }
 
 fun Int.toTimeString(): String {
@@ -59,9 +62,12 @@ class CircadianConsistencyRepository
         @OptIn(ExperimentalCoroutinesApi::class)
         fun resultFor(anchorDate: LocalDate): Flow<CircadianConsistencyResult> =
             settingsRepo.userPreferences.flatMapLatest { prefs ->
-                val anchorMs = anchorDate.plusDays(1)
-                    .atStartOfDay(ZoneId.systemDefault())
-                    .toInstant().toEpochMilli()
+                val anchorMs =
+                    anchorDate
+                        .plusDays(1)
+                        .atStartOfDay(ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli()
                 val fromMs = anchorMs - 60L * 24 * 60 * 60 * 1000L
                 sleepSessionDao.observeSince(fromMs).map { sessions ->
                     val filtered = sessions.filter { it.endTime < anchorMs }
@@ -89,9 +95,11 @@ class CircadianConsistencyRepository
                 return CircadianConsistencyResult.Calibrating
             }
 
-            val startOfDayMs = anchorDate
-                .atStartOfDay(ZoneId.systemDefault())
-                .toInstant().toEpochMilli()
+            val startOfDayMs =
+                anchorDate
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
             val latestSessionEndTime = validSessions.firstOrNull()?.endTime
             if (latestSessionEndTime == null || latestSessionEndTime < startOfDayMs) {
                 return CircadianConsistencyResult.MissingData

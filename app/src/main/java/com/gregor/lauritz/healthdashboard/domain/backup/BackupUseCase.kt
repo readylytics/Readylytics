@@ -65,9 +65,11 @@ class BackupUseCase
                         settingsRepo.updateLastBackupTimestamp(System.currentTimeMillis())
 
                         // Prune old backups, keeping the one we just uploaded plus one previous version
-                        val existing = driveRepository.listBackupFiles(accessToken)
-                            .filter { it.id != uploadedId }
-                            .sortedByDescending { it.name }
+                        val existing =
+                            driveRepository
+                                .listBackupFiles(accessToken)
+                                .filter { it.id != uploadedId }
+                                .sortedByDescending { it.name }
                         existing.drop(1).forEach { driveRepository.deleteFile(accessToken, it.id) }
                     } finally {
                         tempDir.deleteRecursively()

@@ -1,6 +1,5 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
-import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 
 enum class BackupSchedule { MANUAL, DAILY, WEEKLY }
@@ -118,11 +117,12 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         installDate = installDate,
         circadianThresholdOverride = if (hasCircadianThresholdOverride()) circadianThresholdOverride else null,
         dynamicColorEnabled = dynamicColorEnabled,
-        trimpModel = when (trimpMethod) {
-            TrimpMethodProto.TRIMP_ITRIMP -> TrimpModel.I_TRIMP
-            TrimpMethodProto.TRIMP_CHENG -> TrimpModel.CHENG
-            else -> TrimpModel.BANISTER
-        },
+        trimpModel =
+            when (trimpMethod) {
+                TrimpMethodProto.TRIMP_ITRIMP -> TrimpModel.I_TRIMP
+                TrimpMethodProto.TRIMP_CHENG -> TrimpModel.CHENG
+                else -> TrimpModel.BANISTER
+            },
         banisterMultiplier = if (paiCalibration > 0f) paiCalibration else profile.banisterMultiplier,
         chengBeta = if (this.chengBeta > 0f) this.chengBeta else profile.defaultChengBeta,
         itrimB = if (itrimpB > 0f) itrimpB else profile.defaultItrimB,

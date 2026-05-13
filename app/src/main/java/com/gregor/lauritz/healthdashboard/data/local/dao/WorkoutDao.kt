@@ -15,6 +15,7 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM workout_records WHERE startTime >= :fromMs ORDER BY startTime DESC")
     fun _observeSince(fromMs: Long): Flow<List<WorkoutRecordEntity>>
+
     fun observeSince(fromMs: Long): Flow<List<WorkoutRecordEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
     @Query(
@@ -42,7 +43,7 @@ interface WorkoutDao {
     suspend fun getDailyTrimp(
         fromMs: Long,
         toMs: Long,
-        tzOffsetMs: Long
+        tzOffsetMs: Long,
     ): List<Float>
 
     @Query(
@@ -54,19 +55,35 @@ interface WorkoutDao {
         fromMs: Long,
         toMs: Long,
         tzOffsetMs: Long,
-    ): Map<@MapColumn(columnName = "epochDay") Long, @MapColumn(columnName = "dailyTrimp") Float>
+    ): Map<
+        @MapColumn(columnName = "epochDay")
+        Long,
+        @MapColumn(columnName = "dailyTrimp")
+        Float,
+    >
 
     @Query("SELECT * FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs ORDER BY startTime ASC")
-    suspend fun getWorkoutsInRange(fromMs: Long, toMs: Long): List<WorkoutRecordEntity>
+    suspend fun getWorkoutsInRange(
+        fromMs: Long,
+        toMs: Long,
+    ): List<WorkoutRecordEntity>
 
     @Query("SELECT MIN(startTime) FROM workout_records")
     suspend fun getEarliestWorkoutTimestamp(): Long?
 
     @Query("SELECT SUM(durationMinutes) FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs")
-    suspend fun getTotalDurationMinutes(fromMs: Long, toMs: Long): Int?
+    suspend fun getTotalDurationMinutes(
+        fromMs: Long,
+        toMs: Long,
+    ): Int?
 
-    @Query("SELECT SUM(avgHr * durationMinutes) / CAST(SUM(durationMinutes) AS FLOAT) FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs AND durationMinutes > 0")
-    suspend fun getWeightedAvgHr(fromMs: Long, toMs: Long): Float?
+    @Query(
+        "SELECT SUM(avgHr * durationMinutes) / CAST(SUM(durationMinutes) AS FLOAT) FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs AND durationMinutes > 0",
+    )
+    suspend fun getWeightedAvgHr(
+        fromMs: Long,
+        toMs: Long,
+    ): Float?
 
     @Upsert
     suspend fun upsertAll(records: List<WorkoutRecordEntity>)

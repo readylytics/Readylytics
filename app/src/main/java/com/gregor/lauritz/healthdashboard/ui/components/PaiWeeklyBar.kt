@@ -36,12 +36,13 @@ fun PaiWeeklyBar(
     totalPai: Float,
     modifier: Modifier = Modifier,
 ) {
-    val status = when {
-        totalPai >= 100f -> MetricStatus.OPTIMAL
-        totalPai >= 75f -> MetricStatus.NEUTRAL
-        totalPai >= 50f -> MetricStatus.WARNING
-        else -> MetricStatus.POOR
-    }
+    val status =
+        when {
+            totalPai >= 100f -> MetricStatus.OPTIMAL
+            totalPai >= 75f -> MetricStatus.NEUTRAL
+            totalPai >= 50f -> MetricStatus.WARNING
+            else -> MetricStatus.POOR
+        }
     val fillColor = status.gaugeColor()
     val trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
@@ -55,15 +56,18 @@ fun PaiWeeklyBar(
             val barHeight = size.height
             val radius = barHeight / 2f
 
-            val clipPath = Path().apply {
-                addRoundRect(
-                    RoundRect(
-                        left = 0f, top = 0f,
-                        right = totalWidth, bottom = barHeight,
-                        cornerRadius = CornerRadius(radius),
+            val clipPath =
+                Path().apply {
+                    addRoundRect(
+                        RoundRect(
+                            left = 0f,
+                            top = 0f,
+                            right = totalWidth,
+                            bottom = barHeight,
+                            cornerRadius = CornerRadius(radius),
+                        ),
                     )
-                )
-            }
+                }
 
             clipPath(clipPath) {
                 drawRect(color = trackColor, topLeft = Offset(0f, 0f), size = Size(totalWidth, barHeight))

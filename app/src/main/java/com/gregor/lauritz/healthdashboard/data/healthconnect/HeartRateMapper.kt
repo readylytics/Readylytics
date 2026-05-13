@@ -5,7 +5,6 @@ import androidx.health.connect.client.records.RestingHeartRateRecord
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
-
 import com.gregor.lauritz.healthdashboard.domain.model.RecordType
 
 object HeartRateMapper {
@@ -20,9 +19,10 @@ object HeartRateMapper {
         // Flatten + sort chronologically before session matching.
         // Samsung delivers HeartRateRecord batches out of order; the forward-only
         // index breaks if samples from different records interleave in time.
-        val allSamples = records
-            .flatMap { record -> record.samples.map { sample -> record to sample } }
-            .sortedBy { (_, sample) -> sample.time.toEpochMilli() }
+        val allSamples =
+            records
+                .flatMap { record -> record.samples.map { sample -> record to sample } }
+                .sortedBy { (_, sample) -> sample.time.toEpochMilli() }
 
         var sleepIdx = 0
         var workoutIdx = 0
@@ -34,7 +34,10 @@ object HeartRateMapper {
                 sleepIdx++
             }
             val sleepSession =
-                if (sleepIdx < sortedSleep.size && sampleMs in sortedSleep[sleepIdx].startTime..sortedSleep[sleepIdx].endTime) {
+                if (sleepIdx < sortedSleep.size &&
+                    sampleMs >= sortedSleep[sleepIdx].startTime &&
+                    sampleMs <= sortedSleep[sleepIdx].endTime
+                ) {
                     sortedSleep[sleepIdx]
                 } else {
                     null
@@ -44,7 +47,10 @@ object HeartRateMapper {
                 workoutIdx++
             }
             val workoutSession =
-                if (workoutIdx < sortedWorkouts.size && sampleMs in sortedWorkouts[workoutIdx].startTime..sortedWorkouts[workoutIdx].endTime) {
+                if (workoutIdx < sortedWorkouts.size &&
+                    sampleMs >= sortedWorkouts[workoutIdx].startTime &&
+                    sampleMs <= sortedWorkouts[workoutIdx].endTime
+                ) {
                     sortedWorkouts[workoutIdx]
                 } else {
                     null
@@ -81,7 +87,9 @@ object HeartRateMapper {
                 sleepIdx++
             }
             val sleepSession =
-                if (sleepIdx < sortedSleep.size && timestampMs in sortedSleep[sleepIdx].startTime..sortedSleep[sleepIdx].endTime) {
+                if (sleepIdx < sortedSleep.size &&
+                    timestampMs in sortedSleep[sleepIdx].startTime..sortedSleep[sleepIdx].endTime
+                ) {
                     sortedSleep[sleepIdx]
                 } else {
                     null

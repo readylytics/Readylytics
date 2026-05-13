@@ -31,9 +31,10 @@ fun StepsCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().semantics { role = Role.Button },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(

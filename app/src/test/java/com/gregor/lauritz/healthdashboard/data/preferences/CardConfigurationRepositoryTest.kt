@@ -24,40 +24,52 @@ class CardConfigurationRepositoryTest {
     }
 
     @Test
-    fun dashboardCardConfigurations_returnsMappedDomainModels() = runTest {
-        val proto = CardConfigurationsProto.newBuilder()
-            .addDashboardCards(CardConfigurationProto.newBuilder()
-                .setCardId(CardId.SLEEP_SCORE.name)
-                .setIsVisible(true)
-                .setPosition(0)
-                .build())
-            .build()
-        
-        every { dataStore.data } returns flowOf(proto)
+    fun dashboardCardConfigurations_returnsMappedDomainModels() =
+        runTest {
+            val proto =
+                CardConfigurationsProto
+                    .newBuilder()
+                    .addDashboardCards(
+                        CardConfigurationProto
+                            .newBuilder()
+                            .setCardId(CardId.SLEEP_SCORE.name)
+                            .setIsVisible(true)
+                            .setPosition(0)
+                            .build(),
+                    ).build()
 
-        val result = repository.dashboardCardConfigurations().first()
-        
-        assertEquals(SettingsDefaults.DEFAULT_DASHBOARD_CARDS.size, result.size)
-        assertEquals(CardId.SLEEP_SCORE, result[0].cardId)
-        assertTrue(result[0].isVisible)
-        assertEquals(0, result[0].position)
-    }
+            every { dataStore.data } returns flowOf(proto)
+
+            val result = repository.dashboardCardConfigurations().first()
+
+            assertEquals(SettingsDefaults.DEFAULT_DASHBOARD_CARDS.size, result.size)
+            assertEquals(CardId.SLEEP_SCORE, result[0].cardId)
+            assertTrue(result[0].isVisible)
+            assertEquals(0, result[0].position)
+        }
 
     @Test
-    fun updateDashboardCardConfigurations_updatesCorrectProtoField() = runTest {
-        val capturedUpdate = slot<suspend (CardConfigurationsProto) -> CardConfigurationsProto>()
-        coEvery { dataStore.updateData(capture(capturedUpdate)) } returns CardConfigurationsProto.getDefaultInstance()
+    fun updateDashboardCardConfigurations_updatesCorrectProtoField() =
+        runTest {
+            val capturedUpdate = slot<suspend (CardConfigurationsProto) -> CardConfigurationsProto>()
+            coEvery { dataStore.updateData(capture(capturedUpdate)) } returns
+                CardConfigurationsProto.getDefaultInstance()
 
-        val newConfigs = listOf(
-            com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration(CardId.READINESS, isVisible = true, position = 0)
-        )
+            val newConfigs =
+                listOf(
+                    com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration(
+                        CardId.READINESS,
+                        isVisible = true,
+                        position = 0,
+                    ),
+                )
 
-        repository.updateDashboardCardConfigurations(newConfigs)
+            repository.updateDashboardCardConfigurations(newConfigs)
 
-        val initialProto = CardConfigurationsProto.getDefaultInstance()
-        val updatedProto = capturedUpdate.captured(initialProto)
+            val initialProto = CardConfigurationsProto.getDefaultInstance()
+            val updatedProto = capturedUpdate.captured(initialProto)
 
-        assertEquals(1, updatedProto.dashboardCardsCount)
-        assertEquals(CardId.READINESS.name, updatedProto.getDashboardCards(0).cardId)
-    }
+            assertEquals(1, updatedProto.dashboardCardsCount)
+            assertEquals(CardId.READINESS.name, updatedProto.getDashboardCards(0).cardId)
+        }
 }

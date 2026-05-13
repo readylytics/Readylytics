@@ -3,7 +3,6 @@ package com.gregor.lauritz.healthdashboard.data.healthconnect
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import com.gregor.lauritz.healthdashboard.data.local.entity.HrvRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
-
 import com.gregor.lauritz.healthdashboard.domain.model.RecordType
 
 object HrvMapper {
@@ -22,7 +21,9 @@ object HrvMapper {
                 sleepIdx++
             }
             val sleepSession =
-                if (sleepIdx < sortedSleep.size && sampleMs in sortedSleep[sleepIdx].startTime..sortedSleep[sleepIdx].endTime) {
+                if (sleepIdx < sortedSleep.size &&
+                    sampleMs in sortedSleep[sleepIdx].startTime..sortedSleep[sleepIdx].endTime
+                ) {
                     sortedSleep[sleepIdx]
                 } else {
                     null

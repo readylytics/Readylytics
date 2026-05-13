@@ -33,54 +33,61 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-data class StatusItem(val label: String, val color: Color)
+data class StatusItem(
+    val label: String,
+    val color: Color,
+)
 
 @Composable
 fun StatusLegend(modifier: Modifier = Modifier) {
     var isExpanded by rememberSaveable { mutableStateOf(value = false) }
     val colorScheme = MaterialTheme.colorScheme
 
-    val items = listOf(
-        StatusItem("Optimal", colorScheme.primary),
-        StatusItem("Neutral", colorScheme.outline),
-        StatusItem("Warning", colorScheme.tertiary),
-        StatusItem("Poor", colorScheme.error),
-    )
+    val items =
+        listOf(
+            StatusItem("Optimal", colorScheme.primary),
+            StatusItem("Neutral", colorScheme.outline),
+            StatusItem("Warning", colorScheme.tertiary),
+            StatusItem("Poor", colorScheme.error),
+        )
 
     OutlinedCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        )
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        colors =
+            CardDefaults.outlinedCardColors(
+                containerColor = colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            ),
     ) {
         Column(modifier = Modifier.animateContentSize()) {
             // Header
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { isExpanded = !isExpanded }
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { isExpanded = !isExpanded }
+                        .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
-                    tint = colorScheme.onSurfaceVariant
+                    tint = colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = "Status Guide",
                     style = MaterialTheme.typography.titleSmall,
-                    color = colorScheme.onSurface
+                    color = colorScheme.onSurface,
                 )
                 Spacer(Modifier.weight(1f))
                 Icon(
                     imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
-                    tint = colorScheme.onSurfaceVariant
+                    tint = colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -90,13 +97,13 @@ fun StatusLegend(modifier: Modifier = Modifier) {
                 // Using a simpler layout to avoid FlowRow binary compatibility issues in some environments
                 Column(
                     modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     val chunks = items.chunked(2)
                     chunks.forEach { chunk ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             chunk.forEach { item ->
                                 Box(modifier = Modifier.weight(1f)) {
@@ -115,9 +122,10 @@ fun StatusLegend(modifier: Modifier = Modifier) {
 private fun LegendItemRow(item: StatusItem) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
-            modifier = Modifier
-                .size(10.dp)
-                .background(item.color, CircleShape)
+            modifier =
+                Modifier
+                    .size(10.dp)
+                    .background(item.color, CircleShape),
         )
         Spacer(Modifier.width(6.dp))
         Text(

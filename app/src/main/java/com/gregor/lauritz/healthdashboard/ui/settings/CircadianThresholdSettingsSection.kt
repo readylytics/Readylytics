@@ -15,7 +15,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.domain.circadian.CircadianThresholdDefaults
-import com.gregor.lauritz.healthdashboard.domain.circadian.CircadianThresholdValue
 
 private const val THRESHOLD_SLIDER_STEPS = 8 // Results in: 0, 10, 20, ..., 90 (Issue #9)
 
@@ -40,31 +39,33 @@ fun CircadianThresholdSettingsSection(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            ),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
                     "Circadian Consistency",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                
+
                 if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
@@ -72,36 +73,39 @@ fun CircadianThresholdSettingsSection(
             // Show error state (Issue #8)
             if (error != null) {
                 ElevatedCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                    colors =
+                        CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                        ),
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             imageVector = Icons.Default.Error,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(20.dp),
                         )
                         Text(
                             error,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         )
                         TextButton(
                             onClick = onErrorDismissed,
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.heightIn(min = 32.dp)
+                            modifier = Modifier.heightIn(min = 32.dp),
                         ) {
                             Text("Dismiss", style = MaterialTheme.typography.labelMedium)
                         }
@@ -172,22 +176,25 @@ private fun ShiftWorkerModeSelector(
     ) {
         // Within-week mode option
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Checkbox(
                 checked = !useStandardRollingAnchor,
                 onCheckedChange = { onModeChanged(!it) },
-                modifier = Modifier.semantics {
-                    contentDescription = if (!useStandardRollingAnchor) {
-                        "Within-week regularity mode enabled. Compares sleep consistency on same day-of-week across different weeks."
-                    } else {
-                        "Within-week regularity mode disabled"
-                    }
-                }
+                modifier =
+                    Modifier.semantics {
+                        contentDescription =
+                            if (!useStandardRollingAnchor) {
+                                "Within-week regularity mode enabled. Compares sleep consistency on same day-of-week across different weeks."
+                            } else {
+                                "Within-week regularity mode disabled"
+                            }
+                    },
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -205,9 +212,10 @@ private fun ShiftWorkerModeSelector(
 
         // Standard rolling anchor option
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -245,9 +253,10 @@ private fun ThresholdSlider(
     ) {
         // Profile default label
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -284,19 +293,21 @@ private fun ThresholdSlider(
             onValueChange = onValueChanged,
             valueRange = 0f..90f,
             steps = 8, // 0, 10, 20, 30, 40, 50, 60, 70, 80, 90
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics {
-                    contentDescription = "Circadian threshold adjustment. Range: 0 to 90 minutes"
-                    stateDescription = "Current value: ${value.toInt()} minutes"
-                },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription = "Circadian threshold adjustment. Range: 0 to 90 minutes"
+                        stateDescription = "Current value: ${value.toInt()} minutes"
+                    },
         )
 
         // Current value display
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -331,4 +342,3 @@ private fun ThresholdSlider(
         )
     }
 }
-

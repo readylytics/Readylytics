@@ -42,14 +42,16 @@ fun CardManagementBottomSheet(
         modifier = modifier,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -73,18 +75,20 @@ fun CardManagementBottomSheet(
                         onVisibilityChanged = { visible ->
                             onCardVisibilityChanged(card.cardId, visible)
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
                     )
                 }
             }
 
             Button(
                 onClick = onDismiss,
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(top = 16.dp),
+                modifier =
+                    Modifier
+                        .align(Alignment.End)
+                        .padding(top = 16.dp),
             ) {
                 Text("Done")
             }

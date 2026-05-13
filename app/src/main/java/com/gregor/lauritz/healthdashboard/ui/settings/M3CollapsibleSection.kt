@@ -31,46 +31,49 @@ fun M3CollapsibleSection(
     content: @Composable () -> Unit,
 ) {
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(16.dp)
-            )
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(16.dp),
+                ),
     ) {
         Column {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onExpandedChange(!expanded) }
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onExpandedChange(!expanded) }
+                        .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = header,
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 Icon(
                     imageVector = Icons.Filled.ExpandMore,
                     contentDescription = if (expanded) "Collapse" else "Expand",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.rotate(if (expanded) 180f else 0f)
+                    modifier = Modifier.rotate(if (expanded) 180f else 0f),
                 )
             }
 
             AnimatedVisibility(
                 visible = expanded,
                 enter = expandVertically(),
-                exit = shrinkVertically()
+                exit = shrinkVertically(),
             ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
                     content()
                 }

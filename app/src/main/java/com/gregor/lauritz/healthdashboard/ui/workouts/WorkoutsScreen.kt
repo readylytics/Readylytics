@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -26,8 +26,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
+import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
@@ -43,37 +44,28 @@ import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.StatusLegend
-import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberEnd
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
-import com.patrykandpatrick.vico.compose.cartesian.layer.point
+import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
+import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.compose.cartesian.data.columnSeries
+import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.layer.ColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
-import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
-import com.patrykandpatrick.vico.compose.common.fill
-import com.patrykandpatrick.vico.core.cartesian.axis.Axis
-import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
-import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
-import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
-import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
-import com.patrykandpatrick.vico.core.common.data.ExtraStore
-import com.patrykandpatrick.vico.core.common.component.LineComponent
-import com.patrykandpatrick.vico.core.common.shape.CorneredShape
-import java.text.SimpleDateFormat
-import java.util.Date
+import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -117,9 +109,10 @@ fun WorkoutsScreen(
     ) {
         item(key = "date_switcher") {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
             ) {
                 DateSwitcher(
                     selectedDate = uiState.selectedDate,
@@ -180,14 +173,15 @@ private fun HeroSection(
                     else -> MetricStatus.WARNING
                 }
 
-            val strainTooltip = remember {
-                buildString {
-                    append("The ACWR (Acute:Chronic Workload Ratio).\n\n")
-                    append("• 0.8–1.3: Optimal range\n")
-                    append("• > 1.5: High injury risk\n")
-                    append("• < 0.8: Detraining risk")
+            val strainTooltip =
+                remember {
+                    buildString {
+                        append("The ACWR (Acute:Chronic Workload Ratio).\n\n")
+                        append("• 0.8–1.3: Optimal range\n")
+                        append("• > 1.5: High injury risk\n")
+                        append("• < 0.8: Detraining risk")
+                    }
                 }
-            }
             M3ScoreDial(
                 score = strainRatio,
                 label = "Strain Ratio",
@@ -206,9 +200,10 @@ private fun HeroSection(
         Spacer(Modifier.height(8.dp))
 
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -227,16 +222,17 @@ private fun HeroSection(
                                 )
                             }
                         }
-                        val paiTooltip = remember {
-                            buildString {
-                                append("Your 7-day rolling heart health score.\n")
-                                append("Based on how often and how hard you challenge your heart.\n\n")
-                                append("• 100+: Optimal\n")
-                                append("• 75–99: Neutral\n")
-                                append("• 50–74: Warning\n")
-                                append("• < 50: Poor")
+                        val paiTooltip =
+                            remember {
+                                buildString {
+                                    append("Your 7-day rolling heart health score.\n")
+                                    append("Based on how often and how hard you challenge your heart.\n\n")
+                                    append("• 100+: Optimal\n")
+                                    append("• 75–99: Neutral\n")
+                                    append("• 50–74: Warning\n")
+                                    append("• < 50: Poor")
+                                }
                             }
-                        }
                         MetricTooltip(
                             description = paiTooltip,
                         )
@@ -352,8 +348,17 @@ private fun AcwrChart(
     val trimpRangeProvider =
         remember(trimpPoints, rangeDays) {
             object : CartesianLayerRangeProvider {
-                override fun getMinX(minX: Double, maxX: Double, extraStore: ExtraStore) = 0.0
-                override fun getMaxX(minX: Double, maxX: Double, extraStore: ExtraStore) = (rangeDays - 1).toDouble()
+                override fun getMinX(
+                    minX: Double,
+                    maxX: Double,
+                    extraStore: ExtraStore,
+                ) = 0.0
+
+                override fun getMaxX(
+                    minX: Double,
+                    maxX: Double,
+                    extraStore: ExtraStore,
+                ) = (rangeDays - 1).toDouble()
 
                 override fun getMaxY(
                     minY: Double,
@@ -372,8 +377,17 @@ private fun AcwrChart(
     val ratioRangeProvider =
         remember(ratioPoints, rangeDays) {
             object : CartesianLayerRangeProvider {
-                override fun getMinX(minX: Double, maxX: Double, extraStore: ExtraStore) = 0.0
-                override fun getMaxX(minX: Double, maxX: Double, extraStore: ExtraStore) = (rangeDays - 1).toDouble()
+                override fun getMinX(
+                    minX: Double,
+                    maxX: Double,
+                    extraStore: ExtraStore,
+                ) = 0.0
+
+                override fun getMaxX(
+                    minX: Double,
+                    maxX: Double,
+                    extraStore: ExtraStore,
+                ) = (rangeDays - 1).toDouble()
 
                 override fun getMaxY(
                     minY: Double,
@@ -398,7 +412,7 @@ private fun AcwrChart(
                 columnSeries {
                     series(
                         x = validTrimp.map { it.dayOffset },
-                        y = validTrimp.mapNotNull { it.value },
+                        y = validTrimp.mapNotNull { it.value?.toDouble() },
                     )
                 }
             }
@@ -407,34 +421,36 @@ private fun AcwrChart(
                 lineSeries {
                     series(
                         x = validRatio.map { it.dayOffset },
-                        y = validRatio.mapNotNull { it.value },
+                        y = validRatio.mapNotNull { it.value?.toDouble() },
                     )
                 }
             }
         }
     }
 
-    val dotComponent = rememberShapeComponent(fill = fill(ratioColor), shape = CorneredShape.Pill)
+    val dotComponent = rememberShapeComponent(fill = Fill(ratioColor), shape = CircleShape)
     val ratioLine =
         LineCartesianLayer.rememberLine(
-            fill = LineCartesianLayer.LineFill.single(fill(ratioColor)),
+            fill = LineCartesianLayer.LineFill.single(Fill(ratioColor)),
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
-                    LineCartesianLayer.point(dotComponent, 6.dp),
+                    LineCartesianLayer.Point(dotComponent, 6.dp),
                 ),
         )
 
-    val trimpColumn = rememberColumnCartesianLayer(
-        columnProvider = ColumnCartesianLayer.ColumnProvider.series(
-            LineComponent(
-                fill = fill(trimpColor),
-                thicknessDp = 8f,
-                shape = CorneredShape.Pill,
-            )
-        ),
-        rangeProvider = trimpRangeProvider,
-        verticalAxisPosition = Axis.Position.Vertical.Start,
-    )
+    val trimpColumn =
+        rememberColumnCartesianLayer(
+            columnProvider =
+                ColumnCartesianLayer.ColumnProvider.series(
+                    rememberLineComponent(
+                        fill = Fill(trimpColor),
+                        thickness = 8.dp,
+                        shape = CircleShape,
+                    ),
+                ),
+            rangeProvider = trimpRangeProvider,
+            verticalAxisPosition = Axis.Position.Vertical.Start,
+        )
 
     val trimpAxisItemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) }
     val ratioAxisItemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) }
@@ -453,7 +469,7 @@ private fun AcwrChart(
                         label = labelComponent,
                         valueFormatter = trimpAxisFormatter,
                         titleComponent = axisLabelComponent,
-                        title = "TRIMP",
+                        title = { "TRIMP" },
                         itemPlacer = trimpAxisItemPlacer,
                         guideline = guidelineComponent,
                     ),
@@ -462,7 +478,7 @@ private fun AcwrChart(
                         label = labelComponent,
                         valueFormatter = ratioAxisFormatter,
                         titleComponent = axisLabelComponent,
-                        title = "Strain",
+                        title = { "Strain" },
                         itemPlacer = ratioAxisItemPlacer,
                         guideline = null,
                     ),
@@ -493,7 +509,6 @@ private fun EmptyChartPlaceholder(modifier: Modifier = Modifier) {
     }
 }
 
-
 @Composable
 private fun WorkoutHistoryItem(
     item: WorkoutDisplayItem,
@@ -502,13 +517,17 @@ private fun WorkoutHistoryItem(
 ) {
     val workout = item.workout
     val displayType = exerciseTypeToDisplayName(workout.exerciseType)
-    val dateStr = remember(workout.startTime) {
-        val fmt = java.time.format.DateTimeFormatter.ofPattern("(dd.MM)", Locale.getDefault())
-        java.time.Instant.ofEpochMilli(workout.startTime)
-            .atZone(java.time.ZoneId.systemDefault())
-            .toLocalDate()
-            .format(fmt)
-    }
+    val dateStr =
+        remember(workout.startTime) {
+            val fmt =
+                java.time.format.DateTimeFormatter
+                    .ofPattern("(dd.MM)", Locale.getDefault())
+            java.time.Instant
+                .ofEpochMilli(workout.startTime)
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate()
+                .format(fmt)
+        }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -526,7 +545,9 @@ private fun WorkoutHistoryItem(
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    text = "${workout.durationMinutes} min  ·  TRIMP ${item.computedTrimp.roundToInt()}  ·  ${if (workout.avgHr > 0) "${workout.avgHr.roundToInt()} bpm" else "-- bpm"}",
+                    text =
+                        "${workout.durationMinutes} min  ·  TRIMP ${item.computedTrimp.roundToInt()}  ·  " +
+                            if (workout.avgHr > 0) "${workout.avgHr.roundToInt()} bpm" else "-- bpm",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

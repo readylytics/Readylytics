@@ -13,13 +13,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Refresh
@@ -50,14 +50,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
@@ -85,34 +85,62 @@ data class SettingsSectionMetadata(
     val keywords: List<String>,
 )
 
-val settingsSections = listOf(
-    SettingsSectionMetadata(
-        id = "cloud_data_sync",
-        name = "Cloud & Data",
-        keywords = listOf("cloud", "backup", "drive", "data", "retention", "resync", "google account", "health connect", "sync", "foreground")
-    ),
-    SettingsSectionMetadata(
-        id = "baselines_thresholds",
-        name = "Baselines & Thresholds",
-        keywords = listOf("step", "goal", "sleep", "hrv", "rhr", "heart rate", "zone", "baseline", "threshold", "consistency")
-    ),
-    SettingsSectionMetadata(
-        id = "display",
-        name = "Display",
-        keywords = listOf("appearance", "theme")
-    ),
-    SettingsSectionMetadata(
-        id = "advanced",
-        name = "Advanced",
-        keywords = listOf("advanced", "override", "pai", "resting", "hr timing")
-    ),
-)
+val settingsSections =
+    listOf(
+        SettingsSectionMetadata(
+            id = "cloud_data_sync",
+            name = "Cloud & Data",
+            keywords =
+                listOf(
+                    "cloud",
+                    "backup",
+                    "drive",
+                    "data",
+                    "retention",
+                    "resync",
+                    "google account",
+                    "health connect",
+                    "sync",
+                    "foreground",
+                ),
+        ),
+        SettingsSectionMetadata(
+            id = "baselines_thresholds",
+            name = "Baselines & Thresholds",
+            keywords =
+                listOf(
+                    "step",
+                    "goal",
+                    "sleep",
+                    "hrv",
+                    "rhr",
+                    "heart rate",
+                    "zone",
+                    "baseline",
+                    "threshold",
+                    "consistency",
+                ),
+        ),
+        SettingsSectionMetadata(
+            id = "display",
+            name = "Display",
+            keywords = listOf("appearance", "theme"),
+        ),
+        SettingsSectionMetadata(
+            id = "advanced",
+            name = "Advanced",
+            keywords = listOf("advanced", "override", "pai", "resting", "hr timing"),
+        ),
+    )
 
-fun sectionMatches(section: SettingsSectionMetadata, query: String): Boolean {
+fun sectionMatches(
+    section: SettingsSectionMetadata,
+    query: String,
+): Boolean {
     if (query.isBlank()) return true
     val lowerQuery = query.lowercase()
     return section.name.lowercase().contains(lowerQuery) ||
-            section.keywords.any { it.contains(lowerQuery) }
+        section.keywords.any { it.contains(lowerQuery) }
 }
 
 @Composable
@@ -151,25 +179,27 @@ fun SettingsRoute(
         onCloudEvent = { cloudViewModel.onEvent(it, context) },
         onSyncEvent = syncViewModel::onEvent,
         onUIEvent = uiViewModel::onEvent,
-        onNavigateToAbout = onNavigateToAbout
+        onNavigateToAbout = onNavigateToAbout,
     )
 
     // Loading dialog during resync
     if (syncState.isResyncing) {
         Dialog(
             onDismissRequest = {},
-            properties = DialogProperties(
-                dismissOnBackPress = false,
-                dismissOnClickOutside = false,
-                usePlatformDefaultWidth = false,
-            )
+            properties =
+                DialogProperties(
+                    dismissOnBackPress = false,
+                    dismissOnClickOutside = false,
+                    usePlatformDefaultWidth = false,
+                ),
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Center,
             ) {
                 CircularProgressIndicator()
                 Spacer(modifier = Modifier.height(16.dp))
@@ -231,22 +261,25 @@ fun SettingsScreen(
 
     Column(modifier = modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
             ) {
                 // Search
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                     placeholder = { Text("Search settings...") },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
                     trailingIcon = {
@@ -265,7 +298,11 @@ fun SettingsScreen(
                     M3CollapsibleSection(
                         header = "Cloud & Data",
                         expanded = !uiState.collapseCloudData || shouldExpandSection("cloud_data_sync"),
-                        onExpandedChange = { onUIEvent(SettingsEvent.SectionCollapseChanged(SettingsSection.CLOUD_DATA, !it)) }
+                        onExpandedChange = {
+                            onUIEvent(
+                                SettingsEvent.SectionCollapseChanged(SettingsSection.CLOUD_DATA, !it),
+                            )
+                        },
                     ) {
                         Column {
                             SectionHeader("Cloud Backup")
@@ -289,7 +326,11 @@ fun SettingsScreen(
                     M3CollapsibleSection(
                         header = "Baselines & Thresholds",
                         expanded = !uiState.collapseBaselinesThresholds || shouldExpandSection("baselines_thresholds"),
-                        onExpandedChange = { onUIEvent(SettingsEvent.SectionCollapseChanged(SettingsSection.BASELINES_THRESHOLDS, !it)) }
+                        onExpandedChange = {
+                            onUIEvent(
+                                SettingsEvent.SectionCollapseChanged(SettingsSection.BASELINES_THRESHOLDS, !it),
+                            )
+                        },
                     ) {
                         Column {
                             SectionHeader("Daily Step Goal")
@@ -305,7 +346,7 @@ fun SettingsScreen(
                                 onEvent = onHeartRateEvent,
                                 onPhysiologyEvent = onPhysiologyEvent,
                                 expandState = expandState,
-                                onExpandStateChange = { expandState = it }
+                                onExpandStateChange = { expandState = it },
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             PhysiologyProfilePicker(
@@ -319,7 +360,11 @@ fun SettingsScreen(
                                 profile = physiologyState.physiologyProfile,
                                 currentOverride = thresholdState.circadianThresholdOverride,
                                 isShiftWorkerMode = physiologyState.physiologyProfile == PhysiologyProfile.SHIFT_WORKER,
-                                onOverrideChanged = { onThresholdEvent(SettingsEvent.CircadianThresholdOverrideChanged(it)) },
+                                onOverrideChanged = {
+                                    onThresholdEvent(
+                                        SettingsEvent.CircadianThresholdOverrideChanged(it),
+                                    )
+                                },
                                 isLoading = thresholdState.isUpdatingThreshold,
                                 error = thresholdState.thresholdError,
                                 onErrorDismissed = { onThresholdEvent(SettingsEvent.DismissThresholdError) },
@@ -338,7 +383,11 @@ fun SettingsScreen(
                     M3CollapsibleSection(
                         header = "Display",
                         expanded = !uiState.collapseDisplay || shouldExpandSection("display"),
-                        onExpandedChange = { onUIEvent(SettingsEvent.SectionCollapseChanged(SettingsSection.DISPLAY, !it)) }
+                        onExpandedChange = {
+                            onUIEvent(
+                                SettingsEvent.SectionCollapseChanged(SettingsSection.DISPLAY, !it),
+                            )
+                        },
                     ) {
                         Column {
                             AppThemeItem(uiState = uiState, onEvent = onUIEvent)
@@ -346,7 +395,7 @@ fun SettingsScreen(
                                 label = "Dynamic Color",
                                 description = "Use colors derived from your wallpaper (Android 12+)",
                                 checked = uiState.dynamicColorEnabled,
-                                onCheckedChange = { onUIEvent(SettingsEvent.DynamicColorEnabledChanged(it)) }
+                                onCheckedChange = { onUIEvent(SettingsEvent.DynamicColorEnabledChanged(it)) },
                             )
                         }
                     }
@@ -358,7 +407,11 @@ fun SettingsScreen(
                     M3CollapsibleSection(
                         header = "Advanced",
                         expanded = !uiState.collapseAdvanced || shouldExpandSection("advanced"),
-                        onExpandedChange = { onUIEvent(SettingsEvent.SectionCollapseChanged(SettingsSection.ADVANCED, !it)) }
+                        onExpandedChange = {
+                            onUIEvent(
+                                SettingsEvent.SectionCollapseChanged(SettingsSection.ADVANCED, !it),
+                            )
+                        },
                     ) {
                         AdvancedSettingsSection(
                             sleepState = sleepState,
@@ -369,25 +422,25 @@ fun SettingsScreen(
                             itrimB = uiState.itrimB,
                             onEvent = onSleepEvent,
                             onPhysiologyEvent = onPhysiologyEvent,
-                            onUIEvent = onUIEvent
+                            onUIEvent = onUIEvent,
                         )
                     }
                 }
-
             }
         }
 
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+            contentAlignment = Alignment.Center,
         ) {
             TextButton(onClick = onNavigateToAbout) {
                 Text(
                     text = "About Readylytics",
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -424,7 +477,7 @@ private fun DataManagementSection(
                 Spacer(modifier = Modifier.weight(1f))
                 Switch(
                     checked = uiState.retentionDaysEnabled,
-                    onCheckedChange = { onEvent(SettingsEvent.RetentionDaysEnabledChanged(it)) }
+                    onCheckedChange = { onEvent(SettingsEvent.RetentionDaysEnabledChanged(it)) },
                 )
             }
         }
@@ -454,7 +507,7 @@ private fun DataManagementSection(
                     text = "Automatically delete data older than the retention period.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp)
+                    modifier = Modifier.padding(top = 4.dp),
                 )
             }
         }
@@ -463,12 +516,12 @@ private fun DataManagementSection(
             Button(
                 onClick = { onSyncEvent(SettingsEvent.ResyncHealthConnect) },
                 enabled = !uiState.isResyncing,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 if (uiState.isResyncing) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = MaterialTheme.colorScheme.onPrimary,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
@@ -478,7 +531,7 @@ private fun DataManagementSection(
                 text = "Clear all data from Health Connect and reload the last 60 days.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp)
+                modifier = Modifier.padding(top = 4.dp),
             )
         }
     }
@@ -605,7 +658,9 @@ private fun ThresholdSettingsSection(
             valueRange = 0f..90f,
             steps = 17,
             displayValue = "${consistencyWindow.toInt()} min",
-            description = "±Grace period (in minutes) around your median bedtime and wake time before your score starts to drop. Default: 30 min.",
+            description =
+                "±Grace period (in minutes) around your median bedtime and wake time before your score " +
+                    "starts to drop. Default: 30 min.",
         )
 
         var evaluationPeriod by remember(uiState.consistencyEvaluationDays) {
@@ -615,7 +670,11 @@ private fun ThresholdSettingsSection(
             label = "Evaluation Period",
             value = evaluationPeriod,
             onValueChange = { evaluationPeriod = it },
-            onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyEvaluationDaysChanged(evaluationPeriod.toInt())) },
+            onValueChangeFinished = {
+                onEvent(
+                    SettingsEvent.ConsistencyEvaluationDaysChanged(evaluationPeriod.toInt()),
+                )
+            },
             valueRange = 3f..14f,
             steps = 10,
             displayValue = "${evaluationPeriod.toInt()} days",
@@ -667,12 +726,12 @@ private fun HeartRateZoneSection(
                 Text(
                     "Uses age (220 - age) if enabled",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Switch(
                 checked = uiState.autoCalculateMaxHr,
-                onCheckedChange = { onEvent(SettingsEvent.AutoCalculateMaxHrChanged(it)) }
+                onCheckedChange = { onEvent(SettingsEvent.AutoCalculateMaxHrChanged(it)) },
             )
         }
 
@@ -749,7 +808,7 @@ private fun HeartRateZoneSection(
                     selectedGender = physiologyState.gender,
                     expanded = expandState.genderExpanded,
                     onExpandedChange = { onExpandStateChange(expandState.copy(genderExpanded = it)) },
-                    onGenderSelected = { onPhysiologyEvent(SettingsEvent.GenderChanged(it)) }
+                    onGenderSelected = { onPhysiologyEvent(SettingsEvent.GenderChanged(it)) },
                 )
             }
         }
@@ -773,7 +832,7 @@ private fun HeartRateZoneSection(
                 }
             },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -784,12 +843,12 @@ private fun HeartRateZoneSection(
                 Text(
                     "Customize percentage thresholds",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Switch(
                 checked = uiState.manualZoneEditing,
-                onCheckedChange = { onEvent(SettingsEvent.ManualZoneEditingChanged(it)) }
+                onCheckedChange = { onEvent(SettingsEvent.ManualZoneEditingChanged(it)) },
             )
         }
 
@@ -801,7 +860,7 @@ private fun HeartRateZoneSection(
             Text(
                 "Calculated Zones",
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
             )
             Spacer(modifier = Modifier.height(4.dp))
             HeartRateZonesDisplay(
@@ -810,7 +869,7 @@ private fun HeartRateZoneSection(
                 z1p = uiState.zone1MaxPercent,
                 z2p = uiState.zone2MaxPercent,
                 z3p = uiState.zone3MaxPercent,
-                z4p = uiState.zone4MaxPercent
+                z4p = uiState.zone4MaxPercent,
             )
         }
 
@@ -818,7 +877,7 @@ private fun HeartRateZoneSection(
             "Zones are used for TRIMP and workout intensity tracking.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp)
+            modifier = Modifier.padding(top = 8.dp),
         )
     }
 }
@@ -854,7 +913,7 @@ private fun AdvancedSettingsSection(
             Text(
                 "Baseline Overrides",
                 style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 8.dp),
             )
             OutlinedTextField(
                 value = hrvText,
@@ -866,7 +925,7 @@ private fun AdvancedSettingsSection(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("HRV Baseline (ms)")
                         MetricTooltip(
-                            description = "Overrides the 30-day rolling median used in scoring."
+                            description = "Overrides the 30-day rolling median used in scoring.",
                         )
                     }
                 },
@@ -882,7 +941,7 @@ private fun AdvancedSettingsSection(
                     }
                 },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
@@ -895,7 +954,7 @@ private fun AdvancedSettingsSection(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("RHR Baseline (bpm)")
                         MetricTooltip(
-                            description = "Overrides the 30-day rolling median used in scoring."
+                            description = "Overrides the 30-day rolling median used in scoring.",
                         )
                     }
                 },
@@ -911,7 +970,7 @@ private fun AdvancedSettingsSection(
                     }
                 },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
         }
 
@@ -927,15 +986,18 @@ private fun AdvancedSettingsSection(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Resting HR: Minutes Before")
                     MetricTooltip(
-                        description = "Minutes before sleep end to include in wakeup resting HR calculation (default: 5)."
+                        description =
+                            "Minutes before sleep end to include in wakeup resting HR calculation " +
+                                "(default: 5).",
                     )
                 }
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
         )
         Spacer(modifier = Modifier.height(12.dp))
         OutlinedTextField(
@@ -948,15 +1010,18 @@ private fun AdvancedSettingsSection(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Resting HR: Minutes After")
                     MetricTooltip(
-                        description = "Minutes after sleep end to include in wakeup resting HR calculation (default: 15)."
+                        description =
+                            "Minutes after sleep end to include in wakeup resting HR calculation " +
+                                "(default: 15).",
                     )
                 }
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -980,19 +1045,21 @@ private fun AdvancedSettingsSection(
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         Spacer(modifier = Modifier.height(8.dp))
-        val trimpModelOptions = listOf(
-            TrimpModel.BANISTER to "Banister",
-            TrimpModel.CHENG to "Cheng LT-TRIMP",
-            TrimpModel.I_TRIMP to "iTRIMP",
-        )
+        val trimpModelOptions =
+            listOf(
+                TrimpModel.BANISTER to "Banister",
+                TrimpModel.CHENG to "Cheng LT-TRIMP",
+                TrimpModel.I_TRIMP to "iTRIMP",
+            )
         val selectedModelLabel = trimpModelOptions.firstOrNull { it.first == trimpModel }?.second ?: "Banister"
         var trimpDropdownExpanded by remember { mutableStateOf(false) }
         ExposedDropdownMenuBox(
             expanded = trimpDropdownExpanded,
             onExpandedChange = { trimpDropdownExpanded = !trimpDropdownExpanded },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
         ) {
             OutlinedTextField(
                 value = selectedModelLabel,
@@ -1000,9 +1067,10 @@ private fun AdvancedSettingsSection(
                 readOnly = true,
                 label = { Text("Training Load Model") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = trimpDropdownExpanded) },
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
             )
             ExposedDropdownMenu(
                 expanded = trimpDropdownExpanded,
@@ -1064,7 +1132,6 @@ private fun AdvancedSettingsSection(
                 )
             }
         }
-
     }
 }
 
@@ -1075,30 +1142,31 @@ private fun HeartRateZonesDisplay(
     z1p: Float,
     z2p: Float,
     z3p: Float,
-    z4p: Float
+    z4p: Float,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        val zones = listOf(
-            "Zone 1" to (z1MinP.toDouble()..z1p.toDouble()),
-            "Zone 2" to (z1p.toDouble()..z2p.toDouble()),
-            "Zone 3" to (z2p.toDouble()..z3p.toDouble()),
-            "Zone 4" to (z3p.toDouble()..z4p.toDouble()),
-            "Zone 5" to (z4p.toDouble()..1.00)
-        )
+        val zones =
+            listOf(
+                "Zone 1" to (z1MinP.toDouble()..z1p.toDouble()),
+                "Zone 2" to (z1p.toDouble()..z2p.toDouble()),
+                "Zone 3" to (z2p.toDouble()..z3p.toDouble()),
+                "Zone 4" to (z3p.toDouble()..z4p.toDouble()),
+                "Zone 5" to (z4p.toDouble()..1.00),
+            )
 
         zones.forEach { (name, range) ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(name, style = MaterialTheme.typography.bodyMedium)
                 Text(
                     text = "${(maxHr * range.start).roundToInt()} - ${(maxHr * range.endInclusive).roundToInt()} bpm",
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
             }
         }
@@ -1108,7 +1176,7 @@ private fun HeartRateZonesDisplay(
 @Composable
 private fun ZoneEditingSection(
     uiState: HeartRateZonesState,
-    onEvent: (SettingsEvent) -> Unit
+    onEvent: (SettingsEvent) -> Unit,
 ) {
     var z1Min by rememberSaveable { mutableStateOf(uiState.zone1MinBpm.toString()) }
     var z1Max by rememberSaveable { mutableStateOf(uiState.zone1MaxBpm.toString()) }
@@ -1117,20 +1185,27 @@ private fun ZoneEditingSection(
     var z4Max by rememberSaveable { mutableStateOf(uiState.zone4MaxBpm.toString()) }
 
     val maxHr = uiState.maxHeartRate
-    val isValid = remember(z1Min, z1Max, z2Max, z3Max, z4Max, maxHr) {
-        val vals = listOf(z1Min, z1Max, z2Max, z3Max, z4Max).mapNotNull { it.toIntOrNull() }
-        vals.size == 5 &&
-            vals[0] in 1..maxHr && vals[1] in 1..maxHr &&
-            vals[2] in 1..maxHr && vals[3] in 1..maxHr && vals[4] in 1..maxHr &&
-            vals[0] < vals[1] && vals[1] < vals[2] &&
-            vals[2] < vals[3] && vals[3] < vals[4] && vals[4] <= maxHr
-    }
+    val isValid =
+        remember(z1Min, z1Max, z2Max, z3Max, z4Max, maxHr) {
+            val vals = listOf(z1Min, z1Max, z2Max, z3Max, z4Max).mapNotNull { it.toIntOrNull() }
+            vals.size == 5 &&
+                vals[0] in 1..maxHr &&
+                vals[1] in 1..maxHr &&
+                vals[2] in 1..maxHr &&
+                vals[3] in 1..maxHr &&
+                vals[4] in 1..maxHr &&
+                vals[0] < vals[1] &&
+                vals[1] < vals[2] &&
+                vals[2] < vals[3] &&
+                vals[3] < vals[4] &&
+                vals[4] <= maxHr
+        }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             "Heart Rate Zones (BPM)",
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
         )
 
         ZoneRow("Zone 1", z1Min, { z1Min = it }, true, z1Max, { z1Max = it }, true)
@@ -1142,13 +1217,20 @@ private fun ZoneEditingSection(
         if (isValid) {
             Button(
                 onClick = {
-                    onEvent(SettingsEvent.ZoneBpmsChanged(
-                        z1Min.toInt(), z1Max.toInt(), z2Max.toInt(), z3Max.toInt(), z4Max.toInt()
-                    ))
+                    onEvent(
+                        SettingsEvent.ZoneBpmsChanged(
+                            z1Min.toInt(),
+                            z1Max.toInt(),
+                            z2Max.toInt(),
+                            z3Max.toInt(),
+                            z4Max.toInt(),
+                        ),
+                    )
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
             ) {
                 Text("Save Zone Boundaries")
             }
@@ -1156,7 +1238,7 @@ private fun ZoneEditingSection(
             Text(
                 "Invalid: All values must be 1–$maxHr BPM and strictly increasing",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.error,
             )
         }
     }
@@ -1175,23 +1257,32 @@ private fun CompactOutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         enabled = enabled,
-        modifier = modifier
-            .background(
-                MaterialTheme.colorScheme.surface,
-                RoundedCornerShape(8.dp)
-            )
-            .border(
-                width = 1.dp,
-                color = if (isError) MaterialTheme.colorScheme.error
-                        else if (!enabled) MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
-                        else MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        textStyle = MaterialTheme.typography.bodySmall.copy(
-            color = if (enabled) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-        ),
+        modifier =
+            modifier
+                .background(
+                    MaterialTheme.colorScheme.surface,
+                    RoundedCornerShape(8.dp),
+                ).border(
+                    width = 1.dp,
+                    color =
+                        if (isError) {
+                            MaterialTheme.colorScheme.error
+                        } else if (!enabled) {
+                            MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+                        } else {
+                            MaterialTheme.colorScheme.outline
+                        },
+                    shape = RoundedCornerShape(8.dp),
+                ).padding(horizontal = 12.dp, vertical = 8.dp),
+        textStyle =
+            MaterialTheme.typography.bodySmall.copy(
+                color =
+                    if (enabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    },
+            ),
         singleLine = true,
         keyboardOptions = keyboardOptions,
     )
@@ -1205,19 +1296,25 @@ private fun ZoneRow(
     minEditable: Boolean,
     maxValue: String,
     onMaxChange: ((String) -> Unit)?,
-    maxEditable: Boolean
+    maxEditable: Boolean,
 ) {
     val minValid = minValue.toIntOrNull()?.let { it in 1..220 } ?: false
     val maxValid = maxValue.toIntOrNull()?.let { it in 1..220 } ?: false
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(zoneLabel, modifier = Modifier.width(60.dp), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+        Text(
+            zoneLabel,
+            modifier = Modifier.width(60.dp),
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+        )
 
         CompactOutlinedTextField(
             value = minValue,
@@ -1286,7 +1383,7 @@ private fun GenderSelector(
                 onClick = {
                     onGenderSelected(null)
                     onExpandedChange(false)
-                }
+                },
             )
         }
     }
@@ -1474,7 +1571,10 @@ private fun CloudBackupSection(
             if (uiState.lastBackupTimestamp == 0L) {
                 "Never backed up"
             } else {
-                "Last backup: ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(uiState.lastBackupTimestamp))}"
+                "Last backup: ${DateFormat.getDateTimeInstance(
+                    DateFormat.SHORT,
+                    DateFormat.SHORT,
+                ).format(Date(uiState.lastBackupTimestamp))}"
             }
         Text(
             text = lastBackupText,

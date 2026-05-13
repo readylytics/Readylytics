@@ -6,6 +6,8 @@ import java.time.LocalDate
 
 interface ScoringRepository {
     suspend fun computeAndPersistDailySummary(targetDate: LocalDate = LocalDate.now())
+
     suspend fun computeDailySummary(targetDate: LocalDate = LocalDate.now()): DailySummaryEntity
+
     fun toReadinessResult(summary: DailySummaryEntity): ReadinessResult
 }
