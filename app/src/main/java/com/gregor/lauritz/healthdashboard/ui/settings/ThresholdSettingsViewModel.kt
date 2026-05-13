@@ -11,7 +11,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -43,19 +45,6 @@ class ThresholdSettingsViewModel
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = ThresholdSettingsState(),
             )
-
-        private val _updatingState = MutableStateFlow(false)
-        val updatingState: StateFlow<Boolean> = _updatingState.asStateFlow()
-
-        private val _errorState = MutableStateFlow<String?>(null)
-        val errorState: StateFlow<String?> = _errorState.asStateFlow()
-
-        // We can use another combine to merge internal UI state with the data-driven state
-        // But for simplicity, let's just use a separate StateFlow for transient UI state if needed,
-        // or merge it into the main uiState if we want a single source of truth.
-
-        // Actually, let's keep it simple and just update the main uiState manually for transient states
-        // No, stateIn is read-only. We should use a private MutableStateFlow and combine it.
 
         private val transientState = MutableStateFlow(TransientThresholdState())
 
@@ -96,12 +85,12 @@ class ThresholdSettingsViewModel
                         try {
                             val validation = CircadianThresholdValue.tryCreate(minutes = event.minutes)
                             validation
-                                .onSuccess {
+                                .onSuccess { _ ->
                                     transientState.update { it.copy(isUpdating = true, error = null) }
                                     circadianThresholdPreferences.setOverride(minutes = event.minutes)
                                     scoringRepository.computeAndPersistDailySummary()
                                     transientState.update { it.copy(isUpdating = false) }
-                                }.onFailure { error ->
+                                }.onFailure { _ ->
                                     transientState.update {
                                         it.copy(
                                             error = "Invalid threshold value. Range: 0-90 minutes.",
