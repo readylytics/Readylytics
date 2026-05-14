@@ -60,12 +60,7 @@ class ScoringRepositoryImpl
                 val nextDayMidnightMs = nextDayMidnight.toEpochMilli()
 
                 val prefs = settingsRepo.userPreferences.first()
-                val hrMax =
-                    if (prefs.autoCalculateMaxHr) {
-                        HeartRateFormulas.estimateMaxHr(prefs.age).toFloat()
-                    } else {
-                        prefs.maxHeartRate.toFloat()
-                    }
+                val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
 
                 val rhrBaselineValue =
                     baselineComputer.computeAdaptiveBaselineRhrBpm(

@@ -17,17 +17,19 @@ class ComputeWorkoutTrimpUseCase
             restingHrBaseline: Float? = null,
             storedTrimp: Float? = null,
         ): Float {
-            val hrMax =
-                if (prefs.autoCalculateMaxHr) {
-                    HeartRateFormulas.estimateMaxHr(prefs.age).toFloat()
-                } else {
-                    prefs.maxHeartRate.toFloat()
-                }
+            val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
 
+            // RHR baseline resolution with exercise-aware fallback:
+            // 1. Use provided baseline if available (from BaselineComputer)
+            // 2. Use override if set
+            // 3. Estimate from workout data: workout-avg HR less the elevation during exercise
+            //    This fallback only triggers when no historical baseline exists (edge case).
+            //    For normal flow, ScoringRepositoryImpl always provides a calculated baseline.
             val rhrBaseline =
                 restingHrBaseline
                     ?: prefs.rhrBaselineOverride
-                    ?: (workoutAvgHr - 20).coerceAtLeast(40f)
+                    ?: (workoutAvgHr - ScoringConstants.HR_ELEVATION_AT_EXERCISE)
+                        .coerceAtLeast(ScoringConstants.MINIMUM_FALLBACK_RHR)
 
             // If no samples are provided, calculate a "pseudo-integrated" TRIMP based on the session average.
             // This ensures that the fallback matches the integrated logic as closely as possible.
