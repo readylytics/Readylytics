@@ -61,6 +61,11 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data class SettingsExpandState(
     val genderExpanded: Boolean = false,
+    val collapseCloudData: Boolean = false,
+    val collapseBaselinesThresholds: Boolean = false,
+    val collapseDisplay: Boolean = false,
+    val collapseAdvanced: Boolean = false,
+    val aboutDismissed: Boolean = false,
 ) : Parcelable
 
 data class SettingsSectionMetadata(
@@ -281,11 +286,11 @@ fun SettingsScreen(
                 if (matchingSections.any { it.id == "cloud_data_sync" }) {
                     M3CollapsibleSection(
                         header = "Cloud & Data",
-                        expanded = !uiState.collapseCloudData || shouldExpandSection("cloud_data_sync"),
+                        expanded =
+                            !expandState.collapseCloudData ||
+                                shouldExpandSection("cloud_data_sync"),
                         onExpandedChange = {
-                            onUIEvent(
-                                SettingsEvent.SectionCollapseChanged(SettingsSection.CLOUD_DATA, !it),
-                            )
+                            expandState = expandState.copy(collapseCloudData = !it)
                         },
                     ) {
                         Column {
@@ -309,11 +314,11 @@ fun SettingsScreen(
                 if (matchingSections.any { it.id == "baselines_thresholds" }) {
                     M3CollapsibleSection(
                         header = "Baselines & Thresholds",
-                        expanded = !uiState.collapseBaselinesThresholds || shouldExpandSection("baselines_thresholds"),
+                        expanded =
+                            !expandState.collapseBaselinesThresholds ||
+                                shouldExpandSection("baselines_thresholds"),
                         onExpandedChange = {
-                            onUIEvent(
-                                SettingsEvent.SectionCollapseChanged(SettingsSection.BASELINES_THRESHOLDS, !it),
-                            )
+                            expandState = expandState.copy(collapseBaselinesThresholds = !it)
                         },
                     ) {
                         Column {
@@ -366,11 +371,11 @@ fun SettingsScreen(
                 if (matchingSections.any { it.id == "display" }) {
                     M3CollapsibleSection(
                         header = "Display",
-                        expanded = !uiState.collapseDisplay || shouldExpandSection("display"),
+                        expanded =
+                            !expandState.collapseDisplay ||
+                                shouldExpandSection("display"),
                         onExpandedChange = {
-                            onUIEvent(
-                                SettingsEvent.SectionCollapseChanged(SettingsSection.DISPLAY, !it),
-                            )
+                            expandState = expandState.copy(collapseDisplay = !it)
                         },
                     ) {
                         Column {
@@ -390,11 +395,11 @@ fun SettingsScreen(
                 if (matchingSections.any { it.id == "advanced" }) {
                     M3CollapsibleSection(
                         header = "Advanced",
-                        expanded = !uiState.collapseAdvanced || shouldExpandSection("advanced"),
+                        expanded =
+                            !expandState.collapseAdvanced ||
+                                shouldExpandSection("advanced"),
                         onExpandedChange = {
-                            onUIEvent(
-                                SettingsEvent.SectionCollapseChanged(SettingsSection.ADVANCED, !it),
-                            )
+                            expandState = expandState.copy(collapseAdvanced = !it)
                         },
                     ) {
                         AdvancedSettingsSection(

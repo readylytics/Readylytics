@@ -34,12 +34,6 @@ class UISettingsViewModel
                         stepGoal = prefs.stepGoal,
                         retentionDaysEnabled = prefs.retentionDaysEnabled,
                         retentionDays = prefs.retentionDays,
-                        collapseCloudData = prefs.collapseCloudData,
-                        collapseHealthConnect = prefs.collapseHealthConnect,
-                        collapseBaselinesThresholds = prefs.collapseBaselinesThresholds,
-                        collapseDisplay = prefs.collapseDisplay,
-                        collapseAdvanced = prefs.collapseAdvanced,
-                        aboutDismissed = prefs.aboutDismissed,
                         trimpModel = prefs.trimpModel,
                         banisterMultiplier = prefs.banisterMultiplier,
                         chengBeta = prefs.chengBeta,
@@ -72,27 +66,6 @@ class UISettingsViewModel
                     viewModelScope.launch { settingsRepo.updateRetentionDaysEnabled(enabled = event.enabled) }
                 is SettingsEvent.RetentionDaysChanged ->
                     viewModelScope.launch { settingsRepo.updateRetentionDays(days = event.days) }
-                is SettingsEvent.SectionCollapseChanged ->
-                    viewModelScope.launch {
-                        when (event.section) {
-                            SettingsSection.CLOUD_DATA ->
-                                settingsRepo.updateCollapseCloudData(
-                                    collapsed = event.collapsed,
-                                )
-                            SettingsSection.HEALTH_CONNECT ->
-                                settingsRepo.updateCollapseHealthConnect(
-                                    collapsed = event.collapsed,
-                                )
-                            SettingsSection.BASELINES_THRESHOLDS ->
-                                settingsRepo.updateCollapseBaselinesThresholds(
-                                    collapsed = event.collapsed,
-                                )
-                            SettingsSection.DISPLAY -> settingsRepo.updateCollapseDisplay(collapsed = event.collapsed)
-                            SettingsSection.ADVANCED -> settingsRepo.updateCollapseAdvanced(collapsed = event.collapsed)
-                        }
-                    }
-                SettingsEvent.AboutDismissed ->
-                    viewModelScope.launch { settingsRepo.updateAboutDismissed(dismissed = true) }
                 is SettingsEvent.TrimpModelChanged ->
                     viewModelScope.launch {
                         settingsRepo.updateTrimpModel(event.model)

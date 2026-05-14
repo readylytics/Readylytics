@@ -152,31 +152,6 @@ sealed interface SettingsEvent {
 
     data object ResyncHealthConnect : SettingsEvent
 
-    data class SectionCollapseChanged(
-        val section: SettingsSection,
-        val collapsed: Boolean,
-    ) : SettingsEvent
-
-    data class CollapseCloudDataChanged(
-        val collapsed: Boolean,
-    ) : SettingsEvent
-
-    data class CollapseHealthConnectChanged(
-        val collapsed: Boolean,
-    ) : SettingsEvent
-
-    data class CollapseBaselinesThresholdsChanged(
-        val collapsed: Boolean,
-    ) : SettingsEvent
-
-    data class CollapseDisplayChanged(
-        val collapsed: Boolean,
-    ) : SettingsEvent
-
-    data class CollapseAdvancedChanged(
-        val collapsed: Boolean,
-    ) : SettingsEvent
-
     data class PhysiologyProfileChanged(
         val profile: PhysiologyProfile,
     ) : SettingsEvent
@@ -206,12 +181,4 @@ sealed interface SettingsEvent {
     ) : SettingsEvent
 
     data object ResetTrimpToProfileDefaults : SettingsEvent
-}
-
-enum class SettingsSection {
-    CLOUD_DATA,
-    HEALTH_CONNECT,
-    BASELINES_THRESHOLDS,
-    DISPLAY,
-    ADVANCED,
 }
