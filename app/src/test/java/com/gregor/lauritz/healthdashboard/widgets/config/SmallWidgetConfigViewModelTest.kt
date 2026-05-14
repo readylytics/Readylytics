@@ -3,19 +3,17 @@ package com.gregor.lauritz.healthdashboard.widgets.config
 import androidx.lifecycle.SavedStateHandle
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.domain.model.MetricType
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.mockito.Mock
-import org.mockito.junit.MockitoJUnitRunner
-import org.mockito.kotlin.whenever
 
-@RunWith(MockitoJUnitRunner::class)
 class SmallWidgetConfigViewModelTest {
-    @Mock
-    private lateinit var configRepository: WidgetConfigurationRepository
+    private val configRepository: WidgetConfigurationRepository = mockk()
+    private val widgetDataRepository: com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository = mockk()
+    private val context: android.content.Context = mockk()
 
     private lateinit var viewModel: SmallWidgetConfigViewModel
     private lateinit var savedStateHandle: SavedStateHandle
@@ -31,10 +29,10 @@ class SmallWidgetConfigViewModelTest {
     @Test
     fun testInitialState() {
         // Arrange
-        whenever(configRepository.observeSmallWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
+        every { configRepository.observeSmallWidgetConfig(WIDGET_ID) } returns flowOf(null)
 
         // Act
-        viewModel = SmallWidgetConfigViewModel(configRepository, savedStateHandle)
+        viewModel = SmallWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Assert
         assertEquals(MetricType.HRV, viewModel.state.value.selectedMetric)
@@ -45,8 +43,8 @@ class SmallWidgetConfigViewModelTest {
     @Test
     fun testUpdateMetric() {
         // Arrange
-        whenever(configRepository.observeSmallWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
-        viewModel = SmallWidgetConfigViewModel(configRepository, savedStateHandle)
+        every { configRepository.observeSmallWidgetConfig(WIDGET_ID) } returns flowOf(null)
+        viewModel = SmallWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Act
         viewModel.updateMetric(MetricType.RHR)
@@ -58,8 +56,8 @@ class SmallWidgetConfigViewModelTest {
     @Test
     fun testUpdateShowTrend() {
         // Arrange
-        whenever(configRepository.observeSmallWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
-        viewModel = SmallWidgetConfigViewModel(configRepository, savedStateHandle)
+        every { configRepository.observeSmallWidgetConfig(WIDGET_ID) } returns flowOf(null)
+        viewModel = SmallWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Act
         viewModel.updateShowTrend(false)
@@ -71,8 +69,8 @@ class SmallWidgetConfigViewModelTest {
     @Test
     fun testClearError() {
         // Arrange
-        whenever(configRepository.observeSmallWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
-        viewModel = SmallWidgetConfigViewModel(configRepository, savedStateHandle)
+        every { configRepository.observeSmallWidgetConfig(WIDGET_ID) } returns flowOf(null)
+        viewModel = SmallWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Act
         viewModel.clearError()
@@ -90,7 +88,7 @@ class SmallWidgetConfigViewModelTest {
             }
 
         // Act
-        viewModel = SmallWidgetConfigViewModel(configRepository, savedStateHandle)
+        viewModel = SmallWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Assert
         assertEquals("Invalid widget ID", viewModel.state.value.error)
@@ -100,10 +98,10 @@ class SmallWidgetConfigViewModelTest {
     @Test
     fun testWidgetIdPassedToRepository() {
         // Arrange
-        whenever(configRepository.observeSmallWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
+        every { configRepository.observeSmallWidgetConfig(WIDGET_ID) } returns flowOf(null)
 
         // Act
-        viewModel = SmallWidgetConfigViewModel(configRepository, savedStateHandle)
+        viewModel = SmallWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Assert - verify that the correct widgetId was used to query the repository
         assertEquals(false, viewModel.state.value.isLoading)

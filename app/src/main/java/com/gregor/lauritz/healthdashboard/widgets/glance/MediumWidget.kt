@@ -2,10 +2,10 @@ package com.gregor.lauritz.healthdashboard.widgets.glance
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.glance.GlanceComposable
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -23,7 +23,6 @@ import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
-import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -34,15 +33,11 @@ import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import com.gregor.lauritz.healthdashboard.widgets.glance.components.GlanceMetricCard
 import com.gregor.lauritz.healthdashboard.widgets.glance.components.GlanceStepsBar
 
-private val Context.glanceMediumWidgetDataStore by preferencesDataStore(
-    name = "glance_medium_widget_state",
-)
-
 /**
  * Medium widget (1x2) - displays two metrics or steps progress.
  */
 class MediumWidget : GlanceAppWidget() {
-    override val stateDefinition = PreferencesGlanceStateDefinition
+    override val stateDefinition = WidgetGlanceStateDefinition
 
     override suspend fun provideGlance(
         context: Context,
@@ -202,7 +197,7 @@ private fun StepsProgressMode(
         modifier =
             GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(android.graphics.Color.parseColor("#FFFFFF"))),
+                .background(ColorProvider(Color(0xFFFFFFFF))),
         contentAlignment = Alignment.Center,
     ) {
         GlanceStepsBar(
@@ -219,7 +214,7 @@ private fun LoadingWidget() {
         modifier =
             GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(android.graphics.Color.parseColor("#F5F5F5"))),
+                .background(ColorProvider(Color(0xFFF5F5F5))),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -233,7 +228,7 @@ private fun LoadingWidget() {
                 text = "Loading…",
                 style =
                     TextStyle(
-                        color = ColorProvider(android.graphics.Color.parseColor("#666666")),
+                        color = ColorProvider(Color(0xFF666666)),
                         fontSize = 14.sp,
                     ),
             )
@@ -248,7 +243,7 @@ private fun ErrorWidget(error: String) {
         modifier =
             GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(android.graphics.Color.parseColor("#FFF1F0"))),
+                .background(ColorProvider(Color(0xFFFFF1F0))),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -262,7 +257,7 @@ private fun ErrorWidget(error: String) {
                 text = "Error",
                 style =
                     TextStyle(
-                        color = ColorProvider(android.graphics.Color.parseColor("#D32F2F")),
+                        color = ColorProvider(Color(0xFFD32F2F)),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                     ),
@@ -271,7 +266,7 @@ private fun ErrorWidget(error: String) {
                 text = error,
                 style =
                     TextStyle(
-                        color = ColorProvider(android.graphics.Color.parseColor("#D32F2F")),
+                        color = ColorProvider(Color(0xFFD32F2F)),
                         fontSize = 12.sp,
                     ),
                 modifier = GlanceModifier.padding(top = 4.dp),

@@ -27,6 +27,8 @@ data class SmallWidgetConfigState(
 class SmallWidgetConfigViewModel
     @Inject
     constructor(
+        @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
+        private val widgetDataRepository: com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository,
         private val configRepository: WidgetConfigurationRepository,
         savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
@@ -104,6 +106,15 @@ class SmallWidgetConfigViewModel
                             showTimestamp = _state.value.showTimestamp,
                         ),
                     )
+
+                    // Trigger initial update
+                    com.gregor.lauritz.healthdashboard.widgets.glance.SmallWidgetUpdater.updateSmallWidget(
+                        context,
+                        widgetId,
+                        widgetDataRepository,
+                        configRepository,
+                    )
+
                     _state.value = _state.value.copy(isLoading = false, isSaved = true)
                 } catch (e: Exception) {
                     _state.value =

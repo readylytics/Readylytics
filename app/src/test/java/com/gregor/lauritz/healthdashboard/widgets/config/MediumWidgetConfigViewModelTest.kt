@@ -4,19 +4,17 @@ import androidx.lifecycle.SavedStateHandle
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetMode
 import com.gregor.lauritz.healthdashboard.domain.model.MetricType
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.mockito.Mock
-import org.mockito.junit.MockitoJUnitRunner
-import org.mockito.kotlin.whenever
 
-@RunWith(MockitoJUnitRunner::class)
 class MediumWidgetConfigViewModelTest {
-    @Mock
-    private lateinit var configRepository: WidgetConfigurationRepository
+    private val configRepository: WidgetConfigurationRepository = mockk()
+    private val widgetDataRepository: com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository = mockk()
+    private val context: android.content.Context = mockk()
 
     private lateinit var viewModel: MediumWidgetConfigViewModel
     private lateinit var savedStateHandle: SavedStateHandle
@@ -32,10 +30,10 @@ class MediumWidgetConfigViewModelTest {
     @Test
     fun testInitialState() {
         // Arrange
-        whenever(configRepository.observeMediumWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
+        every { configRepository.observeMediumWidgetConfig(WIDGET_ID) } returns flowOf(null)
 
         // Act
-        viewModel = MediumWidgetConfigViewModel(configRepository, savedStateHandle)
+        viewModel = MediumWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Assert
         assertEquals(WidgetMode.DUAL_METRIC, viewModel.state.value.mode)
@@ -46,10 +44,10 @@ class MediumWidgetConfigViewModelTest {
     @Test
     fun testWidgetIdFromSavedStateHandle() {
         // Arrange
-        whenever(configRepository.observeMediumWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
+        every { configRepository.observeMediumWidgetConfig(WIDGET_ID) } returns flowOf(null)
 
         // Act
-        viewModel = MediumWidgetConfigViewModel(configRepository, savedStateHandle)
+        viewModel = MediumWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Assert - widget loads configuration when widgetId is valid
         assertEquals(false, viewModel.state.value.isLoading)
@@ -58,8 +56,8 @@ class MediumWidgetConfigViewModelTest {
     @Test
     fun testUpdateMode() {
         // Arrange
-        whenever(configRepository.observeMediumWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
-        viewModel = MediumWidgetConfigViewModel(configRepository, savedStateHandle)
+        every { configRepository.observeMediumWidgetConfig(WIDGET_ID) } returns flowOf(null)
+        viewModel = MediumWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Act
         viewModel.updateMode(WidgetMode.STEPS_PROGRESS)
@@ -71,8 +69,8 @@ class MediumWidgetConfigViewModelTest {
     @Test
     fun testUpdateMetric1() {
         // Arrange
-        whenever(configRepository.observeMediumWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
-        viewModel = MediumWidgetConfigViewModel(configRepository, savedStateHandle)
+        every { configRepository.observeMediumWidgetConfig(WIDGET_ID) } returns flowOf(null)
+        viewModel = MediumWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Act
         viewModel.updateMetric1(MetricType.SLEEP_SCORE)
@@ -84,8 +82,8 @@ class MediumWidgetConfigViewModelTest {
     @Test
     fun testUpdateMetric2() {
         // Arrange
-        whenever(configRepository.observeMediumWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
-        viewModel = MediumWidgetConfigViewModel(configRepository, savedStateHandle)
+        every { configRepository.observeMediumWidgetConfig(WIDGET_ID) } returns flowOf(null)
+        viewModel = MediumWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Act
         viewModel.updateMetric2(MetricType.READINESS)
@@ -97,8 +95,8 @@ class MediumWidgetConfigViewModelTest {
     @Test
     fun testClearError() {
         // Arrange
-        whenever(configRepository.observeMediumWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
-        viewModel = MediumWidgetConfigViewModel(configRepository, savedStateHandle)
+        every { configRepository.observeMediumWidgetConfig(WIDGET_ID) } returns flowOf(null)
+        viewModel = MediumWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Act
         viewModel.clearError()

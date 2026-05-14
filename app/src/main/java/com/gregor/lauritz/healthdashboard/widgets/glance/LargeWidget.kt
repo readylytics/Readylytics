@@ -2,10 +2,10 @@ package com.gregor.lauritz.healthdashboard.widgets.glance
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.glance.GlanceComposable
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -25,7 +25,6 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
-import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -37,15 +36,11 @@ import com.gregor.lauritz.healthdashboard.widgets.glance.components.GlanceMetric
 import com.gregor.lauritz.healthdashboard.widgets.glance.components.GlanceScoreDial
 import com.gregor.lauritz.healthdashboard.widgets.glance.components.GlanceStepsBar
 
-private val Context.glanceLargeWidgetDataStore by preferencesDataStore(
-    name = "glance_large_widget_state",
-)
-
 /**
  * Large widget (2x2) - mini-dashboard with 2x2 card grid.
  */
 class LargeWidget : GlanceAppWidget() {
-    override val stateDefinition = PreferencesGlanceStateDefinition
+    override val stateDefinition = WidgetGlanceStateDefinition
 
     override suspend fun provideGlance(
         context: Context,
@@ -207,7 +202,7 @@ private fun WidgetCard(
             Box(
                 modifier =
                     modifier
-                        .background(ColorProvider(android.graphics.Color.parseColor("#E0E0E0"))),
+                        .background(ColorProvider(Color(0xFFE0E0E0))),
             ) {
                 // Empty content
             }
@@ -222,7 +217,7 @@ private fun LoadingWidget() {
         modifier =
             GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(android.graphics.Color.parseColor("#F5F5F5"))),
+                .background(ColorProvider(Color(0xFFF5F5F5))),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -236,7 +231,7 @@ private fun LoadingWidget() {
                 text = "Loading…",
                 style =
                     TextStyle(
-                        color = ColorProvider(android.graphics.Color.parseColor("#666666")),
+                        color = ColorProvider(Color(0xFF666666)),
                         fontSize = 14.sp,
                     ),
             )
@@ -251,7 +246,7 @@ private fun ErrorWidget(error: String) {
         modifier =
             GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(android.graphics.Color.parseColor("#FFF1F0"))),
+                .background(ColorProvider(Color(0xFFFFF1F0))),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -265,7 +260,7 @@ private fun ErrorWidget(error: String) {
                 text = "Error",
                 style =
                     TextStyle(
-                        color = ColorProvider(android.graphics.Color.parseColor("#D32F2F")),
+                        color = ColorProvider(Color(0xFFD32F2F)),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                     ),
@@ -274,7 +269,7 @@ private fun ErrorWidget(error: String) {
                 text = error,
                 style =
                     TextStyle(
-                        color = ColorProvider(android.graphics.Color.parseColor("#D32F2F")),
+                        color = ColorProvider(Color(0xFFD32F2F)),
                         fontSize = 12.sp,
                     ),
                 modifier = GlanceModifier.padding(top = 4.dp),

@@ -73,7 +73,7 @@ fun GlanceStepsBar(
                 text = "Steps",
                 style =
                     TextStyle(
-                        color = ColorProvider(android.graphics.Color.parseColor("#333333")),
+                        color = ColorProvider(Color(0xFF333333)),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Normal,
                     ),
@@ -124,7 +124,7 @@ fun GlanceStepsBar(
                 text = "$currentSteps",
                 style =
                     TextStyle(
-                        color = ColorProvider(android.graphics.Color.parseColor("#666666")),
+                        color = ColorProvider(Color(0xFF666666)),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Normal,
                     ),
@@ -136,7 +136,7 @@ fun GlanceStepsBar(
                 text = "Goal: $goalSteps",
                 style =
                     TextStyle(
-                        color = ColorProvider(android.graphics.Color.parseColor("#999999")),
+                        color = ColorProvider(Color(0xFF999999)),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Normal,
                     ),

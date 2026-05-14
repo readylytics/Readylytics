@@ -52,6 +52,9 @@ class MediumWidgetConfigActivity : ComponentActivity() {
     @Inject
     lateinit var configRepository: WidgetConfigurationRepository
 
+    @Inject
+    lateinit var widgetDataRepository: com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository
+
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
     private lateinit var viewModel: MediumWidgetConfigViewModel
 
@@ -75,7 +78,12 @@ class MediumWidgetConfigActivity : ComponentActivity() {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     val savedStateHandle = SavedStateHandle(mapOf("widgetId" to widgetId))
-                    return MediumWidgetConfigViewModel(configRepository, savedStateHandle) as T
+                    return MediumWidgetConfigViewModel(
+                        applicationContext,
+                        widgetDataRepository,
+                        configRepository,
+                        savedStateHandle,
+                    ) as T
                 }
             }
 

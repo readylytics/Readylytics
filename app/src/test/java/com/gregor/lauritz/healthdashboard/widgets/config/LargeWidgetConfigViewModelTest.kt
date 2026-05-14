@@ -2,19 +2,17 @@ package com.gregor.lauritz.healthdashboard.widgets.config
 
 import androidx.lifecycle.SavedStateHandle
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.mockito.Mock
-import org.mockito.junit.MockitoJUnitRunner
-import org.mockito.kotlin.whenever
 
-@RunWith(MockitoJUnitRunner::class)
 class LargeWidgetConfigViewModelTest {
-    @Mock
-    private lateinit var configRepository: WidgetConfigurationRepository
+    private val configRepository: WidgetConfigurationRepository = mockk()
+    private val widgetDataRepository: com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository = mockk()
+    private val context: android.content.Context = mockk()
 
     private lateinit var viewModel: LargeWidgetConfigViewModel
     private lateinit var savedStateHandle: SavedStateHandle
@@ -30,10 +28,10 @@ class LargeWidgetConfigViewModelTest {
     @Test
     fun testInitialState() {
         // Arrange
-        whenever(configRepository.observeLargeWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
+        every { configRepository.observeLargeWidgetConfig(WIDGET_ID) } returns flowOf(null)
 
         // Act
-        viewModel = LargeWidgetConfigViewModel(configRepository, savedStateHandle)
+        viewModel = LargeWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Assert - default state has 4 cards selected
         assertEquals(4, viewModel.state.value.selectedCardIds.size)
@@ -42,10 +40,10 @@ class LargeWidgetConfigViewModelTest {
     @Test
     fun testWidgetIdFromSavedStateHandle() {
         // Arrange
-        whenever(configRepository.observeLargeWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
+        every { configRepository.observeLargeWidgetConfig(WIDGET_ID) } returns flowOf(null)
 
         // Act
-        viewModel = LargeWidgetConfigViewModel(configRepository, savedStateHandle)
+        viewModel = LargeWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Assert - widget loads configuration when widgetId is valid
         assertEquals(false, viewModel.state.value.isLoading)
@@ -54,8 +52,8 @@ class LargeWidgetConfigViewModelTest {
     @Test
     fun testToggleCardSelection() {
         // Arrange
-        whenever(configRepository.observeLargeWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
-        viewModel = LargeWidgetConfigViewModel(configRepository, savedStateHandle)
+        every { configRepository.observeLargeWidgetConfig(WIDGET_ID) } returns flowOf(null)
+        viewModel = LargeWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
         val initialCount = viewModel.state.value.selectedCardIds.size
 
         // Act - remove a card
@@ -68,8 +66,8 @@ class LargeWidgetConfigViewModelTest {
     @Test
     fun testCannotExceedFourCards() {
         // Arrange
-        whenever(configRepository.observeLargeWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
-        viewModel = LargeWidgetConfigViewModel(configRepository, savedStateHandle)
+        every { configRepository.observeLargeWidgetConfig(WIDGET_ID) } returns flowOf(null)
+        viewModel = LargeWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Act - try to add a 5th card (should be rejected)
         // First ensure we have exactly 4
@@ -90,8 +88,8 @@ class LargeWidgetConfigViewModelTest {
     @Test
     fun testClearError() {
         // Arrange
-        whenever(configRepository.observeLargeWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
-        viewModel = LargeWidgetConfigViewModel(configRepository, savedStateHandle)
+        every { configRepository.observeLargeWidgetConfig(WIDGET_ID) } returns flowOf(null)
+        viewModel = LargeWidgetConfigViewModel(context, widgetDataRepository, configRepository, savedStateHandle)
 
         // Act
         viewModel.clearError()
