@@ -97,7 +97,7 @@ robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 google-tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
-material = { group = "com.google.android.material", name = "material", version = "1.13.0" }
+material = { group = "com.google.android.material", name = "material", version = "1.14.0" }
 androidx-arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "archCore" }
 
 [plugins]
