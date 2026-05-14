@@ -119,7 +119,8 @@ fun TrendChart(
 
     val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
 
-    LaunchedEffect(points) {
+    val pointsHash = remember(points) { points.map { it.dayOffset to it.value }.hashCode() }
+    LaunchedEffect(pointsHash) {
         modelProducer.runTransaction {
             val validPoints = points.filter { it.value != null }
             lineSeries {
@@ -143,15 +144,7 @@ fun TrendChart(
                 maxY = maxY,
             )
         }
-    val dotComponent = rememberShapeComponent(fill = Fill(dotColor), shape = CircleShape)
-    val line =
-        LineCartesianLayer.rememberLine(
-            fill = LineCartesianLayer.LineFill.single(Fill(dotColor)),
-            pointProvider =
-                LineCartesianLayer.PointProvider.single(
-                    LineCartesianLayer.Point(dotComponent, 6.dp),
-                ),
-        )
+    val line = rememberChartLine(dotColor)
 
     CartesianChartHost(
         chart =
@@ -242,4 +235,22 @@ fun EmptyChartPlaceholder(modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+@Composable
+fun rememberChartDotComponent(color: Color) =
+    remember(color) {
+        rememberShapeComponent(fill = Fill(color), shape = CircleShape)
+    }
+
+@Composable
+fun rememberChartLine(color: Color): LineCartesianLayer.Line {
+    val dotComponent = rememberChartDotComponent(color)
+    return LineCartesianLayer.rememberLine(
+        fill = LineCartesianLayer.LineFill.single(Fill(color)),
+        pointProvider =
+            LineCartesianLayer.PointProvider.single(
+                LineCartesianLayer.Point(dotComponent, 6.dp),
+            ),
+    )
 }

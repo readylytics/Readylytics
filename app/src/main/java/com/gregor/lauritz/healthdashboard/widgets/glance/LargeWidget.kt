@@ -5,15 +5,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.doublePreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.glance.GlanceComposable
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
@@ -53,11 +51,12 @@ class LargeWidget : GlanceAppWidget() {
         context: Context,
         id: GlanceId,
     ) {
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         provideContent {
             LargeWidgetContent(
                 context = context,
                 glanceId = id,
-                widgetId = id.hashCode(),
+                widgetId = appWidgetId,
             )
         }
     }
@@ -71,8 +70,8 @@ private fun LargeWidgetContent(
     widgetId: Int,
 ) {
     val state = currentState<Preferences>()
-    val error = state[stringPreferencesKey("widget_large_${widgetId}_error")]
-    val lastUpdateMs = state[longPreferencesKey("widget_large_${widgetId}_last_update")] ?: 0L
+    val error = state[LargeWidgetKeys.error(widgetId)]
+    val lastUpdateMs = state[LargeWidgetKeys.lastUpdate(widgetId)] ?: 0L
 
     // Handle error state
     if (error != null) {
@@ -121,12 +120,43 @@ private fun WidgetCard(
     state: Preferences,
     modifier: GlanceModifier,
 ) {
-    val cardType = state[stringPreferencesKey("widget_large_${widgetId}_card${cardNum}_type")] ?: "METRIC"
-    val metricName = state[stringPreferencesKey("widget_large_${widgetId}_card${cardNum}_metric")] ?: "HRV"
-    val value = state[doublePreferencesKey("widget_large_${widgetId}_card${cardNum}_value")] ?: 0.0
-    val statusName = state[stringPreferencesKey("widget_large_${widgetId}_card${cardNum}_status")] ?: "CALIBRATING"
-    val currentSteps = state[longPreferencesKey("widget_large_${widgetId}_card${cardNum}_current_steps")] ?: 0L
-    val goalSteps = state[longPreferencesKey("widget_large_${widgetId}_card${cardNum}_goal_steps")] ?: 10000L
+    val cardTypeKey =
+        when (cardNum) {
+            1 -> LargeWidgetKeys.card1Type(widgetId)
+            2 -> LargeWidgetKeys.card2Type(widgetId)
+            3 -> LargeWidgetKeys.card3Type(widgetId)
+            4 -> LargeWidgetKeys.card4Type(widgetId)
+            else -> null
+        }
+    val metricKey =
+        when (cardNum) {
+            1 -> LargeWidgetKeys.card1Metric(widgetId)
+            2 -> LargeWidgetKeys.card2Metric(widgetId)
+            3 -> LargeWidgetKeys.card3Metric(widgetId)
+            4 -> LargeWidgetKeys.card4Metric(widgetId)
+            else -> null
+        }
+    val valueKey =
+        when (cardNum) {
+            1 -> LargeWidgetKeys.card1Value(widgetId)
+            2 -> LargeWidgetKeys.card2Value(widgetId)
+            3 -> LargeWidgetKeys.card3Value(widgetId)
+            4 -> LargeWidgetKeys.card4Value(widgetId)
+            else -> null
+        }
+    val statusKey =
+        when (cardNum) {
+            1 -> LargeWidgetKeys.card1Status(widgetId)
+            2 -> LargeWidgetKeys.card2Status(widgetId)
+            3 -> LargeWidgetKeys.card3Status(widgetId)
+            4 -> LargeWidgetKeys.card4Status(widgetId)
+            else -> null
+        }
+
+    val cardType = cardTypeKey?.let { state[it] } ?: "METRIC"
+    val metricName = metricKey?.let { state[it] } ?: "HRV"
+    val value = valueKey?.let { state[it] } ?: 0.0
+    val statusName = statusKey?.let { state[it] } ?: "CALIBRATING"
 
     val metricType =
         try {
@@ -167,8 +197,8 @@ private fun WidgetCard(
         "STEPS" -> {
             Box(modifier = modifier) {
                 GlanceStepsBar(
-                    currentSteps = currentSteps,
-                    goalSteps = goalSteps,
+                    currentSteps = value.toLong(),
+                    goalSteps = 10000L, // Default goal as it's not currently stored per-widget
                 )
             }
         }

@@ -21,7 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -45,6 +44,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -129,7 +129,7 @@ fun SleepScreen(
         item(key = "architecture_bar") {
             val sectionLabel =
                 remember(uiState.selectedDate) {
-                    val today = java.time.LocalDate.now()
+                    val today = LocalDate.now()
                     when (uiState.selectedDate) {
                         today -> "Last Night"
                         today.minusDays(1) -> "Night of Yesterday"
@@ -330,10 +330,3 @@ private fun MetricsGrid(
         }
     }
 }
-
-private data class MetricCardData(
-    val title: String,
-    val value: String,
-    val status: MetricStatus,
-    val tooltip: String,
-)
