@@ -7,11 +7,11 @@ import kotlin.math.exp
 object PaiCalculator {
     fun getDefaultPaiScalingFactor(profile: PhysiologyProfile): Float =
         when (profile) {
-            PhysiologyProfile.ATHLETE -> 0.15f
-            PhysiologyProfile.ACTIVE -> 0.18f
-            PhysiologyProfile.GENERAL -> 0.20f
-            PhysiologyProfile.SEDENTARY -> 0.25f
-            PhysiologyProfile.SHIFT_WORKER -> 0.20f
+            PhysiologyProfile.ATHLETE -> ScoringConstants.Pai.PAI_SCALING_ATHLETE
+            PhysiologyProfile.ACTIVE -> ScoringConstants.Pai.PAI_SCALING_ACTIVE
+            PhysiologyProfile.GENERAL -> ScoringConstants.Pai.PAI_SCALING_GENERAL
+            PhysiologyProfile.SEDENTARY -> ScoringConstants.Pai.PAI_SCALING_SEDENTARY
+            PhysiologyProfile.SHIFT_WORKER -> ScoringConstants.Pai.PAI_SCALING_SHIFT_WORKER
         }
 
     /**
@@ -40,27 +40,26 @@ object PaiCalculator {
         return when (trimpModel) {
             TrimpModel.BANISTER -> {
                 val isMale = gender != Gender.FEMALE
-                val a = if (isMale) 0.64f else 0.86f
-                val b = if (isMale) 1.92f else 1.67f
+                val a = if (isMale) ScoringConstants.Trimp.BANISTER_MALE_A else ScoringConstants.Trimp.BANISTER_FEMALE_A
+                val b = if (isMale) ScoringConstants.Trimp.BANISTER_MALE_B else ScoringConstants.Trimp.BANISTER_FEMALE_B
                 durationMinutes * hrR * a * exp(b * hrR) * banisterMultiplier
             }
             TrimpModel.CHENG -> {
-                // LT-TRIMP (Cheng): Piecewise logic with Lactate Threshold (LT) at 85% HRR
-                // K1 = 0.006/sec (0.36/min), K2 = 0.012/sec (0.72/min)
-                // REF: paiesque reference
-                val ltThreshold = 0.85f
+                // LT-TRIMP (Cheng): Piecewise logic with Lactate Threshold (LT)
+                // REF: Cheng 2007; paiesque reference
                 val weight =
-                    if (hrR < ltThreshold) {
-                        0.36f // Linear weight below LT
+                    if (hrR < ScoringConstants.Trimp.CHENG_LT_THRESHOLD) {
+                        ScoringConstants.Trimp.CHENG_WEIGHT_BELOW_LT // Linear weight below LT
                     } else {
-                        0.72f * exp(chengBeta * hrR) // Exponential weight at/above LT
+                        // Exponential weight at/above LT
+                        ScoringConstants.Trimp.CHENG_WEIGHT_ABOVE_LT * exp(chengBeta * hrR)
                     }
-                durationMinutes * hrR * weight * 3.2f
+                durationMinutes * hrR * weight * ScoringConstants.Trimp.CHENG_MULTIPLIER
             }
             TrimpModel.I_TRIMP -> {
                 // iTRIMP: Exponential weighting instead of power law
-                // REF: paiesque reference; Manzi et al. 2009
-                durationMinutes * hrR * exp(itrimB * hrR) * 0.48f
+                // REF: Manzi et al. 2009; paiesque reference
+                durationMinutes * hrR * exp(itrimB * hrR) * ScoringConstants.Trimp.ITRIMP_MULTIPLIER
             }
         }
     }
@@ -73,7 +72,7 @@ object PaiCalculator {
         scalingFactor: Float,
     ): Float {
         val paiD = dailyTrimp * scalingFactor
-        return paiD.coerceAtMost(75f) // Daily Cap
+        return paiD.coerceAtMost(ScoringConstants.Pai.DAILY_CAP)
     }
 
     /**
@@ -115,6 +114,6 @@ object PaiCalculator {
         readinessScore: Float?,
     ): Float {
         if (readinessScore == null) return paiD
-        return paiD * (readinessScore / 100f)
+        return paiD * (readinessScore / ScoringConstants.Pai.READINESS_SCALE)
     }
 }

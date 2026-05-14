@@ -134,5 +134,34 @@ object ScoringConstants {
         const val TIER2_THRESHOLD = 100f
         const val TIER2_MULTIPLIER = 0.5f
         const val TIER3_MULTIPLIER = 0.25f
+
+        // PAI scaling factors by physiology profile — REF: Whoop PAI model
+        const val PAI_SCALING_ATHLETE = 0.15f
+        const val PAI_SCALING_ACTIVE = 0.18f
+        const val PAI_SCALING_GENERAL = 0.20f
+        const val PAI_SCALING_SEDENTARY = 0.25f
+        const val PAI_SCALING_SHIFT_WORKER = 0.20f
+
+        // Readiness integration divisor
+        const val READINESS_SCALE = 100f
+    }
+
+    object Trimp {
+        // Banister TRIMP coefficients — REF: Banister 1991; paiesque reference
+        const val BANISTER_MALE_A = 0.64f
+        const val BANISTER_MALE_B = 1.92f
+        const val BANISTER_FEMALE_A = 0.86f
+        const val BANISTER_FEMALE_B = 1.67f
+
+        // Cheng LT-TRIMP (Lactate Threshold) — REF: Cheng 2007; paiesque reference
+        const val CHENG_LT_THRESHOLD = 0.85f // % HRR
+        const val CHENG_WEIGHT_BELOW_LT = 0.36f // Linear zone
+        const val CHENG_WEIGHT_ABOVE_LT = 0.72f // Exponential zone
+        const val CHENG_MULTIPLIER = 3.2f
+        const val CHENG_BETA = 0.09f // Exponential growth rate
+
+        // iTRIMP (Individual TRIMP) — REF: Manzi et al. 2009; paiesque reference
+        const val ITRIMP_B = 2.1f
+        const val ITRIMP_MULTIPLIER = 0.48f
     }
 }
