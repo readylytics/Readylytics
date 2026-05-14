@@ -121,6 +121,35 @@ class SqlCipherKeyManager
             }
         }
 
+        /**
+         * Exports a decrypted copy of the database to a plaintext file.
+         * Used for Google Drive backups so data remains accessible after Keystore key loss.
+         */
+        fun exportPlaintext(
+            dbFile: File,
+            destFile: File,
+        ) {
+            if (!dbFile.exists()) return
+            val rawKey = getOrCreateDbKey()
+            try {
+                val keyHex = rawKey.joinToString("") { "%02x".format(it) }
+                val db =
+                    net.zetetic.database.sqlcipher.SQLiteDatabase.openOrCreateDatabase(
+                        dbFile,
+                        "x'$keyHex'",
+                        null,
+                        null,
+                        null,
+                    )
+                db.execSQL("ATTACH DATABASE '${destFile.absolutePath}' AS plaintext KEY ''")
+                db.execSQL("SELECT sqlcipher_export('plaintext')")
+                db.execSQL("DETACH DATABASE plaintext")
+                db.close()
+            } finally {
+                rawKey.fill(0)
+            }
+        }
+
         private fun getOrCreateDbKey(): ByteArray =
             if (prefs.contains(PREF_ENCRYPTED_KEY)) {
                 decryptKey()

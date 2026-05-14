@@ -69,7 +69,11 @@ class GoogleDriveRepository
                 val response = apiService.downloadFile("Bearer $accessToken", fileId)
                 if (response.isSuccessful) {
                     response.body()?.use { body ->
-                        dest.writeBytes(body.bytes())
+                        body.byteStream().use { input ->
+                            dest.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
                     } ?: throw DriveApiException("Empty download response")
                 } else {
                     throw DriveApiException("Download failed: ${response.code()}")

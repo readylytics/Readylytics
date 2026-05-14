@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,6 +21,8 @@ class ForegroundSyncController
         private val settingsRepo: SettingsRepository,
         private val syncUseCase: HealthSyncUseCase,
     ) {
+        private val syncMutex = Mutex()
+
         private val _syncCompletedEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
         val syncCompletedEvent: SharedFlow<Unit> = _syncCompletedEvent.asSharedFlow()
 
@@ -68,8 +71,14 @@ class ForegroundSyncController
         }
 
         private suspend fun executeSync(isFirstSync: Boolean) {
-            _isSyncing.value = true
+            if (!syncMutex.tryLock()) {
+                com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") {
+                    "Sync already in progress, skipping redundant request"
+                }
+                return
+            }
             try {
+                _isSyncing.value = true
                 if (isFirstSync) {
                     com.gregor.lauritz.healthdashboard.domain.util.logD(
                         "ForegroundSyncController",
@@ -81,8 +90,12 @@ class ForegroundSyncController
                 com.gregor.lauritz.healthdashboard.domain.util
                     .logD("ForegroundSyncController") { "Sync success" }
                 _syncCompletedEvent.emit(Unit)
+            } catch (e: Exception) {
+                com.gregor.lauritz.healthdashboard.domain.util
+                    .logD("ForegroundSyncController") { "Sync failed: ${e.message}" }
             } finally {
                 _isSyncing.value = false
+                syncMutex.unlock()
             }
         }
     }

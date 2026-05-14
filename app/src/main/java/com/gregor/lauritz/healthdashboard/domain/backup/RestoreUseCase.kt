@@ -9,6 +9,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.data.security.SqlCipherKeyManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -28,6 +29,7 @@ class RestoreUseCase
         private val driveRepository: GoogleDriveRepository,
         private val healthDatabase: HealthDatabase,
         private val settingsRepo: SettingsRepository,
+        private val sqlCipherKeyManager: SqlCipherKeyManager,
     ) {
         sealed class RestoreResult {
             data object Success : RestoreResult()
@@ -100,6 +102,9 @@ class RestoreUseCase
 
                     if (dbDest.exists()) dbDest.renameTo(dbBak)
                     dbNew.renameTo(dbDest)
+
+                    // Re-encrypt the restored database with the local Keystore key
+                    sqlCipherKeyManager.migrateIfNeeded(dbDest)
 
                     if (walSrc.exists()) walSrc.copyTo(File("${dbDest.path}-wal"), overwrite = true)
                     if (shmSrc.exists()) shmSrc.copyTo(File("${dbDest.path}-shm"), overwrite = true)

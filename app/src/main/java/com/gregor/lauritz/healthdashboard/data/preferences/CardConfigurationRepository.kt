@@ -21,6 +21,39 @@ class CardConfigurationRepository
     ) {
         private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+        init {
+            repositoryScope.launch {
+                ensureDefaultCardsArePresent()
+            }
+        }
+
+        private suspend fun ensureDefaultCardsArePresent() {
+            dataStore.updateData { proto ->
+                val stored = proto.dashboardCardsList.mapNotNull { CardConfigurationMapper.toDomain(it) }
+                val defaults = SettingsDefaults.DEFAULT_DASHBOARD_CARDS
+
+                val storedIds = stored.map { it.cardId }.toSet()
+                val missingDefaults = defaults.filter { it.cardId !in storedIds }
+
+                if (missingDefaults.isEmpty()) {
+                    proto
+                } else {
+                    val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
+                    val appended =
+                        missingDefaults.mapIndexed { index, config ->
+                            config.copy(position = maxPos + 1 + index)
+                        }
+                    val merged = stored + appended
+
+                    proto
+                        .toBuilder()
+                        .clearDashboardCards()
+                        .addAllDashboardCards(merged.map { CardConfigurationMapper.toProto(it) })
+                        .build()
+                }
+            }
+        }
+
         fun dashboardCardConfigurations(): Flow<List<CardConfiguration>> =
             dataStore.data
                 .catch { exception ->
@@ -30,31 +63,7 @@ class CardConfigurationRepository
                         throw exception
                     }
                 }.map { proto ->
-                    val stored = proto.dashboardCardsList.mapNotNull { CardConfigurationMapper.toDomain(it) }
-                    val defaults = SettingsDefaults.DEFAULT_DASHBOARD_CARDS
-
-                    // Merge: keep stored configs, but append any new default cards that aren't in stored yet
-                    val storedIds = stored.map { it.cardId }.toSet()
-                    val missingDefaults = defaults.filter { it.cardId !in storedIds }
-
-                    if (missingDefaults.isEmpty()) {
-                        stored
-                    } else {
-                        // Append missing defaults at the end with incremented positions
-                        val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
-                        val appended =
-                            missingDefaults.mapIndexed { index, config ->
-                                config.copy(position = maxPos + 1 + index)
-                            }
-                        val merged = stored + appended
-
-                        // Persist back to storage immediately so we don't re-calculate on next emission
-                        repositoryScope.launch {
-                            updateDashboardCardConfigurations(merged)
-                        }
-
-                        merged
-                    }
+                    proto.dashboardCardsList.mapNotNull { CardConfigurationMapper.toDomain(it) }
                 }
 
         suspend fun updateDashboardCardConfigurations(cards: List<CardConfiguration>) {
