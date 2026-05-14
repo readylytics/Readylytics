@@ -5,15 +5,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.doublePreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.glance.GlanceComposable
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
@@ -46,11 +44,12 @@ class SmallWidget : GlanceAppWidget() {
         context: Context,
         id: GlanceId,
     ) {
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         provideContent {
             SmallWidgetContent(
                 context = context,
                 glanceId = id,
-                widgetId = id.hashCode(),
+                widgetId = appWidgetId,
             )
         }
     }
@@ -63,16 +62,14 @@ private fun SmallWidgetContent(
     glanceId: GlanceId,
     widgetId: Int,
 ) {
-    val prefix = "widget_${widgetId}_"
-
     // Read state from preferences
     val state = currentState<Preferences>()
 
-    val metricTypeName = state[stringPreferencesKey("${prefix}metric_type")] ?: "HRV"
-    val value = state[doublePreferencesKey("${prefix}value")] ?: 0.0
-    val statusName = state[stringPreferencesKey("${prefix}status")] ?: "CALIBRATING"
-    val error = state[stringPreferencesKey("${prefix}error")]
-    val lastUpdateMs = state[longPreferencesKey("${prefix}last_update")] ?: 0L
+    val metricTypeName = state[SmallWidgetKeys.metricType(widgetId)] ?: "HRV"
+    val value = state[SmallWidgetKeys.value(widgetId)] ?: 0.0
+    val statusName = state[SmallWidgetKeys.status(widgetId)] ?: "CALIBRATING"
+    val error = state[SmallWidgetKeys.error(widgetId)]
+    val lastUpdateMs = state[SmallWidgetKeys.lastUpdate(widgetId)] ?: 0L
 
     val metricType =
         try {

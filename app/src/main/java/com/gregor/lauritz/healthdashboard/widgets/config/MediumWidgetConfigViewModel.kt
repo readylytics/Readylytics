@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -47,18 +48,7 @@ class MediumWidgetConfigViewModel
             viewModelScope.launch {
                 try {
                     _state.value = _state.value.copy(isLoading = true, error = null)
-                    val config =
-                        configRepository.observeMediumWidgetConfig(widgetId).let {
-                            try {
-                                val result = mutableListOf<MediumWidgetConfig?>()
-                                it.collect { config ->
-                                    result.add(config)
-                                }
-                                result.firstOrNull()
-                            } catch (e: Exception) {
-                                null
-                            }
-                        }
+                    val config = configRepository.observeMediumWidgetConfig(widgetId).firstOrNull()
 
                     if (config != null) {
                         _state.value =

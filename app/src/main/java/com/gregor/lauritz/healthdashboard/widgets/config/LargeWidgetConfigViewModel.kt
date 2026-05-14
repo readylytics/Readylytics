@@ -9,6 +9,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -59,18 +60,7 @@ class LargeWidgetConfigViewModel
             viewModelScope.launch {
                 try {
                     _state.value = _state.value.copy(isLoading = true, error = null)
-                    val config =
-                        configRepository.observeLargeWidgetConfig(widgetId).let {
-                            try {
-                                val result = mutableListOf<LargeWidgetConfig?>()
-                                it.collect { config ->
-                                    result.add(config)
-                                }
-                                result.firstOrNull()
-                            } catch (e: Exception) {
-                                null
-                            }
-                        }
+                    val config = configRepository.observeLargeWidgetConfig(widgetId).firstOrNull()
 
                     if (config != null && config.cardIds.isNotEmpty()) {
                         _state.value =

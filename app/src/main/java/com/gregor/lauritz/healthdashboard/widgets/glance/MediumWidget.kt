@@ -5,15 +5,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.doublePreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.glance.GlanceComposable
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
@@ -50,11 +48,12 @@ class MediumWidget : GlanceAppWidget() {
         context: Context,
         id: GlanceId,
     ) {
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         provideContent {
             MediumWidgetContent(
                 context = context,
                 glanceId = id,
-                widgetId = id.hashCode(),
+                widgetId = appWidgetId,
             )
         }
     }
@@ -69,8 +68,8 @@ private fun MediumWidgetContent(
 ) {
     val state = currentState<Preferences>()
 
-    val mode = state[stringPreferencesKey("widget_medium_${widgetId}_mode")] ?: "DUAL_METRIC"
-    val error = state[stringPreferencesKey("widget_medium_${widgetId}_error")]
+    val mode = state[MediumWidgetKeys.mode(widgetId)] ?: "DUAL_METRIC"
+    val error = state[MediumWidgetKeys.error(widgetId)]
 
     // Handle error state
     if (error != null) {
@@ -92,13 +91,13 @@ private fun DualMetricMode(
     state: Preferences,
     widgetId: Int,
 ) {
-    val metric1Type = state[stringPreferencesKey("widget_medium_${widgetId}_metric1_type")] ?: "HRV"
-    val metric1Value = state[doublePreferencesKey("widget_medium_${widgetId}_metric1_value")] ?: 0.0
-    val metric1Status = state[stringPreferencesKey("widget_medium_${widgetId}_metric1_status")] ?: "CALIBRATING"
-    val metric2Type = state[stringPreferencesKey("widget_medium_${widgetId}_metric2_type")] ?: "RHR"
-    val metric2Value = state[doublePreferencesKey("widget_medium_${widgetId}_metric2_value")] ?: 0.0
-    val metric2Status = state[stringPreferencesKey("widget_medium_${widgetId}_metric2_status")] ?: "CALIBRATING"
-    val lastUpdateMs = state[longPreferencesKey("widget_medium_${widgetId}_last_update")] ?: 0L
+    val metric1Type = state[MediumWidgetKeys.metric1Type(widgetId)] ?: "HRV"
+    val metric1Value = state[MediumWidgetKeys.metric1Value(widgetId)] ?: 0.0
+    val metric1Status = state[MediumWidgetKeys.metric1Status(widgetId)] ?: "CALIBRATING"
+    val metric2Type = state[MediumWidgetKeys.metric2Type(widgetId)] ?: "RHR"
+    val metric2Value = state[MediumWidgetKeys.metric2Value(widgetId)] ?: 0.0
+    val metric2Status = state[MediumWidgetKeys.metric2Status(widgetId)] ?: "CALIBRATING"
+    val lastUpdateMs = state[MediumWidgetKeys.lastUpdate(widgetId)] ?: 0L
 
     val m1Type =
         try {
@@ -185,9 +184,9 @@ private fun StepsProgressMode(
     state: Preferences,
     widgetId: Int,
 ) {
-    val currentSteps = state[longPreferencesKey("widget_medium_${widgetId}_current_steps")] ?: 0L
-    val goalSteps = state[longPreferencesKey("widget_medium_${widgetId}_goal_steps")] ?: 10000L
-    val lastUpdateMs = state[longPreferencesKey("widget_medium_${widgetId}_last_update")] ?: 0L
+    val currentSteps = state[MediumWidgetKeys.currentSteps(widgetId)] ?: 0L
+    val goalSteps = state[MediumWidgetKeys.goalSteps(widgetId)] ?: 10000L
+    val lastUpdateMs = state[MediumWidgetKeys.lastUpdate(widgetId)] ?: 0L
 
     // Handle loading state
     if (lastUpdateMs == 0L) {

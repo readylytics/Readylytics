@@ -48,7 +48,7 @@ class WidgetUpdateWorker
                 try {
                     val smallWidgetIds = glanceManager.getGlanceIds(SmallWidget::class.java)
                     smallWidgetIds.forEach { glanceId ->
-                        val widgetId = glanceId.hashCode()
+                        val widgetId = glanceManager.getAppWidgetId(glanceId)
                         try {
                             SmallWidgetUpdater.updateSmallWidget(
                                 applicationContext,
@@ -71,7 +71,7 @@ class WidgetUpdateWorker
                 try {
                     val mediumWidgetIds = glanceManager.getGlanceIds(MediumWidget::class.java)
                     mediumWidgetIds.forEach { glanceId ->
-                        val widgetId = glanceId.hashCode()
+                        val widgetId = glanceManager.getAppWidgetId(glanceId)
                         try {
                             MediumWidgetUpdater.updateMediumWidget(
                                 applicationContext,
@@ -94,7 +94,7 @@ class WidgetUpdateWorker
                 try {
                     val largeWidgetIds = glanceManager.getGlanceIds(LargeWidget::class.java)
                     largeWidgetIds.forEach { glanceId ->
-                        val widgetId = glanceId.hashCode()
+                        val widgetId = glanceManager.getAppWidgetId(glanceId)
                         try {
                             LargeWidgetUpdater.updateLargeWidget(
                                 applicationContext,

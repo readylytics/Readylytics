@@ -238,10 +238,7 @@ fun EmptyChartPlaceholder(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun rememberChartDotComponent(color: Color) =
-    remember(color) {
-        rememberShapeComponent(fill = Fill(color), shape = CircleShape)
-    }
+fun rememberChartDotComponent(color: Color) = rememberShapeComponent(fill = Fill(color), shape = CircleShape)
 
 @Composable
 fun rememberChartLine(color: Color): LineCartesianLayer.Line {
