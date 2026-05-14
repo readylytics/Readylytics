@@ -28,8 +28,7 @@ class ComputeWorkoutTrimpUseCase
             val rhrBaseline =
                 restingHrBaseline
                     ?: prefs.rhrBaselineOverride
-                    ?: (workoutAvgHr - ScoringConstants.HR_ELEVATION_AT_EXERCISE)
-                        .coerceAtLeast(ScoringConstants.MINIMUM_FALLBACK_RHR)
+                    ?: ScoringConstants.DEFAULT_RHR_BPM
 
             // If no samples are provided, calculate a "pseudo-integrated" TRIMP based on the session average.
             // This ensures that the fallback matches the integrated logic as closely as possible.
