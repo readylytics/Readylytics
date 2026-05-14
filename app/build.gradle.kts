@@ -175,6 +175,7 @@ dependencies {
     testImplementation(libs.androidx.junit)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.hilt.android.testing)
+    testImplementation(libs.androidx.arch.core.testing)
     kspTest(libs.hilt.compiler)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

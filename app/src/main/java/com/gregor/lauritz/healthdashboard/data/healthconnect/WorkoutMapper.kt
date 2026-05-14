@@ -39,7 +39,6 @@ object WorkoutMapper {
         session: ExerciseSessionRecord,
         hrSamples: List<HeartRateRecordEntity>,
         thresholds: IntArray,
-        trimp: Float = 0f,
     ): WorkoutRecordEntity {
         val zoneMinutes = FloatArray(5)
 
@@ -70,6 +69,8 @@ object WorkoutMapper {
             } else {
                 0f
             }
+
+        val trimp = zoneMinutes.indices.sumOf { (zoneMinutes[it] * ZONE_WEIGHTS[it]).toDouble() }.toFloat()
 
         return WorkoutRecordEntity(
             id = session.metadata.id,

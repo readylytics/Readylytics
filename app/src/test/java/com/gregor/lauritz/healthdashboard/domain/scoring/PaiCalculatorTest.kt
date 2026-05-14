@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -19,7 +20,7 @@ class PaiCalculatorTest {
         val duration = 40f
         val rhr = 60f
         val hrMax = 190f
-        val gender = "Male"
+        val gender = Gender.fromString("Male")
 
         // HR = 64 (less than 60 + 5)
         val result = PaiCalculator.calculateDailyTrimp(duration, 64f, rhr, hrMax, gender)
@@ -36,7 +37,7 @@ class PaiCalculatorTest {
         val hrAvg = 160f
         val rhr = 60f
         val hrMax = 190f
-        val gender = "Male"
+        val gender = Gender.fromString("Male")
 
         // HRR = 190 - 60 = 130
         // HRr = (160 - 60) / 130 = 100 / 130 = 0.7692
@@ -55,7 +56,7 @@ class PaiCalculatorTest {
         val hrAvg = 160f
         val rhr = 60f
         val hrMax = 190f
-        val gender = "Female"
+        val gender = Gender.fromString("Female")
 
         // HRR = 130, HRr = 0.7692
         // a = 0.86, b = 1.67
@@ -75,8 +76,8 @@ class PaiCalculatorTest {
         val hrMax = 190f
 
         val resultNull = PaiCalculator.calculateDailyTrimp(duration, hrAvg, rhr, hrMax, null)
-        val resultOther = PaiCalculator.calculateDailyTrimp(duration, hrAvg, rhr, hrMax, "Other")
-        val resultMale = PaiCalculator.calculateDailyTrimp(duration, hrAvg, rhr, hrMax, "Male")
+        val resultOther = PaiCalculator.calculateDailyTrimp(duration, hrAvg, rhr, hrMax, Gender.fromString("Other"))
+        val resultMale = PaiCalculator.calculateDailyTrimp(duration, hrAvg, rhr, hrMax, Gender.fromString("Male"))
 
         assertEquals(resultMale, resultNull, 0.001f)
         assertEquals(resultMale, resultOther, 0.001f)
@@ -118,7 +119,7 @@ class PaiCalculatorTest {
         val duration = 40f
         val hrMax = 190f
         val rhr = 60f
-        val gender = "Male"
+        val gender = Gender.fromString("Male")
 
         // Scenario: Some samples are high intensity (exercise), some are low (resting)
         // High intensity: 160 bpm -> TRIMP = 86.23 (as seen in other test)
@@ -137,7 +138,7 @@ class PaiCalculatorTest {
         val hrAvg = 160f
         val rhr = 60f
         val hrMax = 190f
-        val gender = "Male"
+        val gender = Gender.fromString("Male")
         val itrimB = 2.1f
 
         // HRr = 0.7692
@@ -163,7 +164,7 @@ class PaiCalculatorTest {
         val hrAvg = 160f
         val rhr = 60f
         val hrMax = 190f
-        val gender = "Male"
+        val gender = Gender.fromString("Male")
 
         // HRr = 0.7692 (Below LT=0.85)
         // Td = 40 * 0.7692 * 0.36 * 3.2 = 35.45
@@ -186,7 +187,7 @@ class PaiCalculatorTest {
         val hrAvg = 180f
         val rhr = 60f
         val hrMax = 190f
-        val gender = "Male"
+        val gender = Gender.fromString("Male")
         val chengBeta = 0.09f
 
         // HRr = 0.9231 (Above LT=0.85)

@@ -1,9 +1,11 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring.components
 
+import com.gregor.lauritz.healthdashboard.data.preferences.Gender
+
 object SleepArchitectureTargetFactory {
     fun create(
         ageYears: Int,
-        gender: String?,
+        gender: Gender?,
     ): SleepArchitectureTargets {
         val base =
             when {

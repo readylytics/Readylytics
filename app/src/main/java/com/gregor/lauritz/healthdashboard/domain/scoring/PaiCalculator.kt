@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import kotlin.math.exp
 
@@ -23,7 +24,7 @@ object PaiCalculator {
         hrAvg: Float,
         rhrBaseline: Float,
         hrMax: Float,
-        gender: String?,
+        gender: Gender?,
         trimpModel: TrimpModel = TrimpModel.BANISTER,
         banisterMultiplier: Float = 1.0f,
         chengBeta: Float = 0.09f,
@@ -38,7 +39,7 @@ object PaiCalculator {
 
         return when (trimpModel) {
             TrimpModel.BANISTER -> {
-                val isMale = gender?.equals("Female", ignoreCase = true) != true
+                val isMale = gender != Gender.FEMALE
                 val a = if (isMale) 0.64f else 0.86f
                 val b = if (isMale) 1.92f else 1.67f
                 durationMinutes * hrR * a * exp(b * hrR) * banisterMultiplier

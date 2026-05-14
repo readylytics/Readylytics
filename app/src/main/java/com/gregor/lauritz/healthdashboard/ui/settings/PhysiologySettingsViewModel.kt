@@ -50,7 +50,7 @@ class PhysiologySettingsViewModel
                 }
                 is SettingsEvent.GenderChanged -> {
                     viewModelScope.launch {
-                        settingsRepo.updateGender(gender = event.gender)
+                        settingsRepo.updateGender(gender = event.gender?.displayName)
                         healthSyncUseCase.sync()
                     }
                 }

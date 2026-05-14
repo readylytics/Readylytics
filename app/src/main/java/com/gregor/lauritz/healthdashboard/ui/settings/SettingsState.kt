@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
+import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
@@ -35,7 +36,7 @@ data class PhysiologySettingsState(
     val birthDay: Int = SettingsDefaults.BIRTH_DAY,
     val birthMonth: Int = SettingsDefaults.BIRTH_MONTH,
     val birthYear: Int = SettingsDefaults.BIRTH_YEAR,
-    val gender: String? = SettingsDefaults.GENDER,
+    val gender: Gender? = null,
 )
 
 data class HeartRateZonesState(

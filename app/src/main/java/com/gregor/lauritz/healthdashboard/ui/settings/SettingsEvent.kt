@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
+import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
@@ -66,7 +67,7 @@ sealed interface SettingsEvent {
     ) : SettingsEvent
 
     data class GenderChanged(
-        val gender: String?,
+        val gender: Gender?,
     ) : SettingsEvent
 
     data class HrvOptimalThresholdChanged(

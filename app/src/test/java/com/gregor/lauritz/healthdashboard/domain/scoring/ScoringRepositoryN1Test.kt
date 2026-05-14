@@ -7,6 +7,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
@@ -191,7 +192,7 @@ class ScoringRepositoryN1Test {
                         paiScalingFactor = 0.15f,
                         maxHeartRate = 190,
                         age = 30,
-                        gender = "Male",
+                        gender = Gender.fromString("Male"),
                     ),
                 )
 
@@ -205,7 +206,7 @@ class ScoringRepositoryN1Test {
                         paiScalingFactor = 0.25f,
                         maxHeartRate = 190,
                         age = 30,
-                        gender = "Male",
+                        gender = Gender.fromString("Male"),
                     ),
                 )
 

@@ -147,7 +147,7 @@ class HealthSyncUseCase
                                         prefs = prefs,
                                         restingHrBaseline = rhrBaseline,
                                     )
-                                WorkoutMapper.mapExerciseSession(session, sessionSamples, thresholds, calculatedTrimp)
+                                WorkoutMapper.mapExerciseSession(session, sessionSamples, thresholds)
                             }
 
                         val hrvEntities = HrvMapper.mapToEntities(hrvRecords, sleepEntities)

@@ -1,5 +1,7 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring.components
 
+import com.gregor.lauritz.healthdashboard.data.preferences.Gender
+
 sealed class SleepArchitectureTargets {
     abstract val deepPercentage: Float
     abstract val remPercentage: Float
@@ -29,10 +31,10 @@ sealed class SleepArchitectureTargets {
     ) : SleepArchitectureTargets()
 }
 
-fun SleepArchitectureTargets.applyGenderAdjustment(gender: String?): SleepArchitectureTargets {
+fun SleepArchitectureTargets.applyGenderAdjustment(gender: Gender?): SleepArchitectureTargets {
     // For females 50-59: add 30 min equivalent to deep sleep target (≈0.02 of typical 8h sleep)
     // REF: Hormonal changes, menopause-related disruption
-    return if (gender?.lowercase() == "female" && this is SleepArchitectureTargets.AgeRange50To69) {
+    return if (gender == Gender.FEMALE && this is SleepArchitectureTargets.AgeRange50To69) {
         this.copy(deepPercentage = this.deepPercentage + 0.02f)
     } else {
         this

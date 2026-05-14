@@ -36,6 +36,7 @@ mockk = "1.14.9"
 robolectric = "4.16.1"
 androidxTestCore = "1.7.0"
 androidxTestRunner = "1.7.0"
+archCore = "2.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -97,6 +98,7 @@ androidx-test-core = { group = "androidx.test", name = "core", version.ref = "an
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 google-tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 material = { group = "com.google.android.material", name = "material", version = "1.13.0" }
+androidx-arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "archCore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
