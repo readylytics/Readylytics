@@ -22,8 +22,15 @@ class RecoveryFlagTest {
         isLateNadir: Boolean = false,
         isCalibrating: Boolean = false,
     ) = calculator.computeRecoveryFlags(
-        zLnHrv, zRhr, rhrDeltaBpm, yesterdayZLnHrv, yesterdayZRhr,
-        hrvMissing, stagesSuspicious, isLateNadir, isCalibrating,
+        zLnHrv,
+        zRhr,
+        rhrDeltaBpm,
+        yesterdayZLnHrv,
+        yesterdayZRhr,
+        hrvMissing,
+        stagesSuspicious,
+        isLateNadir,
+        isCalibrating,
     )
 
     // ─── OVERREACHING ─────────────────────────────────────────────────────────
@@ -37,39 +44,51 @@ class RecoveryFlagTest {
 
     @Test
     fun `overreaching on yesterday only does not set flag`() {
-        val result = flags(
-            zLnHrv = 0f, zRhr = 0f,
-            yesterdayZLnHrv = 2f, yesterdayZRhr = -2.5f,
-        )
+        val result =
+            flags(
+                zLnHrv = 0f,
+                zRhr = 0f,
+                yesterdayZLnHrv = 2f,
+                yesterdayZRhr = -2.5f,
+            )
         assertFalse(RecoveryFlag.OVERREACHING in result)
     }
 
     @Test
     fun `overreaching on both days sets flag`() {
-        val result = flags(
-            zLnHrv = 2f, zRhr = -2.5f,
-            yesterdayZLnHrv = 2f, yesterdayZRhr = -2.5f,
-        )
+        val result =
+            flags(
+                zLnHrv = 2f,
+                zRhr = -2.5f,
+                yesterdayZLnHrv = 2f,
+                yesterdayZRhr = -2.5f,
+            )
         assertTrue(RecoveryFlag.OVERREACHING in result)
     }
 
     @Test
     fun `overreaching requires zRhr below threshold`() {
         // zRhr = -1.9 is above threshold of -2.0 → not overreaching
-        val result = flags(
-            zLnHrv = 2f, zRhr = -1.9f,
-            yesterdayZLnHrv = 2f, yesterdayZRhr = -1.9f,
-        )
+        val result =
+            flags(
+                zLnHrv = 2f,
+                zRhr = -1.9f,
+                yesterdayZLnHrv = 2f,
+                yesterdayZRhr = -1.9f,
+            )
         assertFalse(RecoveryFlag.OVERREACHING in result)
     }
 
     @Test
     fun `overreaching requires zLnHrv above threshold`() {
         // zLnHrv = 1.4 is below threshold of 1.5 → not overreaching
-        val result = flags(
-            zLnHrv = 1.4f, zRhr = -2.5f,
-            yesterdayZLnHrv = 1.4f, yesterdayZRhr = -2.5f,
-        )
+        val result =
+            flags(
+                zLnHrv = 1.4f,
+                zRhr = -2.5f,
+                yesterdayZLnHrv = 1.4f,
+                yesterdayZRhr = -2.5f,
+            )
         assertFalse(RecoveryFlag.OVERREACHING in result)
     }
 
@@ -83,30 +102,42 @@ class RecoveryFlagTest {
 
     @Test
     fun `illness onset on both days via rhrDelta sets flag`() {
-        val result = flags(
-            zLnHrv = -2f, zRhr = 2.5f, rhrDeltaBpm = 6f,
-            yesterdayZLnHrv = -2f, yesterdayZRhr = 2.5f,
-        )
+        val result =
+            flags(
+                zLnHrv = -2f,
+                zRhr = 2.5f,
+                rhrDeltaBpm = 6f,
+                yesterdayZLnHrv = -2f,
+                yesterdayZRhr = 2.5f,
+            )
         assertTrue(RecoveryFlag.ILLNESS_ONSET in result)
     }
 
     @Test
     fun `illness onset on both days via high zRhr sets flag`() {
         // rhrDelta not available but zRhr >= 2.0 satisfies the illness condition
-        val result = flags(
-            zLnHrv = -2f, zRhr = 2.1f, rhrDeltaBpm = null,
-            yesterdayZLnHrv = -2f, yesterdayZRhr = 2.1f,
-        )
+        val result =
+            flags(
+                zLnHrv = -2f,
+                zRhr = 2.1f,
+                rhrDeltaBpm = null,
+                yesterdayZLnHrv = -2f,
+                yesterdayZRhr = 2.1f,
+            )
         assertTrue(RecoveryFlag.ILLNESS_ONSET in result)
     }
 
     @Test
     fun `illness onset requires zLnHrv below threshold`() {
         // zLnHrv = -1.4 is above threshold of -1.5 → no illness
-        val result = flags(
-            zLnHrv = -1.4f, zRhr = 2.5f, rhrDeltaBpm = 6f,
-            yesterdayZLnHrv = -1.4f, yesterdayZRhr = 2.5f,
-        )
+        val result =
+            flags(
+                zLnHrv = -1.4f,
+                zRhr = 2.5f,
+                rhrDeltaBpm = 6f,
+                yesterdayZLnHrv = -1.4f,
+                yesterdayZRhr = 2.5f,
+            )
         assertFalse(RecoveryFlag.ILLNESS_ONSET in result)
     }
 

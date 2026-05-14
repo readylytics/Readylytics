@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -21,30 +22,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import kotlin.math.roundToInt
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
-import com.patrykandpatrick.vico.compose.cartesian.layer.point
+import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
+import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
-import com.patrykandpatrick.vico.compose.common.fill
-import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
-import com.patrykandpatrick.vico.core.cartesian.decoration.HorizontalLine
-import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
-import com.patrykandpatrick.vico.core.common.component.LineComponent
-import com.patrykandpatrick.vico.core.common.shape.CorneredShape
+import kotlin.math.roundToInt
 
 @Composable
 fun TrendCard(
@@ -128,7 +125,7 @@ fun TrendChart(
             lineSeries {
                 series(
                     x = validPoints.map { it.dayOffset },
-                    y = validPoints.mapNotNull { it.value },
+                    y = validPoints.mapNotNull { it.value?.toDouble() },
                 )
             }
         }
@@ -137,21 +134,22 @@ fun TrendChart(
     // Note: Vico scroll positioning is handled through initial rememberVicoScrollState
     // Auto-scroll on range change would require accessing internal Vico APIs
 
-    val rangeProvider = remember(minY, maxY, rangeDays) {
-        CartesianLayerRangeProvider.fixed(
-            minX = 0.0,
-            maxX = (rangeDays - 1).toDouble(),
-            minY = minY,
-            maxY = maxY,
-        )
-    }
-    val dotComponent = rememberShapeComponent(fill = fill(dotColor), shape = CorneredShape.Pill)
+    val rangeProvider =
+        remember(minY, maxY, rangeDays) {
+            CartesianLayerRangeProvider.fixed(
+                minX = 0.0,
+                maxX = (rangeDays - 1).toDouble(),
+                minY = minY,
+                maxY = maxY,
+            )
+        }
+    val dotComponent = rememberShapeComponent(fill = Fill(dotColor), shape = CircleShape)
     val line =
         LineCartesianLayer.rememberLine(
-            fill = LineCartesianLayer.LineFill.single(fill(dotColor)),
+            fill = LineCartesianLayer.LineFill.single(Fill(dotColor)),
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
-                    LineCartesianLayer.point(dotComponent, 6.dp),
+                    LineCartesianLayer.Point(dotComponent, 6.dp),
                 ),
         )
 
@@ -176,12 +174,16 @@ fun TrendChart(
                         guideline = guidelineComponent,
                     ),
                 decorations =
-                    if (showBaseline) listOf(
-                        HorizontalLine(
-                            y = { baselineValue.roundToInt().toDouble() },
-                            line = LineComponent(fill = fill(baselineColor), thicknessDp = 1f),
-                        ),
-                    ) else emptyList(),
+                    if (showBaseline) {
+                        listOf(
+                            HorizontalLine(
+                                y = { baselineValue.toDouble() },
+                                line = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp),
+                            ),
+                        )
+                    } else {
+                        emptyList()
+                    },
             ),
         modelProducer = modelProducer,
         scrollState = scrollState,

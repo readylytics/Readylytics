@@ -5,7 +5,9 @@ package com.gregor.lauritz.healthdashboard.data.preferences
  * Prevents accidental use of encrypted values as plaintext by forcing explicit intent.
  */
 @JvmInline
-value class EncryptedValue(val ciphertext: String) {
+value class EncryptedValue(
+    val ciphertext: String,
+) {
     companion object {
         fun from(plaintext: String?): EncryptedValue? = plaintext?.let { EncryptedValue(it) }
     }

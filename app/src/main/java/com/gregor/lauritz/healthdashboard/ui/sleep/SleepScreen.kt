@@ -1,65 +1,47 @@
 package com.gregor.lauritz.healthdashboard.ui.sleep
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
-import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.deepSleepStatus
 import com.gregor.lauritz.healthdashboard.domain.model.efficiencyStatus
 import com.gregor.lauritz.healthdashboard.domain.model.remSleepStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
-import com.gregor.lauritz.healthdashboard.domain.scoring.toStatus
-import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
-import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
-import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.SleepArchitectureBar
 import com.gregor.lauritz.healthdashboard.ui.components.StatusLegend
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
-import com.gregor.lauritz.healthdashboard.ui.components.containerColor
-import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import java.time.Instant
@@ -68,9 +50,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
-fun SleepRoute(
-    viewModel: SleepViewModel = hiltViewModel(),
-) {
+fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val bHrv by viewModel.baselineHrvFlow.collectAsStateWithLifecycle()
     val bRhr by viewModel.baselineRhrFlow.collectAsStateWithLifecycle()
@@ -107,9 +87,10 @@ fun SleepScreen(
     ) {
         item(key = "date_switcher") {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
             ) {
                 DateSwitcher(
                     selectedDate = uiState.selectedDate,
@@ -128,14 +109,15 @@ fun SleepScreen(
                         .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                val sleepScoreTooltip = remember {
-                    buildString {
-                        append("Total quality of rest based on duration and cycles.\n\n")
-                        append("• 80–100: Optimal\n")
-                        append("• 60–79: Fair\n")
-                        append("• < 60: Poor")
+                val sleepScoreTooltip =
+                    remember {
+                        buildString {
+                            append("Total quality of rest based on duration and cycles.\n\n")
+                            append("• 80–100: Optimal\n")
+                            append("• 60–79: Fair\n")
+                            append("• < 60: Poor")
+                        }
                     }
-                }
                 M3ScoreDial(
                     score = uiState.latestSummary?.sleepScore,
                     label = "Sleep Score",
@@ -157,16 +139,20 @@ fun SleepScreen(
                         }
                     }
                 }
-            val bedTime = uiState.latestSession?.let {
-                Instant.ofEpochMilli(it.startTime)
-                    .atZone(ZoneId.systemDefault())
-                    .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
-            } ?: "—"
-            val wakeTime = uiState.latestSession?.let {
-                Instant.ofEpochMilli(it.endTime)
-                    .atZone(ZoneId.systemDefault())
-                    .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
-            } ?: "—"
+            val bedTime =
+                uiState.latestSession?.let {
+                    Instant
+                        .ofEpochMilli(it.startTime)
+                        .atZone(ZoneId.systemDefault())
+                        .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
+                } ?: "—"
+            val wakeTime =
+                uiState.latestSession?.let {
+                    Instant
+                        .ofEpochMilli(it.endTime)
+                        .atZone(ZoneId.systemDefault())
+                        .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
+                } ?: "—"
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -267,7 +253,7 @@ fun SleepScreen(
             MetricsGrid(
                 uiState = uiState,
                 circadianResult = circadianConsistency,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
 
@@ -294,11 +280,11 @@ private fun MetricsGrid(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Box(modifier = Modifier.weight(1f)) {
                 CircadianConsistencyCard(
@@ -319,7 +305,7 @@ private fun MetricsGrid(
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Box(modifier = Modifier.weight(1f)) {
                 MetricCard(

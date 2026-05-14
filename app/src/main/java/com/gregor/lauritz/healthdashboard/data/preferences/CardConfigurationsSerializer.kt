@@ -7,9 +7,11 @@ import java.io.InputStream
 import java.io.OutputStream
 
 object CardConfigurationsSerializer : Serializer<CardConfigurationsProto> {
-    override val defaultValue: CardConfigurationsProto = CardConfigurationsProto.newBuilder()
-        .addAllDashboardCards(SettingsDefaults.DEFAULT_DASHBOARD_CARDS.map { CardConfigurationMapper.toProto(it) })
-        .build()
+    override val defaultValue: CardConfigurationsProto =
+        CardConfigurationsProto
+            .newBuilder()
+            .addAllDashboardCards(SettingsDefaults.DEFAULT_DASHBOARD_CARDS.map { CardConfigurationMapper.toProto(it) })
+            .build()
 
     override suspend fun readFrom(input: InputStream): CardConfigurationsProto {
         try {
@@ -19,7 +21,10 @@ object CardConfigurationsSerializer : Serializer<CardConfigurationsProto> {
         }
     }
 
-    override suspend fun writeTo(t: CardConfigurationsProto, output: OutputStream) {
+    override suspend fun writeTo(
+        t: CardConfigurationsProto,
+        output: OutputStream,
+    ) {
         t.writeTo(output)
     }
 }

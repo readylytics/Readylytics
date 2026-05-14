@@ -14,7 +14,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -26,7 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.domain.model.stepsStatus
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -76,16 +75,18 @@ fun StepDetailScreen(
         },
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize(),
+            modifier =
+                Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize(),
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
             item(key = "score_dial") {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     M3ScoreDial(
@@ -102,18 +103,20 @@ fun StepDetailScreen(
                 SectionHeader(title = "Trends")
                 Spacer(Modifier.height(8.dp))
                 SingleChoiceSegmentedButtonRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
                 ) {
                     TimeRange.entries.forEachIndexed { index, range ->
                         SegmentedButton(
                             selected = uiState.selectedRange == range,
                             onClick = { onRangeSelected(range) },
-                            shape = SegmentedButtonDefaults.itemShape(
-                                index = index,
-                                count = TimeRange.entries.size,
-                            ),
+                            shape =
+                                SegmentedButtonDefaults.itemShape(
+                                    index = index,
+                                    count = TimeRange.entries.size,
+                                ),
                             label = { Text(range.label) },
                         )
                     }

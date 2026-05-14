@@ -1,8 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.backup
 
 import android.content.Context
-import android.content.Intent
-import com.gregor.lauritz.healthdashboard.MainActivity
 import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthManager
 import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthState
 import com.gregor.lauritz.healthdashboard.data.drive.GoogleDriveRepository
@@ -11,6 +9,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.data.security.SqlCipherKeyManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -30,11 +29,16 @@ class RestoreUseCase
         private val driveRepository: GoogleDriveRepository,
         private val healthDatabase: HealthDatabase,
         private val settingsRepo: SettingsRepository,
+        private val sqlCipherKeyManager: SqlCipherKeyManager,
     ) {
         sealed class RestoreResult {
             data object Success : RestoreResult()
+
             data object SuccessRequiresRestart : RestoreResult()
-            data class Failure(val cause: Throwable) : RestoreResult()
+
+            data class Failure(
+                val cause: Throwable,
+            ) : RestoreResult()
         }
 
         // Phase 1: download and validate — call this before showing the confirmation dialog.
@@ -58,7 +62,11 @@ class RestoreUseCase
                     val zipDest = File(context.cacheDir, "restore_temp.zip")
                     driveRepository.downloadBackup(accessToken, backupFile.id, zipDest)
 
-                    val unzipDir = File(context.cacheDir, "restore_unzipped").also { it.deleteRecursively(); it.mkdirs() }
+                    val unzipDir =
+                        File(context.cacheDir, "restore_unzipped").also {
+                            it.deleteRecursively()
+                            it.mkdirs()
+                        }
                     unzip(zipDest, unzipDir)
                     zipDest.delete()
 
@@ -95,6 +103,9 @@ class RestoreUseCase
                     if (dbDest.exists()) dbDest.renameTo(dbBak)
                     dbNew.renameTo(dbDest)
 
+                    // Re-encrypt the restored database with the local Keystore key
+                    sqlCipherKeyManager.migrateIfNeeded(dbDest)
+
                     if (walSrc.exists()) walSrc.copyTo(File("${dbDest.path}-wal"), overwrite = true)
                     if (shmSrc.exists()) shmSrc.copyTo(File("${dbDest.path}-shm"), overwrite = true)
 
@@ -120,20 +131,75 @@ class RestoreUseCase
         }
 
         private suspend fun restorePreferences(json: JSONObject) {
-            if (json.has("goalSleepHours")) settingsRepo.updateGoalSleepHours(json.getDouble("goalSleepHours").toFloat())
-            if (!json.isNull("hrvBaselineOverride")) settingsRepo.updateHrvBaselineOverride(json.getDouble("hrvBaselineOverride").toFloat())
-            if (!json.isNull("rhrBaselineOverride")) settingsRepo.updateRhrBaselineOverride(json.getDouble("rhrBaselineOverride").toFloat())
-            if (json.has("syncPreference")) settingsRepo.updateSyncPreference(SyncPreference.valueOf(json.getString("syncPreference")))
+            if (json.has(
+                    "goalSleepHours",
+                )
+            ) {
+                settingsRepo.updateGoalSleepHours(json.getDouble("goalSleepHours").toFloat())
+            }
+            if (!json.isNull(
+                    "hrvBaselineOverride",
+                )
+            ) {
+                settingsRepo.updateHrvBaselineOverride(json.getDouble("hrvBaselineOverride").toFloat())
+            }
+            if (!json.isNull(
+                    "rhrBaselineOverride",
+                )
+            ) {
+                settingsRepo.updateRhrBaselineOverride(json.getDouble("rhrBaselineOverride").toFloat())
+            }
+            if (json.has(
+                    "syncPreference",
+                )
+            ) {
+                settingsRepo.updateSyncPreference(SyncPreference.valueOf(json.getString("syncPreference")))
+            }
             if (json.has("syncIntervalHours")) settingsRepo.updateSyncIntervalHours(json.getInt("syncIntervalHours"))
             if (json.has("maxHeartRate")) settingsRepo.updateMaxHeartRate(json.getInt("maxHeartRate"))
-            if (json.has("hrvOptimalThreshold")) settingsRepo.updateHrvOptimalThreshold(json.getDouble("hrvOptimalThreshold").toFloat())
-            if (json.has("hrvWarningThreshold")) settingsRepo.updateHrvWarningThreshold(json.getDouble("hrvWarningThreshold").toFloat())
-            if (json.has("rhrOptimalThreshold")) settingsRepo.updateRhrOptimalThreshold(json.getDouble("rhrOptimalThreshold").toFloat())
-            if (json.has("rhrWarningThreshold")) settingsRepo.updateRhrWarningThreshold(json.getDouble("rhrWarningThreshold").toFloat())
-            if (json.has("restingHrBeforeMinutes")) settingsRepo.updateRestingHrBeforeMinutes(json.getInt("restingHrBeforeMinutes"))
-            if (json.has("restingHrAfterMinutes")) settingsRepo.updateRestingHrAfterMinutes(json.getInt("restingHrAfterMinutes"))
+            if (json.has(
+                    "hrvOptimalThreshold",
+                )
+            ) {
+                settingsRepo.updateHrvOptimalThreshold(json.getDouble("hrvOptimalThreshold").toFloat())
+            }
+            if (json.has(
+                    "hrvWarningThreshold",
+                )
+            ) {
+                settingsRepo.updateHrvWarningThreshold(json.getDouble("hrvWarningThreshold").toFloat())
+            }
+            if (json.has(
+                    "rhrOptimalThreshold",
+                )
+            ) {
+                settingsRepo.updateRhrOptimalThreshold(json.getDouble("rhrOptimalThreshold").toFloat())
+            }
+            if (json.has(
+                    "rhrWarningThreshold",
+                )
+            ) {
+                settingsRepo.updateRhrWarningThreshold(json.getDouble("rhrWarningThreshold").toFloat())
+            }
+            if (json.has(
+                    "restingHrBeforeMinutes",
+                )
+            ) {
+                settingsRepo.updateRestingHrBeforeMinutes(json.getInt("restingHrBeforeMinutes"))
+            }
+            if (json.has(
+                    "restingHrAfterMinutes",
+                )
+            ) {
+                settingsRepo.updateRestingHrAfterMinutes(json.getInt("restingHrAfterMinutes"))
+            }
             if (json.has("appTheme")) settingsRepo.updateAppTheme(AppTheme.valueOf(json.getString("appTheme")))
-            if (json.has("backupSchedule")) settingsRepo.updateBackupSchedule(BackupSchedule.valueOf(json.getString("backupSchedule")))
+            if (json.has(
+                    "backupSchedule",
+                )
+            ) {
+                settingsRepo.updateBackupSchedule(BackupSchedule.valueOf(json.getString("backupSchedule")))
+            }
             if (json.has("birthDay") && json.has("birthMonth") && json.has("birthYear")) {
                 settingsRepo.updateBirthday(
                     json.getInt("birthDay"),
@@ -143,11 +209,10 @@ class RestoreUseCase
             }
         }
 
-
         private fun unzip(
             zipFile: File,
             destDir: File,
-        ): Unit {
+        ) {
             ZipInputStream(zipFile.inputStream().buffered()).use { zis ->
                 var entry = zis.nextEntry
                 while (entry != null) {

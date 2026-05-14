@@ -12,7 +12,10 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
-data class DriveFile(val id: String, val name: String)
+data class DriveFile(
+    val id: String,
+    val name: String,
+)
 
 @Singleton
 class GoogleDriveRepository
@@ -66,7 +69,11 @@ class GoogleDriveRepository
                 val response = apiService.downloadFile("Bearer $accessToken", fileId)
                 if (response.isSuccessful) {
                     response.body()?.use { body ->
-                        dest.writeBytes(body.bytes())
+                        body.byteStream().use { input ->
+                            dest.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
                     } ?: throw DriveApiException("Empty download response")
                 } else {
                     throw DriveApiException("Download failed: ${response.code()}")
@@ -91,4 +98,6 @@ class GoogleDriveRepository
         }
     }
 
-class DriveApiException(message: String) : Exception(message)
+class DriveApiException(
+    message: String,
+) : Exception(message)

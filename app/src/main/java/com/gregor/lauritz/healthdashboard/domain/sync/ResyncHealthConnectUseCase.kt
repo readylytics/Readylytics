@@ -1,11 +1,11 @@
 package com.gregor.lauritz.healthdashboard.domain.sync
 
-import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject

@@ -6,6 +6,7 @@ import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthState
 import com.gregor.lauritz.healthdashboard.data.drive.GoogleDriveRepository
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.security.SqlCipherKeyManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -27,6 +28,7 @@ class BackupUseCase
         private val driveRepository: GoogleDriveRepository,
         private val healthDatabase: HealthDatabase,
         private val settingsRepo: SettingsRepository,
+        private val sqlCipherKeyManager: SqlCipherKeyManager,
     ) {
         suspend fun execute(): Result<Unit> =
             withContext(Dispatchers.IO) {
@@ -44,12 +46,8 @@ class BackupUseCase
                     val zipFile = File(context.cacheDir, "health_backup.zip")
                     try {
                         val dbFile = context.getDatabasePath("health_dashboard.db")
-                        // Copy the main DB file and WAL companion files so the backup is consistent
-                        dbFile.copyTo(File(tempDir, "health.db"), overwrite = true)
-                        val walFile = File("${dbFile.path}-wal")
-                        val shmFile = File("${dbFile.path}-shm")
-                        if (walFile.exists()) walFile.copyTo(File(tempDir, "health.db-wal"), overwrite = true)
-                        if (shmFile.exists()) shmFile.copyTo(File(tempDir, "health.db-shm"), overwrite = true)
+                        // Export decrypted version for backup — ensures usability on new devices
+                        sqlCipherKeyManager.exportPlaintext(dbFile, File(tempDir, "health.db"))
 
                         val prefsJson = exportPreferencesToJson()
                         File(tempDir, "preferences.json").writeText(prefsJson)
@@ -65,9 +63,11 @@ class BackupUseCase
                         settingsRepo.updateLastBackupTimestamp(System.currentTimeMillis())
 
                         // Prune old backups, keeping the one we just uploaded plus one previous version
-                        val existing = driveRepository.listBackupFiles(accessToken)
-                            .filter { it.id != uploadedId }
-                            .sortedByDescending { it.name }
+                        val existing =
+                            driveRepository
+                                .listBackupFiles(accessToken)
+                                .filter { it.id != uploadedId }
+                                .sortedByDescending { it.name }
                         existing.drop(1).forEach { driveRepository.deleteFile(accessToken, it.id) }
                     } finally {
                         tempDir.deleteRecursively()

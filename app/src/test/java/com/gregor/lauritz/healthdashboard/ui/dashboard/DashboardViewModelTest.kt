@@ -1,9 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
-import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
-import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
@@ -15,7 +13,6 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -23,14 +20,11 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModelTest {
-
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var syncController: ForegroundSyncController
@@ -40,36 +34,46 @@ class DashboardViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
 
-        val dailySummaryRepo = mockk<com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepository> {
-            every { observeSince(any()) } returns MutableStateFlow(emptyList())
-            every { observeByDate(any()) } returns MutableStateFlow(null)
-            every { observeFirstSessionEndingInRange(any(), any()) } returns MutableStateFlow(null)
-        }
-        val getDashboardDataUseCase = mockk<com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase>(relaxed = true) {
-            every { formatSleepDuration(any()) } returns "8h 0m"
-        }
-        every { getDashboardDataUseCase(any(), any(), any(), any(), any()) } returns com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase.DashboardCards(emptyMap(), emptyList())
-        val settingsRepo = mockk<SettingsRepository> {
-            every { userPreferences } returns MutableStateFlow(UserPreferences())
-        }
-        val cardConfigRepository = mockk<com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository> {
-            every { dashboardCardConfigurations() } returns MutableStateFlow(emptyList())
-        }
+        val dailySummaryRepo =
+            mockk<com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepository> {
+                every { observeSince(any()) } returns MutableStateFlow(emptyList())
+                every { observeByDate(any()) } returns MutableStateFlow(null)
+                every { observeFirstSessionEndingInRange(any(), any()) } returns MutableStateFlow(null)
+            }
+        val getDashboardDataUseCase =
+            mockk<com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase>(relaxed = true) {
+                every { formatSleepDuration(any()) } returns "8h 0m"
+            }
+        every { getDashboardDataUseCase(any(), any(), any(), any(), any()) } returns
+            com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase.DashboardCards(
+                emptyMap(),
+                emptyList(),
+            )
+        val settingsRepo =
+            mockk<SettingsRepository> {
+                every { userPreferences } returns MutableStateFlow(UserPreferences())
+            }
+        val cardConfigRepository =
+            mockk<com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository> {
+                every { dashboardCardConfigurations() } returns MutableStateFlow(emptyList())
+            }
         val selectedDateRepo = SelectedDateRepository()
-        val circadianRepo = mockk<CircadianConsistencyRepository> {
-            every { resultFor(any()) } returns MutableStateFlow(CircadianConsistencyResult.Calibrating)
-        }
+        val circadianRepo =
+            mockk<CircadianConsistencyRepository> {
+                every { resultFor(any()) } returns MutableStateFlow(CircadianConsistencyResult.Calibrating)
+            }
         syncController = mockk()
 
-        viewModel = DashboardViewModel(
-            dailySummaryRepository = dailySummaryRepo,
-            getDashboardDataUseCase = getDashboardDataUseCase,
-            foregroundSyncController = syncController,
-            selectedDateRepository = selectedDateRepo,
-            settingsRepo = settingsRepo,
-            cardConfigRepository = cardConfigRepository,
-            circadianRepo = circadianRepo,
-        )
+        viewModel =
+            DashboardViewModel(
+                dailySummaryRepository = dailySummaryRepo,
+                getDashboardDataUseCase = getDashboardDataUseCase,
+                foregroundSyncController = syncController,
+                selectedDateRepository = selectedDateRepo,
+                settingsRepo = settingsRepo,
+                cardConfigRepository = cardConfigRepository,
+                circadianRepo = circadianRepo,
+            )
     }
 
     @After
@@ -78,24 +82,25 @@ class DashboardViewModelTest {
     }
 
     @Test
-    fun `onRefresh sets isRefreshing true then false on success`() = runTest {
-        coEvery { syncController.triggerImmediateSync() } returns Unit
+    fun `onRefresh sets isRefreshing true then false on success`() =
+        runTest {
+            coEvery { syncController.triggerImmediateSync() } returns Unit
 
-        viewModel.onRefresh()
-        advanceUntilIdle()
+            viewModel.onRefresh()
+            advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.isRefreshing)
-        coVerify(exactly = 1) { syncController.triggerImmediateSync() }
-    }
+            assertFalse(viewModel.uiState.value.isRefreshing)
+            coVerify(exactly = 1) { syncController.triggerImmediateSync() }
+        }
 
     @Test
-    fun `onRefresh sets isRefreshing false even when sync throws`() = runTest {
-        coEvery { syncController.triggerImmediateSync() } throws RuntimeException("sync failed")
+    fun `onRefresh sets isRefreshing false even when sync throws`() =
+        runTest {
+            coEvery { syncController.triggerImmediateSync() } throws RuntimeException("sync failed")
 
-        viewModel.onRefresh()
-        advanceUntilIdle()
+            viewModel.onRefresh()
+            advanceUntilIdle()
 
-        assertFalse(viewModel.uiState.value.isRefreshing)
-    }
-
+            assertFalse(viewModel.uiState.value.isRefreshing)
+        }
 }

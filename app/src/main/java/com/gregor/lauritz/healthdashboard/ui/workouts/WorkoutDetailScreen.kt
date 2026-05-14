@@ -14,34 +14,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
@@ -49,26 +44,23 @@ import com.gregor.lauritz.healthdashboard.ui.common.DateFormatUtils
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
-import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
-import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
-import java.time.Instant
-import java.time.ZoneId
 import com.gregor.lauritz.healthdashboard.ui.theme.LocalStatusColors
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
+import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
+import com.patrykandpatrick.vico.compose.cartesian.Zoom
+import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
-import com.patrykandpatrick.vico.compose.common.fill
-import com.patrykandpatrick.vico.core.cartesian.CartesianDrawingContext
-import com.patrykandpatrick.vico.core.cartesian.Zoom
-import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
-import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
+import com.patrykandpatrick.vico.compose.common.Fill
+import java.time.Instant
+import java.time.ZoneId
 import kotlin.math.roundToInt
 
 private const val TARGET_X_AXIS_LABELS = 6
@@ -136,7 +128,7 @@ fun WorkoutDetailScreen(
             ) {
                 MetricCard(
                     title = "Training Load",
-                    value = workout.trimp.roundToInt().toString(),
+                    value = (uiState.computedTrimp ?: workout.trimp.roundToInt()).toString(),
                     secondaryText = "TRIMP",
                     status = MetricStatus.NEUTRAL,
                     tooltip = "Total training impulse - measures training intensity and duration.",
@@ -144,7 +136,7 @@ fun WorkoutDetailScreen(
                 )
                 MetricCard(
                     title = "Avg Pulse",
-                    value = if (workout.avgHr > 0) workout.avgHr.toString() else "--",
+                    value = if (workout.avgHr > 0) workout.avgHr.roundToInt().toString() else "--",
                     secondaryText = "BPM",
                     status = MetricStatus.NEUTRAL,
                     tooltip = "Average heart rate during the workout.",
@@ -171,19 +163,24 @@ fun WorkoutDetailScreen(
 private fun WorkoutHeader(workout: WorkoutRecordEntity) {
     val type = remember(workout.exerciseType) { exerciseTypeToDisplayName(workout.exerciseType) }
 
-    val (start, end, date) = remember(workout.startTime, workout.endTime) {
-        val startInstant = Instant.ofEpochMilli(workout.startTime).atZone(ZoneId.systemDefault())
-        val endInstant = Instant.ofEpochMilli(workout.endTime).atZone(ZoneId.systemDefault())
-        Triple(
-            startInstant.format(DateFormatUtils.WORKOUT_TIME_FORMATTER),
-            endInstant.format(DateFormatUtils.WORKOUT_TIME_FORMATTER),
-            startInstant.format(DateFormatUtils.WORKOUT_DATE_FORMATTER),
-        )
-    }
+    val (start, end, date) =
+        remember(workout.startTime, workout.endTime) {
+            val startInstant = Instant.ofEpochMilli(workout.startTime).atZone(ZoneId.systemDefault())
+            val endInstant = Instant.ofEpochMilli(workout.endTime).atZone(ZoneId.systemDefault())
+            Triple(
+                startInstant.format(DateFormatUtils.WORKOUT_TIME_FORMATTER),
+                endInstant.format(DateFormatUtils.WORKOUT_TIME_FORMATTER),
+                startInstant.format(DateFormatUtils.WORKOUT_DATE_FORMATTER),
+            )
+        }
 
     Column {
         Text(text = type, style = MaterialTheme.typography.headlineMedium)
-        Text(text = date, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = date,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Text(
             text = "$start - $end (${workout.durationMinutes} min)",
             style = MaterialTheme.typography.bodySmall,
@@ -271,7 +268,10 @@ private fun HrChartCard(
     }
 }
 
-private fun computeLabelMinutes(durationMinutes: Int, target: Int): List<Double> {
+private fun computeLabelMinutes(
+    durationMinutes: Int,
+    target: Int,
+): List<Double> {
     if (durationMinutes <= 0) return listOf(0.0)
     val intervals = (target - 1).coerceAtLeast(1)
     if (durationMinutes <= intervals) {
@@ -302,24 +302,27 @@ private fun HrChart(
         }
     }
 
-    val labelMinutes = remember(durationMinutes) {
-        computeLabelMinutes(durationMinutes, TARGET_X_AXIS_LABELS)
-    }
-
-    val itemPlacer = remember(labelMinutes) {
-        val base = HorizontalAxis.ItemPlacer.aligned(
-            spacing = { 1 },
-            addExtremeLabelPadding = true,
-        )
-        object : HorizontalAxis.ItemPlacer by base {
-            override fun getLabelValues(
-                context: CartesianDrawingContext,
-                visibleXRange: ClosedFloatingPointRange<Double>,
-                fullXRange: ClosedFloatingPointRange<Double>,
-                maxLabelWidth: Float,
-            ): List<Double> = labelMinutes.filter { it in fullXRange }
+    val labelMinutes =
+        remember(durationMinutes) {
+            computeLabelMinutes(durationMinutes, TARGET_X_AXIS_LABELS)
         }
-    }
+
+    val itemPlacer =
+        remember(labelMinutes) {
+            val base =
+                HorizontalAxis.ItemPlacer.aligned(
+                    spacing = { 1 },
+                    addExtremeLabelPadding = true,
+                )
+            object : HorizontalAxis.ItemPlacer by base {
+                override fun getLabelValues(
+                    context: CartesianDrawingContext,
+                    visibleXRange: ClosedFloatingPointRange<Double>,
+                    fullXRange: ClosedFloatingPointRange<Double>,
+                    maxLabelWidth: Float,
+                ): List<Double> = labelMinutes.filter { it in fullXRange }
+            }
+        }
 
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
@@ -332,32 +335,33 @@ private fun HrChart(
                     lineProvider =
                         LineCartesianLayer.LineProvider.series(
                             LineCartesianLayer.rememberLine(
-                                fill = LineCartesianLayer.LineFill.single(fill(MaterialTheme.colorScheme.primary)),
+                                fill = LineCartesianLayer.LineFill.single(Fill(MaterialTheme.colorScheme.primary)),
                             ),
                         ),
                 ),
                 startAxis =
                     VerticalAxis.rememberStart(
                         label = labelComponent,
-                        title = "BPM",
+                        title = { "BPM" },
                         titleComponent = axisLabelComponent,
                         guideline = guidelineComponent,
                     ),
                 bottomAxis =
                     HorizontalAxis.rememberBottom(
                         label = labelComponent,
-                        title = "Minutes",
+                        title = { "Minutes" },
                         titleComponent = axisLabelComponent,
                         guideline = guidelineComponent,
-                        valueFormatter = { _, value, _ -> value.roundToInt().toString() },
+                        valueFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() },
                         itemPlacer = itemPlacer,
                     ),
             ),
         modelProducer = modelProducer,
-        zoomState = rememberVicoZoomState(
-            zoomEnabled = false,
-            initialZoom = Zoom.Content,
-        ),
+        zoomState =
+            rememberVicoZoomState(
+                zoomEnabled = false,
+                initialZoom = Zoom.Content,
+            ),
         modifier = Modifier.fillMaxWidth().height(200.dp),
     )
 }
@@ -407,7 +411,14 @@ private fun HrrItem(
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium)
         if (drop != null) {
-            val color = if ((threshold != null) && (drop >= threshold)) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            val color =
+                if ((threshold != null) &&
+                    (drop >= threshold)
+                ) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
             Text("$drop bpm", style = MaterialTheme.typography.bodyLarge, color = color)
         } else {
             Text(

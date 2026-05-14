@@ -24,7 +24,10 @@ import kotlin.coroutines.resumeWithException
 
 sealed interface DriveAuthState {
     data object SignedOut : DriveAuthState
-    data class SignedIn(val email: String) : DriveAuthState
+
+    data class SignedIn(
+        val email: String,
+    ) : DriveAuthState
 }
 
 private const val DRIVE_APPDATA_SCOPE = "https://www.googleapis.com/auth/drive.appdata"

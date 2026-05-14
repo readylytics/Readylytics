@@ -13,71 +13,74 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class SleepSettingsViewModel @Inject constructor(
-    private val settingsRepo: SettingsRepository,
-    private val scoringRepository: ScoringRepository,
-) : ViewModel() {
+class SleepSettingsViewModel
+    @Inject
+    constructor(
+        private val settingsRepo: SettingsRepository,
+        private val scoringRepository: ScoringRepository,
+    ) : ViewModel() {
+        val uiState: StateFlow<SleepSettingsState> =
+            settingsRepo.userPreferences
+                .map { prefs ->
+                    SleepSettingsState(
+                        goalSleepHours = prefs.goalSleepHours,
+                        hrvBaselineOverride = prefs.hrvBaselineOverride,
+                        rhrBaselineOverride = prefs.rhrBaselineOverride,
+                        restingHrBeforeMinutes = prefs.restingHrBeforeMinutes,
+                        restingHrAfterMinutes = prefs.restingHrAfterMinutes,
+                    )
+                }.stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5000),
+                    initialValue = SleepSettingsState(),
+                )
 
-    val uiState: StateFlow<SleepSettingsState> = settingsRepo.userPreferences.map { prefs ->
-        SleepSettingsState(
-            goalSleepHours = prefs.goalSleepHours,
-            hrvBaselineOverride = prefs.hrvBaselineOverride,
-            rhrBaselineOverride = prefs.rhrBaselineOverride,
-            restingHrBeforeMinutes = prefs.restingHrBeforeMinutes,
-            restingHrAfterMinutes = prefs.restingHrAfterMinutes,
-        )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = SleepSettingsState()
-    )
-
-    fun onEvent(event: SettingsEvent) {
-        when (event) {
-            is SettingsEvent.GoalSleepHoursChanged ->
-                viewModelScope.launch {
-                    settingsRepo.updateGoalSleepHours(hours = event.hours)
-                    scoringRepository.computeAndPersistDailySummary()
-                }
-            is SettingsEvent.HrvBaselineChanged -> {
-                val value = event.text.toIntOrNull()?.toFloat()
-                if (value != null) {
+        fun onEvent(event: SettingsEvent) {
+            when (event) {
+                is SettingsEvent.GoalSleepHoursChanged ->
                     viewModelScope.launch {
-                        settingsRepo.updateHrvBaselineOverride(rmssdMs = value)
+                        settingsRepo.updateGoalSleepHours(hours = event.hours)
                         scoringRepository.computeAndPersistDailySummary()
                     }
-                }
-            }
-            SettingsEvent.HrvBaselineCleared ->
-                viewModelScope.launch {
-                    settingsRepo.updateHrvBaselineOverride(rmssdMs = null)
-                    scoringRepository.computeAndPersistDailySummary()
-                }
-            is SettingsEvent.RhrBaselineChanged -> {
-                val value = event.text.toIntOrNull()?.toFloat()
-                if (value != null) {
-                    viewModelScope.launch {
-                        settingsRepo.updateRhrBaselineOverride(bpm = value)
-                        scoringRepository.computeAndPersistDailySummary()
+                is SettingsEvent.HrvBaselineChanged -> {
+                    val value = event.text.toIntOrNull()?.toFloat()
+                    if (value != null) {
+                        viewModelScope.launch {
+                            settingsRepo.updateHrvBaselineOverride(rmssdMs = value)
+                            scoringRepository.computeAndPersistDailySummary()
+                        }
                     }
                 }
+                SettingsEvent.HrvBaselineCleared ->
+                    viewModelScope.launch {
+                        settingsRepo.updateHrvBaselineOverride(rmssdMs = null)
+                        scoringRepository.computeAndPersistDailySummary()
+                    }
+                is SettingsEvent.RhrBaselineChanged -> {
+                    val value = event.text.toIntOrNull()?.toFloat()
+                    if (value != null) {
+                        viewModelScope.launch {
+                            settingsRepo.updateRhrBaselineOverride(bpm = value)
+                            scoringRepository.computeAndPersistDailySummary()
+                        }
+                    }
+                }
+                SettingsEvent.RhrBaselineCleared ->
+                    viewModelScope.launch {
+                        settingsRepo.updateRhrBaselineOverride(bpm = null)
+                        scoringRepository.computeAndPersistDailySummary()
+                    }
+                is SettingsEvent.RestingHrBeforeMinutesChanged ->
+                    viewModelScope.launch {
+                        settingsRepo.updateRestingHrBeforeMinutes(minutes = event.minutes)
+                        scoringRepository.computeAndPersistDailySummary()
+                    }
+                is SettingsEvent.RestingHrAfterMinutesChanged ->
+                    viewModelScope.launch {
+                        settingsRepo.updateRestingHrAfterMinutes(minutes = event.minutes)
+                        scoringRepository.computeAndPersistDailySummary()
+                    }
+                else -> {}
             }
-            SettingsEvent.RhrBaselineCleared ->
-                viewModelScope.launch {
-                    settingsRepo.updateRhrBaselineOverride(bpm = null)
-                    scoringRepository.computeAndPersistDailySummary()
-                }
-            is SettingsEvent.RestingHrBeforeMinutesChanged ->
-                viewModelScope.launch {
-                    settingsRepo.updateRestingHrBeforeMinutes(minutes = event.minutes)
-                    scoringRepository.computeAndPersistDailySummary()
-                }
-            is SettingsEvent.RestingHrAfterMinutesChanged ->
-                viewModelScope.launch {
-                    settingsRepo.updateRestingHrAfterMinutes(minutes = event.minutes)
-                    scoringRepository.computeAndPersistDailySummary()
-                }
-            else -> {}
         }
     }
-}

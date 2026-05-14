@@ -37,54 +37,61 @@ fun MainNavHost(
             val initialIndex = getTabIndex(initialState.destination)
             val targetIndex = getTabIndex(targetState.destination)
 
-            val isEnteringDetail = targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
-                targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
-                targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
-                targetState.destination.hasRoute(AppDestination.About::class)
+            val isEnteringDetail =
+                targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.About::class)
 
-            val direction = if (isEnteringDetail) {
-                AnimatedContentTransitionScope.SlideDirection.Start
-            } else if (targetIndex > initialIndex) {
-                AnimatedContentTransitionScope.SlideDirection.Start
-            } else {
-                AnimatedContentTransitionScope.SlideDirection.End
-            }
+            val direction =
+                if (isEnteringDetail) {
+                    AnimatedContentTransitionScope.SlideDirection.Start
+                } else if (targetIndex > initialIndex) {
+                    AnimatedContentTransitionScope.SlideDirection.Start
+                } else {
+                    AnimatedContentTransitionScope.SlideDirection.End
+                }
             fadeIn(animationSpec = tween(300)) + slideIntoContainer(direction, tween(300))
         },
         exitTransition = {
             val initialIndex = getTabIndex(initialState.destination)
             val targetIndex = getTabIndex(targetState.destination)
 
-            val isLeavingDetail = initialState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
-                initialState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
-                initialState.destination.hasRoute(AppDestination.StepDetail::class) ||
-                initialState.destination.hasRoute(AppDestination.About::class)
-            val isEnteringDetail = targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
-                targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
-                targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
-                targetState.destination.hasRoute(AppDestination.About::class)
+            val isLeavingDetail =
+                initialState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
+                    initialState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
+                    initialState.destination.hasRoute(AppDestination.StepDetail::class) ||
+                    initialState.destination.hasRoute(AppDestination.About::class)
+            val isEnteringDetail =
+                targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.About::class)
 
-            val direction = if (isLeavingDetail) {
-                // Keep slide out direction consistent with pop
-                AnimatedContentTransitionScope.SlideDirection.End
-            } else if (isEnteringDetail || targetIndex > initialIndex) {
-                AnimatedContentTransitionScope.SlideDirection.Start
-            } else {
-                AnimatedContentTransitionScope.SlideDirection.End
-            }
+            val direction =
+                if (isLeavingDetail) {
+                    // Keep slide out direction consistent with pop
+                    AnimatedContentTransitionScope.SlideDirection.End
+                } else if (isEnteringDetail || targetIndex > initialIndex) {
+                    AnimatedContentTransitionScope.SlideDirection.Start
+                } else {
+                    AnimatedContentTransitionScope.SlideDirection.End
+                }
             fadeOut(animationSpec = tween(300)) + slideOutOfContainer(direction, tween(300))
         },
         popEnterTransition = {
-            fadeIn(animationSpec = tween(300)) + slideIntoContainer(
-                AnimatedContentTransitionScope.SlideDirection.End,
-                tween(300)
-            )
+            fadeIn(animationSpec = tween(300)) +
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.End,
+                    tween(300),
+                )
         },
         popExitTransition = {
-            fadeOut(animationSpec = tween(300)) + slideOutOfContainer(
-                AnimatedContentTransitionScope.SlideDirection.End,
-                tween(300)
-            )
+            fadeOut(animationSpec = tween(300)) +
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.End,
+                    tween(300),
+                )
         },
     ) {
         composable<TabDestination.Dashboard> {
@@ -140,14 +147,14 @@ fun MainNavHost(
         }
         composable<AppDestination.About> {
             AboutScreen(
-                onDismiss = { navController.popBackStack() }
+                onDismiss = { navController.popBackStack() },
             )
         }
         composable<TabDestination.Settings> {
             SettingsRoute(
                 onNavigateToAbout = {
                     navController.navigate(AppDestination.About)
-                }
+                },
             )
         }
     }
@@ -155,9 +162,10 @@ fun MainNavHost(
 
 private fun getTabIndex(destination: NavDestination?): Int {
     if (destination == null) return -1
-    val index = TabDestination.all.indexOfFirst { tab ->
-        destination.hasRoute(tab::class)
-    }
+    val index =
+        TabDestination.all.indexOfFirst { tab ->
+            destination.hasRoute(tab::class)
+        }
     if (index != -1) return index
 
     // WorkoutDetail is logically under Workouts

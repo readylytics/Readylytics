@@ -12,7 +12,11 @@ class HrvSigmaTest {
     private val calculator = ScoringCalculatorImpl()
 
     private fun lnList(rmssdValues: List<Float>) = rmssdValues.map { ln(it.coerceAtLeast(0.001f)) }
-    private fun uniformLnList(rmssdMs: Float, n: Int) = lnList(List(n) { rmssdMs })
+
+    private fun uniformLnList(
+        rmssdMs: Float,
+        n: Int,
+    ) = lnList(List(n) { rmssdMs })
 
     @Test
     fun `empty list returns prior when n is 0`() {
@@ -31,7 +35,7 @@ class HrvSigmaTest {
 
     @Test
     fun `athlete profile uses smaller prior than sedentary at n=0`() {
-        val athlete  = calculator.hrvSigma(emptyList(), sigmaPrior = PhysiologyProfile.ATHLETE.lnSigmaPrior)
+        val athlete = calculator.hrvSigma(emptyList(), sigmaPrior = PhysiologyProfile.ATHLETE.lnSigmaPrior)
         val sedentary = calculator.hrvSigma(emptyList(), sigmaPrior = PhysiologyProfile.SEDENTARY.lnSigmaPrior)
         assertTrue("Athlete prior should be smaller: $athlete vs $sedentary", athlete < sedentary)
     }
@@ -57,8 +61,31 @@ class HrvSigmaTest {
     @Test
     fun `at n=20 sigma is a blend between personal and prior`() {
         // w = (20-7)/53 ≈ 0.245; use non-trivial variance list
-        val lnList = lnList(listOf(40f, 50f, 55f, 45f, 60f, 50f, 55f, 45f, 60f, 50f,
-                                    40f, 50f, 55f, 45f, 60f, 50f, 55f, 45f, 60f, 50f))
+        val lnList =
+            lnList(
+                listOf(
+                    40f,
+                    50f,
+                    55f,
+                    45f,
+                    60f,
+                    50f,
+                    55f,
+                    45f,
+                    60f,
+                    50f,
+                    40f,
+                    50f,
+                    55f,
+                    45f,
+                    60f,
+                    50f,
+                    55f,
+                    45f,
+                    60f,
+                    50f,
+                ),
+            )
         val sigma = calculator.hrvSigma(lnList, sigmaPrior = 0.18f)
         // blended should be strictly between floor and max(personal, prior)
         assertTrue("Blended sigma at n=20 should be > MIN_LN_SIGMA", sigma > ScoringConstants.Restoration.MIN_LN_SIGMA)
@@ -67,9 +94,11 @@ class HrvSigmaTest {
     @Test
     fun `at n=40 blending weight is approximately 0_62`() {
         // w = (40-7)/53 ≈ 0.623
-        val w = ((40 - ScoringConstants.HRV_SIGMA_BLEND_MIN_N).toFloat() /
-                 (ScoringConstants.HRV_SIGMA_BLEND_MAX_N - ScoringConstants.HRV_SIGMA_BLEND_MIN_N))
-                 .coerceIn(0f, 1f)
+        val w =
+            (
+                (40 - ScoringConstants.HRV_SIGMA_BLEND_MIN_N).toFloat() /
+                    (ScoringConstants.HRV_SIGMA_BLEND_MAX_N - ScoringConstants.HRV_SIGMA_BLEND_MIN_N)
+            ).coerceIn(0f, 1f)
         assertEquals(0.623f, w, 0.001f)
     }
 }

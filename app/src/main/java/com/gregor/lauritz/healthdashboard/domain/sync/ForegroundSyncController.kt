@@ -1,9 +1,8 @@
 package com.gregor.lauritz.healthdashboard.domain.sync
 
-import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
-import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectPermissionRevokedException
-import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -11,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,6 +21,8 @@ class ForegroundSyncController
         private val settingsRepo: SettingsRepository,
         private val syncUseCase: HealthSyncUseCase,
     ) {
+        private val syncMutex = Mutex()
+
         private val _syncCompletedEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
         val syncCompletedEvent: SharedFlow<Unit> = _syncCompletedEvent.asSharedFlow()
 
@@ -28,48 +30,72 @@ class ForegroundSyncController
         val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
         suspend fun evaluateAndSync() {
-            com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "evaluateAndSync called" }
+            com.gregor.lauritz.healthdashboard.domain.util
+                .logD("ForegroundSyncController") { "evaluateAndSync called" }
             val prefs = settingsRepo.userPreferences.first()
             when (prefs.syncPreference) {
                 SyncPreference.NEVER -> {
-                    com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "Sync disabled by user preference" }
+                    com.gregor.lauritz.healthdashboard.domain.util.logD(
+                        "ForegroundSyncController",
+                    ) { "Sync disabled by user preference" }
                     return
                 }
                 SyncPreference.ALWAYS -> {
-                    com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "Sync type: ALWAYS" }
+                    com.gregor.lauritz.healthdashboard.domain.util.logD(
+                        "ForegroundSyncController",
+                    ) { "Sync type: ALWAYS" }
                     executeSync(isFirstSync = prefs.lastSyncTimestamp == 0L)
                 }
                 SyncPreference.BY_TIME -> {
                     val intervalMs = prefs.syncIntervalHours * 3_600_000L
                     val timeSinceLast = System.currentTimeMillis() - prefs.lastSyncTimestamp
-                    com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "Sync type: BY_TIME. Time since last: ${timeSinceLast/1000}s, Interval: ${intervalMs/1000}s" }
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") {
+                        "Sync type: BY_TIME. Time since last: ${timeSinceLast / 1000}s, Interval: ${intervalMs / 1000}s"
+                    }
                     if (timeSinceLast > intervalMs) {
                         executeSync(isFirstSync = prefs.lastSyncTimestamp == 0L)
                     } else {
-                        com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "Sync skipped: interval not met" }
+                        com.gregor.lauritz.healthdashboard.domain.util.logD(
+                            "ForegroundSyncController",
+                        ) { "Sync skipped: interval not met" }
                     }
                 }
             }
         }
 
         suspend fun triggerImmediateSync() {
-            com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "triggerImmediateSync called" }
+            com.gregor.lauritz.healthdashboard.domain.util.logD(
+                "ForegroundSyncController",
+            ) { "triggerImmediateSync called" }
             executeSync(isFirstSync = true)
         }
 
         private suspend fun executeSync(isFirstSync: Boolean) {
-            _isSyncing.value = true
+            if (!syncMutex.tryLock()) {
+                com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") {
+                    "Sync already in progress, skipping redundant request"
+                }
+                return
+            }
             try {
+                _isSyncing.value = true
                 if (isFirstSync) {
-                    com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "Running catch-up sync..." }
+                    com.gregor.lauritz.healthdashboard.domain.util.logD(
+                        "ForegroundSyncController",
+                    ) { "Running catch-up sync..." }
                     syncUseCase.catchUpSync().getOrThrow()
                 } else {
                     syncUseCase.sync().getOrThrow()
                 }
-                com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") { "Sync success" }
+                com.gregor.lauritz.healthdashboard.domain.util
+                    .logD("ForegroundSyncController") { "Sync success" }
                 _syncCompletedEvent.emit(Unit)
+            } catch (e: Exception) {
+                com.gregor.lauritz.healthdashboard.domain.util
+                    .logD("ForegroundSyncController") { "Sync failed: ${e.message}" }
             } finally {
                 _isSyncing.value = false
+                syncMutex.unlock()
             }
         }
     }

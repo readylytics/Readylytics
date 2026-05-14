@@ -37,37 +37,54 @@ class HealthConnectRepositoryImpl
                 HealthPermission.getReadPermission(StepsRecord::class),
             )
 
-        override val requiredPermissions: Set<String> = criticalPermissions +
-            setOf("android.permission.health.READ_HEALTH_DATA_HISTORY")
+        override val requiredPermissions: Set<String> =
+            criticalPermissions +
+                setOf("android.permission.health.READ_HEALTH_DATA_HISTORY")
 
         private val client: HealthConnectClient by lazy {
             HealthConnectClient.getOrCreate(context)
         }
 
-        override fun isAvailable(): Boolean = HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
+        override fun isAvailable(): Boolean =
+            HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
 
         override suspend fun checkPermissions(): PermissionStatus =
             withContext(Dispatchers.IO) {
-                com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") { "Checking permissions..." }
+                com.gregor.lauritz.healthdashboard.domain.util.logD(
+                    "HealthConnectRepository",
+                ) { "Checking permissions..." }
                 if (!isAvailable()) {
-                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") { "SDK not available" }
+                    com.gregor.lauritz.healthdashboard.domain.util.logD(
+                        "HealthConnectRepository",
+                    ) { "SDK not available" }
                     return@withContext PermissionStatus.Unavailable
                 }
-                val granted = try {
-                    client.permissionController.getGrantedPermissions()
-                } catch (e: Exception) {
-                    com.gregor.lauritz.healthdashboard.domain.util.logE("HealthConnectRepository", e) { "Failed to get granted permissions" }
-                    throw e
+                val granted =
+                    try {
+                        client.permissionController.getGrantedPermissions()
+                    } catch (e: Exception) {
+                        com.gregor.lauritz.healthdashboard.domain.util.logE("HealthConnectRepository", e) {
+                            "Failed to get granted permissions"
+                        }
+                        throw e
+                    }
+                com.gregor.lauritz.healthdashboard.domain.util.logD(
+                    "HealthConnectRepository",
+                ) { "Granted permissions: $granted" }
+                com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                    "Required permissions: $requiredPermissions"
                 }
-                com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") { "Granted permissions: $granted" }
-                com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") { "Required permissions: $requiredPermissions" }
 
                 if (granted.containsAll(requiredPermissions)) {
-                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") { "All required permissions granted" }
+                    com.gregor.lauritz.healthdashboard.domain.util.logD(
+                        "HealthConnectRepository",
+                    ) { "All required permissions granted" }
                     PermissionStatus.Granted
                 } else {
                     val missing = requiredPermissions - granted
-                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") { "Missing permissions: $missing" }
+                    com.gregor.lauritz.healthdashboard.domain.util.logD(
+                        "HealthConnectRepository",
+                    ) { "Missing permissions: $missing" }
                     PermissionStatus.Missing(missing)
                 }
             }
@@ -80,13 +97,14 @@ class HealthConnectRepositoryImpl
             var pageToken: String? = null
             try {
                 do {
-                    val response = client.readRecords(
-                        ReadRecordsRequest(
-                            recordType = T::class,
-                            timeRangeFilter = TimeRangeFilter.between(from, to),
-                            pageToken = pageToken,
-                        ),
-                    )
+                    val response =
+                        client.readRecords(
+                            ReadRecordsRequest(
+                                recordType = T::class,
+                                timeRangeFilter = TimeRangeFilter.between(from, to),
+                                pageToken = pageToken,
+                            ),
+                        )
                     all.addAll(response.records)
                     pageToken = response.pageToken
                 } while (pageToken != null)
@@ -141,12 +159,13 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): Long =
             withContext(Dispatchers.IO) {
-                val result = client.aggregate(
-                    AggregateRequest(
-                        metrics = setOf(StepsRecord.COUNT_TOTAL),
-                        timeRangeFilter = TimeRangeFilter.between(from, to),
+                val result =
+                    client.aggregate(
+                        AggregateRequest(
+                            metrics = setOf(StepsRecord.COUNT_TOTAL),
+                            timeRangeFilter = TimeRangeFilter.between(from, to),
+                        ),
                     )
-                )
                 result[StepsRecord.COUNT_TOTAL] ?: 0L
             }
     }

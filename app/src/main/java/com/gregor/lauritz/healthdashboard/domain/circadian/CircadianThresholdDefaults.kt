@@ -3,8 +3,8 @@ package com.gregor.lauritz.healthdashboard.domain.circadian
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 
 object CircadianThresholdDefaults {
-    fun getProfileDefault(profile: PhysiologyProfile): Int {
-        return when (profile) {
+    fun getProfileDefault(profile: PhysiologyProfile): Int =
+        when (profile) {
             PhysiologyProfile.ATHLETE -> 20
             PhysiologyProfile.ACTIVE -> 30
             PhysiologyProfile.GENERAL -> 30
@@ -13,5 +13,4 @@ object CircadianThresholdDefaults {
             // In within-week mode, threshold is disabled (Int.MAX_VALUE in strategy).
             PhysiologyProfile.SHIFT_WORKER -> 20
         }
-    }
 }

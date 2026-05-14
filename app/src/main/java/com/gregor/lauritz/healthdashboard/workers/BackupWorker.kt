@@ -7,8 +7,8 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.gregor.lauritz.healthdashboard.BuildConfig
-import com.gregor.lauritz.healthdashboard.domain.backup.BackupUseCase
 import com.gregor.lauritz.healthdashboard.data.drive.DriveApiException
+import com.gregor.lauritz.healthdashboard.domain.backup.BackupUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 

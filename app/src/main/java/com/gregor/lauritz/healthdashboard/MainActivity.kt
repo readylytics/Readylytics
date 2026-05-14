@@ -10,11 +10,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppNavHost
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncEvent
@@ -25,7 +25,6 @@ import kotlinx.coroutines.flow.collectLatest
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -41,7 +40,7 @@ class MainActivity : ComponentActivity() {
             val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM
 
             FitDashboardTheme(
-                appTheme = appTheme
+                appTheme = appTheme,
             ) {
                 val context = LocalContext.current
 
@@ -64,11 +63,12 @@ class MainActivity : ComponentActivity() {
                 // Trigger permission check every time the activity comes to the foreground
                 val lifecycleOwner = LocalLifecycleOwner.current
                 DisposableEffect(lifecycleOwner) {
-                    val observer = LifecycleEventObserver { _, event ->
-                        if (event == Lifecycle.Event.ON_RESUME) {
-                            viewModel.onAppForeground()
+                    val observer =
+                        LifecycleEventObserver { _, event ->
+                            if (event == Lifecycle.Event.ON_RESUME) {
+                                viewModel.onAppForeground()
+                            }
                         }
-                    }
                     lifecycleOwner.lifecycle.addObserver(observer)
                     onDispose {
                         lifecycleOwner.lifecycle.removeObserver(observer)

@@ -47,7 +47,14 @@ import java.time.LocalDate
 
 @Composable
 fun OnboardingScreen(
-    onGrantPermissionsClick: (birthDay: Int, birthMonth: Int, birthYear: Int, gender: String, physiologyProfile: PhysiologyProfile, dynamicColorEnabled: Boolean) -> Unit,
+    onGrantPermissionsClick: (
+        birthDay: Int,
+        birthMonth: Int,
+        birthYear: Int,
+        gender: String,
+        physiologyProfile: PhysiologyProfile,
+        dynamicColorEnabled: Boolean,
+    ) -> Unit,
     onOpenSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
@@ -58,10 +65,11 @@ fun OnboardingScreen(
         when {
             isLoading -> LoadingContent()
             step == 0 -> WelcomeScreen(onNext = { step = 1 })
-            else -> ProfileSetupScreen(
-                onGrantPermissionsClick = onGrantPermissionsClick,
-                onOpenSettingsClick = onOpenSettingsClick,
-            )
+            else ->
+                ProfileSetupScreen(
+                    onGrantPermissionsClick = onGrantPermissionsClick,
+                    onOpenSettingsClick = onOpenSettingsClick,
+                )
         }
     }
 }
@@ -84,10 +92,11 @@ private fun LoadingContent() {
 @Composable
 private fun WelcomeScreen(onNext: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-            .verticalScroll(rememberScrollState()),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -124,13 +133,25 @@ private fun WelcomeScreen(onNext: () -> Unit) {
         )
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
         FeatureItem(
-            icon = { Icon(Icons.Filled.FavoriteBorder, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+            icon = {
+                Icon(
+                    Icons.Filled.FavoriteBorder,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                )
+            },
             title = "HRV & Resting HR Tracking",
             description = "Personal baselines calculated from your last 30 days of data.",
         )
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
         FeatureItem(
-            icon = { Icon(Icons.Filled.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary) },
+            icon = {
+                Icon(
+                    Icons.Filled.Notifications,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.tertiary,
+                )
+            },
             title = "Training Load Index",
             description = "Acute vs. chronic workload ratio to guide your recovery.",
         )
@@ -170,7 +191,14 @@ private fun FeatureItem(
 
 @Composable
 private fun ProfileSetupScreen(
-    onGrantPermissionsClick: (birthDay: Int, birthMonth: Int, birthYear: Int, gender: String, physiologyProfile: PhysiologyProfile, dynamicColorEnabled: Boolean) -> Unit,
+    onGrantPermissionsClick: (
+        birthDay: Int,
+        birthMonth: Int,
+        birthYear: Int,
+        gender: String,
+        physiologyProfile: PhysiologyProfile,
+        dynamicColorEnabled: Boolean,
+    ) -> Unit,
     onOpenSettingsClick: () -> Unit,
 ) {
     var birthDay by remember { mutableStateOf(LocalDate.now().dayOfMonth.toString()) }
@@ -181,10 +209,11 @@ private fun ProfileSetupScreen(
     var dynamicColorEnabled by remember { mutableStateOf(true) }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-            .verticalScroll(rememberScrollState()),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -197,7 +226,9 @@ private fun ProfileSetupScreen(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = "Your birthday, gender, and activity profile are used to calculate your max heart rate and personalize scores. They are stored only on your device.",
+            text =
+                "Your birthday, gender, and activity profile are used to calculate your max heart rate and " +
+                    "personalize scores. They are stored only on your device.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -213,7 +244,7 @@ private fun ProfileSetupScreen(
 
         PhysiologyProfilePicker(
             selectedProfile = physiologyProfile,
-            onProfileSelected = { physiologyProfile = it }
+            onProfileSelected = { physiologyProfile = it },
         )
 
         Spacer(Modifier.height(16.dp))
@@ -289,7 +320,7 @@ private fun ProfileSetupScreen(
             description = "Use colors derived from your wallpaper (Android 12+)",
             checked = dynamicColorEnabled,
             onCheckedChange = { dynamicColorEnabled = it },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(Modifier.height(24.dp))
@@ -301,7 +332,9 @@ private fun ProfileSetupScreen(
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            text = "This app needs access to Sleep, Heart Rate, HRV, and Exercise data from Health Connect to calculate your scores.",
+            text =
+                "This app needs access to Sleep, Heart Rate, HRV, and Exercise data from Health Connect " +
+                    "to calculate your scores.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -311,8 +344,11 @@ private fun ProfileSetupScreen(
         val dayInt = birthDay.toIntOrNull()
         val monthInt = birthMonth.toIntOrNull()
         val yearInt = birthYear.toIntOrNull()
-        val isInputValid = dayInt in 1..31 && monthInt in 1..12 &&
-                yearInt != null && yearInt in 1900..LocalDate.now().year
+        val isInputValid =
+            dayInt in 1..31 &&
+                monthInt in 1..12 &&
+                yearInt != null &&
+                yearInt in 1900..LocalDate.now().year
 
         Button(
             onClick = {

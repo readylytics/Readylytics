@@ -25,7 +25,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
         WorkoutRecordEntity::class,
         DailySummaryEntity::class,
     ],
-    version = 16,
+    version = 17,
 )
 abstract class HealthDatabase : RoomDatabase() {
     abstract fun sleepSessionDao(): SleepSessionDao
@@ -162,15 +162,27 @@ abstract class HealthDatabase : RoomDatabase() {
         val MIGRATION_7_8 =
             object : Migration(7, 8) {
                 override fun migrate(db: SupportSQLiteDatabase) {
-                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)")
-                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType` ON `heart_rate_records` (`recordType`)")
-                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId` ON `heart_rate_records` (`sessionId`)")
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType` ON `heart_rate_records` (`recordType`)",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId` ON `heart_rate_records` (`sessionId`)",
+                    )
                 }
 
                 override fun migrate(connection: SQLiteConnection) {
-                    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)")
-                    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType` ON `heart_rate_records` (`recordType`)")
-                    connection.execSQL("CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId` ON `heart_rate_records` (`sessionId`)")
+                    connection.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)",
+                    )
+                    connection.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType` ON `heart_rate_records` (`recordType`)",
+                    )
+                    connection.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId` ON `heart_rate_records` (`sessionId`)",
+                    )
                 }
             }
 
@@ -392,6 +404,51 @@ abstract class HealthDatabase : RoomDatabase() {
                     sql.forEach { connection.execSQL(it) }
                 }
             }
+
+        // Migrate WorkoutRecordEntity avgHr from Int to Float
+        val MIGRATION_16_17 =
+            object : Migration(16, 17) {
+                private val sql =
+                    listOf(
+                        """
+                        CREATE TABLE workout_records_new (
+                            `id` TEXT NOT NULL,
+                            `startTime` INTEGER NOT NULL,
+                            `endTime` INTEGER NOT NULL,
+                            `exerciseType` TEXT NOT NULL,
+                            `durationMinutes` INTEGER NOT NULL,
+                            `zone1Minutes` REAL NOT NULL,
+                            `zone2Minutes` REAL NOT NULL,
+                            `zone3Minutes` REAL NOT NULL,
+                            `zone4Minutes` REAL NOT NULL,
+                            `zone5Minutes` REAL NOT NULL,
+                            `trimp` REAL NOT NULL,
+                            `avgHr` REAL NOT NULL,
+                            PRIMARY KEY(`id`)
+                        )
+                        """.trimIndent(),
+                        """
+                        INSERT INTO workout_records_new
+                            (id, startTime, endTime, exerciseType, durationMinutes,
+                             zone1Minutes, zone2Minutes, zone3Minutes, zone4Minutes,
+                             zone5Minutes, trimp, avgHr)
+                        SELECT id, startTime, endTime, exerciseType, durationMinutes,
+                               zone1Minutes, zone2Minutes, zone3Minutes, zone4Minutes,
+                               zone5Minutes, trimp, CAST(avgHr AS REAL)
+                        FROM workout_records
+                        """.trimIndent(),
+                        "DROP TABLE workout_records",
+                        "ALTER TABLE workout_records_new RENAME TO workout_records",
+                        "CREATE INDEX IF NOT EXISTS `index_workout_records_startTime` ON `workout_records` (`startTime`)",
+                    )
+
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    sql.forEach { db.execSQL(it) }
+                }
+
+                override fun migrate(connection: SQLiteConnection) {
+                    sql.forEach { connection.execSQL(it) }
+                }
+            }
     }
 }
-

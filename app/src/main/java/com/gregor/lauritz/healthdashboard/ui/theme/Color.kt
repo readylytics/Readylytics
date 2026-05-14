@@ -41,6 +41,4 @@ val WarningOrangeContainerLight = Color(0xFFFB8C00)
 val OnWarningOrangeLight = Color(0xFFFFFFFF)
 val OnWarningOrangeContainerLight = Color(0xFF4D2C00)
 
-fun Color.toHexCode(): String {
-    return String.format("#%06X", (0xFFFFFF and this.toArgb()))
-}
+fun Color.toHexCode(): String = String.format("#%06X", (0xFFFFFF and this.toArgb()))

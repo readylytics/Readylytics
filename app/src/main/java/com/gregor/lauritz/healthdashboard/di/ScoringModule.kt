@@ -2,6 +2,8 @@ package com.gregor.lauritz.healthdashboard.di
 
 import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.DataStoreCircadianThresholdPreferences
+import com.gregor.lauritz.healthdashboard.data.repository.ScoringRepositoryImpl
+import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculatorImpl
 import dagger.Binds
@@ -9,9 +11,6 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
-
-import com.gregor.lauritz.healthdashboard.data.repository.ScoringRepositoryImpl
-import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 
 @Module
 @InstallIn(SingletonComponent::class)

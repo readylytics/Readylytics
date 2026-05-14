@@ -1,6 +1,5 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
-import com.gregor.lauritz.healthdashboard.domain.util.mean
 import com.gregor.lauritz.healthdashboard.domain.util.median
 import com.gregor.lauritz.healthdashboard.domain.util.stdev
 import org.junit.Assert.assertEquals
@@ -8,7 +7,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.ln
+import java.time.LocalDate
 
 private const val DELTA = 0.5f
 private val calculator = ScoringCalculatorImpl()
@@ -89,6 +88,36 @@ class ComputeCtlTest {
         val ctl = calculator.computeCtlEma(dailyTrimpList = dailyTrimpList)
         val sr = calculator.computeStrainRatio(10f, ctl)
         assertEquals(1.0f, sr, 0.05f)
+    }
+
+    @Test
+    fun `computeEmaWithDecay utilizes extended history for stabilization`() {
+        val rangeEnd = LocalDate.of(2023, 12, 31)
+        val windowDays = 42L // CTL standard
+
+        // Scenario: Athlete had a massive training block (200 TRIMP) 60-120 days ago,
+        // then settled into a moderate block (100 TRIMP) for the last 60 days.
+        val fullHistory = mutableMapOf<LocalDate, Float>()
+        for (i in 60 until 120) {
+            fullHistory[rangeEnd.minusDays(i.toLong())] = 200f
+        }
+        for (i in 0 until 60) {
+            fullHistory[rangeEnd.minusDays(i.toLong())] = 100f
+        }
+
+        // If we only used 42 days (the window size), rangeStart would be rangeEnd - 41.
+        // All values in that window are 100f, so the EMA would be exactly 100f.
+        val scoreTruncated = 100f
+
+        // With the fix, it should find the data starting 120 days ago and process the decay
+        // of the 200f block into the 100f block.
+        val scoreWithHistory = calculator.computeCtlEmaWithDecay(fullHistory, rangeEnd, windowDays)
+
+        // The 200f block from 60 days ago should still have some residual impact, making the CTL > 100.
+        assertTrue(
+            "CTL should be elevated by historical high-load block (found: $scoreWithHistory)",
+            scoreWithHistory > scoreTruncated,
+        )
     }
 }
 
@@ -188,12 +217,10 @@ class ArchSubScoreTest {
     }
 
     @Test
-    fun `no deep or rem scores 0`() =
-        assertEquals(0f, calculator.computeArchSubScore(0, 0, 480), DELTA)
+    fun `no deep or rem scores 0`() = assertEquals(0f, calculator.computeArchSubScore(0, 0, 480), DELTA)
 
     @Test
-    fun `zero duration guard`() =
-        assertEquals(0f, calculator.computeArchSubScore(0, 0, 0), DELTA)
+    fun `zero duration guard`() = assertEquals(0f, calculator.computeArchSubScore(0, 0, 0), DELTA)
 
     @Test
     fun `excess deep sleep is capped at target, not penalised`() {
@@ -223,7 +250,19 @@ class RestorationSubScoreTest {
         // Z_hrv = 0, Z_rhr = 0 → 0.5*50 + 0.5*50 = 50
         val hrv = listOf(60f, 60f, 60f)
         val rhr = listOf(60, 60, 60)
-        assertEquals(50f, calculator.computeRestorationSubScore(60f, hrv, hrv, currentNocturnalRhr = 60f, rhrValues = rhr, rhrBaselineOverride = null, hrvBaselineOverride = null), DELTA)
+        assertEquals(
+            50f,
+            calculator.computeRestorationSubScore(
+                60f,
+                hrv,
+                hrv,
+                currentNocturnalRhr = 60f,
+                rhrValues = rhr,
+                rhrBaselineOverride = null,
+                hrvBaselineOverride = null,
+            ),
+            DELTA,
+        )
     }
 
     @Test
@@ -231,7 +270,16 @@ class RestorationSubScoreTest {
         // currentHrv > mean(history) → positive Z_hrv → higher restoration
         val hrv = listOf(40f, 40f, 40f, 40f, 40f)
         val rhr = listOf(60, 60, 60, 60, 60)
-        val score = calculator.computeRestorationSubScore(60f, hrv, hrv, currentNocturnalRhr = 60f, rhrValues = rhr, rhrBaselineOverride = null, hrvBaselineOverride = null)
+        val score =
+            calculator.computeRestorationSubScore(
+                60f,
+                hrv,
+                hrv,
+                currentNocturnalRhr = 60f,
+                rhrValues = rhr,
+                rhrBaselineOverride = null,
+                hrvBaselineOverride = null,
+            )
         assertTrue("Score should be above 50 with HRV above baseline, was $score", score > 50f)
     }
 
@@ -240,7 +288,16 @@ class RestorationSubScoreTest {
         // currentRhr > baseline → positive Z_rhr → lower restoration
         val hrv = listOf(60f, 60f, 60f)
         val rhr = listOf(55, 55, 55, 55, 55, 55, 55, 55)
-        val score = calculator.computeRestorationSubScore(60f, hrv, hrv, currentNocturnalRhr = 70f, rhrValues = rhr, rhrBaselineOverride = null, hrvBaselineOverride = null)
+        val score =
+            calculator.computeRestorationSubScore(
+                60f,
+                hrv,
+                hrv,
+                currentNocturnalRhr = 70f,
+                rhrValues = rhr,
+                rhrBaselineOverride = null,
+                hrvBaselineOverride = null,
+            )
         assertTrue("Score should be below 50 with elevated RHR, was $score", score < 50f)
     }
 
@@ -248,14 +305,38 @@ class RestorationSubScoreTest {
     fun `rhr override respected`() {
         // Override baseline=60, currentRhr=60 → Z_rhr=0; HRV at baseline → Z_hrv=0 → sRest=50
         val hrv = listOf(60f, 60f, 60f)
-        assertEquals(50f, calculator.computeRestorationSubScore(60f, hrv, hrv, currentNocturnalRhr = 60f, rhrValues = emptyList(), rhrBaselineOverride = 60f, hrvBaselineOverride = null), DELTA)
+        assertEquals(
+            50f,
+            calculator.computeRestorationSubScore(
+                60f,
+                hrv,
+                hrv,
+                currentNocturnalRhr = 60f,
+                rhrValues = emptyList(),
+                rhrBaselineOverride = 60f,
+                hrvBaselineOverride = null,
+            ),
+            DELTA,
+        )
     }
 
     @Test
     fun `hrv override respected`() {
         // Override baseline=60ms, currentHrv=60ms → Z_hrv=0; RHR at baseline → sRest=50
         val rhr = listOf(60, 60, 60)
-        assertEquals(50f, calculator.computeRestorationSubScore(60f, emptyList(), emptyList(), currentNocturnalRhr = 60f, rhrValues = rhr, rhrBaselineOverride = null, hrvBaselineOverride = 60f), DELTA)
+        assertEquals(
+            50f,
+            calculator.computeRestorationSubScore(
+                60f,
+                emptyList(),
+                emptyList(),
+                currentNocturnalRhr = 60f,
+                rhrValues = rhr,
+                rhrBaselineOverride = null,
+                hrvBaselineOverride = 60f,
+            ),
+            DELTA,
+        )
     }
 
     @Test
@@ -263,9 +344,27 @@ class RestorationSubScoreTest {
         // ln(k*x) - ln(k*mu) = ln(x) - ln(mu) → scaling history and today by same factor leaves Z unchanged
         val hrv = listOf(40f, 50f, 60f, 55f, 45f)
         val rhr = listOf(60, 60, 60, 60, 60)
-        val score1 = calculator.computeRestorationSubScore(50f, hrv, hrv, currentNocturnalRhr = 60f, rhrValues = rhr, rhrBaselineOverride = null, hrvBaselineOverride = null)
+        val score1 =
+            calculator.computeRestorationSubScore(
+                50f,
+                hrv,
+                hrv,
+                currentNocturnalRhr = 60f,
+                rhrValues = rhr,
+                rhrBaselineOverride = null,
+                hrvBaselineOverride = null,
+            )
         val scaledHrv = hrv.map { it * 2f }
-        val score2 = calculator.computeRestorationSubScore(100f, scaledHrv, scaledHrv, currentNocturnalRhr = 60f, rhrValues = rhr, rhrBaselineOverride = null, hrvBaselineOverride = null)
+        val score2 =
+            calculator.computeRestorationSubScore(
+                100f,
+                scaledHrv,
+                scaledHrv,
+                currentNocturnalRhr = 60f,
+                rhrValues = rhr,
+                rhrBaselineOverride = null,
+                hrvBaselineOverride = null,
+            )
         assertEquals(score1, score2, DELTA)
     }
 }
@@ -313,15 +412,16 @@ class SleepScoreIntegrationTest {
         //   deepComp = (0.20/0.18)→capped→100; remComp = (0.20/0.22)*100 = 90.9
         //   sArch = 0.5*100 + 0.5*90.9 = 95.45
         // SS = 0.50*95.5 + 0.25*95.45 + 0.25*75 = 47.75 + 23.86 + 18.75 = 90.36
-        val score = calculator.computeSleepScore(
-            durationMinutes = 480,
-            efficiency = 85f,
-            deepSleepMinutes = 96,
-            remSleepMinutes = 96,
-            goalSleepHours = 8f,
-            sRest = 75f,
-            userAge = 25,
-        )
+        val score =
+            calculator.computeSleepScore(
+                durationMinutes = 480,
+                efficiency = 85f,
+                deepSleepMinutes = 96,
+                remSleepMinutes = 96,
+                goalSleepHours = 8f,
+                sRest = 75f,
+                userAge = 25,
+            )
         assertEquals(90.36f, score, DELTA)
     }
 
@@ -330,15 +430,16 @@ class SleepScoreIntegrationTest {
         // TST_term=100, eff=90%→100, sDur=100
         // deep=18%, rem=22% of 100min TST → both hit age-25 targets → sArch=100
         // SS = 0.5*100 + 0.25*100 + 0.25*100 = 100
-        val score = calculator.computeSleepScore(
-            durationMinutes = 100,
-            efficiency = 90f,
-            deepSleepMinutes = 18,
-            remSleepMinutes = 22,
-            goalSleepHours = (100f / 60f),
-            sRest = 100f,
-            userAge = 25,
-        )
+        val score =
+            calculator.computeSleepScore(
+                durationMinutes = 100,
+                efficiency = 90f,
+                deepSleepMinutes = 18,
+                remSleepMinutes = 22,
+                goalSleepHours = (100f / 60f),
+                sRest = 100f,
+                userAge = 25,
+            )
         assertEquals(100f, score, DELTA)
     }
 }

@@ -17,19 +17,19 @@ import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.common.padToRange
-import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.Dispatchers
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -53,7 +53,7 @@ private data class SleepData(
     val latestSummary: DailySummary?,
     val lastSession: SleepSessionEntity?,
     val summaries: List<DailySummary>,
-    val prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+    val prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences,
 )
 
 @HiltViewModel
@@ -69,6 +69,7 @@ class SleepViewModel
         private val circadianRepo: CircadianConsistencyRepository,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
+        val selectedRange: StateFlow<TimeRange> = _selectedRange.asStateFlow()
 
         /**
          * Baseline HRV (calculated from past 30 days, constant across all views).
@@ -76,30 +77,31 @@ class SleepViewModel
          */
         @OptIn(ExperimentalCoroutinesApi::class)
         val baselineHrvFlow =
-            selectedDateRepository.selectedDate.flatMapLatest { date ->
-                hrvDao
-                    .observeSleepHrvSince(TimeRange.THIRTY_DAYS.fromMs(date))
-                    .map { records ->
-                        if (records.isEmpty()) {
-                            null
-                        } else {
-                            val values =
-                                records
-                                    .map { it.rmssdMs }
-                                    .sorted()
-                            val mid = values.size / 2
-                            if (values.size % 2 == 0) {
-                                (values[mid - 1] + values[mid]) / 2f
+            selectedDateRepository.selectedDate
+                .flatMapLatest { date ->
+                    hrvDao
+                        .observeSleepHrvSince(TimeRange.THIRTY_DAYS.fromMs(date))
+                        .map { records ->
+                            if (records.isEmpty()) {
+                                null
                             } else {
-                                values[mid]
+                                val values =
+                                    records
+                                        .map { it.rmssdMs }
+                                        .sorted()
+                                val mid = values.size / 2
+                                if (values.size % 2 == 0) {
+                                    (values[mid - 1] + values[mid]) / 2f
+                                } else {
+                                    values[mid]
+                                }
                             }
                         }
-                    }
-            }.stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = null,
-            )
+                }.stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = null,
+                )
 
         /**
          * Baseline RHR (calculated from past 30 days, constant across all views).
@@ -107,49 +109,51 @@ class SleepViewModel
          */
         @OptIn(ExperimentalCoroutinesApi::class)
         val baselineRhrFlow =
-            selectedDateRepository.selectedDate.flatMapLatest { date ->
-                heartRateDao
-                    .observeSleepHrSince(TimeRange.THIRTY_DAYS.fromMs(date))
-                    .map { records ->
-                        if (records.isEmpty()) {
-                            null
-                        } else {
-                            val sessionAvgs =
-                                records
-                                    .groupBy { it.sessionId }
-                                    .values
-                                    .map { sess ->
-                                        sess
-                                            .map { it.beatsPerMinute }
-                                            .average()
-                                            .toFloat()
+            selectedDateRepository.selectedDate
+                .flatMapLatest { date ->
+                    heartRateDao
+                        .observeSleepHrSince(TimeRange.THIRTY_DAYS.fromMs(date))
+                        .map { records ->
+                            if (records.isEmpty()) {
+                                null
+                            } else {
+                                val sessionAvgs =
+                                    records
+                                        .groupBy { it.sessionId }
+                                        .values
+                                        .map { sess ->
+                                            sess
+                                                .map { it.beatsPerMinute }
+                                                .average()
+                                                .toFloat()
+                                        }
+                                val sorted = sessionAvgs.sorted()
+                                val mid = sorted.size / 2
+                                val median =
+                                    if (sorted.size % 2 == 0) {
+                                        (sorted[mid - 1] + sorted[mid]) / 2f
+                                    } else {
+                                        sorted[mid]
                                     }
-                            val sorted = sessionAvgs.sorted()
-                            val mid = sorted.size / 2
-                            val median =
-                                if (sorted.size % 2 == 0) {
-                                    (sorted[mid - 1] + sorted[mid]) / 2f
-                                } else {
-                                    sorted[mid]
-                                }
-                            median.toInt()
+                                median.toInt()
+                            }
                         }
-                    }
-            }.stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = null,
-            )
+                }.stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = null,
+                )
 
         @OptIn(ExperimentalCoroutinesApi::class)
         val circadianConsistencyFlow =
-            selectedDateRepository.selectedDate.flatMapLatest { date ->
-                circadianRepo.resultFor(date)
-            }.stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = CircadianConsistencyResult.Calibrating,
-            )
+            selectedDateRepository.selectedDate
+                .flatMapLatest { date ->
+                    circadianRepo.resultFor(date)
+                }.stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = CircadianConsistencyResult.Calibrating,
+                )
 
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
@@ -175,24 +179,40 @@ class SleepViewModel
 
                     val summaryFlow =
                         if (date == LocalDate.now(zoneId)) {
-                            val todayMs = LocalDate.now(zoneId).atStartOfDay(zoneId).toInstant().toEpochMilli()
-                            dailySummaryDao.observeSince(todayMs)
+                            val todayMs =
+                                LocalDate
+                                    .now(zoneId)
+                                    .atStartOfDay(zoneId)
+                                    .toInstant()
+                                    .toEpochMilli()
+                            dailySummaryDao
+                                .observeSince(todayMs)
                                 .map { it.firstOrNull()?.let { DailySummaryMapper.toDomain(it) } }
                         } else {
-                            flow { emit(dailySummaryDao.getByDate(selectedMidnightMs)?.let { DailySummaryMapper.toDomain(it) }) }
+                            flow {
+                                emit(
+                                    dailySummaryDao
+                                        .getByDate(
+                                            selectedMidnightMs,
+                                        )?.let { DailySummaryMapper.toDomain(it) },
+                                )
+                            }
                         }
 
-                    val dataFlow = combine(
-                        summaryFlow,
-                        sleepSessionDao.observeFirstSessionEndingInRange(
-                            selectedMidnightMs,
-                            nextDayMidnightMs,
-                        ),
-                        dailySummaryDao.observeSince(fromMs).map { list -> list.map { DailySummaryMapper.toDomain(it) } },
-                        settingsRepo.userPreferences,
-                    ) { latestSummary, latestSession, summaries, prefs ->
-                        SleepData(latestSummary, latestSession, summaries, prefs)
-                    }
+                    val dataFlow =
+                        combine(
+                            summaryFlow,
+                            sleepSessionDao.observeFirstSessionEndingInRange(
+                                selectedMidnightMs,
+                                nextDayMidnightMs,
+                            ),
+                            dailySummaryDao.observeSince(fromMs).map { list ->
+                                list.map { DailySummaryMapper.toDomain(it) }
+                            },
+                            settingsRepo.userPreferences,
+                        ) { latestSummary, latestSession, summaries, prefs ->
+                            SleepData(latestSummary, latestSession, summaries, prefs)
+                        }
 
                     combine(
                         dataFlow,
@@ -203,18 +223,30 @@ class SleepViewModel
 
                         val startLocalDate = Instant.ofEpochMilli(startDayMs).atZone(zoneId).toLocalDate()
 
-                        val hrvPoints = summaries.mapNotNull { s ->
-                            s.nocturnalHrv?.let { hrv ->
-                                val d = s.date
-                                DailyDataPoint(dayOffset = ChronoUnit.DAYS.between(startLocalDate, d).toInt(), value = hrv.toFloat())
-                            }
-                        }.sortedBy { it.dayOffset }.padToRange(range.days)
-                        val rhrPoints = summaries.mapNotNull { s ->
-                            s.nocturnalRhr?.let { rhr ->
-                                val d = s.date
-                                DailyDataPoint(dayOffset = ChronoUnit.DAYS.between(startLocalDate, d).toInt(), value = rhr.toFloat())
-                            }
-                        }.sortedBy { it.dayOffset }.padToRange(range.days)
+                        val hrvPoints =
+                            summaries
+                                .mapNotNull { s ->
+                                    s.nocturnalHrv?.let { hrv ->
+                                        val d = s.date
+                                        DailyDataPoint(
+                                            dayOffset = ChronoUnit.DAYS.between(startLocalDate, d).toInt(),
+                                            value = hrv.toFloat(),
+                                        )
+                                    }
+                                }.sortedBy { it.dayOffset }
+                                .padToRange(range.days)
+                        val rhrPoints =
+                            summaries
+                                .mapNotNull { s ->
+                                    s.nocturnalRhr?.let { rhr ->
+                                        val d = s.date
+                                        DailyDataPoint(
+                                            dayOffset = ChronoUnit.DAYS.between(startLocalDate, d).toInt(),
+                                            value = rhr.toFloat(),
+                                        )
+                                    }
+                                }.sortedBy { it.dayOffset }
+                                .padToRange(range.days)
 
                         SleepUiState(
                             latestSummary = latestSummary,

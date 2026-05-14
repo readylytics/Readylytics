@@ -1,7 +1,6 @@
 package com.gregor.lauritz.healthdashboard.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.MapColumn
 import androidx.room.Query
 import androidx.room.Upsert
@@ -16,7 +15,9 @@ interface HeartRateDao {
             "ORDER BY timestampMs ASC",
     )
     fun _observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordEntity>>
-    fun observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordEntity>> = _observeSleepHrSince(fromMs).distinctUntilChanged()
+
+    fun observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordEntity>> =
+        _observeSleepHrSince(fromMs).distinctUntilChanged()
 
     @Query(
         "SELECT CAST(ROUND(AVG(beatsPerMinute)) AS INTEGER) FROM heart_rate_records " +
@@ -31,7 +32,12 @@ interface HeartRateDao {
     )
     suspend fun getAvgSleepHrForSessions(
         sessionIds: List<String>,
-    ): Map<@MapColumn(columnName = "sessionId") String, @MapColumn(columnName = "avgHr") Int>
+    ): Map<
+        @MapColumn(columnName = "sessionId")
+        String,
+        @MapColumn(columnName = "avgHr")
+        Int,
+    >
 
     @Query(
         "SELECT CAST(ROUND(AVG(beatsPerMinute)) AS INTEGER) FROM heart_rate_records " +
@@ -39,6 +45,29 @@ interface HeartRateDao {
             "GROUP BY sessionId",
     )
     suspend fun getAvgSleepHrPerSession(fromMs: Long): List<Int>
+
+    @Query(
+        "SELECT beatsPerMinute FROM heart_rate_records " +
+            "WHERE sessionId = :sessionId AND recordType = 'SLEEP' " +
+            "ORDER BY beatsPerMinute ASC",
+    )
+    suspend fun getSleepHrSamplesForSession(sessionId: String): List<Int>
+
+    @Query(
+        "SELECT COUNT(*) FROM heart_rate_records " +
+            "WHERE sessionId = :sessionId AND recordType = 'SLEEP'",
+    )
+    suspend fun getSleepHrSampleCount(sessionId: String): Int
+
+    @Query(
+        "SELECT beatsPerMinute FROM heart_rate_records " +
+            "WHERE sessionId = :sessionId AND recordType = 'SLEEP' " +
+            "ORDER BY beatsPerMinute ASC LIMIT 1 OFFSET :offset",
+    )
+    suspend fun getSleepHrSampleAtOffset(
+        sessionId: String,
+        offset: Int,
+    ): Int?
 
     @Query(
         "SELECT MIN(beatsPerMinute) FROM heart_rate_records " +

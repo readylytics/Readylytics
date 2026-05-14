@@ -110,9 +110,13 @@ fun DailySummary.paiStatus(): MetricStatus {
     }
 }
 
-fun stepsStatus(stepCount: Int, stepGoal: Int): MetricStatus = when {
-    stepCount >= stepGoal -> MetricStatus.OPTIMAL
-    stepCount >= stepGoal * 0.75f -> MetricStatus.NEUTRAL
-    stepCount >= stepGoal * 0.5f -> MetricStatus.WARNING
-    else -> MetricStatus.POOR
-}
+fun stepsStatus(
+    stepCount: Int,
+    stepGoal: Int,
+): MetricStatus =
+    when {
+        stepCount >= stepGoal -> MetricStatus.OPTIMAL
+        stepCount >= stepGoal * 0.75f -> MetricStatus.NEUTRAL
+        stepCount >= stepGoal * 0.5f -> MetricStatus.WARNING
+        else -> MetricStatus.POOR
+    }

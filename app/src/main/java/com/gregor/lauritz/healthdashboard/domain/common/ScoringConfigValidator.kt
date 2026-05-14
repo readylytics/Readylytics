@@ -23,7 +23,9 @@ object ScoringConfigValidator {
         }
 
         // Validate circadian consistency
-        if (config.circadianConsistency.thresholdMinutes < 0 && config.circadianConsistency.thresholdMinutes != Int.MAX_VALUE) {
+        if (config.circadianConsistency.thresholdMinutes < 0 &&
+            config.circadianConsistency.thresholdMinutes != Int.MAX_VALUE
+        ) {
             errors.add("Circadian threshold must be non-negative")
         }
 
@@ -31,7 +33,7 @@ object ScoringConfigValidator {
             Result.success(Unit)
         } else {
             Result.failure(
-                IllegalArgumentException("ScoringConfig validation failed: ${errors.joinToString("; ")}")
+                IllegalArgumentException("ScoringConfig validation failed: ${errors.joinToString("; ")}"),
             )
         }
     }

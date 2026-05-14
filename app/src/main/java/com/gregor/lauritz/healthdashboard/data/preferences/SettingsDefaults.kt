@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.data.preferences
 
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 
 object SettingsDefaults {
     const val GOAL_SLEEP_HOURS = 8f
@@ -42,8 +43,9 @@ object SettingsDefaults {
     const val CONSISTENCY_THRESHOLD_MINUTES = 30
     const val CONSISTENCY_EVALUATION_DAYS = 7
     const val CONSISTENCY_BASELINE_DAYS = 14
+
     /**
-     * Authoritative runtime value for PAI scaling. 
+     * Authoritative runtime value for PAI scaling.
      * Initialized from PhysiologyProfile default, but user overrides are persistent.
      */
     const val PAI_SCALING_FACTOR = 0.20f
@@ -59,18 +61,20 @@ object SettingsDefaults {
     val PHYSIOLOGY_PROFILE = PhysiologyProfile.GENERAL
     const val INSTALL_DATE = 0L // Set to System.currentTimeMillis() on first app run
     val CIRCADIAN_THRESHOLD_OVERRIDE: String? = null // null = use profile default
+    val TRIMP_MODEL = TrimpModel.BANISTER
 
-    val DEFAULT_DASHBOARD_CARDS = listOf(
-        CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),
-        CardConfiguration(CardId.READINESS, isVisible = true, position = 1),
-        CardConfiguration(CardId.STEPS, isVisible = true, position = 2),
-        CardConfiguration(CardId.HRV, isVisible = true, position = 3),
-        CardConfiguration(CardId.SLEEP_RHR, isVisible = true, position = 4),
-        CardConfiguration(CardId.SLEEP_DURATION, isVisible = true, position = 5),
-        CardConfiguration(CardId.PAI_DAILY, isVisible = true, position = 6),
-        CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 7),
-        CardConfiguration(CardId.CIRCADIAN_CONSISTENCY, isVisible = true, position = 8),
-        CardConfiguration(CardId.STRAIN_RATIO, isVisible = false, position = 9),
-        CardConfiguration(CardId.SLEEP_EFFICIENCY, isVisible = true, position = 10),
-    )
+    val DEFAULT_DASHBOARD_CARDS =
+        listOf(
+            CardConfiguration(CardId.SLEEP_SCORE, isVisible = true, position = 0),
+            CardConfiguration(CardId.READINESS, isVisible = true, position = 1),
+            CardConfiguration(CardId.STEPS, isVisible = true, position = 2),
+            CardConfiguration(CardId.HRV, isVisible = true, position = 3),
+            CardConfiguration(CardId.SLEEP_RHR, isVisible = true, position = 4),
+            CardConfiguration(CardId.SLEEP_DURATION, isVisible = true, position = 5),
+            CardConfiguration(CardId.PAI_DAILY, isVisible = true, position = 6),
+            CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 7),
+            CardConfiguration(CardId.CIRCADIAN_CONSISTENCY, isVisible = true, position = 8),
+            CardConfiguration(CardId.STRAIN_RATIO, isVisible = false, position = 9),
+            CardConfiguration(CardId.SLEEP_EFFICIENCY, isVisible = true, position = 10),
+        )
 }

@@ -25,10 +25,12 @@ class BirthdayCheckWorker
             if (prefs.birthYear == 1994 && prefs.birthMonth == 1 && prefs.birthDay == 1) {
                 return Result.success()
             }
-            val newAge = Period.between(
-                LocalDate.of(prefs.birthYear, prefs.birthMonth, prefs.birthDay),
-                LocalDate.now(),
-            ).years
+            val newAge =
+                Period
+                    .between(
+                        LocalDate.of(prefs.birthYear, prefs.birthMonth, prefs.birthDay),
+                        LocalDate.now(),
+                    ).years
             if (newAge != prefs.age) {
                 settingsRepo.updateAge(newAge)
             }

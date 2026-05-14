@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 16,
-    "identityHash": "6289a4d162f645cc25587045a4c31da5",
+    "identityHash": "7931bbd5e55f99f8139cc0b5900ddbb1",
     "entities": [
       {
         "tableName": "sleep_sessions",
@@ -251,7 +251,7 @@
       },
       {
         "tableName": "workout_records",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `exerciseType` TEXT NOT NULL, `durationMinutes` INTEGER NOT NULL, `zone1Minutes` REAL NOT NULL, `zone2Minutes` REAL NOT NULL, `zone3Minutes` REAL NOT NULL, `zone4Minutes` REAL NOT NULL, `zone5Minutes` REAL NOT NULL, `trimp` REAL NOT NULL, `avgHr` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `exerciseType` TEXT NOT NULL, `durationMinutes` INTEGER NOT NULL, `zone1Minutes` REAL NOT NULL, `zone2Minutes` REAL NOT NULL, `zone3Minutes` REAL NOT NULL, `zone4Minutes` REAL NOT NULL, `zone5Minutes` REAL NOT NULL, `trimp` REAL NOT NULL, `avgHr` REAL NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -322,7 +322,7 @@
           {
             "fieldPath": "avgHr",
             "columnName": "avgHr",
-            "affinity": "INTEGER",
+            "affinity": "REAL",
             "notNull": true
           }
         ],
@@ -631,7 +631,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '6289a4d162f645cc25587045a4c31da5')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7931bbd5e55f99f8139cc0b5900ddbb1')"
     ]
   }
 }

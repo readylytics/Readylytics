@@ -35,35 +35,42 @@ fun CircadianConsistencyCard(
     val containerColor = status.containerColor()
     val contentColor = status.onContainerColor()
 
-    val scoreText = when (result) {
-        is CircadianConsistencyResult.Calibrating -> "Calibrating"
-        is CircadianConsistencyResult.MissingData -> "—"
-        is CircadianConsistencyResult.Ready -> "${result.score.roundToPercentInt()}%"
-    }
-    val windowText = when (result) {
-        is CircadianConsistencyResult.Calibrating,
-        is CircadianConsistencyResult.MissingData -> null
-        is CircadianConsistencyResult.Ready ->
-            "Median: ${result.medianBedtimeMinutes.toTimeString()}→${result.medianWakeMinutes.toTimeString()}"
-    }
-
-    val tooltipText = remember(result) {
-        val thresholdMinutes = when (result) {
-            is CircadianConsistencyResult.Calibrating,
-            is CircadianConsistencyResult.MissingData -> 30
-            is CircadianConsistencyResult.Ready -> result.thresholdMinutes
+    val scoreText =
+        when (result) {
+            is CircadianConsistencyResult.Calibrating -> "Calibrating"
+            is CircadianConsistencyResult.MissingData -> "—"
+            is CircadianConsistencyResult.Ready -> "${result.score.roundToPercentInt()}%"
         }
-        circadianTooltipText(thresholdMinutes)
-    }
+    val windowText =
+        when (result) {
+            is CircadianConsistencyResult.Calibrating,
+            is CircadianConsistencyResult.MissingData,
+            -> null
+            is CircadianConsistencyResult.Ready ->
+                "Median: ${result.medianBedtimeMinutes.toTimeString()}→${result.medianWakeMinutes.toTimeString()}"
+        }
+
+    val tooltipText =
+        remember(result) {
+            val thresholdMinutes =
+                when (result) {
+                    is CircadianConsistencyResult.Calibrating,
+                    is CircadianConsistencyResult.MissingData,
+                    -> 30
+                    is CircadianConsistencyResult.Ready -> result.thresholdMinutes
+                }
+            circadianTooltipText(thresholdMinutes)
+        }
 
     if (onClick != null) {
         Card(
             onClick = onClick,
             modifier = modifier.fillMaxWidth().semantics { role = Role.Button },
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = containerColor,
-            ),
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = containerColor,
+                ),
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -98,9 +105,10 @@ fun CircadianConsistencyCard(
         Card(
             modifier = modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = containerColor,
-            ),
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = containerColor,
+                ),
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(

@@ -3,7 +3,7 @@ package com.gregor.lauritz.healthdashboard.domain.scoring
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-private const val DELTA = 0.5f   // acceptable rounding tolerance for quadratic outputs
+private const val DELTA = 0.5f // acceptable rounding tolerance for quadratic outputs
 
 // score = 100 * exp(-2.5 * max(0, SR - 1.3)^2), clamped [0, 100]
 // All SR ≤ 1.3 → 100 (no penalty for rest or moderate load).
@@ -12,24 +12,19 @@ class LoadScoreTest {
     private val calculator = ScoringCalculatorImpl()
 
     @Test
-    fun `zero SR scores 100 — no penalty for rest days`() =
-        assertEquals(100f, calculator.computeLoadScore(0f), DELTA)
+    fun `zero SR scores 100 — no penalty for rest days`() = assertEquals(100f, calculator.computeLoadScore(0f), DELTA)
 
     @Test
-    fun `under-training SR 0_5 scores 100`() =
-        assertEquals(100f, calculator.computeLoadScore(0.5f), DELTA)
+    fun `under-training SR 0_5 scores 100`() = assertEquals(100f, calculator.computeLoadScore(0.5f), DELTA)
 
     @Test
-    fun `lower sweet-spot boundary 0_8 scores 100`() =
-        assertEquals(100f, calculator.computeLoadScore(0.8f), DELTA)
+    fun `lower sweet-spot boundary 0_8 scores 100`() = assertEquals(100f, calculator.computeLoadScore(0.8f), DELTA)
 
     @Test
-    fun `ideal SR 1_0 scores 100`() =
-        assertEquals(100f, calculator.computeLoadScore(1.0f), DELTA)
+    fun `ideal SR 1_0 scores 100`() = assertEquals(100f, calculator.computeLoadScore(1.0f), DELTA)
 
     @Test
-    fun `upper sweet-spot boundary 1_3 scores 100`() =
-        assertEquals(100f, calculator.computeLoadScore(1.3f), DELTA)
+    fun `upper sweet-spot boundary 1_3 scores 100`() = assertEquals(100f, calculator.computeLoadScore(1.3f), DELTA)
 
     @Test
     fun `SR 1_35 begins quadratic decay`() {
@@ -57,8 +52,9 @@ class LoadScoreTest {
 
     @Test
     fun `score is monotonically non-increasing above sweet spot`() {
-        val scores = listOf(1.3f, 1.5f, 1.8f, 2.0f, 2.5f, 3.0f)
-            .map { calculator.computeLoadScore(it) }
+        val scores =
+            listOf(1.3f, 1.5f, 1.8f, 2.0f, 2.5f, 3.0f)
+                .map { calculator.computeLoadScore(it) }
         for (i in 0 until scores.size - 1) {
             assert(scores[i] >= scores[i + 1]) {
                 "Score should not increase: ${scores[i]} at index $i < ${scores[i + 1]}"

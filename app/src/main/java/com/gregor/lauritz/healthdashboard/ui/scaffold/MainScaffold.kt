@@ -19,7 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -40,12 +40,13 @@ fun MainScaffold(
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    val showBottomBar = currentDestination?.let { dest ->
-        !dest.hasRoute(AppDestination.WorkoutDetail::class) &&
-        !dest.hasRoute(AppDestination.RestingHrDetail::class) &&
-        !dest.hasRoute(AppDestination.StepDetail::class) &&
-        !dest.hasRoute(AppDestination.About::class)
-    } ?: true
+    val showBottomBar =
+        currentDestination?.let { dest ->
+            !dest.hasRoute(AppDestination.WorkoutDetail::class) &&
+                !dest.hasRoute(AppDestination.RestingHrDetail::class) &&
+                !dest.hasRoute(AppDestination.StepDetail::class) &&
+                !dest.hasRoute(AppDestination.About::class)
+        } ?: true
 
     PullToRefreshBox(
         isRefreshing = isSyncing,
@@ -92,18 +93,20 @@ fun MainScaffold(
         ) { innerPadding ->
             val layoutDirection = LocalLayoutDirection.current
             // Keep padding stable to prevent list jumping when bottom bar hides
-            val bottomPadding = remember(innerPadding.calculateBottomPadding()) {
-                innerPadding.calculateBottomPadding()
-            }
+            val bottomPadding =
+                remember(innerPadding.calculateBottomPadding()) {
+                    innerPadding.calculateBottomPadding()
+                }
 
             MainNavHost(
                 navController = navController,
-                modifier = Modifier.padding(
-                    start = innerPadding.calculateStartPadding(layoutDirection),
-                    top = innerPadding.calculateTopPadding(),
-                    end = innerPadding.calculateEndPadding(layoutDirection),
-                    bottom = bottomPadding
-                ),
+                modifier =
+                    Modifier.padding(
+                        start = innerPadding.calculateStartPadding(layoutDirection),
+                        top = innerPadding.calculateTopPadding(),
+                        end = innerPadding.calculateEndPadding(layoutDirection),
+                        bottom = bottomPadding,
+                    ),
             )
         }
     }

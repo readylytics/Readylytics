@@ -10,7 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
@@ -38,11 +38,12 @@ fun AppNavHost(
         val currentDest = navController.currentDestination
         when (uiState) {
             SyncUiState.NeedsPermissions -> {
-                val targetDest = if (!prefs.aboutDismissed) {
-                    AppDestination.About
-                } else {
-                    AppDestination.Onboarding
-                }
+                val targetDest =
+                    if (!prefs.aboutDismissed) {
+                        AppDestination.About
+                    } else {
+                        AppDestination.Onboarding
+                    }
                 if (currentDest?.hasRoute<AppDestination.Onboarding>() != true &&
                     currentDest?.hasRoute<AppDestination.About>() != true
                 ) {
@@ -85,13 +86,13 @@ fun AppNavHost(
                             popUpTo(AppDestination.About) { inclusive = true }
                         }
                     }
-                }
+                },
             )
         }
 
         composable<AppDestination.Onboarding> {
             OnboardingRoute(
-                syncViewModel = viewModel
+                syncViewModel = viewModel,
             )
         }
 

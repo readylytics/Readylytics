@@ -2,9 +2,11 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
+import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
-import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults
+import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import java.io.File
 
 data class ThresholdSettingsState(
@@ -34,7 +36,7 @@ data class PhysiologySettingsState(
     val birthDay: Int = SettingsDefaults.BIRTH_DAY,
     val birthMonth: Int = SettingsDefaults.BIRTH_MONTH,
     val birthYear: Int = SettingsDefaults.BIRTH_YEAR,
-    val gender: String? = SettingsDefaults.GENDER,
+    val gender: Gender? = null,
 )
 
 data class HeartRateZonesState(
@@ -74,12 +76,10 @@ data class UIState(
     val stepGoal: Int = SettingsDefaults.STEP_GOAL,
     val retentionDaysEnabled: Boolean = SettingsDefaults.RETENTION_DAYS_ENABLED,
     val retentionDays: Int = SettingsDefaults.RETENTION_DAYS,
-    val collapseCloudData: Boolean = SettingsDefaults.COLLAPSE_CLOUD_DATA,
-    val collapseHealthConnect: Boolean = SettingsDefaults.COLLAPSE_HEALTH_CONNECT,
-    val collapseBaselinesThresholds: Boolean = SettingsDefaults.COLLAPSE_BASELINES_THRESHOLDS,
-    val collapseDisplay: Boolean = SettingsDefaults.COLLAPSE_DISPLAY,
-    val collapseAdvanced: Boolean = SettingsDefaults.COLLAPSE_ADVANCED,
-    val aboutDismissed: Boolean = SettingsDefaults.ABOUT_DISMISSED,
+    val trimpModel: TrimpModel = SettingsDefaults.TRIMP_MODEL,
+    val banisterMultiplier: Float = PhysiologyProfile.GENERAL.banisterMultiplier,
+    val chengBeta: Float = PhysiologyProfile.GENERAL.defaultChengBeta,
+    val itrimB: Float = PhysiologyProfile.GENERAL.defaultItrimB,
 )
 
 data class SyncSettingsState(

@@ -18,7 +18,10 @@ object DateFormatUtils {
     fun epochMilliToTimeString(epochMs: Long): String =
         Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()).format(WORKOUT_TIME_FORMATTER)
 
-    fun nightSectionLabel(date: LocalDate, today: LocalDate): String =
+    fun nightSectionLabel(
+        date: LocalDate,
+        today: LocalDate,
+    ): String =
         when (date) {
             today -> "Last Night"
             today.minusDays(1) -> "Night of Yesterday"
@@ -36,7 +39,8 @@ object DateFormatUtils {
     }
 
     fun truncateToDayMs(ms: Long): Long =
-        Instant.ofEpochMilli(ms)
+        Instant
+            .ofEpochMilli(ms)
             .atZone(ZoneId.systemDefault())
             .toLocalDate()
             .atStartOfDay(ZoneId.systemDefault())

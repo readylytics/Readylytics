@@ -146,6 +146,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     // Vico charts
+    implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
 
     // Google Drive backup
@@ -160,7 +161,7 @@ dependencies {
     // WorkManager + Hilt integration
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.hilt.work)
-    // ksp(libs.hilt.work.compiler)
+    ksp(libs.hilt.work.compiler)
 
     // Security
     implementation(libs.google.tink.android)
@@ -174,6 +175,7 @@ dependencies {
     testImplementation(libs.androidx.junit)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.hilt.android.testing)
+    testImplementation(libs.androidx.arch.core.testing)
     kspTest(libs.hilt.compiler)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

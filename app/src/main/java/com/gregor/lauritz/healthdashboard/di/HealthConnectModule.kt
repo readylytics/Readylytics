@@ -13,7 +13,5 @@ import javax.inject.Singleton
 abstract class HealthConnectModule {
     @Binds
     @Singleton
-    abstract fun bindHealthConnectRepository(
-        impl: HealthConnectRepositoryImpl
-    ): HealthConnectRepository
+    abstract fun bindHealthConnectRepository(impl: HealthConnectRepositoryImpl): HealthConnectRepository
 }

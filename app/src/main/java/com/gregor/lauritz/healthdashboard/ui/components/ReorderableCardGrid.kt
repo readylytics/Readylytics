@@ -13,11 +13,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,7 +29,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -72,7 +69,10 @@ class ReorderableCardState {
         targetIndex = null
     }
 
-    fun updateHeight(cardId: CardId, height: Int) {
+    fun updateHeight(
+        cardId: CardId,
+        height: Int,
+    ) {
         if (cardHeights[cardId] != height) {
             cardHeights[cardId] = height
         }
@@ -80,14 +80,13 @@ class ReorderableCardState {
 }
 
 @Composable
-fun rememberReorderableCardState(): ReorderableCardState {
-    return remember { ReorderableCardState() }
-}
+fun rememberReorderableCardState(): ReorderableCardState = remember { ReorderableCardState() }
 
 // Full-width card IDs that should span entire width instead of 50%
-private val FULL_WIDTH_CARDS = setOf(
-    CardId.STEPS,
-)
+private val FULL_WIDTH_CARDS =
+    setOf(
+        CardId.STEPS,
+    )
 
 // Grid component that supports drag-and-drop reordering of cards
 // Only visible cards (isVisible=true) are rendered and can be reordered
@@ -103,11 +102,12 @@ fun ReorderableCardGrid(
     state: ReorderableCardState = rememberReorderableCardState(),
 ) {
     // Filter to show only visible cards that have content, sorted by their position
-    val displayableCards = remember(cardConfigurations, cardDataMap) {
-        cardConfigurations
-            .filter { it.isVisible && cardDataMap.containsKey(it.cardId) }
-            .sortedBy { it.position }
-    }
+    val displayableCards =
+        remember(cardConfigurations, cardDataMap) {
+            cardConfigurations
+                .filter { it.isVisible && cardDataMap.containsKey(it.cardId) }
+                .sortedBy { it.position }
+        }
 
     Column(
         modifier = modifier,
@@ -181,14 +181,16 @@ fun ReorderableCardGrid(
             Spacer(modifier = Modifier.height(16.dp))
             val isHovered = state.targetIndex == displayableCards.size
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
-                color = if (isHovered) {
-                    MaterialTheme.colorScheme.errorContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(80.dp),
+                color =
+                    if (isHovered) {
+                        MaterialTheme.colorScheme.errorContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    },
                 shape = RoundedCornerShape(16.dp),
             ) {
                 Column(
@@ -199,21 +201,23 @@ fun ReorderableCardGrid(
                     Icon(
                         imageVector = Icons.Outlined.Delete,
                         contentDescription = null,
-                        tint = if (isHovered) {
-                            MaterialTheme.colorScheme.onErrorContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                        tint =
+                            if (isHovered) {
+                                MaterialTheme.colorScheme.onErrorContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Drop here to remove",
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (isHovered) {
-                            MaterialTheme.colorScheme.onErrorContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                        color =
+                            if (isHovered) {
+                                MaterialTheme.colorScheme.onErrorContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                     )
                 }
             }
@@ -238,15 +242,16 @@ private fun renderCardItem(
     val cardContent = cardDataMap[card.cardId]!!
 
     // Center gauges (SLEEP_SCORE, READINESS)
-    val wrappedContent: @Composable () -> Unit = if (card.cardId in setOf(CardId.SLEEP_SCORE, CardId.READINESS)) {
-        @Composable {
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                cardContent()
+    val wrappedContent: @Composable () -> Unit =
+        if (card.cardId in setOf(CardId.SLEEP_SCORE, CardId.READINESS)) {
+            @Composable {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    cardContent()
+                }
             }
+        } else {
+            cardContent
         }
-    } else {
-        cardContent
-    }
 
     ReorderableCardItem(
         card = card,
@@ -271,9 +276,10 @@ private fun renderCardItem(
                     val draggedCard = newCards.removeAt(draggedIdx)
                     newCards.add(targetIdx, draggedCard)
 
-                    val updated = newCards.mapIndexed { i, config ->
-                        config.copy(position = i)
-                    }
+                    val updated =
+                        newCards.mapIndexed { i, config ->
+                            config.copy(position = i)
+                        }
                     onCardReorder(updated)
                 }
             }
@@ -289,13 +295,14 @@ private fun renderCardItem(
                 val movementThreshold = cardHeight / 2
 
                 val maxIndex = displayableCards.size
-                val newTargetIndex = if (state.dragOffset.y > movementThreshold && currentTarget < maxIndex) {
-                    currentTarget + 1
-                } else if (state.dragOffset.y < -movementThreshold && currentTarget > 0) {
-                    currentTarget - 1
-                } else {
-                    currentTarget
-                }
+                val newTargetIndex =
+                    if (state.dragOffset.y > movementThreshold && currentTarget < maxIndex) {
+                        currentTarget + 1
+                    } else if (state.dragOffset.y < -movementThreshold && currentTarget > 0) {
+                        currentTarget - 1
+                    } else {
+                        currentTarget
+                    }
 
                 if (newTargetIndex != state.targetIndex) {
                     state.targetIndex = newTargetIndex
@@ -328,60 +335,61 @@ private fun ReorderableCardItem(
     var currentDragOffset by remember { mutableStateOf(IntOffset.Zero) }
 
     Box(
-        modifier = modifier
-            .onSizeChanged { size ->
-                onHeightChanged(size.height)
-            }
-            .then(
-                if (isDragged) {
-                    Modifier
-                        .offset { currentDragOffset }
-                        .graphicsLayer {
-                            alpha = 0.75f
-                            shadowElevation = 16.dp.toPx()
-                            scaleX = 1.02f
-                            scaleY = 1.02f
-                        }
-                } else if (isTarget) {
-                    Modifier
-                        .graphicsLayer {
-                            alpha = 0.6f
-                        }
-                } else {
-                    Modifier
-                }
-            )
-            .then(
-                if (isEditing) {
-                    Modifier.pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragStart = {
-                                currentDragOffset = IntOffset.Zero
-                                onDragStart()
-                            },
-                            onDragEnd = {
-                                onDragEnd()
-                                currentDragOffset = IntOffset.Zero
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                currentDragOffset += IntOffset(
-                                    dragAmount.x.roundToInt(),
-                                    dragAmount.y.roundToInt()
-                                )
-                                onDrag(dragAmount.x, dragAmount.y)
+        modifier =
+            modifier
+                .onSizeChanged { size ->
+                    onHeightChanged(size.height)
+                }.then(
+                    if (isDragged) {
+                        Modifier
+                            .offset { currentDragOffset }
+                            .graphicsLayer {
+                                alpha = 0.75f
+                                shadowElevation = 16.dp.toPx()
+                                scaleX = 1.02f
+                                scaleY = 1.02f
                             }
-                        )
-                    }
-                } else {
-                    Modifier
-                }
-            ),
+                    } else if (isTarget) {
+                        Modifier
+                            .graphicsLayer {
+                                alpha = 0.6f
+                            }
+                    } else {
+                        Modifier
+                    },
+                ).then(
+                    if (isEditing) {
+                        Modifier.pointerInput(Unit) {
+                            detectDragGestures(
+                                onDragStart = {
+                                    currentDragOffset = IntOffset.Zero
+                                    onDragStart()
+                                },
+                                onDragEnd = {
+                                    onDragEnd()
+                                    currentDragOffset = IntOffset.Zero
+                                },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    currentDragOffset +=
+                                        IntOffset(
+                                            dragAmount.x.roundToInt(),
+                                            dragAmount.y.roundToInt(),
+                                        )
+                                    onDrag(dragAmount.x, dragAmount.y)
+                                },
+                            )
+                        }
+                    } else {
+                        Modifier
+                    },
+                ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (isEditing) {

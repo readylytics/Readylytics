@@ -17,18 +17,18 @@ import retrofit2.http.Streaming
 
 @Serializable
 data class DriveFileListResponse(
-    val files: List<DriveFileResponse>
+    val files: List<DriveFileResponse>,
 )
 
 @Serializable
 data class DriveFileResponse(
     val id: String,
-    val name: String
+    val name: String,
 )
 
 @Serializable
 data class DriveUploadResponse(
-    val id: String
+    val id: String,
 )
 
 interface DriveApiService {
@@ -36,7 +36,7 @@ interface DriveApiService {
     suspend fun listFiles(
         @Header("Authorization") authHeader: String,
         @Query("spaces") spaces: String = "appDataFolder",
-        @Query("fields") fields: String = "files(id,name)"
+        @Query("fields") fields: String = "files(id,name)",
     ): DriveFileListResponse
 
     @Multipart
@@ -44,7 +44,7 @@ interface DriveApiService {
     suspend fun uploadFile(
         @Header("Authorization") authHeader: String,
         @Part("metadata") metadata: RequestBody,
-        @Part file: MultipartBody.Part
+        @Part file: MultipartBody.Part,
     ): DriveUploadResponse
 
     @Streaming
@@ -52,12 +52,12 @@ interface DriveApiService {
     suspend fun downloadFile(
         @Header("Authorization") authHeader: String,
         @Path("fileId") fileId: String,
-        @Query("alt") alt: String = "media"
+        @Query("alt") alt: String = "media",
     ): Response<ResponseBody>
 
     @DELETE("files/{fileId}")
     suspend fun deleteFile(
         @Header("Authorization") authHeader: String,
-        @Path("fileId") fileId: String
+        @Path("fileId") fileId: String,
     ): Response<Unit>
 }

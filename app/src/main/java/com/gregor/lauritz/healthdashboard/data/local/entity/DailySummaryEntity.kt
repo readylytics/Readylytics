@@ -34,13 +34,10 @@ data class DailySummaryEntity(
     val zRhr: Float? = null,
     val recoveryFlags: String? = null,
     val hrvSigma: Float? = null,
-
     @Embedded(prefix = "diag_")
     val diagnostics: ReadinessResult.Diagnostics = ReadinessResult.Diagnostics(),
-
     @Embedded(prefix = "contrib_")
     val contributors: ReadinessResult.Contributors = ReadinessResult.Contributors(),
-
     // Legacy/supporting fields not bundled into ReadinessResult
     val rollingMu: Float? = null,
     val rhrDeltaBpm: Float? = null,
@@ -54,4 +51,3 @@ data class DailySummaryEntity(
     val loadContribution: Float? = null,
     val sRest: Float? = null,
 )
-

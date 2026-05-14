@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,7 +19,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Arrangement
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 
 private val StaticEmptyLambda: () -> Unit = {}
@@ -39,16 +39,18 @@ fun MetricCard(
     Card(
         onClick = onClick ?: StaticEmptyLambda,
         enabled = onClick != null,
-        modifier = modifier.let {
-            if (onClick != null) it.semantics { role = Role.Button } else it
-        },
+        modifier =
+            modifier.let {
+                if (onClick != null) it.semantics { role = Role.Button } else it
+            },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = containerColor,
-            contentColor = contentColor,
-            disabledContainerColor = containerColor,
-            disabledContentColor = contentColor,
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = containerColor,
+                contentColor = contentColor,
+                disabledContainerColor = containerColor,
+                disabledContentColor = contentColor,
+            ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(

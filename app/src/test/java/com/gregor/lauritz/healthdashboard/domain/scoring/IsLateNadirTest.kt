@@ -24,54 +24,66 @@ class IsLateNadirTest {
     fun `nadir at exactly 67 percent is not late (boundary)`() {
         // 0.67 * 8h = 5h 21m 36s = 19296000ms; offset == threshold → NOT strictly greater
         val offsetMs = (sessionDurationMs() * 0.67f).toLong()
-        assertFalse(calculator.isLateNadir(
-            minHrTimestampMs = startMs + offsetMs,
-            sessionStartMs = startMs,
-            durationMinutes = durationMinutes,
-        ))
+        assertFalse(
+            calculator.isLateNadir(
+                minHrTimestampMs = startMs + offsetMs,
+                sessionStartMs = startMs,
+                durationMinutes = durationMinutes,
+            ),
+        )
     }
 
     @Test
     fun `nadir at 68 percent is late`() {
         val offsetMs = (sessionDurationMs() * 0.68f).toLong()
-        assertTrue(calculator.isLateNadir(
-            minHrTimestampMs = startMs + offsetMs,
-            sessionStartMs = startMs,
-            durationMinutes = durationMinutes,
-        ))
+        assertTrue(
+            calculator.isLateNadir(
+                minHrTimestampMs = startMs + offsetMs,
+                sessionStartMs = startMs,
+                durationMinutes = durationMinutes,
+            ),
+        )
     }
 
     @Test
     fun `nadir at 50 percent is not late`() {
         val offsetMs = (sessionDurationMs() * 0.50f).toLong()
-        assertFalse(calculator.isLateNadir(
-            minHrTimestampMs = startMs + offsetMs,
-            sessionStartMs = startMs,
-            durationMinutes = durationMinutes,
-        ))
+        assertFalse(
+            calculator.isLateNadir(
+                minHrTimestampMs = startMs + offsetMs,
+                sessionStartMs = startMs,
+                durationMinutes = durationMinutes,
+            ),
+        )
     }
 
     @Test
     fun `nadir at end of session is late`() {
-        assertFalse(calculator.isLateNadir(
-            minHrTimestampMs = startMs,
-            sessionStartMs = startMs,
-            durationMinutes = durationMinutes,
-        ))
-        assertTrue(calculator.isLateNadir(
-            minHrTimestampMs = startMs + sessionDurationMs() - 1L,
-            sessionStartMs = startMs,
-            durationMinutes = durationMinutes,
-        ))
+        assertFalse(
+            calculator.isLateNadir(
+                minHrTimestampMs = startMs,
+                sessionStartMs = startMs,
+                durationMinutes = durationMinutes,
+            ),
+        )
+        assertTrue(
+            calculator.isLateNadir(
+                minHrTimestampMs = startMs + sessionDurationMs() - 1L,
+                sessionStartMs = startMs,
+                durationMinutes = durationMinutes,
+            ),
+        )
     }
 
     @Test
     fun `nadir before session start returns false`() {
         // Negative offset → (negative) NOT > threshold
-        assertFalse(calculator.isLateNadir(
-            minHrTimestampMs = startMs - 1000L,
-            sessionStartMs = startMs,
-            durationMinutes = durationMinutes,
-        ))
+        assertFalse(
+            calculator.isLateNadir(
+                minHrTimestampMs = startMs - 1000L,
+                sessionStartMs = startMs,
+                durationMinutes = durationMinutes,
+            ),
+        )
     }
 }
