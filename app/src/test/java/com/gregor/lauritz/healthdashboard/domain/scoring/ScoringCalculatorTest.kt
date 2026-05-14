@@ -7,6 +7,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
 
 private const val DELTA = 0.5f
 private val calculator = ScoringCalculatorImpl()
@@ -87,6 +88,36 @@ class ComputeCtlTest {
         val ctl = calculator.computeCtlEma(dailyTrimpList = dailyTrimpList)
         val sr = calculator.computeStrainRatio(10f, ctl)
         assertEquals(1.0f, sr, 0.05f)
+    }
+
+    @Test
+    fun `computeEmaWithDecay utilizes extended history for stabilization`() {
+        val rangeEnd = LocalDate.of(2023, 12, 31)
+        val windowDays = 42L // CTL standard
+
+        // Scenario: Athlete had a massive training block (200 TRIMP) 60-120 days ago,
+        // then settled into a moderate block (100 TRIMP) for the last 60 days.
+        val fullHistory = mutableMapOf<LocalDate, Float>()
+        for (i in 60 until 120) {
+            fullHistory[rangeEnd.minusDays(i.toLong())] = 200f
+        }
+        for (i in 0 until 60) {
+            fullHistory[rangeEnd.minusDays(i.toLong())] = 100f
+        }
+
+        // If we only used 42 days (the window size), rangeStart would be rangeEnd - 41.
+        // All values in that window are 100f, so the EMA would be exactly 100f.
+        val scoreTruncated = 100f
+
+        // With the fix, it should find the data starting 120 days ago and process the decay
+        // of the 200f block into the 100f block.
+        val scoreWithHistory = calculator.computeCtlEmaWithDecay(fullHistory, rangeEnd, windowDays)
+
+        // The 200f block from 60 days ago should still have some residual impact, making the CTL > 100.
+        assertTrue(
+            "CTL should be elevated by historical high-load block (found: $scoreWithHistory)",
+            scoreWithHistory > scoreTruncated,
+        )
     }
 }
 

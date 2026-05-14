@@ -40,8 +40,8 @@ You'll see all three on your dashboard once enough data has been collected. Unti
 A 100-point summary of last night's sleep, made of three parts:
 
 - **Duration (50%)** — how much sleep you got, compared to your goal (default 8 hours, configurable). Includes a small adjustment for how efficient your time in bed was.
-- **Architecture (25%)** — how much of your sleep was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery happens; REM is when your brain processes memory and emotion. Targets are age-specific (see below).
-- **Restoration (25%)** — how rested your estimated recovery-related physiology looks, based on overnight heart rate variability (HRV) and resting heart rate (RHR). How we interpret HRV varies by profile (see "HRV sensitivity by profile" below).
+- **Architecture (25%)** — how much of your sleep was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery happens; REM is when your brain processes memory and emotion. Targets are age-specific to account for the natural biological decline in deep sleep across the lifespan (Ohayon 2004).
+- **Restoration (25%)** — how rested your estimated recovery-related physiology looks. We use the natural log of RMSSD (**lnRMSSD**) and overnight resting heart rate (**RHR**) to compute Z-scores. The log transformation is the scientific gold standard (Plews 2013, Buchheit 2014) for monitoring recovery, as it normalizes the skewed distribution of raw HRV data.
 
 **Reading the score**
 
@@ -121,7 +121,7 @@ The ratio (ATL ÷ CTL) tells us whether you've recently spiked above your recent
 
 - 0.8–1.3 → 100 (in your normal range — "sweet spot")
 - 1.3–1.5 → linearly decays
-- Above 1.5 → smooth quadratic decay
+- Above 1.5 → smooth quadratic decay (Gabbett 2016)
 
 **Tooltips**
 
@@ -132,7 +132,7 @@ The ratio (ATL ÷ CTL) tells us whether you've recently spiked above your recent
 
 **Emergency signals**
 
-If your HRV and RHR patterns suggest possible physiological stress (such as early illness or functional overreaching), we apply a soft cap to Readiness to give you a heads-up. This requires two consecutive nights matching the pattern and is informational only, not medical advice.
+If your HRV and RHR patterns suggest possible physiological stress (such as early illness or functional overreaching), we apply a soft cap to Readiness to give you a heads-up. To ensure accuracy and filter out acute noise (e.g., alcohol or minor stress), the algorithm requires the thresholds to be breached on **two consecutive nights** (Mishra 2020, Le Meur 2013). This is informational only, not medical advice.
 
 **What we don't do.** We don't penalise you for resting. A week of light activity will _not_ drop Readiness; the score is designed for load _spikes_, not undertraining.
 
@@ -172,7 +172,7 @@ If you wear your tracker only 3–5 nights a week, the timeline lengthens propor
 ## A short glossary
 
 - **HRV (Heart Rate Variability)** — the millisecond-level variation in time between heartbeats. Higher generally indicates better autonomic recovery, _up to a point_.
-- **RMSSD** — the specific HRV measure most apps use. We work with the natural log of RMSSD internally because it behaves better statistically.
+- **RMSSD** — the specific HRV measure most apps use. We work with the natural log of RMSSD (**lnRMSSD**) internally because it linearizes the naturally skewed distribution of heart rate variability, making statistical comparison (Z-scores) valid (Plews 2013, Buchheit 2014).
 - **RHR (Resting Heart Rate)** — your nocturnal heart rate, averaged across deep portions of sleep.
 - **Deep sleep / Slow-Wave Sleep / N3** — the deepest stage of NREM sleep; growth-hormone release is concentrated here.
 - **REM** — the dreaming stage, important for memory and emotional processing.
@@ -190,7 +190,7 @@ If you wear your tracker only 3–5 nights a week, the timeline lengthens propor
 
 3. **Profiles are engineering heuristics, not physics.** The cutoffs (Athlete ±20 min, Active ±30 min, Sedentary ±45 min circadian threshold) are chosen for practical usability, not derived from prospective studies. We monitor whether these cutoffs are working well and will adjust if needed.
 
-4. **The ACWR (Readiness load ratio) is contested.** The methodological literature (Lolli et al. 2019; Impellizzeri et al. 2020, 2021) has shown that the acute-to-chronic ratio is partially a mathematical artifact and is not a validated _causal_ injury predictor. We present it as a _load change indicator_, not an injury risk score, and we are evaluating an uncoupled-window version (chronic = days 8–28 prior; acute = last 7) for the next release.
+4. **The ACWR (Readiness load ratio) is descriptive, not predictive.** The methodological literature (Lolli et al. 2019; Impellizzeri et al. 2020, 2021) has demonstrated that the acute-to-chronic ratio is often a mathematical artifact and is not a validated *causal* injury predictor. We follow the Gabbett (2016) quadratic penalty model but present it strictly as a **load change indicator** to help you visualize spikes in training intensity, not as a diagnostic injury risk score.
 
 5. **One night is noise; trends are signal.** Treat any single day's score as a data point, not a verdict. Look at the 7-day trend.
 

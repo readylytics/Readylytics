@@ -86,10 +86,10 @@ fun AboutScreen(
                     "**Duration (50%)** — how much sleep you got, compared to your goal (default 8 hours, configurable). Includes a small adjustment for how efficient your time in bed was.",
                 )
                 BulletItem(
-                    "**Architecture (25%)** — how much of your sleep was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery happens; REM is when your brain processes memory and emotion.",
+                    "**Architecture (25%)** — how much of your sleep was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery happens; REM is when your brain processes memory and emotion. Targets are age-specific to account for the natural biological decline in deep sleep across the lifespan (Ohayon 2004).",
                 )
                 BulletItem(
-                    "**Restoration (25%)** — how rested your estimated recovery-related physiology looks, based on overnight heart rate variability (HRV) and resting heart rate (RHR).",
+                    "**Restoration (25%)** — how rested your estimated recovery-related physiology looks. We use the natural log of RMSSD (**lnRMSSD**) and overnight resting heart rate (**RHR**) to compute Z-scores. The log transformation is the scientific gold standard (Plews 2013, Buchheit 2014) for monitoring recovery, as it normalizes the skewed distribution of raw HRV data.",
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -159,10 +159,10 @@ fun AboutScreen(
 
                 Spacer(Modifier.height(8.dp))
                 BodyText("**How we score the ratio**")
-                BulletItem("0.8-1.2 → 100 (in your normal range)")
-                BulletItem("1.2-1.5 → linearly decays toward 40")
+                BulletItem("0.8-1.3 → 100 (in your normal range — \"sweet spot\")")
+                BulletItem("1.3-1.5 → linearly decays")
                 BulletItem(
-                    "Above 1.5 → floors at 40 in the current version (we are revisiting this; see \"Honest limitations\" below)",
+                    "Above 1.5 → smooth quadratic decay (Gabbett 2016)",
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -230,7 +230,7 @@ fun AboutScreen(
                     "**HRV (Heart Rate Variability)** — the millisecond-level variation in time between heartbeats. Higher generally indicates better autonomic recovery, *up to a point*.",
                 )
                 BulletItem(
-                    "**RMSSD** — the specific HRV measure most apps use. We work with the natural log of RMSSD internally because it behaves better statistically.",
+                    "**RMSSD** — the specific HRV measure most apps use. We work with the natural log of RMSSD (**lnRMSSD**) internally because it linearizes the naturally skewed distribution of heart rate variability, making statistical comparison (Z-scores) valid (Plews 2013, Buchheit 2014).",
                 )
                 BulletItem(
                     "**RHR (Resting Heart Rate)** — your nocturnal heart rate, averaged across deep portions of sleep.",
@@ -253,16 +253,16 @@ fun AboutScreen(
             item {
                 SubHeader("## Honest limitations")
                 BulletItem(
-                    "**1. Wearable stage detection is imperfect.** Even premium devices misclassify deep and REM sleep on individual nights. We use 7-day rolling values where it matters and downweight architecture if your device's stage signal is unreliable. Architecture differences within ~5% are not meaningful.",
+                    "**1. Wearable stage detection is imperfect.** Even premium devices misclassify deep and REM sleep on individual nights. We use age-adjusted targets and don't penalise you for differences within ~5% of the target. Architecture differences within that margin are not meaningful.",
                 )
                 BulletItem(
-                    "**2. Population norms are not destiny.** The \"15-25% deep sleep\" range comes from polysomnography studies of healthy adults. Your healthy normal may sit anywhere in that band, and tends to drift lower with age. Our scoring uses age-banded targets so the ceiling shifts with you.",
+                    "**2. Population norms are not destiny.** The age-banded deep sleep ranges come from polysomnography studies of healthy adults. Your healthy normal may sit anywhere in your age band. Our scoring uses age-banded targets so the ceiling shifts with you.",
                 )
                 BulletItem(
-                    "**3. The ACWR (Readiness load ratio) is contested.** The methodological literature (Lolli et al. 2019; Impellizzeri et al. 2020, 2021) has shown that the acute-to-chronic ratio is partially a mathematical artifact and is not a validated *causal* injury predictor. We present it as a *load change indicator*, not an injury risk score, and we are evaluating an uncoupled-window version (chronic = days 8-28 prior; acute = last 7) for the next release.",
+                    "**3. The ACWR (Readiness load ratio) is descriptive, not predictive.** The methodological literature (Lolli et al. 2019; Impellizzeri et al. 2020, 2021) has demonstrated that the acute-to-chronic ratio is often a mathematical artifact and is not a validated *causal* injury predictor. We follow the Gabbett (2016) quadratic penalty model but present it strictly as a **load change indicator** to help you visualize spikes in training intensity, not as a diagnostic injury risk score.",
                 )
                 BulletItem(
-                    "**4. Wellness flag.** When your HRV and RHR patterns suggest possible physiological deviation (such as early illness, sustained stress, or functional overreaching), we surface a soft notification. The flag requires two consecutive nights matching the pattern. This is informational only, not medical advice.",
+                    "**4. Recovery flag.** When your HRV and RHR patterns suggest possible physiological stress (such as early illness or functional overreaching), we surface a soft notification. To ensure accuracy and filter out acute noise, the algorithm requires the thresholds to be breached on **two consecutive nights** (Mishra 2020, Le Meur 2013). This is informational only, not medical advice.",
                 )
                 BulletItem(
                     "**5. One night is noise; trends are signal.** Treat any single day's score as a data point, not a verdict. Look at the 7-day trend.",

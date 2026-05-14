@@ -512,7 +512,13 @@ class ScoringCalculatorImpl
             rangeEnd: LocalDate,
         ): Float {
             if (dailyTrimpByDate.isEmpty()) return ScoringConstants.DEFAULT_FITNESS_LEVEL
-            val rangeStart = rangeEnd.minusDays(windowDays - 1)
+
+            // Decouple the historical calculation window from the EMA time constant.
+            // Starting from the earliest available date allows the initial seed to wash out.
+            val earliestDataDate = dailyTrimpByDate.keys.minOrNull() ?: rangeEnd
+            val defaultStart = rangeEnd.minusDays(windowDays - 1)
+            val rangeStart = if (earliestDataDate.isBefore(defaultStart)) earliestDataDate else defaultStart
+
             val alpha = 2.0 / (windowDays + 1)
             var ewma = (dailyTrimpByDate[rangeStart] ?: 0.0).toDouble()
             var date = rangeStart.plusDays(1)
