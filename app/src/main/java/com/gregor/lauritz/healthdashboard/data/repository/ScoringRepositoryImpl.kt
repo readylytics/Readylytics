@@ -83,8 +83,6 @@ class ScoringRepositoryImpl
 
                 val workouts = workoutDao.getWorkoutsInRange(dayMidnightMs, nextDayMidnightMs)
                 var dailyTrimpRaw = 0f
-                val updatedWorkouts =
-                    mutableListOf<com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity>()
 
                 workouts.forEach { workout ->
                     val workoutHrSamples =
@@ -118,13 +116,6 @@ class ScoringRepositoryImpl
                             storedTrimp = workout.trimp,
                         )
                     dailyTrimpRaw += workoutTrimp
-                    if (workoutTrimp != workout.trimp) {
-                        updatedWorkouts.add(workout.copy(trimp = workoutTrimp))
-                    }
-                }
-
-                if (updatedWorkouts.isNotEmpty()) {
-                    workoutDao.upsertAll(updatedWorkouts)
                 }
 
                 // Enforce 75-point daily cap. Standard PAI is pure load, no readiness penalty.

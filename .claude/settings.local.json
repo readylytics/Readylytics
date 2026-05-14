@@ -14,7 +14,11 @@
       "Bash(./gradlew testDebugUnitTest --no-daemon)",
       "Bash(./gradlew compileDebugKotlin testDebugUnitTest --no-daemon)",
       "Bash(./gradlew -q compileDebugKotlin)",
-      "Bash(./gradlew testDebugUnitTest -q)"
+      "Bash(./gradlew testDebugUnitTest -q)",
+      "mcp__plugin_context-mode_context-mode__ctx_batch_execute",
+      "mcp__plugin_context-mode_context-mode__ctx_execute",
+      "Skill(oh-my-claudecode:ralph)",
+      "Skill(ai-slop-cleaner)"
     ]
   }
 }

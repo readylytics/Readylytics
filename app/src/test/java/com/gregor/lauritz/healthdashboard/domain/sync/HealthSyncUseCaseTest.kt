@@ -11,7 +11,6 @@ import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
-import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
@@ -33,7 +32,6 @@ class HealthSyncUseCaseTest {
     private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val scoringRepository = mockk<ScoringRepository>(relaxed = true)
-    private val computeWorkoutTrimpUseCase = mockk<ComputeWorkoutTrimpUseCase>(relaxed = true)
 
     private lateinit var useCase: HealthSyncUseCase
 
@@ -49,7 +47,6 @@ class HealthSyncUseCaseTest {
                 dailySummaryDao,
                 settingsRepo,
                 scoringRepository,
-                computeWorkoutTrimpUseCase,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
     }
