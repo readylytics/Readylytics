@@ -111,3 +111,88 @@ The UI follows a strict "Material You" (Material 3) aesthetic: dynamic dark mode
 - Build APK: `./gradlew assembleDebug`
 - Clean project: `./gradlew clean`
 - Run unit tests: `./gradlew testDebugUnitTest`
+
+## 📋 Settings Architecture (Phases 1–8 Refactoring)
+
+### Separation of Concerns Pattern
+
+**Validation Layer (Domain)**
+- All validation rules in `domain/validation/` (ValidationRule interface, IntRangeRule, ValidationResult)
+- SettingsValidators.kt defines canonical rules (BIRTHDAY_DAY_RULE, HRV_BASELINE_RULE, etc.)
+- Example: `SettingsValidators.BIRTHDAY_DAY_RULE.validate(input: String): ValidationResult`
+
+**State Management Layer (ViewModel)**
+- ViewModels expose state via StateFlow (PhysiologySettingsViewModel, SleepSettingsViewModel, etc.)
+- ViewModels accept events via onEvent(event: SettingsEvent) sealed interface
+- ViewModels validate events defensively before persisting
+- UI-only state (section toggles) managed locally with rememberSaveable in composables
+
+**Rendering Layer (Composable)**
+- Validate input before firing events (client-side feedback)
+- Display errors from validation result (domain layer)
+- Remain simple: bind state → render, handle events → fire validated events
+- No validation logic in composables; all rules from domain layer
+
+### Code Organization Standards
+
+File size: target ≤ 400 lines, hard limit 800 lines  
+Test structure mirrors source: src/test/java/…/<same-package>/<test-file>
+
+Module organization:
+```
+ui/settings/
+├── physiologyprofile/        [Gender, birthday, heart rate zones]
+├── sleep/                     [Sleep goals, HRV/RHR baselines]
+├── cloud/                     [Google Drive backup/sync]
+├── common/                    [SettingsConstants, ValidatingTextField]
+├── SettingsScreen.kt          [Root, navigation]
+├── SettingsEvent.kt           [Sealed interface]
+├── *SettingsViewModel.kt      [State, events]
+```
+
+Constants & Naming:
+- Physiological (domain-level, immutable): MIN_HEART_RATE=1, MAX_HEART_RATE=220, MIN_HRV_MS=1, MAX_HRV_MS=500, MIN_RHR_BPM=30, MAX_RHR_BPM=100
+- UI Layout (module-scoped): HORIZONTAL_PADDING=16.dp, VERTICAL_SPACER=8.dp in SettingsConstants.kt
+
+### Validation Pattern (Canonical)
+
+For numeric/bounded inputs:
+```kotlin
+private val rule = SettingsValidators.BIRTHDAY_DAY_RULE
+val validation = rule.validate(userInput)
+
+// Render error state
+OutlinedTextField(
+    isError = userInput.isNotEmpty() && validation is ValidationResult.Invalid,
+    supportingText = { 
+        if (validation is ValidationResult.Invalid) Text(validation.message) 
+    },
+)
+
+// Validate before firing event
+onValueChange = { newValue ->
+    userInput = newValue
+    rule.validate(newValue).let { result ->
+        if (result is ValidationResult.Valid) {
+            onEvent(SettingsEvent.Updated(result.parsedValue))
+        }
+    }
+}
+```
+
+### State Management Hierarchy
+
+**Domain State** (ViewModel → SettingsRepository → DataStore): appTheme, paiScalingFactor, stepGoal, birthday, gender, heartRateZones, sleep goals, HRV/RHR baselines. Persists to disk.
+
+**UI-Only State** (Composable local via rememberSaveable): Section toggles, dropdown expanded, search query. Persists across recompositions; cleared on process death.
+
+### Code Quality Checklist (Phase 8)
+
+- [ ] No hardcoded validation thresholds (all via ValidationRule)
+- [ ] No string error messages in composables (all from ValidationResult)
+- [ ] Numeric inputs validated before event firing
+- [ ] No duplicate validation logic (use extracted helper composables)
+- [ ] ViewModels include defensive validation
+- [ ] Tests cover valid/invalid boundaries for all inputs
+- [ ] No dead code; all public functions have callers
+- [ ] Files ≤ 400 lines target (800 max)
