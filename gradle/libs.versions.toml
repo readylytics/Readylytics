@@ -1,5 +1,5 @@
 [versions]
-agp = "9.2.1"
+agp = "8.2.0"
 kotlin = "2.3.21"
 ktlint = "14.2.0"
 ksp = "2.3.7"
