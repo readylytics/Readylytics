@@ -94,114 +94,17 @@ fun HeartRateZoneSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    val dayValidation = SettingsValidators.BIRTHDAY_DAY_RULE.validate(birthDayText)
-                    val monthValidation = SettingsValidators.BIRTHDAY_MONTH_RULE.validate(birthMonthText)
-                    val yearValidation = SettingsValidators.BIRTHDAY_YEAR_RULE.validate(birthYearText)
-                    val allValid =
-                        dayValidation is ValidationResult.Valid &&
-                            monthValidation is ValidationResult.Valid &&
-                            yearValidation is ValidationResult.Valid
-
-                    OutlinedTextField(
-                        value = birthDayText,
-                        onValueChange = { v ->
-                            birthDayText = v.filter { it.isDigit() }.take(2)
-                            val d = birthDayText.toIntOrNull() ?: return@OutlinedTextField
-                            val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
-                            val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
-                            val dayValid =
-                                SettingsValidators.BIRTHDAY_DAY_RULE.validate(
-                                    birthDayText,
-                                ) is ValidationResult.Valid
-                            val monthValid =
-                                SettingsValidators.BIRTHDAY_MONTH_RULE.validate(
-                                    birthMonthText,
-                                ) is ValidationResult.Valid
-                            val yearValid =
-                                SettingsValidators.BIRTHDAY_YEAR_RULE.validate(
-                                    birthYearText,
-                                ) is ValidationResult.Valid
-                            if (dayValid && monthValid && yearValid) {
-                                onPhysiologyEvent(SettingsEvent.BirthdayChanged(d, m, y))
-                            }
-                        },
-                        label = { Text("Day") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        isError = birthDayText.isNotEmpty() && dayValidation is ValidationResult.Invalid,
-                        supportingText = {
-                            if (dayValidation is ValidationResult.Invalid) Text(dayValidation.message)
-                        },
-                        modifier = Modifier.weight(1f),
-                    )
-                    Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER))
-                    OutlinedTextField(
-                        value = birthMonthText,
-                        onValueChange = { v ->
-                            birthMonthText = v.filter { it.isDigit() }.take(2)
-                            val d = birthDayText.toIntOrNull() ?: return@OutlinedTextField
-                            val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
-                            val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
-                            val dayValid =
-                                SettingsValidators.BIRTHDAY_DAY_RULE.validate(
-                                    birthDayText,
-                                ) is ValidationResult.Valid
-                            val monthValid =
-                                SettingsValidators.BIRTHDAY_MONTH_RULE.validate(
-                                    birthMonthText,
-                                ) is ValidationResult.Valid
-                            val yearValid =
-                                SettingsValidators.BIRTHDAY_YEAR_RULE.validate(
-                                    birthYearText,
-                                ) is ValidationResult.Valid
-                            if (dayValid && monthValid && yearValid) {
-                                onPhysiologyEvent(SettingsEvent.BirthdayChanged(d, m, y))
-                            }
-                        },
-                        label = { Text("Month") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        isError = birthMonthText.isNotEmpty() && monthValidation is ValidationResult.Invalid,
-                        supportingText = {
-                            if (monthValidation is ValidationResult.Invalid) Text(monthValidation.message)
-                        },
-                        modifier = Modifier.weight(1f),
-                    )
-                    Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER))
-                    OutlinedTextField(
-                        value = birthYearText,
-                        onValueChange = { v ->
-                            birthYearText = v.filter { it.isDigit() }.take(4)
-                            val d = birthDayText.toIntOrNull() ?: return@OutlinedTextField
-                            val m = birthMonthText.toIntOrNull() ?: return@OutlinedTextField
-                            val y = birthYearText.toIntOrNull() ?: return@OutlinedTextField
-                            val dayValid =
-                                SettingsValidators.BIRTHDAY_DAY_RULE.validate(
-                                    birthDayText,
-                                ) is ValidationResult.Valid
-                            val monthValid =
-                                SettingsValidators.BIRTHDAY_MONTH_RULE.validate(
-                                    birthMonthText,
-                                ) is ValidationResult.Valid
-                            val yearValid =
-                                SettingsValidators.BIRTHDAY_YEAR_RULE.validate(
-                                    birthYearText,
-                                ) is ValidationResult.Valid
-                            if (dayValid && monthValid && yearValid) {
-                                onPhysiologyEvent(SettingsEvent.BirthdayChanged(d, m, y))
-                            }
-                        },
-                        label = { Text("Year") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        isError = birthYearText.isNotEmpty() && yearValidation is ValidationResult.Invalid,
-                        supportingText = {
-                            if (yearValidation is ValidationResult.Invalid) Text(yearValidation.message)
-                        },
-                        modifier = Modifier.weight(1.4f),
-                    )
-                }
+                BirthdayInputRow(
+                    dayText = birthDayText,
+                    onDayChange = { birthDayText = it },
+                    monthText = birthMonthText,
+                    onMonthChange = { birthMonthText = it },
+                    yearText = birthYearText,
+                    onYearChange = { birthYearText = it },
+                    onBirthdayValid = { d, m, y ->
+                        onPhysiologyEvent(SettingsEvent.BirthdayChanged(d, m, y))
+                    },
+                )
                 Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
                 Text(
                     "Age: ${physiologyState.age} (auto-calculated)",
@@ -492,6 +395,83 @@ fun CompactOutlinedTextField(
         singleLine = true,
         keyboardOptions = keyboardOptions,
     )
+}
+
+@Composable
+private fun BirthdayInputRow(
+    dayText: String,
+    onDayChange: (String) -> Unit,
+    monthText: String,
+    onMonthChange: (String) -> Unit,
+    yearText: String,
+    onYearChange: (String) -> Unit,
+    onBirthdayValid: (Int, Int, Int) -> Unit,
+) {
+    val dayValidation = SettingsValidators.BIRTHDAY_DAY_RULE.validate(dayText)
+    val monthValidation = SettingsValidators.BIRTHDAY_MONTH_RULE.validate(monthText)
+    val yearValidation = SettingsValidators.BIRTHDAY_YEAR_RULE.validate(yearText)
+
+    fun tryValidateAndEmit() {
+        val d = dayText.toIntOrNull() ?: return
+        val m = monthText.toIntOrNull() ?: return
+        val y = yearText.toIntOrNull() ?: return
+        val dayValid = dayValidation is ValidationResult.Valid
+        val monthValid = monthValidation is ValidationResult.Valid
+        val yearValid = yearValidation is ValidationResult.Valid
+        if (dayValid && monthValid && yearValid) {
+            onBirthdayValid(d, m, y)
+        }
+    }
+
+    Row(modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = dayText,
+            onValueChange = { v ->
+                onDayChange(v.filter { it.isDigit() }.take(2))
+                tryValidateAndEmit()
+            },
+            label = { Text("Day") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            isError = dayText.isNotEmpty() && dayValidation is ValidationResult.Invalid,
+            supportingText = {
+                if (dayValidation is ValidationResult.Invalid) Text(dayValidation.message)
+            },
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER))
+        OutlinedTextField(
+            value = monthText,
+            onValueChange = { v ->
+                onMonthChange(v.filter { it.isDigit() }.take(2))
+                tryValidateAndEmit()
+            },
+            label = { Text("Month") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            isError = monthText.isNotEmpty() && monthValidation is ValidationResult.Invalid,
+            supportingText = {
+                if (monthValidation is ValidationResult.Invalid) Text(monthValidation.message)
+            },
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER))
+        OutlinedTextField(
+            value = yearText,
+            onValueChange = { v ->
+                onYearChange(v.filter { it.isDigit() }.take(4))
+                tryValidateAndEmit()
+            },
+            label = { Text("Year") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            isError = yearText.isNotEmpty() && yearValidation is ValidationResult.Invalid,
+            supportingText = {
+                if (yearValidation is ValidationResult.Invalid) Text(yearValidation.message)
+            },
+            modifier = Modifier.weight(1.4f),
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
