@@ -3,13 +3,14 @@ package com.gregor.lauritz.healthdashboard.domain.scoring
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.model.PhysiologyConstants
+import com.gregor.lauritz.healthdashboard.domain.scoring.BaselineComputer
 import io.mockk.coEvery
 import io.mockk.mockk
-import java.time.Instant
-import kotlin.test.assertEquals
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import java.time.Instant
+import kotlin.test.assertEquals
 
 class RhrBaselineProviderTest {
     private val baselineComputer = mockk<BaselineComputer>()

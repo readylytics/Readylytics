@@ -13,6 +13,7 @@ import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.BaselineComputer
 import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeSleepMetricsUseCase
+import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConfigFactory
@@ -41,6 +42,7 @@ class ScoringRepositoryImpl
         private val baselineComputer: BaselineComputer,
         private val computeSleepMetricsUseCase: ComputeSleepMetricsUseCase,
         private val scoringConfigFactory: ScoringConfigFactory,
+        private val computeWorkoutTrimpUseCase: ComputeWorkoutTrimpUseCase,
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
     ) : ScoringRepository {
@@ -96,36 +98,33 @@ class ScoringRepositoryImpl
                             .filter { it.recordType == RecordType.EXERCISE.name }
                             .sortedBy { it.timestampMs }
 
-                    if (workoutHrSamples.isNotEmpty()) {
-                        var workoutTrimp = 0f
-                        workoutHrSamples.forEachIndexed { index, sample ->
-                            val nextMs =
-                                if (index < workoutHrSamples.lastIndex) {
-                                    workoutHrSamples[index + 1].timestampMs
-                                } else {
-                                    workout.endTime
-                                }
-                            val durationMinutes = (nextMs - sample.timestampMs) / 60_000f
-
-                            if (durationMinutes > 0f) {
-                                workoutTrimp +=
-                                    PaiCalculator.calculateDailyTrimp(
-                                        durationMinutes = durationMinutes,
-                                        hrAvg = sample.beatsPerMinute.toFloat(),
-                                        rhrBaseline = rhrBaselineValue,
-                                        hrMax = hrMax,
-                                        gender = prefs.gender,
-                                        trimpModel = scoringConfig.trimpModel,
-                                        banisterMultiplier = scoringConfig.banisterMultiplier,
-                                        chengBeta = scoringConfig.chengBeta,
-                                        itrimB = scoringConfig.itrimB,
-                                    )
-                            }
+                    val workoutAvgHr =
+                        workoutHrSamples
+                            .takeIf { it.isNotEmpty() }
+                            ?.map { it.beatsPerMinute }
+                            ?.average()
+                            ?.toFloat()
+                            ?: 0f
+                    val samples =
+                        workoutHrSamples.map { sample ->
+                            ComputeWorkoutTrimpUseCase.HeartRateSample(
+                                java.time.Instant.ofEpochMilli(sample.timestampMs),
+                                sample.beatsPerMinute,
+                            )
                         }
-                        dailyTrimpRaw += workoutTrimp
+                    val workoutTrimp =
+                        computeWorkoutTrimpUseCase.execute(
+                            workoutStartTime = workout.startTime,
+                            workoutEndTime = workout.endTime,
+                            workoutAvgHr = workoutAvgHr,
+                            samples = samples,
+                            prefs = prefs,
+                            restingHrBaseline = rhrBaselineValue,
+                            storedTrimp = workout.trimp,
+                        )
+                    dailyTrimpRaw += workoutTrimp
+                    if (workoutTrimp != workout.trimp) {
                         updatedWorkouts.add(workout.copy(trimp = workoutTrimp))
-                    } else {
-                        dailyTrimpRaw += workout.trimp
                     }
                 }
 

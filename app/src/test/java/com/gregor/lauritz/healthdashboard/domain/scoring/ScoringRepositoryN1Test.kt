@@ -120,6 +120,7 @@ class ScoringRepositoryN1Test {
                 scoringConfigFactory,
                 encryptionManager,
             )
+        val computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase()
         repo =
             ScoringRepositoryImpl(
                 workoutDao,
@@ -130,6 +131,7 @@ class ScoringRepositoryN1Test {
                 baselineComputer,
                 computeSleepMetricsUseCase,
                 scoringConfigFactory,
+                computeWorkoutTrimpUseCase,
                 heartRateDao,
                 hrvDao,
             )
