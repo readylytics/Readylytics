@@ -2,11 +2,11 @@ package com.gregor.lauritz.healthdashboard.domain.sync
 
 import android.content.Context
 import android.content.Intent
-import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
-import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectPermissionRevokedException
-import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.widgets.receiver.WidgetUpdateBroadcastReceiver
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -22,7 +22,7 @@ import javax.inject.Singleton
 class ForegroundSyncController
     @Inject
     constructor(
-        private val context: Context,
+        @ApplicationContext private val context: Context,
         private val settingsRepo: SettingsRepository,
         private val syncUseCase: HealthSyncUseCase,
     ) {

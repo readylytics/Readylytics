@@ -16,90 +16,103 @@ import javax.inject.Singleton
  * Each widget instance has independent configuration.
  */
 @Singleton
-class WidgetConfigurationRepository @Inject constructor(
-    private val dataStore: DataStore<Preferences>,
-) {
-    private val json = Json { ignoreUnknownKeys = true }
-
-    // Small widget configuration
-    suspend fun saveSmallWidgetConfig(
-        widgetId: Int,
-        config: SmallWidgetConfig,
+class WidgetConfigurationRepository
+    @Inject
+    constructor(
+        private val dataStore: DataStore<Preferences>,
     ) {
-        dataStore.edit { preferences ->
-            preferences[smallWidgetConfigKey(widgetId)] = json.encodeToString(SmallWidgetConfig.serializer(), config)
-        }
-    }
+        private val json = Json { ignoreUnknownKeys = true }
 
-    fun observeSmallWidgetConfig(widgetId: Int): Flow<SmallWidgetConfig?> =
-        dataStore.data.map { preferences ->
-            preferences[smallWidgetConfigKey(widgetId)]?.let {
-                json.decodeFromString(SmallWidgetConfig.serializer(), it)
+        // Small widget configuration
+        suspend fun saveSmallWidgetConfig(
+            widgetId: Int,
+            config: SmallWidgetConfig,
+        ) {
+            dataStore.edit { preferences ->
+                preferences[smallWidgetConfigKey(widgetId)] =
+                    json.encodeToString(SmallWidgetConfig.serializer(), config)
             }
         }
 
-    suspend fun getSmallWidgetConfigAsync(widgetId: Int): SmallWidgetConfig? {
-        val preferences = dataStore.data.map { prefs ->
-            prefs[smallWidgetConfigKey(widgetId)]?.let {
-                json.decodeFromString(SmallWidgetConfig.serializer(), it)
+        fun observeSmallWidgetConfig(widgetId: Int): Flow<SmallWidgetConfig?> =
+            dataStore.data.map { preferences ->
+                preferences[smallWidgetConfigKey(widgetId)]?.let {
+                    json.decodeFromString(SmallWidgetConfig.serializer(), it)
+                }
             }
-        }
-        return preferences.map { it }.also { }.toString().let { null } // TODO: blocking call
-    }
 
-    // Medium widget configuration
-    suspend fun saveMediumWidgetConfig(
-        widgetId: Int,
-        config: MediumWidgetConfig,
-    ) {
-        dataStore.edit { preferences ->
-            preferences[mediumWidgetConfigKey(widgetId)] = json.encodeToString(MediumWidgetConfig.serializer(), config)
-        }
-    }
-
-    fun observeMediumWidgetConfig(widgetId: Int): Flow<MediumWidgetConfig?> =
-        dataStore.data.map { preferences ->
-            preferences[mediumWidgetConfigKey(widgetId)]?.let {
-                json.decodeFromString(MediumWidgetConfig.serializer(), it)
-            }
+        suspend fun getSmallWidgetConfigAsync(widgetId: Int): SmallWidgetConfig? {
+            val preferences =
+                dataStore.data.map { prefs ->
+                    prefs[smallWidgetConfigKey(widgetId)]?.let {
+                        json.decodeFromString(SmallWidgetConfig.serializer(), it)
+                    }
+                }
+            return preferences
+                .map { it }
+                .also { }
+                .toString()
+                .let { null } // TODO: blocking call
         }
 
-    // Large widget configuration
-    suspend fun saveLargeWidgetConfig(
-        widgetId: Int,
-        config: LargeWidgetConfig,
-    ) {
-        dataStore.edit { preferences ->
-            preferences[largeWidgetConfigKey(widgetId)] = json.encodeToString(LargeWidgetConfig.serializer(), config)
-        }
-    }
-
-    fun observeLargeWidgetConfig(widgetId: Int): Flow<LargeWidgetConfig?> =
-        dataStore.data.map { preferences ->
-            preferences[largeWidgetConfigKey(widgetId)]?.let {
-                json.decodeFromString(LargeWidgetConfig.serializer(), it)
+        // Medium widget configuration
+        suspend fun saveMediumWidgetConfig(
+            widgetId: Int,
+            config: MediumWidgetConfig,
+        ) {
+            dataStore.edit { preferences ->
+                preferences[mediumWidgetConfigKey(widgetId)] =
+                    json.encodeToString(MediumWidgetConfig.serializer(), config)
             }
         }
 
-    // Cleanup on widget deletion
-    suspend fun deleteWidgetConfig(
-        widgetId: Int,
-        type: WidgetType,
-    ) {
-        dataStore.edit { preferences ->
-            val key = when (type) {
-                WidgetType.SMALL -> smallWidgetConfigKey(widgetId)
-                WidgetType.MEDIUM -> mediumWidgetConfigKey(widgetId)
-                WidgetType.LARGE -> largeWidgetConfigKey(widgetId)
+        fun observeMediumWidgetConfig(widgetId: Int): Flow<MediumWidgetConfig?> =
+            dataStore.data.map { preferences ->
+                preferences[mediumWidgetConfigKey(widgetId)]?.let {
+                    json.decodeFromString(MediumWidgetConfig.serializer(), it)
+                }
             }
-            preferences.remove(key)
-        }
-    }
 
-    private fun smallWidgetConfigKey(widgetId: Int) = stringPreferencesKey("widget_small_config_$widgetId")
-    private fun mediumWidgetConfigKey(widgetId: Int) = stringPreferencesKey("widget_medium_config_$widgetId")
-    private fun largeWidgetConfigKey(widgetId: Int) = stringPreferencesKey("widget_large_config_$widgetId")
-}
+        // Large widget configuration
+        suspend fun saveLargeWidgetConfig(
+            widgetId: Int,
+            config: LargeWidgetConfig,
+        ) {
+            dataStore.edit { preferences ->
+                preferences[largeWidgetConfigKey(widgetId)] =
+                    json.encodeToString(LargeWidgetConfig.serializer(), config)
+            }
+        }
+
+        fun observeLargeWidgetConfig(widgetId: Int): Flow<LargeWidgetConfig?> =
+            dataStore.data.map { preferences ->
+                preferences[largeWidgetConfigKey(widgetId)]?.let {
+                    json.decodeFromString(LargeWidgetConfig.serializer(), it)
+                }
+            }
+
+        // Cleanup on widget deletion
+        suspend fun deleteWidgetConfig(
+            widgetId: Int,
+            type: WidgetType,
+        ) {
+            dataStore.edit { preferences ->
+                val key =
+                    when (type) {
+                        WidgetType.SMALL -> smallWidgetConfigKey(widgetId)
+                        WidgetType.MEDIUM -> mediumWidgetConfigKey(widgetId)
+                        WidgetType.LARGE -> largeWidgetConfigKey(widgetId)
+                    }
+                preferences.remove(key)
+            }
+        }
+
+        private fun smallWidgetConfigKey(widgetId: Int) = stringPreferencesKey("widget_small_config_$widgetId")
+
+        private fun mediumWidgetConfigKey(widgetId: Int) = stringPreferencesKey("widget_medium_config_$widgetId")
+
+        private fun largeWidgetConfigKey(widgetId: Int) = stringPreferencesKey("widget_large_config_$widgetId")
+    }
 
 enum class WidgetType {
     SMALL,

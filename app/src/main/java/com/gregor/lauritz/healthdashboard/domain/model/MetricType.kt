@@ -3,7 +3,9 @@ package com.gregor.lauritz.healthdashboard.domain.model
 /**
  * Enumeration of all available health metrics that can be displayed in widgets.
  */
-enum class MetricType(val displayName: String) {
+enum class MetricType(
+    val displayName: String,
+) {
     HRV("Heart Rate Variability"),
     RHR("Resting Heart Rate"),
     SLEEP_SCORE("Sleep Score"),

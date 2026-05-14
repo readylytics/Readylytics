@@ -8,13 +8,12 @@ import androidx.datastore.preferences.preferencesDataStore
 object WidgetDataStoreProvider {
     private var dataStore: DataStore<Preferences>? = null
 
-    fun getDataStore(context: Context): DataStore<Preferences> {
-        return dataStore ?: synchronized(this) {
+    fun getDataStore(context: Context): DataStore<Preferences> =
+        dataStore ?: synchronized(this) {
             dataStore ?: context.glanceWidgetDataStore.also { dataStore = it }
         }
-    }
 }
 
 private val Context.glanceWidgetDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "glance_widget_data"
+    name = "glance_widget_data",
 )

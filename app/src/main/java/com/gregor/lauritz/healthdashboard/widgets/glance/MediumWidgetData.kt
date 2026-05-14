@@ -1,8 +1,8 @@
 package com.gregor.lauritz.healthdashboard.widgets.glance
 
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 
 /**
  * Data model for medium widget (1x4).
@@ -31,13 +31,19 @@ data class MediumWidgetData(
         const val MODE_DUAL_METRIC = "DUAL_METRIC"
         const val MODE_STEPS_PROGRESS = "STEPS_PROGRESS"
 
-        fun createModeKey(widgetId: Int, suffix: String) =
-            stringPreferencesKey("widget_medium_${widgetId}_${suffix}")
+        fun createModeKey(
+            widgetId: Int,
+            suffix: String,
+        ) = stringPreferencesKey("widget_medium_${widgetId}_$suffix")
 
-        fun createDoubleKey(widgetId: Int, suffix: String) =
-            doublePreferencesKey("widget_medium_${widgetId}_${suffix}")
+        fun createDoubleKey(
+            widgetId: Int,
+            suffix: String,
+        ) = doublePreferencesKey("widget_medium_${widgetId}_$suffix")
 
-        fun createLongKey(widgetId: Int, suffix: String) =
-            longPreferencesKey("widget_medium_${widgetId}_${suffix}")
+        fun createLongKey(
+            widgetId: Int,
+            suffix: String,
+        ) = longPreferencesKey("widget_medium_${widgetId}_$suffix")
     }
 }

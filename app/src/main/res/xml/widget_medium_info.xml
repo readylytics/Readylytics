@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="200dp"
-    android:minHeight="100dp"
+    android:minWidth="72dp"
+    android:minHeight="144dp"
     android:updatePeriodMillis="0"
     android:resizeMode="vertical|horizontal"
     android:widgetCategory="home_screen"
     android:description="@string/widget_medium_description"
     android:configure="com.gregor.lauritz.healthdashboard.widgets.config.MediumWidgetConfigActivity"
     android:targetCellWidth="1"
-    android:targetCellHeight="4" />
+    android:targetCellHeight="2" />

@@ -27,105 +27,116 @@ class WidgetConfigurationRepositoryTest {
     }
 
     @Test
-    fun saveSmallWidgetConfig_persists_configuration() = runTest {
-        val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
-        coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
+    fun saveSmallWidgetConfig_persists_configuration() =
+        runTest {
+            val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
+            coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
 
-        val config = SmallWidgetConfig(
-            widgetId = 123,
-            metricType = "HRV",
-            showTrend = true,
-            showTimestamp = true,
-        )
+            val config =
+                SmallWidgetConfig(
+                    widgetId = 123,
+                    metricType = "HRV",
+                    showTrend = true,
+                    showTimestamp = true,
+                )
 
-        repository.saveSmallWidgetConfig(123, config)
+            repository.saveSmallWidgetConfig(123, config)
 
-        assertNotNull(capturedPreferences.captured)
-    }
-
-    @Test
-    fun observeSmallWidgetConfig_returns_stored_configuration() = runTest {
-        val json = Json { ignoreUnknownKeys = true }
-        val config = SmallWidgetConfig(
-            widgetId = 123,
-            metricType = "RHR",
-            showTrend = false,
-            showTimestamp = true,
-        )
-        val serialized = json.encodeToString(SmallWidgetConfig.serializer(), config)
-
-        val mockPreferences = mockk<Preferences>()
-        coEvery { mockPreferences[stringPreferencesKey("widget_small_config_123")] } returns serialized
-        coEvery { dataStore.data } returns flowOf(mockPreferences)
-
-        val result = repository.observeSmallWidgetConfig(123).first()
-
-        assertNotNull(result)
-        assertEquals("RHR", result?.metricType)
-        assertEquals(false, result?.showTrend)
-    }
+            assertNotNull(capturedPreferences.captured)
+        }
 
     @Test
-    fun observeSmallWidgetConfig_returns_null_when_not_configured() = runTest {
-        val mockPreferences = mockk<Preferences>()
-        coEvery { mockPreferences[any()] } returns null
-        coEvery { dataStore.data } returns flowOf(mockPreferences)
+    fun observeSmallWidgetConfig_returns_stored_configuration() =
+        runTest {
+            val json = Json { ignoreUnknownKeys = true }
+            val config =
+                SmallWidgetConfig(
+                    widgetId = 123,
+                    metricType = "RHR",
+                    showTrend = false,
+                    showTimestamp = true,
+                )
+            val serialized = json.encodeToString(SmallWidgetConfig.serializer(), config)
 
-        val result = repository.observeSmallWidgetConfig(999).first()
+            val mockPreferences = mockk<Preferences>()
+            coEvery { mockPreferences[stringPreferencesKey("widget_small_config_123")] } returns serialized
+            coEvery { dataStore.data } returns flowOf(mockPreferences)
 
-        assertNull(result)
-    }
+            val result = repository.observeSmallWidgetConfig(123).first()
 
-    @Test
-    fun saveMediumWidgetConfig_persists_dual_metric_mode() = runTest {
-        val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
-        coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
-
-        val config = MediumWidgetConfig(
-            widgetId = 456,
-            mode = "DUAL_METRIC",
-            metric1 = "HRV",
-            metric2 = "RHR",
-        )
-
-        repository.saveMediumWidgetConfig(456, config)
-
-        assertNotNull(capturedPreferences.captured)
-    }
+            assertNotNull(result)
+            assertEquals("RHR", result?.metricType)
+            assertEquals(false, result?.showTrend)
+        }
 
     @Test
-    fun saveLargeWidgetConfig_persists_card_ids() = runTest {
-        val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
-        coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
+    fun observeSmallWidgetConfig_returns_null_when_not_configured() =
+        runTest {
+            val mockPreferences = mockk<Preferences>()
+            coEvery { mockPreferences[any()] } returns null
+            coEvery { dataStore.data } returns flowOf(mockPreferences)
 
-        val config = LargeWidgetConfig(
-            widgetId = 789,
-            cardIds = listOf("SLEEP_SCORE", "HRV", "RHR", "STEPS"),
-        )
+            val result = repository.observeSmallWidgetConfig(999).first()
 
-        repository.saveLargeWidgetConfig(789, config)
-
-        assertNotNull(capturedPreferences.captured)
-    }
+            assertNull(result)
+        }
 
     @Test
-    fun deleteWidgetConfig_removes_small_widget_configuration() = runTest {
-        val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
-        coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
+    fun saveMediumWidgetConfig_persists_dual_metric_mode() =
+        runTest {
+            val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
+            coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
 
-        repository.deleteWidgetConfig(123, WidgetType.SMALL)
+            val config =
+                MediumWidgetConfig(
+                    widgetId = 456,
+                    mode = "DUAL_METRIC",
+                    metric1 = "HRV",
+                    metric2 = "RHR",
+                )
 
-        assertNotNull(capturedPreferences.captured)
-    }
+            repository.saveMediumWidgetConfig(456, config)
+
+            assertNotNull(capturedPreferences.captured)
+        }
 
     @Test
-    fun deleteWidgetConfig_handles_all_widget_types() = runTest {
-        val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
-        coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
+    fun saveLargeWidgetConfig_persists_card_ids() =
+        runTest {
+            val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
+            coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
 
-        repository.deleteWidgetConfig(100, WidgetType.MEDIUM)
-        repository.deleteWidgetConfig(101, WidgetType.LARGE)
+            val config =
+                LargeWidgetConfig(
+                    widgetId = 789,
+                    cardIds = listOf("SLEEP_SCORE", "HRV", "RHR", "STEPS"),
+                )
 
-        assertNotNull(capturedPreferences.captured)
-    }
+            repository.saveLargeWidgetConfig(789, config)
+
+            assertNotNull(capturedPreferences.captured)
+        }
+
+    @Test
+    fun deleteWidgetConfig_removes_small_widget_configuration() =
+        runTest {
+            val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
+            coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
+
+            repository.deleteWidgetConfig(123, WidgetType.SMALL)
+
+            assertNotNull(capturedPreferences.captured)
+        }
+
+    @Test
+    fun deleteWidgetConfig_handles_all_widget_types() =
+        runTest {
+            val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
+            coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
+
+            repository.deleteWidgetConfig(100, WidgetType.MEDIUM)
+            repository.deleteWidgetConfig(101, WidgetType.LARGE)
+
+            assertNotNull(capturedPreferences.captured)
+        }
 }

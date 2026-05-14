@@ -30,10 +30,11 @@ class WidgetDeletionReceiver : BroadcastReceiver() {
         if (intent?.action != AppWidgetManager.ACTION_APPWIDGET_DELETED) return
         context ?: return
 
-        val widgetId = intent.getIntExtra(
-            AppWidgetManager.EXTRA_APPWIDGET_ID,
-            AppWidgetManager.INVALID_APPWIDGET_ID,
-        )
+        val widgetId =
+            intent.getIntExtra(
+                AppWidgetManager.EXTRA_APPWIDGET_ID,
+                AppWidgetManager.INVALID_APPWIDGET_ID,
+            )
 
         if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
             val result = goAsync()

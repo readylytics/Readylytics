@@ -1,13 +1,10 @@
 package com.gregor.lauritz.healthdashboard.widgets.glance.components
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceComposable
 import androidx.glance.GlanceModifier
-import androidx.glance.action.ActionParameters
-import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -18,6 +15,7 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import com.gregor.lauritz.healthdashboard.widgets.glance.utils.GlanceColorUtils
@@ -40,19 +38,20 @@ fun GlanceMetricCard(
     status: MetricStatus,
     label: String? = null,
     trend: Double? = null,
-    onClickAction: ((ActionParameters) -> Unit)? = null,
+    onClickAction: androidx.glance.action.Action? = null,
     modifier: GlanceModifier = GlanceModifier,
 ) {
-    val containerColor = GlanceColorUtils.containerColor(status)
-    val contentColor = GlanceColorUtils.onContainerColor(status)
+    val containerColor = ColorProvider(GlanceColorUtils.containerColor(status))
+    val contentColor = ColorProvider(GlanceColorUtils.onContainerColor(status))
     val formattedValue = GlanceMetricsFormatter.formatValue(metricType, value)
     val unit = GlanceMetricsFormatter.getUnit(metricType)
     val displayLabel = label ?: metricType.displayName
     val trendSymbol = GlanceMetricsFormatter.formatTrend(trend)
 
-    var cardModifier = modifier
-        .fillMaxSize()
-        .background(containerColor)
+    var cardModifier =
+        modifier
+            .fillMaxSize()
+            .background(containerColor)
 
     if (onClickAction != null) {
         cardModifier = cardModifier.clickable(onClickAction)
@@ -63,27 +62,30 @@ fun GlanceMetricCard(
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .padding(12.dp),
+            modifier =
+                GlanceModifier
+                    .fillMaxSize()
+                    .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Label (top)
             Text(
                 text = displayLabel,
-                style = TextStyle(
-                    color = contentColor,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Normal,
-                ),
+                style =
+                    TextStyle(
+                        color = contentColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Normal,
+                    ),
             )
 
             // Status indicator dot (optional)
             if (status != MetricStatus.CALIBRATING) {
                 Box(
-                    modifier = GlanceModifier
-                        .padding(top = 2.dp)
-                        .background(GlanceColorUtils.gaugeColor(status)),
+                    modifier =
+                        GlanceModifier
+                            .padding(top = 2.dp)
+                            .background(ColorProvider(GlanceColorUtils.gaugeColor(status))),
                 ) {
                     // Dot is implicit from background
                 }
@@ -92,11 +94,12 @@ fun GlanceMetricCard(
             // Value (center, large)
             Text(
                 text = formattedValue,
-                style = TextStyle(
-                    color = contentColor,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
+                style =
+                    TextStyle(
+                        color = contentColor,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
                 modifier = GlanceModifier.padding(vertical = 4.dp),
             )
 
@@ -104,11 +107,12 @@ fun GlanceMetricCard(
             if (unit.isNotEmpty()) {
                 Text(
                     text = unit,
-                    style = TextStyle(
-                        color = contentColor,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Normal,
-                    ),
+                    style =
+                        TextStyle(
+                            color = contentColor,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Normal,
+                        ),
                 )
             }
 
@@ -116,11 +120,12 @@ fun GlanceMetricCard(
             if (trendSymbol != null) {
                 Text(
                     text = trendSymbol,
-                    style = TextStyle(
-                        color = contentColor,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                    style =
+                        TextStyle(
+                            color = contentColor,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
                     modifier = GlanceModifier.padding(top = 2.dp),
                 )
             }

@@ -2,7 +2,9 @@ package com.gregor.lauritz.healthdashboard.widgets.glance
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -14,43 +16,36 @@ import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
-import androidx.glance.layout.Arrangement
+import androidx.glance.currentState
+import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
+import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
-import androidx.glance.state.GlanceState
+import androidx.glance.layout.width
 import androidx.glance.state.PreferencesGlanceStateDefinition
+import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.gregor.lauritz.healthdashboard.MainActivity
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import com.gregor.lauritz.healthdashboard.widgets.glance.components.GlanceMetricCard
 import com.gregor.lauritz.healthdashboard.widgets.glance.components.GlanceStepsBar
 
 private val Context.glanceMediumWidgetDataStore by preferencesDataStore(
-    name = "glance_medium_widget_state"
+    name = "glance_medium_widget_state",
 )
 
 /**
- * Medium widget (1x4) - displays two metrics or steps progress.
- *
- * Two Modes:
- * 1. DUAL_METRIC: Two metric cards side-by-side
- * 2. STEPS_PROGRESS: Horizontal steps progress bar
- *
- * Features:
- * - User configurable mode and metrics
- * - Click navigation to metric detail screens
- * - Status-based colors (reuses dashboard)
- * - Auto-updates on sync + daily fallback
+ * Medium widget (1x2) - displays two metrics or steps progress.
  */
-class MediumWidget : GlanceAppWidget(
-    stateDefinition = PreferencesGlanceStateDefinition()
-) {
+class MediumWidget : GlanceAppWidget() {
+    override val stateDefinition = PreferencesGlanceStateDefinition
+
     override suspend fun provideGlance(
         context: Context,
         id: GlanceId,
@@ -72,7 +67,7 @@ private fun MediumWidgetContent(
     glanceId: GlanceId,
     widgetId: Int,
 ) {
-    val state = GlanceState.currentState<androidx.datastore.preferences.core.Preferences>()
+    val state = currentState<Preferences>()
 
     val mode = state[stringPreferencesKey("widget_medium_${widgetId}_mode")] ?: "DUAL_METRIC"
     val error = state[stringPreferencesKey("widget_medium_${widgetId}_error")]
@@ -94,24 +89,41 @@ private fun MediumWidgetContent(
 @GlanceComposable
 private fun DualMetricMode(
     context: Context,
-    state: androidx.datastore.preferences.core.Preferences,
+    state: Preferences,
     widgetId: Int,
 ) {
     val metric1Type = state[stringPreferencesKey("widget_medium_${widgetId}_metric1_type")] ?: "HRV"
     val metric1Value = state[doublePreferencesKey("widget_medium_${widgetId}_metric1_value")] ?: 0.0
     val metric1Status = state[stringPreferencesKey("widget_medium_${widgetId}_metric1_status")] ?: "CALIBRATING"
-
     val metric2Type = state[stringPreferencesKey("widget_medium_${widgetId}_metric2_type")] ?: "RHR"
     val metric2Value = state[doublePreferencesKey("widget_medium_${widgetId}_metric2_value")] ?: 0.0
     val metric2Status = state[stringPreferencesKey("widget_medium_${widgetId}_metric2_status")] ?: "CALIBRATING"
-
     val lastUpdateMs = state[longPreferencesKey("widget_medium_${widgetId}_last_update")] ?: 0L
 
-    // Parse enum values
-    val m1Type = try { MetricType.valueOf(metric1Type) } catch (e: Exception) { MetricType.HRV }
-    val m1Status = try { MetricStatus.valueOf(metric1Status) } catch (e: Exception) { MetricStatus.CALIBRATING }
-    val m2Type = try { MetricType.valueOf(metric2Type) } catch (e: Exception) { MetricType.RHR }
-    val m2Status = try { MetricStatus.valueOf(metric2Status) } catch (e: Exception) { MetricStatus.CALIBRATING }
+    val m1Type =
+        try {
+            MetricType.valueOf(metric1Type)
+        } catch (e: Exception) {
+            MetricType.HRV
+        }
+    val m1Status =
+        try {
+            MetricStatus.valueOf(metric1Status)
+        } catch (e: Exception) {
+            MetricStatus.CALIBRATING
+        }
+    val m2Type =
+        try {
+            MetricType.valueOf(metric2Type)
+        } catch (e: Exception) {
+            MetricType.RHR
+        }
+    val m2Status =
+        try {
+            MetricStatus.valueOf(metric2Status)
+        } catch (e: Exception) {
+            MetricStatus.CALIBRATING
+        }
 
     // Handle loading state
     if (m1Status == MetricStatus.CALIBRATING && lastUpdateMs == 0L) {
@@ -120,49 +132,47 @@ private fun DualMetricMode(
     }
 
     // Create click actions
-    val click1Action = actionStartActivity(
-        action = android.content.Intent.ACTION_VIEW,
-        uri = "app://metric/${m1Type.name.lowercase()}",
-        parameters = emptyMap(),
-    )
+    val click1Action =
+        actionStartActivity<MainActivity>()
 
-    val click2Action = actionStartActivity(
-        action = android.content.Intent.ACTION_VIEW,
-        uri = "app://metric/${m2Type.name.lowercase()}",
-        parameters = emptyMap(),
-    )
+    val click2Action =
+        actionStartActivity<MainActivity>()
 
     Row(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier =
+            GlanceModifier
+                .fillMaxSize()
+                .padding(4.dp),
     ) {
         // Metric 1 (left)
         Box(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .weight(1f),
+            modifier =
+                GlanceModifier
+                    .fillMaxSize()
+                    .defaultWeight(),
         ) {
             GlanceMetricCard(
                 metricType = m1Type,
                 value = metric1Value,
                 status = m1Status,
-                onClickAction = { click1Action },
+                onClickAction = click1Action,
             )
         }
 
+        Spacer(modifier = GlanceModifier.width(4.dp))
+
         // Metric 2 (right)
         Box(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .weight(1f),
+            modifier =
+                GlanceModifier
+                    .fillMaxSize()
+                    .defaultWeight(),
         ) {
             GlanceMetricCard(
                 metricType = m2Type,
                 value = metric2Value,
                 status = m2Status,
-                onClickAction = { click2Action },
+                onClickAction = click2Action,
             )
         }
     }
@@ -172,7 +182,7 @@ private fun DualMetricMode(
 @GlanceComposable
 private fun StepsProgressMode(
     context: Context,
-    state: androidx.datastore.preferences.core.Preferences,
+    state: Preferences,
     widgetId: Int,
 ) {
     val currentSteps = state[longPreferencesKey("widget_medium_${widgetId}_current_steps")] ?: 0L
@@ -186,16 +196,15 @@ private fun StepsProgressMode(
     }
 
     // Create click action to navigate to steps screen
-    val clickAction = actionStartActivity(
-        action = android.content.Intent.ACTION_VIEW,
-        uri = "app://metric/steps",
-        parameters = emptyMap(),
-    )
+    val clickAction =
+        actionStartActivity<MainActivity>()
 
     Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(ColorProvider(android.graphics.Color.parseColor("#FFFFFF")))
+        modifier =
+            GlanceModifier
+                .fillMaxSize()
+                .background(ColorProvider(android.graphics.Color.parseColor("#FFFFFF"))),
+        contentAlignment = Alignment.Center,
     ) {
         GlanceStepsBar(
             currentSteps = currentSteps,
@@ -208,23 +217,26 @@ private fun StepsProgressMode(
 @GlanceComposable
 private fun LoadingWidget() {
     Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(ColorProvider(android.graphics.Color.parseColor("#F5F5F5")))
+        modifier =
+            GlanceModifier
+                .fillMaxSize()
+                .background(ColorProvider(android.graphics.Color.parseColor("#F5F5F5"))),
+        contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .padding(8.dp),
-            horizontalAlignment = androidx.glance.layout.Alignment.CenterHorizontally,
+            modifier =
+                GlanceModifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = "Loading…",
-                style = TextStyle(
-                    color = ColorProvider(android.graphics.Color.parseColor("#666666")),
-                    fontSize = 14.sp,
-                ),
-                modifier = GlanceModifier.padding(top = 16.dp),
+                style =
+                    TextStyle(
+                        color = ColorProvider(android.graphics.Color.parseColor("#666666")),
+                        fontSize = 14.sp,
+                    ),
             )
         }
     }
@@ -234,30 +246,35 @@ private fun LoadingWidget() {
 @GlanceComposable
 private fun ErrorWidget(error: String) {
     Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(ColorProvider(android.graphics.Color.parseColor("#FFCDD2")))
+        modifier =
+            GlanceModifier
+                .fillMaxSize()
+                .background(ColorProvider(android.graphics.Color.parseColor("#FFF1F0"))),
+        contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .padding(8.dp),
-            horizontalAlignment = androidx.glance.layout.Alignment.CenterHorizontally,
+            modifier =
+                GlanceModifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = "Error",
-                style = TextStyle(
-                    color = ColorProvider(android.graphics.Color.parseColor("#D32F2F")),
-                    fontSize = 12.sp,
-                ),
-                modifier = GlanceModifier.padding(top = 8.dp),
+                style =
+                    TextStyle(
+                        color = ColorProvider(android.graphics.Color.parseColor("#D32F2F")),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
             )
             Text(
                 text = error,
-                style = TextStyle(
-                    color = ColorProvider(android.graphics.Color.parseColor("#333333")),
-                    fontSize = 10.sp,
-                ),
+                style =
+                    TextStyle(
+                        color = ColorProvider(android.graphics.Color.parseColor("#D32F2F")),
+                        fontSize = 12.sp,
+                    ),
                 modifier = GlanceModifier.padding(top = 4.dp),
             )
         }

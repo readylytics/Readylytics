@@ -1,6 +1,5 @@
 package com.gregor.lauritz.healthdashboard.widgets.receiver
 
-import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -16,17 +15,17 @@ import com.gregor.lauritz.healthdashboard.widgets.glance.MediumWidgetUpdater
 import com.gregor.lauritz.healthdashboard.widgets.glance.SmallWidget
 import com.gregor.lauritz.healthdashboard.widgets.glance.SmallWidgetUpdater
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-private const val TAG = "WidgetUpdateBroadcastReceiver"
+private const val TAG = "WidgetUpdateReceiver"
 
 /**
- * Broadcast receiver that listens for sync completion events and triggers widget updates.
- *
- * Registered to listen for custom broadcast action: "com.gregor.lauritz.healthdashboard.SYNC_COMPLETE"
- * Called from ForegroundSyncController when app syncs with Health Connect.
+ * BroadcastReceiver that triggers widget updates when app data changes.
+ * Listens for SYNC_COMPLETE broadcasts to keep widgets fresh.
  */
 @AndroidEntryPoint
 class WidgetUpdateBroadcastReceiver : BroadcastReceiver() {
@@ -36,15 +35,18 @@ class WidgetUpdateBroadcastReceiver : BroadcastReceiver() {
     @Inject
     lateinit var configRepository: WidgetConfigurationRepository
 
-    override fun onReceive(
-        context: Context?,
-        intent: Intent?,
-    ) {
-        if (intent?.action != ACTION_SYNC_COMPLETE) return
-        context ?: return
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
+        if (intent.action != ACTION_SYNC_COMPLETE) return
+
+        Log.d(TAG, "Received sync complete, updating widgets")
         val result = goAsync()
-        MainScope().launch {
+
+        scope.launch {
             try {
                 val glanceManager = GlanceAppWidgetManager(context)
 
@@ -64,7 +66,7 @@ class WidgetUpdateBroadcastReceiver : BroadcastReceiver() {
                             Log.e(TAG, "Failed to update small widget $widgetId", e)
                         }
                     }
-                    glanceManager.updateAll(SmallWidget::class.java)
+                    SmallWidget().updateAll(context)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to update small widgets", e)
                 }
@@ -85,7 +87,7 @@ class WidgetUpdateBroadcastReceiver : BroadcastReceiver() {
                             Log.e(TAG, "Failed to update medium widget $widgetId", e)
                         }
                     }
-                    glanceManager.updateAll(MediumWidget::class.java)
+                    MediumWidget().updateAll(context)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to update medium widgets", e)
                 }
@@ -106,7 +108,7 @@ class WidgetUpdateBroadcastReceiver : BroadcastReceiver() {
                             Log.e(TAG, "Failed to update large widget $widgetId", e)
                         }
                     }
-                    glanceManager.updateAll(LargeWidget::class.java)
+                    LargeWidget().updateAll(context)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to update large widgets", e)
                 }
@@ -120,4 +122,3 @@ class WidgetUpdateBroadcastReceiver : BroadcastReceiver() {
         const val ACTION_SYNC_COMPLETE = "com.gregor.lauritz.healthdashboard.SYNC_COMPLETE"
     }
 }
-

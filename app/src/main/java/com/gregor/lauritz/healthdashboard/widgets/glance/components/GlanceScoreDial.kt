@@ -1,7 +1,6 @@
 package com.gregor.lauritz.healthdashboard.widgets.glance.components
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceComposable
@@ -41,63 +40,72 @@ fun GlanceScoreDial(
     val gaugeColor = GlanceColorUtils.gaugeColor(status)
 
     val scoreInt = score.toInt()
-    val scoreStr = if (score == 0.0 && status == MetricStatus.CALIBRATING) {
-        "--"
-    } else {
-        scoreInt.toString()
-    }
+    val scoreStr =
+        if (score == 0.0 && status == MetricStatus.CALIBRATING) {
+            "--"
+        } else {
+            scoreInt.toString()
+        }
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(ColorProvider(containerColor.hashCode())),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(ColorProvider(containerColor)),
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .padding(12.dp),
+            modifier =
+                GlanceModifier
+                    .fillMaxSize()
+                    .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Label (top)
             Text(
                 text = label,
-                style = TextStyle(
-                    color = ColorProvider(contentColor.hashCode()),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Normal,
-                ),
+                style =
+                    TextStyle(
+                        color = ColorProvider(contentColor),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Normal,
+                    ),
                 modifier = GlanceModifier.padding(bottom = 4.dp),
             )
 
             // Score (center, large)
             Text(
                 text = scoreStr,
-                style = TextStyle(
-                    color = ColorProvider(contentColor.hashCode()),
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
+                style =
+                    TextStyle(
+                        color = ColorProvider(contentColor),
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
                 modifier = GlanceModifier.padding(vertical = 2.dp),
             )
 
             // Max score indicator
             Text(
                 text = "/100",
-                style = TextStyle(
-                    color = ColorProvider(contentColor.hashCode()),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Normal,
-                ),
+                style =
+                    TextStyle(
+                        color = ColorProvider(contentColor),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Normal,
+                    ),
             )
 
             // Status dot (bottom)
             if (status != MetricStatus.CALIBRATING) {
                 Box(
-                    modifier = GlanceModifier
-                        .background(ColorProvider(gaugeColor.hashCode()))
-                        .padding(top = 2.dp),
-                )
+                    modifier =
+                        GlanceModifier
+                            .background(ColorProvider(gaugeColor))
+                            .padding(top = 2.dp),
+                ) {
+                    // Empty content
+                }
             }
         }
     }

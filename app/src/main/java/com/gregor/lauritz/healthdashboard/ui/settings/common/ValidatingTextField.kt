@@ -1,4 +1,4 @@
-package com.gregor.lauritz.healthdashboard.ui.components
+package com.gregor.lauritz.healthdashboard.ui.settings.common
 
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
@@ -28,7 +28,7 @@ fun ValidatingTextField(
         keyboardOptions = keyboardOptions,
         isError = isError,
         supportingText = {
-            if (isError && result is ValidationResult.Invalid) {
+            if (isError) {
                 Text(result.message)
             }
         },

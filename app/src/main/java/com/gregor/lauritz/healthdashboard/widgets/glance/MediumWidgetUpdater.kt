@@ -3,11 +3,10 @@ package com.gregor.lauritz.healthdashboard.widgets.glance
 import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.edit
-import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.updateAll
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetMode
-import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import kotlinx.coroutines.flow.first
 
@@ -27,21 +26,24 @@ object MediumWidgetUpdater {
     ) {
         try {
             // Load widget configuration
-            val config = configRepository.observeMediumWidgetConfig(widgetId).first()
-                ?: return
+            val config =
+                configRepository.observeMediumWidgetConfig(widgetId).first()
+                    ?: return
 
-            val mode = try {
-                WidgetMode.valueOf(config.mode)
-            } catch (e: IllegalArgumentException) {
-                WidgetMode.DUAL_METRIC
-            }
+            val mode =
+                try {
+                    WidgetMode.valueOf(config.mode)
+                } catch (e: IllegalArgumentException) {
+                    WidgetMode.DUAL_METRIC
+                }
 
             // Load latest summary
-            val summary = widgetDataRepository.getLatestSummaryAsync()
-                ?: run {
-                    saveWidgetError(context, widgetId, "No data available")
-                    return
-                }
+            val summary =
+                widgetDataRepository.getLatestSummaryAsync()
+                    ?: run {
+                        saveWidgetError(context, widgetId, "No data available")
+                        return
+                    }
 
             when (mode) {
                 WidgetMode.DUAL_METRIC -> {
@@ -51,7 +53,6 @@ object MediumWidgetUpdater {
                     updateStepsProgressMode(context, widgetId, summary)
                 }
             }
-
         } catch (e: Exception) {
             Log.e(TAG, "Failed to update medium widget $widgetId", e)
             saveWidgetError(context, widgetId, e.message ?: "Unknown error")
@@ -64,17 +65,19 @@ object MediumWidgetUpdater {
         config: com.gregor.lauritz.healthdashboard.data.repository.MediumWidgetConfig,
         summary: com.gregor.lauritz.healthdashboard.domain.model.DailySummary,
     ) {
-        val metric1Type = try {
-            MetricType.valueOf(config.metric1 ?: "HRV")
-        } catch (e: IllegalArgumentException) {
-            MetricType.HRV
-        }
+        val metric1Type =
+            try {
+                MetricType.valueOf(config.metric1 ?: "HRV")
+            } catch (e: IllegalArgumentException) {
+                MetricType.HRV
+            }
 
-        val metric2Type = try {
-            MetricType.valueOf(config.metric2 ?: "RHR")
-        } catch (e: IllegalArgumentException) {
-            MetricType.RHR
-        }
+        val metric2Type =
+            try {
+                MetricType.valueOf(config.metric2 ?: "RHR")
+            } catch (e: IllegalArgumentException) {
+                MetricType.RHR
+            }
 
         val (metric1Value, metric1Status) = WidgetMetricExtractor.extractMetricData(metric1Type, summary)
         val (metric2Value, metric2Status) = WidgetMetricExtractor.extractMetricData(metric2Type, summary)
@@ -90,7 +93,7 @@ object MediumWidgetUpdater {
             preferences[MediumWidgetKeys.lastUpdate(widgetId)] = System.currentTimeMillis()
         }
 
-        GlanceAppWidgetManager(context).updateAll(MediumWidget::class.java)
+        MediumWidget().updateAll(context)
     }
 
     private suspend fun updateStepsProgressMode(
@@ -107,7 +110,7 @@ object MediumWidgetUpdater {
             preferences[MediumWidgetKeys.lastUpdate(widgetId)] = System.currentTimeMillis()
         }
 
-        GlanceAppWidgetManager(context).updateAll(MediumWidget::class.java)
+        MediumWidget().updateAll(context)
     }
 
     private suspend fun saveWidgetError(
@@ -120,7 +123,6 @@ object MediumWidgetUpdater {
             preferences[MediumWidgetKeys.mode(widgetId)] = WidgetMode.DUAL_METRIC.name
         }
 
-        GlanceAppWidgetManager(context).updateAll(MediumWidget::class.java)
+        MediumWidget().updateAll(context)
     }
-
 }

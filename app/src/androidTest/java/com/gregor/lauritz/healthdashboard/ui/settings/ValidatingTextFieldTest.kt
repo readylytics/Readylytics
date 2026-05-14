@@ -4,7 +4,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gregor.lauritz.healthdashboard.domain.validation.IntRangeRule
-import com.gregor.lauritz.healthdashboard.ui.components.ValidatingTextField
+import com.gregor.lauritz.healthdashboard.ui.settings.common.ValidatingTextField
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

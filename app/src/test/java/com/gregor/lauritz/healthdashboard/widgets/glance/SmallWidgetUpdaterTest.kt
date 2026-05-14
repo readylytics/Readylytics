@@ -1,15 +1,11 @@
 package com.gregor.lauritz.healthdashboard.widgets.glance
 
 import android.content.Context
-import androidx.datastore.preferences.core.PreferencesFactory
-import androidx.datastore.preferences.core.edit
 import androidx.test.core.app.ApplicationProvider
+import com.gregor.lauritz.healthdashboard.data.repository.SmallWidgetConfig
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository
-import com.gregor.lauritz.healthdashboard.data.repository.SmallWidgetConfig
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
-import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
-import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -17,8 +13,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.junit.MockitoJUnitRunner
-import org.mockito.kotlin.whenever
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 @RunWith(MockitoJUnitRunner::class)
 class SmallWidgetUpdaterTest {
@@ -36,74 +32,79 @@ class SmallWidgetUpdaterTest {
     }
 
     @Test
-    fun testUpdateSmallWidget_success() = runTest {
-        // Arrange
-        val widgetId = 1
-        val config = SmallWidgetConfig(
-            widgetId = widgetId,
-            metricType = "HRV",
-        )
-        val summary = createDailySummary(nocturnalHrv = 45)
+    fun testUpdateSmallWidget_success() =
+        runTest {
+            // Arrange
+            val widgetId = 1
+            val config =
+                SmallWidgetConfig(
+                    widgetId = widgetId,
+                    metricType = "HRV",
+                )
+            val summary = createDailySummary(nocturnalHrv = 45)
 
-        whenever(configRepository.observeSmallWidgetConfig(widgetId)).thenReturn(flowOf(config))
-        whenever(widgetDataRepository.getLatestSummaryAsync()).thenReturn(summary)
+            whenever(configRepository.observeSmallWidgetConfig(widgetId)).thenReturn(flowOf(config))
+            whenever(widgetDataRepository.getLatestSummaryAsync()).thenReturn(summary)
 
-        // Act
-        SmallWidgetUpdater.updateSmallWidget(
-            context,
-            widgetId,
-            widgetDataRepository,
-            configRepository,
-        )
+            // Act
+            SmallWidgetUpdater.updateSmallWidget(
+                context,
+                widgetId,
+                widgetDataRepository,
+                configRepository,
+            )
 
-        // Assert
-        verify(configRepository).observeSmallWidgetConfig(widgetId)
-        verify(widgetDataRepository).getLatestSummaryAsync()
-    }
-
-    @Test
-    fun testUpdateSmallWidget_noData() = runTest {
-        // Arrange
-        val widgetId = 1
-        val config = SmallWidgetConfig(
-            widgetId = widgetId,
-            metricType = "HRV",
-        )
-
-        whenever(configRepository.observeSmallWidgetConfig(widgetId)).thenReturn(flowOf(config))
-        whenever(widgetDataRepository.getLatestSummaryAsync()).thenReturn(null)
-
-        // Act
-        SmallWidgetUpdater.updateSmallWidget(
-            context,
-            widgetId,
-            widgetDataRepository,
-            configRepository,
-        )
-
-        // Assert
-        verify(configRepository).observeSmallWidgetConfig(widgetId)
-        verify(widgetDataRepository).getLatestSummaryAsync()
-    }
+            // Assert
+            verify(configRepository).observeSmallWidgetConfig(widgetId)
+            verify(widgetDataRepository).getLatestSummaryAsync()
+        }
 
     @Test
-    fun testUpdateSmallWidget_noConfig() = runTest {
-        // Arrange
-        val widgetId = 1
+    fun testUpdateSmallWidget_noData() =
+        runTest {
+            // Arrange
+            val widgetId = 1
+            val config =
+                SmallWidgetConfig(
+                    widgetId = widgetId,
+                    metricType = "HRV",
+                )
 
-        whenever(configRepository.observeSmallWidgetConfig(widgetId)).thenReturn(flowOf(null))
+            whenever(configRepository.observeSmallWidgetConfig(widgetId)).thenReturn(flowOf(config))
+            whenever(widgetDataRepository.getLatestSummaryAsync()).thenReturn(null)
 
-        // Act
-        SmallWidgetUpdater.updateSmallWidget(
-            context,
-            widgetId,
-            widgetDataRepository,
-            configRepository,
-        )
+            // Act
+            SmallWidgetUpdater.updateSmallWidget(
+                context,
+                widgetId,
+                widgetDataRepository,
+                configRepository,
+            )
 
-        // Assert
-        verify(configRepository).observeSmallWidgetConfig(widgetId)
-    }
+            // Assert
+            verify(configRepository).observeSmallWidgetConfig(widgetId)
+            verify(widgetDataRepository).getLatestSummaryAsync()
+        }
+
+    @Test
+    fun testUpdateSmallWidget_noConfig() =
+        runTest {
+            // Arrange
+            val widgetId = 1
+
+            whenever(configRepository.observeSmallWidgetConfig(widgetId)).thenReturn(flowOf(null))
+
+            // Act
+            SmallWidgetUpdater.updateSmallWidget(
+                context,
+                widgetId,
+                widgetDataRepository,
+                configRepository,
+            )
+
+            // Assert
+            verify(configRepository).observeSmallWidgetConfig(widgetId)
+        }
 
     private fun createDailySummary(
         nocturnalHrv: Int? = null,

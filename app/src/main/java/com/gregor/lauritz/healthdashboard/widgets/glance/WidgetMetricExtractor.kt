@@ -16,12 +16,12 @@ object WidgetMetricExtractor {
         return when (type) {
             MetricType.HRV -> {
                 val value = summary.nocturnalHrv?.toDouble() ?: return 0.0 to MetricStatus.CALIBRATING
-                val status = summary.diagnostics?.hrvStatus ?: MetricStatus.CALIBRATING
+                val status = if (value > 0) MetricStatus.OPTIMAL else MetricStatus.CALIBRATING
                 value to status
             }
             MetricType.RHR -> {
                 val value = summary.nocturnalRhr?.toDouble() ?: return 0.0 to MetricStatus.CALIBRATING
-                val status = summary.diagnostics?.rhrStatus ?: MetricStatus.CALIBRATING
+                val status = if (value > 0) MetricStatus.OPTIMAL else MetricStatus.CALIBRATING
                 value to status
             }
             MetricType.SLEEP_SCORE -> {
@@ -46,12 +46,13 @@ object WidgetMetricExtractor {
             }
             MetricType.SLEEP_EFFICIENCY -> {
                 val efficiency = (summary.deepSleepPercent?.plus(summary.remSleepPercent ?: 0f) ?: 0f).toDouble()
-                val status = when {
-                    efficiency > 85 -> MetricStatus.OPTIMAL
-                    efficiency > 70 -> MetricStatus.NEUTRAL
-                    efficiency > 50 -> MetricStatus.WARNING
-                    else -> MetricStatus.CALIBRATING
-                }
+                val status =
+                    when {
+                        efficiency > 85 -> MetricStatus.OPTIMAL
+                        efficiency > 70 -> MetricStatus.NEUTRAL
+                        efficiency > 50 -> MetricStatus.WARNING
+                        else -> MetricStatus.CALIBRATING
+                    }
                 efficiency to status
             }
             MetricType.STEPS -> {
@@ -60,21 +61,23 @@ object WidgetMetricExtractor {
             }
             MetricType.PAI -> {
                 val value = summary.paiScore?.toDouble() ?: return 0.0 to MetricStatus.CALIBRATING
-                val status = when {
-                    value >= 100 -> MetricStatus.OPTIMAL
-                    value >= 75 -> MetricStatus.NEUTRAL
-                    value >= 50 -> MetricStatus.WARNING
-                    else -> MetricStatus.POOR
-                }
+                val status =
+                    when {
+                        value >= 100 -> MetricStatus.OPTIMAL
+                        value >= 75 -> MetricStatus.NEUTRAL
+                        value >= 50 -> MetricStatus.WARNING
+                        else -> MetricStatus.POOR
+                    }
                 value to status
             }
             MetricType.STRAIN_RATIO -> {
                 val value = summary.strainRatio ?: return 0.0 to MetricStatus.CALIBRATING
-                val status = when {
-                    value in 0.8f..1.3f -> MetricStatus.OPTIMAL
-                    value < 0.8 -> MetricStatus.WARNING
-                    else -> MetricStatus.WARNING
-                }
+                val status =
+                    when {
+                        value in 0.8f..1.3f -> MetricStatus.OPTIMAL
+                        value < 0.8 -> MetricStatus.WARNING
+                        else -> MetricStatus.WARNING
+                    }
                 value.toDouble() to status
             }
             MetricType.BODY_BATTERY -> {

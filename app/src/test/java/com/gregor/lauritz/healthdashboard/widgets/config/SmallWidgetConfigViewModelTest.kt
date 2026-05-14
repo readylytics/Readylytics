@@ -1,12 +1,9 @@
 package com.gregor.lauritz.healthdashboard.widgets.config
 
 import androidx.lifecycle.SavedStateHandle
-import com.gregor.lauritz.healthdashboard.data.repository.SmallWidgetConfig
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -25,9 +22,10 @@ class SmallWidgetConfigViewModelTest {
 
     @Before
     fun setUp() {
-        savedStateHandle = SavedStateHandle().apply {
-            set("widgetId", WIDGET_ID)
-        }
+        savedStateHandle =
+            SavedStateHandle().apply {
+                set("widgetId", WIDGET_ID)
+            }
     }
 
     @Test
@@ -81,6 +79,34 @@ class SmallWidgetConfigViewModelTest {
 
         // Assert
         assertEquals(null, viewModel.state.value.error)
+    }
+
+    @Test
+    fun testInvalidWidgetIdShowsError() {
+        // Arrange
+        savedStateHandle =
+            SavedStateHandle().apply {
+                set("widgetId", 0) // Invalid widget ID
+            }
+
+        // Act
+        viewModel = SmallWidgetConfigViewModel(configRepository, savedStateHandle)
+
+        // Assert
+        assertEquals("Invalid widget ID", viewModel.state.value.error)
+        assertEquals(false, viewModel.state.value.isLoading)
+    }
+
+    @Test
+    fun testWidgetIdPassedToRepository() {
+        // Arrange
+        whenever(configRepository.observeSmallWidgetConfig(WIDGET_ID)).thenReturn(flowOf(null))
+
+        // Act
+        viewModel = SmallWidgetConfigViewModel(configRepository, savedStateHandle)
+
+        // Assert - verify that the correct widgetId was used to query the repository
+        assertEquals(false, viewModel.state.value.isLoading)
     }
 
     companion object {

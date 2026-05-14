@@ -7,8 +7,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,29 +29,36 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetMode
 import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
- * Configuration activity for medium widget (1x4).
+ * Configuration activity for medium widget (1x2).
  * Allows user to select widget mode (dual metric or steps progress) and metrics.
  */
 @AndroidEntryPoint
 class MediumWidgetConfigActivity : ComponentActivity() {
-    private val viewModel: MediumWidgetConfigViewModel by viewModels()
+    @Inject
+    lateinit var configRepository: WidgetConfigurationRepository
+
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+    private lateinit var viewModel: MediumWidgetConfigViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Get widget ID from intent
         widgetId = intent?.getIntExtra(
             AppWidgetManager.EXTRA_APPWIDGET_ID,
             AppWidgetManager.INVALID_APPWIDGET_ID,
@@ -65,15 +70,27 @@ class MediumWidgetConfigActivity : ComponentActivity() {
             return
         }
 
+        val factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    val savedStateHandle = SavedStateHandle(mapOf("widgetId" to widgetId))
+                    return MediumWidgetConfigViewModel(configRepository, savedStateHandle) as T
+                }
+            }
+
+        viewModel = ViewModelProvider(this, factory).get(MediumWidgetConfigViewModel::class.java)
+
         setContent {
             FitDashboardTheme {
                 val state by viewModel.state.collectAsStateWithLifecycle()
 
                 LaunchedEffect(state.isSaved) {
                     if (state.isSaved) {
-                        val resultValue = Intent().apply {
-                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                        }
+                        val resultValue =
+                            Intent().apply {
+                                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                            }
                         setResult(Activity.RESULT_OK, resultValue)
                         finish()
                     }
@@ -106,15 +123,16 @@ private fun MediumWidgetConfigScreen(
 
     Scaffold { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             // Header
             Text(
-                text = "Configure Medium Widget",
+                text = "Configure Medium Widget (1x2)",
                 style = MaterialTheme.typography.headlineMedium,
             )
 
@@ -126,9 +144,10 @@ private fun MediumWidgetConfigScreen(
                     color = MaterialTheme.colorScheme.errorContainer,
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -148,9 +167,10 @@ private fun MediumWidgetConfigScreen(
             // Loading state
             if (state.isLoading) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator()
@@ -227,22 +247,26 @@ private fun ModeSelectionSection(
 
         // Dual Metric Option
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .selectable(
-                    selected = selectedMode == WidgetMode.DUAL_METRIC,
-                    onClick = { onModeChange(WidgetMode.DUAL_METRIC) },
-                ),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .selectable(
+                        selected = selectedMode == WidgetMode.DUAL_METRIC,
+                        onClick = { onModeChange(WidgetMode.DUAL_METRIC) },
+                    ),
             shape = MaterialTheme.shapes.medium,
-            color = if (selectedMode == WidgetMode.DUAL_METRIC)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            color =
+                if (selectedMode == WidgetMode.DUAL_METRIC) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                },
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -263,22 +287,26 @@ private fun ModeSelectionSection(
 
         // Steps Progress Option
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .selectable(
-                    selected = selectedMode == WidgetMode.STEPS_PROGRESS,
-                    onClick = { onModeChange(WidgetMode.STEPS_PROGRESS) },
-                ),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .selectable(
+                        selected = selectedMode == WidgetMode.STEPS_PROGRESS,
+                        onClick = { onModeChange(WidgetMode.STEPS_PROGRESS) },
+                    ),
             shape = MaterialTheme.shapes.medium,
-            color = if (selectedMode == WidgetMode.STEPS_PROGRESS)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            color =
+                if (selectedMode == WidgetMode.STEPS_PROGRESS) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                },
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -314,16 +342,18 @@ private fun MetricSelectionSection(
 
         // Metric 1
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onMetric1Click),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onMetric1Click),
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surfaceVariant,
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -341,16 +371,18 @@ private fun MetricSelectionSection(
 
         // Metric 2
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onMetric2Click),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onMetric2Click),
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surfaceVariant,
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -373,12 +405,13 @@ private fun StepsProgressDescription() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.successContainer.copy(alpha = 0.3f),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(

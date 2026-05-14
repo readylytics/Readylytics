@@ -3,10 +3,9 @@ package com.gregor.lauritz.healthdashboard.widgets.glance
 import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.edit
-import androidx.glance.appwidget.GlanceAppWidgetManager
-import com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository
+import androidx.glance.appwidget.updateAll
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
-import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository
 import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import kotlinx.coroutines.flow.first
 
@@ -25,25 +24,26 @@ object SmallWidgetUpdater {
     ) {
         try {
             // Load widget configuration
-            val config = configRepository.observeSmallWidgetConfig(widgetId).first()
-                ?: return
+            val config =
+                configRepository.observeSmallWidgetConfig(widgetId).first()
+                    ?: return
 
             val metricType = MetricType.valueOf(config.metricType)
 
             // Load latest summary
-            val summary = widgetDataRepository.getLatestSummaryAsync()
-                ?: run {
-                    // No data available
-                    saveWidgetState(context, widgetId, metricType, null, "No data available")
-                    return
-                }
+            val summary =
+                widgetDataRepository.getLatestSummaryAsync()
+                    ?: run {
+                        // No data available
+                        saveWidgetState(context, widgetId, metricType, null, "No data available")
+                        return
+                    }
 
             // Extract metric value and calculate status
             val (value, status) = WidgetMetricExtractor.extractMetricData(metricType, summary)
 
             // Save to DataStore
             saveWidgetState(context, widgetId, metricType, value, status.name, trend = null)
-
         } catch (e: Exception) {
             Log.e(TAG, "Failed to update small widget $widgetId", e)
             saveWidgetError(context, widgetId, e.message ?: "Unknown error")
@@ -72,7 +72,7 @@ object SmallWidgetUpdater {
         }
 
         // Trigger widget update
-        GlanceAppWidgetManager(context).updateAll(SmallWidget::class.java)
+        SmallWidget().updateAll(context)
     }
 
     private suspend fun saveWidgetError(
@@ -85,7 +85,6 @@ object SmallWidgetUpdater {
             preferences[SmallWidgetKeys.status(widgetId)] = "CALIBRATING"
         }
 
-        GlanceAppWidgetManager(context).updateAll(SmallWidget::class.java)
+        SmallWidget().updateAll(context)
     }
-
 }

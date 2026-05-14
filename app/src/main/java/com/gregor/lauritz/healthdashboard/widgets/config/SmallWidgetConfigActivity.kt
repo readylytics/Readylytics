@@ -7,8 +7,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,28 +26,38 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
- * Configuration activity for small widget (1x2).
- * Allows user to select metric, trend display, and timestamp display.
+ * Configuration activity for small widget (1x1).
+ * Allows user to select a single metric, trend display, and timestamp display.
  */
 @AndroidEntryPoint
 class SmallWidgetConfigActivity : ComponentActivity() {
-    private val viewModel: SmallWidgetConfigViewModel by viewModels()
+    @Inject
+    lateinit var configRepository: WidgetConfigurationRepository
+
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+    private lateinit var viewModel: SmallWidgetConfigViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Get widget ID from intent
         widgetId = intent?.getIntExtra(
             AppWidgetManager.EXTRA_APPWIDGET_ID,
             AppWidgetManager.INVALID_APPWIDGET_ID,
@@ -61,15 +69,27 @@ class SmallWidgetConfigActivity : ComponentActivity() {
             return
         }
 
+        val factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    val savedStateHandle = SavedStateHandle(mapOf("widgetId" to widgetId))
+                    return SmallWidgetConfigViewModel(configRepository, savedStateHandle) as T
+                }
+            }
+
+        viewModel = ViewModelProvider(this, factory).get(SmallWidgetConfigViewModel::class.java)
+
         setContent {
             FitDashboardTheme {
                 val state by viewModel.state.collectAsStateWithLifecycle()
 
                 LaunchedEffect(state.isSaved) {
                     if (state.isSaved) {
-                        val resultValue = Intent().apply {
-                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                        }
+                        val resultValue =
+                            Intent().apply {
+                                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                            }
                         setResult(Activity.RESULT_OK, resultValue)
                         finish()
                     }
@@ -97,19 +117,20 @@ private fun SmallWidgetConfigScreen(
     onSave: () -> Unit,
     onErrorDismissed: () -> Unit,
 ) {
-    var showMetricSelector by androidx.compose.runtime.mutableStateOf(false)
+    var showMetricSelector by remember { mutableStateOf(false) }
 
     Scaffold { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             // Header
             Text(
-                text = "Configure Small Widget",
+                text = "Configure Small Widget (1x1)",
                 style = MaterialTheme.typography.headlineMedium,
             )
 
@@ -121,9 +142,10 @@ private fun SmallWidgetConfigScreen(
                     color = MaterialTheme.colorScheme.errorContainer,
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -143,9 +165,10 @@ private fun SmallWidgetConfigScreen(
             // Loading state
             if (state.isLoading) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator()
@@ -207,16 +230,18 @@ private fun MetricSelectionCard(
     onSelectClick: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onSelectClick),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onSelectClick),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -253,9 +278,10 @@ private fun OptionSwitchCard(
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {

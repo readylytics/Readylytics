@@ -3,7 +3,7 @@ package com.gregor.lauritz.healthdashboard.widgets.glance
 import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.edit
-import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.updateAll
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
@@ -25,26 +25,28 @@ object LargeWidgetUpdater {
     ) {
         try {
             // Load widget configuration
-            val config = configRepository.observeLargeWidgetConfig(widgetId).first()
-                ?: return
+            val config =
+                configRepository.observeLargeWidgetConfig(widgetId).first()
+                    ?: return
 
             // Load latest summary
-            val summary = widgetDataRepository.getLatestSummaryAsync()
-                ?: run {
-                    saveWidgetError(context, widgetId, "No data available")
-                    return
-                }
+            val summary =
+                widgetDataRepository.getLatestSummaryAsync()
+                    ?: run {
+                        saveWidgetError(context, widgetId, "No data available")
+                        return
+                    }
 
             // Default 4-card layout if not configured
-            val cardIds = if (config.cardIds.isEmpty()) {
-                listOf("SLEEP_SCORE", "READINESS", "HRV", "STEPS")
-            } else {
-                config.cardIds.take(4) // Limit to 4 cards
-            }
+            val cardIds =
+                if (config.cardIds.isEmpty()) {
+                    listOf("SLEEP_SCORE", "READINESS", "HRV", "STEPS")
+                } else {
+                    config.cardIds.take(4) // Limit to 4 cards
+                }
 
             // Update each card
             saveWidgetState(context, widgetId, cardIds, summary)
-
         } catch (e: Exception) {
             Log.e(TAG, "Failed to update large widget $widgetId", e)
             saveWidgetError(context, widgetId, e.message ?: "Unknown error")
@@ -96,7 +98,7 @@ object LargeWidgetUpdater {
             preferences[LargeWidgetKeys.lastUpdate(widgetId)] = System.currentTimeMillis()
         }
 
-        GlanceAppWidgetManager(context).updateAll(LargeWidget::class.java)
+        LargeWidget().updateAll(context)
     }
 
     private suspend fun saveWidgetError(
@@ -108,7 +110,7 @@ object LargeWidgetUpdater {
             preferences[LargeWidgetKeys.error(widgetId)] = error
         }
 
-        GlanceAppWidgetManager(context).updateAll(LargeWidget::class.java)
+        LargeWidget().updateAll(context)
     }
 
     private fun extractCardData(
@@ -116,20 +118,21 @@ object LargeWidgetUpdater {
         summary: com.gregor.lauritz.healthdashboard.domain.model.DailySummary,
     ): Triple<Double, MetricStatus, String> {
         // Determine card type and extract data
-        val metricType = try {
-            MetricType.valueOf(cardId)
-        } catch (e: IllegalArgumentException) {
-            return Triple(0.0, MetricStatus.CALIBRATING, "METRIC")
-        }
+        val metricType =
+            try {
+                MetricType.valueOf(cardId)
+            } catch (e: IllegalArgumentException) {
+                return Triple(0.0, MetricStatus.CALIBRATING, "METRIC")
+            }
 
-        val cardType = when (metricType) {
-            MetricType.STEPS -> "STEPS"
-            MetricType.SLEEP_SCORE, MetricType.READINESS -> "SCORE"
-            else -> "METRIC"
-        }
+        val cardType =
+            when (metricType) {
+                MetricType.STEPS -> "STEPS"
+                MetricType.SLEEP_SCORE, MetricType.READINESS -> "SCORE"
+                else -> "METRIC"
+            }
 
         val (value, status) = WidgetMetricExtractor.extractMetricData(metricType, summary)
         return Triple(value, status, cardType)
     }
-
 }

@@ -7,7 +7,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,12 +19,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -34,24 +30,30 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.domain.model.MetricType
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
- * Configuration activity for large widget (2x4).
+ * Configuration activity for large widget (2x2).
  * Allows user to select up to 4 cards to display in a 2x2 grid.
  */
 @AndroidEntryPoint
 class LargeWidgetConfigActivity : ComponentActivity() {
-    private val viewModel: LargeWidgetConfigViewModel by viewModels()
+    @Inject
+    lateinit var configRepository: WidgetConfigurationRepository
+
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+    private lateinit var viewModel: LargeWidgetConfigViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,15 +70,27 @@ class LargeWidgetConfigActivity : ComponentActivity() {
             return
         }
 
+        val factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    val savedStateHandle = SavedStateHandle(mapOf("widgetId" to widgetId))
+                    return LargeWidgetConfigViewModel(configRepository, savedStateHandle) as T
+                }
+            }
+
+        viewModel = ViewModelProvider(this, factory).get(LargeWidgetConfigViewModel::class.java)
+
         setContent {
             FitDashboardTheme {
                 val state by viewModel.state.collectAsStateWithLifecycle()
 
                 LaunchedEffect(state.isSaved) {
                     if (state.isSaved) {
-                        val resultValue = Intent().apply {
-                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                        }
+                        val resultValue =
+                            Intent().apply {
+                                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                            }
                         setResult(Activity.RESULT_OK, resultValue)
                         finish()
                     }
@@ -102,16 +116,17 @@ private fun LargeWidgetConfigScreen(
 ) {
     Scaffold { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Configure Large Widget",
+                        text = "Configure Large Widget (2x2)",
                         style = MaterialTheme.typography.headlineMedium,
                     )
                     Text(
@@ -131,9 +146,10 @@ private fun LargeWidgetConfigScreen(
                         color = MaterialTheme.colorScheme.errorContainer,
                     ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -155,37 +171,37 @@ private fun LargeWidgetConfigScreen(
             if (state.isLoading) {
                 item {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator()
                     }
                 }
-                return@Scaffold
-            }
+            } else {
+                item {
+                    CardSelectionSection(
+                        selectedCardIds = state.selectedCardIds,
+                        onCardToggle = onCardToggle,
+                    )
+                }
 
-            item {
-                CardSelectionSection(
-                    selectedCardIds = state.selectedCardIds,
-                    onCardToggle = onCardToggle,
-                )
-            }
+                item {
+                    SelectedCardsPreview(
+                        selectedCardIds = state.selectedCardIds,
+                    )
+                }
 
-            item {
-                SelectedCardsPreview(
-                    selectedCardIds = state.selectedCardIds,
-                )
-            }
-
-            item {
-                Button(
-                    onClick = onSave,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isLoading,
-                ) {
-                    Text("Save Configuration")
+                item {
+                    Button(
+                        onClick = onSave,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isLoading,
+                    ) {
+                        Text("Save Configuration")
+                    }
                 }
             }
 
@@ -207,20 +223,21 @@ private fun CardSelectionSection(
             style = MaterialTheme.typography.labelLarge,
         )
 
-        val availableCards = listOf(
-            CardOption("SLEEP_SCORE", "Sleep Score", "Overall sleep quality"),
-            CardOption("READINESS", "Readiness", "Daily readiness score"),
-            CardOption("HRV", "HRV", "Heart rate variability"),
-            CardOption("RHR", "RHR", "Resting heart rate"),
-            CardOption("RECOVERY", "Recovery", "Recovery percentage"),
-            CardOption("STEPS", "Steps", "Daily step count"),
-            CardOption("SLEEP_DURATION", "Sleep Duration", "Total sleep time"),
-            CardOption("SLEEP_EFFICIENCY", "Sleep Efficiency", "Sleep quality ratio"),
-            CardOption("STRESS", "Stress", "Daily stress level"),
-            CardOption("BODY_BATTERY", "Body Battery", "Energy level"),
-            CardOption("PAI", "PAI", "Personal Activity Index"),
-            CardOption("STRAIN_RATIO", "Strain Ratio", "Training load ratio"),
-        )
+        val availableCards =
+            listOf(
+                CardOption("SLEEP_SCORE", "Sleep Score", "Overall sleep quality"),
+                CardOption("READINESS", "Readiness", "Daily readiness score"),
+                CardOption("HRV", "HRV", "Heart rate variability"),
+                CardOption("RHR", "RHR", "Resting heart rate"),
+                CardOption("RECOVERY", "Recovery", "Recovery percentage"),
+                CardOption("STEPS", "Steps", "Daily step count"),
+                CardOption("SLEEP_DURATION", "Sleep Duration", "Total sleep time"),
+                CardOption("SLEEP_EFFICIENCY", "Sleep Efficiency", "Sleep quality ratio"),
+                CardOption("STRESS", "Stress", "Daily stress level"),
+                CardOption("BODY_BATTERY", "Body Battery", "Energy level"),
+                CardOption("PAI", "PAI", "Personal Activity Index"),
+                CardOption("STRAIN_RATIO", "Strain Ratio", "Training load ratio"),
+            )
 
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
@@ -246,20 +263,23 @@ private fun CardSelectionItem(
     onToggle: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = !isDisabled, onClick = onToggle),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(enabled = !isDisabled, onClick = onToggle),
         shape = MaterialTheme.shapes.medium,
-        color = when {
-            isSelected -> MaterialTheme.colorScheme.primaryContainer
-            isDisabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-            else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        },
+        color =
+            when {
+                isSelected -> MaterialTheme.colorScheme.primaryContainer
+                isDisabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            },
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -267,14 +287,22 @@ private fun CardSelectionItem(
                 Text(
                     text = card.displayName,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (isDisabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    else MaterialTheme.colorScheme.onSurface,
+                    color =
+                        if (isDisabled) {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
                 )
                 Text(
                     text = card.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isDisabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color =
+                        if (isDisabled) {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                 )
             }
 
@@ -288,18 +316,17 @@ private fun CardSelectionItem(
 }
 
 @Composable
-private fun SelectedCardsPreview(
-    selectedCardIds: List<String>,
-) {
+private fun SelectedCardsPreview(selectedCardIds: List<String>) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
@@ -320,13 +347,13 @@ private fun SelectedCardsPreview(
                 ) {
                     repeat(2) { row ->
                         Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .background(
-                                    MaterialTheme.colorScheme.surface,
-                                    MaterialTheme.shapes.small,
-                                )
-                                .padding(6.dp),
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .background(
+                                        MaterialTheme.colorScheme.surface,
+                                        MaterialTheme.shapes.small,
+                                    ).padding(6.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             repeat(2) { col ->
@@ -335,13 +362,13 @@ private fun SelectedCardsPreview(
                                     PreviewCard(cardId = selectedCardIds[index])
                                 } else {
                                     Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .background(
-                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                                MaterialTheme.shapes.small,
-                                            )
-                                            .padding(8.dp),
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .background(
+                                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                                    MaterialTheme.shapes.small,
+                                                ).padding(8.dp),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Text(
@@ -363,13 +390,13 @@ private fun SelectedCardsPreview(
 @Composable
 private fun PreviewCard(cardId: String) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                MaterialTheme.shapes.small,
-            )
-            .padding(8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    MaterialTheme.shapes.small,
+                ).padding(8.dp),
         contentAlignment = Alignment.CenterStart,
     ) {
         Text(

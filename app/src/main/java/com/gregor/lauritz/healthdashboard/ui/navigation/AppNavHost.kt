@@ -40,11 +40,12 @@ fun AppNavHost(
         val currentDest = navController.currentDestination
         when (uiState) {
             SyncUiState.NeedsPermissions -> {
-                val targetDest = if (!prefs.aboutDismissed) {
-                    AppDestination.About
-                } else {
-                    AppDestination.Onboarding
-                }
+                val targetDest =
+                    if (!prefs.aboutDismissed) {
+                        AppDestination.About
+                    } else {
+                        AppDestination.Onboarding
+                    }
                 if (currentDest?.hasRoute<AppDestination.Onboarding>() != true &&
                     currentDest?.hasRoute<AppDestination.About>() != true
                 ) {
@@ -112,13 +113,13 @@ fun AppNavHost(
                             popUpTo(AppDestination.About) { inclusive = true }
                         }
                     }
-                }
+                },
             )
         }
 
         composable<AppDestination.Onboarding> {
             OnboardingRoute(
-                syncViewModel = viewModel
+                syncViewModel = viewModel,
             )
         }
 

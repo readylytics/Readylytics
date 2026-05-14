@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.doublePreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.state.GlanceStateDefinition
@@ -43,24 +42,21 @@ data class SmallWidgetData(
 /**
  * GlanceStateDefinition for SmallWidget.
  * Uses DataStore under the hood via Glance's PreferencesGlanceStateDefinition.
- *
- * Note: For now, we'll use the default PreferencesGlanceStateDefinition
- * and manually manage state. In a production app, we'd create a custom
- * GlanceStateDefinition if needed.
  */
-class SmallWidgetStateDefinition : GlanceStateDefinition<SmallWidgetData> {
+class SmallWidgetStateDefinition : GlanceStateDefinition<Preferences> {
     override suspend fun getDataStore(
         context: Context,
         fileKey: String,
     ): DataStore<Preferences> {
         // Use Glance's built-in DataStore management
-        return androidx.glance.state.PreferencesGlanceStateDefinition().getDataStore(
+        return androidx.glance.state.PreferencesGlanceStateDefinition.getDataStore(
             context,
             fileKey,
         )
     }
 
-    override fun getLocation(context: Context, fileKey: String): File {
-        return File(context.filesDir, "glance_small_widget_$fileKey")
-    }
+    override fun getLocation(
+        context: Context,
+        fileKey: String,
+    ): File = File(context.filesDir, "glance_small_widget_$fileKey")
 }
