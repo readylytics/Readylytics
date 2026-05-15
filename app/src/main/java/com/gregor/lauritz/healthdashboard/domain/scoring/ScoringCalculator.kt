@@ -8,6 +8,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Sleep
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Strain
 import com.gregor.lauritz.healthdashboard.domain.scoring.components.EmergencyFlagThresholds
 import com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargets
+import com.gregor.lauritz.healthdashboard.domain.util.logD
 import com.gregor.lauritz.healthdashboard.domain.util.mean
 import com.gregor.lauritz.healthdashboard.domain.util.median
 import com.gregor.lauritz.healthdashboard.domain.util.stdev
@@ -285,6 +286,7 @@ class ScoringCalculatorImpl
 
         // Blended provisional sigma on ln-scale.
         // w = clamp((n - 7) / (60 - 7), 0, 1); at n<7 fully prior-driven; at n≥60 fully personal.
+        // Heuristic blending — see HrvSigmaTest for validation against published cohorts (Kubios MARS).
         // REF: Plews 2013b Sports Med; Schaffarczyk 2024; Kubios HRV practice
         override fun hrvSigma(
             lnHrvValues: List<Float>,
@@ -296,9 +298,26 @@ class ScoringCalculatorImpl
                     (n - ScoringConstants.HRV_SIGMA_BLEND_MIN_N).toFloat() /
                         (ScoringConstants.HRV_SIGMA_BLEND_MAX_N - ScoringConstants.HRV_SIGMA_BLEND_MIN_N)
                 ).coerceIn(0f, 1f)
-            val blended = w * lnHrvValues.stdev() + (1f - w) * sigmaPrior
-            return blended.coerceAtLeast(Restoration.MIN_LN_SIGMA)
+            val personal = lnHrvValues.stdev()
+            val blended = w * personal + (1f - w) * sigmaPrior
+            val final = blended.coerceAtLeast(Restoration.MIN_LN_SIGMA)
+            logD("HrvSigma") {
+                "n=$n w=$w personal=$personal prior=$sigmaPrior blended=$blended final=$final " +
+                    "confidence=${hrvSigmaConfidence(n)}"
+            }
+            return final
         }
+
+        /**
+         * Confidence in the personal HRV sigma estimate (0–1 scale).
+         * Maps directly to blending weight w; n<7 → 0; n>=60 → 1.
+         * Persistable as DailySummaryEntity.hrvSigmaConfidence.
+         */
+        fun hrvSigmaConfidence(n: Int): Float =
+            (
+                (n - ScoringConstants.HRV_SIGMA_BLEND_MIN_N).toFloat() /
+                    (ScoringConstants.HRV_SIGMA_BLEND_MAX_N - ScoringConstants.HRV_SIGMA_BLEND_MIN_N)
+            ).coerceIn(0f, 1f)
 
         // Computes the HRV Z-score on the ln(RMSSD) scale using separate mean and sigma windows.
         // muHistory     = last 7 valid nights (short-term mean)
