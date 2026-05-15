@@ -239,9 +239,13 @@ class HealthSyncUseCase
             }
             if (secondary.isEmpty()) return primary
 
-            val msPerDay = 24L * 60L * 60L * 1000L
-            val primaryDays = primary.mapTo(mutableSetOf()) { getTimestamp(it) / msPerDay }
-            val fallback = secondary.filter { getTimestamp(it) / msPerDay !in primaryDays }
+            val zoneId = ZoneId.systemDefault()
+            val primaryDays = primary.mapTo(mutableSetOf()) {
+                Instant.ofEpochMilli(getTimestamp(it)).atZone(zoneId).toLocalDate()
+            }
+            val fallback = secondary.filter {
+                Instant.ofEpochMilli(getTimestamp(it)).atZone(zoneId).toLocalDate() !in primaryDays
+            }
 
             if (fallback.isNotEmpty()) {
                 logD("DeviceFilter") { "Added ${fallback.size} secondary device records as fallback" }
