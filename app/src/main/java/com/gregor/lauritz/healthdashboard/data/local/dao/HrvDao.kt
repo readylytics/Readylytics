@@ -79,4 +79,7 @@ interface HrvDao {
 
     @Query("DELETE FROM hrv_records")
     suspend fun deleteAll(): Int
+
+    @Query("SELECT DISTINCT deviceName FROM hrv_records WHERE deviceName IS NOT NULL AND deviceName != ''")
+    suspend fun getDistinctDeviceNames(): List<String>
 }

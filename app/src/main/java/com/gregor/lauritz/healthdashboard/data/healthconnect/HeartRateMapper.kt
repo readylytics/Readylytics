@@ -68,6 +68,7 @@ object HeartRateMapper {
                 beatsPerMinute = sample.beatsPerMinute.toInt(),
                 recordType = recordType,
                 sessionId = sessionId,
+                deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
             )
         }
     }
@@ -104,6 +105,7 @@ object HeartRateMapper {
                 beatsPerMinute = record.beatsPerMinute.toInt(),
                 recordType = recordType,
                 sessionId = sessionId,
+                deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
             )
         }
     }

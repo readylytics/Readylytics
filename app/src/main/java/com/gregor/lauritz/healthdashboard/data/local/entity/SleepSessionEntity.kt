@@ -24,4 +24,5 @@ data class SleepSessionEntity(
     val sleepScore: Float? = null,
     val startZoneOffsetSeconds: Int? = null,
     val endZoneOffsetSeconds: Int? = null,
+    val deviceName: String? = null,
 )

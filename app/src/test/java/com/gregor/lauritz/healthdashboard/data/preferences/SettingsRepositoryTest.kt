@@ -6,6 +6,11 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,7 +36,14 @@ class SettingsRepositoryTest {
                 scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
                 produceFile = { context.dataStoreFile("test_settings.pb") },
             )
-        repository = SettingsRepository(dataStore)
+        repository =
+            SettingsRepository(
+                dataStore = dataStore,
+                sleepSessionDao = mockk<SleepSessionDao>(relaxed = true),
+                heartRateDao = mockk<HeartRateDao>(relaxed = true),
+                hrvDao = mockk<HrvDao>(relaxed = true),
+                workoutDao = mockk<WorkoutDao>(relaxed = true),
+            )
     }
 
     @Test

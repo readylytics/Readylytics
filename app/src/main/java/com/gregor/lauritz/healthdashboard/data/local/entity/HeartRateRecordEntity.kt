@@ -18,4 +18,5 @@ data class HeartRateRecordEntity(
     val beatsPerMinute: Int,
     val recordType: String,
     val sessionId: String? = null,
+    val deviceName: String? = null,
 )

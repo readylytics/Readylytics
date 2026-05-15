@@ -28,6 +28,12 @@ sealed interface SyncUiState {
 
     data object PermissionsGranted : SyncUiState
 
+    data object DiscoveringDevices : SyncUiState
+
+    data class DeviceSelectionReady(
+        val devices: List<String>,
+    ) : SyncUiState
+
     data object SyncingCatchUp : SyncUiState
 
     data class Error(
@@ -165,32 +171,50 @@ class SyncViewModel
 
         fun onPermissionsGranted() {
             foregroundCheckJob?.cancel()
-            // Set state synchronously before launching the coroutine so that
-            // onAppForeground() sees SyncingCatchUp immediately and bails out,
-            // preventing Samsung's stale getGrantedPermissions() from overwriting.
+            _uiState.update { SyncUiState.DiscoveringDevices }
+            viewModelScope.launch {
+                try {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("SyncViewModel") {
+                        "Discovering devices..."
+                    }
+                    val devices = hcRepo.discoverDevices(windowDays = 2)
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("SyncViewModel") {
+                        "Device discovery completed: ${devices.size} devices found"
+                    }
+                    _uiState.update { SyncUiState.DeviceSelectionReady(devices) }
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logE("SyncViewModel", e) {
+                        "Device discovery: permissions revoked"
+                    }
+                    _uiState.update { SyncUiState.NeedsPermissions }
+                } catch (e: Exception) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logE("SyncViewModel", e) {
+                        "Device discovery failed"
+                    }
+                    _uiState.update {
+                        SyncUiState.Error(e.message ?: "Device discovery failed")
+                    }
+                }
+            }
+        }
+
+        fun onDeviceSelected() {
             _uiState.update { SyncUiState.SyncingCatchUp }
             viewModelScope.launch {
                 try {
                     foregroundSyncController.triggerImmediateSync()
                 } catch (e: HealthConnectPermissionRevokedException) {
-                    // Samsung throws SecurityException during data reads even immediately
-                    // after granting in the dialog due to propagation delay. Re-verify
-                    // before sending the user back to onboarding.
                     val recheck = hcRepo.checkPermissions()
                     if (recheck !is PermissionStatus.Granted) {
                         _uiState.update { SyncUiState.NeedsPermissions }
                         return@launch
                     }
-                    // HC says granted — Samsung false positive. Proceed to main screen;
-                    // background sync will pick up data on next foreground.
                     com.gregor.lauritz.healthdashboard.domain.util.logE("SyncViewModel", e) {
                         "Sync threw permission error but HC says granted — proceeding"
                     }
                 } catch (e: Exception) {
-                    // Sync failed for non-permission reason. Permissions are granted,
-                    // so let the user into the app rather than blocking on onboarding.
                     com.gregor.lauritz.healthdashboard.domain.util.logE("SyncViewModel", e) {
-                        "Post-permission sync failed, proceeding to MainShell"
+                        "Post-device-selection sync failed"
                     }
                 }
                 _uiState.update { SyncUiState.PermissionsGranted }

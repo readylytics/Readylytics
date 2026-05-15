@@ -93,4 +93,7 @@ interface WorkoutDao {
 
     @Query("DELETE FROM workout_records")
     suspend fun deleteAll(): Int
+
+    @Query("SELECT DISTINCT deviceName FROM workout_records WHERE deviceName IS NOT NULL AND deviceName != ''")
+    suspend fun getDistinctDeviceNames(): List<String>
 }

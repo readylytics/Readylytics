@@ -6,6 +6,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.sync.ResyncHealthConnectUseCase
+import com.gregor.lauritz.healthdashboard.domain.util.logE
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +28,8 @@ class SyncSettingsViewModel
         private val _isResyncing = MutableStateFlow(false)
         val isResyncing: StateFlow<Boolean> = _isResyncing.asStateFlow()
 
+        private val availableDevices = MutableStateFlow<List<String>>(emptyList())
+
         // Internal property to allow overriding in tests
         var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
 
@@ -34,17 +37,35 @@ class SyncSettingsViewModel
             combine(
                 settingsRepo.userPreferences,
                 _isResyncing,
-            ) { prefs, isResyncing ->
+                availableDevices,
+            ) { prefs, isResyncing, availableDevices ->
                 SyncSettingsState(
                     syncPreference = prefs.syncPreference,
                     syncIntervalHours = prefs.syncIntervalHours,
                     isResyncing = isResyncing,
+                    availableDevices = availableDevices,
+                    primaryDeviceName = prefs.primaryDeviceName,
                 )
             }.stateIn(
                 scope = viewModelScope,
                 started = sharingStarted,
                 initialValue = SyncSettingsState(),
             )
+        }
+
+        init {
+            loadAvailableDevices()
+        }
+
+        private fun loadAvailableDevices() {
+            viewModelScope.launch {
+                try {
+                    val devices = settingsRepo.getAvailableDevices()
+                    availableDevices.value = devices
+                } catch (e: Exception) {
+                    logE("SyncSettingsViewModel", e) { "Failed to load available devices" }
+                }
+            }
         }
 
         fun onEvent(event: SettingsEvent) {

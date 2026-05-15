@@ -35,6 +35,7 @@ object HrvMapper {
                 rmssdMs = record.heartRateVariabilityMillis.toFloat(),
                 recordType = if (sleepSession != null) RecordType.SLEEP.name else RecordType.RESTING.name,
                 sessionId = sleepSession?.id,
+                deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
             )
         }
     }

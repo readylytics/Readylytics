@@ -58,4 +58,6 @@ interface HealthConnectRepository {
         from: Instant,
         to: Instant,
     ): Long
+
+    suspend fun discoverDevices(windowDays: Int = 2): List<String>
 }

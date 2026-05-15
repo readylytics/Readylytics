@@ -61,6 +61,7 @@ data class UserPreferences(
     val banisterMultiplier: Float = PhysiologyProfile.GENERAL.banisterMultiplier,
     val chengBeta: Float = PhysiologyProfile.GENERAL.defaultChengBeta,
     val itrimB: Float = PhysiologyProfile.GENERAL.defaultItrimB,
+    val primaryDeviceName: String? = null,
 )
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
@@ -126,5 +127,6 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         banisterMultiplier = if (paiCalibration > 0f) paiCalibration else profile.banisterMultiplier,
         chengBeta = if (this.chengBeta > 0f) this.chengBeta else profile.defaultChengBeta,
         itrimB = if (itrimpB > 0f) itrimpB else profile.defaultItrimB,
+        primaryDeviceName = if (hasPrimaryDeviceName()) primaryDeviceName else null,
     )
 }

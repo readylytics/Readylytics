@@ -54,6 +54,7 @@ import com.gregor.lauritz.healthdashboard.ui.settings.SleepSettingsSection
 import com.gregor.lauritz.healthdashboard.ui.settings.ThresholdSettingsSection
 import com.gregor.lauritz.healthdashboard.ui.settings.cloud.CloudBackupSection
 import com.gregor.lauritz.healthdashboard.ui.settings.cloud.DataManagementSection
+import com.gregor.lauritz.healthdashboard.ui.settings.cloud.DeviceSelectionSection
 import com.gregor.lauritz.healthdashboard.ui.settings.cloud.SyncSettingsSection
 import com.gregor.lauritz.healthdashboard.ui.settings.physiologyprofile.HeartRateZoneSection
 import kotlinx.parcelize.Parcelize
@@ -299,6 +300,9 @@ fun SettingsScreen(
                                 uiState = cloudState,
                                 onEvent = onCloudEvent,
                             )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            SectionHeader("Device")
+                            DeviceSelectionSection()
                             Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Data Management")
                             DataManagementSection(uiState = uiState, onEvent = onUIEvent, onSyncEvent = onSyncEvent)

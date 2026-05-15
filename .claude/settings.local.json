@@ -18,7 +18,8 @@
       "mcp__plugin_context-mode_context-mode__ctx_batch_execute",
       "mcp__plugin_context-mode_context-mode__ctx_execute",
       "Skill(oh-my-claudecode:ralph)",
-      "Skill(ai-slop-cleaner)"
+      "Skill(ai-slop-cleaner)",
+      "Skill(oh-my-claudecode:team)"
     ]
   }
 }

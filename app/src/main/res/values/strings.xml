@@ -26,4 +26,17 @@
     <string name="tooltip_resting_hr_no_baseline">Minimum heart rate captured around wake up time.\n\nNot enough data to calculate baseline.</string>
 
     <string name="tooltip_strain_ratio">Ratio of acute to chronic training load.\nIndicates if training is sustainable.\n\n• 0.8-1.3: Optimal balance\n• &lt;0.8: Under-training\n• &gt;1.3: Overtraining risk</string>
+
+    <!-- Device Selection -->
+    <string name="device_selection_title">Choose your primary device</string>
+    <string name="device_selection_description">We found data from multiple sources. Pick the device whose readings should drive your scores — we\'ll fall back to other devices for days it didn\'t record.</string>
+    <string name="device_selection_no_devices">No specific devices were detected. We\'ll use all available data sources.</string>
+    <string name="device_selection_use_all">Use all devices</string>
+    <string name="device_selection_continue_with">Continue with %1$s</string>
+    <string name="device_selection_dialog_title">Select Primary Device</string>
+    <string name="device_selection_dialog_message">Which device should we use for health metrics?</string>
+    <string name="device_selection_dialog_label">Device</string>
+    <string name="device_selection_dialog_placeholder">Choose a device</string>
+    <string name="device_selection_dialog_no_devices">No devices available</string>
+    <string name="device_selection_dialog_hc_error">No devices found from Health Connect</string>
 </resources>
