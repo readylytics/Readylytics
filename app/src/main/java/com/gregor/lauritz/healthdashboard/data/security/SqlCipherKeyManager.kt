@@ -55,15 +55,8 @@ class SqlCipherKeyManager
          */
         fun getOrCreateFactory(): SupportSQLiteOpenHelper.Factory {
             val decryptedKey = getOrCreateDbKey()
-            return try {
-                // Raw key mode matches migration's ATTACH KEY "x'hex'" syntax.
-                // JVM String is immutable so keyHex cannot be zeroed — acceptable for this call site.
-                val keyHex = "x'${decryptedKey.joinToString("") { "%02x".format(it) }}'"
-                net.zetetic.database.sqlcipher
-                    .SupportOpenHelperFactory(keyHex.toByteArray(Charsets.UTF_8))
-            } finally {
-                decryptedKey.fill(0)
-            }
+            return net.zetetic.database.sqlcipher
+                .SupportOpenHelperFactory(decryptedKey)
         }
 
         /**
@@ -81,12 +74,20 @@ class SqlCipherKeyManager
 
             // SQLite magic header is 16 bytes: "SQLite format 3\000"
             val sqliteMagic = "SQLite format 3\u0000".toByteArray(Charsets.UTF_8)
-            if (!magic.contentEquals(sqliteMagic)) {
+            if (magic.contentEquals(sqliteMagic)) {
+                performMigration(dbFile)
                 return
             }
 
+            // Verification: ensure the database is readable with the current key.
+            // If it's not a plaintext SQLite file and not a valid SQLCipher file, it's corrupted or key mismatch.
+            verifyDatabaseKey(dbFile)
+        }
+
+        private fun performMigration(dbFile: File) {
             val tempFile = File(dbFile.parent, "${dbFile.name}.cipher_tmp")
             val rawKey = getOrCreateDbKey()
+
             try {
                 // Open plaintext DB with empty password
                 val db =
@@ -98,8 +99,7 @@ class SqlCipherKeyManager
                         null,
                     )
 
-                val keyHex = rawKey.joinToString("") { "%02x".format(it) }
-                db.execSQL("ATTACH DATABASE '${tempFile.absolutePath}' AS encrypted KEY \"x'$keyHex'\"")
+                db.execSQL("ATTACH DATABASE ? AS encrypted KEY ?", arrayOf(tempFile.absolutePath, rawKey))
                 db.execSQL("SELECT sqlcipher_export('encrypted')")
                 db.execSQL("DETACH DATABASE encrypted")
                 db.close()
@@ -121,6 +121,35 @@ class SqlCipherKeyManager
             }
         }
 
+        private fun verifyDatabaseKey(dbFile: File) {
+            val rawKey = getOrCreateDbKey()
+            try {
+                val db =
+                    net.zetetic.database.sqlcipher.SQLiteDatabase.openOrCreateDatabase(
+                        dbFile,
+                        rawKey,
+                        null,
+                        null,
+                        null,
+                    )
+                // Small query to verify key is correct
+                db.rawQuery("SELECT COUNT(*) FROM sqlite_schema", null).use { it.moveToFirst() }
+                db.close()
+            } catch (e: Exception) {
+                // If opening fails with SQLITE_NOTADB, the key is wrong or file is corrupted.
+                if (e.message?.contains("code 26") == true ||
+                    e is net.zetetic.database.sqlcipher.SQLiteNotADatabaseException
+                ) {
+                    val backupFile = File(dbFile.path + ".corrupted_${System.currentTimeMillis()}")
+                    dbFile.renameTo(backupFile)
+                    File(dbFile.path + "-wal").delete()
+                    File(dbFile.path + "-shm").delete()
+                }
+            } finally {
+                rawKey.fill(0)
+            }
+        }
+
         /**
          * Exports a decrypted copy of the database to a plaintext file.
          * Used for Google Drive backups so data remains accessible after Keystore key loss.
@@ -131,17 +160,17 @@ class SqlCipherKeyManager
         ) {
             if (!dbFile.exists()) return
             val rawKey = getOrCreateDbKey()
+
             try {
-                val keyHex = rawKey.joinToString("") { "%02x".format(it) }
                 val db =
                     net.zetetic.database.sqlcipher.SQLiteDatabase.openOrCreateDatabase(
                         dbFile,
-                        "x'$keyHex'",
+                        rawKey,
                         null,
                         null,
                         null,
                     )
-                db.execSQL("ATTACH DATABASE '${destFile.absolutePath}' AS plaintext KEY ''")
+                db.execSQL("ATTACH DATABASE ? AS plaintext KEY ''", arrayOf(destFile.absolutePath))
                 db.execSQL("SELECT sqlcipher_export('plaintext')")
                 db.execSQL("DETACH DATABASE plaintext")
                 db.close()

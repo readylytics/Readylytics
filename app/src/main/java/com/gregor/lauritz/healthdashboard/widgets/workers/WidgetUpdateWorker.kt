@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.widgets.workers
 import android.content.Context
 import android.util.Log
 import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.updateAll
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -112,6 +113,11 @@ class WidgetUpdateWorker
                     Log.e(TAG, "Failed to update large widgets", e)
                     failureCount++
                 }
+
+                // Trigger batch updates once at the end
+                SmallWidget().updateAll(applicationContext)
+                MediumWidget().updateAll(applicationContext)
+                LargeWidget().updateAll(applicationContext)
 
                 Log.i(TAG, "Widget update completed: $successCount success, $failureCount failures")
                 if (failureCount > 0 && successCount == 0) {

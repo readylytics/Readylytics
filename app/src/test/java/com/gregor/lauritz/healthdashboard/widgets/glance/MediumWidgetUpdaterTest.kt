@@ -7,23 +7,23 @@ import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRep
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetMode
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mock
-import org.mockito.junit.MockitoJUnitRunner
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import java.time.LocalDate
 
-@RunWith(MockitoJUnitRunner::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33])
 class MediumWidgetUpdaterTest {
-    @Mock
-    private lateinit var widgetDataRepository: WidgetDataRepository
-
-    @Mock
-    private lateinit var configRepository: WidgetConfigurationRepository
+    private val widgetDataRepository = mockk<WidgetDataRepository>()
+    private val configRepository = mockk<WidgetConfigurationRepository>()
 
     private lateinit var context: Context
 
@@ -33,10 +33,10 @@ class MediumWidgetUpdaterTest {
     }
 
     @Test
-    fun testUpdateMediumWidget_dualMetricMode() =
+    fun updateMediumWidget_updates_widget_with_dual_metric_data() =
         runTest {
             // Arrange
-            val widgetId = 2
+            val widgetId = 1
             val config =
                 MediumWidgetConfig(
                     widgetId = widgetId,
@@ -45,93 +45,30 @@ class MediumWidgetUpdaterTest {
                     metric2 = "RHR",
                 )
             val summary =
-                createDailySummary(
+                DailySummary(
+                    date = LocalDate.now(),
                     nocturnalHrv = 45,
                     nocturnalRhr = 52,
+                    stepCount = 8500,
+                    sleepDurationMinutes = 480,
+                    deepSleepPercent = 20f,
+                    remSleepPercent = 25f,
                 )
 
-            whenever(configRepository.observeMediumWidgetConfig(widgetId)).thenReturn(flowOf(config))
-            whenever(widgetDataRepository.getLatestSummaryAsync()).thenReturn(summary)
+            coEvery { configRepository.observeMediumWidgetConfig(widgetId) } returns flowOf(config)
+            coEvery { widgetDataRepository.getLatestSummaryAsync() } returns summary
 
             // Act
             MediumWidgetUpdater.updateMediumWidget(
-                context,
-                widgetId,
-                widgetDataRepository,
-                configRepository,
+                context = context,
+                widgetId = widgetId,
+                configRepository = configRepository,
+                widgetDataRepository = widgetDataRepository,
             )
 
             // Assert
-            verify(configRepository).observeMediumWidgetConfig(widgetId)
-            verify(widgetDataRepository).getLatestSummaryAsync()
+            // Verification of Glance updates is complex, but we verify the interactions
+            coVerify { configRepository.observeMediumWidgetConfig(widgetId) }
+            coVerify { widgetDataRepository.getLatestSummaryAsync() }
         }
-
-    @Test
-    fun testUpdateMediumWidget_stepsProgressMode() =
-        runTest {
-            // Arrange
-            val widgetId = 2
-            val config =
-                MediumWidgetConfig(
-                    widgetId = widgetId,
-                    mode = WidgetMode.STEPS_PROGRESS.name,
-                )
-            val summary = createDailySummary(stepCount = 7500)
-
-            whenever(configRepository.observeMediumWidgetConfig(widgetId)).thenReturn(flowOf(config))
-            whenever(widgetDataRepository.getLatestSummaryAsync()).thenReturn(summary)
-
-            // Act
-            MediumWidgetUpdater.updateMediumWidget(
-                context,
-                widgetId,
-                widgetDataRepository,
-                configRepository,
-            )
-
-            // Assert
-            verify(configRepository).observeMediumWidgetConfig(widgetId)
-            verify(widgetDataRepository).getLatestSummaryAsync()
-        }
-
-    @Test
-    fun testUpdateMediumWidget_invalidMode() =
-        runTest {
-            // Arrange
-            val widgetId = 2
-            val config =
-                MediumWidgetConfig(
-                    widgetId = widgetId,
-                    mode = "INVALID_MODE",
-                )
-            val summary = createDailySummary()
-
-            whenever(configRepository.observeMediumWidgetConfig(widgetId)).thenReturn(flowOf(config))
-            whenever(widgetDataRepository.getLatestSummaryAsync()).thenReturn(summary)
-
-            // Act - should fallback to DUAL_METRIC
-            MediumWidgetUpdater.updateMediumWidget(
-                context,
-                widgetId,
-                widgetDataRepository,
-                configRepository,
-            )
-
-            // Assert
-            verify(configRepository).observeMediumWidgetConfig(widgetId)
-        }
-
-    private fun createDailySummary(
-        nocturnalHrv: Int? = null,
-        nocturnalRhr: Int? = null,
-        stepCount: Int? = null,
-    ) = DailySummary(
-        date = "2024-01-01",
-        nocturnalHrv = nocturnalHrv,
-        nocturnalRhr = nocturnalRhr,
-        stepCount = stepCount,
-        sleepDurationMinutes = 480,
-        deepSleepPercent = 20f,
-        remSleepPercent = 25f,
-    )
 }

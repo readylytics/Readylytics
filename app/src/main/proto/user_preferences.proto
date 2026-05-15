@@ -115,6 +115,10 @@ message UserPreferencesProto {
         string circadian_threshold_override = 50;
     }
 
+    oneof backup_password_oneof {
+        string backup_password = 56;
+    }
+
     TrimpMethodProto trimp_method = 52;
     float cheng_beta = 53;
     float itrimp_b = 54;

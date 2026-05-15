@@ -4,10 +4,15 @@ import android.net.Uri
 import com.gregor.lauritz.healthdashboard.domain.model.MetricType
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33])
 class WidgetDeepLinkRouterTest {
     private lateinit var router: WidgetDeepLinkRouter
 

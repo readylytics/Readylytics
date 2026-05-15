@@ -3,7 +3,6 @@ package com.gregor.lauritz.healthdashboard.widgets.glance
 import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.edit
-import androidx.glance.appwidget.updateAll
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetMode
@@ -92,8 +91,6 @@ object MediumWidgetUpdater {
             preferences[MediumWidgetKeys.metric2Status(widgetId)] = metric2Status.name
             preferences[MediumWidgetKeys.lastUpdate(widgetId)] = System.currentTimeMillis()
         }
-
-        MediumWidget().updateAll(context)
     }
 
     private suspend fun updateStepsProgressMode(
@@ -109,8 +106,6 @@ object MediumWidgetUpdater {
             preferences[MediumWidgetKeys.goalSteps(widgetId)] = DEFAULT_STEPS_GOAL
             preferences[MediumWidgetKeys.lastUpdate(widgetId)] = System.currentTimeMillis()
         }
-
-        MediumWidget().updateAll(context)
     }
 
     private suspend fun saveWidgetError(
@@ -122,7 +117,5 @@ object MediumWidgetUpdater {
             preferences[MediumWidgetKeys.error(widgetId)] = error
             preferences[MediumWidgetKeys.mode(widgetId)] = WidgetMode.DUAL_METRIC.name
         }
-
-        MediumWidget().updateAll(context)
     }
 }

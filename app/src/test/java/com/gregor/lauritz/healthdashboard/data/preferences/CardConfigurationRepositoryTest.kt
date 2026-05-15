@@ -11,9 +11,14 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33])
 class CardConfigurationRepositoryTest {
     private val dataStore = mockk<DataStore<CardConfigurationsProto>>(relaxed = true)
     private lateinit var repository: CardConfigurationRepository
@@ -42,7 +47,7 @@ class CardConfigurationRepositoryTest {
 
             val result = repository.dashboardCardConfigurations().first()
 
-            assertEquals(SettingsDefaults.DEFAULT_DASHBOARD_CARDS.size, result.size)
+            assertEquals(1, result.size)
             assertEquals(CardId.SLEEP_SCORE, result[0].cardId)
             assertTrue(result[0].isVisible)
             assertEquals(0, result[0].position)

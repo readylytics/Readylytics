@@ -42,7 +42,7 @@ class WidgetDataRepository
          * Get latest summary synchronously (for widget initial load).
          */
         suspend fun getLatestSummaryAsync(): DailySummary? =
-            dailySummaryDao.getByDate(System.currentTimeMillis())?.let {
+            dailySummaryDao.getLatest()?.let {
                 DailySummaryMapper.toDomain(it)
             }
 

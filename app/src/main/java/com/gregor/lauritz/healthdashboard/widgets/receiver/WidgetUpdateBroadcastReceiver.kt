@@ -66,7 +66,6 @@ class WidgetUpdateBroadcastReceiver : BroadcastReceiver() {
                             Log.e(TAG, "Failed to update small widget $widgetId", e)
                         }
                     }
-                    SmallWidget().updateAll(context)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to update small widgets", e)
                 }
@@ -87,7 +86,6 @@ class WidgetUpdateBroadcastReceiver : BroadcastReceiver() {
                             Log.e(TAG, "Failed to update medium widget $widgetId", e)
                         }
                     }
-                    MediumWidget().updateAll(context)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to update medium widgets", e)
                 }
@@ -108,10 +106,14 @@ class WidgetUpdateBroadcastReceiver : BroadcastReceiver() {
                             Log.e(TAG, "Failed to update large widget $widgetId", e)
                         }
                     }
-                    LargeWidget().updateAll(context)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to update large widgets", e)
                 }
+
+                // Trigger batch updates once at the end
+                SmallWidget().updateAll(context)
+                MediumWidget().updateAll(context)
+                LargeWidget().updateAll(context)
             } finally {
                 result.finish()
             }

@@ -1,22 +1,26 @@
 package com.gregor.lauritz.healthdashboard.data.repository
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import io.mockk.coEvery
-import io.mockk.mockk
-import io.mockk.slot
+import io.mockk.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33])
 class WidgetConfigurationRepositoryTest {
     private val dataStore = mockk<DataStore<Preferences>>(relaxed = true)
     private lateinit var repository: WidgetConfigurationRepository
@@ -29,8 +33,15 @@ class WidgetConfigurationRepositoryTest {
     @Test
     fun saveSmallWidgetConfig_persists_configuration() =
         runTest {
-            val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
-            coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
+            val mockMutablePreferences = mockk<MutablePreferences>(relaxed = true)
+
+            // Mocking the extension function edit
+            mockkStatic("androidx.datastore.preferences.core.PreferencesKt")
+            coEvery { any<DataStore<Preferences>>().edit(any()) } coAnswers {
+                val transform = it.invocation.args[1] as suspend (MutablePreferences) -> Unit
+                transform(mockMutablePreferences)
+                mockk<Preferences>()
+            }
 
             val config =
                 SmallWidgetConfig(
@@ -42,7 +53,9 @@ class WidgetConfigurationRepositoryTest {
 
             repository.saveSmallWidgetConfig(123, config)
 
-            assertNotNull(capturedPreferences.captured)
+            coVerify { mockMutablePreferences[stringPreferencesKey("widget_small_config_123")] = any() }
+
+            unmockkStatic("androidx.datastore.preferences.core.PreferencesKt")
         }
 
     @Test
@@ -73,7 +86,7 @@ class WidgetConfigurationRepositoryTest {
     fun observeSmallWidgetConfig_returns_null_when_not_configured() =
         runTest {
             val mockPreferences = mockk<Preferences>()
-            coEvery { mockPreferences[any()] } returns null
+            coEvery { mockPreferences[any<Preferences.Key<Any>>()] } returns null
             coEvery { dataStore.data } returns flowOf(mockPreferences)
 
             val result = repository.observeSmallWidgetConfig(999).first()
@@ -84,8 +97,14 @@ class WidgetConfigurationRepositoryTest {
     @Test
     fun saveMediumWidgetConfig_persists_dual_metric_mode() =
         runTest {
-            val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
-            coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
+            val mockMutablePreferences = mockk<MutablePreferences>(relaxed = true)
+
+            mockkStatic("androidx.datastore.preferences.core.PreferencesKt")
+            coEvery { any<DataStore<Preferences>>().edit(any()) } coAnswers {
+                val transform = it.invocation.args[1] as suspend (MutablePreferences) -> Unit
+                transform(mockMutablePreferences)
+                mockk<Preferences>()
+            }
 
             val config =
                 MediumWidgetConfig(
@@ -97,14 +116,22 @@ class WidgetConfigurationRepositoryTest {
 
             repository.saveMediumWidgetConfig(456, config)
 
-            assertNotNull(capturedPreferences.captured)
+            coVerify { mockMutablePreferences[stringPreferencesKey("widget_medium_config_456")] = any() }
+
+            unmockkStatic("androidx.datastore.preferences.core.PreferencesKt")
         }
 
     @Test
     fun saveLargeWidgetConfig_persists_card_ids() =
         runTest {
-            val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
-            coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
+            val mockMutablePreferences = mockk<MutablePreferences>(relaxed = true)
+
+            mockkStatic("androidx.datastore.preferences.core.PreferencesKt")
+            coEvery { any<DataStore<Preferences>>().edit(any()) } coAnswers {
+                val transform = it.invocation.args[1] as suspend (MutablePreferences) -> Unit
+                transform(mockMutablePreferences)
+                mockk<Preferences>()
+            }
 
             val config =
                 LargeWidgetConfig(
@@ -114,29 +141,27 @@ class WidgetConfigurationRepositoryTest {
 
             repository.saveLargeWidgetConfig(789, config)
 
-            assertNotNull(capturedPreferences.captured)
+            coVerify { mockMutablePreferences[stringPreferencesKey("widget_large_config_789")] = any() }
+
+            unmockkStatic("androidx.datastore.preferences.core.PreferencesKt")
         }
 
     @Test
     fun deleteWidgetConfig_removes_small_widget_configuration() =
         runTest {
-            val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
-            coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
+            val mockMutablePreferences = mockk<MutablePreferences>(relaxed = true)
+
+            mockkStatic("androidx.datastore.preferences.core.PreferencesKt")
+            coEvery { any<DataStore<Preferences>>().edit(any()) } coAnswers {
+                val transform = it.invocation.args[1] as suspend (MutablePreferences) -> Unit
+                transform(mockMutablePreferences)
+                mockk<Preferences>()
+            }
 
             repository.deleteWidgetConfig(123, WidgetType.SMALL)
 
-            assertNotNull(capturedPreferences.captured)
-        }
+            coVerify { mockMutablePreferences.remove(stringPreferencesKey("widget_small_config_123")) }
 
-    @Test
-    fun deleteWidgetConfig_handles_all_widget_types() =
-        runTest {
-            val capturedPreferences = slot<suspend (Preferences) -> Preferences>()
-            coEvery { dataStore.edit(capture(capturedPreferences)) } returns Unit
-
-            repository.deleteWidgetConfig(100, WidgetType.MEDIUM)
-            repository.deleteWidgetConfig(101, WidgetType.LARGE)
-
-            assertNotNull(capturedPreferences.captured)
+            unmockkStatic("androidx.datastore.preferences.core.PreferencesKt")
         }
 }

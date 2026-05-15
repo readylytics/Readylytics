@@ -34,6 +34,9 @@ interface DailySummaryDao {
     @Upsert
     suspend fun upsertAll(summaries: List<DailySummaryEntity>)
 
+    @Query("SELECT * FROM daily_summaries ORDER BY dateMidnightMs DESC LIMIT 1")
+    suspend fun getLatest(): DailySummaryEntity?
+
     @Query("SELECT * FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
     suspend fun getByDate(dateMidnightMs: Long): DailySummaryEntity?
 

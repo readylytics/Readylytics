@@ -61,6 +61,7 @@ data class UserPreferences(
     val banisterMultiplier: Float = PhysiologyProfile.GENERAL.banisterMultiplier,
     val chengBeta: Float = PhysiologyProfile.GENERAL.defaultChengBeta,
     val itrimB: Float = PhysiologyProfile.GENERAL.defaultItrimB,
+    val backupPassword: String? = null,
 )
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
@@ -116,6 +117,7 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         physiologyProfile = profile,
         installDate = installDate,
         circadianThresholdOverride = if (hasCircadianThresholdOverride()) circadianThresholdOverride else null,
+        backupPassword = if (hasBackupPassword()) backupPassword else null,
         dynamicColorEnabled = dynamicColorEnabled,
         trimpModel =
             when (trimpMethod) {

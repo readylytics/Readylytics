@@ -3,7 +3,6 @@ package com.gregor.lauritz.healthdashboard.widgets.glance
 import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.edit
-import androidx.glance.appwidget.updateAll
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository
 import com.gregor.lauritz.healthdashboard.domain.model.MetricType
@@ -70,9 +69,6 @@ object SmallWidgetUpdater {
                 preferences[SmallWidgetKeys.trend(widgetId)] = it
             }
         }
-
-        // Trigger widget update
-        SmallWidget().updateAll(context)
     }
 
     private suspend fun saveWidgetError(
@@ -84,7 +80,5 @@ object SmallWidgetUpdater {
             preferences[SmallWidgetKeys.error(widgetId)] = error
             preferences[SmallWidgetKeys.status(widgetId)] = "CALIBRATING"
         }
-
-        SmallWidget().updateAll(context)
     }
 }

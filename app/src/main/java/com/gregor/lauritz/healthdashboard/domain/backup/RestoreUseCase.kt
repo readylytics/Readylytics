@@ -9,6 +9,8 @@ import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.data.security.BackupEncryptionHelper
+import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import com.gregor.lauritz.healthdashboard.data.security.SqlCipherKeyManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +32,8 @@ class RestoreUseCase
         private val healthDatabase: HealthDatabase,
         private val settingsRepo: SettingsRepository,
         private val sqlCipherKeyManager: SqlCipherKeyManager,
+        private val encryptionManager: EncryptionManager,
+        private val backupEncryptionHelper: BackupEncryptionHelper,
     ) {
         sealed class RestoreResult {
             data object Success : RestoreResult()
@@ -59,8 +63,31 @@ class RestoreUseCase
                         files.firstOrNull { it.name == "health_backup.zip" }
                             ?: throw IllegalStateException("No backup found in Google Drive")
 
+                    val encryptedZip = File(context.cacheDir, "restore_temp.zip.enc")
                     val zipDest = File(context.cacheDir, "restore_temp.zip")
-                    driveRepository.downloadBackup(accessToken, backupFile.id, zipDest)
+                    driveRepository.downloadBackup(accessToken, backupFile.id, encryptedZip)
+
+                    // Decrypt the ZIP
+                    val prefs = settingsRepo.userPreferences.first()
+                    val backupPassword =
+                        prefs.backupPassword?.let {
+                            encryptionManager.decrypt(it)
+                        }
+
+                    val ciphertext = encryptedZip.readBytes()
+                    val plaintext =
+                        if (backupPassword != null) {
+                            try {
+                                backupEncryptionHelper.decrypt(ciphertext, backupPassword)
+                            } catch (e: Exception) {
+                                // If password decryption fails, try Keystore (legacy)
+                                encryptionManager.decrypt(ciphertext)
+                            }
+                        } else {
+                            encryptionManager.decrypt(ciphertext)
+                        }
+                    zipDest.writeBytes(plaintext)
+                    encryptedZip.delete()
 
                     val unzipDir =
                         File(context.cacheDir, "restore_unzipped").also {
@@ -100,14 +127,21 @@ class RestoreUseCase
                     val walSrc = File(unzipDir, "health.db-wal")
                     val shmSrc = File(unzipDir, "health.db-shm")
 
+                    if (walSrc.exists()) walSrc.copyTo(File(dbNew.path + "-wal"), overwrite = true)
+                    if (shmSrc.exists()) shmSrc.copyTo(File(dbNew.path + "-shm"), overwrite = true)
+
                     if (dbDest.exists()) dbDest.renameTo(dbBak)
                     dbNew.renameTo(dbDest)
 
-                    // Re-encrypt the restored database with the local Keystore key
-                    sqlCipherKeyManager.migrateIfNeeded(dbDest)
+                    // Also rename wal/shm if they exist
+                    val walNew = File(dbNew.path + "-wal")
+                    val shmNew = File(dbNew.path + "-shm")
+                    if (walNew.exists()) walNew.renameTo(File(dbDest.path + "-wal"))
+                    if (shmNew.exists()) shmNew.renameTo(File(dbDest.path + "-shm"))
 
-                    if (walSrc.exists()) walSrc.copyTo(File("${dbDest.path}-wal"), overwrite = true)
-                    if (shmSrc.exists()) shmSrc.copyTo(File("${dbDest.path}-shm"), overwrite = true)
+                    // Re-encrypt the restored database with the local Keystore key
+                    // This will also handle merging and deleting the plaintext WAL/SHM files
+                    sqlCipherKeyManager.migrateIfNeeded(dbDest)
 
                     // Only clean up the backup once the new DB is in place
                     dbBak.delete()
@@ -213,10 +247,14 @@ class RestoreUseCase
             zipFile: File,
             destDir: File,
         ) {
+            val canonicalDest = destDir.canonicalPath
             ZipInputStream(zipFile.inputStream().buffered()).use { zis ->
                 var entry = zis.nextEntry
                 while (entry != null) {
                     val outFile = File(destDir, entry.name)
+                    if (!outFile.canonicalPath.startsWith(canonicalDest + File.separator)) {
+                        throw SecurityException("Malicious ZIP entry: ${entry.name}")
+                    }
                     outFile.outputStream().use { zis.copyTo(it) }
                     zis.closeEntry()
                     entry = zis.nextEntry

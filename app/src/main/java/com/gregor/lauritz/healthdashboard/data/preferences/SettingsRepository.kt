@@ -399,4 +399,14 @@ class SettingsRepository
         suspend fun updateDynamicColorEnabled(enabled: Boolean) {
             dataStore.updateData { it.toBuilder().setDynamicColorEnabled(enabled).build() }
         }
+
+        suspend fun updateBackupPassword(encryptedPassword: String?) {
+            dataStore.updateData { builder ->
+                if (encryptedPassword != null) {
+                    builder.toBuilder().setBackupPassword(encryptedPassword).build()
+                } else {
+                    builder.toBuilder().clearBackupPassword().build()
+                }
+            }
+        }
     }

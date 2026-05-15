@@ -17,7 +17,7 @@ import org.junit.Test
 class ForegroundSyncControllerTest {
     private val settingsRepo = mockk<SettingsRepository>()
     private val syncUseCase = mockk<HealthSyncUseCase>()
-    private val controller = ForegroundSyncController(settingsRepo, syncUseCase)
+    private val controller = ForegroundSyncController(mockk(relaxed = true), settingsRepo, syncUseCase)
 
     @Test
     fun `evaluateAndSync should not run multiple syncs concurrently`() =

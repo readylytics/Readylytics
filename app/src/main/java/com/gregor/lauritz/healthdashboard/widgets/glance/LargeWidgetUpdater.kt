@@ -3,7 +3,6 @@ package com.gregor.lauritz.healthdashboard.widgets.glance
 import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.edit
-import androidx.glance.appwidget.updateAll
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.repository.WidgetDataRepository
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
@@ -97,8 +96,6 @@ object LargeWidgetUpdater {
 
             preferences[LargeWidgetKeys.lastUpdate(widgetId)] = System.currentTimeMillis()
         }
-
-        LargeWidget().updateAll(context)
     }
 
     private suspend fun saveWidgetError(
@@ -109,8 +106,6 @@ object LargeWidgetUpdater {
         WidgetDataStoreProvider.getDataStore(context).edit { preferences ->
             preferences[LargeWidgetKeys.error(widgetId)] = error
         }
-
-        LargeWidget().updateAll(context)
     }
 
     private fun extractCardData(

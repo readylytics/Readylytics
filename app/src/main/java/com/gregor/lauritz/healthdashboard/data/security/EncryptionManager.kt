@@ -40,7 +40,7 @@ class EncryptionManager
          * Encrypts a string and returns a Base64 encoded ciphertext.
          */
         fun encrypt(plaintext: String): String {
-            val ciphertext = aead.encrypt(plaintext.toByteArray(Charsets.UTF_8), null)
+            val ciphertext = encrypt(plaintext.toByteArray(Charsets.UTF_8))
             return Base64.encodeToString(ciphertext, Base64.NO_WRAP)
         }
 
@@ -49,9 +49,19 @@ class EncryptionManager
          */
         fun decrypt(ciphertext: String): String {
             val decoded = Base64.decode(ciphertext, Base64.NO_WRAP)
-            val plaintext = aead.decrypt(decoded, null)
+            val plaintext = decrypt(decoded)
             return String(plaintext, Charsets.UTF_8)
         }
+
+        /**
+         * Encrypts a ByteArray and returns the ciphertext.
+         */
+        fun encrypt(data: ByteArray): ByteArray = aead.encrypt(data, null)
+
+        /**
+         * Decrypts a ciphertext ByteArray and returns the plaintext.
+         */
+        fun decrypt(data: ByteArray): ByteArray = aead.decrypt(data, null)
 
         companion object {
             private const val KEYSET_NAME = "master_keyset"

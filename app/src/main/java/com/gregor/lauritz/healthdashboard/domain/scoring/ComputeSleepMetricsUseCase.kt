@@ -402,33 +402,6 @@ class ComputeSleepMetricsUseCase
             )
         }
 
-        private suspend fun isHrCoverageValid(
-            sessionStartMs: Long,
-            sessionEndMs: Long,
-            durationMinutes: Int,
-        ): Boolean {
-            if (durationMinutes < ScoringConstants.MIN_VALID_SLEEP_DURATION_MINUTES) return false
-            val hrRecords = heartRateDao.getByTimeRange(sessionStartMs, sessionEndMs)
-            if (hrRecords.isEmpty()) return false
-
-            val sleepDurationMs = sessionEndMs - sessionStartMs
-            val coverageMs =
-                hrRecords.fold(0L) { acc, record ->
-                    val nextTime =
-                        (
-                            hrRecords
-                                .dropWhile { it.timestampMs != record.timestampMs }
-                                .drop(1)
-                                .firstOrNull()
-                                ?.timestampMs
-                        ) ?: (record.timestampMs + 60000L)
-                    val coverage = minOf(nextTime - record.timestampMs, sleepDurationMs)
-                    acc + coverage
-                }
-            val coveragePercent = (coverageMs.toFloat() / sleepDurationMs.toFloat()) * 100f
-            return coveragePercent >= 70f
-        }
-
         private fun isHrCoverageValidUsingRecords(
             sessionStartMs: Long,
             sessionEndMs: Long,
@@ -440,15 +413,14 @@ class ComputeSleepMetricsUseCase
             if (filtered.isEmpty()) return false
 
             val sleepDurationMs = sessionEndMs - sessionStartMs
-            val coverageMs =
-                if (filtered.size > 1) {
-                    filtered.zipWithNext { current, next -> next.timestampMs - current.timestampMs }.sum()
-                } else {
-                    0L
-                }
-            // Assuming the last record covers a 1-minute interval, matching the original logic's fallback.
-            val totalCoverage = (coverageMs + if (filtered.isNotEmpty()) 60000L else 0L).coerceAtMost(sleepDurationMs)
-            val coveragePercent = (coverageMs.toFloat() / sleepDurationMs.toFloat()) * 100f
-            return coveragePercent >= 70f
+            var coverageMs = 0L
+            for (i in 0 until filtered.size - 1) {
+                coverageMs += filtered[i + 1].timestampMs - filtered[i].timestampMs
+            }
+            // Add 1 minute for the last sample
+            coverageMs += 60000L
+
+            val totalCoverage = coverageMs.coerceAtMost(sleepDurationMs)
+            return (totalCoverage.toFloat() / sleepDurationMs.toFloat()) >= 0.7f
         }
     }

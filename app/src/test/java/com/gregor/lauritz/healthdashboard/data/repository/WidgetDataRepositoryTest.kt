@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.data.repository
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -26,7 +27,11 @@ class WidgetDataRepositoryTest {
     @Test
     fun observeLatestSummary_returns_most_recent_summary() =
         runTest {
-            val mockEntity = mockk<com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity>()
+            val mockEntity =
+                mockk<com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity>(
+                    relaxed = true,
+                )
+            every { mockEntity.dateMidnightMs } returns 1609459200000L
             coEvery { dailySummaryDao.observeLatest() } returns flowOf(mockEntity)
 
             val result = repository.observeLatestSummary().first()
@@ -47,8 +52,12 @@ class WidgetDataRepositoryTest {
     @Test
     fun observeSummaryByDate_returns_summary_for_specific_date() =
         runTest {
-            val mockEntity = mockk<com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity>()
+            val mockEntity =
+                mockk<com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity>(
+                    relaxed = true,
+                )
             val dateMidnightMs = 1609459200000L // 2021-01-01 00:00:00 UTC
+            every { mockEntity.dateMidnightMs } returns dateMidnightMs
 
             coEvery { dailySummaryDao.observeByDate(dateMidnightMs) } returns flowOf(mockEntity)
 
@@ -72,8 +81,12 @@ class WidgetDataRepositoryTest {
     @Test
     fun getLatestSummaryAsync_returns_current_data() =
         runTest {
-            val mockEntity = mockk<com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity>()
-            coEvery { dailySummaryDao.getLatestAsync() } returns mockEntity
+            val mockEntity =
+                mockk<com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity>(
+                    relaxed = true,
+                )
+            every { mockEntity.dateMidnightMs } returns 1609459200000L
+            coEvery { dailySummaryDao.getLatest() } returns mockEntity
 
             val result = repository.getLatestSummaryAsync()
 
@@ -83,7 +96,7 @@ class WidgetDataRepositoryTest {
     @Test
     fun getLatestSummaryAsync_returns_null_when_no_data() =
         runTest {
-            coEvery { dailySummaryDao.getLatestAsync() } returns null
+            coEvery { dailySummaryDao.getLatest() } returns null
 
             val result = repository.getLatestSummaryAsync()
 
@@ -94,9 +107,13 @@ class WidgetDataRepositoryTest {
     fun getSummaryByDateAsync_returns_summary_for_date() =
         runTest {
             val dateMidnightMs = 1609459200000L
-            val mockEntity = mockk<com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity>()
+            val mockEntity =
+                mockk<com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity>(
+                    relaxed = true,
+                )
+            every { mockEntity.dateMidnightMs } returns dateMidnightMs
 
-            coEvery { dailySummaryDao.getByDateAsync(dateMidnightMs) } returns mockEntity
+            coEvery { dailySummaryDao.getByDate(dateMidnightMs) } returns mockEntity
 
             val result = repository.getSummaryByDateAsync(dateMidnightMs)
 
@@ -107,7 +124,7 @@ class WidgetDataRepositoryTest {
     fun getSummaryByDateAsync_returns_null_when_no_data() =
         runTest {
             val dateMidnightMs = 1609459200000L
-            coEvery { dailySummaryDao.getByDateAsync(dateMidnightMs) } returns null
+            coEvery { dailySummaryDao.getByDate(dateMidnightMs) } returns null
 
             val result = repository.getSummaryByDateAsync(dateMidnightMs)
 
@@ -120,9 +137,21 @@ class WidgetDataRepositoryTest {
             val fromMidnightMs = 1609459200000L
             val mockEntities =
                 listOf(
-                    mockk<com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity>(),
-                    mockk<com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity>(),
-                    mockk<com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity>(),
+                    mockk<com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity>(
+                        relaxed = true,
+                    ).also {
+                        every { it.dateMidnightMs } returns fromMidnightMs
+                    },
+                    mockk<com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity>(
+                        relaxed = true,
+                    ).also {
+                        every { it.dateMidnightMs } returns fromMidnightMs + 86400000L
+                    },
+                    mockk<com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity>(
+                        relaxed = true,
+                    ).also {
+                        every { it.dateMidnightMs } returns fromMidnightMs + 172800000L
+                    },
                 )
 
             coEvery { dailySummaryDao.observeSince(fromMidnightMs) } returns flowOf(mockEntities)
