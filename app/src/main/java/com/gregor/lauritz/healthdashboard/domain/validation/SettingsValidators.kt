@@ -17,4 +17,11 @@ object SettingsValidators {
     val RHR_BASELINE_RULE = IntRangeRule(30, 100, "RHR: 30–100 bpm")
 
     val HEART_RATE_RULE = IntRangeRule(1, 220, "HR: 1–220 bpm")
+
+    /**
+     * Zone-edge bpm input rule — same numeric range as HEART_RATE_RULE but
+     * named explicitly so call sites read clearly. Cross-field validation
+     * (monotonicity, HR max cap, RHR floor) is performed by [ZoneConfigValidator].
+     */
+    val ZONE_EDGE_BPM_RULE = IntRangeRule(1, 220, "Zone edge: 1–220 bpm")
 }
