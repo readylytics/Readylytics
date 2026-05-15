@@ -25,7 +25,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
         WorkoutRecordEntity::class,
         DailySummaryEntity::class,
     ],
-    version = 18,
+    version = 20,
 )
 abstract class HealthDatabase : RoomDatabase() {
     abstract fun sleepSessionDao(): SleepSessionDao
@@ -414,6 +414,46 @@ abstract class HealthDatabase : RoomDatabase() {
                         "ALTER TABLE heart_rate_records ADD COLUMN deviceName TEXT",
                         "ALTER TABLE hrv_records ADD COLUMN deviceName TEXT",
                         "ALTER TABLE workout_records ADD COLUMN deviceName TEXT",
+                    )
+
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    sql.forEach { db.execSQL(it) }
+                }
+
+                override fun migrate(connection: SQLiteConnection) {
+                    sql.forEach { connection.execSQL(it) }
+                }
+            }
+
+        // Phase 0.3: device-aware sleep stage validation persistence.
+        val MIGRATION_18_19 =
+            object : Migration(18, 19) {
+                private val sql =
+                    listOf(
+                        "ALTER TABLE sleep_sessions ADD COLUMN stageValidationWarning TEXT",
+                        "ALTER TABLE sleep_sessions ADD COLUMN deviceSource TEXT",
+                        "ALTER TABLE sleep_sessions ADD COLUMN stagesSuspicious INTEGER NOT NULL DEFAULT 0",
+                        "ALTER TABLE sleep_sessions ADD COLUMN stagesInvalid INTEGER NOT NULL DEFAULT 0",
+                    )
+
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    sql.forEach { db.execSQL(it) }
+                }
+
+                override fun migrate(connection: SQLiteConnection) {
+                    sql.forEach { connection.execSQL(it) }
+                }
+            }
+
+        // Phase 0.4 + 0.5: readiness cap reasoning + timezone offset detection columns.
+        val MIGRATION_19_20 =
+            object : Migration(19, 20) {
+                private val sql =
+                    listOf(
+                        "ALTER TABLE daily_summaries ADD COLUMN readinessCappingReason TEXT",
+                        "ALTER TABLE daily_summaries ADD COLUMN readinessRecommendation TEXT",
+                        "ALTER TABLE sleep_sessions ADD COLUMN timezoneJumpDetected INTEGER NOT NULL DEFAULT 0",
+                        "ALTER TABLE sleep_sessions ADD COLUMN dstTransitionDetected INTEGER NOT NULL DEFAULT 0",
                     )
 
                 override fun migrate(db: SupportSQLiteDatabase) {

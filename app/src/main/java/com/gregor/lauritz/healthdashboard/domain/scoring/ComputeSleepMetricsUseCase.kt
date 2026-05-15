@@ -182,6 +182,8 @@ class ComputeSleepMetricsUseCase
                     deepMinutes = session.deepSleepMinutes,
                     remMinutes = session.remSleepMinutes,
                     hrCoverageValid = currentHrCoverage,
+                    userAge = prefs.age,
+                    deviceSource = session.deviceName,
                 )
             val stagesSuspicious = !validation.stagesValid || validation.stagesSuspicious
 

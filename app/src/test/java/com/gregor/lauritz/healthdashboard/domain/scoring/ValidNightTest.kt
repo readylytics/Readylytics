@@ -79,25 +79,25 @@ class ValidNightTest {
     }
 
     @Test
-    fun `deep over 40 percent is invalid`() {
-        // 200 / 480 = 41.7% → invalid
+    fun `deep over age-banded threshold is invalid`() {
+        // 200 / 480 = 41.7% → invalid (above 28% age<40 band)
         val result = validate(deepMinutes = 200, remMinutes = 80, durationMinutes = 480)
         assertFalse(result.stagesValid)
     }
 
     @Test
-    fun `rem over 45 percent is invalid`() {
-        // 220 / 480 = 45.8% → invalid
+    fun `rem over age-banded threshold is invalid`() {
+        // 220 / 480 = 45.8% → invalid (above 28% age<40 band)
         val result = validate(deepMinutes = 60, remMinutes = 220, durationMinutes = 480)
         assertFalse(result.stagesValid)
     }
 
     @Test
-    fun `deep + rem over 70 percent is suspicious but not invalid`() {
-        // deep=38%, rem=33% → combined=71% → suspicious; each under individual limit
-        val result = validate(deepMinutes = 182, remMinutes = 160, durationMinutes = 480)
+    fun `deep close to band ceiling but rem normal is suspicious when sum reaches 70 percent`() {
+        // deep=27% (under 28%), rem=24% → sum=51% → valid and not suspicious
+        val result = validate(deepMinutes = 130, remMinutes = 115, durationMinutes = 480)
         assertTrue(result.stagesValid)
-        assertTrue(result.stagesSuspicious)
+        assertFalse(result.stagesSuspicious)
     }
 
     // ─── canContributeToBaseline ───────────────────────────────────────────────

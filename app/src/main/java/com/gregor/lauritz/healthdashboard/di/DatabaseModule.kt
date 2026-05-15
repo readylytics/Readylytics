@@ -65,6 +65,8 @@ object DatabaseModule {
                     HealthDatabase.MIGRATION_15_16,
                     HealthDatabase.MIGRATION_16_17,
                     HealthDatabase.MIGRATION_17_18,
+                    HealthDatabase.MIGRATION_18_19,
+                    HealthDatabase.MIGRATION_19_20,
                 ).addCallback(
                     object : RoomDatabase.Callback() {
                         override fun onOpen(db: SupportSQLiteDatabase) {

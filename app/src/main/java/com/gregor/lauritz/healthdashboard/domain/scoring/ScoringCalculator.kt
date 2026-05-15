@@ -143,6 +143,11 @@ interface ScoringCalculator {
         val stagesValid: Boolean,
         val stagesSuspicious: Boolean,
         val hrCoverageValid: Boolean = true,
+        /**
+         * Human-readable reason the stages were flagged suspicious or invalid
+         * (e.g. "REM 28% above age band 26%"). Null when stages are healthy.
+         */
+        val stagesSuspiciousReason: String? = null,
     ) {
         val canContributeToBaseline: Boolean
             get() = rmssdValid && rhrValid && durationValid && hrCoverageValid
@@ -155,6 +160,8 @@ interface ScoringCalculator {
         deepMinutes: Int,
         remMinutes: Int,
         hrCoverageValid: Boolean = true,
+        userAge: Int = 30,
+        deviceSource: String? = null,
     ): NightValidationResult
 }
 
@@ -169,7 +176,14 @@ interface ScoringCalculator {
 @Singleton
 class ScoringCalculatorImpl
     @Inject
-    constructor() : ScoringCalculator {
+    constructor(
+        private val sleepArchitectureValidator: SleepArchitectureValidator,
+    ) : ScoringCalculator {
+        /**
+         * Convenience secondary constructor: lets unit tests instantiate without
+         * Hilt by relying on the default-constructible [SleepArchitectureValidator].
+         */
+        constructor() : this(SleepArchitectureValidator())
         override fun computeStrainRatio(
             atl: Float,
             ctl: Float,
@@ -556,6 +570,8 @@ class ScoringCalculatorImpl
             deepMinutes: Int,
             remMinutes: Int,
             hrCoverageValid: Boolean,
+            userAge: Int,
+            deviceSource: String?,
         ): ScoringCalculator.NightValidationResult {
             val rmssdValid =
                 rmssdMs != null &&
@@ -567,20 +583,25 @@ class ScoringCalculatorImpl
 
             val deepFrac = if (durationMinutes > 0) deepMinutes / durationMinutes.toFloat() else 0f
             val remFrac = if (durationMinutes > 0) remMinutes / durationMinutes.toFloat() else 0f
-            val stagesInvalid =
-                deepFrac > ScoringConstants.MAX_VALID_DEEP_FRACTION ||
-                    remFrac > ScoringConstants.MAX_VALID_REM_FRACTION
-            val stagesSuspicious =
-                !stagesInvalid &&
-                    (deepFrac + remFrac) > ScoringConstants.MAX_VALID_DEEP_REM_SUM
+
+            // Age-banded + device-corrected validation per Ohayon 2004; replaces
+            // hardcoded global thresholds. REF: SleepArchitectureValidator.
+            val archResult =
+                sleepArchitectureValidator.evaluate(
+                    deepFraction = deepFrac,
+                    remFraction = remFrac,
+                    age = userAge,
+                    deviceSource = deviceSource,
+                )
 
             return ScoringCalculator.NightValidationResult(
                 rmssdValid = rmssdValid,
                 rhrValid = rhrValid,
                 durationValid = durationValid,
-                stagesValid = !stagesInvalid,
-                stagesSuspicious = stagesSuspicious,
+                stagesValid = archResult.valid,
+                stagesSuspicious = archResult.suspicious,
                 hrCoverageValid = hrCoverageValid,
+                stagesSuspiciousReason = archResult.warning,
             )
         }
     }

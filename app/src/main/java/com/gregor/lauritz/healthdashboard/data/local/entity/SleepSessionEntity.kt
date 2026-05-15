@@ -25,4 +25,27 @@ data class SleepSessionEntity(
     val startZoneOffsetSeconds: Int? = null,
     val endZoneOffsetSeconds: Int? = null,
     val deviceName: String? = null,
+    /**
+     * Optional human-readable warning produced by [com.gregor.lauritz.healthdashboard.domain.scoring.SleepArchitectureValidator]
+     * when the stage architecture was flagged as suspicious or invalid (Phase 0.3).
+     */
+    val stageValidationWarning: String? = null,
+    /**
+     * Normalised device source label used to apply device-specific stage corrections
+     * (e.g. "fitbit", "oura", "apple_watch", "garmin"). Currently equal to
+     * [deviceName] in lowercase; kept as a separate column so future ingestion
+     * pipelines can map differently without changing the user-visible name.
+     */
+    val deviceSource: String? = null,
+    /**
+     * True iff [SleepArchitectureValidator.isSuspiciousArchitecture] returned true
+     * for this night. Persisted so historical UI can render the flag without
+     * re-running validation.
+     */
+    val stagesSuspicious: Boolean = false,
+    /**
+     * True iff [SleepArchitectureValidator.isValidArchitecture] returned false
+     * for this night, meaning the night should NOT contribute to baselines.
+     */
+    val stagesInvalid: Boolean = false,
 )

@@ -29,6 +29,7 @@ object SleepDataMapper {
         val timeInBedMinutes = ((session.endTime.toEpochMilli() - session.startTime.toEpochMilli()) / 60_000L).toInt()
         val efficiency = totalSleepMinutes.toFloat() / max(timeInBedMinutes, 1) * 100f
 
+        val deviceLabel = DeviceLabel.from(session.metadata.device, session.metadata.dataOrigin)
         return SleepSessionEntity(
             id = session.metadata.id,
             startTime = session.startTime.toEpochMilli(),
@@ -42,7 +43,9 @@ object SleepDataMapper {
             sleepScore = null,
             startZoneOffsetSeconds = session.startZoneOffset?.totalSeconds,
             endZoneOffsetSeconds = session.endZoneOffset?.totalSeconds,
-            deviceName = DeviceLabel.from(session.metadata.device, session.metadata.dataOrigin),
+            deviceName = deviceLabel,
+            // Phase 0.3: normalise device source label for validator lookup.
+            deviceSource = deviceLabel?.lowercase()?.trim(),
         )
     }
 }
