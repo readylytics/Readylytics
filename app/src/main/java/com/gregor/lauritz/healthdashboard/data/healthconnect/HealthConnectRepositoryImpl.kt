@@ -19,6 +19,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -175,7 +176,7 @@ class HealthConnectRepositoryImpl
                     com.gregor.lauritz.healthdashboard.domain.util.logD(
                         "HealthConnectRepository",
                     ) { "Discovering devices in $windowDays day window..." }
-                    val from = Instant.now().minusSeconds(windowDays.toLong() * 86400)
+                    val from = Instant.now().minusSeconds(windowDays.toLong() * TimeUnit.DAYS.toSeconds(1))
                     val to = Instant.now()
 
                     val devices = mutableSetOf<String>()

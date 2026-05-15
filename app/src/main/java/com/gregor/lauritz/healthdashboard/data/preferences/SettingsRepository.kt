@@ -35,6 +35,8 @@ class SettingsRepository
 
         private fun Int.toValidAge() = coerceIn(1, 120)
 
+        private var cachedAvailableDevices: List<String>? = null
+
         private fun Float.toValidHrvOptimal() = coerceIn(1.0f, 1.2f)
 
         private fun Float.toValidHrvWarning() = coerceIn(0.8f, 1.0f)
@@ -424,8 +426,10 @@ class SettingsRepository
             }
         }
 
-        suspend fun getAvailableDevices(): List<String> =
-            coroutineScope {
+        suspend fun getAvailableDevices(): List<String> {
+            cachedAvailableDevices?.let { return it }
+
+            return coroutineScope {
                 val dbDevices =
                     async {
                         (
@@ -436,10 +440,16 @@ class SettingsRepository
                         ).filterNot { it.isBlank() }
                             .distinct()
                     }
-                val hcDevices = async { healthConnectRepository.discoverDevices(windowDays = 60) }
+                val hcDevices = async { healthConnectRepository.discoverDevices(windowDays = 14) }
 
                 (dbDevices.await() + hcDevices.await())
                     .distinct()
                     .sorted()
+                    .also { cachedAvailableDevices = it }
             }
+        }
+
+        fun clearDeviceCache() {
+            cachedAvailableDevices = null
+        }
     }

@@ -226,15 +226,7 @@ class HealthSyncUseCase
         ): List<T> {
             if (primaryDevice == null || records.isEmpty()) return records
 
-            val primary = mutableListOf<T>()
-            val secondary = mutableListOf<T>()
-            for (record in records) {
-                if (getDeviceName(record) == primaryDevice) {
-                    primary.add(record)
-                } else {
-                    secondary.add(record)
-                }
-            }
+            val (primary, secondary) = records.partition { getDeviceName(it) == primaryDevice }
 
             if (primary.isEmpty()) {
                 logD("DeviceFilter") {
@@ -245,13 +237,39 @@ class HealthSyncUseCase
             if (secondary.isEmpty()) return primary
 
             val zoneId = ZoneId.systemDefault()
+            var lastTimestamp = -1L
+            var lastLocalDate: LocalDate? = null
+
             val primaryDays =
                 primary.mapTo(mutableSetOf()) {
-                    Instant.ofEpochMilli(getTimestamp(it)).atZone(zoneId).toLocalDate()
+                    val ts = getTimestamp(it)
+                    if (ts == lastTimestamp && lastLocalDate != null) {
+                        lastLocalDate!!
+                    } else {
+                        val date = Instant.ofEpochMilli(ts).atZone(zoneId).toLocalDate()
+                        lastTimestamp = ts
+                        lastLocalDate = date
+                        date
+                    }
                 }
+
+            // Reset for secondary filtering
+            lastTimestamp = -1L
+            lastLocalDate = null
+
             val fallback =
                 secondary.filter {
-                    Instant.ofEpochMilli(getTimestamp(it)).atZone(zoneId).toLocalDate() !in primaryDays
+                    val ts = getTimestamp(it)
+                    val date =
+                        if (ts == lastTimestamp && lastLocalDate != null) {
+                            lastLocalDate!!
+                        } else {
+                            val d = Instant.ofEpochMilli(ts).atZone(zoneId).toLocalDate()
+                            lastTimestamp = ts
+                            lastLocalDate = d
+                            d
+                        }
+                    date !in primaryDays
                 }
 
             if (fallback.isNotEmpty()) {

@@ -59,6 +59,9 @@ class SqlCipherKeyManager
             return try {
                 val keyHex = decryptedKey.toHex()
                 val rawKeyBytes = "x'$keyHex'".toByteArray(Charsets.UTF_8)
+                // We must NOT fill rawKeyBytes with zeros here, because SupportOpenHelperFactory
+                // holds a reference to the array and uses it when Room actually opens the database.
+                // The factory clears the array automatically after the database is opened.
                 net.zetetic.database.sqlcipher
                     .SupportOpenHelperFactory(rawKeyBytes)
             } finally {

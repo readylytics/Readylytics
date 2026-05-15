@@ -35,6 +35,7 @@ class CloudSettingsViewModel
 
         fun refreshAvailableDevices() {
             viewModelScope.launch {
+                settingsRepo.clearDeviceCache()
                 _availableDevices.value = settingsRepo.getAvailableDevices()
             }
         }
