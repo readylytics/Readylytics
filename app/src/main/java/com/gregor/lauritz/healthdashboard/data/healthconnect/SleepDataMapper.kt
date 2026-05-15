@@ -42,7 +42,7 @@ object SleepDataMapper {
             sleepScore = null,
             startZoneOffsetSeconds = session.startZoneOffset?.totalSeconds,
             endZoneOffsetSeconds = session.endZoneOffset?.totalSeconds,
-            deviceName = DeviceLabel.from(session.metadata.device),
+            deviceName = DeviceLabel.from(session.metadata.device, session.metadata.dataOrigin),
         )
     }
 }

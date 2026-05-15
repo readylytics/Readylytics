@@ -85,7 +85,7 @@ object WorkoutMapper {
             zone5Minutes = zoneMinutes[4],
             trimp = trimp,
             avgHr = avgHr,
-            deviceName = DeviceLabel.from(session.metadata.device),
+            deviceName = DeviceLabel.from(session.metadata.device, session.metadata.dataOrigin),
         )
     }
 }

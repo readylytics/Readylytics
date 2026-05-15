@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.data.healthconnect
 
+import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.records.metadata.Device
 
 /**
@@ -8,19 +9,50 @@ import androidx.health.connect.client.records.metadata.Device
  *
  * Health Connect's [Device] exposes `manufacturer` and `model` plus a numeric
  * `type`. We prefer the combination "manufacturer model" when both are present,
- * falling back to whichever single value is available. Returns null when the
- * device metadata carries no useful identification (e.g. manually-entered data).
+ * falling back to whichever single value is available. If device info is absent,
+ * we fall back to a hardcoded mapping of known Health Connect package names.
  */
 internal object DeviceLabel {
-    fun from(device: Device?): String? {
-        if (device == null) return null
-        val manufacturer = device.manufacturer?.trim().orEmpty()
-        val model = device.model?.trim().orEmpty()
-        return when {
-            manufacturer.isNotEmpty() && model.isNotEmpty() -> "$manufacturer $model"
-            model.isNotEmpty() -> model
-            manufacturer.isNotEmpty() -> manufacturer
-            else -> null
+    fun from(
+        device: Device?,
+        dataOrigin: DataOrigin,
+    ): String {
+        val manufacturer = device?.manufacturer?.trim()
+        val model = device?.model?.trim()
+
+        if (!manufacturer.isNullOrEmpty() && !model.isNullOrEmpty()) {
+            return "$manufacturer $model"
         }
+        if (!model.isNullOrEmpty()) {
+            return model
+        }
+        if (!manufacturer.isNullOrEmpty()) {
+            return manufacturer
+        }
+
+        // Fallback to package name if device info is not useful
+        return mapPackageName(dataOrigin.packageName)
     }
+
+    private fun mapPackageName(packageName: String): String =
+        when (packageName) {
+            "com.google.android.apps.fitness" -> "Google Fit"
+            "com.samsung.android.wear.shealth" -> "Samsung Health (Watch)"
+            "com.samsung.android.app.shealth" -> "Samsung Health (Phone)"
+            "com.garmin.android.apps.connect" -> "Garmin Connect"
+            "com.whoop.android" -> "Whoop"
+            "com.ouraring.ouraring" -> "Oura"
+            "com.strava" -> "Strava"
+            "com.withings.wiscale2" -> "Withings"
+            else -> {
+                // Best-effort attempt to create a readable name from the package
+                // e.g. com.example.health.app -> "Health App"
+                packageName
+                    .split('.')
+                    .lastOrNull()
+                    ?.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                    ?.replace("_", " ")
+                    ?: packageName
+            }
+        }
 }

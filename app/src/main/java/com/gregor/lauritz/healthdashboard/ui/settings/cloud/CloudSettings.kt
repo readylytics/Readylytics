@@ -22,10 +22,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
@@ -34,6 +37,7 @@ import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
 import com.gregor.lauritz.healthdashboard.ui.settings.SyncSettingsState
 import com.gregor.lauritz.healthdashboard.ui.settings.UIState
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
+import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 
@@ -339,3 +343,42 @@ private val BackupSchedule.displayName: String
             BackupSchedule.DAILY -> "Daily"
             BackupSchedule.WEEKLY -> "Weekly"
         }
+
+@Composable
+fun DeviceSelectionSection(viewModel: CloudSettingsViewModel = hiltViewModel()) {
+    val availableDevices by viewModel.availableDevices.collectAsStateWithLifecycle()
+    val primaryDevice by viewModel.primaryDevice.collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
+    val hasDevices = availableDevices.isNotEmpty()
+
+    Column(
+        modifier =
+            Modifier.padding(
+                horizontal = SettingsConstants.HORIZONTAL_PADDING,
+                vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
+            ),
+    ) {
+        DropdownPreferenceItem(
+            label = "Primary Device",
+            selectedDisplayValue =
+                when {
+                    !hasDevices -> "Calibrating..."
+                    primaryDevice != null -> primaryDevice!!
+                    else -> "Select a device"
+                },
+            options = availableDevices,
+            onOptionSelected = { deviceName ->
+                coroutineScope.launch { viewModel.updatePrimaryDevice(deviceName) }
+            },
+            optionLabel = { it },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = hasDevices,
+        )
+        Text(
+            text = "Device used for metrics calculation",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 16.dp, top = 4.dp),
+        )
+    }
+}

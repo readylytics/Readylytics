@@ -5,6 +5,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import kotlinx.coroutines.async
@@ -28,6 +29,7 @@ class SettingsRepository
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
+        private val healthConnectRepository: HealthConnectRepository,
     ) {
         private fun Int.toValidMaxHr() = coerceIn(100, 250)
 
@@ -424,13 +426,19 @@ class SettingsRepository
 
         suspend fun getAvailableDevices(): List<String> =
             coroutineScope {
-                val sleepDevices = async { sleepSessionDao.getDistinctDeviceNames() }
-                val hrDevices = async { heartRateDao.getDistinctDeviceNames() }
-                val hrvDevices = async { hrvDao.getDistinctDeviceNames() }
-                val workoutDevices = async { workoutDao.getDistinctDeviceNames() }
+                val dbDevices =
+                    async {
+                        (
+                            sleepSessionDao.getDistinctDeviceNames() +
+                                heartRateDao.getDistinctDeviceNames() +
+                                hrvDao.getDistinctDeviceNames() +
+                                workoutDao.getDistinctDeviceNames()
+                        ).filterNot { it.isBlank() }
+                            .distinct()
+                    }
+                val hcDevices = async { healthConnectRepository.discoverDevices(windowDays = 60) }
 
-                (sleepDevices.await() + hrDevices.await() + hrvDevices.await() + workoutDevices.await())
-                    .filterNot { it.isBlank() }
+                (dbDevices.await() + hcDevices.await())
                     .distinct()
                     .sorted()
             }

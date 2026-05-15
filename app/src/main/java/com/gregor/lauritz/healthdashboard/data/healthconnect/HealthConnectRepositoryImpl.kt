@@ -182,22 +182,22 @@ class HealthConnectRepositoryImpl
 
                     val sleepSessions = readSleepSessions(from, to)
                     sleepSessions.forEach { record ->
-                        DeviceLabel.from(record.metadata.device)?.let { devices.add(it) }
+                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
                     }
 
                     val hrRecords = readHeartRateSamples(from, to)
                     hrRecords.forEach { record ->
-                        DeviceLabel.from(record.metadata.device)?.let { devices.add(it) }
+                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
                     }
 
                     val hrvRecords = readHrvSamples(from, to)
                     hrvRecords.forEach { record ->
-                        DeviceLabel.from(record.metadata.device)?.let { devices.add(it) }
+                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
                     }
 
                     val workoutRecords = readExerciseSessions(from, to)
                     workoutRecords.forEach { record ->
-                        DeviceLabel.from(record.metadata.device)?.let { devices.add(it) }
+                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
                     }
 
                     com.gregor.lauritz.healthdashboard.domain.util.logD(

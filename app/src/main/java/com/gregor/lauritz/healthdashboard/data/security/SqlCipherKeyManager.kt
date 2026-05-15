@@ -51,16 +51,16 @@ class SqlCipherKeyManager
 
         /**
          * Returns a SupportSQLiteOpenHelper.Factory configured with the database encryption key.
-         * The decrypted key is immediately zeroed after the factory is created.
+         * The key is passed as a raw hex string (x'...') to skip SQLCipher's default KDF and
+         * use the 256-bit AES key directly.
          */
         fun getOrCreateFactory(): SupportSQLiteOpenHelper.Factory {
             val decryptedKey = getOrCreateDbKey()
             return try {
-                // Pass the raw 32-byte key directly. SQLCipher for Android's
-                // SupportOpenHelperFactory constructor taking byte[] is for raw keys.
-                // We clone it because the factory might keep a reference, and we zero the original.
+                val keyHex = decryptedKey.toHex()
+                val rawKeyBytes = "x'$keyHex'".toByteArray(Charsets.UTF_8)
                 net.zetetic.database.sqlcipher
-                    .SupportOpenHelperFactory(decryptedKey.clone())
+                    .SupportOpenHelperFactory(rawKeyBytes)
             } finally {
                 decryptedKey.fill(0)
             }
@@ -98,7 +98,7 @@ class SqlCipherKeyManager
                         null,
                     )
 
-                val keyHex = rawKey.joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+                val keyHex = rawKey.toHex()
                 // Use the standard SQLCipher syntax for raw keys: ATTACH ... KEY x'hex'
                 db.execSQL("ATTACH DATABASE '${tempFile.absolutePath}' AS encrypted KEY x'$keyHex'")
                 db.execSQL("SELECT sqlcipher_export('encrypted')")
@@ -133,7 +133,7 @@ class SqlCipherKeyManager
             if (!dbFile.exists()) return
             val rawKey = getOrCreateDbKey()
             try {
-                val keyHex = rawKey.joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+                val keyHex = rawKey.toHex()
                 val db =
                     net.zetetic.database.sqlcipher.SQLiteDatabase.openOrCreateDatabase(
                         dbFile,
@@ -220,6 +220,8 @@ class SqlCipherKeyManager
             cipher.init(Cipher.DECRYPT_MODE, keystoreKey, GCMParameterSpec(128, iv))
             return cipher.doFinal(encryptedKey)
         }
+
+        private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it.toInt() and 0xFF) }
 
         companion object {
             private const val KEYSTORE_ALIAS = "sqlcipher_db_key"
