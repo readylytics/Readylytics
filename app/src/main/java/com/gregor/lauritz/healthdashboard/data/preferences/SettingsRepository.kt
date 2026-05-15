@@ -420,13 +420,13 @@ class SettingsRepository
             }
         }
 
-        suspend fun getAvailableDevices(): List<String> {
-            val sleepDevices = sleepSessionDao.getDistinctDeviceNames()
-            val hrDevices = heartRateDao.getDistinctDeviceNames()
-            val hrvDevices = hrvDao.getDistinctDeviceNames()
-            val workoutDevices = workoutDao.getDistinctDeviceNames()
+        suspend fun getAvailableDevices(): List<String> = kotlinx.coroutines.coroutineScope {
+            val sleepDevices = async { sleepSessionDao.getDistinctDeviceNames() }
+            val hrDevices = async { heartRateDao.getDistinctDeviceNames() }
+            val hrvDevices = async { hrvDao.getDistinctDeviceNames() }
+            val workoutDevices = async { workoutDao.getDistinctDeviceNames() }
 
-            return (sleepDevices + hrDevices + hrvDevices + workoutDevices)
+            (sleepDevices.await() + hrDevices.await() + hrvDevices.await() + workoutDevices.await())
                 .filterNot { it.isBlank() }
                 .distinct()
                 .sorted()
