@@ -84,6 +84,8 @@ class SettingsRepository
 
         val lastBackupTimestampFlow: Flow<Long> = userPreferences.map { it.lastBackupTimestamp }
 
+        val primaryDeviceName: Flow<String?> = userPreferences.map { it.primaryDeviceName }
+
         // --- Update Methods ---
 
         suspend fun updateGoalSleepHours(hours: Float) {
@@ -408,6 +410,16 @@ class SettingsRepository
             dataStore.updateData { it.toBuilder().setDynamicColorEnabled(enabled).build() }
         }
 
+        suspend fun updatePrimaryDevice(deviceName: String?) {
+            dataStore.updateData { builder ->
+                if (deviceName != null) {
+                    builder.toBuilder().setPrimaryDeviceName(deviceName).build()
+                } else {
+                    builder.toBuilder().clearPrimaryDeviceName().build()
+                }
+            }
+        }
+
         suspend fun getAvailableDevices(): List<String> {
             val sleepDevices = sleepSessionDao.getDistinctDeviceNames()
             val hrDevices = heartRateDao.getDistinctDeviceNames()
@@ -415,6 +427,7 @@ class SettingsRepository
             val workoutDevices = workoutDao.getDistinctDeviceNames()
 
             return (sleepDevices + hrDevices + hrvDevices + workoutDevices)
+                .filterNot { it.isBlank() }
                 .distinct()
                 .sorted()
         }

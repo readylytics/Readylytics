@@ -25,7 +25,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
         WorkoutRecordEntity::class,
         DailySummaryEntity::class,
     ],
-    version = 17,
+    version = 18,
 )
 abstract class HealthDatabase : RoomDatabase() {
     abstract fun sleepSessionDao(): SleepSessionDao
@@ -394,6 +394,26 @@ abstract class HealthDatabase : RoomDatabase() {
                         "DROP TABLE daily_summaries",
                         "ALTER TABLE daily_summaries_new RENAME TO daily_summaries",
                         "CREATE INDEX IF NOT EXISTS index_daily_summaries_dateMidnightMs ON daily_summaries (dateMidnightMs)",
+                    )
+
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    sql.forEach { db.execSQL(it) }
+                }
+
+                override fun migrate(connection: SQLiteConnection) {
+                    sql.forEach { connection.execSQL(it) }
+                }
+            }
+
+        // Add deviceName columns to all record tables to support multi-device selection.
+        val MIGRATION_17_18 =
+            object : Migration(17, 18) {
+                private val sql =
+                    listOf(
+                        "ALTER TABLE sleep_sessions ADD COLUMN deviceName TEXT",
+                        "ALTER TABLE heart_rate_records ADD COLUMN deviceName TEXT",
+                        "ALTER TABLE hrv_records ADD COLUMN deviceName TEXT",
+                        "ALTER TABLE workout_records ADD COLUMN deviceName TEXT",
                     )
 
                 override fun migrate(db: SupportSQLiteDatabase) {

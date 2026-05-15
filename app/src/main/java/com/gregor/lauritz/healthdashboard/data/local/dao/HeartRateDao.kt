@@ -102,4 +102,7 @@ interface HeartRateDao {
 
     @Query("DELETE FROM heart_rate_records")
     suspend fun deleteAll(): Int
+
+    @Query("SELECT DISTINCT deviceName FROM heart_rate_records WHERE deviceName IS NOT NULL AND deviceName != ''")
+    suspend fun getDistinctDeviceNames(): List<String>
 }

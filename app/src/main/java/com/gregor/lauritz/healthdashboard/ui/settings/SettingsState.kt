@@ -86,4 +86,6 @@ data class SyncSettingsState(
     val syncPreference: SyncPreference = SettingsDefaults.SYNC_PREFERENCE,
     val syncIntervalHours: Int = SettingsDefaults.SYNC_INTERVAL_HOURS,
     val isResyncing: Boolean = false,
+    val availableDevices: List<String> = emptyList(),
+    val primaryDeviceName: String? = null,
 )

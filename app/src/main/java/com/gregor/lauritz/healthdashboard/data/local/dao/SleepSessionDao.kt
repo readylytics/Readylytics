@@ -57,4 +57,7 @@ interface SleepSessionDao {
 
     @Query("DELETE FROM sleep_sessions")
     suspend fun deleteAll(): Int
+
+    @Query("SELECT DISTINCT deviceName FROM sleep_sessions WHERE deviceName IS NOT NULL AND deviceName != ''")
+    suspend fun getDistinctDeviceNames(): List<String>
 }

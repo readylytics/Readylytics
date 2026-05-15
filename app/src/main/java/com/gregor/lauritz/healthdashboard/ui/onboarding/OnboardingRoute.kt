@@ -43,30 +43,46 @@ fun OnboardingRoute(
             }
         }
 
-    OnboardingScreen(
-        onGrantPermissionsClick = { day, month, year, gender, physiologyProfile, dynamicColorEnabled ->
-            com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") {
-                "Grant Access clicked. Saving profile first..."
-            }
-            onboardingViewModel.saveProfile(
-                day = day,
-                month = month,
-                year = year,
-                gender = gender,
-                physiologyProfile = physiologyProfile,
-                dynamicColorEnabled = dynamicColorEnabled,
-                onComplete = {
-                    com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") {
-                        "Profile saved. Launching HC permissions: $permissions"
+    val currentState = uiState
+    when (currentState) {
+        is SyncUiState.DeviceSelectionReady -> {
+            DeviceSelectionScreen(
+                devices = currentState.devices,
+                onDeviceSelected = { deviceName ->
+                    onboardingViewModel.selectDevice(deviceName) {
+                        syncViewModel.onDeviceSelected()
                     }
-                    permissionLauncher.launch(permissions)
                 },
             )
-        },
-        onOpenSettingsClick = {
-            val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
-            runCatching { context.startActivity(intent) }
-        },
-        isLoading = uiState is SyncUiState.SyncingCatchUp,
-    )
+        }
+        else -> {
+            OnboardingScreen(
+                onGrantPermissionsClick = { day, month, year, gender, physiologyProfile, dynamicColorEnabled ->
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") {
+                        "Grant Access clicked. Saving profile first..."
+                    }
+                    onboardingViewModel.saveProfile(
+                        day = day,
+                        month = month,
+                        year = year,
+                        gender = gender,
+                        physiologyProfile = physiologyProfile,
+                        dynamicColorEnabled = dynamicColorEnabled,
+                        onComplete = {
+                            com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") {
+                                "Profile saved. Launching HC permissions: $permissions"
+                            }
+                            permissionLauncher.launch(permissions)
+                        },
+                    )
+                },
+                onOpenSettingsClick = {
+                    val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
+                    runCatching { context.startActivity(intent) }
+                },
+                isLoading = currentState is SyncUiState.SyncingCatchUp ||
+                    currentState is SyncUiState.DiscoveringDevices,
+            )
+        }
+    }
 }

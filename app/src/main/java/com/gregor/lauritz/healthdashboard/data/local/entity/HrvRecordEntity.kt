@@ -18,4 +18,5 @@ data class HrvRecordEntity(
     val rmssdMs: Float,
     val recordType: String,
     val sessionId: String? = null,
+    val deviceName: String? = null,
 )

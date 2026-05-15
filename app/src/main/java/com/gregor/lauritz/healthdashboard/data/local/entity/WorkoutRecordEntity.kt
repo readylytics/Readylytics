@@ -23,4 +23,5 @@ data class WorkoutRecordEntity(
     val zone5Minutes: Float,
     val trimp: Float,
     val avgHr: Float,
+    val deviceName: String? = null,
 )
