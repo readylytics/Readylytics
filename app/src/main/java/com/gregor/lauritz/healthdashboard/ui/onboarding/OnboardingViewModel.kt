@@ -31,4 +31,14 @@ class OnboardingViewModel
                 onComplete()
             }
         }
+
+        fun selectDevice(
+            deviceName: String?,
+            onComplete: () -> Unit,
+        ) {
+            viewModelScope.launch {
+                settingsRepo.updatePrimaryDevice(deviceName)
+                onComplete()
+            }
+        }
     }

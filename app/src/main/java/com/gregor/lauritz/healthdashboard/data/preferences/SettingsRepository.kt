@@ -1,6 +1,10 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
 import androidx.datastore.core.DataStore
+import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +22,10 @@ class SettingsRepository
     @Inject
     constructor(
         private val dataStore: DataStore<UserPreferencesProto>,
+        private val sleepSessionDao: SleepSessionDao,
+        private val heartRateDao: HeartRateDao,
+        private val hrvDao: HrvDao,
+        private val workoutDao: WorkoutDao,
     ) {
         private fun Int.toValidMaxHr() = coerceIn(100, 250)
 
@@ -398,5 +406,16 @@ class SettingsRepository
 
         suspend fun updateDynamicColorEnabled(enabled: Boolean) {
             dataStore.updateData { it.toBuilder().setDynamicColorEnabled(enabled).build() }
+        }
+
+        suspend fun getAvailableDevices(): List<String> {
+            val sleepDevices = sleepSessionDao.getDistinctDeviceNames()
+            val hrDevices = heartRateDao.getDistinctDeviceNames()
+            val hrvDevices = hrvDao.getDistinctDeviceNames()
+            val workoutDevices = workoutDao.getDistinctDeviceNames()
+
+            return (sleepDevices + hrDevices + hrvDevices + workoutDevices)
+                .distinct()
+                .sorted()
         }
     }

@@ -168,4 +168,50 @@ class HealthConnectRepositoryImpl
                     )
                 result[StepsRecord.COUNT_TOTAL] ?: 0L
             }
+
+        override suspend fun discoverDevices(windowDays: Int): List<String> =
+            withContext(Dispatchers.IO) {
+                try {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD(
+                        "HealthConnectRepository",
+                    ) { "Discovering devices in $windowDays day window..." }
+                    val from = Instant.now().minusSeconds(windowDays.toLong() * 86400)
+                    val to = Instant.now()
+
+                    val devices = mutableSetOf<String>()
+
+                    val sleepSessions = readSleepSessions(from, to)
+                    sleepSessions.forEach { record ->
+                        record.metadata.device?.deviceName?.let { devices.add(it) }
+                    }
+
+                    val hrRecords = readHeartRateSamples(from, to)
+                    hrRecords.forEach { record ->
+                        record.metadata.device?.deviceName?.let { devices.add(it) }
+                    }
+
+                    val hrvRecords = readHrvSamples(from, to)
+                    hrvRecords.forEach { record ->
+                        record.metadata.device?.deviceName?.let { devices.add(it) }
+                    }
+
+                    val workoutRecords = readExerciseSessions(from, to)
+                    workoutRecords.forEach { record ->
+                        record.metadata.device?.deviceName?.let { devices.add(it) }
+                    }
+
+                    com.gregor.lauritz.healthdashboard.domain.util.logD(
+                        "HealthConnectRepository",
+                    ) { "Device discovery found ${devices.size} unique devices" }
+                    devices.sorted()
+                } catch (e: SecurityException) {
+                    throw HealthConnectPermissionRevokedException(e)
+                } catch (e: Exception) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logE(
+                        "HealthConnectRepository",
+                        e,
+                    ) { "Device discovery failed" }
+                    emptyList()
+                }
+            }
     }
