@@ -100,26 +100,34 @@ class SleepArchitectureValidatorTest {
     // ─── Suspicious flag ────────────────────────────────────────────────────
 
     @Test
-    fun `combined sum above 70 percent flags suspicious`() {
-        // deep=20%, rem=22% → 42% sum, valid not suspicious
-        val resOk = validator.evaluate(0.20f, 0.22f, age = 30, deviceSource = null)
-        assertTrue(resOk.valid)
-        assertFalse(resOk.suspicious)
+    fun `mid-range stages are not suspicious`() {
+        // deep=18%, rem=22% — both well below ceiling and 85% threshold
+        val res = validator.evaluate(0.18f, 0.22f, age = 30, deviceSource = null)
+        assertTrue(res.valid)
+        assertFalse(res.suspicious)
+    }
 
-        // deep=26%, rem=27% → both under, sum=53% → valid not suspicious
-        val resStillOk = validator.evaluate(0.26f, 0.27f, age = 30, deviceSource = null)
-        assertTrue(resStillOk.valid)
-        assertFalse(resStillOk.suspicious)
+    @Test
+    fun `deep within suspicious band flags suspicious without rejecting night`() {
+        // For age<40 ceiling is 28%; 85% of 28% = 23.8%. Deep=25% > 23.8% → suspicious.
+        val res = validator.evaluate(0.25f, 0.20f, age = 30, deviceSource = null)
+        assertTrue(res.valid)
+        assertTrue(res.suspicious)
+    }
 
-        // deep=27%, rem=27% combined 54% → still not suspicious
-        // Build a case at the boundary: deep=0.27, rem=0.27 → 0.54 < 0.70 ⇒ not suspicious
-        // To trigger suspicious we need both within ceilings AND sum >= 0.70.
-        // For age<40 ceilings are 0.28/0.28. Choose deep=0.27, rem=0.27 → 0.54: not suspicious.
-        // Need sum >= 0.70 while each <=0.28 → impossible (max 0.56). For age 50: 0.25+0.26=0.51 max.
-        // The 70% suspicion band is therefore only reachable when stages are invalid;
-        // confirm that scenario flips valid=false.
-        val resInvalid = validator.evaluate(0.30f, 0.40f, age = 30, deviceSource = null)
-        assertFalse(resInvalid.valid)
+    @Test
+    fun `REM within suspicious band flags suspicious`() {
+        // 85% of 28% rem ceiling = 23.8%. Rem=25% → suspicious.
+        val res = validator.evaluate(0.15f, 0.25f, age = 30, deviceSource = null)
+        assertTrue(res.valid)
+        assertTrue(res.suspicious)
+    }
+
+    @Test
+    fun `invalid night is not also flagged suspicious`() {
+        val res = validator.evaluate(0.30f, 0.40f, age = 30, deviceSource = null)
+        assertFalse(res.valid)
+        assertFalse(res.suspicious)
     }
 
     // ─── Warning messages ──────────────────────────────────────────────────

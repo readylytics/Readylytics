@@ -93,9 +93,18 @@ class ValidNightTest {
     }
 
     @Test
-    fun `deep close to band ceiling but rem normal is suspicious when sum reaches 70 percent`() {
-        // deep=27% (under 28%), rem=24% → sum=51% → valid and not suspicious
-        val result = validate(deepMinutes = 130, remMinutes = 115, durationMinutes = 480)
+    fun `deep close to band ceiling is flagged suspicious but still valid`() {
+        // deep=27% (under 28% age<40 ceiling, above 23.8% suspicious threshold)
+        // rem=20% (normal)
+        val result = validate(deepMinutes = 130, remMinutes = 96, durationMinutes = 480)
+        assertTrue(result.stagesValid)
+        assertTrue(result.stagesSuspicious)
+    }
+
+    @Test
+    fun `mid-range stages are valid and not suspicious`() {
+        // deep=20%, rem=22% — both safely below ceiling and below 85% threshold
+        val result = validate(deepMinutes = 96, remMinutes = 106, durationMinutes = 480)
         assertTrue(result.stagesValid)
         assertFalse(result.stagesSuspicious)
     }

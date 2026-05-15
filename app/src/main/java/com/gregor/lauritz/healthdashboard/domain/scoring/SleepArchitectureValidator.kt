@@ -36,12 +36,15 @@ class SleepArchitectureValidator
          * "Hard" because no PSG cohort reports values above these for healthy adults;
          * any wearable claiming a 50% REM night is almost certainly mis-classifying
          * stages.
+         *
+         * @property suspiciousFractionOfCeiling deep% or rem% above this fraction
+         *  of their respective ceiling triggers the suspicious flag (still scored,
+         *  reduced arch weight). 0.85 ≈ "within 15% of the hard ceiling".
          */
         data class Bounds(
             val deepMaxFraction: Float,
             val remMaxFraction: Float,
-            /** Sum above this triggers the suspicious flag (still scored, reduced arch weight). */
-            val combinedSuspiciousFraction: Float = 0.70f,
+            val suspiciousFractionOfCeiling: Float = 0.85f,
         )
 
         /**
@@ -90,9 +93,10 @@ class SleepArchitectureValidator
         }
 
         /**
-         * True if (deep%, rem%) sums into the 70-75% suspicious band but each
-         * individual value remains within bounds. Such nights are still scored,
-         * with architecture weight reduced — the suspicion is recorded.
+         * True if either deep% or rem% lies within the suspicious band — i.e.
+         * above [Bounds.suspiciousFractionOfCeiling] (default 85%) of its
+         * respective ceiling but still below the ceiling itself. Such nights
+         * are still scored, with architecture weight reduced.
          */
         fun isSuspiciousArchitecture(
             deepFraction: Float,
@@ -105,7 +109,9 @@ class SleepArchitectureValidator
             if (!(adjDeep <= bounds.deepMaxFraction && adjRem <= bounds.remMaxFraction)) {
                 return false // Already invalid.
             }
-            return (adjDeep + adjRem) >= bounds.combinedSuspiciousFraction
+            val deepWarn = bounds.deepMaxFraction * bounds.suspiciousFractionOfCeiling
+            val remWarn = bounds.remMaxFraction * bounds.suspiciousFractionOfCeiling
+            return adjDeep >= deepWarn || adjRem >= remWarn
         }
 
         /**
@@ -122,13 +128,17 @@ class SleepArchitectureValidator
             val (adjDeep, adjRem) = adjusted(deepFraction, remFraction, deviceSource)
             val deepPct = (adjDeep * 100f).format1()
             val remPct = (adjRem * 100f).format1()
+            val deepWarn = bounds.deepMaxFraction * bounds.suspiciousFractionOfCeiling
+            val remWarn = bounds.remMaxFraction * bounds.suspiciousFractionOfCeiling
             return when {
                 adjDeep > bounds.deepMaxFraction ->
                     "Deep ${deepPct}% above age band ${bounds.deepMaxFraction.toPct()}%"
                 adjRem > bounds.remMaxFraction ->
                     "REM ${remPct}% above age band ${bounds.remMaxFraction.toPct()}%"
-                (adjDeep + adjRem) >= bounds.combinedSuspiciousFraction ->
-                    "Combined deep+REM ${(adjDeep + adjRem).toPct()}% in 70-75% suspicious band"
+                adjDeep >= deepWarn ->
+                    "Deep ${deepPct}% in suspicious band (>=${deepWarn.toPct()}%)"
+                adjRem >= remWarn ->
+                    "REM ${remPct}% in suspicious band (>=${remWarn.toPct()}%)"
                 else -> null
             }
         }
