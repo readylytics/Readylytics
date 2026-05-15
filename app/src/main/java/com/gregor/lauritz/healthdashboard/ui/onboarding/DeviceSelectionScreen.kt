@@ -23,8 +23,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 
 /**
  * Shown after Health Connect permissions are granted and device discovery has completed.
@@ -48,7 +50,7 @@ fun DeviceSelectionScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Choose your primary device",
+                text = stringResource(R.string.device_selection_title),
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
             )
@@ -56,9 +58,7 @@ fun DeviceSelectionScreen(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text =
-                    "We found data from multiple sources. Pick the device whose readings should " +
-                        "drive your scores — we'll fall back to other devices for days it didn't record.",
+                text = stringResource(R.string.device_selection_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -75,8 +75,7 @@ fun DeviceSelectionScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text =
-                            "No specific devices were detected. We'll use all available data sources.",
+                        text = stringResource(R.string.device_selection_no_devices),
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                     )
@@ -105,7 +104,7 @@ fun DeviceSelectionScreen(
                 onClick = { onDeviceSelected(null) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Use all devices")
+                Text(stringResource(R.string.device_selection_use_all))
             }
 
             Spacer(Modifier.height(8.dp))
@@ -115,7 +114,12 @@ fun DeviceSelectionScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = devices.isNotEmpty(),
             ) {
-                Text("Continue with " + (devices.firstOrNull() ?: "auto"))
+                Text(
+                    stringResource(
+                        R.string.device_selection_continue_with,
+                        devices.firstOrNull() ?: "auto",
+                    ),
+                )
             }
         }
     }

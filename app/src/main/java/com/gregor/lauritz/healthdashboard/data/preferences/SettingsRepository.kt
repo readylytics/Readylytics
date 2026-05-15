@@ -13,6 +13,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.IOException
 import java.time.LocalDate
 import java.time.Period
@@ -36,6 +38,7 @@ class SettingsRepository
         private fun Int.toValidAge() = coerceIn(1, 120)
 
         private var cachedAvailableDevices: List<String>? = null
+        private val deviceCacheMutex = Mutex()
 
         private fun Float.toValidHrvOptimal() = coerceIn(1.0f, 1.2f)
 
@@ -426,30 +429,33 @@ class SettingsRepository
             }
         }
 
-        suspend fun getAvailableDevices(): List<String> {
-            cachedAvailableDevices?.let { return it }
+        suspend fun getAvailableDevices(): List<String> =
+            deviceCacheMutex.withLock {
+                cachedAvailableDevices?.let { return it }
 
-            return coroutineScope {
-                val dbDevices =
-                    async {
-                        (
-                            sleepSessionDao.getDistinctDeviceNames() +
-                                heartRateDao.getDistinctDeviceNames() +
-                                hrvDao.getDistinctDeviceNames() +
-                                workoutDao.getDistinctDeviceNames()
-                        ).filterNot { it.isBlank() }
-                            .distinct()
-                    }
-                val hcDevices = async { healthConnectRepository.discoverDevices(windowDays = 14) }
+                coroutineScope {
+                    val dbDevices =
+                        async {
+                            (
+                                sleepSessionDao.getDistinctDeviceNames() +
+                                    heartRateDao.getDistinctDeviceNames() +
+                                    hrvDao.getDistinctDeviceNames() +
+                                    workoutDao.getDistinctDeviceNames()
+                            ).filterNot { it.isBlank() }
+                                .distinct()
+                        }
+                    val hcDevices = async { healthConnectRepository.discoverDevices(windowDays = 14) }
 
-                (dbDevices.await() + hcDevices.await())
-                    .distinct()
-                    .sorted()
-                    .also { cachedAvailableDevices = it }
+                    (dbDevices.await() + hcDevices.await())
+                        .distinct()
+                        .sorted()
+                        .also { cachedAvailableDevices = it }
+                }
             }
-        }
 
-        fun clearDeviceCache() {
-            cachedAvailableDevices = null
+        suspend fun clearDeviceCache() {
+            deviceCacheMutex.withLock {
+                cachedAvailableDevices = null
+            }
         }
     }

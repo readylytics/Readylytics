@@ -20,15 +20,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import com.gregor.lauritz.healthdashboard.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeviceSelectionDialog(
     availableDevices: List<String>,
     selectedDevice: String?,
-    onDeviceSelected: (String) -> Unit,
+    onDeviceSelected: (String?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     var localSelection by remember(selectedDevice) { mutableStateOf(selectedDevice) }
@@ -41,11 +43,11 @@ fun DeviceSelectionDialog(
                 dismissOnBackPress = false,
                 dismissOnClickOutside = false,
             ),
-        title = { Text("Select Primary Device") },
+        title = { Text(stringResource(R.string.device_selection_dialog_title)) },
         text = {
             Column {
                 Text(
-                    text = "Which device should we use for health metrics?",
+                    text = stringResource(R.string.device_selection_dialog_message),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -59,19 +61,19 @@ fun DeviceSelectionDialog(
                         onValueChange = {},
                         readOnly = true,
                         isError = isError,
-                        label = { Text("Device") },
+                        label = { Text(stringResource(R.string.device_selection_dialog_label)) },
                         placeholder = {
                             Text(
                                 if (isError) {
-                                    "No devices available"
+                                    stringResource(R.string.device_selection_dialog_no_devices)
                                 } else {
-                                    "Choose a device"
+                                    stringResource(R.string.device_selection_dialog_placeholder)
                                 },
                             )
                         },
                         supportingText =
                             if (isError) {
-                                { Text("No devices found from Health Connect") }
+                                { Text(stringResource(R.string.device_selection_dialog_hc_error)) }
                             } else {
                                 null
                             },
@@ -107,13 +109,15 @@ fun DeviceSelectionDialog(
                 }
             }
         },
+        dismissButton = {
+            TextButton(onClick = { onDeviceSelected(null) }) {
+                Text(stringResource(R.string.device_selection_use_all))
+            }
+        },
         confirmButton = {
             TextButton(
                 onClick = {
-                    val choice = localSelection
-                    if (choice != null) {
-                        onDeviceSelected(choice)
-                    }
+                    localSelection?.let { onDeviceSelected(it) }
                 },
                 enabled = localSelection != null,
             ) {
