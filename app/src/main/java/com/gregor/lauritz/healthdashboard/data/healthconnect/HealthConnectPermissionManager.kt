@@ -38,7 +38,8 @@ class HealthConnectPermissionManager
         private val mutex = Mutex()
 
         // recordType (HealthPermission string) -> timestamp of most-recent revocation
-        private val revokedAt: MutableMap<String, Long> = mutableMapOf()
+        // MUST be thread-safe: accessed from repository IO threads + UI threads
+        private val revokedAt: MutableMap<String, Long> = java.util.concurrent.ConcurrentHashMap()
 
         private val _state = MutableStateFlow<HealthConnectPermissionState>(
             HealthConnectPermissionState.Unknown,

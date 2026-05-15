@@ -136,9 +136,11 @@ class RecoveryFlagValidator
                 (thresholds.illnessZHrvThreshold - zLnHrvToday).coerceAtLeast(0f) / MAX_HRV_PENETRATION
             val rhrPenetration =
                 (zRhrToday - thresholds.illnessZRhrThreshold).coerceAtLeast(0f) / MAX_RHR_PENETRATION
-            val absDeltaContribution = (rhrDeltaBpm ?: 0f).let { abs(it) / MAX_RHR_DELTA_BPM }
+            // Illness is associated with ELEVATED RHR, so only count positive (upward) deltas.
+            // Negative delta (RHR drop) is a recovery signal, not an illness signal.
+            val rhrDeltaContribution = (rhrDeltaBpm ?: 0f).coerceAtLeast(0f) / MAX_RHR_DELTA_BPM
             val penetrationConfidence =
-                ((hrvPenetration + rhrPenetration + absDeltaContribution) / 3f).coerceIn(0f, 1f)
+                ((hrvPenetration + rhrPenetration + rhrDeltaContribution) / 3f).coerceIn(0f, 1f)
             val daysConfidence =
                 ((consecutiveDays - 1).coerceAtLeast(0).toFloat() / MAX_CONSECUTIVE_DAYS_FOR_CONFIDENCE)
                     .coerceIn(0f, 1f)

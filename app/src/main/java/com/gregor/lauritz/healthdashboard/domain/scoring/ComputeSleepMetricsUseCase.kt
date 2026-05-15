@@ -308,18 +308,20 @@ class ComputeSleepMetricsUseCase
                 // escalating caps. Look at yesterday's persisted recovery flags.
                 val yesterdayFlags =
                     yesterdaySummary?.recoveryFlags?.split(",")?.toSet() ?: emptySet()
-                val consecutiveOverreachingDays =
-                    if (com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag.OVERREACHING.name in yesterdayFlags) {
-                        2
-                    } else {
-                        1
-                    }
-                val consecutiveIllnessDays =
-                    if (com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag.ILLNESS_ONSET.name in yesterdayFlags) {
-                        2
-                    } else {
-                        1
-                    }
+                // Count actual consecutive days by scanning backwards through history
+                // This enables escalating readiness caps (day 1→70, day 3+→55)
+                val consecutiveOverreachingDays = countConsecutiveFlagDays(
+                    flag = com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag.OVERREACHING,
+                    fromDate = dateMidnightMs,
+                    maxLookback = 7,
+                    dailySummaries = allHistory,
+                )
+                val consecutiveIllnessDays = countConsecutiveFlagDays(
+                    flag = com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag.ILLNESS_ONSET,
+                    fromDate = dateMidnightMs,
+                    maxLookback = 7,
+                    dailySummaries = allHistory,
+                )
 
                 val readinessDetail =
                     scoringCalculator.computeReadinessScoreDetail(
@@ -493,5 +495,31 @@ class ComputeSleepMetricsUseCase
             val totalCoverage = (coverageMs + if (filtered.isNotEmpty()) 60000L else 0L).coerceAtMost(sleepDurationMs)
             val coveragePercent = (coverageMs.toFloat() / sleepDurationMs.toFloat()) * 100f
             return coveragePercent >= 70f
+        }
+
+        /**
+         * Count consecutive days a flag was present, scanning backwards from [fromDate].
+         * Enables escalating readiness caps based on streak length.
+         */
+        private fun countConsecutiveFlagDays(
+            flag: com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag,
+            fromDate: Long,
+            maxLookback: Int,
+            dailySummaries: List<DailySummaryEntity>,
+        ): Int {
+            var count = 0
+            var checkDate = fromDate
+            for (i in 0 until maxLookback) {
+                val summary = dailySummaries.find { it.dateMidnightMs == checkDate }
+                val flagsPresent =
+                    summary?.recoveryFlags?.split(",")?.map { it.trim() }?.toSet() ?: emptySet()
+                if (flag.name in flagsPresent) {
+                    count++
+                    checkDate -= TimeUnit.DAYS.toMillis(1)
+                } else {
+                    break  // Streak broken
+                }
+            }
+            return count.coerceAtLeast(1)  // At least 1 day if flag present today
         }
     }

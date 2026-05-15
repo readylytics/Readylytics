@@ -83,7 +83,10 @@ class EncryptionHealthCheck(
 
     private fun runIntegrityCheck(db: SupportSQLiteDatabase): Boolean =
         try {
-            db.query("PRAGMA integrity_check").use { cursor ->
+            // Use PRAGMA quick_check instead of integrity_check for startup performance.
+            // quick_check runs faster and catches most common corruption issues.
+            // (Full integrity_check is expensive on large encrypted databases at app startup.)
+            db.query("PRAGMA quick_check").use { cursor ->
                 if (cursor.moveToFirst()) {
                     val result = cursor.getString(0)
                     "ok".equals(result, ignoreCase = true)
@@ -92,7 +95,7 @@ class EncryptionHealthCheck(
                 }
             }
         } catch (t: Throwable) {
-            logE("EncryptionHealthCheck", t) { "PRAGMA integrity_check threw" }
+            logE("EncryptionHealthCheck", t) { "PRAGMA quick_check threw" }
             false
         }
 

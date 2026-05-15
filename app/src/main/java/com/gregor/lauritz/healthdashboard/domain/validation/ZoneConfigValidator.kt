@@ -99,6 +99,7 @@ class ZoneConfigValidator
                     issues +=
                         ZoneIssue(
                             field = ordered[i].first,
+                            // Localized message format: see strings.xml zone_error_ordering
                             message =
                                 "${ordered[i].first} (${ordered[i].second}) must be higher than " +
                                     "${ordered[i - 1].first} (${ordered[i - 1].second}).",
@@ -114,6 +115,7 @@ class ZoneConfigValidator
                     issues +=
                         ZoneIssue(
                             field = "zone5MaxBpm",
+                            // Localized message format: see strings.xml zone_error_zone5_exceeds_max
                             message =
                                 "Zone 5 max ($zone5) exceeds 95% of your estimated HR max ($hrMax). " +
                                     "Lower by ${zone5 - maxAllowed} bpm.",
