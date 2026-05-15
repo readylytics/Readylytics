@@ -28,7 +28,7 @@ class SyncSettingsViewModel
         private val _isResyncing = MutableStateFlow(false)
         val isResyncing: StateFlow<Boolean> = _isResyncing.asStateFlow()
 
-        private val _availableDevices = MutableStateFlow<List<String>>(emptyList())
+        private val availableDevices = MutableStateFlow<List<String>>(emptyList())
 
         // Internal property to allow overriding in tests
         var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
@@ -37,7 +37,7 @@ class SyncSettingsViewModel
             combine(
                 settingsRepo.userPreferences,
                 _isResyncing,
-                _availableDevices,
+                availableDevices,
             ) { prefs, isResyncing, availableDevices ->
                 SyncSettingsState(
                     syncPreference = prefs.syncPreference,
@@ -61,7 +61,7 @@ class SyncSettingsViewModel
             viewModelScope.launch {
                 try {
                     val devices = settingsRepo.getAvailableDevices()
-                    _availableDevices.value = devices
+                    availableDevices.value = devices
                 } catch (e: Exception) {
                     logE("SyncSettingsViewModel", e) { "Failed to load available devices" }
                 }

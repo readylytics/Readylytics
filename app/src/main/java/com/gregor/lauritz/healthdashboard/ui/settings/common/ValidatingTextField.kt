@@ -28,7 +28,7 @@ fun ValidatingTextField(
         keyboardOptions = keyboardOptions,
         isError = isError,
         supportingText = {
-            if (isError && result is ValidationResult.Invalid) {
+            if (isError) {
                 Text(result.message)
             }
         },

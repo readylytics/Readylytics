@@ -7,6 +7,8 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -420,15 +422,16 @@ class SettingsRepository
             }
         }
 
-        suspend fun getAvailableDevices(): List<String> = kotlinx.coroutines.coroutineScope {
-            val sleepDevices = async { sleepSessionDao.getDistinctDeviceNames() }
-            val hrDevices = async { heartRateDao.getDistinctDeviceNames() }
-            val hrvDevices = async { hrvDao.getDistinctDeviceNames() }
-            val workoutDevices = async { workoutDao.getDistinctDeviceNames() }
+        suspend fun getAvailableDevices(): List<String> =
+            coroutineScope {
+                val sleepDevices = async { sleepSessionDao.getDistinctDeviceNames() }
+                val hrDevices = async { heartRateDao.getDistinctDeviceNames() }
+                val hrvDevices = async { hrvDao.getDistinctDeviceNames() }
+                val workoutDevices = async { workoutDao.getDistinctDeviceNames() }
 
-            (sleepDevices.await() + hrDevices.await() + hrvDevices.await() + workoutDevices.await())
-                .filterNot { it.isBlank() }
-                .distinct()
-                .sorted()
-        }
+                (sleepDevices.await() + hrDevices.await() + hrvDevices.await() + workoutDevices.await())
+                    .filterNot { it.isBlank() }
+                    .distinct()
+                    .sorted()
+            }
     }

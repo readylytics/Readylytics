@@ -56,11 +56,11 @@ class SqlCipherKeyManager
         fun getOrCreateFactory(): SupportSQLiteOpenHelper.Factory {
             val decryptedKey = getOrCreateDbKey()
             return try {
-                // Raw key mode matches migration's ATTACH KEY "x'hex'" syntax.
-                // JVM String is immutable so keyHex cannot be zeroed — acceptable for this call site.
-                val keyHex = "x'${decryptedKey.joinToString("") { "%02x".format(it) }}'"
+                // Pass the raw 32-byte key directly. SQLCipher for Android's
+                // SupportOpenHelperFactory constructor taking byte[] is for raw keys.
+                // We clone it because the factory might keep a reference, and we zero the original.
                 net.zetetic.database.sqlcipher
-                    .SupportOpenHelperFactory(keyHex.toByteArray(Charsets.UTF_8))
+                    .SupportOpenHelperFactory(decryptedKey.clone())
             } finally {
                 decryptedKey.fill(0)
             }
@@ -98,8 +98,9 @@ class SqlCipherKeyManager
                         null,
                     )
 
-                val keyHex = rawKey.joinToString("") { "%02x".format(it) }
-                db.execSQL("ATTACH DATABASE '${tempFile.absolutePath}' AS encrypted KEY \"x'$keyHex'\"")
+                val keyHex = rawKey.joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+                // Use the standard SQLCipher syntax for raw keys: ATTACH ... KEY x'hex'
+                db.execSQL("ATTACH DATABASE '${tempFile.absolutePath}' AS encrypted KEY x'$keyHex'")
                 db.execSQL("SELECT sqlcipher_export('encrypted')")
                 db.execSQL("DETACH DATABASE encrypted")
                 db.close()
@@ -132,7 +133,7 @@ class SqlCipherKeyManager
             if (!dbFile.exists()) return
             val rawKey = getOrCreateDbKey()
             try {
-                val keyHex = rawKey.joinToString("") { "%02x".format(it) }
+                val keyHex = rawKey.joinToString("") { "%02x".format(it.toInt() and 0xFF) }
                 val db =
                     net.zetetic.database.sqlcipher.SQLiteDatabase.openOrCreateDatabase(
                         dbFile,

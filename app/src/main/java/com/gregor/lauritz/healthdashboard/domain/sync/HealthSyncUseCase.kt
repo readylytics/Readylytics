@@ -137,7 +137,12 @@ class HealthSyncUseCase
                         val filteredSleep =
                             filterByDevicePreference(sleepEntities, primaryDevice, { it.deviceName }, { it.startTime })
                         val filteredWorkouts =
-                            filterByDevicePreference(workoutEntities, primaryDevice, { it.deviceName }, { it.startTime })
+                            filterByDevicePreference(
+                                workoutEntities,
+                                primaryDevice,
+                                { it.deviceName },
+                                { it.startTime },
+                            )
                         val filteredHr =
                             filterByDevicePreference(hrEntities, primaryDevice, { it.deviceName }, { it.timestampMs })
                         val filteredHrv =
@@ -240,12 +245,14 @@ class HealthSyncUseCase
             if (secondary.isEmpty()) return primary
 
             val zoneId = ZoneId.systemDefault()
-            val primaryDays = primary.mapTo(mutableSetOf()) {
-                Instant.ofEpochMilli(getTimestamp(it)).atZone(zoneId).toLocalDate()
-            }
-            val fallback = secondary.filter {
-                Instant.ofEpochMilli(getTimestamp(it)).atZone(zoneId).toLocalDate() !in primaryDays
-            }
+            val primaryDays =
+                primary.mapTo(mutableSetOf()) {
+                    Instant.ofEpochMilli(getTimestamp(it)).atZone(zoneId).toLocalDate()
+                }
+            val fallback =
+                secondary.filter {
+                    Instant.ofEpochMilli(getTimestamp(it)).atZone(zoneId).toLocalDate() !in primaryDays
+                }
 
             if (fallback.isNotEmpty()) {
                 logD("DeviceFilter") { "Added ${fallback.size} secondary device records as fallback" }

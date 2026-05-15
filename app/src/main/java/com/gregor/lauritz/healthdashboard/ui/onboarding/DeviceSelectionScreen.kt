@@ -41,9 +41,10 @@ fun DeviceSelectionScreen(
 ) {
     Surface(modifier = modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -67,9 +68,10 @@ fun DeviceSelectionScreen(
 
             if (devices.isEmpty()) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
@@ -81,9 +83,10 @@ fun DeviceSelectionScreen(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier
-                        .weight(1f, fill = true)
-                        .fillMaxWidth(),
+                    modifier =
+                        Modifier
+                            .weight(1f, fill = true)
+                            .fillMaxWidth(),
                     contentPadding = PaddingValues(vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -127,9 +130,10 @@ private fun DeviceCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
         onClick = onClick,
     ) {
         Text(

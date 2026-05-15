@@ -80,8 +80,9 @@ fun OnboardingRoute(
                     val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
                     runCatching { context.startActivity(intent) }
                 },
-                isLoading = currentState is SyncUiState.SyncingCatchUp ||
-                    currentState is SyncUiState.DiscoveringDevices,
+                isLoading =
+                    currentState is SyncUiState.SyncingCatchUp ||
+                        currentState is SyncUiState.DiscoveringDevices,
             )
         }
     }
