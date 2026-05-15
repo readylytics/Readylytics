@@ -35,6 +35,7 @@ class ComputeSleepMetricsUseCase
         private val scoringCalculator: ScoringCalculator,
         private val scoringConfigFactory: ScoringConfigFactory,
         private val encryptionManager: EncryptionManager,
+        private val timezoneValidator: TimezoneValidator = TimezoneValidator(),
     ) {
         suspend operator fun invoke(
             session: SleepSessionEntity,
@@ -209,16 +210,23 @@ class ComputeSleepMetricsUseCase
             if (currentNocturnalRhr != null) {
                 rhrRatio = currentNocturnalRhr.toFloat() / (baselineRhrValue + 0.001f)
 
-                // Timezone jump detection — travel often shifts physiological nadir.
-                // REF: A.12 review — detect significant offset shifts vs. previous session.
-                val currentOffset = session.endZoneOffsetSeconds
+                // Timezone-offset validation — travel and DST both shift the
+                // physiological nadir window, so we need to distinguish "user
+                // crossed timezones" from "clocks rolled an hour back/forward".
+                // REF: TimezoneValidator (Phase 0.5).
+                val currentOffset = session.startZoneOffsetSeconds ?: session.endZoneOffsetSeconds
                 val previousSession = historicalSessions.maxByOrNull { it.endTime }
                 val previousOffset = previousSession?.endZoneOffsetSeconds
-                val isTimezoneJump =
-                    currentOffset != null &&
-                        previousOffset != null &&
-                        kotlin.math.abs(currentOffset - previousOffset) >
-                        ScoringConstants.TIMEZONE_JUMP_THRESHOLD_SECONDS
+                val sessionLocalDate =
+                    timezoneValidator.localDate(session.startTime, currentOffset)
+                val tzValidation =
+                    timezoneValidator.validateTimezoneOffset(
+                        currentOffsetSeconds = currentOffset,
+                        previousOffsetSeconds = previousOffset,
+                        sessionDate = sessionLocalDate,
+                    )
+                val isTimezoneJump = tzValidation == TimezoneValidator.TimezoneValidation.TIMEZONE_JUMP
+                val isDstTransition = tzValidation == TimezoneValidator.TimezoneValidation.DST_TRANSITION
 
                 val minHrTimestamp = heartRateDao.getMinHrTimestamp(session.id)
                 val isLateNadirRaw =

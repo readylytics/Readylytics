@@ -48,4 +48,15 @@ data class SleepSessionEntity(
      * for this night, meaning the night should NOT contribute to baselines.
      */
     val stagesInvalid: Boolean = false,
+    /**
+     * Phase 0.5 — true when the session's `startZoneOffsetSeconds` differs from
+     * the previous session by more than 1h AND the date is NOT a DST boundary.
+     * Persisted so downstream consumers can disable nadir-based penalties.
+     */
+    val timezoneJumpDetected: Boolean = false,
+    /**
+     * Phase 0.5 — true when the session's offset shifted by exactly ±3600s on
+     * a known DST boundary date.
+     */
+    val dstTransitionDetected: Boolean = false,
 )
