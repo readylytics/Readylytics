@@ -296,13 +296,34 @@ class ComputeSleepMetricsUseCase
                         emergencyFlags = scoringConfig.emergencyFlags,
                     )
 
-                readinessScore =
-                    scoringCalculator.computeReadinessScore(
+                // Phase 0.4: count consecutive nights of overreaching / illness to drive
+                // escalating caps. Look at yesterday's persisted recovery flags.
+                val yesterdayFlags =
+                    yesterdaySummary?.recoveryFlags?.split(",")?.toSet() ?: emptySet()
+                val consecutiveOverreachingDays =
+                    if (com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag.OVERREACHING.name in yesterdayFlags) {
+                        2
+                    } else {
+                        1
+                    }
+                val consecutiveIllnessDays =
+                    if (com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag.ILLNESS_ONSET.name in yesterdayFlags) {
+                        2
+                    } else {
+                        1
+                    }
+
+                val readinessDetail =
+                    scoringCalculator.computeReadinessScoreDetail(
                         sRest = sRest,
                         sleepScore = sleepScore,
                         loadScore = loadScore,
                         recoveryFlags = recoveryFlags,
+                        strainRatio = summary.strainRatio,
+                        consecutiveOverreachingDays = consecutiveOverreachingDays,
+                        consecutiveIllnessDays = consecutiveIllnessDays,
                     )
+                readinessScore = readinessDetail.score
 
                 persistedZLnHrv = zHrv
                 persistedZRhr = zRhr
@@ -364,6 +385,9 @@ class ComputeSleepMetricsUseCase
                                 configHashCode = scoringConfig.auditTrail.configHashCode,
                                 phaseName = scoringConfig.auditTrail.phaseName,
                             ),
+                        cappingReason = readinessDetail.cappingReason,
+                        recommendation = readinessDetail.recommendation,
+                        capExplanation = readinessDetail.capExplanation,
                     )
             }
 
@@ -401,6 +425,15 @@ class ComputeSleepMetricsUseCase
                 diagnostics = readinessResult.diagnostics,
                 contributors = readinessResult.contributors,
                 sRest = readinessResult.sRest,
+                // Phase 0.4: persist cap reason and recommendation for UI/debug consumers.
+                readinessCappingReason =
+                    readinessResult.cappingReason
+                        .takeIf { it != com.gregor.lauritz.healthdashboard.domain.model.ReadinessCappingReason.NONE }
+                        ?.name,
+                readinessRecommendation =
+                    readinessResult.recommendation?.let { rec ->
+                        "${rec.action.name}|${rec.message}"
+                    },
             )
         }
 

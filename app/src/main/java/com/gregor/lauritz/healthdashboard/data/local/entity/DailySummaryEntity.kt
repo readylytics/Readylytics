@@ -50,4 +50,9 @@ data class DailySummaryEntity(
     val architectureScoreContribution: Float? = null,
     val loadContribution: Float? = null,
     val sRest: Float? = null,
+    // Phase 0.4: readiness cap reasoning & recommendation persistence.
+    /** Enum name of [ReadinessCappingReason]; "NONE" or null when not capped. */
+    val readinessCappingReason: String? = null,
+    /** JSON-ish line: "ACTION|message". UI deserialises into a [ReadinessRecommendation]. */
+    val readinessRecommendation: String? = null,
 )

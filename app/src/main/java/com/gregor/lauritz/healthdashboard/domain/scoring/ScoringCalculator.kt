@@ -1,7 +1,10 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
+import com.gregor.lauritz.healthdashboard.domain.model.ReadinessCappingReason
+import com.gregor.lauritz.healthdashboard.domain.model.ReadinessRecommendation
 import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
+import com.gregor.lauritz.healthdashboard.domain.model.TrainingAction
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Readiness
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Restoration
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Sleep
@@ -117,6 +120,36 @@ interface ScoringCalculator {
         loadScore: Float,
         recoveryFlags: Set<RecoveryFlag> = emptySet(),
     ): Float
+
+    /**
+     * Rich readiness result that augments [computeReadinessScore] with the
+     * capping reason and a [ReadinessRecommendation]. Used by
+     * [ComputeSleepMetricsUseCase] (Phase 0.4) to surface medical-grade
+     * action guidance instead of a bare number.
+     *
+     * @param strainRatio current ACWR (acute / chronic workload ratio). Used to
+     *  detect the EXTREME_LOAD cap (SR > 2.0).
+     * @param consecutiveOverreachingDays number of consecutive nights the
+     *  overreaching pattern has fired; controls escalating cap (day 1 → 70,
+     *  day 3+ → 55).
+     */
+    data class ReadinessScoreDetail(
+        val score: Float,
+        val rawScore: Float,
+        val cappingReason: ReadinessCappingReason,
+        val recommendation: ReadinessRecommendation,
+        val capExplanation: String?,
+    )
+
+    fun computeReadinessScoreDetail(
+        sRest: Float,
+        sleepScore: Float,
+        loadScore: Float,
+        recoveryFlags: Set<RecoveryFlag> = emptySet(),
+        strainRatio: Float? = null,
+        consecutiveOverreachingDays: Int = 1,
+        consecutiveIllnessDays: Int = 1,
+    ): ReadinessScoreDetail
 
     fun isLateNadir(
         minHrTimestampMs: Long,
@@ -494,24 +527,135 @@ class ScoringCalculatorImpl
             sleepScore: Float,
             loadScore: Float,
             recoveryFlags: Set<RecoveryFlag>,
-        ): Float {
-            var rs =
+        ): Float =
+            computeReadinessScoreDetail(
+                sRest = sRest,
+                sleepScore = sleepScore,
+                loadScore = loadScore,
+                recoveryFlags = recoveryFlags,
+            ).score
+
+        override fun computeReadinessScoreDetail(
+            sRest: Float,
+            sleepScore: Float,
+            loadScore: Float,
+            recoveryFlags: Set<RecoveryFlag>,
+            strainRatio: Float?,
+            consecutiveOverreachingDays: Int,
+            consecutiveIllnessDays: Int,
+        ): ScoringCalculator.ReadinessScoreDetail {
+            val raw =
                 Readiness.WEIGHT_RESTORATION * sRest +
                     Readiness.WEIGHT_SLEEP * sleepScore +
                     Readiness.WEIGHT_LOAD * loadScore
 
-            // Functional overreaching: HRV↑ AND RHR↓ on 2 consecutive nights
-            // REF: Le Meur 2013 Med Sci Sports Exerc; Bellenger 2017 Front Physiol
+            var rs = raw
+            var cappingReason = ReadinessCappingReason.NONE
+            var capExplanation: String? = null
+
+            // Functional overreaching: HRV↑ AND RHR↓ on 2 consecutive nights.
+            // Escalating cap: 70 on day 1-2, 55 on day 3+.
             if (RecoveryFlag.OVERREACHING in recoveryFlags) {
-                rs = rs.coerceAtMost(Readiness.OVERREACHING_MAX_SCORE)
-            }
-            // Illness onset: HRV↓ AND RHR↑ on 2 consecutive nights
-            // REF: Mishra 2020 Nat Biomed Eng; Quer 2021 Nat Med
-            if (RecoveryFlag.ILLNESS_ONSET in recoveryFlags) {
-                rs = rs.coerceAtMost(Readiness.ILLNESS_MAX_SCORE)
+                val cap =
+                    if (consecutiveOverreachingDays >= Readiness.OVERREACHING_ESCALATED_DAYS) {
+                        Readiness.OVERREACHING_ESCALATED_MAX_SCORE
+                    } else {
+                        Readiness.OVERREACHING_MAX_SCORE
+                    }
+                if (rs > cap) {
+                    rs = cap
+                    cappingReason = ReadinessCappingReason.OVERREACHING_CONSECUTIVE
+                    capExplanation =
+                        "Readiness capped at ${cap.toInt()}: overreaching pattern (high HRV, low RHR) " +
+                            "for $consecutiveOverreachingDays night(s)"
+                }
             }
 
-            return rs.coerceIn(0f, 100f)
+            // Illness onset: HRV↓ AND RHR↑ on 2 consecutive nights.
+            // Illness cap is stricter than overreaching and takes precedence when both fire.
+            if (RecoveryFlag.ILLNESS_ONSET in recoveryFlags) {
+                if (rs > Readiness.ILLNESS_MAX_SCORE) {
+                    rs = Readiness.ILLNESS_MAX_SCORE
+                    cappingReason = ReadinessCappingReason.ILLNESS_ONSET_CONSECUTIVE
+                    capExplanation =
+                        "Readiness capped at ${Readiness.ILLNESS_MAX_SCORE.toInt()}: illness signature " +
+                            "(low HRV, elevated RHR) for $consecutiveIllnessDays night(s)"
+                }
+            }
+
+            // Extreme training load (SR > 2.0) — independent of cardiac flags.
+            if (strainRatio != null && strainRatio > Readiness.EXTREME_LOAD_SR_THRESHOLD) {
+                if (rs > Readiness.EXTREME_LOAD_MAX_SCORE) {
+                    rs = Readiness.EXTREME_LOAD_MAX_SCORE
+                    cappingReason = ReadinessCappingReason.EXTREME_LOAD
+                    capExplanation =
+                        "Readiness capped at ${Readiness.EXTREME_LOAD_MAX_SCORE.toInt()}: training load very " +
+                            "high (SR=${"%.2f".format(strainRatio)} > 2.0)"
+                }
+            }
+
+            val finalScore = rs.coerceIn(0f, 100f)
+            return ScoringCalculator.ReadinessScoreDetail(
+                score = finalScore,
+                rawScore = raw.coerceIn(0f, 100f),
+                cappingReason = cappingReason,
+                recommendation = buildRecommendation(finalScore, cappingReason),
+                capExplanation = capExplanation,
+            )
+        }
+
+        private fun buildRecommendation(
+            score: Float,
+            cappingReason: ReadinessCappingReason,
+        ): ReadinessRecommendation {
+            val action =
+                when {
+                    score >= Readiness.ACTION_FULL_EFFORT_THRESHOLD -> TrainingAction.FULL_EFFORT
+                    score >= Readiness.ACTION_NORMAL_THRESHOLD -> TrainingAction.NORMAL
+                    score >= Readiness.ACTION_LIGHT_THRESHOLD -> TrainingAction.LIGHT_ACTIVITY
+                    else -> TrainingAction.REST
+                }
+            return when (cappingReason) {
+                ReadinessCappingReason.OVERREACHING_CONSECUTIVE ->
+                    ReadinessRecommendation(
+                        action = TrainingAction.LIGHT_ACTIVITY,
+                        message =
+                            "HRV elevated 2+ nights with low RHR. Reduce training intensity 3-5 days. " +
+                                "Stay hydrated and prioritise sleep.",
+                        durationDays = ReadinessRecommendation.OVERREACHING_RECOMMENDATION_DAYS,
+                    )
+                ReadinessCappingReason.ILLNESS_ONSET_CONSECUTIVE ->
+                    ReadinessRecommendation(
+                        action = TrainingAction.REST,
+                        message =
+                            "RHR elevated with low HRV. May indicate infection or autonomic stress. " +
+                                "Rest today and monitor symptoms; consult a clinician if fever or fatigue persists.",
+                        durationDays = ReadinessRecommendation.ILLNESS_RECOMMENDATION_DAYS,
+                    )
+                ReadinessCappingReason.EXTREME_LOAD ->
+                    ReadinessRecommendation(
+                        action = TrainingAction.LIGHT_ACTIVITY,
+                        message =
+                            "Acute training load very high (SR > 2.0). Prioritise recovery the next 3 days " +
+                                "to avoid non-functional overreaching.",
+                        durationDays = ReadinessRecommendation.EXTREME_LOAD_RECOMMENDATION_DAYS,
+                    )
+                ReadinessCappingReason.NONE ->
+                    ReadinessRecommendation(
+                        action = action,
+                        message =
+                            when (action) {
+                                TrainingAction.FULL_EFFORT ->
+                                    "Excellent recovery — full-effort training is appropriate today."
+                                TrainingAction.NORMAL ->
+                                    "Solid recovery — train normally; listen to perceived exertion."
+                                TrainingAction.LIGHT_ACTIVITY ->
+                                    "Suboptimal recovery — keep today light (active recovery / Z1-Z2)."
+                                TrainingAction.REST ->
+                                    "Poor recovery — rest day recommended; revisit tomorrow."
+                            },
+                    )
+            }
         }
 
         // Pure function — moves late-nadir check out of ScoringRepository for testability.

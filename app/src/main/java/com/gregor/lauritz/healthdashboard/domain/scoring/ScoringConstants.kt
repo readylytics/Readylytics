@@ -132,6 +132,20 @@ object ScoringConstants {
         const val ILLNESS_Z_HRV_THRESHOLD = -1.5f
         const val ILLNESS_RHR_DELTA_BPM = 5f
         const val ILLNESS_MAX_SCORE = 50f
+
+        // Phase 0.4 — escalating caps when the same pattern persists.
+        // Day 1: standard cap. Day 3+: hard floor at 55 to force rest.
+        const val OVERREACHING_ESCALATED_DAYS = 3
+        const val OVERREACHING_ESCALATED_MAX_SCORE = 55f
+
+        // Strain Ratio danger zone — REF: Gabbett 2016 BJSM, Windt 2018 BJSM
+        const val EXTREME_LOAD_SR_THRESHOLD = 2.0f
+        const val EXTREME_LOAD_MAX_SCORE = 60f
+
+        // Action thresholds for translating score → TrainingAction.
+        const val ACTION_FULL_EFFORT_THRESHOLD = 80f
+        const val ACTION_NORMAL_THRESHOLD = 60f
+        const val ACTION_LIGHT_THRESHOLD = 40f
     }
 
     object Pai {

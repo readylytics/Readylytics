@@ -24,6 +24,12 @@ data class ReadinessResult(
     val recoveryFlags: Set<RecoveryFlag>,
     val contributors: Contributors,
     val diagnostics: Diagnostics,
+    /** Why readiness was capped below the raw weighted score. NONE = no cap. */
+    val cappingReason: ReadinessCappingReason = ReadinessCappingReason.NONE,
+    /** Actionable training guidance for the next 24h. Always present. */
+    val recommendation: ReadinessRecommendation? = null,
+    /** One-line human-readable cap explanation for the UI. Null when not capped. */
+    val capExplanation: String? = null,
 ) {
     /**
      * Tracks which underlying factors drove the readiness score so the UI/debug
@@ -66,6 +72,9 @@ data class ReadinessResult(
                 recoveryFlags = emptySet(),
                 contributors = Contributors(),
                 diagnostics = Diagnostics(),
+                cappingReason = ReadinessCappingReason.NONE,
+                recommendation = null,
+                capExplanation = null,
             )
     }
 }
