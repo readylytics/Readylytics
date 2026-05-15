@@ -22,7 +22,13 @@ import javax.inject.Singleton
 /**
  * Manages SQLCipher database encryption key generation, storage, and decryption.
  * Uses Android KeyStore to protect a 256-bit AES key, with encrypted key + IV stored in SharedPreferences.
+ *
  * Memory safety: all plaintext ByteArray instances are zeroed with .fill(0) after use.
+ *
+ * Encryption required; no plaintext fallback. Any failure to derive or load the
+ * encryption key MUST cause the app to fail-fast at startup via
+ * [EncryptionHealthCheck] — silently opening a plaintext database with health
+ * records is unacceptable.
  */
 @Singleton
 class SqlCipherKeyManager
@@ -30,6 +36,18 @@ class SqlCipherKeyManager
     constructor(
         @ApplicationContext private val context: Context,
     ) {
+        @Volatile
+        private var statusInternal: EncryptionStatus = EncryptionStatus.UNINITIALIZED
+
+        /**
+         * Wall-clock timestamp (System.currentTimeMillis) of the most recent key
+         * rotation, or null if the key has never been rotated since first install.
+         * Currently only updated when the persisted key is regenerated.
+         */
+        @Volatile
+        var lastKeyRotationTimestamp: Long? = null
+            private set
+
         init {
             try {
                 System.loadLibrary("sqlcipher")
@@ -37,6 +55,7 @@ class SqlCipherKeyManager
                 // In Robolectric or Unit tests, native libraries are often not available.
                 // We only throw if we're not in a test environment.
                 if (System.getProperty("java.runtime.name")?.contains("Android", ignoreCase = true) == true) {
+                    statusInternal = EncryptionStatus.FAILED
                     throw RuntimeException(
                         "Failed to load sqlcipher native library. Ensure SQLCipher is properly integrated.",
                         e,
@@ -50,18 +69,36 @@ class SqlCipherKeyManager
         }
 
         /**
+         * Returns the current encryption lifecycle status. Used by
+         * [EncryptionHealthCheck] at startup to refuse to open the database when
+         * key material is unavailable.
+         */
+        fun encryptionStatus(): EncryptionStatus = statusInternal
+
+        /**
          * Returns a SupportSQLiteOpenHelper.Factory configured with the database encryption key.
          * The key is passed as a raw hex string (x'...') to skip SQLCipher's default KDF and
          * use the 256-bit AES key directly.
+         *
+         * On success, [encryptionStatus] transitions to [EncryptionStatus.INITIALIZED]. Any
+         * exception from Keystore / Tink / Cipher leaves status as [EncryptionStatus.FAILED]
+         * and is rethrown — callers must not open a plaintext database in that case.
          */
         fun getOrCreateFactory(): SupportSQLiteOpenHelper.Factory {
-            val decryptedKey = getOrCreateDbKey()
+            val decryptedKey =
+                try {
+                    getOrCreateDbKey()
+                } catch (t: Throwable) {
+                    statusInternal = EncryptionStatus.FAILED
+                    throw t
+                }
             return try {
                 val keyHex = decryptedKey.toHex()
                 val rawKeyBytes = "x'$keyHex'".toByteArray(Charsets.UTF_8)
                 // We must NOT fill rawKeyBytes with zeros here, because SupportOpenHelperFactory
                 // holds a reference to the array and uses it when Room actually opens the database.
                 // The factory clears the array automatically after the database is opened.
+                statusInternal = EncryptionStatus.INITIALIZED
                 net.zetetic.database.sqlcipher
                     .SupportOpenHelperFactory(rawKeyBytes)
             } finally {
@@ -72,6 +109,11 @@ class SqlCipherKeyManager
         /**
          * Detects if the database file is plaintext (SQLite format) and migrates it to encrypted format.
          * Checks the first 16 bytes for SQLite magic header; if found, performs migration.
+         *
+         * The migration is wrapped in a small retry loop ([MIGRATION_MAX_ATTEMPTS] attempts) because
+         * transient Keystore failures (device locked, RNG starvation under boot pressure) can
+         * occasionally surface as one-off exceptions. Persistent failures still propagate so
+         * the app aborts startup rather than running unencrypted.
          */
         fun migrateIfNeeded(dbFile: File) {
             if (!dbFile.exists()) return
@@ -88,6 +130,27 @@ class SqlCipherKeyManager
                 return
             }
 
+            var lastError: Throwable? = null
+            repeat(MIGRATION_MAX_ATTEMPTS) { attempt ->
+                try {
+                    performMigration(dbFile)
+                    return
+                } catch (e: Exception) {
+                    lastError = e
+                    if (attempt == MIGRATION_MAX_ATTEMPTS - 1) {
+                        statusInternal = EncryptionStatus.FAILED
+                        throw RuntimeException(
+                            "SQLCipher migration failed after $MIGRATION_MAX_ATTEMPTS attempts",
+                            e,
+                        )
+                    }
+                }
+            }
+            // Defensive: unreachable but keeps the compiler happy.
+            lastError?.let { throw it }
+        }
+
+        private fun performMigration(dbFile: File) {
             val tempFile = File(dbFile.parent, "${dbFile.name}.cipher_tmp")
             val rawKey = getOrCreateDbKey()
             try {
@@ -119,7 +182,7 @@ class SqlCipherKeyManager
                 File("${dbFile.absolutePath}-shm").delete()
             } catch (e: Exception) {
                 tempFile.delete()
-                throw RuntimeException("SQLCipher migration failed", e)
+                throw e
             } finally {
                 rawKey.fill(0)
             }
@@ -156,12 +219,16 @@ class SqlCipherKeyManager
 
         private fun getOrCreateDbKey(): ByteArray =
             if (prefs.contains(PREF_ENCRYPTED_KEY)) {
+                lastKeyRotationTimestamp = prefs.getLong(PREF_KEY_GENERATED_AT, 0L).takeIf { it > 0L }
                 decryptKey()
             } else {
                 val rawKey = ByteArray(32)
                 SecureRandom().nextBytes(rawKey)
                 try {
                     encryptAndStoreKey(rawKey)
+                    val now = System.currentTimeMillis()
+                    prefs.edit().putLong(PREF_KEY_GENERATED_AT, now).apply()
+                    lastKeyRotationTimestamp = now
                     rawKey.clone()
                 } finally {
                     rawKey.fill(0)
@@ -231,5 +298,9 @@ class SqlCipherKeyManager
             private const val PREF_FILE_NAME = "sqlcipher_key_prefs"
             private const val PREF_ENCRYPTED_KEY = "encrypted_key"
             private const val PREF_IV = "encryption_iv"
+            private const val PREF_KEY_GENERATED_AT = "encrypted_key_generated_at"
+
+            /** Number of times to retry a transient Keystore/SQLCipher migration failure. */
+            internal const val MIGRATION_MAX_ATTEMPTS = 3
         }
     }

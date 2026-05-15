@@ -10,7 +10,9 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import com.gregor.lauritz.healthdashboard.data.security.EncryptionHealthCheck
 import com.gregor.lauritz.healthdashboard.data.security.SqlCipherKeyManager
+import com.gregor.lauritz.healthdashboard.domain.util.logD
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,11 +26,19 @@ import javax.inject.Singleton
 object DatabaseModule {
     @Provides
     @Singleton
+    fun provideEncryptionHealthCheck(
+        sqlCipherKeyManager: SqlCipherKeyManager,
+    ): EncryptionHealthCheck = EncryptionHealthCheck(sqlCipherKeyManager)
+
+    @Provides
+    @Singleton
     fun provideDatabase(
         @ApplicationContext context: Context,
         sqlCipherKeyManager: SqlCipherKeyManager,
+        encryptionHealthCheck: EncryptionHealthCheck,
     ): HealthDatabase {
         val dbFile = context.getDatabasePath("health_dashboard.db")
+        val provideStart = System.nanoTime()
         sqlCipherKeyManager.migrateIfNeeded(dbFile)
 
         val builder =
@@ -60,6 +70,15 @@ object DatabaseModule {
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             super.onOpen(db)
                             db.execSQL("PRAGMA synchronous = NORMAL")
+                            // Fail-fast: refuse to expose user data if encryption did not initialise.
+                            // Throws EncryptionUnavailableException → app crashes by design.
+                            val report = encryptionHealthCheck.verify(db)
+                            val totalMs = (System.nanoTime() - provideStart) / 1_000_000L
+                            logD("DatabaseModule") {
+                                "Database encryption verified at startup " +
+                                    "(provideDatabase ms=$totalMs, keyDerivation ms=${report.keyDerivationMs}, " +
+                                    "dbOpen ms=${report.dbOpenMs}, cipher=${report.cipherVersion})"
+                            }
                         }
                     },
                 )
