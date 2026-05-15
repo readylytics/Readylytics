@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -40,9 +41,11 @@ fun MetricCard(
         onClick = onClick ?: StaticEmptyLambda,
         enabled = onClick != null,
         modifier =
-            modifier.let {
-                if (onClick != null) it.semantics { role = Role.Button } else it
-            },
+            modifier
+                .height(140.dp)
+                .let {
+                    if (onClick != null) it.semantics { role = Role.Button } else it
+                },
         shape = RoundedCornerShape(16.dp),
         colors =
             CardDefaults.cardColors(
@@ -52,7 +55,12 @@ fun MetricCard(
                 disabledContentColor = contentColor,
             ),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxHeight()
+                    .padding(16.dp),
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -60,25 +68,26 @@ fun MetricCard(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleSmall,
                     color = contentColor,
                 )
                 MetricTooltip(description = tooltip, iconTint = contentColor)
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = value,
                 style = MaterialTheme.typography.displaySmall,
                 color = contentColor,
             )
             if (secondaryText != null) {
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = secondaryText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor.copy(alpha = 0.7f),
+                )
             }
-            Text(
-                text = secondaryText ?: "",
-                style = MaterialTheme.typography.bodySmall,
-                color = contentColor.copy(alpha = 0.7f),
-            )
         }
     }
 }

@@ -128,7 +128,6 @@ fun StepDetailScreen(
             item(key = "steps_chart") {
                 TrendCard(
                     title = "Daily Steps",
-                    unit = "steps",
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
                     TrendChart(

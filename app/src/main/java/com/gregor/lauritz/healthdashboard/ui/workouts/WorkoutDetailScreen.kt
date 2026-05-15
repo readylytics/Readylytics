@@ -137,7 +137,7 @@ fun WorkoutDetailScreen(
                 MetricCard(
                     title = "Avg Pulse",
                     value = if (workout.avgHr > 0) workout.avgHr.roundToInt().toString() else "--",
-                    secondaryText = "BPM",
+                    secondaryText = "bpm",
                     status = MetricStatus.NEUTRAL,
                     tooltip = "Average heart rate during the workout.",
                     modifier = Modifier.weight(1f),
@@ -342,7 +342,7 @@ private fun HrChart(
                 startAxis =
                     VerticalAxis.rememberStart(
                         label = labelComponent,
-                        title = { "BPM" },
+                        title = { "bpm" },
                         titleComponent = axisLabelComponent,
                         guideline = guidelineComponent,
                     ),

@@ -4,8 +4,10 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -134,11 +136,11 @@ fun ReorderableCardGrid(
             } else {
                 // Try to pair with next card
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     if (cardIndex < displayableCards.size) {
-                        Box(modifier = Modifier.weight(1f)) {
+                        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                             renderCardItem(
                                 card = displayableCards[cardIndex],
                                 linearIndex = cardIndex,
@@ -148,14 +150,14 @@ fun ReorderableCardGrid(
                                 displayableCards = displayableCards,
                                 onCardRemove = onCardRemove,
                                 onCardReorder = onCardReorder,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                             )
                         }
                         cardIndex++
                     }
 
                     if (cardIndex < displayableCards.size && displayableCards[cardIndex].cardId !in FULL_WIDTH_CARDS) {
-                        Box(modifier = Modifier.weight(1f)) {
+                        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                             renderCardItem(
                                 card = displayableCards[cardIndex],
                                 linearIndex = cardIndex,
@@ -165,7 +167,7 @@ fun ReorderableCardGrid(
                                 displayableCards = displayableCards,
                                 onCardRemove = onCardRemove,
                                 onCardReorder = onCardReorder,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                             )
                         }
                         cardIndex++
@@ -241,11 +243,13 @@ private fun renderCardItem(
     val isTarget = state.targetIndex == linearIndex && state.draggedIndex != null
     val cardContent = cardDataMap[card.cardId]!!
 
-    // Center gauges (SLEEP_SCORE, READINESS)
     val wrappedContent: @Composable () -> Unit =
         if (card.cardId in setOf(CardId.SLEEP_SCORE, CardId.READINESS)) {
             @Composable {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(140.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
                     cardContent()
                 }
             }
@@ -389,6 +393,7 @@ private fun ReorderableCardItem(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .fillMaxHeight()
                     .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -401,7 +406,7 @@ private fun ReorderableCardItem(
                 )
             }
 
-            Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 if (content != null) {
                     content()
                 }

@@ -96,7 +96,7 @@ class GetDashboardDataUseCase
             val value = summary.totalPai?.roundToPercentInt()?.toString() ?: "—"
 
             return CardData(
-                title = "PAI Score",
+                title = "PAI",
                 value = value,
                 unit = "",
                 status = status,

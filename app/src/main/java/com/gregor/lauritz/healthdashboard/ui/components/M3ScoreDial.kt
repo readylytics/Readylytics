@@ -8,7 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -94,15 +93,14 @@ fun M3ScoreDial(
             )
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-        if (tooltipDescription != null) {
-            MetricTooltip(
-                description = tooltipDescription,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
-            )
+            if (tooltipDescription != null) {
+                MetricTooltip(
+                    description = tooltipDescription,
+                )
+            }
         }
     }
 }

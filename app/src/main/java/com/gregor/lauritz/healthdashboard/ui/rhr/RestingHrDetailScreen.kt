@@ -129,7 +129,6 @@ fun RestingHrDetailScreen(
             item(key = "rhr_chart") {
                 TrendCard(
                     title = "Resting Heart Rate",
-                    unit = "bpm",
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
                     TrendChart(

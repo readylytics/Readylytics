@@ -258,7 +258,7 @@ fun ZoneEditingSection(
 
     Column(verticalArrangement = Arrangement.spacedBy(SettingsConstants.VERTICAL_SPACER)) {
         Text(
-            "Heart Rate Zones (BPM)",
+            "Heart Rate Zones (bpm)",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
         )
@@ -291,7 +291,7 @@ fun ZoneEditingSection(
             }
         } else {
             Text(
-                "Invalid: All values must be 1–$maxHr BPM and strictly increasing",
+                "Invalid: All values must be 1–$maxHr bpm and strictly increasing",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )

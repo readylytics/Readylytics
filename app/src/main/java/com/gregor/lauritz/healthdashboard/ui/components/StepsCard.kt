@@ -29,14 +29,21 @@ fun StepsCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth().semantics { role = Role.Button },
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .semantics { role = Role.Button },
         shape = RoundedCornerShape(16.dp),
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
             ),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier =
+                Modifier
+                    .padding(16.dp),
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -44,16 +51,16 @@ fun StepsCard(
             ) {
                 Text(
                     text = "Daily Steps",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = "Goal: ${java.text.NumberFormat.getNumberInstance().format(stepGoal)}",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             StepsBar(
                 stepCount = stepCount,
                 stepGoal = stepGoal,

@@ -46,7 +46,6 @@ import kotlin.math.roundToInt
 @Composable
 fun TrendCard(
     title: String,
-    unit: String,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -60,12 +59,6 @@ fun TrendCard(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = unit,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Spacer(Modifier.height(16.dp))
@@ -111,6 +104,7 @@ fun TrendChart(
         }
 
     val labelComponent = ChartDefaults.labelTextComponent()
+    val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val baselineColor = MaterialTheme.colorScheme.onSurfaceVariant
     val guidelineComponent = ChartDefaults.guidelineComponent()
     val dotColor = MaterialTheme.colorScheme.primary
@@ -165,6 +159,8 @@ fun TrendChart(
                         label = labelComponent,
                         valueFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() },
                         guideline = guidelineComponent,
+                        title = { baselineUnit },
+                        titleComponent = axisLabelComponent,
                     ),
                 bottomAxis =
                     HorizontalAxis.rememberBottom(

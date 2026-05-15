@@ -3,9 +3,11 @@ package com.gregor.lauritz.healthdashboard.ui.sleep
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -207,7 +209,6 @@ fun SleepScreen(
         item(key = "hrv_chart") {
             TrendCard(
                 title = "HRV",
-                unit = "ms",
                 modifier = Modifier.padding(horizontal = 16.dp),
             ) {
                 TrendChart(
@@ -227,7 +228,6 @@ fun SleepScreen(
         item(key = "rhr_chart") {
             TrendCard(
                 title = "Resting Heart Rate",
-                unit = "bpm",
                 modifier = Modifier.padding(horizontal = 16.dp),
             ) {
                 TrendChart(
@@ -283,16 +283,16 @@ private fun MetricsGrid(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 CircadianConsistencyCard(
                     result = circadianResult,
                     onClick = null,
                 )
             }
-            Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCard(
                     title = "Sleep Efficiency",
                     value = session?.let { "${it.efficiency.roundToPercentInt()}%" } ?: "—",
@@ -304,10 +304,10 @@ private fun MetricsGrid(
             }
         }
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCard(
                     title = "Deep Sleep",
                     value = summary?.deepSleepPercent?.let { "${it.roundToPercentInt()}%" } ?: "—",
@@ -317,7 +317,7 @@ private fun MetricsGrid(
                     onClick = null,
                 )
             }
-            Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCard(
                     title = "REM Sleep",
                     value = summary?.remSleepPercent?.let { "${it.roundToPercentInt()}%" } ?: "—",

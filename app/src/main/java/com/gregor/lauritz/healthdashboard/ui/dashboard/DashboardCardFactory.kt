@@ -26,8 +26,8 @@ fun buildCardDataMap(
 
     cardMap[CardId.SLEEP_SCORE] = {
         M3ScoreDial(
-            score = summary?.sleepScore,
             label = "Sleep Score",
+            score = summary?.sleepScore,
             onClick = if (isEditing) ({}) else onNavigateToSleep,
             tooltipDescription =
                 "Total quality of rest based on duration and cycles.\n\n• 80–100: Optimal\n• 60–79: Fair\n• < 60: Poor",
@@ -36,8 +36,8 @@ fun buildCardDataMap(
 
     cardMap[CardId.READINESS] = {
         M3ScoreDial(
-            score = summary?.readinessScore,
             label = "Readiness",
+            score = summary?.readinessScore,
             onClick = if (isEditing) ({}) else onNavigateToWorkouts,
             tooltipDescription =
                 "Preparation for stress based on recent load & recovery.\n\n• 85–100: Peak\n• 30–69: Moderate\n• < 30: Rest",
