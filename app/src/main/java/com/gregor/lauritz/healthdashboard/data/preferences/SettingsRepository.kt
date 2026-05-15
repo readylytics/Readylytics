@@ -458,4 +458,27 @@ class SettingsRepository
                 cachedAvailableDevices = null
             }
         }
+
+        // --- Health Connect permission revocation (Phase 0.2) ---
+
+        /** Replace the set of revoked Health Connect permission strings. */
+        suspend fun updateHcPermissionsRevoked(permissions: List<String>) {
+            val joined = permissions.distinct().sorted().joinToString(",")
+            dataStore.updateData { it.toBuilder().setHcPermissionsRevoked(joined).build() }
+        }
+
+        /** Record the human-readable reason sync is disabled, or clear it (null). */
+        suspend fun updateHcSyncDisabledReason(reason: String?) {
+            dataStore.updateData { builder ->
+                if (reason != null) {
+                    builder.toBuilder().setHcSyncDisabledReason(reason).build()
+                } else {
+                    builder.toBuilder().clearHcSyncDisabledReason().build()
+                }
+            }
+        }
+
+        suspend fun updateLastPermissionCheckTimestamp(timestamp: Long) {
+            dataStore.updateData { it.toBuilder().setLastPermissionCheckTimestamp(timestamp).build() }
+        }
     }

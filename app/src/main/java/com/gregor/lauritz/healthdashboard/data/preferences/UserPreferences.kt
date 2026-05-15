@@ -62,6 +62,13 @@ data class UserPreferences(
     val chengBeta: Float = PhysiologyProfile.GENERAL.defaultChengBeta,
     val itrimB: Float = PhysiologyProfile.GENERAL.defaultItrimB,
     val primaryDeviceName: String? = null,
+    // Phase 0.2: Health Connect permission revocation tracking.
+    /** Permissions known to be revoked. Empty when all required permissions are granted. */
+    val hcPermissionsRevoked: List<String> = emptyList(),
+    /** Reason sync is disabled. null = sync enabled. */
+    val hcSyncDisabledReason: String? = null,
+    /** Wall-clock ms of the most recent Health Connect permission check. 0 = never checked. */
+    val lastPermissionCheckTimestamp: Long = 0L,
 )
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
@@ -128,5 +135,13 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         chengBeta = if (this.chengBeta > 0f) this.chengBeta else profile.defaultChengBeta,
         itrimB = if (itrimpB > 0f) itrimpB else profile.defaultItrimB,
         primaryDeviceName = if (hasPrimaryDeviceName()) primaryDeviceName else null,
+        hcPermissionsRevoked =
+            if (hcPermissionsRevoked.isNullOrBlank()) {
+                emptyList()
+            } else {
+                hcPermissionsRevoked.split(",").filter { it.isNotBlank() }
+            },
+        hcSyncDisabledReason = if (hasHcSyncDisabledReason()) hcSyncDisabledReason else null,
+        lastPermissionCheckTimestamp = lastPermissionCheckTimestamp,
     )
 }

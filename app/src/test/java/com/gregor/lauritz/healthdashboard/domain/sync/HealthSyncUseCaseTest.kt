@@ -1,5 +1,7 @@
 package com.gregor.lauritz.healthdashboard.domain.sync
 
+import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectPermissionManager
+import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectPermissionState
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
@@ -16,8 +18,11 @@ import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -32,6 +37,7 @@ class HealthSyncUseCaseTest {
     private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val scoringRepository = mockk<ScoringRepository>(relaxed = true)
+    private val permissionManager = mockk<HealthConnectPermissionManager>(relaxed = true)
 
     private lateinit var useCase: HealthSyncUseCase
 
@@ -47,8 +53,13 @@ class HealthSyncUseCaseTest {
                 dailySummaryDao,
                 settingsRepo,
                 scoringRepository,
+                permissionManager,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
+        // Default: permissions are granted so sync proceeds.
+        coEvery { permissionManager.checkPermissions() } returns HealthConnectPermissionState.Granted
+        every { permissionManager.state } returns MutableStateFlow(HealthConnectPermissionState.Granted)
+        every { permissionManager.revokedPermissions() } returns emptyList()
     }
 
     @Test
@@ -91,5 +102,40 @@ class HealthSyncUseCaseTest {
                 heartRateDao.upsertAll(any())
                 hrvDao.upsertAll(any())
             }
+        }
+
+    @Test
+    fun `sync aborts when permissions revoked and does not call repository reads`() =
+        runTest {
+            coEvery { permissionManager.checkPermissions() } returns HealthConnectPermissionState.Revoked
+            every { permissionManager.revokedPermissions() } returns listOf("android.permission.health.READ_SLEEP")
+
+            val result = useCase.sync()
+
+            assertTrue(result.isFailure)
+            assertTrue(result.exceptionOrNull() is HealthSyncUseCase.SyncDisabledException)
+            coVerify(exactly = 0) { hcRepo.readSleepSessions(any(), any()) }
+            coVerify { settingsRepo.updateHcSyncDisabledReason("Permissions revoked") }
+        }
+
+    @Test
+    fun `sync clears disabled reason when permissions granted`() =
+        runTest {
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+            useCase.sync(windowDays = 1)
+            coVerify { settingsRepo.updateHcSyncDisabledReason(null) }
+            coVerify { settingsRepo.updateHcPermissionsRevoked(emptyList()) }
+        }
+
+    @Test
+    fun `sync aborts on PartiallyRevoked state`() =
+        runTest {
+            coEvery { permissionManager.checkPermissions() } returns
+                HealthConnectPermissionState.PartiallyRevoked(listOf("android.permission.health.READ_HEART_RATE"))
+            every { permissionManager.revokedPermissions() } returns
+                listOf("android.permission.health.READ_HEART_RATE")
+            val result = useCase.sync()
+            assertTrue(result.isFailure)
+            assertFalse(result.isSuccess)
         }
 }

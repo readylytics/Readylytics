@@ -123,6 +123,18 @@ message UserPreferencesProto {
     oneof primary_device_name_oneof {
         string primary_device_name = 56;
     }
+
+    // --- Health Connect permission revocation tracking (Phase 0.2) ---
+    // Comma-separated list of fully-qualified HealthPermission strings known to
+    // be revoked. Empty string = all granted.
+    string hc_permissions_revoked = 57;
+    // Reason sync is currently disabled (e.g. "Permissions revoked"). null/empty
+    // = sync enabled.
+    oneof hc_sync_disabled_reason_oneof {
+        string hc_sync_disabled_reason = 58;
+    }
+    // Wall-clock timestamp (ms) of the most recent permission check, for telemetry/debug.
+    int64 last_permission_check_timestamp = 59;
 }
 
 enum TrimpMethodProto {

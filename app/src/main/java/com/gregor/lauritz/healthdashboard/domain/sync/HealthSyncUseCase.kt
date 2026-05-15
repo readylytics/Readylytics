@@ -1,5 +1,7 @@
 package com.gregor.lauritz.healthdashboard.data.sync
 
+import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectPermissionManager
+import com.gregor.lauritz.healthdashboard.data.healthconnect.HealthConnectPermissionState
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HeartRateMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HrvMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.SleepDataMapper
@@ -12,6 +14,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.model.RecordType
+import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectPermissionRevokedException
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
@@ -42,12 +45,50 @@ class HealthSyncUseCase
         private val dailySummaryDao: DailySummaryDao,
         private val settingsRepo: SettingsRepository,
         private val scoringRepository: ScoringRepository,
+        private val permissionManager: HealthConnectPermissionManager,
     ) {
         private val syncMutex = Mutex()
+
+        /**
+         * Domain-level reason a sync attempt failed without retrying.
+         * Surfaced via `Result.failure(SyncDisabledException(reason))`.
+         */
+        class SyncDisabledException(
+            val reason: String,
+        ) : Exception("Sync disabled: $reason")
 
         suspend fun sync(windowDays: Int = 8): Result<Unit> =
             syncMutex.withLock {
                 withContext(Dispatchers.IO) {
+                    // Phase 0.2: Check permissions before doing any work. If any critical
+                    // permissions are missing, persist the reason and abort — do NOT retry.
+                    val permissionState = permissionManager.checkPermissions()
+                    settingsRepo.updateLastPermissionCheckTimestamp(System.currentTimeMillis())
+                    when (permissionState) {
+                        is HealthConnectPermissionState.Revoked,
+                        is HealthConnectPermissionState.PartiallyRevoked,
+                        -> {
+                            val reason = "Permissions revoked"
+                            val missing =
+                                (permissionState as? HealthConnectPermissionState.PartiallyRevoked)
+                                    ?.missing
+                                    .orEmpty()
+                            settingsRepo.updateHcPermissionsRevoked(
+                                missing.ifEmpty { permissionManager.revokedPermissions() },
+                            )
+                            settingsRepo.updateHcSyncDisabledReason(reason)
+                            logD("HealthSyncUseCase") {
+                                "Sync aborted: $reason (state=$permissionState)"
+                            }
+                            return@withContext Result.failure(SyncDisabledException(reason))
+                        }
+                        else -> {
+                            // Clear any prior disabled reason now that permissions are healthy.
+                            settingsRepo.updateHcSyncDisabledReason(null)
+                            settingsRepo.updateHcPermissionsRevoked(emptyList())
+                        }
+                    }
+
                     runCatching {
                         logD("HealthSyncUseCase") { "Starting sync (window=$windowDays days)..." }
                         val to = Instant.now()
@@ -196,6 +237,16 @@ class HealthSyncUseCase
                         }
 
                         settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
+                    }.onFailure { e ->
+                        if (e is HealthConnectPermissionRevokedException) {
+                            // Permission revoked mid-flight: persist the reason so the UI
+                            // can surface the "Grant permissions" banner.
+                            settingsRepo.updateHcPermissionsRevoked(permissionManager.revokedPermissions())
+                            settingsRepo.updateHcSyncDisabledReason("Permissions revoked")
+                            logD("HealthSyncUseCase") {
+                                "Sync hit permission revocation mid-flight; sync disabled"
+                            }
+                        }
                     }
                 }
             }

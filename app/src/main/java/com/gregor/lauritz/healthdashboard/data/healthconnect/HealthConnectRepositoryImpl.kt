@@ -6,6 +6,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
@@ -15,6 +16,8 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectPermissionRevokedException
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.PermissionStatus
+import com.gregor.lauritz.healthdashboard.domain.util.logD
+import dagger.Lazy
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,12 +25,15 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.reflect.KClass
 
 @Singleton
 class HealthConnectRepositoryImpl
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
+        // Lazy<> avoids a Dagger cycle: PermissionManager itself depends on HealthConnectRepository.
+        private val permissionManager: Lazy<HealthConnectPermissionManager>,
     ) : HealthConnectRepository {
         override val criticalPermissions: Set<String> =
             setOf(
@@ -90,10 +96,31 @@ class HealthConnectRepositoryImpl
                 }
             }
 
-        private suspend inline fun <reified T : androidx.health.connect.client.records.Record> readAllPages(
+        /**
+         * Pages through Health Connect records of type [T]. Before issuing a read,
+         * we consult the global [HealthConnectPermissionManager] to short-circuit
+         * if we already know the user revoked this record type — that avoids
+         * generating a SecurityException for every batch.
+         *
+         * If the read still throws SecurityException (race with system revocation
+         * dialog), we record the revocation with the manager and surface a
+         * descriptive [HealthConnectPermissionRevokedException] instead of a
+         * generic IOException.
+         */
+        private suspend fun <T : Record> readAllPages(
+            recordClass: KClass<T>,
             from: Instant,
             to: Instant,
         ): List<T> {
+            val permissionString = HealthPermission.getReadPermission(recordClass)
+            if (!permissionManager.get().hasPermission(permissionString)) {
+                logD("HealthConnectRepository") {
+                    "Skipping read for ${recordClass.simpleName}: permission already marked revoked"
+                }
+                throw HealthConnectPermissionRevokedException(
+                    SecurityException("Permission $permissionString known to be revoked"),
+                )
+            }
             val all = mutableListOf<T>()
             var pageToken: String? = null
             try {
@@ -101,7 +128,7 @@ class HealthConnectRepositoryImpl
                     val response =
                         client.readRecords(
                             ReadRecordsRequest(
-                                recordType = T::class,
+                                recordType = recordClass,
                                 timeRangeFilter = TimeRangeFilter.between(from, to),
                                 pageToken = pageToken,
                             ),
@@ -110,6 +137,7 @@ class HealthConnectRepositoryImpl
                     pageToken = response.pageToken
                 } while (pageToken != null)
             } catch (e: SecurityException) {
+                permissionManager.get().onPermissionRevoked(permissionString)
                 throw HealthConnectPermissionRevokedException(e)
             }
             return all
@@ -120,7 +148,7 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): List<SleepSessionRecord> =
             withContext(Dispatchers.IO) {
-                readAllPages<SleepSessionRecord>(from, to)
+                readAllPages(SleepSessionRecord::class, from, to)
             }
 
         override suspend fun readHeartRateSamples(
@@ -128,7 +156,7 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): List<HeartRateRecord> =
             withContext(Dispatchers.IO) {
-                readAllPages<HeartRateRecord>(from, to)
+                readAllPages(HeartRateRecord::class, from, to)
             }
 
         override suspend fun readRestingHeartRateSamples(
@@ -136,7 +164,7 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): List<RestingHeartRateRecord> =
             withContext(Dispatchers.IO) {
-                readAllPages<RestingHeartRateRecord>(from, to)
+                readAllPages(RestingHeartRateRecord::class, from, to)
             }
 
         override suspend fun readHrvSamples(
@@ -144,7 +172,7 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): List<HeartRateVariabilityRmssdRecord> =
             withContext(Dispatchers.IO) {
-                readAllPages<HeartRateVariabilityRmssdRecord>(from, to)
+                readAllPages(HeartRateVariabilityRmssdRecord::class, from, to)
             }
 
         override suspend fun readExerciseSessions(
@@ -152,7 +180,7 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): List<ExerciseSessionRecord> =
             withContext(Dispatchers.IO) {
-                readAllPages<ExerciseSessionRecord>(from, to)
+                readAllPages(ExerciseSessionRecord::class, from, to)
             }
 
         override suspend fun readSteps(
@@ -160,14 +188,25 @@ class HealthConnectRepositoryImpl
             to: Instant,
         ): Long =
             withContext(Dispatchers.IO) {
-                val result =
-                    client.aggregate(
-                        AggregateRequest(
-                            metrics = setOf(StepsRecord.COUNT_TOTAL),
-                            timeRangeFilter = TimeRangeFilter.between(from, to),
-                        ),
+                val stepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
+                if (!permissionManager.get().hasPermission(stepsPermission)) {
+                    throw HealthConnectPermissionRevokedException(
+                        SecurityException("Permission $stepsPermission known to be revoked"),
                     )
-                result[StepsRecord.COUNT_TOTAL] ?: 0L
+                }
+                try {
+                    val result =
+                        client.aggregate(
+                            AggregateRequest(
+                                metrics = setOf(StepsRecord.COUNT_TOTAL),
+                                timeRangeFilter = TimeRangeFilter.between(from, to),
+                            ),
+                        )
+                    result[StepsRecord.COUNT_TOTAL] ?: 0L
+                } catch (e: SecurityException) {
+                    permissionManager.get().onPermissionRevoked(stepsPermission)
+                    throw HealthConnectPermissionRevokedException(e)
+                }
             }
 
         override suspend fun discoverDevices(windowDays: Int): List<String> =
