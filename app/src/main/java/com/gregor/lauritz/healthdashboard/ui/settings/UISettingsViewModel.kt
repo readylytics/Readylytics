@@ -86,7 +86,7 @@ class UISettingsViewModel
                         healthSyncUseCase.sync()
                     }
                 is SettingsEvent.BanisterMultiplierChanged -> {
-                    val validation = SettingsValidators.TRIMP_BANISTER_MULTIPLIER_RULE.validate(event.value.toString())
+                    val validation = SettingsValidators.TRIMP_BANISTER_MULTIPLIER_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             settingsRepo.updateBanisterMultiplier(event.value)
