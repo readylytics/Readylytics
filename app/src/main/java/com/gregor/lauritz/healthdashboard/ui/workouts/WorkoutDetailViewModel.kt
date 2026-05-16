@@ -108,7 +108,7 @@ class WorkoutDetailViewModel
                 val recoveryMetrics = RecoveryMetricsMapper.mapRecoveryMetrics(allSamples, workout.endTime, endHr)
 
                 val prefs = settingsRepo.userPreferences.first()
-                val workoutSamples = allSamples.filter { it.timestamp <= workoutEndInstant }.sortedBy { it.timestamp }
+                val workoutSamples = allSamples.filter { it.timestamp <= workoutEndInstant }
 
                 val computedTrimp =
                     computeWorkoutTrimpUseCase.execute(
