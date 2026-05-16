@@ -16,7 +16,7 @@ class PaiScoringStrategy
 
         fun computeCtlEma(
             dailyTrimpList: List<Float>,
-            seedFitnessLevel: Float,
+            seedFitnessLevel: Float = ScoringConstants.DEFAULT_FITNESS_LEVEL,
             windowDays: Long = ScoringConstants.CHRONIC_DAYS,
         ): Float = computeEma(dailyTrimpList, seedFitnessLevel, windowDays)
 
