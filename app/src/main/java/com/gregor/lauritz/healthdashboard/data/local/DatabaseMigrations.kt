@@ -131,25 +131,43 @@ object DatabaseMigrations {
         object : Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
-                    "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)",
+                    """
+                    CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs`
+                    ON `heart_rate_records` (`timestampMs`)
+                    """.trimIndent(),
                 )
                 db.execSQL(
-                    "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType` ON `heart_rate_records` (`recordType`)",
+                    """
+                    CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType`
+                    ON `heart_rate_records` (`recordType`)
+                    """.trimIndent(),
                 )
                 db.execSQL(
-                    "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId` ON `heart_rate_records` (`sessionId`)",
+                    """
+                    CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId`
+                    ON `heart_rate_records` (`sessionId`)
+                    """.trimIndent(),
                 )
             }
 
             override fun migrate(connection: SQLiteConnection) {
                 connection.execSQL(
-                    "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs` ON `heart_rate_records` (`timestampMs`)",
+                    """
+                    CREATE INDEX IF NOT EXISTS `index_heart_rate_records_timestampMs`
+                    ON `heart_rate_records` (`timestampMs`)
+                    """.trimIndent(),
                 )
                 connection.execSQL(
-                    "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType` ON `heart_rate_records` (`recordType`)",
+                    """
+                    CREATE INDEX IF NOT EXISTS `index_heart_rate_records_recordType`
+                    ON `heart_rate_records` (`recordType`)
+                    """.trimIndent(),
                 )
                 connection.execSQL(
-                    "CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId` ON `heart_rate_records` (`sessionId`)",
+                    """
+                    CREATE INDEX IF NOT EXISTS `index_heart_rate_records_sessionId`
+                    ON `heart_rate_records` (`sessionId`)
+                    """.trimIndent(),
                 )
             }
         }

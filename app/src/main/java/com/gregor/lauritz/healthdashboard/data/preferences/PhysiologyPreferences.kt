@@ -86,19 +86,22 @@ internal class PhysiologyPreferences
             month: Int,
             year: Int,
         ) {
+            val today = LocalDate.now(clock)
             val safeMonth = month.coerceIn(1, 12)
-            val safeYear = year.coerceIn(1900, LocalDate.now(clock).year)
+            val safeYear = year.coerceIn(1900, today.year)
             val daysInMonth = YearMonth.of(safeYear, safeMonth).lengthOfMonth()
             val safeDay = day.coerceIn(1, daysInMonth)
 
             dataStore.updateData {
                 val birthDate = LocalDate.of(safeYear, safeMonth, safeDay)
-                val age = Period.between(birthDate, LocalDate.now(clock)).years
+                // Reject future dates: ensure birthDate is not after today
+                val validBirthDate = if (birthDate > today) today else birthDate
+                val age = Period.between(validBirthDate, today).years
                 it
                     .toBuilder()
-                    .setBirthDay(safeDay)
-                    .setBirthMonth(safeMonth)
-                    .setBirthYear(safeYear)
+                    .setBirthDay(validBirthDate.dayOfMonth)
+                    .setBirthMonth(validBirthDate.monthValue)
+                    .setBirthYear(validBirthDate.year)
                     .setAge(age.toValidAge())
                     .build()
             }
