@@ -12,7 +12,7 @@ Coordinate specialized agents, tools, and skills so work is completed accurately
 - Prefer evidence over assumptions: verify outcomes before final claims.
 - Choose the lightest-weight path that preserves quality.
 - Consult official docs before implementing with SDKs/frameworks/APIs.
-</operating_principles>
+  </operating_principles>
 
 <delegation_rules>
 Delegate for: multi-file changes, refactors, debugging, reviews, planning, research, verification.
@@ -68,11 +68,13 @@ Say "setup omc" or run `/oh-my-claudecode:omc-setup`.
 # Health & Recovery Dashboard - Project Context for Claude
 
 ## 📱 Project Overview
+
 This is an offline-first, Android-native health and recovery tracking app. It acts as an advanced sports science tool that reads biometric data (Sleep, HRV, RHR, Workouts) from Google Health Connect, calculates advanced metrics (TRIMP, Strain Ratio, Sleep Score), and stores data locally using Room (SQLite).
 
 The UI follows a strict "Material You" (Material 3) aesthetic: dynamic dark mode first, using semantic color roles (Success, Error, Tertiary) to handle health status indicators natively with Jetpack Compose and Vico for charting.
 
 ## 🛠 Tech Stack & Environment
+
 - **Language:** Kotlin
 - **IDE:** Android Studio
 - **SDK Target & Minimum:** `minSdk = 35` (Android 15), `targetSdk = 35`
@@ -85,21 +87,25 @@ The UI follows a strict "Material You" (Material 3) aesthetic: dynamic dark mode
 - **Local State:** DataStore (Preferences)
 
 ## 🏗 Architecture & Code Style
+
 - **Pattern:** MVVM (Model-View-ViewModel) + Clean Architecture principles.
 - **State Management:** Use `StateFlow` and `SharedFlow` in ViewModels. Compose UI should observe state using `collectAsStateWithLifecycle()`.
 - **Offline-First:** All UI must be driven by the local Room database (Single Source of Truth). Health Connect is purely an ingestion source.
 - **Algorithmic Engine:** Keep the math formulas (Sleep Score, Load Score, Baselines) in a dedicated, pure-Kotlin repository layer that is easily testable and decoupled from the Android framework.
 
 ## 🔗 References & Implementation Hints
+
 - **Paiesque Repository:** Implementation hints, especially regarding Health Connect data parsing, heart rate zones, and workout calculation logic, can be taken from the reference repository: [https://codeberg.org/ojrandom/paiesque](https://codeberg.org/ojrandom/paiesque). Use this as a guide for handling raw biometric data flows.
 
 ## 📏 Compose & UI Guidelines
+
 - **Theme:** Enforce a Material 3 aesthetic with `dynamicDarkColorScheme`.
 - **Components:** Create reusable components for recurring elements (e.g., `M3ScoreDial`, `M3DataCard`, `M3Tooltip`).
 - **Shapes:** Use rounded corners, primarily `RoundedCornerShape(16.dp)` for cards.
 - **Charts:** When using Vico, implement smooth bezier curves for line charts with translucent gradient fills below the line, mapped to M3 Primary/Secondary/Tertiary tonal palettes.
 
 ## ⚙️ Core Business Rules
+
 - **Baselines:** Always calculate physiological baselines (HRV, RHR) using the **Median** over the past 30 days. If < 7 days of data exist, UI must show a "Calibrating" state (greyed out / SurfaceVariant).
 - **Sleep Score:** Weighted by Duration (50%), Architecture (25%), and Restoration (25%). Depends on a user-defined Goal Sleep Time ($G_{tst}$).
 - **Load Score:** Based on Acute:Chronic Workload Ratio (Strain Ratio) matching 7-day average TRIMP vs. 42-day average TRIMP.
@@ -107,6 +113,7 @@ The UI follows a strict "Material You" (Material 3) aesthetic: dynamic dark mode
 - **Health Connect Permissions:** Must strictly handle permissions (`READ_SLEEP`, `READ_HEART_RATE`, `READ_HEART_RATE_VARIABILITY`, `READ_EXERCISE`) before querying. Provide a UX to deep-link to system settings if permissions are missing.
 
 ## ⌨️ Common Build Commands
+
 - Run app: `./gradlew installDebug`
 - Build APK: `./gradlew assembleDebug`
 - Clean project: `./gradlew clean`
@@ -117,17 +124,20 @@ The UI follows a strict "Material You" (Material 3) aesthetic: dynamic dark mode
 ### Separation of Concerns Pattern
 
 **Validation Layer (Domain)**
+
 - All validation rules in `domain/validation/` (ValidationRule interface, IntRangeRule, ValidationResult)
 - SettingsValidators.kt defines canonical rules (BIRTHDAY_DAY_RULE, HRV_BASELINE_RULE, etc.)
 - Example: `SettingsValidators.BIRTHDAY_DAY_RULE.validate(input: String): ValidationResult`
 
 **State Management Layer (ViewModel)**
+
 - ViewModels expose state via StateFlow (PhysiologySettingsViewModel, SleepSettingsViewModel, etc.)
 - ViewModels accept events via onEvent(event: SettingsEvent) sealed interface
 - ViewModels validate events defensively before persisting
 - UI-only state (section toggles) managed locally with rememberSaveable in composables
 
 **Rendering Layer (Composable)**
+
 - Validate input before firing events (client-side feedback)
 - Display errors from validation result (domain layer)
 - Remain simple: bind state → render, handle events → fire validated events
@@ -139,6 +149,7 @@ File size: target ≤ 400 lines, hard limit 800 lines
 Test structure mirrors source: src/test/java/…/<same-package>/<test-file>
 
 Module organization:
+
 ```
 ui/settings/
 ├── physiologyprofile/        [Gender, birthday, heart rate zones]
@@ -151,12 +162,14 @@ ui/settings/
 ```
 
 Constants & Naming:
+
 - Physiological (domain-level, immutable): MIN_HEART_RATE=1, MAX_HEART_RATE=220, MIN_HRV_MS=1, MAX_HRV_MS=500, MIN_RHR_BPM=30, MAX_RHR_BPM=100
 - UI Layout (module-scoped): HORIZONTAL_PADDING=16.dp, VERTICAL_SPACER=8.dp in SettingsConstants.kt
 
 ### Validation Pattern (Canonical)
 
 For numeric/bounded inputs:
+
 ```kotlin
 private val rule = SettingsValidators.BIRTHDAY_DAY_RULE
 val validation = rule.validate(userInput)
@@ -164,8 +177,8 @@ val validation = rule.validate(userInput)
 // Render error state
 OutlinedTextField(
     isError = userInput.isNotEmpty() && validation is ValidationResult.Invalid,
-    supportingText = { 
-        if (validation is ValidationResult.Invalid) Text(validation.message) 
+    supportingText = {
+        if (validation is ValidationResult.Invalid) Text(validation.message)
     },
 )
 
