@@ -96,19 +96,20 @@ class HealthDeviceRepository
         val allDevices = coroutineScope {
             val dbDevicesAsync =
                 async {
-                    (
-                        sleepSessionDao.getDistinctDeviceNames() +
-                            heartRateDao.getDistinctDeviceNames() +
-                            hrvDao.getDistinctDeviceNames() +
-                            workoutDao.getDistinctDeviceNames()
-                    ).filterNot { it.isBlank() }.distinct()
+                    sleepSessionDao.getDistinctDeviceNames() +
+                        heartRateDao.getDistinctDeviceNames() +
+                        hrvDao.getDistinctDeviceNames() +
+                        workoutDao.getDistinctDeviceNames()
                 }
 
             val hcDevicesAsync = async {
                 healthConnectRepository.discoverDevices(windowDays = 14)
             }
 
-            (dbDevicesAsync.await() + hcDevicesAsync.await()).distinct().sorted()
+            (dbDevicesAsync.await() + hcDevicesAsync.await())
+                .filterNot { it.isBlank() }
+                .distinct()
+                .sorted()
         }
 
         // Cache with timestamp for TTL tracking (using elapsedRealtime for monotonic clock)
