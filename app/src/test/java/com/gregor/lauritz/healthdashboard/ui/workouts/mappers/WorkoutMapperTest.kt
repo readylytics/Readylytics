@@ -40,10 +40,16 @@ class WorkoutMapperTest {
         val start = Instant.now()
         val samples = mutableListOf<HeartRatePoint>()
         for (minute in 0..59) {
-            samples.add(HeartRatePoint(start.plusSeconds((minute * 60).toLong()), 100 + minute))
+            samples.add(
+                HeartRatePoint(
+                    start.plusSeconds((minute * 60).toLong()),
+                    100 + minute,
+                ),
+            )
         }
 
-        val result = ChartDataMapper.mapToChartData(samples, start.toEpochMilli(), start.plusSeconds(3600).toEpochMilli())
+        val endTime = start.plusSeconds(3600).toEpochMilli()
+        val result = ChartDataMapper.mapToChartData(samples, start.toEpochMilli(), endTime)
 
         assertEquals(60, result.first.size)
         assertEquals(60, result.second)

@@ -57,7 +57,6 @@ class WorkoutDetailViewModel
         private val _uiState = MutableStateFlow(WorkoutDetailUiState())
         val uiState = _uiState.asStateFlow()
 
-
         fun loadWorkout(workoutId: String) {
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
@@ -87,7 +86,8 @@ class WorkoutDetailViewModel
                         .distinctBy { it.timestamp }
                         .sortedBy { it.timestamp }
 
-                val (chartData, durationMinutes) = ChartDataMapper.mapToChartData(allSamples, workout.startTime, workout.endTime)
+                val (chartData, durationMinutes) =
+                    ChartDataMapper.mapToChartData(allSamples, workout.startTime, workout.endTime)
 
                 val workoutEndInstant = Instant.ofEpochMilli(workout.endTime)
                 val endHr = allSamples.lastOrNull { it.timestamp <= workoutEndInstant }?.bpm
