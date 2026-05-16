@@ -6,6 +6,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import java.time.Clock
 import java.time.LocalDate
 import java.time.Period
+import java.time.YearMonth
 import javax.inject.Inject
 
 internal class PhysiologyPreferences
@@ -85,12 +86,14 @@ internal class PhysiologyPreferences
             month: Int,
             year: Int,
         ) {
-            val safeDay = day.coerceIn(1, 31)
             val safeMonth = month.coerceIn(1, 12)
             val safeYear = year.coerceIn(1900, LocalDate.now(clock).year)
+            val daysInMonth = YearMonth.of(safeYear, safeMonth).lengthOfMonth()
+            val safeDay = day.coerceIn(1, daysInMonth)
 
             dataStore.updateData {
-                val age = Period.between(LocalDate.of(safeYear, safeMonth, safeDay), LocalDate.now(clock)).years
+                val birthDate = LocalDate.of(safeYear, safeMonth, safeDay)
+                val age = Period.between(birthDate, LocalDate.now(clock)).years
                 it
                     .toBuilder()
                     .setBirthDay(safeDay)

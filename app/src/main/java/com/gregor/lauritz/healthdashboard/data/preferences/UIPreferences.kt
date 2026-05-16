@@ -38,8 +38,13 @@ internal class UIPreferences
             dataStore.updateData {
                 it
                     .toBuilder()
-                    .setAppTheme(AppThemeProto.valueOf("THEME_${theme.name}"))
-                    .build()
+                    .setAppTheme(
+                        when (theme) {
+                            AppTheme.SYSTEM -> AppThemeProto.THEME_SYSTEM
+                            AppTheme.LIGHT -> AppThemeProto.THEME_LIGHT
+                            AppTheme.DARK -> AppThemeProto.THEME_DARK
+                        },
+                    ).build()
             }
         }
 

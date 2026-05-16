@@ -16,8 +16,13 @@ internal class SyncPreferences
             dataStore.updateData {
                 it
                     .toBuilder()
-                    .setSyncPreference(SyncPreferenceProto.valueOf("SYNC_${pref.name}"))
-                    .build()
+                    .setSyncPreference(
+                        when (pref) {
+                            SyncPreference.NEVER -> SyncPreferenceProto.SYNC_NEVER
+                            SyncPreference.ALWAYS -> SyncPreferenceProto.SYNC_ALWAYS
+                            SyncPreference.BY_TIME -> SyncPreferenceProto.SYNC_BY_TIME
+                        },
+                    ).build()
             }
         }
 

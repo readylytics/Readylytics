@@ -22,8 +22,13 @@ internal class CloudPreferences
             dataStore.updateData {
                 it
                     .toBuilder()
-                    .setBackupSchedule(BackupScheduleProto.valueOf("BACKUP_${schedule.name}"))
-                    .build()
+                    .setBackupSchedule(
+                        when (schedule) {
+                            BackupSchedule.MANUAL -> BackupScheduleProto.BACKUP_MANUAL
+                            BackupSchedule.DAILY -> BackupScheduleProto.BACKUP_DAILY
+                            BackupSchedule.WEEKLY -> BackupScheduleProto.BACKUP_WEEKLY
+                        },
+                    ).build()
             }
         }
 
