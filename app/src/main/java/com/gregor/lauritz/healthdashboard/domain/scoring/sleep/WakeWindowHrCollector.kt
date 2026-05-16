@@ -33,7 +33,9 @@ class WakeWindowHrCollector
             val baselineFrom = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
             val sessions = sleepSessionDao.getSince(baselineFrom)
 
-            // Batch-fetch all HR records covering every session's wake window in one query
+            // Batch-fetch all HR records in one query covering all session wake windows.
+            // Trade-off: loads entire range (30d + margins) rather than individual windows,
+            // but single DB query + single O(R*S) pass is more efficient than N individual queries.
             val batchWindowStart = (sessions.minOfOrNull { it.endTime } ?: session.endTime) - beforeMs
             val batchWindowEnd = (sessions.maxOfOrNull { it.endTime } ?: session.endTime) + afterMs
 
@@ -58,6 +60,8 @@ class WakeWindowHrCollector
                     for ((sessionId, _) in sessionWindows) {
                         sessionMinHrs[sessionId] = Int.MAX_VALUE
                     }
+                    // O(R * S) single-pass algorithm: iterate records once, check all windows.
+                    // Preferred over nested filtering which requires O(S) separate record scans.
                     for (record in allWakeHrRecords) {
                         for ((sessionId, window) in sessionWindows) {
                             if (record.timestampMs in window.first..window.second) {
