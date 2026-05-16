@@ -74,7 +74,7 @@ class PaiScoringStrategy
             var ewma = (dailyTrimpByDate[rangeStart] ?: 0.0).toDouble()
             var date = rangeStart.plusDays(1)
             while (!date.isAfter(rangeEnd)) {
-                val trimp = (dailyTrimpByDate[date] ?: 0.0).toDouble()
+                val trimp = dailyTrimpByDate[date]?.toDouble() ?: 0.0
                 ewma = trimp * alpha + ewma * (1.0 - alpha)
                 date = date.plusDays(1)
             }
