@@ -1,8 +1,8 @@
 package com.gregor.lauritz.healthdashboard.domain.user
 
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
-import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
+import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate

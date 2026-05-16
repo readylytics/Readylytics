@@ -119,7 +119,5 @@ interface HeartRateDao {
             "WHERE sessionId IN (:sessionIds) AND recordType = 'SLEEP' " +
             "ORDER BY sessionId, beatsPerMinute ASC",
     )
-    suspend fun getSleepHrSamplesForSessions(
-        sessionIds: List<String>,
-    ): List<HeartRateRecordEntity>
+    suspend fun getSleepHrSamplesForSessions(sessionIds: List<String>): List<HeartRateRecordEntity>
 }

@@ -422,8 +422,7 @@ class SettingsRepository
             }
         }
 
-        suspend fun getAvailableDevices(): List<String> =
-            healthDeviceRepository.getAvailableDevices()
+        suspend fun getAvailableDevices(): List<String> = healthDeviceRepository.getAvailableDevices()
 
         suspend fun clearDeviceCache() {
             healthDeviceRepository.invalidateCache()

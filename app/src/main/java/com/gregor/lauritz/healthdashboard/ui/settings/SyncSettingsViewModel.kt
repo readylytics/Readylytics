@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
-import com.gregor.lauritz.healthdashboard.data.sync.HealthSyncUseCase
+import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.sync.ResyncHealthConnectUseCase
 import com.gregor.lauritz.healthdashboard.domain.util.logE
 import dagger.hilt.android.lifecycle.HiltViewModel

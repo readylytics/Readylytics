@@ -4,7 +4,6 @@ import androidx.compose.runtime.Immutable
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
-import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardManagementDelegate
 import com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepository
@@ -94,7 +93,12 @@ fun createDashboardBasicInputsFlow(
             }
 
         // PAI breakdown is always 7-day window
-        val paiFromMs = date.minusDays(6).atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val paiFromMs =
+            date
+                .minusDays(6)
+                .atStartOfDay(zoneId)
+                .toInstant()
+                .toEpochMilli()
         val paiBreakdownFlow = dailySummaryRepository.observeSince(paiFromMs)
 
         // Combine all basic inputs
@@ -139,7 +143,12 @@ fun createDashboardCardStateFlow(
             // Get the most recent sleep session ending on the selected date
             dailySummaryRepository.observeFirstSessionEndingInRange(
                 fromMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli(),
-                toMs = date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                toMs =
+                    date
+                        .plusDays(1)
+                        .atStartOfDay(zoneId)
+                        .toInstant()
+                        .toEpochMilli(),
             )
         },
     ) { isManaging, cardConfig, session ->

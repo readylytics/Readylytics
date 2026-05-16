@@ -1,4 +1,4 @@
-package com.gregor.lauritz.healthdashboard.data.sync
+package com.gregor.lauritz.healthdashboard.domain.sync
 
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HeartRateMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HrvMapper
@@ -11,7 +11,6 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-import com.gregor.lauritz.healthdashboard.domain.model.RecordType
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
@@ -149,13 +148,14 @@ class HealthSyncUseCase
                             val steps = stepsMap[day] ?: 0L
                             val result = syncDayScoring(day, steps)
 
-                            result.onSuccess {
-                                successCount++
-                                logD("HealthSyncUseCase") { "Day $day: SUCCESS" }
-                            }.onFailure { e ->
-                                failureCount++
-                                logD("HealthSyncUseCase") { "Day $day: FAILED - ${e.message}" }
-                            }
+                            result
+                                .onSuccess {
+                                    successCount++
+                                    logD("HealthSyncUseCase") { "Day $day: SUCCESS" }
+                                }.onFailure { e ->
+                                    failureCount++
+                                    logD("HealthSyncUseCase") { "Day $day: FAILED - ${e.message}" }
+                                }
                         }
 
                         logD("HealthSyncUseCase") {
@@ -225,7 +225,7 @@ class HealthSyncUseCase
                 primary.mapTo(mutableSetOf()) {
                     val ts = getTimestamp(it)
                     if (ts == lastTimestamp && lastLocalDate != null) {
-                        lastLocalDate!!
+                        lastLocalDate
                     } else {
                         val date = Instant.ofEpochMilli(ts).atZone(zoneId).toLocalDate()
                         lastTimestamp = ts
@@ -243,7 +243,7 @@ class HealthSyncUseCase
                     val ts = getTimestamp(it)
                     val date =
                         if (ts == lastTimestamp && lastLocalDate != null) {
-                            lastLocalDate!!
+                            lastLocalDate
                         } else {
                             val d = Instant.ofEpochMilli(ts).atZone(zoneId).toLocalDate()
                             lastTimestamp = ts
