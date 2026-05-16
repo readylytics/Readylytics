@@ -45,7 +45,7 @@ class LoadScoringStrategy
             muHistory: List<Float>,
             sigmaHistory: List<Float>,
             sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior,
-            baselineOverride: Float?,
+            baselineOverride: Float? = null,
         ): Float? {
             if (currentRmssdMs <= 0f || (baselineOverride == null && muHistory.isEmpty())) return null
             val lnMuHistory = muHistory.map { ln(it.coerceAtLeast(0.001f)) }
