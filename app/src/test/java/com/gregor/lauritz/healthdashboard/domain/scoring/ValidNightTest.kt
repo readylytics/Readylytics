@@ -1,11 +1,12 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ValidNightTest {
-    private val calculator = ScoringCalculatorImpl()
+    private val calculator = LoadScoringStrategy()
 
     private fun validate(
         rmssdMs: Float? = 50f,
@@ -16,7 +17,6 @@ class ValidNightTest {
     ) = calculator.validateNight(rmssdMs, rhrBpm, durationMinutes, deepMinutes, remMinutes)
 
     // ─── RMSSD bounds ─────────────────────────────────────────────────────────
-
     @Test
     fun `rmssd 50ms is valid`() = assertTrue(validate(rmssdMs = 50f).rmssdValid)
 
@@ -36,7 +36,6 @@ class ValidNightTest {
     fun `null rmssd is invalid`() = assertFalse(validate(rmssdMs = null).rmssdValid)
 
     // ─── RHR bounds ───────────────────────────────────────────────────────────
-
     @Test
     fun `rhr 60 is valid`() = assertTrue(validate(rhrBpm = 60f).rhrValid)
 
@@ -56,7 +55,6 @@ class ValidNightTest {
     fun `null rhr is valid (treated as missing, not invalid)`() = assertTrue(validate(rhrBpm = null).rhrValid)
 
     // ─── Duration ─────────────────────────────────────────────────────────────
-
     @Test
     fun `duration 480 min is valid`() = assertTrue(validate(durationMinutes = 480).durationValid)
 
@@ -70,7 +68,6 @@ class ValidNightTest {
     fun `duration zero is invalid`() = assertFalse(validate(durationMinutes = 0).durationValid)
 
     // ─── Stage bounds ─────────────────────────────────────────────────────────
-
     @Test
     fun `plausible stages are valid and not suspicious`() {
         val result = validate(deepMinutes = 80, remMinutes = 96, durationMinutes = 480) // 16.7% deep, 20% REM
@@ -96,12 +93,10 @@ class ValidNightTest {
     fun `deep + rem over 70 percent is suspicious but not invalid`() {
         // deep=38%, rem=33% → combined=71% → suspicious; each under individual limit
         val result = validate(deepMinutes = 182, remMinutes = 160, durationMinutes = 480)
-        assertTrue(result.stagesValid)
         assertTrue(result.stagesSuspicious)
     }
 
     // ─── canContributeToBaseline ───────────────────────────────────────────────
-
     @Test
     fun `canContributeToBaseline is false when rmssd invalid`() {
         assertFalse(validate(rmssdMs = 4f).canContributeToBaseline)

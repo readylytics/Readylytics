@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
 import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -8,7 +9,7 @@ import org.junit.Test
 private const val DELTA = 0.5f
 
 class ReadinessScoreTest {
-    private val calculator = ScoringCalculatorImpl()
+    private val calculator = LoadScoringStrategy()
 
     @Test
     fun `readiness score is 100 for ideal inputs`() {

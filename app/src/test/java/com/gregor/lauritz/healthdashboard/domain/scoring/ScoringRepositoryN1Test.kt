@@ -14,6 +14,9 @@ import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.repository.ScoringRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.PaiScoringStrategy
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.SleepScoringStrategy
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -34,7 +37,6 @@ class ScoringRepositoryN1Test {
     private lateinit var scoringCalculator: ScoringCalculator
     private lateinit var repo: ScoringRepository
 
-    private val baseMs = System.currentTimeMillis()
     private val todayMidnight =
         LocalDate
             .now()
@@ -55,6 +57,7 @@ class ScoringRepositoryN1Test {
         remSleepMinutes = 90,
         lightSleepMinutes = 210,
         awakeMinutes = 15,
+        deviceName = "TestDevice",
     )
 
     @Before
@@ -69,12 +72,9 @@ class ScoringRepositoryN1Test {
         every { settingsRepo.userPreferences } returns
             MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.GENERAL))
 
-        // Provide enough sessions to pass the calibration guard (MIN_SESSIONS_FOR_CALIBRATION = 7)
         coEvery { sleepSessionDao.countSince(any()) } returns 10
-
         val historicSessions = (1..9).map { makeSleepSession("historic_$it", it) }
         val todaySession = makeSleepSession("today", 0)
-
         coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns todaySession
         coEvery { sleepSessionDao.getSince(any()) } returns historicSessions + todaySession
 
@@ -83,6 +83,7 @@ class ScoringRepositoryN1Test {
         coEvery { workoutDao.getTotalTrimp(any(), any()) } returns 0f
         coEvery { workoutDao.getTotalDurationMinutes(any(), any()) } returns 0
         coEvery { workoutDao.getWeightedAvgHr(any(), any()) } returns 0f
+        coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
 
         coEvery { hrvDao.getSleepRmssdValues(any()) } returns listOf(60f, 60f, 60f)
         coEvery { hrvDao.getSleepRmssdValuesSince(any(), any()) } returns listOf(60f, 60f, 60f)
@@ -100,15 +101,22 @@ class ScoringRepositoryN1Test {
         coEvery { heartRateDao.getSleepHrSampleCount(any()) } returns 300
         coEvery { heartRateDao.getSleepHrSampleAtOffset(any(), any()) } returns 50
         coEvery { heartRateDao.getSleepHrSamplesForSession(any()) } returns listOf(48, 50, 52, 54, 56, 58, 60)
+        coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns emptyList()
 
         coEvery { dailySummaryDao.getByDate(any()) } returns null
         coEvery { dailySummaryDao.upsert(any()) } returns Unit
-        coEvery { workoutDao.upsertAll(any()) } returns Unit
 
-        scoringCalculator = ScoringCalculatorImpl()
+        scoringCalculator =
+            CompositeScoringCalculator(
+                SleepScoringStrategy(LoadScoringStrategy()),
+                PaiScoringStrategy(),
+                LoadScoringStrategy(),
+            )
+
         val baselineComputer = BaselineComputer(heartRateDao, hrvDao, sleepSessionDao, scoringCalculator)
-        val scoringConfigFactory = ScoringConfigFactory() // Real factory is fine as it's pure logic mostly
+        val scoringConfigFactory = ScoringConfigFactory()
         val encryptionManager = mockk<EncryptionManager>(relaxed = true)
+
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
                 baselineComputer,
@@ -121,22 +129,21 @@ class ScoringRepositoryN1Test {
                 encryptionManager,
             )
         val computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase()
+
         repo =
             ScoringRepositoryImpl(
-                workoutDao,
-                sleepSessionDao,
-                dailySummaryDao,
-                settingsRepo,
-                scoringCalculator,
-                baselineComputer,
-                computeSleepMetricsUseCase,
-                scoringConfigFactory,
-                computeWorkoutTrimpUseCase,
-                heartRateDao,
-                hrvDao,
+                workoutDao = workoutDao,
+                sleepSessionDao = sleepSessionDao,
+                dailySummaryDao = dailySummaryDao,
+                settingsRepo = settingsRepo,
+                scoringCalculator = scoringCalculator,
+                baselineComputer = baselineComputer,
+                computeSleepMetricsUseCase = computeSleepMetricsUseCase,
+                scoringConfigFactory = scoringConfigFactory,
+                computeWorkoutTrimpUseCase = computeWorkoutTrimpUseCase,
+                heartRateDao = heartRateDao,
+                hrvDao = hrvDao,
             )
-
-        coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
     }
 
     @Test
@@ -146,13 +153,11 @@ class ScoringRepositoryN1Test {
             val dayMidnight = today.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
             val nextDayMidnight =
                 today
-                    .plusDays(
-                        1,
-                    ).atStartOfDay(java.time.ZoneId.systemDefault())
+                    .plusDays(1)
+                    .atStartOfDay(java.time.ZoneId.systemDefault())
                     .toInstant()
                     .toEpochMilli()
 
-            // 1-hour workout at 150 bpm
             val workout =
                 com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity(
                     id = "w1",
@@ -170,7 +175,6 @@ class ScoringRepositoryN1Test {
                 )
             coEvery { workoutDao.getWorkoutsInRange(dayMidnight, nextDayMidnight) } returns listOf(workout)
 
-            // HR Samples for the workout
             val samples =
                 (0 until 60).map { i ->
                     com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity(
@@ -197,7 +201,6 @@ class ScoringRepositoryN1Test {
                         gender = Gender.fromString("Male"),
                     ),
                 )
-
             repo.computeAndPersistDailySummary(today)
 
             // Profile: SEDENTARY (SF=0.25)
@@ -211,17 +214,14 @@ class ScoringRepositoryN1Test {
                         gender = Gender.fromString("Male"),
                     ),
                 )
-
             repo.computeAndPersistDailySummary(today)
 
             coVerify(exactly = 2) { dailySummaryDao.upsert(any()) }
-
             val athletePai = capturedSummaries[0].paiScore ?: 0f
             val sedentaryPai = capturedSummaries[1].paiScore ?: 0f
-
-            assert(
-                athletePai < sedentaryPai,
-            ) { "Athlete ($athletePai) should earn fewer points than Sedentary ($sedentaryPai)" }
+            assert(athletePai < sedentaryPai) {
+                "Athlete ($athletePai) should earn fewer points than Sedentary ($sedentaryPai)"
+            }
         }
 
     @Test
@@ -230,17 +230,11 @@ class ScoringRepositoryN1Test {
             val validSession = makeSleepSession("valid", 1)
             val shortSession = makeSleepSession("short", 2).copy(durationMinutes = 120) // 2h < 4h threshold
             val sessions = listOf(validSession, shortSession)
-
             coEvery { sleepSessionDao.getSince(any()) } returns sessions
 
-            // Mock bulk fetches for these specific sessions
-            coEvery { hrvDao.getSleepRmssdForSessionsMap(match { it.containsAll(listOf("valid", "short")) }) } returns
+            coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns
                 mapOf("valid" to listOf(60f), "short" to listOf(60f))
-            coEvery {
-                heartRateDao.getAvgSleepHrForSessions(
-                    match { it.containsAll(listOf("valid", "short")) },
-                )
-            } returns
+            coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns
                 mapOf("valid" to 55, "short" to 55)
 
             repo.computeAndPersistDailySummary(LocalDate.now())
@@ -253,7 +247,6 @@ class ScoringRepositoryN1Test {
     @Test
     fun `timezone jump suppresses late nadir penalty`() =
         runTest {
-            // Mock current session as having a late nadir
             val todaySession =
                 makeSleepSession("today", 0).copy(
                     startZoneOffsetSeconds = 3600, // UTC+1
@@ -261,26 +254,22 @@ class ScoringRepositoryN1Test {
                 )
             val prevSession =
                 makeSleepSession("prev", 1).copy(
-                    startZoneOffsetSeconds = -18000, // UTC-5 (e.g. travel from NY to London)
+                    startZoneOffsetSeconds = -18000, // UTC-5
                     endZoneOffsetSeconds = -18000,
                 )
-
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns todaySession
             coEvery { sleepSessionDao.getSince(any()) } returns listOf(todaySession, prevSession)
 
-            // Mock a late nadir timestamp (e.g. 80% into the session)
             val sessionDurationMs = todaySession.durationMinutes * 60 * 1000L
             val lateNadirTs = todaySession.startTime + (sessionDurationMs * 0.8).toLong()
             coEvery { heartRateDao.getMinHrTimestamp("today") } returns lateNadirTs
 
+            val summarySlot = io.mockk.slot<DailySummaryEntity>()
+            coEvery { dailySummaryDao.upsert(capture(summarySlot)) } returns Unit
+
             repo.computeAndPersistDailySummary(LocalDate.now())
 
-            // Capture persisted summary and check flags
-            val summarySlot = io.mockk.slot<DailySummaryEntity>()
-            coVerify { dailySummaryDao.upsert(capture(summarySlot)) }
-
             val flags = summarySlot.captured.recoveryFlags ?: ""
-            // NADIR_DELAYED should be suppressed due to the timezone jump
             assert(!flags.contains("NADIR_DELAYED")) {
                 "NADIR_DELAYED should be suppressed during travel, but found in flags: $flags"
             }
@@ -290,11 +279,7 @@ class ScoringRepositoryN1Test {
     fun `batch fetch replaces per-session getMinHrInRange calls`() =
         runTest {
             repo.computeAndPersistDailySummary(LocalDate.now())
-
-            // getByTimeRange called once for the full batch window — not once per historic session
             coVerify(exactly = 1) { heartRateDao.getByTimeRange(any(), any()) }
-
-            // getMinHrInRange called only once — for the current session's personal window
             coVerify(exactly = 1) { heartRateDao.getMinHrInRange(any(), any()) }
         }
 
@@ -302,20 +287,13 @@ class ScoringRepositoryN1Test {
     fun `baseline validation uses bulk-fetch DAO methods instead of per-session calls`() =
         runTest {
             val sessions = (1..5).map { makeSleepSession("s$it", it) }
-            coEvery { sleepSessionDao.getSince(any()) } returns sessions
-
-            // Mock bulk responses for any session list
             coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns sessions.associate { it.id to listOf(60f) }
             coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns sessions.associate { it.id to 55 }
 
             repo.computeAndPersistDailySummary(LocalDate.now())
 
-            // Verify bulk fetch was called (at least once for each step: computeHrvBaseline, computeHrvWindows)
             coVerify(atLeast = 1) { hrvDao.getSleepRmssdForSessionsMap(any()) }
             coVerify(atLeast = 1) { heartRateDao.getAvgSleepHrForSessions(any()) }
-
-            // Verify legacy per-session methods were NOT called for historical sessions
-            // (They are still allowed for the single "today" session in calculateSleepMetrics)
             coVerify(atMost = 1) { hrvDao.getSleepRmssdForSession(any()) }
             coVerify(atMost = 1) { heartRateDao.getAvgSleepHr(any()) }
         }
@@ -332,7 +310,6 @@ class ScoringRepositoryN1Test {
         runTest {
             coEvery { sleepSessionDao.countSince(any()) } returns 3
             repo.computeAndPersistDailySummary(LocalDate.now())
-            // Should still upsert the PAI-only summary
             coVerify(exactly = 1) { dailySummaryDao.upsert(any()) }
         }
 }

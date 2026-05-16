@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -9,7 +10,7 @@ private const val DELTA = 0.01f
 // computeHrvScore: linear below z=1.5; soft saturation above.
 // REF: spec §4.2; Bellenger 2017 Front Physiol
 class HrvScoreTest {
-    private val calculator = ScoringCalculatorImpl()
+    private val calculator = LoadScoringStrategy()
 
     @Test
     fun `z=-3 clamps to 0`() {

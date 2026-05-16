@@ -66,7 +66,7 @@ Extract heavy transformation logic from ViewModel:
 - Create `strategies/PaiScoringStrategy.kt` (~100 lines)
 - Create `strategies/LoadScoringStrategy.kt` (~100 lines)
 - Create `strategies/ScoringStrategy.kt` (interface)
-- Create `ComposeScoringCalculator.kt` (~100 lines, orchestrator)
+- Create `CompositeScoringCalculator.kt` (~100 lines, orchestrator)
 - Behavior preservation (formulas unchanged)
 - Add 15 tests (3+ per strategy)
 
@@ -130,39 +130,36 @@ Extract heavy transformation logic from ViewModel:
 
 ---
 
-## PHASE 6: Cloud & Backup Architecture
+## PHASE 6: Local Backup & Restore (MVP Simplification)
 
-**Duration:** 2–3 weeks | **Effort:** 20–30h | **Risk:** Medium-High
+**Duration:** 1–2 weeks | **Effort:** 12–18h | **Risk:** Low
 
-**Objective:** Harden backup/restore state machine, token lifecycle, transactional safety.
+**Objective:** File-based backup/restore. No cloud, auth, token lifecycle.
 
-### 6.1 CloudBackupViewModel.kt (152 lines) → State machine
+### 6.1 LocalBackupManager.kt (~80 lines)
 
-- Create `cloud/BackupState.kt` (sealed state: Idle → Backing → Done/Error)
-- Create `cloud/RestoreFlow.kt` (orchestrator)
-- Create `cloud/BackupScheduler.kt` (schedule logic)
-- Create `cloud/CloudErrorHandler.kt` (error recovery)
-- Exponential backoff, progress tracking, cancellation support
-- Add 10 tests
+- Serialize DB → JSON to app files directory
+- Timestamp backups (YYYY-MM-DD_HHmmss format)
+- Compression optional (defer to Phase 8)
+- Delete old backups (>7 days)
+- Add 4 tests
 
-### 6.2 DriveAuthManager.kt → Token lifecycle hardening
+### 6.2 BackupScheduler.kt (~60 lines)
 
-- Refresh tokens before expiry
-- Offline detection + queueing
-- Auth state caching (short TTL)
-- Revocation detection
-- Security audit for token storage
+- WorkManager periodic task (daily, battery constraint)
+- Trigger on-demand backup from UI
+- No network, no auth needed
+- Add 3 tests
+
+### 6.3 RestoreFlow.kt (~60 lines)
+
+- User selects backup file from directory
+- Validate integrity (row counts, schema version check)
+- Atomic restore or rollback on error
+- User confirmation before restore
 - Add 6 tests
 
-### 6.3 BackupUseCase & RestoreUseCase → Transactional safety
-
-- All-or-nothing transactions
-- Checksum verification (integrity)
-- Partial restore with rollback
-- Pre-restore validation
-- Add 8 tests
-
-**Risks:** Security-critical, data loss risk | **Mitigation:** Transactional safety, checksum verification
+**Risks:** File I/O errors, data loss on corrupt backup | **Mitigation:** Checksums, rollback support, user confirmation
 
 ---
 
