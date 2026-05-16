@@ -71,7 +71,7 @@ class PaiScoringStrategy
             val rangeStart = if (earliestDataDate.isBefore(defaultStart)) earliestDataDate else defaultStart
 
             val alpha = 2.0 / (windowDays + 1)
-            var ewma = (dailyTrimpByDate[rangeStart] ?: 0.0).toDouble()
+            var ewma = dailyTrimpByDate[rangeStart]?.toDouble() ?: 0.0
             var date = rangeStart.plusDays(1)
             while (!date.isAfter(rangeEnd)) {
                 val trimp = dailyTrimpByDate[date]?.toDouble() ?: 0.0
