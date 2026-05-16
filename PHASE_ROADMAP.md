@@ -1,6 +1,6 @@
 # Master Roadmap: Phases 3–9
 
-**Status:** Phases 1–3 complete. Phase 4 complete. Phase 5.1 & 5.2 complete (PR#18 fixes merged). Phase 5.3 pending.
+**Status:** Phases 1–5 complete. Phase 6 complete (Local Backup & Restore). Phase 7+ pending.
 
 ---
 

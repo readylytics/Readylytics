@@ -24,6 +24,9 @@ interface HrvDao {
     fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordEntity>> =
         _observeSleepHrvSince(fromMs).distinctUntilChanged()
 
+    @Query("SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
+    suspend fun getSince(fromMs: Long): List<HrvRecordEntity>
+
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +
             "ORDER BY timestampMs ASC",

@@ -18,6 +18,9 @@ interface WorkoutDao {
 
     fun observeSince(fromMs: Long): Flow<List<WorkoutRecordEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
+    @Query("SELECT * FROM workout_records WHERE startTime >= :fromMs ORDER BY startTime DESC")
+    suspend fun getSince(fromMs: Long): List<WorkoutRecordEntity>
+
     @Query(
         "SELECT AVG(trimp) FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs",
     )

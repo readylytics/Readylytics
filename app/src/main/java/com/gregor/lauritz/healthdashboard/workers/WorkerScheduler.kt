@@ -22,6 +22,7 @@ class WorkerScheduler
     ) {
         companion object {
             const val BACKUP_WORK_NAME = "health_backup_periodic"
+            const val LOCAL_BACKUP_WORK_NAME = "local_backup_periodic"
             const val BIRTHDAY_WORK_NAME = "birthday_check_periodic"
             const val DATA_CLEANUP_WORK_NAME = "data_cleanup_periodic"
         }
@@ -91,6 +92,27 @@ class WorkerScheduler
 
                 workManager.get().enqueueUniquePeriodicWork(
                     DATA_CLEANUP_WORK_NAME,
+                    ExistingPeriodicWorkPolicy.KEEP,
+                    request,
+                )
+            }
+
+        suspend fun scheduleLocalBackupWorker() =
+            withContext(Dispatchers.IO) {
+                val constraints =
+                    Constraints
+                        .Builder()
+                        .setRequiresBatteryNotLow(true)
+                        .build()
+
+                val request =
+                    PeriodicWorkRequestBuilder<LocalBackupWorker>(1, TimeUnit.DAYS)
+                        .setConstraints(constraints)
+                        .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
+                        .build()
+
+                workManager.get().enqueueUniquePeriodicWork(
+                    LOCAL_BACKUP_WORK_NAME,
                     ExistingPeriodicWorkPolicy.KEEP,
                     request,
                 )

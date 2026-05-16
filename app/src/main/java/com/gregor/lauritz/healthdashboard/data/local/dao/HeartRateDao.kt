@@ -19,6 +19,9 @@ interface HeartRateDao {
     fun observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordEntity>> =
         _observeSleepHrSince(fromMs).distinctUntilChanged()
 
+    @Query("SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
+    suspend fun getSince(fromMs: Long): List<HeartRateRecordEntity>
+
     @Query(
         "SELECT CAST(ROUND(AVG(beatsPerMinute)) AS INTEGER) FROM heart_rate_records " +
             "WHERE recordType = 'SLEEP' AND sessionId = :sessionId",

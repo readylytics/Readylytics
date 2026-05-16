@@ -50,4 +50,282 @@ data class DailySummaryEntity(
     val architectureScoreContribution: Float? = null,
     val loadContribution: Float? = null,
     val sRest: Float? = null,
-)
+) {
+    companion object {
+        fun fromJson(json: org.json.JSONObject): DailySummaryEntity =
+            DailySummaryEntity(
+                dateMidnightMs = json.getLong("dateMidnightMs"),
+                sleepScore =
+                    if (json.has("sleepScore") &&
+                        !json.isNull("sleepScore")
+                    ) {
+                        json.getDouble("sleepScore").toFloat()
+                    } else {
+                        null
+                    },
+                loadScore =
+                    if (json.has("loadScore") &&
+                        !json.isNull("loadScore")
+                    ) {
+                        json.getDouble("loadScore").toFloat()
+                    } else {
+                        null
+                    },
+                readinessScore =
+                    if (json.has("readinessScore") &&
+                        !json.isNull("readinessScore")
+                    ) {
+                        json.getDouble("readinessScore").toFloat()
+                    } else {
+                        null
+                    },
+                strainRatio =
+                    if (json.has("strainRatio") &&
+                        !json.isNull("strainRatio")
+                    ) {
+                        json.getDouble("strainRatio").toFloat()
+                    } else {
+                        null
+                    },
+                nocturnalRhr =
+                    if (json.has("nocturnalRhr") &&
+                        !json.isNull("nocturnalRhr")
+                    ) {
+                        json.getInt("nocturnalRhr")
+                    } else {
+                        null
+                    },
+                nocturnalHrv =
+                    if (json.has("nocturnalHrv") &&
+                        !json.isNull("nocturnalHrv")
+                    ) {
+                        json.getInt("nocturnalHrv")
+                    } else {
+                        null
+                    },
+                sleepDurationMinutes =
+                    if (json.has("sleepDurationMinutes") &&
+                        !json.isNull("sleepDurationMinutes")
+                    ) {
+                        json.getInt("sleepDurationMinutes")
+                    } else {
+                        null
+                    },
+                deepSleepPercent =
+                    if (json.has("deepSleepPercent") &&
+                        !json.isNull("deepSleepPercent")
+                    ) {
+                        json.getDouble("deepSleepPercent").toFloat()
+                    } else {
+                        null
+                    },
+                remSleepPercent =
+                    if (json.has("remSleepPercent") &&
+                        !json.isNull("remSleepPercent")
+                    ) {
+                        json.getDouble("remSleepPercent").toFloat()
+                    } else {
+                        null
+                    },
+                totalTrimp =
+                    if (json.has("totalTrimp") &&
+                        !json.isNull("totalTrimp")
+                    ) {
+                        json.getDouble("totalTrimp").toFloat()
+                    } else {
+                        null
+                    },
+                rhrRatio =
+                    if (json.has("rhrRatio") &&
+                        !json.isNull("rhrRatio")
+                    ) {
+                        json.getDouble("rhrRatio").toFloat()
+                    } else {
+                        null
+                    },
+                hrvBaseline =
+                    if (json.has("hrvBaseline") &&
+                        !json.isNull("hrvBaseline")
+                    ) {
+                        json.getInt("hrvBaseline")
+                    } else {
+                        null
+                    },
+                restingHeartRate =
+                    if (json.has("restingHeartRate") &&
+                        !json.isNull("restingHeartRate")
+                    ) {
+                        json.getInt("restingHeartRate")
+                    } else {
+                        null
+                    },
+                restingHrRatio =
+                    if (json.has("restingHrRatio") &&
+                        !json.isNull("restingHrRatio")
+                    ) {
+                        json.getDouble("restingHrRatio").toFloat()
+                    } else {
+                        null
+                    },
+                restingHrBaseline =
+                    if (json.has("restingHrBaseline") &&
+                        !json.isNull("restingHrBaseline")
+                    ) {
+                        json.getInt("restingHrBaseline")
+                    } else {
+                        null
+                    },
+                paiScore =
+                    if (json.has("paiScore") &&
+                        !json.isNull("paiScore")
+                    ) {
+                        json.getDouble("paiScore").toFloat()
+                    } else {
+                        null
+                    },
+                totalPai =
+                    if (json.has("totalPai") &&
+                        !json.isNull("totalPai")
+                    ) {
+                        json.getDouble("totalPai").toFloat()
+                    } else {
+                        null
+                    },
+                stepCount =
+                    if (json.has(
+                            "stepCount",
+                        ) &&
+                        !json.isNull(
+                            "stepCount",
+                        )
+                    ) {
+                        json.getInt(
+                            "stepCount",
+                        )
+                    } else {
+                        null
+                    },
+                zLnHrv =
+                    if (json.has(
+                            "zLnHrv",
+                        ) &&
+                        !json.isNull("zLnHrv")
+                    ) {
+                        json.getDouble("zLnHrv").toFloat()
+                    } else {
+                        null
+                    },
+                zRhr = if (json.has("zRhr") && !json.isNull("zRhr")) json.getDouble("zRhr").toFloat() else null,
+                recoveryFlags =
+                    if (json.has("recoveryFlags") &&
+                        !json.isNull("recoveryFlags")
+                    ) {
+                        json.getString("recoveryFlags")
+                    } else {
+                        null
+                    },
+                hrvSigma =
+                    if (json.has("hrvSigma") &&
+                        !json.isNull("hrvSigma")
+                    ) {
+                        json.getDouble("hrvSigma").toFloat()
+                    } else {
+                        null
+                    },
+                diagnostics = ReadinessResult.Diagnostics(),
+                contributors = ReadinessResult.Contributors(),
+                rollingMu =
+                    if (json.has("rollingMu") &&
+                        !json.isNull("rollingMu")
+                    ) {
+                        json.getDouble("rollingMu").toFloat()
+                    } else {
+                        null
+                    },
+                rhrDeltaBpm =
+                    if (json.has("rhrDeltaBpm") &&
+                        !json.isNull("rhrDeltaBpm")
+                    ) {
+                        json.getDouble("rhrDeltaBpm").toFloat()
+                    } else {
+                        null
+                    },
+                lateNadir =
+                    if (json.has("lateNadir") &&
+                        !json.isNull("lateNadir")
+                    ) {
+                        json.getBoolean("lateNadir")
+                    } else {
+                        null
+                    },
+                stagesSuspicious =
+                    if (json.has("stagesSuspicious") &&
+                        !json.isNull("stagesSuspicious")
+                    ) {
+                        json.getBoolean("stagesSuspicious")
+                    } else {
+                        null
+                    },
+                isCalibrating =
+                    if (json.has("isCalibrating") &&
+                        !json.isNull("isCalibrating")
+                    ) {
+                        json.getBoolean("isCalibrating")
+                    } else {
+                        null
+                    },
+                hrvScoreContribution =
+                    if (json.has("hrvScoreContribution") &&
+                        !json.isNull("hrvScoreContribution")
+                    ) {
+                        json.getDouble("hrvScoreContribution").toFloat()
+                    } else {
+                        null
+                    },
+                rhrScoreContribution =
+                    if (json.has("rhrScoreContribution") &&
+                        !json.isNull("rhrScoreContribution")
+                    ) {
+                        json.getDouble("rhrScoreContribution").toFloat()
+                    } else {
+                        null
+                    },
+                durationScoreContribution =
+                    if (json.has("durationScoreContribution") &&
+                        !json.isNull("durationScoreContribution")
+                    ) {
+                        json.getDouble("durationScoreContribution").toFloat()
+                    } else {
+                        null
+                    },
+                architectureScoreContribution =
+                    if (json.has("architectureScoreContribution") &&
+                        !json.isNull("architectureScoreContribution")
+                    ) {
+                        json.getDouble("architectureScoreContribution").toFloat()
+                    } else {
+                        null
+                    },
+                loadContribution =
+                    if (json.has("loadContribution") &&
+                        !json.isNull("loadContribution")
+                    ) {
+                        json.getDouble("loadContribution").toFloat()
+                    } else {
+                        null
+                    },
+                sRest =
+                    if (json.has(
+                            "sRest",
+                        ) &&
+                        !json.isNull(
+                            "sRest",
+                        )
+                    ) {
+                        json.getDouble("sRest").toFloat()
+                    } else {
+                        null
+                    },
+            )
+    }
+}

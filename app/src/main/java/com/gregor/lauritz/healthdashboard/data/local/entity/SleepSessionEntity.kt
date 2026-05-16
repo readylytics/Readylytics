@@ -25,4 +25,51 @@ data class SleepSessionEntity(
     val startZoneOffsetSeconds: Int? = null,
     val endZoneOffsetSeconds: Int? = null,
     val deviceName: String? = null,
-)
+) {
+    companion object {
+        fun fromJson(json: org.json.JSONObject): SleepSessionEntity =
+            SleepSessionEntity(
+                id = json.getString("id"),
+                startTime = json.getLong("startTime"),
+                endTime = json.getLong("endTime"),
+                durationMinutes = json.getInt("durationMinutes"),
+                efficiency = json.getDouble("efficiency").toFloat(),
+                deepSleepMinutes = json.getInt("deepSleepMinutes"),
+                remSleepMinutes = json.getInt("remSleepMinutes"),
+                lightSleepMinutes = json.getInt("lightSleepMinutes"),
+                awakeMinutes = json.getInt("awakeMinutes"),
+                sleepScore =
+                    if (json.has("sleepScore") &&
+                        !json.isNull("sleepScore")
+                    ) {
+                        json.getDouble("sleepScore").toFloat()
+                    } else {
+                        null
+                    },
+                startZoneOffsetSeconds =
+                    if (json.has("startZoneOffsetSeconds") &&
+                        !json.isNull("startZoneOffsetSeconds")
+                    ) {
+                        json.getInt("startZoneOffsetSeconds")
+                    } else {
+                        null
+                    },
+                endZoneOffsetSeconds =
+                    if (json.has("endZoneOffsetSeconds") &&
+                        !json.isNull("endZoneOffsetSeconds")
+                    ) {
+                        json.getInt("endZoneOffsetSeconds")
+                    } else {
+                        null
+                    },
+                deviceName =
+                    if (json.has("deviceName") &&
+                        !json.isNull("deviceName")
+                    ) {
+                        json.getString("deviceName")
+                    } else {
+                        null
+                    },
+            )
+    }
+}
