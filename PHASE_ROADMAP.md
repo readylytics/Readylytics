@@ -38,6 +38,18 @@
 
 **Risks:** Interdependent state flows | **Mitigation:** Extract in order, test after each
 
+### 3.4 WorkoutDetailViewModel.kt Data Transformations (210 → 70 lines)
+
+Extract heavy transformation logic from ViewModel:
+
+- Create `mappers/ChartDataMapper.kt` (~60 lines) — converts HeartRatePoint samples → chart coordinates
+- Create `mappers/RecoveryMetricsMapper.kt` (~50 lines) — computes HRR (1/2/3 min drops)
+- Create `mappers/DailyPaiBreakdownMapper.kt` (~40 lines) — builds 7-day PAI breakdown
+- ViewModel becomes pure orchestrator: load data → map → update state
+- Add 8 tests (mapper unit tests + integration)
+
+**Risks:** State flow interdependencies | **Mitigation:** Mappers pure functions, no side effects
+
 ---
 
 ## PHASE 4: Domain Scoring Refactor
