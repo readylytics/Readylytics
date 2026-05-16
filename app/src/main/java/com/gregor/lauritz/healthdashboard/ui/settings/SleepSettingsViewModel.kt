@@ -60,10 +60,9 @@ class SleepSettingsViewModel
                         scoringRepository.computeAndPersistDailySummary()
                     }
                 is SettingsEvent.RhrBaselineChanged -> {
-                    val value = event.text.toFloatOrNull()
+                    val value = event.text.toIntOrNull()?.toFloat()
                     val isValid =
                         SettingsValidators.RHR_BASELINE_RULE.validate(event.text) is ValidationResult.Valid
-                    if (value != null && isValid) {
                         viewModelScope.launch {
                             settingsRepo.updateRhrBaselineOverride(bpm = value)
                             scoringRepository.computeAndPersistDailySummary()
