@@ -13,7 +13,9 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRep
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -47,10 +49,9 @@ class DashboardFlowIntermediateTest {
             val today = LocalDate.now()
             val summary =
                 DailySummary(
-                    dateMs = today.atStartOfDay().toInstant().toEpochMilli(),
+                    date = today,
                     stepCount = 10000,
                     isCalibrating = false,
-                    dataQuality = 1.0f,
                 )
             val prefs =
                 UserPreferences(
@@ -148,21 +149,14 @@ class DashboardFlowIntermediateTest {
             val paiSummaries =
                 listOf(
                     DailySummary(
-                        dateMs =
-                            today
-                                .minusDays(6)
-                                .atStartOfDay()
-                                .toInstant()
-                                .toEpochMilli(),
+                        date = today.minusDays(6),
                         stepCount = 1000,
                         isCalibrating = false,
-                        dataQuality = 1.0f,
                     ),
                     DailySummary(
-                        dateMs = today.atStartOfDay().toInstant().toEpochMilli(),
+                        date = today,
                         stepCount = 10000,
                         isCalibrating = false,
-                        dataQuality = 1.0f,
                     ),
                 )
 
@@ -203,22 +197,24 @@ class DashboardFlowIntermediateTest {
                     id = "session_1",
                     startTime = today.atStartOfDay().toInstant().toEpochMilli(),
                     endTime = today.atStartOfDay().toInstant().toEpochMilli() + 8 * 60 * 60 * 1000,
-                    duration = 8 * 60 * 60 * 1000,
+                    durationMinutes = 480,
+                    efficiency = 0.85f,
                     deepSleepMinutes = 120,
                     remSleepMinutes = 60,
+                    lightSleepMinutes = 180,
                     awakeMinutes = 15,
                     deviceName = "TestDevice",
                 )
             val cardConfig =
                 CardConfiguration(
-                    cardId = CardId.SLEEP,
+                    cardId = CardId.SLEEP_SCORE,
                     isVisible = true,
                     position = 0,
                 )
 
-            coEvery {
+            every {
                 cardManagementDelegate.isManagingCards
-            } returns flowOf(false)
+            } returns MutableStateFlow(false)
             coEvery {
                 cardConfigRepository.dashboardCardConfigurations()
             } returns flowOf(listOf(cardConfig))
@@ -252,14 +248,14 @@ class DashboardFlowIntermediateTest {
             val today = LocalDate.now()
             val cardConfig =
                 CardConfiguration(
-                    cardId = CardId.SLEEP,
+                    cardId = CardId.SLEEP_SCORE,
                     isVisible = true,
                     position = 0,
                 )
 
-            coEvery {
+            every {
                 cardManagementDelegate.isManagingCards
-            } returns flowOf(false)
+            } returns MutableStateFlow(false)
             coEvery {
                 cardConfigRepository.dashboardCardConfigurations()
             } returns flowOf(listOf(cardConfig))
