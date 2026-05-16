@@ -28,7 +28,7 @@ class LoadScoringStrategy
 
         fun hrvSigma(
             lnHrvValues: List<Float>,
-            sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior,
+            sigmaPrior: Float,
         ): Float {
             val n = lnHrvValues.size
             val w =
