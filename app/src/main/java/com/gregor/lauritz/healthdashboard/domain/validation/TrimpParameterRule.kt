@@ -4,4 +4,4 @@ class TrimpParameterRule(
     min: Float,
     max: Float,
     override val errorMessage: String,
-) : ValidationRule<String> by FloatRangeRule(min, max, errorMessage)
+) : FloatRangeRule(min, max, errorMessage)
