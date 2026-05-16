@@ -303,12 +303,12 @@ Extract heavy transformation logic from ViewModel:
 | 2         | Settings           | 15+       | 42–56       | Med      | ✅ DONE      |
 | 3         | Large UI Refactor  | 10+       | 40–60       | Med-High | ✅ DONE      |
 | 4         | Scoring Domain     | 8         | 30–50       | High     | ✅ DONE      |
-| 5         | Data Layer         | 10+       | 25–40       | Med-High | 📍 IN PROG   |
+| 5         | Data Layer         | 10+       | 25–40       | Med-High | ✅ DONE      |
 | 6         | Cloud/Backup       | 6         | 20–30       | Med-High | 📋 PENDING   |
 | 7         | Test Coverage      | +50 tests | 20–35       | Low      | 📋 PENDING   |
 | 8         | Performance        | —         | 25–40       | Med      | 📋 PENDING   |
 | 9         | Polish/Launch      | —         | 15–25       | Low      | 📋 PENDING   |
-| **TOTAL** | **Complete Audit** | **65–80** | **257–386** | **Med**  | **5/9 IN WORK** |
+| **TOTAL** | **Complete Audit** | **65–80** | **257–386** | **Med**  | **6/9 IN WORK** |
 
 ---
 
