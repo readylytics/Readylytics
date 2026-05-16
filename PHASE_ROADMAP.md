@@ -1,6 +1,6 @@
 # Master Roadmap: Phases 3–9
 
-**Status:** Phase 1 & 2 complete. Phase 3 starting.
+**Status:** Phases 1, 2, & 3 complete. Phase 4 starting.
 
 ---
 
@@ -290,14 +290,14 @@
 | --------- | ------------------ | --------- | ----------- | -------- | ------------ |
 | 1         | Dashboard/Sync     | 6–8       | 40–50       | Med      | ✅ DONE      |
 | 2         | Settings           | 15+       | 42–56       | Med      | ✅ DONE      |
-| 3         | Large UI Refactor  | 10+       | 40–60       | Med-High | 📍 NEXT      |
-| 4         | Scoring Domain     | 8         | 30–50       | High     | 📋 PENDING   |
+| 3         | Large UI Refactor  | 10+       | 40–60       | Med-High | ✅ DONE      |
+| 4         | Scoring Domain     | 8         | 30–50       | High     | 📍 NEXT      |
 | 5         | Data Layer         | 10+       | 25–40       | Med-High | 📋 PENDING   |
 | 6         | Cloud/Backup       | 6         | 20–30       | Med-High | 📋 PENDING   |
 | 7         | Test Coverage      | +50 tests | 20–35       | Low      | 📋 PENDING   |
 | 8         | Performance        | —         | 25–40       | Med      | 📋 PENDING   |
 | 9         | Polish/Launch      | —         | 15–25       | Low      | 📋 PENDING   |
-| **TOTAL** | **Complete Audit** | **65–80** | **257–386** | **Med**  | **2/9 DONE** |
+| **TOTAL** | **Complete Audit** | **65–80** | **257–386** | **Med**  | **3/9 DONE** |
 
 ---
 
