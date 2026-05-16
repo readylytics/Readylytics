@@ -95,7 +95,7 @@ class UISettingsViewModel
                     }
                 }
                 is SettingsEvent.ChengBetaChanged -> {
-                    val validation = SettingsValidators.TRIMP_CHENG_BETA_RULE.validate(event.value.toString())
+                    val validation = SettingsValidators.TRIMP_CHENG_BETA_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             settingsRepo.updateChengBeta(event.value)
