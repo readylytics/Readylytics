@@ -13,11 +13,8 @@ object ChartDataMapper {
         val workoutStartInstant = Instant.ofEpochMilli(workoutStart)
         val workoutEndInstant = Instant.ofEpochMilli(workoutEnd)
         val workoutSamples = samples.filter { it.timestamp in workoutStartInstant..workoutEndInstant }
-        val durationMinutes =
-            ChronoUnit.MINUTES
-                .between(workoutStartInstant, workoutEndInstant)
-                .toInt()
-                .coerceAtLeast(1)
+        val durationSeconds = ChronoUnit.SECONDS.between(workoutStartInstant, workoutEndInstant)
+        val durationMinutes = ((durationSeconds + 59) / 60).toInt().coerceAtLeast(1)
 
         val chartData =
             workoutSamples
