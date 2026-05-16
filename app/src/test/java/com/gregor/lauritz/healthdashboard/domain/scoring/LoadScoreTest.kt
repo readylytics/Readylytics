@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -9,22 +10,32 @@ private const val DELTA = 0.5f // acceptable rounding tolerance for quadratic ou
 // All SR ≤ 1.3 → 100 (no penalty for rest or moderate load).
 // REF: Gabbett 2016 BJSM; Windt & Gabbett 2018 BJSM; A.4 review
 class LoadScoreTest {
-    private val calculator = ScoringCalculatorImpl()
+    private val calculator = LoadScoringStrategy()
 
     @Test
-    fun `zero SR scores 100 — no penalty for rest days`() = assertEquals(100f, calculator.computeLoadScore(0f), DELTA)
+    fun `zero SR scores 100 — no penalty for rest days`() {
+        assertEquals(100f, calculator.computeLoadScore(0f), DELTA)
+    }
 
     @Test
-    fun `under-training SR 0_5 scores 100`() = assertEquals(100f, calculator.computeLoadScore(0.5f), DELTA)
+    fun `under-training SR 0_5 scores 100`() {
+        assertEquals(100f, calculator.computeLoadScore(0.5f), DELTA)
+    }
 
     @Test
-    fun `lower sweet-spot boundary 0_8 scores 100`() = assertEquals(100f, calculator.computeLoadScore(0.8f), DELTA)
+    fun `lower sweet-spot boundary 0_8 scores 100`() {
+        assertEquals(100f, calculator.computeLoadScore(0.8f), DELTA)
+    }
 
     @Test
-    fun `ideal SR 1_0 scores 100`() = assertEquals(100f, calculator.computeLoadScore(1.0f), DELTA)
+    fun `ideal SR 1_0 scores 100`() {
+        assertEquals(100f, calculator.computeLoadScore(1.0f), DELTA)
+    }
 
     @Test
-    fun `upper sweet-spot boundary 1_3 scores 100`() = assertEquals(100f, calculator.computeLoadScore(1.3f), DELTA)
+    fun `upper sweet-spot boundary 1_3 scores 100`() {
+        assertEquals(100f, calculator.computeLoadScore(1.3f), DELTA)
+    }
 
     @Test
     fun `SR 1_35 begins quadratic decay`() {

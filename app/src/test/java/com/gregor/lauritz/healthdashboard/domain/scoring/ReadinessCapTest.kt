@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
 import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -11,7 +12,7 @@ private const val DELTA = 0.01f
 // OVERREACHING → cap 70; ILLNESS_ONSET → cap 50; both → min cap (50); empty → no cap.
 // REF: Le Meur 2013 Med Sci Sports Exerc; Mishra 2020 Nat Biomed Eng
 class ReadinessCapTest {
-    private val calculator = ScoringCalculatorImpl()
+    private val calculator = LoadScoringStrategy()
 
     private fun readiness(
         sRest: Float = 80f,

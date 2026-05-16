@@ -48,6 +48,7 @@ class CircadianConsistencyRepositoryTest {
             remSleepMinutes = 90,
             lightSleepMinutes = 180,
             awakeMinutes = 10,
+            deviceName = "Device",
         )
     }
 
@@ -118,12 +119,13 @@ class CircadianConsistencyRepositoryTest {
                         id = "nap$i",
                         startTime = System.currentTimeMillis() - i * ONE_DAY_MS,
                         endTime = System.currentTimeMillis() - i * ONE_DAY_MS + 2 * 3600_000L,
-                        durationMinutes = 90,
+                        durationMinutes = 120,
                         efficiency = 80f,
                         deepSleepMinutes = 0,
                         remSleepMinutes = 0,
-                        lightSleepMinutes = 90,
+                        lightSleepMinutes = 120,
                         awakeMinutes = 0,
+                        deviceName = "NapDevice",
                     )
                 }
             val repo = buildRepo(sessions = naps)
