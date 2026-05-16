@@ -7,6 +7,8 @@ import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPre
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.circadian.CircadianThresholdValue
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
+import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
+import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -65,14 +67,30 @@ class ThresholdSettingsViewModel
 
         fun onEvent(event: SettingsEvent) {
             when (event) {
-                is SettingsEvent.HrvOptimalThresholdChanged ->
-                    viewModelScope.launch { settingsRepo.updateHrvOptimalThreshold(value = event.value) }
-                is SettingsEvent.HrvWarningThresholdChanged ->
-                    viewModelScope.launch { settingsRepo.updateHrvWarningThreshold(value = event.value) }
-                is SettingsEvent.RhrOptimalThresholdChanged ->
-                    viewModelScope.launch { settingsRepo.updateRhrOptimalThreshold(value = event.value) }
-                is SettingsEvent.RhrWarningThresholdChanged ->
-                    viewModelScope.launch { settingsRepo.updateRhrWarningThreshold(value = event.value) }
+                is SettingsEvent.HrvOptimalThresholdChanged -> {
+                    val validation = SettingsValidators.HRV_OPTIMAL_THRESHOLD_RULE.validate(event.value)
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch { settingsRepo.updateHrvOptimalThreshold(value = event.value) }
+                    }
+                }
+                is SettingsEvent.HrvWarningThresholdChanged -> {
+                    val validation = SettingsValidators.HRV_WARNING_THRESHOLD_RULE.validate(event.value)
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch { settingsRepo.updateHrvWarningThreshold(value = event.value) }
+                    }
+                }
+                is SettingsEvent.RhrOptimalThresholdChanged -> {
+                    val validation = SettingsValidators.RHR_OPTIMAL_THRESHOLD_RULE.validate(event.value)
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch { settingsRepo.updateRhrOptimalThreshold(value = event.value) }
+                    }
+                }
+                is SettingsEvent.RhrWarningThresholdChanged -> {
+                    val validation = SettingsValidators.RHR_WARNING_THRESHOLD_RULE.validate(event.value)
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch { settingsRepo.updateRhrWarningThreshold(value = event.value) }
+                    }
+                }
                 is SettingsEvent.ConsistencyThresholdChanged ->
                     viewModelScope.launch { settingsRepo.updateConsistencyThresholdMinutes(minutes = event.minutes) }
                 is SettingsEvent.ConsistencyEvaluationDaysChanged ->
