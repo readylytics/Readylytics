@@ -4,7 +4,6 @@ import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.math.exp
@@ -30,7 +29,14 @@ class SleepScoringStrategyTest {
 
     @Test
     fun `archSubScore zero duration scores 0`() {
-        val result = sleepStrategy.computeArchSubScore(deepSleepMinutes = 0, remSleepMinutes = 0, durationMinutes = 0, userAge = 30, sleepTargets = null)
+        val result =
+            sleepStrategy.computeArchSubScore(
+                deepSleepMinutes = 0,
+                remSleepMinutes = 0,
+                durationMinutes = 0,
+                userAge = 30,
+                sleepTargets = null,
+            )
         assertEquals(0f, result, DELTA)
     }
 
@@ -39,7 +45,14 @@ class SleepScoringStrategyTest {
         val durationMinutes = 480
         val deepMinutes = (durationMinutes * 0.18f).toInt()
         val remMinutes = (durationMinutes * 0.22f).toInt()
-        val result = sleepStrategy.computeArchSubScore(deepMinutes, remMinutes, durationMinutes, userAge = 25, sleepTargets = null)
+        val result =
+            sleepStrategy.computeArchSubScore(
+                deepMinutes,
+                remMinutes,
+                durationMinutes,
+                userAge = 25,
+                sleepTargets = null,
+            )
         assertEquals(100f, result, DELTA)
     }
 
@@ -47,34 +60,36 @@ class SleepScoringStrategyTest {
     fun `sleepScore suspicious stages arch weight dropped`() {
         val sDur = sleepStrategy.computeDurationSubScore(480, 95f, 8f)
         val sRest = 50f
-        val result = sleepStrategy.computeSleepScore(
-            durationMinutes = 480,
-            efficiency = 95f,
-            deepSleepMinutes = 86,
-            remSleepMinutes = 105,
-            goalSleepHours = 8f,
-            sRest = sRest,
-            userAge = 30,
-            stagesSuspicious = true,
-            sleepTargets = null,
-        )
+        val result =
+            sleepStrategy.computeSleepScore(
+                durationMinutes = 480,
+                efficiency = 95f,
+                deepSleepMinutes = 86,
+                remSleepMinutes = 105,
+                goalSleepHours = 8f,
+                sRest = sRest,
+                userAge = 30,
+                stagesSuspicious = true,
+                sleepTargets = null,
+            )
         val expected = 0.75f * sDur + 0.0f + 0.25f * sRest
         assertEquals(expected, result, DELTA)
     }
 
     @Test
     fun `restorationSubScore zero Z scores blend HRV RHR`() {
-        val result = sleepStrategy.computeRestorationSubScore(
-            currentHrvMean = 30f,
-            muHrvHistory = listOf(30f),
-            sigmaHrvHistory = listOf(5f),
-            sigmaPrior = 0.18f,
-            currentNocturnalRhr = 60f,
-            rhrValues = listOf(60),
-            rhrBaselineOverride = null,
-            hrvBaselineOverride = null,
-            restorationWeights = null,
-        )
+        val result =
+            sleepStrategy.computeRestorationSubScore(
+                currentHrvMean = 30f,
+                muHrvHistory = listOf(30f),
+                sigmaHrvHistory = listOf(5f),
+                sigmaPrior = 0.18f,
+                currentNocturnalRhr = 60f,
+                rhrValues = listOf(60),
+                rhrBaselineOverride = null,
+                hrvBaselineOverride = null,
+                restorationWeights = null,
+            )
         val hrvScore = 50f
         val rhrScore = 50f
         val expected = 0.5f * hrvScore + 0.5f * rhrScore
@@ -147,41 +162,44 @@ class LoadScoringStrategyTest {
 
     @Test
     fun `hrvZScore empty history returns null`() {
-        val result = loadStrategy.computeHrvZScore(
-            currentRmssdMs = 50f,
-            muHistory = emptyList(),
-            sigmaHistory = emptyList(),
-            sigmaPrior = 0.18f,
-            baselineOverride = null,
-        )
+        val result =
+            loadStrategy.computeHrvZScore(
+                currentRmssdMs = 50f,
+                muHistory = emptyList(),
+                sigmaHistory = emptyList(),
+                sigmaPrior = 0.18f,
+                baselineOverride = null,
+            )
         assertNull(result)
     }
 
     @Test
     fun `recoveryFlags calibrating sets flag`() {
-        val result = loadStrategy.computeRecoveryFlags(
-            zLnHrv = 0f,
-            zRhr = 0f,
-            rhrDeltaBpm = null,
-            yesterdayZLnHrv = null,
-            yesterdayZRhr = null,
-            hrvMissing = false,
-            stagesSuspicious = false,
-            isLateNadir = false,
-            isCalibrating = true,
-            emergencyFlags = null,
-        )
+        val result =
+            loadStrategy.computeRecoveryFlags(
+                zLnHrv = 0f,
+                zRhr = 0f,
+                rhrDeltaBpm = null,
+                yesterdayZLnHrv = null,
+                yesterdayZRhr = null,
+                hrvMissing = false,
+                stagesSuspicious = false,
+                isLateNadir = false,
+                isCalibrating = true,
+                emergencyFlags = null,
+            )
         assertEquals(setOf(RecoveryFlag.CALIBRATING), result)
     }
 
     @Test
     fun `readinessScore illness flag caps at 65`() {
-        val result = loadStrategy.computeReadinessScore(
-            sRest = 100f,
-            sleepScore = 100f,
-            loadScore = 100f,
-            recoveryFlags = setOf(RecoveryFlag.ILLNESS_ONSET),
-        )
+        val result =
+            loadStrategy.computeReadinessScore(
+                sRest = 100f,
+                sleepScore = 100f,
+                loadScore = 100f,
+                recoveryFlags = setOf(RecoveryFlag.ILLNESS_ONSET),
+            )
         assertEquals(ScoringConstants.Readiness.ILLNESS_MAX_SCORE, result, DELTA)
     }
 }

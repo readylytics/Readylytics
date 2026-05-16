@@ -1,11 +1,11 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.domain.scoring.ComposeScoringCalculator
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.PaiScoringStrategy
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.SleepScoringStrategy
 import com.gregor.lauritz.healthdashboard.domain.util.median
 import com.gregor.lauritz.healthdashboard.domain.util.stdev
-import com.gregor.lauritz.healthdashboard.domain.scoring.ComposeScoringCalculator
-import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.SleepScoringStrategy
-import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.PaiScoringStrategy
-import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -15,11 +15,12 @@ import java.time.LocalDate
 
 private const val DELTA = 0.5f
 
-private val calculator = ComposeScoringCalculator(
-    SleepScoringStrategy(LoadScoringStrategy()),
-    PaiScoringStrategy(),
-    LoadScoringStrategy()
-)
+private val calculator =
+    ComposeScoringCalculator(
+        SleepScoringStrategy(LoadScoringStrategy()),
+        PaiScoringStrategy(),
+        LoadScoringStrategy(),
+    )
 
 // ─── Math helpers ─────────────────────────────────────────────────────────────
 class MathHelpersTest {
@@ -270,29 +271,31 @@ class RestorationSubScoreTest {
 
     @Test
     fun `rhr override respected`() {
-        val score = calculator.computeRestorationSubScore(
-            currentHrvMean = 60f,
-            muHrvHistory = listOf(60f, 60f, 60f),
-            sigmaHrvHistory = listOf(60f, 60f, 60f),
-            currentNocturnalRhr = 60f,
-            rhrValues = emptyList(),
-            rhrBaselineOverride = 60f,
-            hrvBaselineOverride = null,
-        )
+        val score =
+            calculator.computeRestorationSubScore(
+                currentHrvMean = 60f,
+                muHrvHistory = listOf(60f, 60f, 60f),
+                sigmaHrvHistory = listOf(60f, 60f, 60f),
+                currentNocturnalRhr = 60f,
+                rhrValues = emptyList(),
+                rhrBaselineOverride = 60f,
+                hrvBaselineOverride = null,
+            )
         assertEquals(50f, score, DELTA)
     }
 
     @Test
     fun `hrv override respected`() {
-        val score = calculator.computeRestorationSubScore(
-            currentHrvMean = 60f,
-            muHrvHistory = emptyList(),
-            sigmaHrvHistory = emptyList(),
-            currentNocturnalRhr = 60f,
-            rhrValues = listOf(60, 60, 60),
-            rhrBaselineOverride = null,
-            hrvBaselineOverride = 60f,
-        )
+        val score =
+            calculator.computeRestorationSubScore(
+                currentHrvMean = 60f,
+                muHrvHistory = emptyList(),
+                sigmaHrvHistory = emptyList(),
+                currentNocturnalRhr = 60f,
+                rhrValues = listOf(60, 60, 60),
+                rhrBaselineOverride = null,
+                hrvBaselineOverride = 60f,
+            )
         assertEquals(50f, score, DELTA)
     }
 

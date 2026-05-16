@@ -57,7 +57,7 @@ class ScoringRepositoryN1Test {
         remSleepMinutes = 90,
         lightSleepMinutes = 210,
         awakeMinutes = 15,
-        deviceName = "TestDevice"
+        deviceName = "TestDevice",
     )
 
     @Before
@@ -106,11 +106,12 @@ class ScoringRepositoryN1Test {
         coEvery { dailySummaryDao.getByDate(any()) } returns null
         coEvery { dailySummaryDao.upsert(any()) } returns Unit
 
-        scoringCalculator = ComposeScoringCalculator(
-            SleepScoringStrategy(LoadScoringStrategy()),
-            PaiScoringStrategy(),
-            LoadScoringStrategy()
-        )
+        scoringCalculator =
+            ComposeScoringCalculator(
+                SleepScoringStrategy(LoadScoringStrategy()),
+                PaiScoringStrategy(),
+                LoadScoringStrategy(),
+            )
 
         val baselineComputer = BaselineComputer(heartRateDao, hrvDao, sleepSessionDao, scoringCalculator)
         val scoringConfigFactory = ScoringConfigFactory()
@@ -141,7 +142,7 @@ class ScoringRepositoryN1Test {
                 scoringConfigFactory = scoringConfigFactory,
                 computeWorkoutTrimpUseCase = computeWorkoutTrimpUseCase,
                 heartRateDao = heartRateDao,
-                hrvDao = hrvDao
+                hrvDao = hrvDao,
             )
     }
 
@@ -198,7 +199,7 @@ class ScoringRepositoryN1Test {
                         maxHeartRate = 190,
                         age = 30,
                         gender = Gender.fromString("Male"),
-                    )
+                    ),
                 )
             repo.computeAndPersistDailySummary(today)
 
@@ -211,7 +212,7 @@ class ScoringRepositoryN1Test {
                         maxHeartRate = 190,
                         age = 30,
                         gender = Gender.fromString("Male"),
-                    )
+                    ),
                 )
             repo.computeAndPersistDailySummary(today)
 
@@ -224,85 +225,91 @@ class ScoringRepositoryN1Test {
         }
 
     @Test
-    fun `baseline calculation excludes invalid nights`() = runTest {
-        val validSession = makeSleepSession("valid", 1)
-        val shortSession = makeSleepSession("short", 2).copy(durationMinutes = 120) // 2h < 4h threshold
-        val sessions = listOf(validSession, shortSession)
-        coEvery { sleepSessionDao.getSince(any()) } returns sessions
+    fun `baseline calculation excludes invalid nights`() =
+        runTest {
+            val validSession = makeSleepSession("valid", 1)
+            val shortSession = makeSleepSession("short", 2).copy(durationMinutes = 120) // 2h < 4h threshold
+            val sessions = listOf(validSession, shortSession)
+            coEvery { sleepSessionDao.getSince(any()) } returns sessions
 
-        coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns
-            mapOf("valid" to listOf(60f), "short" to listOf(60f))
-        coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns
-            mapOf("valid" to 55, "short" to 55)
+            coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns
+                mapOf("valid" to listOf(60f), "short" to listOf(60f))
+            coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns
+                mapOf("valid" to 55, "short" to 55)
 
-        repo.computeAndPersistDailySummary(LocalDate.now())
+            repo.computeAndPersistDailySummary(LocalDate.now())
 
-        // Should only fetch HRV samples for the valid session for baseline median
-        coVerify { hrvDao.getSleepRmssdValuesForSessions(listOf("valid")) }
-        coVerify(exactly = 0) { hrvDao.getSleepRmssdValuesForSessions(match { it.contains("short") }) }
-    }
-
-    @Test
-    fun `timezone jump suppresses late nadir penalty`() = runTest {
-        val todaySession =
-            makeSleepSession("today", 0).copy(
-                startZoneOffsetSeconds = 3600, // UTC+1
-                endZoneOffsetSeconds = 3600,
-            )
-        val prevSession =
-            makeSleepSession("prev", 1).copy(
-                startZoneOffsetSeconds = -18000, // UTC-5
-                endZoneOffsetSeconds = -18000,
-            )
-        coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns todaySession
-        coEvery { sleepSessionDao.getSince(any()) } returns listOf(todaySession, prevSession)
-
-        val sessionDurationMs = todaySession.durationMinutes * 60 * 1000L
-        val lateNadirTs = todaySession.startTime + (sessionDurationMs * 0.8).toLong()
-        coEvery { heartRateDao.getMinHrTimestamp("today") } returns lateNadirTs
-
-        val summarySlot = io.mockk.slot<DailySummaryEntity>()
-        coEvery { dailySummaryDao.upsert(capture(summarySlot)) } returns Unit
-
-        repo.computeAndPersistDailySummary(LocalDate.now())
-
-        val flags = summarySlot.captured.recoveryFlags ?: ""
-        assert(!flags.contains("NADIR_DELAYED")) {
-            "NADIR_DELAYED should be suppressed during travel, but found in flags: $flags"
+            // Should only fetch HRV samples for the valid session for baseline median
+            coVerify { hrvDao.getSleepRmssdValuesForSessions(listOf("valid")) }
+            coVerify(exactly = 0) { hrvDao.getSleepRmssdValuesForSessions(match { it.contains("short") }) }
         }
-    }
 
     @Test
-    fun `batch fetch replaces per-session getMinHrInRange calls`() = runTest {
-        repo.computeAndPersistDailySummary(LocalDate.now())
-        coVerify(exactly = 1) { heartRateDao.getByTimeRange(any(), any()) }
-        coVerify(exactly = 1) { heartRateDao.getMinHrInRange(any(), any()) }
-    }
+    fun `timezone jump suppresses late nadir penalty`() =
+        runTest {
+            val todaySession =
+                makeSleepSession("today", 0).copy(
+                    startZoneOffsetSeconds = 3600, // UTC+1
+                    endZoneOffsetSeconds = 3600,
+                )
+            val prevSession =
+                makeSleepSession("prev", 1).copy(
+                    startZoneOffsetSeconds = -18000, // UTC-5
+                    endZoneOffsetSeconds = -18000,
+                )
+            coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns todaySession
+            coEvery { sleepSessionDao.getSince(any()) } returns listOf(todaySession, prevSession)
+
+            val sessionDurationMs = todaySession.durationMinutes * 60 * 1000L
+            val lateNadirTs = todaySession.startTime + (sessionDurationMs * 0.8).toLong()
+            coEvery { heartRateDao.getMinHrTimestamp("today") } returns lateNadirTs
+
+            val summarySlot = io.mockk.slot<DailySummaryEntity>()
+            coEvery { dailySummaryDao.upsert(capture(summarySlot)) } returns Unit
+
+            repo.computeAndPersistDailySummary(LocalDate.now())
+
+            val flags = summarySlot.captured.recoveryFlags ?: ""
+            assert(!flags.contains("NADIR_DELAYED")) {
+                "NADIR_DELAYED should be suppressed during travel, but found in flags: $flags"
+            }
+        }
 
     @Test
-    fun `baseline validation uses bulk-fetch DAO methods instead of per-session calls`() = runTest {
-        val sessions = (1..5).map { makeSleepSession("s$it", it) }
-        coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns sessions.associate { it.id to listOf(60f) }
-        coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns sessions.associate { it.id to 55 }
-
-        repo.computeAndPersistDailySummary(LocalDate.now())
-
-        coVerify(atLeast = 1) { hrvDao.getSleepRmssdForSessionsMap(any()) }
-        coVerify(atLeast = 1) { heartRateDao.getAvgSleepHrForSessions(any()) }
-        coVerify(atMost = 1) { hrvDao.getSleepRmssdForSession(any()) }
-        coVerify(atMost = 1) { heartRateDao.getAvgSleepHr(any()) }
-    }
+    fun `batch fetch replaces per-session getMinHrInRange calls`() =
+        runTest {
+            repo.computeAndPersistDailySummary(LocalDate.now())
+            coVerify(exactly = 1) { heartRateDao.getByTimeRange(any(), any()) }
+            coVerify(exactly = 1) { heartRateDao.getMinHrInRange(any(), any()) }
+        }
 
     @Test
-    fun `result is persisted exactly once`() = runTest {
-        repo.computeAndPersistDailySummary(LocalDate.now())
-        coVerify(exactly = 1) { dailySummaryDao.upsert(any<DailySummaryEntity>()) }
-    }
+    fun `baseline validation uses bulk-fetch DAO methods instead of per-session calls`() =
+        runTest {
+            val sessions = (1..5).map { makeSleepSession("s$it", it) }
+            coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns sessions.associate { it.id to listOf(60f) }
+            coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns sessions.associate { it.id to 55 }
+
+            repo.computeAndPersistDailySummary(LocalDate.now())
+
+            coVerify(atLeast = 1) { hrvDao.getSleepRmssdForSessionsMap(any()) }
+            coVerify(atLeast = 1) { heartRateDao.getAvgSleepHrForSessions(any()) }
+            coVerify(atMost = 1) { hrvDao.getSleepRmssdForSession(any()) }
+            coVerify(atMost = 1) { heartRateDao.getAvgSleepHr(any()) }
+        }
 
     @Test
-    fun `is persisted even when insufficient sessions for calibration`() = runTest {
-        coEvery { sleepSessionDao.countSince(any()) } returns 3
-        repo.computeAndPersistDailySummary(LocalDate.now())
-        coVerify(exactly = 1) { dailySummaryDao.upsert(any()) }
-    }
+    fun `result is persisted exactly once`() =
+        runTest {
+            repo.computeAndPersistDailySummary(LocalDate.now())
+            coVerify(exactly = 1) { dailySummaryDao.upsert(any<DailySummaryEntity>()) }
+        }
+
+    @Test
+    fun `is persisted even when insufficient sessions for calibration`() =
+        runTest {
+            coEvery { sleepSessionDao.countSince(any()) } returns 3
+            repo.computeAndPersistDailySummary(LocalDate.now())
+            coVerify(exactly = 1) { dailySummaryDao.upsert(any()) }
+        }
 }
