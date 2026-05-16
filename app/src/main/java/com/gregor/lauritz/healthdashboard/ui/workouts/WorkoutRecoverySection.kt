@@ -15,7 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 
 @Composable
@@ -32,19 +34,19 @@ fun WorkoutRecoverySection(uiState: WorkoutDetailUiState) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Heart Rate Recovery",
+                    text = stringResource(R.string.workout_recovery_header),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 MetricTooltip(
-                    description = "A drop of 18+ bpm in the first minute is considered good.",
+                    description = stringResource(R.string.workout_recovery_tooltip_description),
                     iconTint = MaterialTheme.colorScheme.onSurface,
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
-            HrrItem("1 Minute", uiState.hrr1Min, 18)
-            HrrItem("2 Minutes", uiState.hrr2Min, 35)
-            HrrItem("3 Minutes", uiState.hrr3Min, null)
+            HrrItem(stringResource(R.string.workout_recovery_item_1min), uiState.hrr1Min, 18)
+            HrrItem(stringResource(R.string.workout_recovery_item_2min), uiState.hrr2Min, 35)
+            HrrItem(stringResource(R.string.workout_recovery_item_3min), uiState.hrr3Min, null)
         }
     }
 }
@@ -71,10 +73,14 @@ private fun HrrItem(
                 } else {
                     MaterialTheme.colorScheme.onSurface
                 }
-            Text("$drop bpm", style = MaterialTheme.typography.bodyLarge, color = color)
+            Text(
+                text = stringResource(R.string.workout_recovery_bpm_value, drop),
+                style = MaterialTheme.typography.bodyLarge,
+                color = color,
+            )
         } else {
             Text(
-                "N/A",
+                text = stringResource(R.string.workout_recovery_na),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
