@@ -1,20 +1,16 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
 import androidx.datastore.core.DataStore
+import com.gregor.lauritz.healthdashboard.data.device.HealthDeviceRepository
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
-import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import java.io.IOException
 import java.time.LocalDate
 import java.time.Period
@@ -31,14 +27,11 @@ class SettingsRepository
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
-        private val healthConnectRepository: HealthConnectRepository,
+        private val healthDeviceRepository: HealthDeviceRepository,
     ) {
         private fun Int.toValidMaxHr() = coerceIn(100, 250)
 
         private fun Int.toValidAge() = coerceIn(1, 120)
-
-        private var cachedAvailableDevices: List<String>? = null
-        private val deviceCacheMutex = Mutex()
 
         private fun Float.toValidHrvOptimal() = coerceIn(1.0f, 1.2f)
 
@@ -430,32 +423,9 @@ class SettingsRepository
         }
 
         suspend fun getAvailableDevices(): List<String> =
-            deviceCacheMutex.withLock {
-                cachedAvailableDevices?.let { return it }
-
-                coroutineScope {
-                    val dbDevices =
-                        async {
-                            (
-                                sleepSessionDao.getDistinctDeviceNames() +
-                                    heartRateDao.getDistinctDeviceNames() +
-                                    hrvDao.getDistinctDeviceNames() +
-                                    workoutDao.getDistinctDeviceNames()
-                            ).filterNot { it.isBlank() }
-                                .distinct()
-                        }
-                    val hcDevices = async { healthConnectRepository.discoverDevices(windowDays = 14) }
-
-                    (dbDevices.await() + hcDevices.await())
-                        .distinct()
-                        .sorted()
-                        .also { cachedAvailableDevices = it }
-                }
-            }
+            healthDeviceRepository.getAvailableDevices()
 
         suspend fun clearDeviceCache() {
-            deviceCacheMutex.withLock {
-                cachedAvailableDevices = null
-            }
+            healthDeviceRepository.invalidateCache()
         }
     }
