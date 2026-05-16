@@ -44,16 +44,29 @@ class WakeWindowHrCollector
                     .filter { it.timestampMs in (session.endTime - beforeMs)..(session.endTime + afterMs) }
                     .minOfOrNull { it.beatsPerMinute }
 
+            val historicSessions = sessions.filter { it.id != session.id }
             val historicRestingHrs =
-                sessions
-                    .filter { it.id != session.id }
-                    .mapNotNull { s ->
-                        val start = s.endTime - beforeMs
-                        val end = s.endTime + afterMs
-                        allWakeHrRecords
-                            .filter { it.timestampMs in start..end }
-                            .minOfOrNull { it.beatsPerMinute }
+                if (historicSessions.isEmpty()) {
+                    emptyList()
+                } else {
+                    val sessionWindows =
+                        historicSessions.map { s ->
+                            s.id to
+                                (s.endTime - beforeMs to s.endTime + afterMs)
+                        }
+                    val sessionMinHrs = mutableMapOf<String, Int>()
+                    for ((sessionId, _) in sessionWindows) {
+                        sessionMinHrs[sessionId] = Int.MAX_VALUE
                     }
+                    for (record in allWakeHrRecords) {
+                        for ((sessionId, window) in sessionWindows) {
+                            if (record.timestampMs in window.first..window.second) {
+                                sessionMinHrs[sessionId] = minOf(sessionMinHrs[sessionId]!!, record.beatsPerMinute)
+                            }
+                        }
+                    }
+                    sessionMinHrs.values.filter { it != Int.MAX_VALUE }
+                }
 
             val restingHrBaseline =
                 if (historicRestingHrs.isNotEmpty()) {

@@ -48,4 +48,11 @@ object SettingsValidators {
     val TRIMP_BANISTER_MULTIPLIER_RULE = TrimpParameterRule(0.5f, 2.5f, "Multiplier: 0.5–2.5")
     val TRIMP_CHENG_BETA_RULE = TrimpParameterRule(0.04f, 0.12f, "Beta: 0.04–0.12")
     val TRIMP_ITRIMP_B_FACTOR_RULE = TrimpParameterRule(1.0f, 4.5f, "B Factor: 1.0–4.5")
+
+    // Domain validators for measured/calculated values
+    val HRV_BOUNDS_VALIDATOR = HrvBoundsValidator()
+    val RHR_BOUNDS_VALIDATOR = RhrBoundsValidator()
+    val SLEEP_DURATION_VALIDATOR = SleepDurationValidator()
+    val SLEEP_EFFICIENCY_VALIDATOR = SleepEfficiencyValidator()
+    val SLEEP_ARCHITECTURE_VALIDATOR = SleepArchitectureValidator()
 }
