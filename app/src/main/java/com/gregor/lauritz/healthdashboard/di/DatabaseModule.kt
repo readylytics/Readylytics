@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
@@ -37,25 +38,8 @@ object DatabaseModule {
                 .openHelperFactory(sqlCipherKeyManager.getOrCreateFactory())
                 .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                 .setQueryCoroutineContext(Dispatchers.IO)
-                .addMigrations(
-                    HealthDatabase.MIGRATION_1_2,
-                    HealthDatabase.MIGRATION_2_3,
-                    HealthDatabase.MIGRATION_3_4,
-                    HealthDatabase.MIGRATION_4_5,
-                    HealthDatabase.MIGRATION_5_6,
-                    HealthDatabase.MIGRATION_6_7,
-                    HealthDatabase.MIGRATION_7_8,
-                    HealthDatabase.MIGRATION_8_9,
-                    HealthDatabase.MIGRATION_9_10,
-                    HealthDatabase.MIGRATION_10_11,
-                    HealthDatabase.MIGRATION_11_12,
-                    HealthDatabase.MIGRATION_12_13,
-                    HealthDatabase.MIGRATION_13_14,
-                    HealthDatabase.MIGRATION_14_15,
-                    HealthDatabase.MIGRATION_15_16,
-                    HealthDatabase.MIGRATION_16_17,
-                    HealthDatabase.MIGRATION_17_18,
-                ).addCallback(
+                .addMigrations(*DatabaseMigrations.all)
+                .addCallback(
                     object : RoomDatabase.Callback() {
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             super.onOpen(db)
