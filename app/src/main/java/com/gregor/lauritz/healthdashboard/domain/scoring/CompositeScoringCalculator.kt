@@ -12,7 +12,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class ComposeScoringCalculator
+class CompositeScoringCalculator
     @Inject
     constructor(
         private val sleepStrategy: SleepScoringStrategy,

@@ -4,7 +4,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPre
 import com.gregor.lauritz.healthdashboard.data.preferences.DataStoreCircadianThresholdPreferences
 import com.gregor.lauritz.healthdashboard.data.repository.ScoringRepositoryImpl
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
-import com.gregor.lauritz.healthdashboard.domain.scoring.ComposeScoringCalculator
+import com.gregor.lauritz.healthdashboard.domain.scoring.CompositeScoringCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import dagger.Binds
 import dagger.Module
@@ -21,7 +21,7 @@ abstract class ScoringModule {
 
     @Binds
     @Singleton
-    abstract fun bindScoringCalculator(impl: ComposeScoringCalculator): ScoringCalculator
+    abstract fun bindScoringCalculator(impl: CompositeScoringCalculator): ScoringCalculator
 
     @Binds
     @Singleton

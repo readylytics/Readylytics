@@ -107,7 +107,7 @@ class ScoringRepositoryN1Test {
         coEvery { dailySummaryDao.upsert(any()) } returns Unit
 
         scoringCalculator =
-            ComposeScoringCalculator(
+            CompositeScoringCalculator(
                 SleepScoringStrategy(LoadScoringStrategy()),
                 PaiScoringStrategy(),
                 LoadScoringStrategy(),

@@ -66,7 +66,7 @@ Extract heavy transformation logic from ViewModel:
 - Create `strategies/PaiScoringStrategy.kt` (~100 lines)
 - Create `strategies/LoadScoringStrategy.kt` (~100 lines)
 - Create `strategies/ScoringStrategy.kt` (interface)
-- Create `ComposeScoringCalculator.kt` (~100 lines, orchestrator)
+- Create `CompositeScoringCalculator.kt` (~100 lines, orchestrator)
 - Behavior preservation (formulas unchanged)
 - Add 15 tests (3+ per strategy)
 

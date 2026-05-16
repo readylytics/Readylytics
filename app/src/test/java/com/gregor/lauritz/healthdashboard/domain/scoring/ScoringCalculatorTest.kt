@@ -1,6 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
-import com.gregor.lauritz.healthdashboard.domain.scoring.ComposeScoringCalculator
+import com.gregor.lauritz.healthdashboard.domain.scoring.CompositeScoringCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.PaiScoringStrategy
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.SleepScoringStrategy
@@ -16,7 +16,7 @@ import java.time.LocalDate
 private const val DELTA = 0.5f
 
 private val calculator =
-    ComposeScoringCalculator(
+    CompositeScoringCalculator(
         SleepScoringStrategy(LoadScoringStrategy()),
         PaiScoringStrategy(),
         LoadScoringStrategy(),
