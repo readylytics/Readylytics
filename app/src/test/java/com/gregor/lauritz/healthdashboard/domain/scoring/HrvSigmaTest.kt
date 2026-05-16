@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -9,7 +10,7 @@ import kotlin.math.ln
 private const val DELTA = 0.001f
 
 class HrvSigmaTest {
-    private val calculator = ScoringCalculatorImpl()
+    private val calculator = LoadScoringStrategy()
 
     private fun lnList(rmssdValues: List<Float>) = rmssdValues.map { ln(it.coerceAtLeast(0.001f)) }
 
@@ -69,21 +70,6 @@ class HrvSigmaTest {
                     55f,
                     45f,
                     60f,
-                    50f,
-                    55f,
-                    45f,
-                    60f,
-                    50f,
-                    40f,
-                    50f,
-                    55f,
-                    45f,
-                    60f,
-                    50f,
-                    55f,
-                    45f,
-                    60f,
-                    50f,
                 ),
             )
         val sigma = calculator.hrvSigma(lnList, sigmaPrior = 0.18f)

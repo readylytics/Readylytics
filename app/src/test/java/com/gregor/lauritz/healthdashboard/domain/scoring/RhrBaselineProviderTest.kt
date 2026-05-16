@@ -23,9 +23,7 @@ class RhrBaselineProviderTest {
             val overrideValue = 55f
             val prefs = UserPreferences(rhrBaselineOverride = overrideValue)
             coEvery { settingsRepository.userPreferences } returns flowOf(prefs)
-
             val baseline = provider.getRhrBaseline(Instant.now())
-
             assertEquals(overrideValue, baseline)
         }
 
@@ -36,28 +34,22 @@ class RhrBaselineProviderTest {
             val rhrValues = listOf(60, 62, 64, 61, 63)
             val dayMidnight = Instant.now()
             val prefs = UserPreferences(rhrBaselineOverride = null)
-
             coEvery { settingsRepository.userPreferences } returns flowOf(prefs)
             coEvery { baselineComputer.rhrHistory(dayMidnight) } returns rhrValues
             coEvery { baselineComputer.resolveBaselineRhrBpm(rhrValues, null) } returns calculatedRhr
-
             val baseline = provider.getRhrBaseline(dayMidnight)
-
             assertEquals(calculatedRhr, baseline)
         }
 
     @Test
     fun getRhrBaseline_with_insufficient_data_returns_default() =
         runTest {
-            val dayMidnight = Instant.now()
             val emptyRhrValues = emptyList<Int>()
+            val dayMidnight = Instant.now()
             val prefs = UserPreferences(rhrBaselineOverride = null)
-
             coEvery { settingsRepository.userPreferences } returns flowOf(prefs)
             coEvery { baselineComputer.rhrHistory(dayMidnight) } returns emptyRhrValues
-
             val baseline = provider.getRhrBaseline(dayMidnight)
-
             assertEquals(PhysiologyConstants.DEFAULT_RHR_BPM.toFloat(), baseline)
         }
 
@@ -65,14 +57,10 @@ class RhrBaselineProviderTest {
     fun getRhrBaseline_with_null_rhr_baseline_returns_default() =
         runTest {
             val dayMidnight = Instant.now()
-            val rhrValues = emptyList<Int>()
             val prefs = UserPreferences(rhrBaselineOverride = null)
-
             coEvery { settingsRepository.userPreferences } returns flowOf(prefs)
-            coEvery { baselineComputer.rhrHistory(dayMidnight) } returns rhrValues
-
+            coEvery { baselineComputer.rhrHistory(dayMidnight) } returns emptyList()
             val baseline = provider.getRhrBaseline(dayMidnight)
-
             assertEquals(PhysiologyConstants.DEFAULT_RHR_BPM.toFloat(), baseline)
         }
 }

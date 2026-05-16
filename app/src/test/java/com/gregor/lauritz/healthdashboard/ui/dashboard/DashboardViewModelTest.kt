@@ -28,6 +28,7 @@ class DashboardViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var syncController: ForegroundSyncController
+    private lateinit var selectedDateRepository: SelectedDateRepository
     private lateinit var viewModel: DashboardViewModel
 
     @Before
@@ -57,7 +58,7 @@ class DashboardViewModelTest {
             mockk<com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository> {
                 every { dashboardCardConfigurations() } returns MutableStateFlow(emptyList())
             }
-        val selectedDateRepo =
+        selectedDateRepository =
             mockk<SelectedDateRepository> {
                 every { selectedDate } returns MutableStateFlow(java.time.LocalDate.now())
                 coEvery { selectPreviousDay() } returns Unit
@@ -74,7 +75,7 @@ class DashboardViewModelTest {
                 dailySummaryRepository = dailySummaryRepo,
                 getDashboardDataUseCase = getDashboardDataUseCase,
                 foregroundSyncController = syncController,
-                selectedDateRepository = selectedDateRepo,
+                selectedDateRepository = selectedDateRepository,
                 settingsRepo = settingsRepo,
                 cardConfigRepository = cardConfigRepository,
                 circadianRepo = circadianRepo,
@@ -116,18 +117,15 @@ class DashboardViewModelTest {
 
             // Verify that the state combines all three input flows
             org.junit.Assert.assertNotNull(initialState)
-            org.junit.Assert.assertTrue(initialState.selectedDate != null)
-            org.junit.Assert.assertTrue(initialState.cardConfigurations != null)
-            org.junit.Assert.assertTrue(initialState.isRefreshing == false || initialState.isRefreshing == true)
+            org.junit.Assert.assertNotNull(initialState.selectedDate)
+            org.junit.Assert.assertNotNull(initialState.cardConfigurations)
+            // Initial isRefreshing is false
+            org.junit.Assert.assertFalse(initialState.isRefreshing)
         }
 
     @Test
     fun `onPreviousDay delegates to selectedDateRepository`() =
         runTest {
-            coEvery {
-                selectedDateRepository.selectPreviousDay()
-            } returns Unit
-
             viewModel.onPreviousDay()
             coVerify { selectedDateRepository.selectPreviousDay() }
         }
@@ -135,10 +133,6 @@ class DashboardViewModelTest {
     @Test
     fun `onNextDay delegates to selectedDateRepository`() =
         runTest {
-            coEvery {
-                selectedDateRepository.selectNextDay()
-            } returns Unit
-
             viewModel.onNextDay()
             coVerify { selectedDateRepository.selectNextDay() }
         }
@@ -158,6 +152,6 @@ class DashboardViewModelTest {
     @Test
     fun `isManagingCards exposes card management state`() {
         val managingState = viewModel.isManagingCards.value
-        org.junit.Assert.assertTrue(managingState == true || managingState == false)
+        org.junit.Assert.assertFalse(managingState)
     }
 }

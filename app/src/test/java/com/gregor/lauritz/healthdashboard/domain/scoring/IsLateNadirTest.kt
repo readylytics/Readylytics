@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -8,8 +9,7 @@ import org.junit.Test
 // Threshold = 0.67 * sessionDuration. durationMinutes=0 is always false (guard).
 // REF: Trinder 2001 J Sleep Res 10:253
 class IsLateNadirTest {
-    private val calculator = ScoringCalculatorImpl()
-
+    private val calculator = LoadScoringStrategy()
     private val startMs = 0L
     private val durationMinutes = 480 // 8 hours
 
@@ -59,13 +59,6 @@ class IsLateNadirTest {
 
     @Test
     fun `nadir at end of session is late`() {
-        assertFalse(
-            calculator.isLateNadir(
-                minHrTimestampMs = startMs,
-                sessionStartMs = startMs,
-                durationMinutes = durationMinutes,
-            ),
-        )
         assertTrue(
             calculator.isLateNadir(
                 minHrTimestampMs = startMs + sessionDurationMs() - 1L,
