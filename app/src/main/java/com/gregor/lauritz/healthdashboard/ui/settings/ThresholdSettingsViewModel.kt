@@ -74,7 +74,7 @@ class ThresholdSettingsViewModel
                     }
                 }
                 is SettingsEvent.HrvWarningThresholdChanged -> {
-                    val validation = SettingsValidators.HRV_WARNING_THRESHOLD_RULE.validate(event.value.toString())
+                    val validation = SettingsValidators.HRV_WARNING_THRESHOLD_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch { settingsRepo.updateHrvWarningThreshold(value = event.value) }
                     }
