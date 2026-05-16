@@ -20,27 +20,16 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRes
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
-
-private data class DashboardInputs(
-    val summary: DailySummary?,
-    val prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences,
-    val circadian: CircadianConsistencyResult?,
-    val paiSummaries: List<DailySummary>,
-)
 
 @HiltViewModel
 class DashboardViewModel
@@ -52,101 +41,83 @@ class DashboardViewModel
         private val selectedDateRepository: SelectedDateRepository,
         private val settingsRepo: SettingsRepository,
         private val cardConfigRepository: CardConfigurationRepository,
-        circadianRepo: CircadianConsistencyRepository,
+        private val circadianRepo: CircadianConsistencyRepository,
     ) : ViewModel() {
         private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
 
         val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
 
-        @OptIn(ExperimentalCoroutinesApi::class)
-        val uiState =
-            selectedDateRepository.selectedDate
-                .flatMapLatest { date ->
-                    val today = LocalDate.now()
-                    val zoneId = ZoneId.systemDefault()
-                    val summaryFlow =
-                        if (date == today) {
-                            val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                            dailySummaryRepository.observeSince(todayMs).map { it.firstOrNull() }
-                        } else {
-                            val midnightMs =
-                                date
-                                    .atStartOfDay(ZoneId.systemDefault())
-                                    .toInstant()
-                                    .toEpochMilli()
-                            dailySummaryRepository.observeByDate(midnightMs)
-                        }
-                    val paiFromMs =
-                        date
-                            .minusDays(6)
-                            .atStartOfDay(ZoneId.systemDefault())
-                            .toInstant()
-                            .toEpochMilli()
-                    val paiBreakdownFlow = dailySummaryRepository.observeSince(paiFromMs)
-                    val sessionFlow =
-                        dailySummaryRepository.observeFirstSessionEndingInRange(
-                            fromMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli(),
-                            toMs =
-                                date
-                                    .plusDays(1)
-                                    .atStartOfDay(zoneId)
-                                    .toInstant()
-                                    .toEpochMilli(),
-                        )
-                    val basicInputsFlow =
-                        combine(
-                            summaryFlow,
-                            settingsRepo.userPreferences,
-                            circadianRepo.resultFor(date),
-                            paiBreakdownFlow,
-                        ) { summary, prefs, circadian, paiSummaries ->
-                            DashboardInputs(summary, prefs, circadian, paiSummaries)
-                        }
+        val uiState: StateFlow<DashboardUiState> =
+            combine(
+                createDashboardBasicInputsFlow(
+                    selectedDateRepository.selectedDate,
+                    dailySummaryRepository,
+                    settingsRepo,
+                    circadianRepo,
+                ),
+                createDashboardCardStateFlow(
+                    selectedDateRepository.selectedDate,
+                    cardManagementDelegate,
+                    cardConfigRepository,
+                    dailySummaryRepository,
+                ),
+                createDashboardRealtimeStateFlow(foregroundSyncController),
+            ) { basicInputs, cardState, realtimeState ->
+                val combined =
+                    DashboardCombinedInputs(
+                        basicInputs = basicInputs,
+                        cardState = cardState,
+                        realtimeState = realtimeState,
+                    )
+                transformToUiState(combined, selectedDateRepository.selectedDate.value)
+            }.flowOn(Dispatchers.Default).stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = DashboardUiState(),
+            )
 
-                    combine(
-                        basicInputsFlow,
-                        cardManagementDelegate.isManagingCards,
-                        cardConfigRepository.dashboardCardConfigurations(),
-                        sessionFlow,
-                        foregroundSyncController.isSyncing,
-                    ) { inputs, isManaging, cardConfigs, session, isSyncing ->
-                        val sessionSummary =
-                            session?.let {
-                                SleepSessionSummary(
-                                    efficiency = it.efficiency,
-                                    startTime = it.startTime,
-                                    endTime = it.endTime,
-                                )
-                            }
-                        val cards =
-                            getDashboardDataUseCase.invoke(
-                                summary = inputs.summary,
-                                prefs = inputs.prefs,
-                                date = date,
-                                lastSleepSession = sessionSummary,
-                                paiSummaries = inputs.paiSummaries,
-                            )
-                        DashboardUiState(
-                            summary = inputs.summary,
-                            selectedDate = date,
-                            cardDataMap = cards.cardDataMap,
-                            circadianConsistency = inputs.circadian,
-                            restingHrCard = cards.cardDataMap[CardId.RESTING_HR],
-                            paiDailyBreakdown = cards.paiDailyBreakdown,
-                            stepCount = inputs.summary?.stepCount,
-                            stepGoal = inputs.prefs.stepGoal,
-                            lastSleepSession = sessionSummary,
-                            cardConfigurations = cardConfigs,
-                            isManagingCards = isManaging,
-                            isRefreshing = isSyncing,
-                            isCalibrating = inputs.summary?.isCalibrating ?: false,
-                        )
-                    }.flowOn(Dispatchers.Default)
-                }.stateIn(
-                    scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(5_000),
-                    initialValue = DashboardUiState(),
+        private fun transformToUiState(
+            combined: DashboardCombinedInputs,
+            selectedDate: LocalDate,
+        ): DashboardUiState {
+            val basicInputs = combined.basicInputs
+            val cardState = combined.cardState
+            val realtimeState = combined.realtimeState
+
+            val sessionSummary =
+                cardState.lastSleepSession?.let {
+                    SleepSessionSummary(
+                        efficiency = it.efficiency,
+                        startTime = it.startTime,
+                        endTime = it.endTime,
+                    )
+                }
+
+            val cards =
+                getDashboardDataUseCase.invoke(
+                    summary = basicInputs.summary,
+                    prefs = basicInputs.userPreferences,
+                    date = selectedDate,
+                    lastSleepSession = sessionSummary,
+                    paiSummaries = basicInputs.paiSummaries,
                 )
+
+            return DashboardUiState(
+                summary = basicInputs.summary,
+                selectedDate = selectedDate,
+                cardDataMap = cards.cardDataMap,
+                circadianConsistency = basicInputs.circadianResult,
+                restingHrCard = cards.cardDataMap[CardId.RESTING_HR],
+                paiDailyBreakdown = cards.paiDailyBreakdown,
+                stepCount = basicInputs.summary?.stepCount,
+                stepGoal = basicInputs.userPreferences.stepGoal,
+                lastSleepSession = sessionSummary,
+                cardConfigurations = cardState.cardConfiguration,
+                isManagingCards = cardState.isManagingCards,
+                isRefreshing = realtimeState.isSyncing,
+                isCalibrating = basicInputs.summary?.isCalibrating ?: false,
+            )
+        }
 
         fun formatSleepDuration(minutes: Int?): String = getDashboardDataUseCase.formatSleepDuration(minutes)
 
