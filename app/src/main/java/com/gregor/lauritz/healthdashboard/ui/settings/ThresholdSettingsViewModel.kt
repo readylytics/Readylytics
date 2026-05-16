@@ -68,7 +68,7 @@ class ThresholdSettingsViewModel
         fun onEvent(event: SettingsEvent) {
             when (event) {
                 is SettingsEvent.HrvOptimalThresholdChanged -> {
-                    val validation = SettingsValidators.HRV_OPTIMAL_THRESHOLD_RULE.validate(event.value.toString())
+                    val validation = SettingsValidators.HRV_OPTIMAL_THRESHOLD_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch { settingsRepo.updateHrvOptimalThreshold(value = event.value) }
                     }
