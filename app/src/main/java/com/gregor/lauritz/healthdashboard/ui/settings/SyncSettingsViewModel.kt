@@ -7,6 +7,8 @@ import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.sync.ResyncHealthConnectUseCase
 import com.gregor.lauritz.healthdashboard.domain.util.logE
+import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
+import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -79,8 +81,11 @@ class SyncSettingsViewModel
                     }
                 }
                 is SettingsEvent.SyncIntervalChanged -> {
-                    viewModelScope.launch {
-                        settingsRepo.updateSyncIntervalHours(hours = event.hours)
+                    val validation = SettingsValidators.SYNC_INTERVAL_HOURS_RULE.validate(event.hours.toString())
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            settingsRepo.updateSyncIntervalHours(hours = event.hours)
+                        }
                     }
                 }
                 SettingsEvent.ResyncHealthConnect -> {

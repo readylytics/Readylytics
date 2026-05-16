@@ -6,6 +6,8 @@ import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
+import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
+import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -43,9 +45,18 @@ class PhysiologySettingsViewModel
         fun onEvent(event: SettingsEvent) {
             when (event) {
                 is SettingsEvent.BirthdayChanged -> {
-                    viewModelScope.launch {
-                        userUseCase.updateBirthday(day = event.day, month = event.month, year = event.year)
-                        healthSyncUseCase.sync()
+                    val dayValidation = SettingsValidators.BIRTHDAY_DAY_RULE.validate(event.day.toString())
+                    val monthValidation = SettingsValidators.BIRTHDAY_MONTH_RULE.validate(event.month.toString())
+                    val yearValidation = SettingsValidators.BIRTHDAY_YEAR_RULE.validate(event.year.toString())
+
+                    if (dayValidation is ValidationResult.Valid &&
+                        monthValidation is ValidationResult.Valid &&
+                        yearValidation is ValidationResult.Valid
+                    ) {
+                        viewModelScope.launch {
+                            userUseCase.updateBirthday(day = event.day, month = event.month, year = event.year)
+                            healthSyncUseCase.sync()
+                        }
                     }
                 }
                 is SettingsEvent.GenderChanged -> {

@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
+import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
+import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -48,8 +50,9 @@ class HeartRateZonesViewModel
         fun onEvent(event: SettingsEvent) {
             when (event) {
                 is SettingsEvent.MaxHeartRateChanged -> {
-                    val value = event.text.toIntOrNull()
-                    if (value != null) {
+                    val validation = SettingsValidators.HEART_RATE_RULE.validate(event.text)
+                    if (validation is ValidationResult.Valid) {
+                        val value = event.text.toInt()
                         viewModelScope.launch {
                             settingsRepo.updateMaxHeartRate(bpm = value)
                             healthSyncUseCase.sync()

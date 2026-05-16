@@ -30,6 +30,9 @@ object SettingsValidators {
     // Data retention days
     val RETENTION_DAYS_RULE = RetentionDaysRule()
 
+    // Sync interval hours (1–24)
+    val SYNC_INTERVAL_HOURS_RULE = SyncIntervalHoursRule()
+
     // PAI scaling factor (0.1–0.3)
     val PAI_SCALING_FACTOR_RULE = PaiScalingFactorRule()
 

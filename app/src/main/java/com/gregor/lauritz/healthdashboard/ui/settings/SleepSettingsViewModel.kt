@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
+import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
+import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -43,8 +45,9 @@ class SleepSettingsViewModel
                         scoringRepository.computeAndPersistDailySummary()
                     }
                 is SettingsEvent.HrvBaselineChanged -> {
-                    val value = event.text.toIntOrNull()?.toFloat()
-                    if (value != null) {
+                    val validation = SettingsValidators.HRV_BASELINE_RULE.validate(event.text)
+                    if (validation is ValidationResult.Valid) {
+                        val value = event.text.toFloat()
                         viewModelScope.launch {
                             settingsRepo.updateHrvBaselineOverride(rmssdMs = value)
                             scoringRepository.computeAndPersistDailySummary()
@@ -57,8 +60,9 @@ class SleepSettingsViewModel
                         scoringRepository.computeAndPersistDailySummary()
                     }
                 is SettingsEvent.RhrBaselineChanged -> {
-                    val value = event.text.toIntOrNull()?.toFloat()
-                    if (value != null) {
+                    val validation = SettingsValidators.RHR_BASELINE_RULE.validate(event.text)
+                    if (validation is ValidationResult.Valid) {
+                        val value = event.text.toFloat()
                         viewModelScope.launch {
                             settingsRepo.updateRhrBaselineOverride(bpm = value)
                             scoringRepository.computeAndPersistDailySummary()
@@ -70,16 +74,24 @@ class SleepSettingsViewModel
                         settingsRepo.updateRhrBaselineOverride(bpm = null)
                         scoringRepository.computeAndPersistDailySummary()
                     }
-                is SettingsEvent.RestingHrBeforeMinutesChanged ->
-                    viewModelScope.launch {
-                        settingsRepo.updateRestingHrBeforeMinutes(minutes = event.minutes)
-                        scoringRepository.computeAndPersistDailySummary()
+                is SettingsEvent.RestingHrBeforeMinutesChanged -> {
+                    val validation = SettingsValidators.RESTING_HR_MINUTES_RULE.validate(event.minutes.toString())
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            settingsRepo.updateRestingHrBeforeMinutes(minutes = event.minutes)
+                            scoringRepository.computeAndPersistDailySummary()
+                        }
                     }
-                is SettingsEvent.RestingHrAfterMinutesChanged ->
-                    viewModelScope.launch {
-                        settingsRepo.updateRestingHrAfterMinutes(minutes = event.minutes)
-                        scoringRepository.computeAndPersistDailySummary()
+                }
+                is SettingsEvent.RestingHrAfterMinutesChanged -> {
+                    val validation = SettingsValidators.RESTING_HR_MINUTES_RULE.validate(event.minutes.toString())
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            settingsRepo.updateRestingHrAfterMinutes(minutes = event.minutes)
+                            scoringRepository.computeAndPersistDailySummary()
+                        }
                     }
+                }
                 else -> {}
             }
         }

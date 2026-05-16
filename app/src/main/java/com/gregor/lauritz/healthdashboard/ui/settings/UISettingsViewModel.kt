@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
+import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
+import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -52,40 +54,64 @@ class UISettingsViewModel
                     viewModelScope.launch { settingsRepo.updateAppTheme(theme = event.theme) }
                 is SettingsEvent.DynamicColorEnabledChanged ->
                     viewModelScope.launch { settingsRepo.updateDynamicColorEnabled(enabled = event.enabled) }
-                is SettingsEvent.PaiScalingFactorChanged ->
-                    viewModelScope.launch {
-                        settingsRepo.updatePaiScalingFactor(value = event.value)
-                        healthSyncUseCase.sync()
+                is SettingsEvent.PaiScalingFactorChanged -> {
+                    val validation = SettingsValidators.PAI_SCALING_FACTOR_RULE.validate(event.value.toString())
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            settingsRepo.updatePaiScalingFactor(value = event.value)
+                            healthSyncUseCase.sync()
+                        }
                     }
-                is SettingsEvent.StepGoalChanged ->
-                    viewModelScope.launch {
-                        settingsRepo.updateStepGoal(steps = event.steps)
-                        healthSyncUseCase.sync()
+                }
+                is SettingsEvent.StepGoalChanged -> {
+                    val validation = SettingsValidators.STEP_GOAL_RULE.validate(event.steps.toString())
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            settingsRepo.updateStepGoal(steps = event.steps)
+                            healthSyncUseCase.sync()
+                        }
                     }
+                }
                 is SettingsEvent.RetentionDaysEnabledChanged ->
                     viewModelScope.launch { settingsRepo.updateRetentionDaysEnabled(enabled = event.enabled) }
-                is SettingsEvent.RetentionDaysChanged ->
-                    viewModelScope.launch { settingsRepo.updateRetentionDays(days = event.days) }
+                is SettingsEvent.RetentionDaysChanged -> {
+                    val validation = SettingsValidators.RETENTION_DAYS_RULE.validate(event.days.toString())
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch { settingsRepo.updateRetentionDays(days = event.days) }
+                    }
+                }
                 is SettingsEvent.TrimpModelChanged ->
                     viewModelScope.launch {
                         settingsRepo.updateTrimpModel(event.model)
                         healthSyncUseCase.sync()
                     }
-                is SettingsEvent.BanisterMultiplierChanged ->
-                    viewModelScope.launch {
-                        settingsRepo.updateBanisterMultiplier(event.value)
-                        healthSyncUseCase.sync()
+                is SettingsEvent.BanisterMultiplierChanged -> {
+                    val validation = SettingsValidators.TRIMP_BANISTER_MULTIPLIER_RULE.validate(event.value.toString())
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            settingsRepo.updateBanisterMultiplier(event.value)
+                            healthSyncUseCase.sync()
+                        }
                     }
-                is SettingsEvent.ChengBetaChanged ->
-                    viewModelScope.launch {
-                        settingsRepo.updateChengBeta(event.value)
-                        healthSyncUseCase.sync()
+                }
+                is SettingsEvent.ChengBetaChanged -> {
+                    val validation = SettingsValidators.TRIMP_CHENG_BETA_RULE.validate(event.value.toString())
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            settingsRepo.updateChengBeta(event.value)
+                            healthSyncUseCase.sync()
+                        }
                     }
-                is SettingsEvent.ItrimBChanged ->
-                    viewModelScope.launch {
-                        settingsRepo.updateItrimB(event.value)
-                        healthSyncUseCase.sync()
+                }
+                is SettingsEvent.ItrimBChanged -> {
+                    val validation = SettingsValidators.TRIMP_ITRIMP_B_FACTOR_RULE.validate(event.value.toString())
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            settingsRepo.updateItrimB(event.value)
+                            healthSyncUseCase.sync()
+                        }
                     }
+                }
                 SettingsEvent.ResetTrimpToProfileDefaults ->
                     viewModelScope.launch {
                         val profile = settingsRepo.userPreferences.first().physiologyProfile
