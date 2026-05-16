@@ -9,6 +9,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -47,12 +49,15 @@ class HealthDeviceRepository
     private val _deviceCache = MutableStateFlow<CacheEntry?>(null)
     private val deviceCache = _deviceCache.asStateFlow()
 
+    // Mutex to prevent concurrent fetches
+    private val fetchMutex = Mutex()
+
     /**
      * Get available devices with automatic caching.
      * Cache invalidates after TTL or when explicitly cleared.
      *
-     * Thread-safe: Multiple concurrent calls won't cause double-fetch
-     * (first one fetches, subsequent ones wait for result)
+     * Thread-safe: Multiple concurrent calls won't cause double-fetch.
+     * The Mutex ensures only the first caller fetches; others wait for cached result.
      */
     suspend fun getAvailableDevices(): List<String> {
         // Check if cached and not expired
@@ -61,22 +66,22 @@ class HealthDeviceRepository
             return cached.devices
         }
 
-        // Fetch fresh data
-        return fetchAndCacheDevices()
+        // Fetch with Mutex to prevent double-fetch
+        return fetchMutex.withLock {
+            // Double-check after acquiring lock in case another coroutine fetched
+            val rechecked = deviceCache.value
+            if (rechecked != null && !rechecked.isExpired()) {
+                return@withLock rechecked.devices
+            }
+            fetchAndCacheDevices()
+        }
     }
 
     /**
      * Invalidate cache immediately (call after sync completes).
      * This ensures next getAvailableDevices() call fetches fresh data.
      */
-    suspend fun invalidateCache() {
-        _deviceCache.value = null
-    }
-
-    /**
-     * Clear cache on demand (can be called from sync completion).
-     */
-    fun clearCache() {
+    fun invalidateCache() {
         _deviceCache.value = null
     }
 

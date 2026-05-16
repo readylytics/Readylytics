@@ -69,7 +69,7 @@ class DashboardViewModel
                         cardState = cardState,
                         realtimeState = realtimeState,
                     )
-                transformToUiState(combined, selectedDateRepository.selectedDate.value)
+                transformToUiState(combined, basicInputs.selectedDate)
             }.flowOn(Dispatchers.Default).stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),

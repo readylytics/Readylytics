@@ -51,16 +51,84 @@ class HealthSyncUseCase
                     runCatching {
                         logD("HealthSyncUseCase") { "Starting sync (window=$windowDays days)..." }
                         val today = LocalDate.now(ZoneId.systemDefault())
+                        val zoneId = ZoneId.systemDefault()
                         val prefs = settingsRepo.userPreferences.first()
 
                         updateCalculatedMetrics(prefs)
+
+                        val windowStart = today.minusDays((windowDays - 1).toLong()).atStartOfDay(zoneId).toInstant()
+                        val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
+
+                        logD("HealthSyncUseCase") { "Bulk fetching HC data for $windowDays days..." }
+
+                        val sleepSessions = hcRepo.readSleepSessions(windowStart, windowEnd)
+                        val sleepEntities = sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
+                        val exerciseRecords = hcRepo.readExerciseSessions(windowStart, windowEnd)
+                        val hrRecords = hcRepo.readHeartRateSamples(windowStart, windowEnd)
+                        val hrvRecords = hcRepo.readHrvSamples(windowStart, windowEnd)
+
+                        logD("HealthSyncUseCase") {
+                            "Bulk HC fetch complete: sleep=${sleepEntities.size} " +
+                                "hrv_rmssd=${hrvRecords.size} hr_records=${hrRecords.size}"
+                        }
+
+                        val thresholds =
+                            WorkoutMapper.zoneThresholds(
+                                prefs.zone1MinBpm,
+                                prefs.zone1MaxBpm,
+                                prefs.zone2MaxBpm,
+                                prefs.zone3MaxBpm,
+                                prefs.zone4MaxBpm,
+                            )
+
+                        val initialWorkouts =
+                            exerciseRecords.map {
+                                WorkoutMapper.mapExerciseSession(
+                                    it,
+                                    emptyList(),
+                                    thresholds,
+                                )
+                            }
+                        val hrEntities = HeartRateMapper.mapToEntities(hrRecords, sleepEntities, initialWorkouts)
+                        val hrBySession = hrEntities.filter { it.sessionId != null }.groupBy { it.sessionId }
+                        val workoutEntities =
+                            exerciseRecords.map { session ->
+                                val sessionSamples = hrBySession[session.metadata.id] ?: emptyList()
+                                WorkoutMapper.mapExerciseSession(session, sessionSamples, thresholds)
+                            }
+                        val hrvEntities = HrvMapper.mapToEntities(hrvRecords, sleepEntities)
+
+                        val primaryDevice = prefs.primaryDeviceName
+                        val filteredSleep =
+                            filterByDevicePreference(sleepEntities, primaryDevice, { it.deviceName }, { it.startTime })
+                        val filteredWorkouts =
+                            filterByDevicePreference(
+                                workoutEntities,
+                                primaryDevice,
+                                { it.deviceName },
+                                { it.startTime },
+                            )
+                        val filteredHr =
+                            filterByDevicePreference(hrEntities, primaryDevice, { it.deviceName }, { it.timestampMs })
+                        val filteredHrv =
+                            filterByDevicePreference(hrvEntities, primaryDevice, { it.deviceName }, { it.timestampMs })
+
+                        logD("HealthSyncUseCase") {
+                            "Device filtering: sleep=${filteredSleep.size} workouts=${filteredWorkouts.size} " +
+                                "hr=${filteredHr.size} hrv=${filteredHrv.size}"
+                        }
+
+                        sleepDao.upsertAll(filteredSleep)
+                        workoutDao.upsertAll(filteredWorkouts)
+                        heartRateDao.upsertAll(filteredHr)
+                        hrvDao.upsertAll(filteredHrv)
 
                         var successCount = 0
                         var failureCount = 0
 
                         for (i in (windowDays - 1) downTo 0) {
                             val day = today.minusDays(i.toLong())
-                            val result = syncDay(day, prefs)
+                            val result = syncDayScoring(day)
 
                             result.onSuccess {
                                 successCount++
@@ -81,88 +149,21 @@ class HealthSyncUseCase
 
         suspend fun catchUpSync(): Result<Unit> = sync(windowDays = 60)
 
-        private suspend fun syncDay(
-            day: LocalDate,
-            prefs: UserPreferences,
-        ): Result<Unit> =
+        private suspend fun syncDayScoring(day: LocalDate): Result<Unit> =
             withContext(Dispatchers.IO) {
                 runCatching {
                     val zoneId = ZoneId.systemDefault()
                     val dayStart = day.atStartOfDay(zoneId).toInstant()
                     val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
 
-                    logD("HealthSyncUseCase") { "Syncing day=$day (start=$dayStart end=$dayEnd)..." }
-
-                    val sleepSessions = hcRepo.readSleepSessions(dayStart, dayEnd)
-                    val sleepEntities = sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
-                    val exerciseRecords = hcRepo.readExerciseSessions(dayStart, dayEnd)
-                    val hrRecords = hcRepo.readHeartRateSamples(dayStart, dayEnd)
-                    val hrvRecords = hcRepo.readHrvSamples(dayStart, dayEnd)
                     val steps = hcRepo.readSteps(dayStart, dayEnd)
-
-                    logD("HealthSyncUseCase") {
-                        "Day $day HC fetch: sleep=${sleepEntities.size} hrv_rmssd=${hrvRecords.size} " +
-                            "hr_records=${hrRecords.size} steps=$steps"
-                    }
-
-                    val thresholds =
-                        WorkoutMapper.zoneThresholds(
-                            prefs.zone1MinBpm,
-                            prefs.zone1MaxBpm,
-                            prefs.zone2MaxBpm,
-                            prefs.zone3MaxBpm,
-                            prefs.zone4MaxBpm,
-                        )
-
-                    val initialWorkouts =
-                        exerciseRecords.map {
-                            WorkoutMapper.mapExerciseSession(
-                                it,
-                                emptyList(),
-                                thresholds,
-                            )
-                        }
-                    val hrEntities = HeartRateMapper.mapToEntities(hrRecords, sleepEntities, initialWorkouts)
-                    val hrBySession = hrEntities.filter { it.sessionId != null }.groupBy { it.sessionId }
-                    val workoutEntities =
-                        exerciseRecords.map { session ->
-                            val sessionSamples = hrBySession[session.metadata.id] ?: emptyList()
-                            WorkoutMapper.mapExerciseSession(session, sessionSamples, thresholds)
-                        }
-
-                    val hrvEntities = HrvMapper.mapToEntities(hrvRecords, sleepEntities)
-
-                    val primaryDevice = prefs.primaryDeviceName
-                    val filteredSleep =
-                        filterByDevicePreference(sleepEntities, primaryDevice, { it.deviceName }, { it.startTime })
-                    val filteredWorkouts =
-                        filterByDevicePreference(
-                            workoutEntities,
-                            primaryDevice,
-                            { it.deviceName },
-                            { it.startTime },
-                        )
-                    val filteredHr =
-                        filterByDevicePreference(hrEntities, primaryDevice, { it.deviceName }, { it.timestampMs })
-                    val filteredHrv =
-                        filterByDevicePreference(hrvEntities, primaryDevice, { it.deviceName }, { it.timestampMs })
-
-                    logD("HealthSyncUseCase") {
-                        "Day $day filtered: sleep=${filteredSleep.size} workouts=${filteredWorkouts.size} " +
-                            "hr=${filteredHr.size} hrv=${filteredHrv.size}"
-                    }
-
-                    sleepDao.upsertAll(filteredSleep)
-                    workoutDao.upsertAll(filteredWorkouts)
-                    heartRateDao.upsertAll(filteredHr)
-                    hrvDao.upsertAll(filteredHrv)
 
                     val afterScoring = scoringRepository.computeDailySummary(day)
                     val stepCountInt = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                     val finalSummary = afterScoring.copy(stepCount = stepCountInt)
                     dailySummaryDao.upsert(finalSummary)
 
-                    logD("HealthSyncUseCase") { "Day $day: scored and summary persisted" }
+                    logD("HealthSyncUseCase") { "Day $day: scored (steps=$steps) and summary persisted" }
                 }
             }
 
