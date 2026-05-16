@@ -46,7 +46,9 @@ class SleepSettingsViewModel
                     }
                 is SettingsEvent.HrvBaselineChanged -> {
                     val value = event.text.toFloatOrNull()
-                    if (value != null && SettingsValidators.HRV_BASELINE_RULE.validate(event.text) is ValidationResult.Valid) {
+                    val isValid =
+                        SettingsValidators.HRV_BASELINE_RULE.validate(event.text) is ValidationResult.Valid
+                    if (value != null && isValid) {
                         viewModelScope.launch {
                             settingsRepo.updateHrvBaselineOverride(rmssdMs = value)
                             scoringRepository.computeAndPersistDailySummary()
@@ -60,8 +62,9 @@ class SleepSettingsViewModel
                     }
                 is SettingsEvent.RhrBaselineChanged -> {
                     val value = event.text.toFloatOrNull()
-                    if (value != null &&
-                        SettingsValidators.RHR_BASELINE_RULE.validate(event.text) is ValidationResult.Valid) {
+                    val isValid =
+                        SettingsValidators.RHR_BASELINE_RULE.validate(event.text) is ValidationResult.Valid
+                    if (value != null && isValid) {
                         viewModelScope.launch {
                             settingsRepo.updateRhrBaselineOverride(bpm = value)
                             scoringRepository.computeAndPersistDailySummary()

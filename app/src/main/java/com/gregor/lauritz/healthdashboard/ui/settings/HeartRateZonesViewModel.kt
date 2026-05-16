@@ -51,8 +51,9 @@ class HeartRateZonesViewModel
             when (event) {
                 is SettingsEvent.MaxHeartRateChanged -> {
                     val value = event.text.toIntOrNull()
-                    if (value != null &&
-                        SettingsValidators.HEART_RATE_RULE.validate(event.text) is ValidationResult.Valid) {
+                    val isValid =
+                        SettingsValidators.HEART_RATE_RULE.validate(event.text) is ValidationResult.Valid
+                    if (value != null && isValid) {
                         viewModelScope.launch {
                             settingsRepo.updateMaxHeartRate(bpm = value)
                             healthSyncUseCase.sync()
