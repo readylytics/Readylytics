@@ -1,0 +1,305 @@
+package com.gregor.lauritz.healthdashboard.domain.scoring.sleep
+
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
+import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
+import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
+import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
+import io.mockk.coEvery
+import io.mockk.mockk
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.time.Instant
+
+private const val DELTA = 0.5f
+
+class CurrentNightHrvResolverTest {
+    private val hrvDao = mockk<HrvDao>()
+    private val dailySummaryDao = mockk<DailySummaryDao>()
+    private val resolver = CurrentNightHrvResolver(hrvDao, dailySummaryDao)
+
+    @Test
+    fun `resolve_sessionHrvPresent_returnsSessionSamples`() =
+        runTest {
+            val session = mockSession(id = 1L)
+            val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
+            val samples = listOf(30f, 35f, 40f)
+
+            coEvery { hrvDao.getSleepRmssdForSession(1L) } returns samples
+            coEvery { hrvDao.getRmssdInTimeRange(any(), any()) } returns emptyList()
+
+            val result = resolver.resolve(session, dayMidnight)
+
+            assertEquals(samples, result.samples)
+            assertEquals(35f, result.mean, DELTA)
+        }
+
+    @Test
+    fun `resolve_sessionHrvEmpty_fallsBackToTimeRange`() =
+        runTest {
+            val session = mockSession(id = 1L, startTime = 1000L, endTime = 5000L)
+            val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
+            val samples = listOf(28f, 32f)
+
+            coEvery { hrvDao.getSleepRmssdForSession(1L) } returns emptyList()
+            coEvery { hrvDao.getRmssdInTimeRange(1000L, 5000L) } returns samples
+
+            val result = resolver.resolve(session, dayMidnight)
+
+            assertEquals(samples, result.samples)
+            assertEquals(30f, result.mean, DELTA)
+        }
+
+    @Test
+    fun `resolve_timeRangeEmpty_fallsBackToRollingMean`() =
+        runTest {
+            val session = mockSession(id = 1L)
+            val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
+            val dayMidnightMs = dayMidnight.toEpochMilli()
+
+            coEvery { hrvDao.getSleepRmssdForSession(1L) } returns emptyList()
+            coEvery { hrvDao.getRmssdInTimeRange(any(), any()) } returns emptyList()
+            coEvery {
+                dailySummaryDao.getSince(dayMidnightMs - 7 * 86400000)
+            } returns
+                listOf(
+                    mockDailySummary(dateMidnightMs = dayMidnightMs - 86400000, nocturnalHrv = 32),
+                    mockDailySummary(dateMidnightMs = dayMidnightMs - 172800000, nocturnalHrv = 28),
+                )
+
+            val result = resolver.resolve(session, dayMidnight)
+
+            assertEquals(emptyList<Float>(), result.samples)
+            assertEquals(30f, result.mean, DELTA)
+        }
+
+    @Test
+    fun `resolve_allEmpty_returnsMeanZero`() =
+        runTest {
+            val session = mockSession(id = 1L)
+            val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
+
+            coEvery { hrvDao.getSleepRmssdForSession(1L) } returns emptyList()
+            coEvery { hrvDao.getRmssdInTimeRange(any(), any()) } returns emptyList()
+            coEvery { dailySummaryDao.getSince(any()) } returns emptyList()
+
+            val result = resolver.resolve(session, dayMidnight)
+
+            assertEquals(emptyList<Float>(), result.samples)
+            assertEquals(0f, result.mean, DELTA)
+        }
+}
+
+class WakeWindowHrCollectorTest {
+    private val heartRateDao = mockk<HeartRateDao>()
+    private val sleepSessionDao = mockk<SleepSessionDao>()
+    private val collector = WakeWindowHrCollector(heartRateDao, sleepSessionDao)
+
+    @Test
+    fun `collect_historicRecordsPresent_computesBaselineAndRatio`() =
+        runTest {
+            val session = mockSession(id = 1L, endTime = 10000L)
+            val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
+
+            coEvery { sleepSessionDao.getSince(any()) } returns
+                listOf(
+                    mockSession(id = 1L, endTime = 10000L),
+                    mockSession(id = 2L, endTime = 9000L),
+                )
+            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns
+                listOf(
+                    mockHeartRateRecord(timestampMs = 9900L, bpm = 55),
+                    mockHeartRateRecord(timestampMs = 10100L, bpm = 60),
+                    mockHeartRateRecord(timestampMs = 8900L, bpm = 50),
+                )
+
+            val result = collector.collect(session, dayMidnight, 200L, 200L)
+
+            assertEquals(60, result.currentRestingHr)
+            assertEquals(50, result.restingHrBaseline)
+            assertEquals(1.2f, result.restingHrRatio!!, DELTA)
+        }
+
+    @Test
+    fun `collect_noHistoricRecords_baselineNull`() =
+        runTest {
+            val session = mockSession(id = 1L)
+            val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
+
+            coEvery { sleepSessionDao.getSince(any()) } returns listOf(session)
+            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+
+            val result = collector.collect(session, dayMidnight, 200L, 200L)
+
+            assertNull(result.currentRestingHr)
+            assertNull(result.restingHrBaseline)
+            assertNull(result.restingHrRatio)
+        }
+
+    @Test
+    fun `collect_currentWindowEmpty_currentRestingHrNull`() =
+        runTest {
+            val session = mockSession(id = 1L, endTime = 10000L)
+            val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
+
+            coEvery { sleepSessionDao.getSince(any()) } returns
+                listOf(
+                    mockSession(id = 1L, endTime = 10000L),
+                    mockSession(id = 2L, endTime = 9000L),
+                )
+            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns
+                listOf(
+                    mockHeartRateRecord(timestampMs = 8800L, bpm = 50),
+                )
+
+            val result = collector.collect(session, dayMidnight, 200L, 200L)
+
+            assertNull(result.currentRestingHr)
+            assertEquals(50, result.restingHrBaseline)
+        }
+}
+
+class SleepNadirAnalyzerTest {
+    private val heartRateDao = mockk<HeartRateDao>()
+    private val scoringCalculator = mockk<ScoringCalculator>()
+    private val analyzer = SleepNadirAnalyzer(heartRateDao, scoringCalculator)
+
+    @Test
+    fun `analyze_nadirInLastThird_isLateTrue`() =
+        runTest {
+            val session =
+                mockSession(
+                    id = 1L,
+                    startTime = 1000L,
+                    durationMinutes = 480,
+                    endZoneOffsetSeconds = 0,
+                )
+            val historical = listOf(mockSession(endZoneOffsetSeconds = 0, endTime = 500L))
+
+            coEvery { heartRateDao.getMinHrTimestamp(1L) } returns 2000L
+            coEvery {
+                scoringCalculator.isLateNadir(2000L, 1000L, 480)
+            } returns true
+
+            val result = analyzer.analyze(session, historical)
+
+            assertTrue(result.isLateNadir)
+            assertFalse(result.isTimezoneJump)
+        }
+
+    @Test
+    fun `analyze_timezoneJump_suppressesLateNadir`() =
+        runTest {
+            val session =
+                mockSession(
+                    id = 1L,
+                    startTime = 1000L,
+                    durationMinutes = 480,
+                    endZoneOffsetSeconds = 3600,
+                )
+            val historical = listOf(mockSession(endZoneOffsetSeconds = 0, endTime = 500L))
+
+            coEvery { heartRateDao.getMinHrTimestamp(1L) } returns 2000L
+            coEvery {
+                scoringCalculator.isLateNadir(2000L, 1000L, 480)
+            } returns true
+
+            val result = analyzer.analyze(session, historical)
+
+            assertFalse(result.isLateNadir)
+            assertTrue(result.isTimezoneJump)
+        }
+
+    @Test
+    fun `analyze_noPreviousSession_noTimezoneJump`() =
+        runTest {
+            val session = mockSession(id = 1L, endZoneOffsetSeconds = 3600)
+
+            coEvery { heartRateDao.getMinHrTimestamp(1L) } returns null
+
+            val result = analyzer.analyze(session, emptyList())
+
+            assertFalse(result.isLateNadir)
+            assertFalse(result.isTimezoneJump)
+        }
+}
+
+class HrCoverageValidatorTest {
+    private val validator = HrCoverageValidator()
+
+    @Test
+    fun `isValid_coverageAbove70pct_returnsTrue`() {
+        val sessionStart = 1000L
+        val sessionEnd = 10000L
+        val durationMinutes = 150
+        val records =
+            listOf(
+                mockHeartRateRecord(timestampMs = 2000L),
+                mockHeartRateRecord(timestampMs = 8000L),
+            )
+
+        val result = validator.isValid(sessionStart, sessionEnd, durationMinutes, records)
+
+        assertTrue(result)
+    }
+
+    @Test
+    fun `isValid_coverageBelow70pct_returnsFalse`() {
+        val sessionStart = 1000L
+        val sessionEnd = 100000L
+        val durationMinutes = 1500
+        val records =
+            listOf(
+                mockHeartRateRecord(timestampMs = 2000L),
+            )
+
+        val result = validator.isValid(sessionStart, sessionEnd, durationMinutes, records)
+
+        assertFalse(result)
+    }
+}
+
+private fun mockSession(
+    id: Long = 1L,
+    startTime: Long = 1000L,
+    endTime: Long = 10000L,
+    durationMinutes: Int = 150,
+    endZoneOffsetSeconds: Int? = 0,
+): SleepSessionEntity =
+    SleepSessionEntity(
+        id = id,
+        startTime = startTime,
+        endTime = endTime,
+        durationMinutes = durationMinutes,
+        deepSleepMinutes = 90,
+        remSleepMinutes = 30,
+        efficiency = 0.9f,
+        endZoneOffsetSeconds = endZoneOffsetSeconds,
+    )
+
+private fun mockHeartRateRecord(
+    timestampMs: Long = 1000L,
+    bpm: Int = 60,
+): HeartRateRecordEntity =
+    HeartRateRecordEntity(
+        id = 0,
+        beatsPerMinute = bpm,
+        timestampMs = timestampMs,
+    )
+
+private fun mockDailySummary(
+    dateMidnightMs: Long = 0L,
+    nocturnalHrv: Int? = null,
+): DailySummaryEntity =
+    DailySummaryEntity(
+        id = 0,
+        dateMidnightMs = dateMidnightMs,
+        nocturnalHrv = nocturnalHrv,
+    )
