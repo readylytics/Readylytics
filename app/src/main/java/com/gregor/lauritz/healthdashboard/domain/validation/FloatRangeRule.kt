@@ -1,6 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.validation
 
-class FloatRangeRule(
+open class FloatRangeRule(
     private val min: Float,
     private val max: Float,
     override val errorMessage: String,
@@ -9,5 +9,6 @@ class FloatRangeRule(
         if (value in min..max) ValidationResult.Valid else ValidationResult.Invalid(errorMessage)
 
     override fun validate(value: String): ValidationResult =
-        value.toFloatOrNull()?.let { validate(it) } ?: ValidationResult.Invalid(errorMessage)
+        if (value.isEmpty()) ValidationResult.Valid
+        else value.toFloatOrNull()?.let { validate(it) } ?: ValidationResult.Invalid(errorMessage)
 }
