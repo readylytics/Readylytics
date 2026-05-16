@@ -44,38 +44,46 @@ class SleepSettingsViewModel
                         settingsRepo.updateGoalSleepHours(hours = event.hours)
                         scoringRepository.computeAndPersistDailySummary()
                     }
+
                 is SettingsEvent.HrvBaselineChanged -> {
                     val value = event.text.toIntOrNull()?.toFloat()
                     val isValid =
                         SettingsValidators.HRV_BASELINE_RULE.validate(event.text) is ValidationResult.Valid
+                    if (isValid) {
                         viewModelScope.launch {
                             settingsRepo.updateHrvBaselineOverride(rmssdMs = value)
                             scoringRepository.computeAndPersistDailySummary()
                         }
                     }
                 }
+
                 SettingsEvent.HrvBaselineCleared ->
                     viewModelScope.launch {
                         settingsRepo.updateHrvBaselineOverride(rmssdMs = null)
                         scoringRepository.computeAndPersistDailySummary()
                     }
+
                 is SettingsEvent.RhrBaselineChanged -> {
                     val value = event.text.toIntOrNull()?.toFloat()
                     val isValid =
                         SettingsValidators.RHR_BASELINE_RULE.validate(event.text) is ValidationResult.Valid
+                    if (isValid) {
                         viewModelScope.launch {
                             settingsRepo.updateRhrBaselineOverride(bpm = value)
                             scoringRepository.computeAndPersistDailySummary()
                         }
                     }
                 }
+
                 SettingsEvent.RhrBaselineCleared ->
                     viewModelScope.launch {
                         settingsRepo.updateRhrBaselineOverride(bpm = null)
                         scoringRepository.computeAndPersistDailySummary()
                     }
+
                 is SettingsEvent.RestingHrBeforeMinutesChanged -> {
-                    val validation = SettingsValidators.RESTING_HR_MINUTES_RULE.validate(event.minutes.toString())
+                    val validation =
+                        SettingsValidators.RESTING_HR_MINUTES_RULE.validate(event.minutes.toString())
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             settingsRepo.updateRestingHrBeforeMinutes(minutes = event.minutes)
@@ -83,8 +91,10 @@ class SleepSettingsViewModel
                         }
                     }
                 }
+
                 is SettingsEvent.RestingHrAfterMinutesChanged -> {
-                    val validation = SettingsValidators.RESTING_HR_MINUTES_RULE.validate(event.minutes.toString())
+                    val validation =
+                        SettingsValidators.RESTING_HR_MINUTES_RULE.validate(event.minutes.toString())
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             settingsRepo.updateRestingHrAfterMinutes(minutes = event.minutes)
@@ -92,6 +102,7 @@ class SleepSettingsViewModel
                         }
                     }
                 }
+
                 else -> {}
             }
         }

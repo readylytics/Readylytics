@@ -9,6 +9,9 @@ open class FloatRangeRule(
         if (value in min..max) ValidationResult.Valid else ValidationResult.Invalid(errorMessage)
 
     override fun validate(value: String): ValidationResult =
-        if (value.isEmpty()) ValidationResult.Valid
-        else value.toFloatOrNull()?.let { validate(it) } ?: ValidationResult.Invalid(errorMessage)
+        if (value.isEmpty()) {
+            ValidationResult.Valid
+        } else {
+            value.toFloatOrNull()?.let { validate(it) } ?: ValidationResult.Invalid(errorMessage)
+        }
 }
