@@ -1,0 +1,13 @@
+package com.gregor.lauritz.healthdashboard.domain.validation
+
+class RestingHrMinutesRule(
+    override val errorMessage: String = "Minutes: 0–60",
+) : ValidationRule<String> {
+    companion object {
+        private const val MIN_MINUTES = 0
+        private const val MAX_MINUTES = 60
+    }
+
+    override fun validate(value: String): ValidationResult =
+        IntRangeRule(MIN_MINUTES, MAX_MINUTES, errorMessage).validate(value)
+}
