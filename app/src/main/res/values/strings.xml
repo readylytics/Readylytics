@@ -52,7 +52,7 @@
     <string name="about_reading_score_fair">**50-69** Fair. Likely a duration shortfall, fragmented sleep, or an off night for HRV/RHR.</string>
     <string name="about_reading_score_poor">**Below 50** Poor. Multiple components are below typical. One bad night is rarely meaningful; a streak deserves attention.</string>
     <string name="about_tooltips_label">**Tooltips you\'ll see**</string>
-    <string name="about_tooltip_deep_sleep">*Deep sleep target 15-25%* of total sleep, with the healthy range narrowing as you age. We do not penalise you if your wearable reports unusual numbers — wearable stage detection is imperfect.</string>
+<string name="about_tooltip_deep_sleep">*Deep sleep target 15-25%* of total sleep, with the healthy range narrowing as you age. We do not penalize you if your wearable reports unusual numbers — wearable stage detection is imperfect.</string>
     <string name="about_tooltip_rem">*REM target 20-25%* of total sleep, also drifting slightly downward with age.</string>
     <string name="about_tooltip_efficiency">*Sleep efficiency above 85%* is considered good (American Academy of Sleep Medicine consensus).</string>
 
