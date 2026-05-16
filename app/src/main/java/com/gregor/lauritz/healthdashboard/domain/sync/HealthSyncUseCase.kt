@@ -52,9 +52,11 @@ class HealthSyncUseCase
                         logD("HealthSyncUseCase") { "Starting sync (window=$windowDays days)..." }
                         val today = LocalDate.now(ZoneId.systemDefault())
                         val zoneId = ZoneId.systemDefault()
-                        val prefs = settingsRepo.userPreferences.first()
+                        val initialPrefs = settingsRepo.userPreferences.first()
 
-                        updateCalculatedMetrics(prefs)
+                        updateCalculatedMetrics(initialPrefs)
+                        // Re-fetch preferences in case they were updated by updateCalculatedMetrics
+                        val prefs = settingsRepo.userPreferences.first()
 
                         val windowStart = today.minusDays((windowDays - 1).toLong()).atStartOfDay(zoneId).toInstant()
                         val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
@@ -123,12 +125,29 @@ class HealthSyncUseCase
                         heartRateDao.upsertAll(filteredHr)
                         hrvDao.upsertAll(filteredHrv)
 
+                        // Bulk-fetch steps in parallel to avoid sequential IPC calls
+                        logD("HealthSyncUseCase") { "Bulk fetching steps for $windowDays days..." }
+                        val stepsMap: Map<LocalDate, Long> =
+                            coroutineScope {
+                                (windowDays - 1 downTo 0)
+                                    .map { i ->
+                                        async {
+                                            val day = today.minusDays(i.toLong())
+                                            val dayStart = day.atStartOfDay(zoneId).toInstant()
+                                            val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
+                                            day to hcRepo.readSteps(dayStart, dayEnd)
+                                        }
+                                    }.awaitAll()
+                                    .toMap()
+                            }
+
                         var successCount = 0
                         var failureCount = 0
 
                         for (i in (windowDays - 1) downTo 0) {
                             val day = today.minusDays(i.toLong())
-                            val result = syncDayScoring(day)
+                            val steps = stepsMap[day] ?: 0L
+                            val result = syncDayScoring(day, steps)
 
                             result.onSuccess {
                                 successCount++
@@ -149,15 +168,12 @@ class HealthSyncUseCase
 
         suspend fun catchUpSync(): Result<Unit> = sync(windowDays = 60)
 
-        private suspend fun syncDayScoring(day: LocalDate): Result<Unit> =
+        private suspend fun syncDayScoring(
+            day: LocalDate,
+            steps: Long,
+        ): Result<Unit> =
             withContext(Dispatchers.IO) {
                 runCatching {
-                    val zoneId = ZoneId.systemDefault()
-                    val dayStart = day.atStartOfDay(zoneId).toInstant()
-                    val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
-
-                    val steps = hcRepo.readSteps(dayStart, dayEnd)
-
                     val afterScoring = scoringRepository.computeDailySummary(day)
                     val stepCountInt = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                     val finalSummary = afterScoring.copy(stepCount = stepCountInt)

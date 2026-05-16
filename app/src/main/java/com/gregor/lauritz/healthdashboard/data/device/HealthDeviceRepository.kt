@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.data.device
 
+import android.os.SystemClock
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
@@ -42,7 +43,7 @@ class HealthDeviceRepository
         val devices: List<String>,
         val timestampMs: Long,
     ) {
-        fun isExpired(): Boolean = System.currentTimeMillis() - timestampMs > CACHE_TTL_MS
+        fun isExpired(): Boolean = SystemClock.elapsedRealtime() - timestampMs > CACHE_TTL_MS
     }
 
     // Flow-based cache (better than manual Mutex + mutable var)
@@ -110,8 +111,8 @@ class HealthDeviceRepository
             (dbDevicesAsync.await() + hcDevicesAsync.await()).distinct().sorted()
         }
 
-        // Cache with timestamp for TTL tracking
-        _deviceCache.value = CacheEntry(allDevices, System.currentTimeMillis())
+        // Cache with timestamp for TTL tracking (using elapsedRealtime for monotonic clock)
+        _deviceCache.value = CacheEntry(allDevices, SystemClock.elapsedRealtime())
 
         return allDevices
     }

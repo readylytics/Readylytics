@@ -57,7 +57,12 @@ class DashboardViewModelTest {
             mockk<com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository> {
                 every { dashboardCardConfigurations() } returns MutableStateFlow(emptyList())
             }
-        val selectedDateRepo = SelectedDateRepository()
+        val selectedDateRepo =
+            mockk<SelectedDateRepository> {
+                every { selectedDate } returns MutableStateFlow(java.time.LocalDate.now())
+                coEvery { selectPreviousDay() } returns Unit
+                coEvery { selectNextDay() } returns Unit
+            }
         val circadianRepo =
             mockk<CircadianConsistencyRepository> {
                 every { resultFor(any()) } returns MutableStateFlow(CircadianConsistencyResult.Calibrating)
@@ -119,15 +124,23 @@ class DashboardViewModelTest {
     @Test
     fun `onPreviousDay delegates to selectedDateRepository`() =
         runTest {
+            coEvery {
+                selectedDateRepository.selectPreviousDay()
+            } returns Unit
+
             viewModel.onPreviousDay()
-            coVerify { viewModel.onPreviousDay() }
+            coVerify { selectedDateRepository.selectPreviousDay() }
         }
 
     @Test
     fun `onNextDay delegates to selectedDateRepository`() =
         runTest {
+            coEvery {
+                selectedDateRepository.selectNextDay()
+            } returns Unit
+
             viewModel.onNextDay()
-            coVerify { viewModel.onNextDay() }
+            coVerify { selectedDateRepository.selectNextDay() }
         }
 
     @Test

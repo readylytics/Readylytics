@@ -80,8 +80,8 @@ fun createDashboardBasicInputsFlow(
     circadianRepository: CircadianConsistencyRepository,
 ): Flow<DashboardBasicInputs> =
     selectedDate.flatMapLatest { date ->
-        val today = LocalDate.now()
         val zoneId = ZoneId.systemDefault()
+        val today = LocalDate.now(zoneId)
 
         // Select appropriate summary flow based on whether date is today or historical
         val summaryFlow =

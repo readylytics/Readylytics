@@ -162,7 +162,7 @@ class HealthDeviceRepositoryTest {
     }
 
     @Test
-    fun `clearCache works like invalidateCache`() = runTest {
+    fun `invalidateCache clears cached devices and forces fresh fetch`() = runTest {
         coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
         coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
         coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
@@ -172,8 +172,8 @@ class HealthDeviceRepositoryTest {
         // Fetch and cache
         repository.getAvailableDevices()
 
-        // Clear cache (non-suspend version)
-        repository.clearCache()
+        // Invalidate cache
+        repository.invalidateCache()
 
         // Reset mocks with different data
         coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device3")
