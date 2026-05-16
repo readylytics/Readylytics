@@ -14,9 +14,10 @@ import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.repository.ScoringRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
-import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
-import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.PaiScoringStrategy
-import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.SleepScoringStrategy
+import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.CurrentNightHrvResolver
+import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.HrCoverageValidator
+import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.SleepNadirAnalyzer
+import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.WakeWindowHrCollector
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -116,17 +117,22 @@ class ScoringRepositoryN1Test {
         val baselineComputer = BaselineComputer(heartRateDao, hrvDao, sleepSessionDao, scoringCalculator)
         val scoringConfigFactory = ScoringConfigFactory()
         val encryptionManager = mockk<EncryptionManager>(relaxed = true)
-
+        val hrvResolver = CurrentNightHrvResolver(hrvDao, dailySummaryDao)
+        val wakeHrCollector = WakeWindowHrCollector(heartRateDao, sleepSessionDao)
+        val nadirAnalyzer = SleepNadirAnalyzer(heartRateDao, scoringCalculator)
+        val coverageValidator = HrCoverageValidator()
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
                 baselineComputer,
                 dailySummaryDao,
-                hrvDao,
                 heartRateDao,
-                sleepSessionDao,
                 scoringCalculator,
                 scoringConfigFactory,
                 encryptionManager,
+                hrvResolver,
+                wakeHrCollector,
+                nadirAnalyzer,
+                coverageValidator,
             )
         val computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase()
 
