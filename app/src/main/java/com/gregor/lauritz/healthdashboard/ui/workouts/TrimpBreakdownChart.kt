@@ -20,6 +20,7 @@ import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
@@ -91,6 +92,17 @@ private fun HrChart(
             }
         }
 
+    val rangeProvider =
+        remember(chartData) {
+            val values = chartData.map { it.second }
+            val lo = values.minOrNull() ?: 0.0
+            val hi = values.maxOrNull() ?: 0.0
+            CartesianLayerRangeProvider.fixed(
+                minY = (lo - 5.0).coerceAtLeast(0.0),
+                maxY = hi + 5.0,
+            )
+        }
+
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
@@ -105,6 +117,7 @@ private fun HrChart(
                                 fill = LineCartesianLayer.LineFill.single(Fill(MaterialTheme.colorScheme.primary)),
                             ),
                         ),
+                    rangeProvider = rangeProvider,
                 ),
                 startAxis =
                     VerticalAxis.rememberStart(
@@ -112,6 +125,7 @@ private fun HrChart(
                         title = { "bpm" },
                         titleComponent = axisLabelComponent,
                         guideline = guidelineComponent,
+                        valueFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() },
                     ),
                 bottomAxis =
                     HorizontalAxis.rememberBottom(

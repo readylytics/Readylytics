@@ -8,7 +8,9 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
-import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
+import com.gregor.lauritz.healthdashboard.ui.workouts.mappers.ChartDataMapper
+import com.gregor.lauritz.healthdashboard.ui.workouts.mappers.DailyPaiBreakdownMapper
+import com.gregor.lauritz.healthdashboard.ui.workouts.mappers.RecoveryMetricsMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,9 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
-import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
-import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
@@ -57,32 +57,6 @@ class WorkoutDetailViewModel
         private val _uiState = MutableStateFlow(WorkoutDetailUiState())
         val uiState = _uiState.asStateFlow()
 
-        private fun computeChartData(
-            samples: List<HeartRatePoint>,
-            workoutStart: Long,
-            workoutEnd: Long,
-        ): Pair<List<Pair<Double, Double>>, Int> {
-            val workoutStartInstant = Instant.ofEpochMilli(workoutStart)
-            val workoutEndInstant = Instant.ofEpochMilli(workoutEnd)
-            val workoutSamples = samples.filter { it.timestamp in workoutStartInstant..workoutEndInstant }
-            val durationMinutes =
-                ChronoUnit.MINUTES
-                    .between(workoutStartInstant, workoutEndInstant)
-                    .toInt()
-                    .coerceAtLeast(1)
-
-            val chartData =
-                workoutSamples
-                    .groupBy {
-                        (ChronoUnit.SECONDS.between(workoutStartInstant, it.timestamp) / 60L).toInt()
-                    }.toSortedMap()
-                    .map { (minute, points) ->
-                        minute.toDouble() to points.map { it.bpm.toDouble() }.average()
-                    }
-
-            return chartData to durationMinutes
-        }
-
         fun loadWorkout(workoutId: String) {
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
@@ -112,7 +86,8 @@ class WorkoutDetailViewModel
                         .distinctBy { it.timestamp }
                         .sortedBy { it.timestamp }
 
-                val (chartData, durationMinutes) = computeChartData(allSamples, workout.startTime, workout.endTime)
+                val (chartData, durationMinutes) =
+                    ChartDataMapper.mapToChartData(allSamples, workout.startTime, workout.endTime)
 
                 val workoutEndInstant = Instant.ofEpochMilli(workout.endTime)
                 val endHr = allSamples.lastOrNull { it.timestamp <= workoutEndInstant }?.bpm
@@ -123,55 +98,17 @@ class WorkoutDetailViewModel
 
                 val sevenDaysAgo =
                     workoutDate
-                        .minusDays(
-                            6,
-                        ).atStartOfDay(ZoneId.systemDefault())
+                        .minusDays(6)
+                        .atStartOfDay(ZoneId.systemDefault())
                         .toInstant()
                         .toEpochMilli()
                 val summaries = dailySummaryDao.getSince(sevenDaysAgo)
-                val summaryByDate = summaries.associateBy { it.dateMidnightMs }
-                val paiBreakdown =
-                    (6 downTo 0).map { daysBack ->
-                        val day = workoutDate.minusDays(daysBack.toLong())
-                        val dayMs = day.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                        val label = day.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
-                        val pai = summaryByDate[dayMs]?.paiScore ?: 0f
-                        label to pai
-                    }
+                val paiBreakdown = DailyPaiBreakdownMapper.mapDailyBreakdown(workoutDate, summaries)
 
-                var hr1Min: Int? = null
-                var hr2Min: Int? = null
-                var hr3Min: Int? = null
-
-                if (endHr != null) {
-                    val recoverySamples = allSamples.filter { it.timestamp > workoutEndInstant }
-
-                    fun findRecoveryHr(minutes: Int): Int? {
-                        val target = workoutEndInstant.plus(minutes.toLong(), ChronoUnit.MINUTES)
-                        val toleranceSeconds = ScoringConstants.Workout.HRR_TOLERANCE_SECONDS
-                        return recoverySamples
-                            .filter { sample ->
-                                val diff =
-                                    java.time.Duration
-                                        .between(sample.timestamp, target)
-                                        .abs()
-                                        .seconds
-                                diff <= toleranceSeconds
-                            }.minByOrNull { sample ->
-                                java.time.Duration
-                                    .between(sample.timestamp, target)
-                                    .abs()
-                                    .toMillis()
-                            }?.bpm
-                    }
-
-                    hr1Min = findRecoveryHr(1)
-                    hr2Min = findRecoveryHr(2)
-                    hr3Min = findRecoveryHr(3)
-                }
+                val recoveryMetrics = RecoveryMetricsMapper.mapRecoveryMetrics(allSamples, workout.endTime, endHr)
 
                 val prefs = settingsRepo.userPreferences.first()
-                val workoutSamples = allSamples.filter { it.timestamp <= workoutEndInstant }.sortedBy { it.timestamp }
+                val workoutSamples = allSamples.filter { it.timestamp <= workoutEndInstant }
 
                 val computedTrimp =
                     computeWorkoutTrimpUseCase.execute(
@@ -196,9 +133,9 @@ class WorkoutDetailViewModel
                         hrSamples = allSamples,
                         hrChartData = chartData,
                         durationMinutes = durationMinutes,
-                        hrr1Min = if (endHr != null && hr1Min != null) endHr - hr1Min else null,
-                        hrr2Min = if (endHr != null && hr2Min != null) endHr - hr2Min else null,
-                        hrr3Min = if (endHr != null && hr3Min != null) endHr - hr3Min else null,
+                        hrr1Min = recoveryMetrics.hrr1Min,
+                        hrr2Min = recoveryMetrics.hrr2Min,
+                        hrr3Min = recoveryMetrics.hrr3Min,
                         totalPai = summary?.totalPai,
                         paiDailyBreakdown = paiBreakdown,
                         computedTrimp = computedTrimp.roundToInt().takeIf { it > 0 },

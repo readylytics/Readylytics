@@ -1,6 +1,6 @@
 # Master Roadmap: Phases 3–9
 
-**Status:** Phases 1, 2, & 3 complete. Phase 4 starting.
+**Status:** Phases 1–3 complete (including 3.4 mapper extraction). Phase 4 starting.
 
 ---
 
@@ -49,6 +49,8 @@ Extract heavy transformation logic from ViewModel:
 - Add 8 tests (mapper unit tests + integration)
 
 **Risks:** State flow interdependencies | **Mitigation:** Mappers pure functions, no side effects
+
+**Result:** ✅ COMPLETE — ViewModel reduced to 70 lines (pure orchestrator). 3 mappers + 8 tests. All files ≤60 lines.
 
 ---
 

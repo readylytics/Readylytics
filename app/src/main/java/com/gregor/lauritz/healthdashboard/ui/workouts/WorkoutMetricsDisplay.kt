@@ -35,7 +35,7 @@ fun WorkoutMetricsDisplay(
     workout: WorkoutRecordEntity,
     computedTrimp: Int?,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
         WorkoutHeader(workout)
 
         Row(
