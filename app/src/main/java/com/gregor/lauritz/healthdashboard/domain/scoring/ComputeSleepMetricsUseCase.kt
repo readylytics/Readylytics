@@ -90,7 +90,7 @@ class ComputeSleepMetricsUseCase
             val hrvResult = hrvResolver.resolve(session, dayMidnight)
             val sessionHrvSamples = hrvResult.samples
             val currentHrvMean = hrvResult.mean
-            logD("ScoringRepository") { "HRV resolved: samples=${sessionHrvSamples.size}, mean=$currentHrvMean" }
+            logD("ComputeSleepMetrics") { "HRV resolved: samples=${sessionHrvSamples.size}, mean=$currentHrvMean" }
 
             val currentNocturnalRhr = heartRateDao.getAvgSleepHr(session.id)
             val baselineRhrValue = baselineComputer.resolveBaselineRhrRounded(rhrValues, prefs.rhrBaselineOverride)
