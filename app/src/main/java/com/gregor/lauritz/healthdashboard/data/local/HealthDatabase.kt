@@ -23,7 +23,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
         WorkoutRecordEntity::class,
         DailySummaryEntity::class,
     ],
-    version = 18,
+    version = HealthDatabase.DATABASE_VERSION,
 )
 abstract class HealthDatabase : RoomDatabase() {
     abstract fun sleepSessionDao(): SleepSessionDao
@@ -37,6 +37,8 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun dailySummaryDao(): DailySummaryDao
 
     companion object {
+        const val DATABASE_VERSION = 18
+
         fun create(context: Context): HealthDatabase =
             Room
                 .databaseBuilder(context, HealthDatabase::class.java, "health_db")

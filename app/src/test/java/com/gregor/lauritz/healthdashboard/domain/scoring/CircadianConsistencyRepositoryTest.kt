@@ -93,6 +93,8 @@ class CircadianConsistencyRepositoryTest {
 
                 override suspend fun deleteBeforeTimestamp(beforeMs: Long) = throw UnsupportedOperationException()
 
+                override suspend fun count() = throw UnsupportedOperationException()
+
                 override suspend fun deleteAll() = throw UnsupportedOperationException()
 
                 override suspend fun getDistinctDeviceNames(): List<String> = emptyList()

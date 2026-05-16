@@ -45,9 +45,9 @@ class LocalRestoreManager
                     val json = JSONObject(backupFile.readText())
 
                     val schemaVersion = json.getInt("schemaVersion")
-                    if (schemaVersion != 18) {
+                    if (schemaVersion != HealthDatabase.DATABASE_VERSION) {
                         throw IllegalStateException(
-                            "Backup schema version $schemaVersion does not match database version 18",
+                            "Backup schema version $schemaVersion does not match database version ${HealthDatabase.DATABASE_VERSION}",
                         )
                     }
 

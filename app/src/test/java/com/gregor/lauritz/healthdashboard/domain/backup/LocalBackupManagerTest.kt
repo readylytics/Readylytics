@@ -4,8 +4,12 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
+import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
+import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
@@ -14,12 +18,15 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+@RunWith(RobolectricTestRunner::class)
 class LocalBackupManagerTest {
     private lateinit var context: Context
     private lateinit var db: HealthDatabase
@@ -36,6 +43,7 @@ class LocalBackupManagerTest {
         db =
             Room
                 .inMemoryDatabaseBuilder(context, HealthDatabase::class.java)
+                .allowMainThreadQueries()
                 .build()
 
         settingsRepo =
@@ -44,7 +52,7 @@ class LocalBackupManagerTest {
                     flowOf(
                         mockk(relaxed = true) {
                             coEvery { goalSleepHours } returns 8.0f
-                            coEvery { syncPreference } returns SyncPreference.ON_FOREGROUND
+                            coEvery { syncPreference } returns SyncPreference.ALWAYS
                             coEvery { appTheme } returns AppTheme.DARK
                             coEvery { backupSchedule } returns BackupSchedule.DAILY
                             coEvery { birthDay } returns 1

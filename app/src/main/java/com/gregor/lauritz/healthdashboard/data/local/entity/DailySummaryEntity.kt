@@ -192,23 +192,15 @@ data class DailySummaryEntity(
                         null
                     },
                 stepCount =
-                    if (json.has(
-                            "stepCount",
-                        ) &&
-                        !json.isNull(
-                            "stepCount",
-                        )
+                    if (json.has("stepCount") &&
+                        !json.isNull("stepCount")
                     ) {
-                        json.getInt(
-                            "stepCount",
-                        )
+                        json.getInt("stepCount")
                     } else {
                         null
                     },
                 zLnHrv =
-                    if (json.has(
-                            "zLnHrv",
-                        ) &&
+                    if (json.has("zLnHrv") &&
                         !json.isNull("zLnHrv")
                     ) {
                         json.getDouble("zLnHrv").toFloat()
@@ -232,8 +224,39 @@ data class DailySummaryEntity(
                     } else {
                         null
                     },
-                diagnostics = ReadinessResult.Diagnostics(),
-                contributors = ReadinessResult.Contributors(),
+                diagnostics =
+                    if (json.has("diagnostics")) {
+                        val d = json.getJSONObject("diagnostics")
+                        ReadinessResult.Diagnostics(
+                            zLnHrv = if (d.isNull("zLnHrv")) null else d.getDouble("zLnHrv").toFloat(),
+                            zRhr = if (d.isNull("zRhr")) null else d.getDouble("zRhr").toFloat(),
+                            lnSigma = if (d.isNull("lnSigma")) null else d.getDouble("lnSigma").toFloat(),
+                            rollingMu = if (d.isNull("rollingMu")) null else d.getDouble("rollingMu").toFloat(),
+                            rhrDeltaBpm = if (d.isNull("rhrDeltaBpm")) null else d.getDouble("rhrDeltaBpm").toFloat(),
+                            isCalibrating = d.optBoolean("isCalibrating", false),
+                            stagesSuspicious = d.optBoolean("stagesSuspicious", false),
+                            lateNadir = d.optBoolean("lateNadir", false),
+                            hrvMissing = d.optBoolean("hrvMissing", false),
+                            timezoneJump = d.optBoolean("timezoneJump", false),
+                            configHashCode = if (d.isNull("configHashCode")) null else d.getInt("configHashCode"),
+                            phaseName = if (d.isNull("phaseName")) null else d.getString("phaseName"),
+                        )
+                    } else {
+                        ReadinessResult.Diagnostics()
+                    },
+                contributors =
+                    if (json.has("contributors")) {
+                        val c = json.getJSONObject("contributors")
+                        ReadinessResult.Contributors(
+                            hrvScore = if (c.isNull("hrvScore")) null else c.getDouble("hrvScore").toFloat(),
+                            rhrScore = if (c.isNull("rhrScore")) null else c.getDouble("rhrScore").toFloat(),
+                            durationScore = if (c.isNull("durationScore")) null else c.getDouble("durationScore").toFloat(),
+                            architectureScore = if (c.isNull("architectureScore")) null else c.getDouble("architectureScore").toFloat(),
+                            loadContribution = if (c.isNull("loadContribution")) null else c.getDouble("loadContribution").toFloat(),
+                        )
+                    } else {
+                        ReadinessResult.Contributors()
+                    },
                 rollingMu =
                     if (json.has("rollingMu") &&
                         !json.isNull("rollingMu")

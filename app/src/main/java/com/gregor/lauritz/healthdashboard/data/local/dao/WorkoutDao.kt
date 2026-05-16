@@ -94,6 +94,9 @@ interface WorkoutDao {
     @Query("DELETE FROM workout_records WHERE startTime < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
+    @Query("SELECT COUNT(*) FROM workout_records")
+    suspend fun count(): Int
+
     @Query("DELETE FROM workout_records")
     suspend fun deleteAll(): Int
 

@@ -43,6 +43,9 @@ interface DailySummaryDao {
     @Query("DELETE FROM daily_summaries WHERE dateMidnightMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
+    @Query("SELECT COUNT(*) FROM daily_summaries")
+    suspend fun count(): Int
+
     @Query("DELETE FROM daily_summaries")
     suspend fun deleteAll(): Int
 }

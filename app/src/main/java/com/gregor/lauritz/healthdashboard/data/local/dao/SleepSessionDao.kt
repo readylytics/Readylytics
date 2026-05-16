@@ -55,6 +55,9 @@ interface SleepSessionDao {
     @Query("DELETE FROM sleep_sessions WHERE endTime < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
+    @Query("SELECT COUNT(*) FROM sleep_sessions")
+    suspend fun count(): Int
+
     @Query("DELETE FROM sleep_sessions")
     suspend fun deleteAll(): Int
 

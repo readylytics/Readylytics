@@ -103,6 +103,9 @@ interface HeartRateDao {
     @Query("DELETE FROM heart_rate_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
+    @Query("SELECT COUNT(*) FROM heart_rate_records")
+    suspend fun count(): Int
+
     @Query("DELETE FROM heart_rate_records")
     suspend fun deleteAll(): Int
 

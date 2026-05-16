@@ -80,6 +80,9 @@ interface HrvDao {
     @Query("DELETE FROM hrv_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
+    @Query("SELECT COUNT(*) FROM hrv_records")
+    suspend fun count(): Int
+
     @Query("DELETE FROM hrv_records")
     suspend fun deleteAll(): Int
 
