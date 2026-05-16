@@ -84,7 +84,7 @@ fun WorkoutDetailScreen(
         }
 
         item {
-            WorkoutEditForm(uiState)
+            WorkoutRecoverySection(uiState)
         }
     }
 }

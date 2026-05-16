@@ -20,7 +20,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun WorkoutEditForm(uiState: WorkoutDetailUiState) {
+fun WorkoutRecoverySection(uiState: WorkoutDetailUiState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
