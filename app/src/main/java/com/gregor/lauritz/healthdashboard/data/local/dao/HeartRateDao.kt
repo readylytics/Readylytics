@@ -105,4 +105,21 @@ interface HeartRateDao {
 
     @Query("SELECT DISTINCT deviceName FROM heart_rate_records WHERE deviceName IS NOT NULL AND deviceName != ''")
     suspend fun getDistinctDeviceNames(): List<String>
+
+    /**
+     * Batch fetch all sleep HR samples for multiple sessions in a single query.
+     * Used to fix N+1 query pattern in baseline computation.
+     *
+     * Returns all records with their sessionId so they can be grouped in memory.
+     * More efficient than per-session queries for computing statistics.
+     */
+    @Query(
+        "SELECT id, sessionId, recordType, beatsPerMinute, timestampMs, deviceName " +
+            "FROM heart_rate_records " +
+            "WHERE sessionId IN (:sessionIds) AND recordType = 'SLEEP' " +
+            "ORDER BY sessionId, beatsPerMinute ASC",
+    )
+    suspend fun getSleepHrSamplesForSessions(
+        sessionIds: List<String>,
+    ): List<HeartRateRecordEntity>
 }
