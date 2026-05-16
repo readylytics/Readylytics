@@ -50,36 +50,36 @@ class SyncViewModelTest {
     @Test
     fun syncViewModel_permissionsMissing_needsPermissionsState() {
         coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Missing(setOf("perm1"))
-        
+
         viewModel.onAppForeground()
-        
+
         assertEquals(SyncUiState.NeedsPermissions, viewModel.uiState.value)
     }
 
     @Test
     fun syncViewModel_permissionsGranted_permissionsGrantedState() {
         coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Granted
-        
+
         viewModel.onAppForeground()
-        
+
         assertEquals(SyncUiState.PermissionsGranted, viewModel.uiState.value)
     }
 
     @Test
     fun syncViewModel_healthConnectUnavailable_unavailableState() {
         coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Unavailable
-        
+
         viewModel.onAppForeground()
-        
+
         assertEquals(SyncUiState.Unavailable, viewModel.uiState.value)
     }
 
     @Test
     fun syncViewModel_onPermissionsGranted_discoveringDevices() {
         coEvery { hcRepo.discoverDevices(any()) } returns listOf("Device 1")
-        
+
         viewModel.onPermissionsGranted()
-        
+
         // Note: It might transition quickly to DeviceSelectionReady because of UnconfinedTestDispatcher
         assertTrue(viewModel.uiState.value is SyncUiState.DeviceSelectionReady)
     }

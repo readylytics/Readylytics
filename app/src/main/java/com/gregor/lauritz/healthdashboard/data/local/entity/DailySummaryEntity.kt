@@ -250,9 +250,33 @@ data class DailySummaryEntity(
                         ReadinessResult.Contributors(
                             hrvScore = if (c.isNull("hrvScore")) null else c.getDouble("hrvScore").toFloat(),
                             rhrScore = if (c.isNull("rhrScore")) null else c.getDouble("rhrScore").toFloat(),
-                            durationScore = if (c.isNull("durationScore")) null else c.getDouble("durationScore").toFloat(),
-                            architectureScore = if (c.isNull("architectureScore")) null else c.getDouble("architectureScore").toFloat(),
-                            loadContribution = if (c.isNull("loadContribution")) null else c.getDouble("loadContribution").toFloat(),
+                            durationScore =
+                                if (c.isNull(
+                                        "durationScore",
+                                    )
+                                ) {
+                                    null
+                                } else {
+                                    c.getDouble("durationScore").toFloat()
+                                },
+                            architectureScore =
+                                if (c.isNull(
+                                        "architectureScore",
+                                    )
+                                ) {
+                                    null
+                                } else {
+                                    c.getDouble("architectureScore").toFloat()
+                                },
+                            loadContribution =
+                                if (c.isNull(
+                                        "loadContribution",
+                                    )
+                                ) {
+                                    null
+                                } else {
+                                    c.getDouble("loadContribution").toFloat()
+                                },
                         )
                     } else {
                         ReadinessResult.Contributors()
