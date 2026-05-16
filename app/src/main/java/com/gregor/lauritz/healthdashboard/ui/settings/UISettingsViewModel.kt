@@ -55,7 +55,7 @@ class UISettingsViewModel
                 is SettingsEvent.DynamicColorEnabledChanged ->
                     viewModelScope.launch { settingsRepo.updateDynamicColorEnabled(enabled = event.enabled) }
                 is SettingsEvent.PaiScalingFactorChanged -> {
-                    val validation = SettingsValidators.PAI_SCALING_FACTOR_RULE.validate(event.value.toString())
+                    val validation = SettingsValidators.PAI_SCALING_FACTOR_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             settingsRepo.updatePaiScalingFactor(value = event.value)
