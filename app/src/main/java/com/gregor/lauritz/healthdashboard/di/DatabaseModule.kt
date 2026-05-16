@@ -38,7 +38,8 @@ object DatabaseModule {
                 .openHelperFactory(sqlCipherKeyManager.getOrCreateFactory())
                 .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                 .setQueryCoroutineContext(Dispatchers.IO)
-                .addMigrations(*DatabaseMigrations.all).addCallback(
+                .addMigrations(*DatabaseMigrations.all)
+                .addCallback(
                     object : RoomDatabase.Callback() {
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             super.onOpen(db)

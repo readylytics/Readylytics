@@ -38,7 +38,8 @@ abstract class HealthDatabase : RoomDatabase() {
 
     companion object {
         fun create(context: Context): HealthDatabase =
-            Room.databaseBuilder(context, HealthDatabase::class.java, "health_db")
+            Room
+                .databaseBuilder(context, HealthDatabase::class.java, "health_db")
                 .addMigrations(*DatabaseMigrations.all)
                 .build()
     }

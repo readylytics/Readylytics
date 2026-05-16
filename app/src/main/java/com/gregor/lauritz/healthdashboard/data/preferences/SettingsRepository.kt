@@ -1,12 +1,12 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
 import androidx.datastore.core.DataStore
+import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 import java.time.LocalDate
-import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -121,7 +121,8 @@ class SettingsRepository
 
         suspend fun updateCollapseHealthConnect(collapsed: Boolean) = ui.updateCollapseHealthConnect(collapsed)
 
-        suspend fun updateCollapseBaselinesThresholds(collapsed: Boolean) = ui.updateCollapseBaselinesThresholds(collapsed)
+        suspend fun updateCollapseBaselinesThresholds(collapsed: Boolean) =
+            ui.updateCollapseBaselinesThresholds(collapsed)
 
         suspend fun updateCollapseDisplay(collapsed: Boolean) = ui.updateCollapseDisplay(collapsed)
 
@@ -149,7 +150,8 @@ class SettingsRepository
 
         suspend fun updateSyncIntervalHours(hours: Int) = sync.updateSyncIntervalHours(hours)
 
-        suspend fun updateCircadianThresholdOverride(encryptedMinutes: String?) = sync.updateCircadianThresholdOverride(encryptedMinutes)
+        suspend fun updateCircadianThresholdOverride(encryptedMinutes: String?) =
+            sync.updateCircadianThresholdOverride(encryptedMinutes)
 
         suspend fun updateLastSyncTimestamp(timestamp: Long) = sync.updateLastSyncTimestamp(timestamp)
 
