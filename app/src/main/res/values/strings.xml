@@ -81,7 +81,7 @@
     <string name="about_tooltip_maintain">*Maintain (60-84)* — manageable load increase.</string>
     <string name="about_tooltip_caution">*Caution (30-59)* — meaningful load spike; consider an easier day.</string>
     <string name="about_tooltip_fatigue">*High Fatigue (&lt;30)* — large spike vs. your norm.</string>
-    <string name="about_readiness_no_penalty">**What we don\'t do.** We don\'t penalise you for resting. A week of light activity will *not* drop Readiness; the score is designed for load *spikes*, not undertraining.</string>
+<string name="about_readiness_no_penalty">**What we don\'t do.** We don\'t penalize you for resting. A week of light activity will *not* drop Readiness; the score is designed for load *spikes*, not undertraining.</string>
 
     <string name="about_header_needs">## What the app needs from you</string>
     <string name="about_hc_reads">We read from Android Health Connect:</string>
