@@ -86,7 +86,7 @@ class ThresholdSettingsViewModel
                     }
                 }
                 is SettingsEvent.RhrWarningThresholdChanged -> {
-                    val validation = SettingsValidators.RHR_WARNING_THRESHOLD_RULE.validate(event.value.toString())
+                    val validation = SettingsValidators.RHR_WARNING_THRESHOLD_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch { settingsRepo.updateRhrWarningThreshold(value = event.value) }
                     }
