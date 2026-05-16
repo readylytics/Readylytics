@@ -102,7 +102,7 @@ object DatabaseMigrations {
                         "remSleepPercent REAL, totalTrimp REAL, rhrRatio REAL, " +
                         "hrvBaseline INTEGER, restingHeartRate INTEGER, " +
                         "restingHrRatio REAL, restingHrBaseline INTEGER)",
-                    "INSERT INTO daily_summaries_new SELECT * FROM daily_summaries",
+                    "INSERT INTO daily_summaries_new (dateMidnightMs, sleepScore, loadScore, readinessScore, strainRatio, nocturnalRhr, nocturnalHrv, sleepDurationMinutes, deepSleepPercent, remSleepPercent, totalTrimp, rhrRatio, hrvBaseline, restingHeartRate, restingHrRatio, restingHrBaseline) SELECT dateMidnightMs, sleepScore, loadScore, readinessScore, strainRatio, nocturnalRhr, nocturnalHrv, sleepDurationMinutes, deepSleepPercent, remSleepPercent, totalTrimp, rhrRatio, hrvBaseline, restingHeartRate, restingHrRatio, restingHrBaseline FROM daily_summaries",
                     "DROP TABLE daily_summaries",
                     "ALTER TABLE daily_summaries_new RENAME TO daily_summaries",
                 )
@@ -347,8 +347,8 @@ object DatabaseMigrations {
                            nocturnalRhr, nocturnalHrv, sleepDurationMinutes, deepSleepPercent,
                            remSleepPercent, totalTrimp, rhrRatio, hrvBaseline, restingHeartRate,
                            restingHrRatio, restingHrBaseline, paiScore, totalPai, stepCount,
-                           zLnHrv, zRhr, recoveryFlags, NULL,
-                           zLnHrv, zRhr, NULL, rollingMu, rhrDeltaBpm,
+                           zLnHrv, zRhr, recoveryFlags, hrvSigma,
+                           zLnHrv, zRhr, hrvSigma, rollingMu, rhrDeltaBpm,
 
                            COALESCE(isCalibrating, 0), COALESCE(stagesSuspicious, 0), COALESCE(lateNadir, 0), 0, 0,
                            hrvScoreContribution, rhrScoreContribution, durationScoreContribution, architectureScoreContribution, loadContribution,

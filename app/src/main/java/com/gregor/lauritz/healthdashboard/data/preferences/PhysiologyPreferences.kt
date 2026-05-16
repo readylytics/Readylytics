@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.data.preferences
 import androidx.datastore.core.DataStore
 import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
+import java.time.Clock
 import java.time.LocalDate
 import java.time.Period
 import javax.inject.Inject
@@ -11,6 +12,7 @@ internal class PhysiologyPreferences
     @Inject
     constructor(
         private val dataStore: DataStore<UserPreferencesProto>,
+        private val clock: Clock = Clock.systemDefaultZone(),
     ) {
         private fun Int.toValidMaxHr() = coerceIn(100, 250)
 
@@ -85,10 +87,10 @@ internal class PhysiologyPreferences
         ) {
             val safeDay = day.coerceIn(1, 31)
             val safeMonth = month.coerceIn(1, 12)
-            val safeYear = year.coerceIn(1900, LocalDate.now().year)
+            val safeYear = year.coerceIn(1900, LocalDate.now(clock).year)
 
             dataStore.updateData {
-                val age = Period.between(LocalDate.of(safeYear, safeMonth, safeDay), LocalDate.now()).years
+                val age = Period.between(LocalDate.of(safeYear, safeMonth, safeDay), LocalDate.now(clock)).years
                 it
                     .toBuilder()
                     .setBirthDay(safeDay)
@@ -146,8 +148,15 @@ internal class PhysiologyPreferences
             dataStore.updateData {
                 it
                     .toBuilder()
-                    .setPhysiologyProfile(PhysiologyProfileProto.valueOf("PROFILE_${profile.name}"))
-                    .setPaiScalingFactor(newPaiFactor)
+                    .setPhysiologyProfile(
+                        when (profile) {
+                            PhysiologyProfile.ATHLETE -> PhysiologyProfileProto.PROFILE_ATHLETE
+                            PhysiologyProfile.ACTIVE -> PhysiologyProfileProto.PROFILE_ACTIVE
+                            PhysiologyProfile.GENERAL -> PhysiologyProfileProto.PROFILE_GENERAL
+                            PhysiologyProfile.SEDENTARY -> PhysiologyProfileProto.PROFILE_SEDENTARY
+                            PhysiologyProfile.SHIFT_WORKER -> PhysiologyProfileProto.PROFILE_SHIFT_WORKER
+                        },
+                    ).setPaiScalingFactor(newPaiFactor)
                     .setPaiCalibration(profile.banisterMultiplier)
                     .setChengBeta(profile.defaultChengBeta)
                     .setItrimpB(profile.defaultItrimB)

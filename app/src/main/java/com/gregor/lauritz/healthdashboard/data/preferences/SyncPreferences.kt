@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
 import androidx.datastore.core.DataStore
+import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -9,6 +10,7 @@ internal class SyncPreferences
     @Inject
     constructor(
         private val dataStore: DataStore<UserPreferencesProto>,
+        private val clock: Clock = Clock.systemDefaultZone(),
     ) {
         suspend fun updateSyncPreference(pref: SyncPreference) {
             dataStore.updateData {
@@ -54,7 +56,7 @@ internal class SyncPreferences
         suspend fun initializeInstallDateIfUnset() {
             dataStore.updateData { proto ->
                 if (proto.installDate == 0L) {
-                    proto.toBuilder().setInstallDate(System.currentTimeMillis()).build()
+                    proto.toBuilder().setInstallDate(clock.millis()).build()
                 } else {
                     proto
                 }
