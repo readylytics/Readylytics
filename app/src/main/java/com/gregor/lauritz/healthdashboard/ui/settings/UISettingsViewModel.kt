@@ -104,7 +104,7 @@ class UISettingsViewModel
                     }
                 }
                 is SettingsEvent.ItrimBChanged -> {
-                    val validation = SettingsValidators.TRIMP_ITRIMP_B_FACTOR_RULE.validate(event.value.toString())
+                    val validation = SettingsValidators.TRIMP_ITRIMP_B_FACTOR_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             settingsRepo.updateItrimB(event.value)
