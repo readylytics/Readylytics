@@ -80,7 +80,7 @@ class ThresholdSettingsViewModel
                     }
                 }
                 is SettingsEvent.RhrOptimalThresholdChanged -> {
-                    val validation = SettingsValidators.RHR_OPTIMAL_THRESHOLD_RULE.validate(event.value.toString())
+                    val validation = SettingsValidators.RHR_OPTIMAL_THRESHOLD_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch { settingsRepo.updateRhrOptimalThreshold(value = event.value) }
                     }
