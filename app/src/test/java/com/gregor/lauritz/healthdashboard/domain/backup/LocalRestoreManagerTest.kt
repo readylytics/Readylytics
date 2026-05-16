@@ -159,7 +159,7 @@ class LocalRestoreManagerTest {
             backupFile.writeText(json.toString())
 
             val result = manager.applyRestore(backupFile)
-            assertTrue(result is LocalRestoreManager.RestoreResult.Success)
+            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
 
             val sessions = db.sleepSessionDao().getSince(0)
             assertEquals(1, sessions.size)
@@ -217,7 +217,7 @@ class LocalRestoreManagerTest {
             backupFile.writeText(json.toString())
 
             val result = manager.applyRestore(backupFile)
-            assertTrue(result is LocalRestoreManager.RestoreResult.Success)
+            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
 
             val sessions = db.sleepSessionDao().getSince(0)
             assertEquals(1, sessions.size)

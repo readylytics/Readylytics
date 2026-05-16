@@ -48,21 +48,17 @@ import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
-import com.gregor.lauritz.healthdashboard.ui.settings.ActivitySettingsSection
-import com.gregor.lauritz.healthdashboard.ui.settings.AdvancedSettingsSection
-import com.gregor.lauritz.healthdashboard.ui.settings.SleepSettingsSection
-import com.gregor.lauritz.healthdashboard.ui.settings.ThresholdSettingsSection
-import com.gregor.lauritz.healthdashboard.ui.settings.cloud.CloudBackupSection
-import com.gregor.lauritz.healthdashboard.ui.settings.cloud.DataManagementSection
-import com.gregor.lauritz.healthdashboard.ui.settings.cloud.DeviceSelectionSection
-import com.gregor.lauritz.healthdashboard.ui.settings.cloud.SyncSettingsSection
+import com.gregor.lauritz.healthdashboard.ui.settings.backup.LocalBackupSection
+import com.gregor.lauritz.healthdashboard.ui.settings.data.DataManagementSection
+import com.gregor.lauritz.healthdashboard.ui.settings.data.DeviceSelectionSection
+import com.gregor.lauritz.healthdashboard.ui.settings.data.SyncSettingsSection
 import com.gregor.lauritz.healthdashboard.ui.settings.physiologyprofile.HeartRateZoneSection
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class SettingsExpandState(
     val genderExpanded: Boolean = false,
-    val collapseCloudData: Boolean = false,
+    val collapseDataBackup: Boolean = false,
     val collapseBaselinesThresholds: Boolean = false,
     val collapseDisplay: Boolean = false,
     val collapseAdvanced: Boolean = false,
@@ -78,17 +74,15 @@ data class SettingsSectionMetadata(
 val settingsSections =
     listOf(
         SettingsSectionMetadata(
-            id = "cloud_data_sync",
-            name = "Cloud & Data",
+            id = "data_backup_sync",
+            name = "Data & Backup",
             keywords =
                 listOf(
-                    "cloud",
                     "backup",
-                    "drive",
+                    "local",
                     "data",
                     "retention",
                     "resync",
-                    "google account",
                     "health connect",
                     "sync",
                     "foreground",
@@ -139,7 +133,7 @@ fun SettingsRoute(
     sleepViewModel: SleepSettingsViewModel = hiltViewModel(),
     physiologyViewModel: PhysiologySettingsViewModel = hiltViewModel(),
     heartRateViewModel: HeartRateZonesViewModel = hiltViewModel(),
-    cloudViewModel: CloudBackupViewModel = hiltViewModel(),
+    localBackupViewModel: LocalBackupViewModel = hiltViewModel(),
     syncViewModel: SyncSettingsViewModel = hiltViewModel(),
     uiViewModel: UISettingsViewModel = hiltViewModel(),
     onNavigateToAbout: () -> Unit = {},
@@ -148,7 +142,7 @@ fun SettingsRoute(
     val sleepState by sleepViewModel.uiState.collectAsStateWithLifecycle()
     val physiologyState by physiologyViewModel.uiState.collectAsStateWithLifecycle()
     val heartRateState by heartRateViewModel.uiState.collectAsStateWithLifecycle()
-    val cloudState by cloudViewModel.uiState.collectAsStateWithLifecycle()
+    val localBackupState by localBackupViewModel.uiState.collectAsStateWithLifecycle()
     val syncState by syncViewModel.uiState.collectAsStateWithLifecycle()
     val uiState by uiViewModel.uiState.collectAsStateWithLifecycle()
 
@@ -159,14 +153,14 @@ fun SettingsRoute(
         sleepState = sleepState,
         physiologyState = physiologyState,
         heartRateState = heartRateState,
-        cloudState = cloudState,
+        localBackupState = localBackupState,
         syncState = syncState,
         uiState = uiState,
         onThresholdEvent = thresholdViewModel::onEvent,
         onSleepEvent = sleepViewModel::onEvent,
         onPhysiologyEvent = physiologyViewModel::onEvent,
         onHeartRateEvent = heartRateViewModel::onEvent,
-        onCloudEvent = { cloudViewModel.onEvent(it, context) },
+        onLocalBackupEvent = { localBackupViewModel.onEvent(it, context) },
         onSyncEvent = syncViewModel::onEvent,
         onUIEvent = uiViewModel::onEvent,
         onNavigateToAbout = onNavigateToAbout,
@@ -210,14 +204,14 @@ fun SettingsScreen(
     sleepState: SleepSettingsState,
     physiologyState: PhysiologySettingsState,
     heartRateState: HeartRateZonesState,
-    cloudState: CloudBackupState,
+    localBackupState: LocalBackupState,
     syncState: SyncSettingsState,
     uiState: UIState,
     onThresholdEvent: (SettingsEvent) -> Unit,
     onSleepEvent: (SettingsEvent) -> Unit,
     onPhysiologyEvent: (SettingsEvent) -> Unit,
     onHeartRateEvent: (SettingsEvent) -> Unit,
-    onCloudEvent: (SettingsEvent) -> Unit,
+    onLocalBackupEvent: (SettingsEvent) -> Unit,
     onSyncEvent: (SettingsEvent) -> Unit,
     onUIEvent: (SettingsEvent) -> Unit,
     modifier: Modifier = Modifier,
@@ -233,18 +227,21 @@ fun SettingsScreen(
         searchQuery.isNotBlank() && matchingSections.any { it.id == sectionId }
     }
 
-    if (cloudState.showRestoreConfirmDialog) {
+    if (localBackupState.showRestoreConfirmDialog) {
         AlertDialog(
-            onDismissRequest = { onCloudEvent(SettingsEvent.RestoreDismissed) },
-            title = { Text("Restore from Drive?") },
+            onDismissRequest = { onLocalBackupEvent(SettingsEvent.RestoreDismissed) },
+            title = { Text("Restore Backup?") },
             text = {
-                Text("This will replace all local health data and restart the app. This cannot be undone.")
+                val filename = localBackupState.pendingRestoreFile?.name ?: "this backup"
+                Text(
+                    "This will replace all local health data with the contents of $filename and restart the app. This cannot be undone.",
+                )
             },
             confirmButton = {
-                Button(onClick = { onCloudEvent(SettingsEvent.RestoreConfirmed) }) { Text("Restore") }
+                Button(onClick = { onLocalBackupEvent(SettingsEvent.RestoreConfirmed) }) { Text("Restore") }
             },
             dismissButton = {
-                TextButton(onClick = { onCloudEvent(SettingsEvent.RestoreDismissed) }) { Text("Cancel") }
+                TextButton(onClick = { onLocalBackupEvent(SettingsEvent.RestoreDismissed) }) { Text("Cancel") }
             },
         )
     }
@@ -283,22 +280,22 @@ fun SettingsScreen(
                     singleLine = true,
                 )
 
-                // Cloud & Data & Health Connect
-                if (matchingSections.any { it.id == "cloud_data_sync" }) {
+                // Data & Backup & Health Connect
+                if (matchingSections.any { it.id == "data_backup_sync" }) {
                     M3CollapsibleSection(
-                        header = "Cloud & Data",
+                        header = "Data & Backup",
                         expanded =
-                            !expandState.collapseCloudData ||
-                                shouldExpandSection("cloud_data_sync"),
+                            !expandState.collapseDataBackup ||
+                                shouldExpandSection("data_backup_sync"),
                         onExpandedChange = {
-                            expandState = expandState.copy(collapseCloudData = !it)
+                            expandState = expandState.copy(collapseDataBackup = !it)
                         },
                     ) {
                         Column {
-                            SectionHeader("Cloud Backup")
-                            CloudBackupSection(
-                                uiState = cloudState,
-                                onEvent = onCloudEvent,
+                            SectionHeader("Local Backup")
+                            LocalBackupSection(
+                                uiState = localBackupState,
+                                onEvent = onLocalBackupEvent,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Device")

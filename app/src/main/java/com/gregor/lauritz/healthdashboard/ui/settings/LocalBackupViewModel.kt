@@ -5,10 +5,9 @@ import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.MainActivity
-import com.gregor.lauritz.healthdashboard.data.drive.DriveAuthManager
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
-import com.gregor.lauritz.healthdashboard.domain.backup.BackupUseCase
-import com.gregor.lauritz.healthdashboard.domain.backup.RestoreUseCase
+import com.gregor.lauritz.healthdashboard.domain.backup.LocalBackupManager
+import com.gregor.lauritz.healthdashboard.domain.backup.LocalRestoreManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,36 +20,36 @@ import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
-class CloudBackupViewModel
+class LocalBackupViewModel
     @Inject
     constructor(
         private val settingsRepo: SettingsRepository,
-        private val driveAuthManager: DriveAuthManager,
-        private val backupUseCase: BackupUseCase,
-        private val restoreUseCase: RestoreUseCase,
+        private val localBackupManager: LocalBackupManager,
+        private val localRestoreManager: LocalRestoreManager,
     ) : ViewModel() {
         private val transientState = MutableStateFlow(TransientBackupState())
 
-        val uiState: StateFlow<CloudBackupState> =
+        val uiState: StateFlow<LocalBackupState> =
             combine(
                 settingsRepo.userPreferences,
                 transientState,
             ) { prefs, transient ->
-                CloudBackupState(
-                    driveAccountEmail = prefs.driveAccountEmail,
-                    backupSchedule = prefs.backupSchedule,
+                LocalBackupState(
                     lastBackupTimestamp = prefs.lastBackupTimestamp,
+                    backupSchedule = prefs.backupSchedule,
+                    backupDirectory = localBackupManager.getBackupDirectory().absolutePath,
                     isBackingUp = transient.isBackingUp,
                     isRestoring = transient.isRestoring,
                     showRestoreConfirmDialog = transient.showRestoreConfirmDialog,
-                    driveError = transient.driveError,
+                    backupError = transient.backupError,
                     restoreSuccess = transient.restoreSuccess,
-                    pendingRestoreDir = transient.pendingRestoreDir,
+                    pendingRestoreFile = transient.pendingRestoreFile,
+                    availableBackups = localBackupManager.listBackups(),
                 )
             }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
-                initialValue = CloudBackupState(),
+                initialValue = LocalBackupState(),
             )
 
         fun onEvent(
@@ -58,85 +57,86 @@ class CloudBackupViewModel
             context: Context,
         ) {
             when (event) {
-                SettingsEvent.BackupNow -> {
+                SettingsEvent.CreateLocalBackup -> {
                     viewModelScope.launch {
-                        transientState.update { it.copy(isBackingUp = true, driveError = null) }
-                        backupUseCase
-                            .execute()
-                            .onFailure { e ->
-                                transientState.update { it.copy(driveError = e.message ?: "Backup failed") }
+                        transientState.update { it.copy(isBackingUp = true, backupError = null) }
+                        localBackupManager
+                            .createBackup()
+                            .onSuccess {
+                                settingsRepo.updateLastBackupTimestamp(System.currentTimeMillis())
+                            }.onFailure { e ->
+                                transientState.update { it.copy(backupError = e.message ?: "Backup failed") }
                             }
                         transientState.update { it.copy(isBackingUp = false) }
                     }
                 }
-                SettingsEvent.RestoreFromDrive -> {
+                is SettingsEvent.RestoreLocalBackup -> {
                     viewModelScope.launch {
-                        transientState.update { it.copy(isRestoring = true, driveError = null) }
-                        restoreUseCase
-                            .downloadAndValidate()
-                            .onSuccess { dir ->
+                        transientState.update { it.copy(isRestoring = true, backupError = null) }
+                        localRestoreManager
+                            .validate(event.file)
+                            .onSuccess {
                                 transientState.update {
                                     it.copy(
                                         isRestoring = false,
                                         showRestoreConfirmDialog = true,
-                                        pendingRestoreDir = dir,
+                                        pendingRestoreFile = event.file,
                                     )
                                 }
                             }.onFailure { e ->
                                 transientState.update {
-                                    it.copy(isRestoring = false, driveError = e.message ?: "Restore download failed")
+                                    it.copy(isRestoring = false, backupError = e.message ?: "Restore validation failed")
                                 }
                             }
                     }
                 }
                 SettingsEvent.RestoreConfirmed -> {
-                    val dir = transientState.value.pendingRestoreDir ?: return
+                    val file = transientState.value.pendingRestoreFile ?: return
                     transientState.update { it.copy(showRestoreConfirmDialog = false, isRestoring = true) }
                     viewModelScope.launch {
-                        when (val result = restoreUseCase.applyRestore(dir)) {
-                            RestoreUseCase.RestoreResult.SuccessRequiresRestart -> {
+                        val result = localRestoreManager.applyRestore(file)
+                        when (result) {
+                            LocalRestoreManager.RestoreResult.SuccessRequiresRestart -> {
                                 val restartIntent =
                                     Intent(context, MainActivity::class.java).apply {
                                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                                     }
                                 context.startActivity(restartIntent)
                             }
-                            is RestoreUseCase.RestoreResult.Failure -> {
+                            is LocalRestoreManager.RestoreResult.Failure -> {
                                 transientState.update {
                                     it.copy(
                                         isRestoring = false,
-                                        driveError = result.cause.message,
+                                        backupError = result.cause.message,
                                     )
                                 }
                             }
-                            RestoreUseCase.RestoreResult.Success -> {
+                            LocalRestoreManager.RestoreResult.Success -> {
                                 transientState.update { it.copy(isRestoring = false) }
                             }
                         }
                     }
                 }
                 SettingsEvent.RestoreDismissed -> {
-                    transientState.value.pendingRestoreDir?.deleteRecursively()
-                    transientState.update { it.copy(showRestoreConfirmDialog = false, pendingRestoreDir = null) }
+                    transientState.update { it.copy(showRestoreConfirmDialog = false, pendingRestoreFile = null) }
+                }
+                is SettingsEvent.ChangeBackupDirectory -> {
+                    localBackupManager.updateBackupDirectory(event.path)
+                    // Trigger refresh
+                    transientState.update { it.copy() }
+                }
+                is SettingsEvent.DeleteLocalBackup -> {
+                    viewModelScope.launch {
+                        event.file.delete()
+                        // Trigger state refresh
+                        transientState.update { it.copy() }
+                    }
+                }
+                SettingsEvent.DismissBackupError -> {
+                    transientState.update { it.copy(backupError = null) }
                 }
                 is SettingsEvent.BackupScheduleChanged ->
                     viewModelScope.launch { settingsRepo.updateBackupSchedule(schedule = event.schedule) }
-                SettingsEvent.DriveSignOut -> {
-                    viewModelScope.launch {
-                        driveAuthManager.signOut(context = context)
-                        settingsRepo.updateDriveAccountEmail(email = null)
-                    }
-                }
-                SettingsEvent.DriveSignIn -> {
-                    viewModelScope.launch {
-                        driveAuthManager.signIn(activityContext = context).onFailure { e ->
-                            transientState.update { it.copy(driveError = e.message ?: "Sign-in failed") }
-                        }
-                    }
-                }
-                SettingsEvent.DismissDriveError -> {
-                    transientState.update { it.copy(driveError = null) }
-                }
                 else -> {}
             }
         }
@@ -145,8 +145,8 @@ class CloudBackupViewModel
             val isBackingUp: Boolean = false,
             val isRestoring: Boolean = false,
             val showRestoreConfirmDialog: Boolean = false,
-            val driveError: String? = null,
+            val backupError: String? = null,
             val restoreSuccess: Boolean = false,
-            val pendingRestoreDir: File? = null,
+            val pendingRestoreFile: File? = null,
         )
     }

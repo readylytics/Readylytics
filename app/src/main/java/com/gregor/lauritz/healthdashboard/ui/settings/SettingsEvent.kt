@@ -6,6 +6,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
+import java.io.File
 
 sealed interface SettingsEvent {
     data class GoalSleepHoursChanged(
@@ -124,23 +125,29 @@ sealed interface SettingsEvent {
         val enabled: Boolean,
     ) : SettingsEvent
 
-    data object DriveSignIn : SettingsEvent
+    data object CreateLocalBackup : SettingsEvent
 
-    data object DriveSignOut : SettingsEvent
-
-    data class BackupScheduleChanged(
-        val schedule: BackupSchedule,
+    data class RestoreLocalBackup(
+        val file: File,
     ) : SettingsEvent
-
-    data object BackupNow : SettingsEvent
-
-    data object RestoreFromDrive : SettingsEvent
 
     data object RestoreConfirmed : SettingsEvent
 
     data object RestoreDismissed : SettingsEvent
 
-    data object DismissDriveError : SettingsEvent
+    data object DismissBackupError : SettingsEvent
+
+    data class DeleteLocalBackup(
+        val file: File,
+    ) : SettingsEvent
+
+    data class ChangeBackupDirectory(
+        val path: String,
+    ) : SettingsEvent
+
+    data class BackupScheduleChanged(
+        val schedule: BackupSchedule,
+    ) : SettingsEvent
 
     data class RetentionDaysEnabledChanged(
         val enabled: Boolean,

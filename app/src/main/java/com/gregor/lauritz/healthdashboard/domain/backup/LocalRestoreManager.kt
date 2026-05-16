@@ -34,6 +34,8 @@ class LocalRestoreManager
         sealed class RestoreResult {
             data object Success : RestoreResult()
 
+            data object SuccessRequiresRestart : RestoreResult()
+
             data class Failure(
                 val cause: Throwable,
             ) : RestoreResult()
@@ -149,7 +151,7 @@ class LocalRestoreManager
                         restorePreferences(json.getJSONObject("preferences"))
                     }
 
-                    RestoreResult.Success
+                    RestoreResult.SuccessRequiresRestart
                 }.getOrElse { RestoreResult.Failure(it) }
             }
 

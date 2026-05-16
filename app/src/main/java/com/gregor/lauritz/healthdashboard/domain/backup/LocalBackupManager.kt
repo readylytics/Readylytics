@@ -30,7 +30,13 @@ class LocalBackupManager
         private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
     ) {
-        private val backupDir = File(context.filesDir, "backups")
+        private var backupDir = File(context.filesDir, "backups")
+
+        fun updateBackupDirectory(path: String) {
+            backupDir = File(path)
+        }
+
+        fun getBackupDirectory(): File = backupDir
 
         suspend fun createBackup(): Result<File> =
             withContext(Dispatchers.IO) {
@@ -162,7 +168,7 @@ class LocalBackupManager
             writer.name("id").value(h.id)
             writer.name("timestampMs").value(h.timestampMs)
             writer.name("rmssdMs").value(h.rmssdMs.toDouble())
-            writer.name("recordType").value(h.recordType.toLong())
+            writer.name("recordType").value(h.recordType)
             writer.name("sessionId").value(h.sessionId)
             writer.name("deviceName").value(h.deviceName)
             writer.endObject()

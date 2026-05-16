@@ -55,16 +55,17 @@ data class HeartRateZonesState(
     val zone4MaxBpm: Int = SettingsDefaults.ZONE_4_MAX_BPM,
 )
 
-data class CloudBackupState(
-    val driveAccountEmail: String? = SettingsDefaults.DRIVE_ACCOUNT_EMAIL,
-    val backupSchedule: BackupSchedule = SettingsDefaults.BACKUP_SCHEDULE,
+data class LocalBackupState(
     val lastBackupTimestamp: Long = SettingsDefaults.LAST_BACKUP_TIMESTAMP,
+    val backupSchedule: BackupSchedule = SettingsDefaults.BACKUP_SCHEDULE,
+    val backupDirectory: String = "",
     val isBackingUp: Boolean = false,
     val isRestoring: Boolean = false,
     val showRestoreConfirmDialog: Boolean = false,
-    val driveError: String? = null,
+    val backupError: String? = null,
     val restoreSuccess: Boolean = false,
-    val pendingRestoreDir: File? = null,
+    val pendingRestoreFile: File? = null,
+    val availableBackups: List<File> = emptyList(),
 )
 
 data class UIState(
