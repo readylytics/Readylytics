@@ -1,4 +1,4 @@
-package com.gregor.lauritz.healthdashboard.data.sync
+package com.gregor.lauritz.healthdashboard.domain.sync
 
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HeartRateMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HrvMapper
@@ -11,7 +11,6 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
-import com.gregor.lauritz.healthdashboard.domain.model.RecordType
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
@@ -50,47 +49,28 @@ class HealthSyncUseCase
                 withContext(Dispatchers.IO) {
                     runCatching {
                         logD("HealthSyncUseCase") { "Starting sync (window=$windowDays days)..." }
-                        val to = Instant.now()
+                        val today = LocalDate.now(ZoneId.systemDefault())
                         val zoneId = ZoneId.systemDefault()
-                        val from =
-                            LocalDate
-                                .now(zoneId)
-                                .minusDays(windowDays.toLong())
-                                .atStartOfDay(zoneId)
-                                .toInstant()
+                        val initialPrefs = settingsRepo.userPreferences.first()
 
+                        updateCalculatedMetrics(initialPrefs)
+                        // Re-fetch preferences in case they were updated by updateCalculatedMetrics
                         val prefs = settingsRepo.userPreferences.first()
 
-                        logD("HealthSyncUseCase") { "Reading records from Health Connect..." }
-                        val sleepSessions = hcRepo.readSleepSessions(from, to)
+                        val windowStart = today.minusDays((windowDays - 1).toLong()).atStartOfDay(zoneId).toInstant()
+                        val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
+
+                        logD("HealthSyncUseCase") { "Bulk fetching HC data for $windowDays days..." }
+
+                        val sleepSessions = hcRepo.readSleepSessions(windowStart, windowEnd)
                         val sleepEntities = sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
-                        val exerciseRecords = hcRepo.readExerciseSessions(from, to)
-                        val hrRecords = hcRepo.readHeartRateSamples(from, to)
-                        val hrvRecords = hcRepo.readHrvSamples(from, to)
+                        val exerciseRecords = hcRepo.readExerciseSessions(windowStart, windowEnd)
+                        val hrRecords = hcRepo.readHeartRateSamples(windowStart, windowEnd)
+                        val hrvRecords = hcRepo.readHrvSamples(windowStart, windowEnd)
 
-                        val totalSleepStages = sleepSessions.sumOf { it.stages.size }
-                        val hrSampleCounts = hrRecords.map { it.samples.size }
                         logD("HealthSyncUseCase") {
-                            "Fetched HC: sleep=${sleepEntities.size} stages=$totalSleepStages " +
-                                "hrv_rmssd=${hrvRecords.size} " +
-                                "hr_records=${hrRecords.size} hr_total_samples=${hrSampleCounts.sum()} " +
-                                "from=$from to=$to"
-                        }
-
-                        if (hrRecords.isNotEmpty()) {
-                            val sources = hrRecords.map { it.metadata.dataOrigin.packageName }.distinct()
-                            logD("HealthSyncUseCase") { "HR Sources: $sources per_record_samples=$hrSampleCounts" }
-                        }
-                        if (hrvRecords.isNotEmpty()) {
-                            val newest = hrvRecords.maxByOrNull { it.time }?.time
-                            val oldest = hrvRecords.minByOrNull { it.time }?.time
-                            logD("HealthSyncUseCase") { "HRV time range in fetch: oldest=$oldest newest=$newest" }
-                        }
-                        if (sleepEntities.isNotEmpty()) {
-                            val latestSession = sleepEntities.maxByOrNull { it.endTime }
-                            logD("HealthSyncUseCase") {
-                                "Latest sleep session: id=${latestSession?.id} start=${latestSession?.startTime} end=${latestSession?.endTime}"
-                            }
+                            "Bulk HC fetch complete: sleep=${sleepEntities.size} " +
+                                "hrv_rmssd=${hrvRecords.size} hr_records=${hrRecords.size}"
                         }
 
                         val thresholds =
@@ -101,6 +81,7 @@ class HealthSyncUseCase
                                 prefs.zone3MaxBpm,
                                 prefs.zone4MaxBpm,
                             )
+
                         val initialWorkouts =
                             exerciseRecords.map {
                                 WorkoutMapper.mapExerciseSession(
@@ -116,24 +97,9 @@ class HealthSyncUseCase
                                 val sessionSamples = hrBySession[session.metadata.id] ?: emptyList()
                                 WorkoutMapper.mapExerciseSession(session, sessionSamples, thresholds)
                             }
-
                         val hrvEntities = HrvMapper.mapToEntities(hrvRecords, sleepEntities)
 
-                        val (sleepHrv, restingHrv) = hrvEntities.partition { it.recordType == RecordType.SLEEP.name }
-                        logD(
-                            "HealthSyncUseCase",
-                        ) { "HRV classified: sleep=${sleepHrv.size} resting=${restingHrv.size}" }
-                        logD("HealthSyncUseCase") {
-                            "HR entities: ${hrEntities.size} sleep=${hrEntities.count {
-                                it.recordType == RecordType.SLEEP.name
-                            }}"
-                        }
-
                         val primaryDevice = prefs.primaryDeviceName
-                        if (primaryDevice != null) {
-                            logD("HealthSyncUseCase") { "Applying device preference: $primaryDevice" }
-                        }
-
                         val filteredSleep =
                             filterByDevicePreference(sleepEntities, primaryDevice, { it.deviceName }, { it.startTime })
                         val filteredWorkouts =
@@ -149,11 +115,8 @@ class HealthSyncUseCase
                             filterByDevicePreference(hrvEntities, primaryDevice, { it.deviceName }, { it.timestampMs })
 
                         logD("HealthSyncUseCase") {
-                            "Device filtering results: " +
-                                "sleep=${filteredSleep.size}/${sleepEntities.size} " +
-                                "workout=${filteredWorkouts.size}/${workoutEntities.size} " +
-                                "hr=${filteredHr.size}/${hrEntities.size} " +
-                                "hrv=${filteredHrv.size}/${hrvEntities.size}"
+                            "Device filtering: sleep=${filteredSleep.size} workouts=${filteredWorkouts.size} " +
+                                "hr=${filteredHr.size} hrv=${filteredHrv.size}"
                         }
 
                         sleepDao.upsertAll(filteredSleep)
@@ -161,9 +124,8 @@ class HealthSyncUseCase
                         heartRateDao.upsertAll(filteredHr)
                         hrvDao.upsertAll(filteredHrv)
 
-                        updateCalculatedMetrics(prefs)
-
-                        val today = LocalDate.now(zoneId)
+                        // Bulk-fetch steps in parallel to avoid sequential IPC calls
+                        logD("HealthSyncUseCase") { "Bulk fetching steps for $windowDays days..." }
                         val stepsMap: Map<LocalDate, Long> =
                             coroutineScope {
                                 (windowDays - 1 downTo 0)
@@ -178,29 +140,48 @@ class HealthSyncUseCase
                                     .toMap()
                             }
 
+                        var successCount = 0
+                        var failureCount = 0
+
                         for (i in (windowDays - 1) downTo 0) {
                             val day = today.minusDays(i.toLong())
                             val steps = stepsMap[day] ?: 0L
+                            val result = syncDayScoring(day, steps)
 
-                            // Run scoring first
-                            val afterScoring = scoringRepository.computeDailySummary(day)
-                            val stepCountInt = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-                            val finalSummary =
-                                afterScoring.copy(
-                                    stepCount = stepCountInt,
-                                )
-
-                            // Persist immediately so that the next day's calculation (which depends on previous days)
-                            // can find this summary in the database (critical for PAI accumulation).
-                            dailySummaryDao.upsert(finalSummary)
+                            result
+                                .onSuccess {
+                                    successCount++
+                                    logD("HealthSyncUseCase") { "Day $day: SUCCESS" }
+                                }.onFailure { e ->
+                                    failureCount++
+                                    logD("HealthSyncUseCase") { "Day $day: FAILED - ${e.message}" }
+                                }
                         }
 
+                        logD("HealthSyncUseCase") {
+                            "Sync complete: $successCount succeeded, $failureCount failed"
+                        }
                         settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
                     }
                 }
             }
 
         suspend fun catchUpSync(): Result<Unit> = sync(windowDays = 60)
+
+        private suspend fun syncDayScoring(
+            day: LocalDate,
+            steps: Long,
+        ): Result<Unit> =
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val afterScoring = scoringRepository.computeDailySummary(day)
+                    val stepCountInt = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                    val finalSummary = afterScoring.copy(stepCount = stepCountInt)
+                    dailySummaryDao.upsert(finalSummary)
+
+                    logD("HealthSyncUseCase") { "Day $day: scored (steps=$steps) and summary persisted" }
+                }
+            }
 
         private suspend fun updateCalculatedMetrics(prefs: UserPreferences) {
             // Always recalculate Max HR if auto-calculate is enabled (in case age changed via onboarding/settings)
@@ -244,7 +225,7 @@ class HealthSyncUseCase
                 primary.mapTo(mutableSetOf()) {
                     val ts = getTimestamp(it)
                     if (ts == lastTimestamp && lastLocalDate != null) {
-                        lastLocalDate!!
+                        lastLocalDate
                     } else {
                         val date = Instant.ofEpochMilli(ts).atZone(zoneId).toLocalDate()
                         lastTimestamp = ts
@@ -262,7 +243,7 @@ class HealthSyncUseCase
                     val ts = getTimestamp(it)
                     val date =
                         if (ts == lastTimestamp && lastLocalDate != null) {
-                            lastLocalDate!!
+                            lastLocalDate
                         } else {
                             val d = Instant.ofEpochMilli(ts).atZone(zoneId).toLocalDate()
                             lastTimestamp = ts

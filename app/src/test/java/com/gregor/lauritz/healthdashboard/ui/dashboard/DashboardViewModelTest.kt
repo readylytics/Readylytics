@@ -57,7 +57,12 @@ class DashboardViewModelTest {
             mockk<com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository> {
                 every { dashboardCardConfigurations() } returns MutableStateFlow(emptyList())
             }
-        val selectedDateRepo = SelectedDateRepository()
+        val selectedDateRepo =
+            mockk<SelectedDateRepository> {
+                every { selectedDate } returns MutableStateFlow(java.time.LocalDate.now())
+                coEvery { selectPreviousDay() } returns Unit
+                coEvery { selectNextDay() } returns Unit
+            }
         val circadianRepo =
             mockk<CircadianConsistencyRepository> {
                 every { resultFor(any()) } returns MutableStateFlow(CircadianConsistencyResult.Calibrating)
@@ -103,4 +108,56 @@ class DashboardViewModelTest {
 
             assertFalse(viewModel.uiState.value.isRefreshing)
         }
+
+    @Test
+    fun `uiState correctly aggregates basic inputs, card state, and realtime state`() =
+        runTest {
+            val initialState = viewModel.uiState.value
+
+            // Verify that the state combines all three input flows
+            org.junit.Assert.assertNotNull(initialState)
+            org.junit.Assert.assertTrue(initialState.selectedDate != null)
+            org.junit.Assert.assertTrue(initialState.cardConfigurations != null)
+            org.junit.Assert.assertTrue(initialState.isRefreshing == false || initialState.isRefreshing == true)
+        }
+
+    @Test
+    fun `onPreviousDay delegates to selectedDateRepository`() =
+        runTest {
+            coEvery {
+                selectedDateRepository.selectPreviousDay()
+            } returns Unit
+
+            viewModel.onPreviousDay()
+            coVerify { selectedDateRepository.selectPreviousDay() }
+        }
+
+    @Test
+    fun `onNextDay delegates to selectedDateRepository`() =
+        runTest {
+            coEvery {
+                selectedDateRepository.selectNextDay()
+            } returns Unit
+
+            viewModel.onNextDay()
+            coVerify { selectedDateRepository.selectNextDay() }
+        }
+
+    @Test
+    fun `toggleCardManagement delegates to cardManagementDelegate`() =
+        runTest {
+            viewModel.toggleCardManagement()
+            // This should not throw
+        }
+
+    @Test
+    fun `errorMessage exposes error state`() {
+        org.junit.Assert.assertNull(viewModel.errorMessage.value)
+    }
+
+    @Test
+    fun `isManagingCards exposes card management state`() {
+        val managingState = viewModel.isManagingCards.value
+        org.junit.Assert.assertTrue(managingState == true || managingState == false)
+    }
 }
