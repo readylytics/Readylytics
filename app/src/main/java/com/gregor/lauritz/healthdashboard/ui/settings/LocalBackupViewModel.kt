@@ -12,16 +12,24 @@ import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.domain.backup.LocalBackupManager
 import com.gregor.lauritz.healthdashboard.domain.backup.LocalRestoreManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class LocalBackupViewModel
     @Inject
@@ -33,11 +41,25 @@ class LocalBackupViewModel
     ) : ViewModel() {
         private val transientState = MutableStateFlow(TransientBackupState())
 
+        private val availableBackupsFlow: StateFlow<List<BackupFileInfo>> =
+            transientState
+                .map { it.refreshTrigger }
+                .distinctUntilChanged()
+                .flatMapLatest {
+                    flow { emit(localBackupManager.listBackups()) }
+                        .flowOn(Dispatchers.IO)
+                }.stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5000),
+                    initialValue = emptyList(),
+                )
+
         val uiState: StateFlow<LocalBackupState> =
             combine(
                 settingsRepo.userPreferences,
                 transientState,
-            ) { prefs, transient ->
+                availableBackupsFlow,
+            ) { prefs, transient, backups ->
                 LocalBackupState(
                     lastBackupTimestamp = prefs.lastBackupTimestamp,
                     backupSchedule = prefs.backupSchedule,
@@ -51,7 +73,7 @@ class LocalBackupViewModel
                     backupError = transient.backupError,
                     restoreSuccess = transient.restoreSuccess,
                     pendingRestoreFile = transient.pendingRestoreFile,
-                    availableBackups = localBackupManager.listBackups(),
+                    availableBackups = backups,
                     passwordVerificationResult = transient.passwordVerificationResult,
                 )
             }.stateIn(
