@@ -49,6 +49,7 @@ fun SyncSettingsSection(
 @Composable
 fun DataManagementSection(
     uiState: UIState,
+    isResyncing: Boolean,
     onEvent: (SettingsEvent) -> Unit,
     onSyncEvent: (SettingsEvent) -> Unit,
 ) {
@@ -119,10 +120,10 @@ fun DataManagementSection(
         ) {
             Button(
                 onClick = { onSyncEvent(SettingsEvent.ResyncHealthConnect) },
-                enabled = !uiState.isResyncing,
+                enabled = !isResyncing,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                if (uiState.isResyncing) {
+                if (isResyncing) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         color = MaterialTheme.colorScheme.onPrimary,

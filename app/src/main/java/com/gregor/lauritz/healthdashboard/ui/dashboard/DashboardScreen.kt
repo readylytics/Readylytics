@@ -11,10 +11,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,8 +45,18 @@ fun DashboardRoute(
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(errorMessage) {
+        if (errorMessage != null) {
+            snackbarHostState.showSnackbar(errorMessage ?: "Error")
+        }
+    }
+
     DashboardScreen(
         uiState = uiState,
+        snackbarHostState = snackbarHostState,
         onRefresh = viewModel::onRefresh,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
@@ -61,6 +75,7 @@ fun DashboardRoute(
 @Composable
 fun DashboardScreen(
     uiState: DashboardUiState,
+    snackbarHostState: SnackbarHostState,
     onRefresh: () -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
@@ -79,117 +94,133 @@ fun DashboardScreen(
     val sheetState = rememberModalBottomSheetState()
     var showCardManagement by remember { mutableStateOf(false) }
 
-    if (showCardManagement) {
-        CardManagementBottomSheet(
-            cards = uiState.cardConfigurations,
-            onCardVisibilityChanged = onCardVisibilityChanged,
-            onResetToDefaults = onResetToDefaults,
-            onDismiss = {
-                scope.launch { sheetState.hide() }
-                showCardManagement = false
-            },
-            sheetState = sheetState,
-        )
-    }
-
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 16.dp),
-    ) {
-        item(key = "date_switcher") {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-            ) {
-                DateSwitcher(
-                    selectedDate = uiState.selectedDate,
-                    onPreviousDay = onPreviousDay,
-                    onNextDay = onNextDay,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+    Box(modifier = modifier.fillMaxSize()) {
+        if (showCardManagement) {
+            CardManagementBottomSheet(
+                cards = uiState.cardConfigurations,
+                onCardVisibilityChanged = onCardVisibilityChanged,
+                onResetToDefaults = onResetToDefaults,
+                onDismiss = {
+                    scope.launch { sheetState.hide() }
+                    showCardManagement = false
+                },
+                sheetState = sheetState,
+            )
         }
 
-        if (uiState.isCalibrating) {
-            item(key = "calibration_banner") {
-                CalibrationBanner(
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = 16.dp),
+        ) {
+            item(key = "date_switcher") {
+                Column(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                )
+                            .padding(horizontal = 16.dp),
+                ) {
+                    DateSwitcher(
+                        selectedDate = uiState.selectedDate,
+                        onPreviousDay = onPreviousDay,
+                        onNextDay = onNextDay,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
-        }
 
-        if (summary == null && (uiState.selectedDate < LocalDate.now())) {
-            item(key = "no_data_placeholder") {
+            if (uiState.isCalibrating) {
+                item(key = "calibration_banner") {
+                    CalibrationBanner(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
+            }
+
+            if (summary == null && (uiState.selectedDate < LocalDate.now())) {
+                item(key = "no_data_placeholder") {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "No data for this day",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            } else {
+                item(key = "metric_grid") {
+                    ReorderableCardGrid(
+                        cardConfigurations = uiState.cardConfigurations,
+                        cardDataMap =
+                            buildCardDataMap(
+                                uiState = uiState,
+                                onNavigateToSleep = onNavigateToSleep,
+                                onNavigateToWorkouts = onNavigateToWorkouts,
+                                onNavigateToRhr = onNavigateToRhr,
+                                onNavigateToSteps = onNavigateToSteps,
+                                isEditing = uiState.isManagingCards,
+                            ),
+                        isEditing = uiState.isManagingCards,
+                        onCardRemove = { cardId ->
+                            onCardVisibilityChanged(cardId, false)
+                        },
+                        onCardReorder = onReorderCards,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                }
+            }
+
+            item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(16.dp)) }
+
+            item(key = "status_legend") {
+                StatusLegend()
+            }
+
+            item(key = "customize_button") {
                 Box(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 48.dp),
+                            .padding(vertical = 16.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = "No data for this day",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    TextButton(
+                        onClick = {
+                            if (!uiState.isManagingCards) {
+                                showCardManagement = true
+                            }
+                            onToggleCardManagement()
+                        },
+                    ) {
+                        Text(
+                            text = if (uiState.isManagingCards) "Done" else "Customize",
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
                 }
             }
-        } else {
-            item(key = "metric_grid") {
-                ReorderableCardGrid(
-                    cardConfigurations = uiState.cardConfigurations,
-                    cardDataMap =
-                        buildCardDataMap(
-                            uiState = uiState,
-                            onNavigateToSleep = onNavigateToSleep,
-                            onNavigateToWorkouts = onNavigateToWorkouts,
-                            onNavigateToRhr = onNavigateToRhr,
-                            onNavigateToSteps = onNavigateToSteps,
-                            isEditing = uiState.isManagingCards,
-                        ),
-                    isEditing = uiState.isManagingCards,
-                    onCardRemove = { cardId ->
-                        onCardVisibilityChanged(cardId, false)
-                    },
-                    onCardReorder = onReorderCards,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+        }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp),
+            snackbar = { data ->
+                Snackbar(
+                    data,
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
                 )
-            }
-        }
-
-        item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(16.dp)) }
-
-        item(key = "status_legend") {
-            StatusLegend()
-        }
-
-        item(key = "customize_button") {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                TextButton(
-                    onClick = {
-                        if (!uiState.isManagingCards) {
-                            showCardManagement = true
-                        }
-                        onToggleCardManagement()
-                    },
-                ) {
-                    Text(
-                        text = if (uiState.isManagingCards) "Done" else "Customize",
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            }
-        }
+            },
+        )
     }
 }

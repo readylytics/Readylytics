@@ -302,7 +302,12 @@ fun SettingsScreen(
                             DeviceSelectionSection()
                             Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Data Management")
-                            DataManagementSection(uiState = uiState, onEvent = onUIEvent, onSyncEvent = onSyncEvent)
+                            DataManagementSection(
+                                uiState = uiState,
+                                isResyncing = syncState.isResyncing,
+                                onEvent = onUIEvent,
+                                onSyncEvent = onSyncEvent,
+                            )
                             Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Health Connect")
                             SyncSettingsSection(uiState = syncState, onEvent = onSyncEvent)

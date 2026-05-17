@@ -91,8 +91,11 @@ class SyncSettingsViewModel
                 SettingsEvent.ResyncHealthConnect -> {
                     viewModelScope.launch {
                         _isResyncing.value = true
-                        resyncHealthConnectUseCase.execute()
-                        _isResyncing.value = false
+                        try {
+                            resyncHealthConnectUseCase.execute()
+                        } finally {
+                            _isResyncing.value = false
+                        }
                     }
                 }
                 else -> {}

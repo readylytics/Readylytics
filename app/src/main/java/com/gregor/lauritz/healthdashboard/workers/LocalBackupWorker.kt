@@ -10,6 +10,8 @@ import com.gregor.lauritz.healthdashboard.BuildConfig
 import com.gregor.lauritz.healthdashboard.domain.backup.LocalBackupManager
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import java.io.IOException
+import java.io.InterruptedIOException
 
 @HiltWorker
 class LocalBackupWorker
@@ -29,7 +31,14 @@ class LocalBackupWorker
                 else -> {
                     val cause = result.exceptionOrNull()
                     if (BuildConfig.DEBUG) Log.e(TAG, "Local backup failed", cause)
-                    Result.failure(workDataOf("error" to (cause?.message ?: "Unknown error")))
+                    when (cause) {
+                        is IOException, is InterruptedIOException -> {
+                            Result.retry()
+                        }
+                        else -> {
+                            Result.failure(workDataOf("error" to (cause?.message ?: "Unknown error")))
+                        }
+                    }
                 }
             }
         }
