@@ -11,10 +11,15 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.HrvRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import net.lingala.zip4j.ZipFile
+import net.lingala.zip4j.model.ZipParameters
+import net.lingala.zip4j.model.enums.AesKeyStrength
+import net.lingala.zip4j.model.enums.EncryptionMethod
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
@@ -32,6 +37,7 @@ class LocalBackupManager
         @ApplicationContext private val context: Context,
         private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
+        private val encryptionManager: EncryptionManager,
     ) {
         private val defaultBackupDir = File(context.filesDir, "backups")
 
@@ -43,103 +49,146 @@ class LocalBackupManager
 
                     val timestamp =
                         Instant.now().atZone(ZoneId.systemDefault()).format(FILENAME_FORMATTER)
-                    val filename = "backup_$timestamp.json"
+                    val jsonFilename = "backup_$timestamp.json"
+                    val zipFilename = "backup_$timestamp.zip"
 
-                    val outputStream: OutputStream
-                    var resultFile: File? = null
+                    // 1. Write JSON to a temporary file
+                    val tempJsonFile = File(context.cacheDir, jsonFilename)
+                    FileOutputStream(tempJsonFile).use { fos ->
+                        writeJsonToStream(fos)
+                    }
+
+                    // 2. Fetch and decrypt backup password
+                    val password =
+                        prefs.backupPasswordHash?.let { hash ->
+                            encryptionManager.decrypt(hash)
+                        }
+
+                    // 3. Create ZIP file
+                    val finalFile: File
+                    val outputStream: OutputStream?
 
                     if (customUri != null) {
                         val dir =
                             DocumentFile.fromTreeUri(context, customUri)
                                 ?: throw IllegalStateException("Could not access custom backup directory")
                         val file =
-                            dir.createFile("application/json", filename)
+                            dir.createFile("application/zip", zipFilename)
                                 ?: throw IllegalStateException("Could not create backup file in custom directory")
-                        outputStream = context.contentResolver.openOutputStream(file.uri)
-                            ?: throw IllegalStateException("Could not open output stream for custom backup file")
+
+                        // Zip4j needs a File or can work with Streams, but for SAF it's tricky.
+                        // We'll create the ZIP in cache and then copy to SAF.
+                        val tempZipFile = File(context.cacheDir, zipFilename)
+                        createZip(tempJsonFile, tempZipFile, password)
+
+                        context.contentResolver.openOutputStream(file.uri)?.use { os ->
+                            tempZipFile.inputStream().use { it.copyTo(os) }
+                        }
+                        tempZipFile.delete()
+                        finalFile = tempJsonFile // Just a placeholder, we return null for customUri usually or the file
+                        outputStream = null // Already closed
                     } else {
                         defaultBackupDir.mkdirs()
                         pruneOldBackups(defaultBackupDir)
-                        val file = File(defaultBackupDir, filename)
-                        outputStream = FileOutputStream(file)
-                        resultFile = file
+                        finalFile = File(defaultBackupDir, zipFilename)
+                        createZip(tempJsonFile, finalFile, password)
                     }
 
-                    val sleepSessionDao = healthDatabase.sleepSessionDao()
-                    val heartRateDao = healthDatabase.heartRateDao()
-                    val hrvDao = healthDatabase.hrvDao()
-                    val workoutDao = healthDatabase.workoutDao()
-                    val dailySummaryDao = healthDatabase.dailySummaryDao()
+                    // 4. Cleanup
+                    tempJsonFile.delete()
 
-                    val rowCounts =
-                        mapOf(
-                            "sleepSessions" to sleepSessionDao.count(),
-                            "heartRateRecords" to heartRateDao.count(),
-                            "hrvRecords" to hrvDao.count(),
-                            "workouts" to workoutDao.count(),
-                            "dailySummaries" to dailySummaryDao.count(),
-                        )
-
-                    outputStream.use { os ->
-                        JsonWriter(OutputStreamWriter(os, "UTF-8")).use { writer ->
-                            writer.setIndent("  ")
-                            writer.beginObject()
-
-                            writer.name("schemaVersion").value(HealthDatabase.DATABASE_VERSION.toLong())
-                            writer.name("exportedAt").value(Instant.now().toString())
-
-                            writer.name("rowCounts")
-                            writer.beginObject()
-                            rowCounts.forEach { (key, value) ->
-                                writer.name(key).value(value.toLong())
-                            }
-                            writer.endObject()
-
-                            writer.name("preferences")
-                            writePreferences(writer)
-
-                            writer.name("sleepSessions")
-                            writer.beginArray()
-                            sleepSessionDao.getSince(0).forEach { s ->
-                                writeSleepSession(writer, s)
-                            }
-                            writer.endArray()
-
-                            writer.name("heartRateRecords")
-                            writer.beginArray()
-                            heartRateDao.getSince(0).forEach { h ->
-                                writeHeartRateRecord(writer, h)
-                            }
-                            writer.endArray()
-
-                            writer.name("hrvRecords")
-                            writer.beginArray()
-                            hrvDao.getSince(0).forEach { hrv ->
-                                writeHrvRecord(writer, hrv)
-                            }
-                            writer.endArray()
-
-                            writer.name("workouts")
-                            writer.beginArray()
-                            workoutDao.getSince(0).forEach { w ->
-                                writeWorkout(writer, w)
-                            }
-                            writer.endArray()
-
-                            writer.name("dailySummaries")
-                            writer.beginArray()
-                            dailySummaryDao.getSince(0).forEach { d ->
-                                writeDailySummary(writer, d)
-                            }
-                            writer.endArray()
-
-                            writer.endObject()
-                        }
-                    }
-
-                    resultFile
+                    if (customUri != null) null else finalFile
                 }
             }
+
+        private fun createZip(
+            inputFile: File,
+            zipFile: File,
+            password: String?,
+        ) {
+            val zip = ZipFile(zipFile, password?.toCharArray())
+            val parameters =
+                ZipParameters().apply {
+                    if (password != null) {
+                        isEncryptFiles = true
+                        encryptionMethod = EncryptionMethod.AES
+                        aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                    }
+                }
+            zip.addFile(inputFile, parameters)
+        }
+
+        private suspend fun writeJsonToStream(outputStream: OutputStream) {
+            val sleepSessionDao = healthDatabase.sleepSessionDao()
+            val heartRateDao = healthDatabase.heartRateDao()
+            val hrvDao = healthDatabase.hrvDao()
+            val workoutDao = healthDatabase.workoutDao()
+            val dailySummaryDao = healthDatabase.dailySummaryDao()
+
+            val rowCounts =
+                mapOf(
+                    "sleepSessions" to sleepSessionDao.count(),
+                    "heartRateRecords" to heartRateDao.count(),
+                    "hrvRecords" to hrvDao.count(),
+                    "workouts" to workoutDao.count(),
+                    "dailySummaries" to dailySummaryDao.count(),
+                )
+
+            JsonWriter(OutputStreamWriter(outputStream, "UTF-8")).use { writer ->
+                writer.setIndent("  ")
+                writer.beginObject()
+
+                writer.name("schemaVersion").value(HealthDatabase.DATABASE_VERSION.toLong())
+                writer.name("exportedAt").value(Instant.now().toString())
+
+                writer.name("rowCounts")
+                writer.beginObject()
+                rowCounts.forEach { (key, value) ->
+                    writer.name(key).value(value.toLong())
+                }
+                writer.endObject()
+
+                writer.name("preferences")
+                writePreferences(writer)
+
+                writer.name("sleepSessions")
+                writer.beginArray()
+                sleepSessionDao.getSince(0).forEach { s ->
+                    writeSleepSession(writer, s)
+                }
+                writer.endArray()
+
+                writer.name("heartRateRecords")
+                writer.beginArray()
+                heartRateDao.getSince(0).forEach { h ->
+                    writeHeartRateRecord(writer, h)
+                }
+                writer.endArray()
+
+                writer.name("hrvRecords")
+                writer.beginArray()
+                hrvDao.getSince(0).forEach { hrv ->
+                    writeHrvRecord(writer, hrv)
+                }
+                writer.endArray()
+
+                writer.name("workouts")
+                writer.beginArray()
+                workoutDao.getSince(0).forEach { w ->
+                    writeWorkout(writer, w)
+                }
+                writer.endArray()
+
+                writer.name("dailySummaries")
+                writer.beginArray()
+                dailySummaryDao.getSince(0).forEach { d ->
+                    writeDailySummary(writer, d)
+                }
+                writer.endArray()
+
+                writer.endObject()
+            }
+        }
 
         private fun writeSleepSession(
             writer: JsonWriter,
@@ -295,18 +344,83 @@ class LocalBackupManager
             }
             writer.name("syncPreference").value(prefs.syncPreference.name)
             writer.name("syncIntervalHours").value(prefs.syncIntervalHours.toLong())
+            writer.name("lastSyncTimestamp").value(prefs.lastSyncTimestamp)
             writer.name("maxHeartRate").value(prefs.maxHeartRate.toLong())
-            writer.name("hrvOptimalThreshold").value(prefs.hrvOptimalThreshold.toLong())
-            writer.name("hrvWarningThreshold").value(prefs.hrvWarningThreshold.toLong())
-            writer.name("rhrOptimalThreshold").value(prefs.rhrOptimalThreshold.toLong())
-            writer.name("rhrWarningThreshold").value(prefs.rhrWarningThreshold.toLong())
-            writer.name("restingHrBeforeMinutes").value(prefs.restingHrBeforeMinutes.toLong())
-            writer.name("restingHrAfterMinutes").value(prefs.restingHrAfterMinutes.toLong())
-            writer.name("appTheme").value(prefs.appTheme.name)
-            writer.name("backupSchedule").value(prefs.backupSchedule.name)
+            writer.name("autoCalculateMaxHr").value(prefs.autoCalculateMaxHr)
+            writer.name("manualZoneEditing").value(prefs.manualZoneEditing)
+            writer.name("zone1MinPercent").value(prefs.zone1MinPercent.toDouble())
+            writer.name("zone1MaxPercent").value(prefs.zone1MaxPercent.toDouble())
+            writer.name("zone2MaxPercent").value(prefs.zone2MaxPercent.toDouble())
+            writer.name("zone3MaxPercent").value(prefs.zone3MaxPercent.toDouble())
+            writer.name("zone4MaxPercent").value(prefs.zone4MaxPercent.toDouble())
+            writer.name("zone1MinBpm").value(prefs.zone1MinBpm.toLong())
+            writer.name("zone1MaxBpm").value(prefs.zone1MaxBpm.toLong())
+            writer.name("zone2MaxBpm").value(prefs.zone2MaxBpm.toLong())
+            writer.name("zone3MaxBpm").value(prefs.zone3MaxBpm.toLong())
+            writer.name("zone4MaxBpm").value(prefs.zone4MaxBpm.toLong())
+            writer.name("age").value(prefs.age.toLong())
             writer.name("birthDay").value(prefs.birthDay.toLong())
             writer.name("birthMonth").value(prefs.birthMonth.toLong())
             writer.name("birthYear").value(prefs.birthYear.toLong())
+            if (prefs.gender != null) {
+                writer.name("gender").value(prefs.gender.name)
+            } else {
+                writer.name("gender").nullValue()
+            }
+            writer.name("hrvOptimalThreshold").value(prefs.hrvOptimalThreshold.toDouble())
+            writer.name("hrvWarningThreshold").value(prefs.hrvWarningThreshold.toDouble())
+            writer.name("rhrOptimalThreshold").value(prefs.rhrOptimalThreshold.toDouble())
+            writer.name("rhrWarningThreshold").value(prefs.rhrWarningThreshold.toDouble())
+            writer.name("restingHrBeforeMinutes").value(prefs.restingHrBeforeMinutes.toLong())
+            writer.name("restingHrAfterMinutes").value(prefs.restingHrAfterMinutes.toLong())
+            writer.name("appTheme").value(prefs.appTheme.name)
+            if (prefs.driveAccountEmail != null) {
+                writer.name("driveAccountEmail").value(prefs.driveAccountEmail)
+            } else {
+                writer.name("driveAccountEmail").nullValue()
+            }
+            writer.name("backupSchedule").value(prefs.backupSchedule.name)
+            writer.name("lastBackupTimestamp").value(prefs.lastBackupTimestamp)
+            writer.name("consistencyThresholdMinutes").value(prefs.consistencyThresholdMinutes.toLong())
+            writer.name("consistencyEvaluationDays").value(prefs.consistencyEvaluationDays.toLong())
+            writer.name("consistencyBaselineDays").value(prefs.consistencyBaselineDays.toLong())
+            writer.name("paiScalingFactor").value(prefs.paiScalingFactor.toDouble())
+            writer.name("stepGoal").value(prefs.stepGoal.toLong())
+            writer.name("retentionDaysEnabled").value(prefs.retentionDaysEnabled)
+            writer.name("retentionDays").value(prefs.retentionDays.toLong())
+            writer.name("collapseCloudData").value(prefs.collapseCloudData)
+            writer.name("collapseHealthConnect").value(prefs.collapseHealthConnect)
+            writer.name("collapseBaselinesThresholds").value(prefs.collapseBaselinesThresholds)
+            writer.name("collapseDisplay").value(prefs.collapseDisplay)
+            writer.name("collapseAdvanced").value(prefs.collapseAdvanced)
+            writer.name("aboutDismissed").value(prefs.aboutDismissed)
+            writer.name("physiologyProfile").value(prefs.physiologyProfile.name)
+            writer.name("installDate").value(prefs.installDate)
+            if (prefs.circadianThresholdOverride != null) {
+                writer.name("circadianThresholdOverride").value(prefs.circadianThresholdOverride)
+            } else {
+                writer.name("circadianThresholdOverride").nullValue()
+            }
+            writer.name("dynamicColorEnabled").value(prefs.dynamicColorEnabled)
+            writer.name("trimpModel").value(prefs.trimpModel.name)
+            writer.name("banisterMultiplier").value(prefs.banisterMultiplier.toDouble())
+            writer.name("chengBeta").value(prefs.chengBeta.toDouble())
+            writer.name("itrimB").value(prefs.itrimB.toDouble())
+            if (prefs.primaryDeviceName != null) {
+                writer.name("primaryDeviceName").value(prefs.primaryDeviceName)
+            } else {
+                writer.name("primaryDeviceName").nullValue()
+            }
+            if (prefs.backupDirectoryUri != null) {
+                writer.name("backupDirectoryUri").value(prefs.backupDirectoryUri)
+            } else {
+                writer.name("backupDirectoryUri").nullValue()
+            }
+            if (prefs.backupPasswordHash != null) {
+                writer.name("backupPasswordHash").value(prefs.backupPasswordHash)
+            } else {
+                writer.name("backupPasswordHash").nullValue()
+            }
             writer.endObject()
         }
 
@@ -319,14 +433,14 @@ class LocalBackupManager
                     val dir = DocumentFile.fromTreeUri(context, customUri)
                     dir
                         ?.listFiles()
-                        ?.filter { it.name?.startsWith("backup_") == true && it.name?.endsWith(".json") == true }
+                        ?.filter { it.name?.startsWith("backup_") == true && it.name?.endsWith(".zip") == true }
                         ?.map { BackupFileInfo(it.name!!, it.lastModified(), it.length(), it.uri) }
                         ?.sortedByDescending { it.lastModified }
                         ?: emptyList()
                 } else {
                     defaultBackupDir.mkdirs()
                     defaultBackupDir
-                        .listFiles { f -> f.name.startsWith("backup_") && f.name.endsWith(".json") }
+                        .listFiles { f -> f.name.startsWith("backup_") && f.name.endsWith(".zip") }
                         ?.map { BackupFileInfo(it.name, it.lastModified(), it.length(), Uri.fromFile(it)) }
                         ?.sortedByDescending { it.lastModified }
                         ?: emptyList()
