@@ -1,6 +1,5 @@
 package com.gregor.lauritz.healthdashboard.domain.dashboard
 
-import android.content.Context
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
@@ -12,10 +11,10 @@ import com.gregor.lauritz.healthdashboard.domain.model.paiStatus
 import com.gregor.lauritz.healthdashboard.domain.model.restingHrStatus
 import com.gregor.lauritz.healthdashboard.domain.model.rhrStatus
 import com.gregor.lauritz.healthdashboard.domain.model.sleepDurationStatus
+import com.gregor.lauritz.healthdashboard.domain.util.ResourceProvider
 import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
 import com.gregor.lauritz.healthdashboard.ui.dashboard.CardData
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardAction
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -28,7 +27,7 @@ import javax.inject.Singleton
 class GetDashboardDataUseCase
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
+        private val resourceProvider: ResourceProvider,
         private val getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase,
     ) {
         data class DashboardCards(
@@ -101,7 +100,7 @@ class GetDashboardDataUseCase
                 unit = "",
                 status = status,
                 action = DashboardAction.NAVIGATE_WORKOUTS,
-                tooltip = context.getString(R.string.tooltip_pai),
+                tooltip = resourceProvider.getString(R.string.tooltip_pai),
             )
         }
 
@@ -152,11 +151,18 @@ class GetDashboardDataUseCase
 
             val tooltip =
                 buildString {
-                    append(context.getString(R.string.tooltip_sleep_rhr))
+                    append(resourceProvider.getString(R.string.tooltip_sleep_rhr))
                     if (rhrBaseline != null && rhrArrow != null && rhrDiff != null) {
-                        append(context.getString(R.string.tooltip_sleep_rhr_baseline, rhrBaseline, rhrArrow, rhrDiff))
+                        append(
+                            resourceProvider.getString(
+                                R.string.tooltip_sleep_rhr_baseline,
+                                rhrBaseline,
+                                rhrArrow,
+                                rhrDiff,
+                            ),
+                        )
                     } else {
-                        append(context.getString(R.string.tooltip_sleep_rhr_no_baseline))
+                        append(resourceProvider.getString(R.string.tooltip_sleep_rhr_no_baseline))
                     }
                 }
 
@@ -195,24 +201,31 @@ class GetDashboardDataUseCase
 
             val tooltip =
                 buildString {
-                    append(context.getString(R.string.tooltip_sleep_hrv))
+                    append(resourceProvider.getString(R.string.tooltip_sleep_hrv))
                     if (hrvBaseline != null) {
                         if (hrvArrow != null && hrvDiff != null) {
                             append(
-                                context.getString(R.string.tooltip_sleep_hrv_baseline, hrvBaseline, hrvArrow, hrvDiff),
+                                resourceProvider.getString(
+                                    R.string.tooltip_sleep_hrv_baseline,
+                                    hrvBaseline,
+                                    hrvArrow,
+                                    hrvDiff,
+                                ),
                             )
                         } else {
-                            append(context.getString(R.string.tooltip_sleep_hrv_baseline_no_today, hrvBaseline))
+                            append(
+                                resourceProvider.getString(R.string.tooltip_sleep_hrv_baseline_no_today, hrvBaseline),
+                            )
                         }
                     } else {
-                        append(context.getString(R.string.tooltip_sleep_hrv_no_baseline))
+                        append(resourceProvider.getString(R.string.tooltip_sleep_hrv_no_baseline))
                     }
                     val z = summary.zLnHrv
                     val sigma = summary.hrvSigma
                     if (z != null && sigma != null) {
                         val zStr = String.format(Locale.getDefault(), "%.2f", z)
                         val sigmaStr = String.format(Locale.getDefault(), "%.3f", sigma)
-                        append(context.getString(R.string.tooltip_sleep_hrv_diagnostics, zStr, sigmaStr))
+                        append(resourceProvider.getString(R.string.tooltip_sleep_hrv_diagnostics, zStr, sigmaStr))
                     }
                 }
 
@@ -249,7 +262,7 @@ class GetDashboardDataUseCase
                 unit = "",
                 status = durationStatus,
                 action = DashboardAction.NAVIGATE_SLEEP,
-                tooltip = context.getString(R.string.tooltip_sleep_duration, goalStr),
+                tooltip = resourceProvider.getString(R.string.tooltip_sleep_duration, goalStr),
             ).let {
                 if (lastNightText != null) it.copy(secondaryText = lastNightText) else it
             }
@@ -274,7 +287,7 @@ class GetDashboardDataUseCase
                                 else -> "="
                             }
                         append(
-                            context.getString(
+                            resourceProvider.getString(
                                 R.string.tooltip_resting_hr_baseline,
                                 prefs.restingHrBeforeMinutes,
                                 prefs.restingHrAfterMinutes,
@@ -284,7 +297,7 @@ class GetDashboardDataUseCase
                             ),
                         )
                     } else {
-                        append(context.getString(R.string.tooltip_resting_hr_no_baseline))
+                        append(resourceProvider.getString(R.string.tooltip_resting_hr_no_baseline))
                     }
                 }
 

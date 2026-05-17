@@ -1,22 +1,22 @@
 package com.gregor.lauritz.healthdashboard.ui.settings
 
-import android.content.Context
-import android.content.Intent
-import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gregor.lauritz.healthdashboard.MainActivity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
-import com.gregor.lauritz.healthdashboard.domain.backup.LocalBackupManager
-import com.gregor.lauritz.healthdashboard.domain.backup.LocalRestoreManager
+import com.gregor.lauritz.healthdashboard.domain.backup.BackupService
+import com.gregor.lauritz.healthdashboard.domain.backup.RestoreResult
+import com.gregor.lauritz.healthdashboard.domain.backup.RestoreService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -35,10 +35,21 @@ class LocalBackupViewModel
     @Inject
     constructor(
         private val settingsRepo: SettingsRepository,
-        private val localBackupManager: LocalBackupManager,
-        private val localRestoreManager: LocalRestoreManager,
+        private val backupService: BackupService,
+        private val restoreService: RestoreService,
         private val encryptionManager: EncryptionManager,
     ) : ViewModel() {
+        sealed interface SideEffect {
+            data object RestartApp : SideEffect
+
+            data class TakePersistableUriPermission(
+                val uri: String,
+            ) : SideEffect
+        }
+
+        private val _sideEffect = MutableSharedFlow<SideEffect>()
+        val sideEffect: SharedFlow<SideEffect> = _sideEffect.asSharedFlow()
+
         private val transientState = MutableStateFlow(TransientBackupState())
 
         private val availableBackupsFlow: StateFlow<List<BackupFileInfo>> =
@@ -46,7 +57,7 @@ class LocalBackupViewModel
                 .map { it.refreshTrigger }
                 .distinctUntilChanged()
                 .flatMapLatest {
-                    flow { emit(localBackupManager.listBackups()) }
+                    flow { emit(backupService.listBackups()) }
                         .flowOn(Dispatchers.IO)
                 }.stateIn(
                     scope = viewModelScope,
@@ -82,10 +93,7 @@ class LocalBackupViewModel
                 initialValue = LocalBackupState(),
             )
 
-        fun onEvent(
-            event: SettingsEvent,
-            context: Context,
-        ) {
+        fun onEvent(event: SettingsEvent) {
             when (event) {
                 SettingsEvent.CreateLocalBackup -> {
                     viewModelScope.launch {
@@ -100,7 +108,7 @@ class LocalBackupViewModel
                 is SettingsEvent.RestoreLocalBackup -> {
                     viewModelScope.launch {
                         transientState.update { it.copy(isRestoring = true, backupError = null) }
-                        localRestoreManager
+                        restoreService
                             .validate(event.file.uri)
                             .onSuccess {
                                 transientState.update {
@@ -121,15 +129,11 @@ class LocalBackupViewModel
                     val file = transientState.value.pendingRestoreFile ?: return
                     transientState.update { it.copy(showRestoreConfirmDialog = false, isRestoring = true) }
                     viewModelScope.launch {
-                        when (val result = localRestoreManager.applyRestore(file.uri)) {
-                            LocalRestoreManager.RestoreResult.SuccessRequiresRestart -> {
-                                val restartIntent =
-                                    Intent(context, MainActivity::class.java).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                                    }
-                                context.startActivity(restartIntent)
+                        when (val result = restoreService.applyRestore(file.uri)) {
+                            RestoreResult.SuccessRequiresRestart -> {
+                                _sideEffect.emit(SideEffect.RestartApp)
                             }
-                            is LocalRestoreManager.RestoreResult.Failure -> {
+                            is RestoreResult.Failure -> {
                                 transientState.update {
                                     it.copy(
                                         isRestoring = false,
@@ -137,7 +141,7 @@ class LocalBackupViewModel
                                     )
                                 }
                             }
-                            LocalRestoreManager.RestoreResult.Success -> {
+                            RestoreResult.Success -> {
                                 transientState.update { it.copy(isRestoring = false, restoreSuccess = true) }
                             }
                         }
@@ -148,17 +152,13 @@ class LocalBackupViewModel
                 }
                 is SettingsEvent.ChangeBackupDirectory -> {
                     viewModelScope.launch {
-                        val uri = event.path.toUri()
-                        context.contentResolver.takePersistableUriPermission(
-                            uri,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
-                        )
+                        _sideEffect.emit(SideEffect.TakePersistableUriPermission(event.path))
                         settingsRepo.updateBackupDirectoryUri(event.path)
                     }
                 }
                 is SettingsEvent.DeleteLocalBackup -> {
                     viewModelScope.launch {
-                        localBackupManager
+                        backupService
                             .deleteBackup(event.file.uri)
                             .onFailure { e ->
                                 android.util.Log.e("LocalBackupViewModel", "Failed to delete backup", e)
@@ -188,7 +188,7 @@ class LocalBackupViewModel
                         transientState.update { it.copy(isReencrypting = true, showSetPasswordDialog = false) }
 
                         // 1. Re-encrypt existing backups
-                        localBackupManager
+                        backupService
                             .reencryptBackups(oldPassword, event.raw)
                             .onFailure { e ->
                                 android.util.Log.e("LocalBackupViewModel", "Re-encryption failed", e)
@@ -231,7 +231,7 @@ class LocalBackupViewModel
 
         private suspend fun startBackup() {
             transientState.update { it.copy(isBackingUp = true, backupError = null) }
-            localBackupManager
+            backupService
                 .createBackup()
                 .onSuccess {
                     settingsRepo.updateLastBackupTimestamp(System.currentTimeMillis())

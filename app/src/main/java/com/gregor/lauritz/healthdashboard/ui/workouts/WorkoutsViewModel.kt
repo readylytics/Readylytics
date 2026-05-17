@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.workouts
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
@@ -74,8 +75,12 @@ class WorkoutsViewModel
         private val settingsRepo: SettingsRepository,
         private val computeWorkoutTrimpUseCase:
             com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase,
+        private val savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
-        private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
+        private val _selectedRange =
+            MutableStateFlow(
+                savedStateHandle.get<TimeRange>("selectedRange") ?: TimeRange.SEVEN_DAYS,
+            )
 
         val selectedRange = _selectedRange.asStateFlow()
 
@@ -313,6 +318,7 @@ class WorkoutsViewModel
 
         fun onRangeSelected(range: TimeRange) {
             _selectedRange.value = range
+            savedStateHandle["selectedRange"] = range
         }
 
         fun onPreviousDay() {

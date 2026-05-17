@@ -1,5 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.settings
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Parcelable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +30,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,17 +45,20 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.MainActivity
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
+import com.gregor.lauritz.healthdashboard.ui.settings.LocalBackupViewModel.SideEffect
 import com.gregor.lauritz.healthdashboard.ui.settings.backup.LocalBackupSection
 import com.gregor.lauritz.healthdashboard.ui.settings.data.DataManagementSection
 import com.gregor.lauritz.healthdashboard.ui.settings.data.DeviceSelectionSection
 import com.gregor.lauritz.healthdashboard.ui.settings.data.SyncSettingsSection
 import com.gregor.lauritz.healthdashboard.ui.settings.physiologyprofile.HeartRateZoneSection
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
@@ -148,6 +154,27 @@ fun SettingsRoute(
 
     val context = LocalContext.current
 
+    LaunchedEffect(localBackupViewModel.sideEffect) {
+        localBackupViewModel.sideEffect.collectLatest { effect ->
+            when (effect) {
+                SideEffect.RestartApp -> {
+                    val restartIntent =
+                        Intent(context, MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        }
+                    context.startActivity(restartIntent)
+                }
+                is SideEffect.TakePersistableUriPermission -> {
+                    val uri = android.net.Uri.parse(effect.uri)
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                    )
+                }
+            }
+        }
+    }
+
     SettingsScreen(
         thresholdState = thresholdState,
         sleepState = sleepState,
@@ -160,7 +187,7 @@ fun SettingsRoute(
         onSleepEvent = sleepViewModel::onEvent,
         onPhysiologyEvent = physiologyViewModel::onEvent,
         onHeartRateEvent = heartRateViewModel::onEvent,
-        onLocalBackupEvent = { localBackupViewModel.onEvent(it, context) },
+        onLocalBackupEvent = localBackupViewModel::onEvent,
         onSyncEvent = syncViewModel::onEvent,
         onUIEvent = uiViewModel::onEvent,
         onNavigateToAbout = onNavigateToAbout,

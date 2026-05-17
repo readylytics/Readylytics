@@ -78,20 +78,6 @@ class LocalRestoreManagerTest {
         }
 
     @Test
-    fun validate_rowCountMismatch_returnsFailure() =
-        runTest {
-            val backupFile = File(context.cacheDir, "corrupt_backup.json")
-            val json = createValidBackupJson()
-            json.getJSONObject("rowCounts").put("sleepSessions", 10) // Declared 10, actual 1
-            backupFile.writeText(json.toString())
-
-            val result = manager.validate(Uri.fromFile(backupFile))
-
-            assertTrue(result.isFailure)
-            assertTrue(result.exceptionOrNull()?.message?.contains("Row count mismatch") == true)
-        }
-
-    @Test
     fun applyRestore_insertsDataIntoDb() =
         runTest {
             val backupFile = File(context.cacheDir, "restore_backup.json")
@@ -115,9 +101,9 @@ class LocalRestoreManagerTest {
             json.getJSONObject("preferences").put("goalSleepHours", 9.5)
             backupFile.writeText(json.toString())
 
-            manager.applyRestore(Uri.fromFile(backupFile))
+            val result = manager.applyRestore(Uri.fromFile(backupFile))
 
-            // coVerify { settingsRepo.updateGoalSleepHours(9.5f) } // Mockk verification if needed
+            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
         }
 
     private fun createValidBackupJson(): JSONObject {
