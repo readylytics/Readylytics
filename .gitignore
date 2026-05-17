@@ -44,3 +44,4 @@ scripts/health_connect_export.db
 SPEC.md
 
 docs/superpowers/
+.claude/settings.local.json

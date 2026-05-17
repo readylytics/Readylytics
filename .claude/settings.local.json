@@ -20,7 +20,12 @@
       "Skill(oh-my-claudecode:ralph)",
       "Skill(ai-slop-cleaner)",
       "Skill(oh-my-claudecode:team)",
-      "mcp__plugin_context-mode_context-mode__ctx_stats"
+      "mcp__plugin_context-mode_context-mode__ctx_stats",
+      "Bash(python3 *)",
+      "Bash(gh pr *)",
+      "Bash(./gradlew clean *)",
+      "Bash(timeout 180 gradlew.bat assembleDebug)",
+      "Bash(bash gradlew *)"
     ]
   }
 }

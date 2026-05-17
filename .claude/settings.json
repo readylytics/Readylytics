@@ -12,11 +12,7 @@
       "Bash(./gradlew testDebugUnitTest --no-build-cache)",
       "Bash(./gradlew testDebugUnitTest --tests TimeRangeTest)",
       "Bash(./gradlew assembleDebug --no-daemon)",
-      "Bash(./gradlew compileDebugKotlin --no-daemon)",
-      "Bash(gh pr *)",
-      "Bash(./gradlew clean *)",
-      "Bash(timeout 180 gradlew.bat assembleDebug)",
-      "Bash(bash gradlew *)"
+      "Bash(./gradlew compileDebugKotlin --no-daemon)"
     ]
   }
 }
