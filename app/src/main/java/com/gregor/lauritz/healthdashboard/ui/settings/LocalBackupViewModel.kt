@@ -44,6 +44,7 @@ class LocalBackupViewModel
                     backupDirectory = prefs.backupDirectoryUri,
                     isBackingUp = transient.isBackingUp,
                     isRestoring = transient.isRestoring,
+                    isReencrypting = transient.isReencrypting,
                     isPasswordSet = prefs.backupPasswordHash != null,
                     showSetPasswordDialog = transient.showSetPasswordDialog,
                     showRestoreConfirmDialog = transient.showRestoreConfirmDialog,
@@ -135,21 +136,14 @@ class LocalBackupViewModel
                 }
                 is SettingsEvent.DeleteLocalBackup -> {
                     viewModelScope.launch {
-                        try {
-                            if (event.file.uri.scheme == "file") {
-                                java.io.File(event.file.uri.path!!).delete()
-                            } else {
-                                androidx.documentfile.provider.DocumentFile
-                                    .fromSingleUri(context, event.file.uri)
-                                    ?.delete()
+                        localBackupManager
+                            .deleteBackup(event.file.uri)
+                            .onFailure { e ->
+                                android.util.Log.e("LocalBackupViewModel", "Failed to delete backup", e)
+                                transientState.update { it.copy(backupError = e.message) }
                             }
-                        } catch (e: Exception) {
-                            android.util.Log.e("LocalBackupViewModel", "Failed to delete backup", e)
-                        } finally {
-                            // Trigger state refresh by updating transient state
-                            // This ensures the combined flow re-lists backups
-                            transientState.update { it.copy(backupError = null) }
-                        }
+                        // Always refresh
+                        transientState.update { it.copy() }
                     }
                 }
                 SettingsEvent.DismissBackupError -> {
@@ -163,9 +157,25 @@ class LocalBackupViewModel
                 }
                 is SettingsEvent.UpdateBackupPassword -> {
                     viewModelScope.launch {
-                        val hash = if (event.raw.isBlank()) null else encryptionManager.encrypt(event.raw)
-                        settingsRepo.updateBackupPasswordHash(hash)
-                        transientState.update { it.copy(showSetPasswordDialog = false) }
+                        val currentPrefs = settingsRepo.userPreferences.first()
+                        val oldHash = currentPrefs.backupPasswordHash
+                        val oldPassword = oldHash?.let { encryptionManager.decrypt(it) }
+
+                        val newHash = if (event.raw.isBlank()) null else encryptionManager.encrypt(event.raw)
+
+                        transientState.update { it.copy(isReencrypting = true, showSetPasswordDialog = false) }
+
+                        // 1. Re-encrypt existing backups
+                        localBackupManager
+                            .reencryptBackups(oldPassword, event.raw)
+                            .onFailure { e ->
+                                android.util.Log.e("LocalBackupViewModel", "Re-encryption failed", e)
+                            }
+
+                        // 2. Update master password hash
+                        settingsRepo.updateBackupPasswordHash(newHash)
+
+                        transientState.update { it.copy(isReencrypting = false) }
 
                         if (event.autoStartBackup) {
                             startBackup()
@@ -212,6 +222,7 @@ class LocalBackupViewModel
         private data class TransientBackupState(
             val isBackingUp: Boolean = false,
             val isRestoring: Boolean = false,
+            val isReencrypting: Boolean = false,
             val showRestoreConfirmDialog: Boolean = false,
             val showSetPasswordDialog: Boolean = false,
             val backupError: String? = null,

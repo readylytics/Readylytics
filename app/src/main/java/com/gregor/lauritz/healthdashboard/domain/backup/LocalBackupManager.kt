@@ -101,6 +101,95 @@ class LocalBackupManager
                 }
             }
 
+        suspend fun deleteBackup(uri: Uri): Result<Unit> =
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    if (uri.scheme == "content") {
+                        val documentFile = DocumentFile.fromSingleUri(context, uri)
+                        if (documentFile?.delete() == false) {
+                            // Try alternative if direct delete fails
+                            val prefs = settingsRepository.userPreferences.first()
+                            val customUri = prefs.backupDirectoryUri?.let { Uri.parse(it) }
+                            if (customUri != null) {
+                                val root = DocumentFile.fromTreeUri(context, customUri)
+                                val file = root?.findFile(documentFile.name ?: "")
+                                if (file?.delete() == false) {
+                                    throw IllegalStateException("Failed to delete SAF document")
+                                }
+                            } else {
+                                throw IllegalStateException("Failed to delete document")
+                            }
+                        }
+                    } else if (uri.scheme == "file") {
+                        val file = File(uri.path!!)
+                        if (file.exists() && !file.delete()) {
+                            throw IllegalStateException("Failed to delete local file")
+                        }
+                    }
+                    return@runCatching Unit
+                }
+            }
+
+        suspend fun reencryptBackups(
+            oldPassword: String?,
+            newPassword: String?,
+        ): Result<Unit> =
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val backups = listBackups()
+                    val tempDir = File(context.cacheDir, "reencrypt_temp")
+                    tempDir.mkdirs()
+
+                    backups.forEach { info ->
+                        val tempZip = File(tempDir, info.name)
+                        val tempJson = File(tempDir, info.name.replace(".zip", ".json"))
+
+                        // 1. Copy to temp zip if it's SAF
+                        if (info.uri.scheme == "content") {
+                            context.contentResolver.openInputStream(info.uri)?.use { input ->
+                                tempZip.outputStream().use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                        } else {
+                            File(info.uri.path!!).copyTo(tempZip, overwrite = true)
+                        }
+
+                        // 2. Extract
+                        val zipFile = ZipFile(tempZip, oldPassword?.toCharArray())
+                        zipFile.extractAll(tempDir.absolutePath)
+
+                        // 3. Re-zip with new password
+                        tempZip.delete()
+                        val newZip = ZipFile(tempZip, newPassword?.toCharArray())
+                        val parameters =
+                            ZipParameters().apply {
+                                if (newPassword != null) {
+                                    isEncryptFiles = true
+                                    encryptionMethod = EncryptionMethod.AES
+                                    aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                                }
+                            }
+                        newZip.addFile(tempJson, parameters)
+
+                        // 4. Overwrite original
+                        if (info.uri.scheme == "content") {
+                            context.contentResolver.openOutputStream(info.uri, "wt")?.use { output ->
+                                tempZip.inputStream().use { it.copyTo(output) }
+                            }
+                        } else {
+                            tempZip.copyTo(File(info.uri.path!!), overwrite = true)
+                        }
+
+                        // 5. Cleanup current file
+                        tempZip.delete()
+                        tempJson.delete()
+                    }
+                    tempDir.deleteRecursively()
+                    return@runCatching Unit
+                }
+            }
+
         private fun createZip(
             inputFile: File,
             zipFile: File,

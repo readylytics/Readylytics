@@ -93,7 +93,7 @@ fun LocalBackupSection(
         // Create Backup Button
         Button(
             onClick = { onEvent(SettingsEvent.CreateLocalBackup) },
-            enabled = !uiState.isBackingUp && !uiState.isRestoring,
+            enabled = !uiState.isBackingUp && !uiState.isRestoring && !uiState.isReencrypting,
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (uiState.isBackingUp) {
@@ -104,6 +104,18 @@ fun LocalBackupSection(
                 )
             } else {
                 Text("Create New Backup")
+            }
+        }
+
+        if (uiState.isReencrypting) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                Text(
+                    text = "Updating existing backup passwords...",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
             }
         }
 
@@ -135,7 +147,7 @@ fun LocalBackupSection(
                     file = file,
                     onRestore = { onEvent(SettingsEvent.RestoreLocalBackup(file)) },
                     onDelete = { onEvent(SettingsEvent.DeleteLocalBackup(file)) },
-                    enabled = !uiState.isBackingUp && !uiState.isRestoring,
+                    enabled = !uiState.isBackingUp && !uiState.isRestoring && !uiState.isReencrypting,
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
             }

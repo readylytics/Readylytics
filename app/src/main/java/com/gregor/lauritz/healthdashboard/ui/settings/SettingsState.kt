@@ -61,6 +61,7 @@ data class LocalBackupState(
     val backupDirectory: String? = null,
     val isBackingUp: Boolean = false,
     val isRestoring: Boolean = false,
+    val isReencrypting: Boolean = false,
     val isPasswordSet: Boolean = false,
     val showSetPasswordDialog: Boolean = false,
     val showRestoreConfirmDialog: Boolean = false,
