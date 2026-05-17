@@ -28,6 +28,13 @@ interface SleepSessionDao {
     @Query("SELECT COUNT(*) FROM sleep_sessions WHERE startTime >= :fromMs")
     suspend fun countSince(fromMs: Long): Int
 
+    @Query("SELECT * FROM sleep_sessions WHERE startTime >= :fromMs ORDER BY startTime ASC LIMIT :limit OFFSET :offset")
+    suspend fun getPaged(
+        fromMs: Long,
+        limit: Int,
+        offset: Int,
+    ): List<SleepSessionEntity>
+
     @Query("SELECT * FROM sleep_sessions WHERE startTime >= :fromMs")
     suspend fun getSince(fromMs: Long): List<SleepSessionEntity>
 

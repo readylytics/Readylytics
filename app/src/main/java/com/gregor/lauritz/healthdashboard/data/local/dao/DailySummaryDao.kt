@@ -37,6 +37,15 @@ interface DailySummaryDao {
     @Query("SELECT * FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
     suspend fun getByDate(dateMidnightMs: Long): DailySummaryEntity?
 
+    @Query(
+        "SELECT * FROM daily_summaries WHERE dateMidnightMs >= :fromMs ORDER BY dateMidnightMs ASC LIMIT :limit OFFSET :offset",
+    )
+    suspend fun getPaged(
+        fromMs: Long,
+        limit: Int,
+        offset: Int,
+    ): List<DailySummaryEntity>
+
     @Query("SELECT * FROM daily_summaries WHERE dateMidnightMs >= :fromMs ORDER BY dateMidnightMs ASC")
     suspend fun getSince(fromMs: Long): List<DailySummaryEntity>
 

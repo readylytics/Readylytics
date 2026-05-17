@@ -142,8 +142,8 @@ class LocalBackupViewModel
                                 android.util.Log.e("LocalBackupViewModel", "Failed to delete backup", e)
                                 transientState.update { it.copy(backupError = e.message) }
                             }
-                        // Always refresh
-                        transientState.update { it.copy() }
+                        // Force refresh the list
+                        transientState.update { it.copy(refreshTrigger = it.refreshTrigger + 1) }
                     }
                 }
                 SettingsEvent.DismissBackupError -> {
@@ -229,5 +229,6 @@ class LocalBackupViewModel
             val restoreSuccess: Boolean = false,
             val pendingRestoreFile: BackupFileInfo? = null,
             val passwordVerificationResult: Boolean? = null,
+            val refreshTrigger: Int = 0,
         )
     }
