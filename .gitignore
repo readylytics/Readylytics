@@ -42,3 +42,5 @@ __pycache__/
 scripts/health_connect_export.db
 
 SPEC.md
+
+docs/superpowers/
