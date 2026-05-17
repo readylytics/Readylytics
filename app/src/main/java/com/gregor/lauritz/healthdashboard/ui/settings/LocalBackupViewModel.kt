@@ -44,6 +44,8 @@ class LocalBackupViewModel
                     backupDirectory = prefs.backupDirectoryUri,
                     isBackingUp = transient.isBackingUp,
                     isRestoring = transient.isRestoring,
+                    isPasswordSet = prefs.backupPasswordHash != null,
+                    showSetPasswordDialog = transient.showSetPasswordDialog,
                     showRestoreConfirmDialog = transient.showRestoreConfirmDialog,
                     backupError = transient.backupError,
                     restoreSuccess = transient.restoreSuccess,
@@ -64,15 +66,12 @@ class LocalBackupViewModel
             when (event) {
                 SettingsEvent.CreateLocalBackup -> {
                     viewModelScope.launch {
-                        transientState.update { it.copy(isBackingUp = true, backupError = null) }
-                        localBackupManager
-                            .createBackup()
-                            .onSuccess {
-                                settingsRepo.updateLastBackupTimestamp(System.currentTimeMillis())
-                            }.onFailure { e ->
-                                transientState.update { it.copy(backupError = e.message ?: "Backup failed") }
-                            }
-                        transientState.update { it.copy(isBackingUp = false) }
+                        val currentHash = settingsRepo.userPreferences.first().backupPasswordHash
+                        if (currentHash == null) {
+                            transientState.update { it.copy(showSetPasswordDialog = true) }
+                        } else {
+                            startBackup()
+                        }
                     }
                 }
                 is SettingsEvent.RestoreLocalBackup -> {
@@ -156,10 +155,21 @@ class LocalBackupViewModel
                 SettingsEvent.DismissBackupError -> {
                     transientState.update { it.copy(backupError = null) }
                 }
+                SettingsEvent.OpenSetPasswordDialog -> {
+                    transientState.update { it.copy(showSetPasswordDialog = true) }
+                }
+                SettingsEvent.DismissSetPasswordDialog -> {
+                    transientState.update { it.copy(showSetPasswordDialog = false) }
+                }
                 is SettingsEvent.UpdateBackupPassword -> {
                     viewModelScope.launch {
                         val hash = if (event.raw.isBlank()) null else encryptionManager.encrypt(event.raw)
                         settingsRepo.updateBackupPasswordHash(hash)
+                        transientState.update { it.copy(showSetPasswordDialog = false) }
+
+                        if (event.autoStartBackup) {
+                            startBackup()
+                        }
                     }
                 }
                 is SettingsEvent.VerifyBackupPassword -> {
@@ -187,10 +197,23 @@ class LocalBackupViewModel
             }
         }
 
+        private suspend fun startBackup() {
+            transientState.update { it.copy(isBackingUp = true, backupError = null) }
+            localBackupManager
+                .createBackup()
+                .onSuccess {
+                    settingsRepo.updateLastBackupTimestamp(System.currentTimeMillis())
+                }.onFailure { e ->
+                    transientState.update { it.copy(backupError = e.message ?: "Backup failed") }
+                }
+            transientState.update { it.copy(isBackingUp = false) }
+        }
+
         private data class TransientBackupState(
             val isBackingUp: Boolean = false,
             val isRestoring: Boolean = false,
             val showRestoreConfirmDialog: Boolean = false,
+            val showSetPasswordDialog: Boolean = false,
             val backupError: String? = null,
             val restoreSuccess: Boolean = false,
             val pendingRestoreFile: BackupFileInfo? = null,
