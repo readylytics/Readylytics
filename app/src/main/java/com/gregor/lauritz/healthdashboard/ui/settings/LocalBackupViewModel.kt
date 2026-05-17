@@ -136,19 +136,21 @@ class LocalBackupViewModel
                 }
                 is SettingsEvent.DeleteLocalBackup -> {
                     viewModelScope.launch {
-                        // For SAF, deletion is via DocumentFile
-                        // For internal, it's java.io.File
-                        // Simplify by having LocalBackupManager handle it or just use ContentResolver
-                        // For now, let's assume we can use DocumentFile
                         try {
-                            androidx.documentfile.provider.DocumentFile
-                                .fromSingleUri(context, event.file.uri)
-                                ?.delete()
-                        } catch (_: Exception) {
-                            // ignore
+                            if (event.file.uri.scheme == "file") {
+                                java.io.File(event.file.uri.path!!).delete()
+                            } else {
+                                androidx.documentfile.provider.DocumentFile
+                                    .fromSingleUri(context, event.file.uri)
+                                    ?.delete()
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("LocalBackupViewModel", "Failed to delete backup", e)
+                        } finally {
+                            // Trigger state refresh by updating transient state
+                            // This ensures the combined flow re-lists backups
+                            transientState.update { it.copy(backupError = null) }
                         }
-                        // Trigger state refresh
-                        transientState.update { it.copy() }
                     }
                 }
                 SettingsEvent.DismissBackupError -> {
