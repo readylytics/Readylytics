@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.settings.backup
 
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
@@ -25,11 +26,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
+import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.settings.LocalBackupState
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
-import java.io.File
 import java.text.DateFormat
 import java.util.Date
 
@@ -139,8 +140,8 @@ private fun BackupDirectoryItem(
             contract = ActivityResultContracts.OpenDocumentTree(),
         ) { uri ->
             uri?.let {
-                // For prototype, we use the path if available, or a placeholder
-                onEvent(SettingsEvent.ChangeBackupDirectory(it.path ?: ""))
+                // Use the URI string for persistence and access via SAF
+                onEvent(SettingsEvent.ChangeBackupDirectory(it.toString()))
             }
         }
 
@@ -150,8 +151,14 @@ private fun BackupDirectoryItem(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text("Backup Directory", style = MaterialTheme.typography.bodyMedium)
+            val displayPath =
+                if (uiState.backupDirectory.isNullOrBlank()) {
+                    "Default (App Internal)"
+                } else {
+                    Uri.parse(uiState.backupDirectory).path ?: uiState.backupDirectory
+                }
             Text(
-                text = uiState.backupDirectory.ifBlank { "Default (App Internal)" },
+                text = displayPath,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -164,7 +171,7 @@ private fun BackupDirectoryItem(
 
 @Composable
 private fun BackupFileItem(
-    file: File,
+    file: BackupFileInfo,
     onRestore: () -> Unit,
     onDelete: () -> Unit,
     enabled: Boolean,
@@ -188,11 +195,11 @@ private fun BackupFileItem(
                         .getDateTimeInstance(
                             DateFormat.MEDIUM,
                             DateFormat.SHORT,
-                        ).format(Date(file.lastModified())),
+                        ).format(Date(file.lastModified)),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
-                text = "${file.length() / 1024} KB",
+                text = "${file.sizeBytes / 1024} KB",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

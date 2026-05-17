@@ -1,7 +1,9 @@
 package com.gregor.lauritz.healthdashboard.domain.backup
 
 import android.content.Context
+import android.net.Uri
 import android.util.JsonWriter
+import androidx.documentfile.provider.DocumentFile
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.time.Instant
 import java.time.ZoneId
@@ -30,23 +33,37 @@ class LocalBackupManager
         private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
     ) {
-        private var backupDir = File(context.filesDir, "backups")
+        private val defaultBackupDir = File(context.filesDir, "backups")
 
-        fun updateBackupDirectory(path: String) {
-            backupDir = File(path)
-        }
-
-        fun getBackupDirectory(): File = backupDir
-
-        suspend fun createBackup(): Result<File> =
+        suspend fun createBackup(): Result<File?> =
             withContext(Dispatchers.IO) {
                 runCatching {
-                    backupDir.mkdirs()
-                    pruneOldBackups()
+                    val prefs = settingsRepository.userPreferences.first()
+                    val customUri = prefs.backupDirectoryUri?.let { Uri.parse(it) }
 
                     val timestamp =
                         Instant.now().atZone(ZoneId.systemDefault()).format(FILENAME_FORMATTER)
-                    val backupFile = File(backupDir, "backup_$timestamp.json")
+                    val filename = "backup_$timestamp.json"
+
+                    val outputStream: OutputStream
+                    var resultFile: File? = null
+
+                    if (customUri != null) {
+                        val dir =
+                            DocumentFile.fromTreeUri(context, customUri)
+                                ?: throw IllegalStateException("Could not access custom backup directory")
+                        val file =
+                            dir.createFile("application/json", filename)
+                                ?: throw IllegalStateException("Could not create backup file in custom directory")
+                        outputStream = context.contentResolver.openOutputStream(file.uri)
+                            ?: throw IllegalStateException("Could not open output stream for custom backup file")
+                    } else {
+                        defaultBackupDir.mkdirs()
+                        pruneOldBackups(defaultBackupDir)
+                        val file = File(defaultBackupDir, filename)
+                        outputStream = FileOutputStream(file)
+                        resultFile = file
+                    }
 
                     val sleepSessionDao = healthDatabase.sleepSessionDao()
                     val heartRateDao = healthDatabase.heartRateDao()
@@ -54,7 +71,6 @@ class LocalBackupManager
                     val workoutDao = healthDatabase.workoutDao()
                     val dailySummaryDao = healthDatabase.dailySummaryDao()
 
-                    // Gather metadata for rowCounts
                     val rowCounts =
                         mapOf(
                             "sleepSessions" to sleepSessionDao.count(),
@@ -64,8 +80,8 @@ class LocalBackupManager
                             "dailySummaries" to dailySummaryDao.count(),
                         )
 
-                    FileOutputStream(backupFile).use { fos ->
-                        JsonWriter(OutputStreamWriter(fos, "UTF-8")).use { writer ->
+                    outputStream.use { os ->
+                        JsonWriter(OutputStreamWriter(os, "UTF-8")).use { writer ->
                             writer.setIndent("  ")
                             writer.beginObject()
 
@@ -121,7 +137,7 @@ class LocalBackupManager
                         }
                     }
 
-                    backupFile
+                    resultFile
                 }
             }
 
@@ -154,7 +170,7 @@ class LocalBackupManager
             writer.name("id").value(h.id)
             writer.name("timestampMs").value(h.timestampMs)
             writer.name("beatsPerMinute").value(h.beatsPerMinute.toLong())
-            writer.name("recordType").value(h.recordType.toLong())
+            writer.name("recordType").value(h.recordType)
             writer.name("sessionId").value(h.sessionId)
             writer.name("deviceName").value(h.deviceName)
             writer.endObject()
@@ -294,16 +310,33 @@ class LocalBackupManager
             writer.endObject()
         }
 
-        fun listBackups(): List<File> =
-            backupDir
-                .listFiles { f -> f.name.startsWith("backup_") && f.name.endsWith(".json") }
-                ?.sortedByDescending { it.lastModified() }
-                ?: emptyList()
+        suspend fun listBackups(): List<BackupFileInfo> =
+            withContext(Dispatchers.IO) {
+                val prefs = settingsRepository.userPreferences.first()
+                val customUri = prefs.backupDirectoryUri?.let { Uri.parse(it) }
 
-        private fun pruneOldBackups() {
+                if (customUri != null) {
+                    val dir = DocumentFile.fromTreeUri(context, customUri)
+                    dir
+                        ?.listFiles()
+                        ?.filter { it.name?.startsWith("backup_") == true && it.name?.endsWith(".json") == true }
+                        ?.map { BackupFileInfo(it.name!!, it.lastModified(), it.length(), it.uri) }
+                        ?.sortedByDescending { it.lastModified }
+                        ?: emptyList()
+                } else {
+                    defaultBackupDir.mkdirs()
+                    defaultBackupDir
+                        .listFiles { f -> f.name.startsWith("backup_") && f.name.endsWith(".json") }
+                        ?.map { BackupFileInfo(it.name, it.lastModified(), it.length(), Uri.fromFile(it)) }
+                        ?.sortedByDescending { it.lastModified }
+                        ?: emptyList()
+                }
+            }
+
+        private fun pruneOldBackups(dir: File) {
             val now = System.currentTimeMillis()
             val sevenDaysMs = 7L * 24 * 60 * 60 * 1000
-            backupDir
+            dir
                 .listFiles { f -> f.name.startsWith("backup_") && f.isFile }
                 ?.filter { now - it.lastModified() > sevenDaysMs }
                 ?.forEach { it.delete() }
@@ -313,3 +346,10 @@ class LocalBackupManager
             private val FILENAME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")
         }
     }
+
+data class BackupFileInfo(
+    val name: String,
+    val lastModified: Long,
+    val sizeBytes: Long,
+    val uri: Uri,
+)

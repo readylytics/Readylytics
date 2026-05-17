@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.MainActivity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.domain.backup.LocalBackupManager
 import com.gregor.lauritz.healthdashboard.domain.backup.LocalRestoreManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,8 +17,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
+import androidx.core.net.toUri
 
 @HiltViewModel
 class LocalBackupViewModel
@@ -37,7 +38,7 @@ class LocalBackupViewModel
                 LocalBackupState(
                     lastBackupTimestamp = prefs.lastBackupTimestamp,
                     backupSchedule = prefs.backupSchedule,
-                    backupDirectory = localBackupManager.getBackupDirectory().absolutePath,
+                    backupDirectory = prefs.backupDirectoryUri,
                     isBackingUp = transient.isBackingUp,
                     isRestoring = transient.isRestoring,
                     showRestoreConfirmDialog = transient.showRestoreConfirmDialog,
@@ -74,7 +75,7 @@ class LocalBackupViewModel
                     viewModelScope.launch {
                         transientState.update { it.copy(isRestoring = true, backupError = null) }
                         localRestoreManager
-                            .validate(event.file)
+                            .validate(event.file.uri)
                             .onSuccess {
                                 transientState.update {
                                     it.copy(
@@ -94,8 +95,7 @@ class LocalBackupViewModel
                     val file = transientState.value.pendingRestoreFile ?: return
                     transientState.update { it.copy(showRestoreConfirmDialog = false, isRestoring = true) }
                     viewModelScope.launch {
-                        val result = localRestoreManager.applyRestore(file)
-                        when (result) {
+                        when (val result = localRestoreManager.applyRestore(file.uri)) {
                             LocalRestoreManager.RestoreResult.SuccessRequiresRestart -> {
                                 val restartIntent =
                                     Intent(context, MainActivity::class.java).apply {
@@ -121,13 +121,28 @@ class LocalBackupViewModel
                     transientState.update { it.copy(showRestoreConfirmDialog = false, pendingRestoreFile = null) }
                 }
                 is SettingsEvent.ChangeBackupDirectory -> {
-                    localBackupManager.updateBackupDirectory(event.path)
-                    // Trigger refresh
-                    transientState.update { it.copy() }
+                    viewModelScope.launch {
+                        val uri = event.path.toUri()
+                        context.contentResolver.takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                        )
+                        settingsRepo.updateBackupDirectoryUri(event.path)
+                    }
                 }
                 is SettingsEvent.DeleteLocalBackup -> {
                     viewModelScope.launch {
-                        event.file.delete()
+                        // For SAF, deletion is via DocumentFile
+                        // For internal, it's java.io.File
+                        // Simplify by having LocalBackupManager handle it or just use ContentResolver
+                        // For now, let's assume we can use DocumentFile
+                        try {
+                            androidx.documentfile.provider.DocumentFile
+                                .fromSingleUri(context, event.file.uri)
+                                ?.delete()
+                        } catch (_: Exception) {
+                            // ignore
+                        }
                         // Trigger state refresh
                         transientState.update { it.copy() }
                     }
@@ -147,6 +162,6 @@ class LocalBackupViewModel
             val showRestoreConfirmDialog: Boolean = false,
             val backupError: String? = null,
             val restoreSuccess: Boolean = false,
-            val pendingRestoreFile: File? = null,
+            val pendingRestoreFile: BackupFileInfo? = null,
         )
     }

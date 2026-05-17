@@ -5,8 +5,8 @@ import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
-import java.io.File
 
 sealed interface SettingsEvent {
     data class GoalSleepHoursChanged(
@@ -128,7 +128,7 @@ sealed interface SettingsEvent {
     data object CreateLocalBackup : SettingsEvent
 
     data class RestoreLocalBackup(
-        val file: File,
+        val file: BackupFileInfo,
     ) : SettingsEvent
 
     data object RestoreConfirmed : SettingsEvent
@@ -138,7 +138,7 @@ sealed interface SettingsEvent {
     data object DismissBackupError : SettingsEvent
 
     data class DeleteLocalBackup(
-        val file: File,
+        val file: BackupFileInfo,
     ) : SettingsEvent
 
     data class ChangeBackupDirectory(

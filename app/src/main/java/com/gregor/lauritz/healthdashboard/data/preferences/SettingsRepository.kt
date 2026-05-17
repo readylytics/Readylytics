@@ -20,7 +20,7 @@ class SettingsRepository
         private val sleep: SleepPreferences,
         private val ui: UIPreferences,
         private val sync: SyncPreferences,
-        private val cloud: CloudPreferences,
+        private val backup: BackupPreferences,
     ) {
         /**
          * The primary flow of user preferences.
@@ -43,11 +43,11 @@ class SettingsRepository
 
         val dynamicColorEnabled: Flow<Boolean> = userPreferences.map { it.dynamicColorEnabled }
 
-        val driveAccountEmail: Flow<String?> = userPreferences.map { it.driveAccountEmail }
-
         val backupSchedule: Flow<BackupSchedule> = userPreferences.map { it.backupSchedule }
 
         val lastBackupTimestampFlow: Flow<Long> = userPreferences.map { it.lastBackupTimestamp }
+
+        val backupDirectoryUri: Flow<String?> = userPreferences.map { it.backupDirectoryUri }
 
         val primaryDeviceName: Flow<String?> = userPreferences.map { it.primaryDeviceName }
 
@@ -95,7 +95,7 @@ class SettingsRepository
 
         suspend fun updateHrvWarningThreshold(value: Float) = thresholds.updateHrvWarningThreshold(value)
 
-        suspend fun updateRhrOptimalThreshold(value: Float) = thresholds.updateRhrOptimalThreshold(value)
+        suspend fun updateRhrOptimalThreshold(value: Float) = thresholds.updateHrvOptimalThreshold(value)
 
         suspend fun updateRhrWarningThreshold(value: Float) = thresholds.updateRhrWarningThreshold(value)
 
@@ -155,11 +155,11 @@ class SettingsRepository
 
         suspend fun updateLastSyncTimestamp(timestamp: Long) = sync.updateLastSyncTimestamp(timestamp)
 
-        suspend fun updateDriveAccountEmail(email: String?) = cloud.updateDriveAccountEmail(email)
+        suspend fun updateBackupSchedule(schedule: BackupSchedule) = backup.updateBackupSchedule(schedule)
 
-        suspend fun updateBackupSchedule(schedule: BackupSchedule) = cloud.updateBackupSchedule(schedule)
+        suspend fun updateLastBackupTimestamp(timestamp: Long) = backup.updateLastBackupTimestamp(timestamp)
 
-        suspend fun updateLastBackupTimestamp(timestamp: Long) = cloud.updateLastBackupTimestamp(timestamp)
+        suspend fun updateBackupDirectoryUri(uri: String?) = backup.updateBackupDirectoryUri(uri)
 
         suspend fun updateAppTheme(theme: AppTheme) = ui.updateAppTheme(theme)
 

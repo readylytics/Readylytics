@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.domain.backup
 
 import android.content.Context
+import android.net.Uri
 import androidx.room.withTransaction
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
@@ -13,7 +14,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -41,10 +41,14 @@ class LocalRestoreManager
             ) : RestoreResult()
         }
 
-        suspend fun validate(backupFile: File): Result<BackupManifest> =
+        suspend fun validate(backupUri: Uri): Result<BackupManifest> =
             withContext(Dispatchers.IO) {
                 runCatching {
-                    val json = JSONObject(backupFile.readText())
+                    val jsonString =
+                        context.contentResolver.openInputStream(backupUri)?.use {
+                            it.bufferedReader().readText()
+                        } ?: throw IllegalStateException("Could not read backup file")
+                    val json = JSONObject(jsonString)
 
                     val schemaVersion = json.getInt("schemaVersion")
                     if (schemaVersion != HealthDatabase.DATABASE_VERSION) {
@@ -77,10 +81,14 @@ class LocalRestoreManager
                 }
             }
 
-        suspend fun applyRestore(backupFile: File): RestoreResult =
+        suspend fun applyRestore(backupUri: Uri): RestoreResult =
             withContext(Dispatchers.IO) {
                 runCatching {
-                    val json = JSONObject(backupFile.readText())
+                    val jsonString =
+                        context.contentResolver.openInputStream(backupUri)?.use {
+                            it.bufferedReader().readText()
+                        } ?: throw IllegalStateException("Could not read backup file")
+                    val json = JSONObject(jsonString)
 
                     healthDatabase.withTransaction {
                         val sleepSessionDao = healthDatabase.sleepSessionDao()

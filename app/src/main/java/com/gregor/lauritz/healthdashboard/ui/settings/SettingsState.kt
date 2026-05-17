@@ -6,8 +6,8 @@ import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
-import java.io.File
 
 data class ThresholdSettingsState(
     val circadianThresholdOverride: Int? = null,
@@ -58,14 +58,14 @@ data class HeartRateZonesState(
 data class LocalBackupState(
     val lastBackupTimestamp: Long = SettingsDefaults.LAST_BACKUP_TIMESTAMP,
     val backupSchedule: BackupSchedule = SettingsDefaults.BACKUP_SCHEDULE,
-    val backupDirectory: String = "",
+    val backupDirectory: String? = null,
     val isBackingUp: Boolean = false,
     val isRestoring: Boolean = false,
     val showRestoreConfirmDialog: Boolean = false,
     val backupError: String? = null,
     val restoreSuccess: Boolean = false,
-    val pendingRestoreFile: File? = null,
-    val availableBackups: List<File> = emptyList(),
+    val pendingRestoreFile: BackupFileInfo? = null,
+    val availableBackups: List<BackupFileInfo> = emptyList(),
 )
 
 data class UIState(
