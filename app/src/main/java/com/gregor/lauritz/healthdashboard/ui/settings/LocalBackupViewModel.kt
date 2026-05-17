@@ -116,7 +116,7 @@ class LocalBackupViewModel
                                 }
                             }
                             LocalRestoreManager.RestoreResult.Success -> {
-                                transientState.update { it.copy(isRestoring = false) }
+                                transientState.update { it.copy(isRestoring = false, restoreSuccess = true) }
                             }
                         }
                     }

@@ -513,10 +513,5 @@ class LocalRestoreManager
             } else if (json.has("backupDirectoryUri")) {
                 settingsRepository.updateBackupDirectoryUri(null)
             }
-            if (!json.isNull("backupPasswordHash")) {
-                settingsRepository.updateBackupPasswordHash(json.getString("backupPasswordHash"))
-            } else if (json.has("backupPasswordHash")) {
-                settingsRepository.updateBackupPasswordHash(null)
-            }
         }
     }

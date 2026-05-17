@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.domain.backup
 import android.content.Context
 import android.net.Uri
 import android.util.JsonWriter
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
@@ -45,7 +46,7 @@ class LocalBackupManager
             withContext(Dispatchers.IO) {
                 runCatching {
                     val prefs = settingsRepository.userPreferences.first()
-                    val customUri = prefs.backupDirectoryUri?.let { Uri.parse(it) }
+                    val customUri = prefs.backupDirectoryUri?.toUri()
 
                     val timestamp =
                         Instant.now().atZone(ZoneId.systemDefault()).format(FILENAME_FORMATTER)
@@ -105,7 +106,7 @@ class LocalBackupManager
                         val documentFile = DocumentFile.fromSingleUri(context, uri)
                         if (documentFile?.delete() == false) {
                             val prefs = settingsRepository.userPreferences.first()
-                            val customUri = prefs.backupDirectoryUri?.let { Uri.parse(it) }
+                            val customUri = prefs.backupDirectoryUri?.toUri()
                             if (customUri != null) {
                                 val root = DocumentFile.fromTreeUri(context, customUri)
                                 val file = root?.findFile(documentFile.name ?: "")
@@ -135,51 +136,57 @@ class LocalBackupManager
                     val tempDir = File(context.cacheDir, "reencrypt_temp")
                     tempDir.mkdirs()
 
-                    backups.forEach { info ->
-                        val tempZip = File(tempDir, info.name)
-                        val tempJson = File(tempDir, info.name.replace(".zip", ".json"))
+                    try {
+                        backups.forEach { info ->
+                            val tempZip = File(tempDir, info.name)
+                            val tempJson = File(tempDir, info.name.replace(".zip", ".json"))
+                            val newZipPath = File(tempDir, "reencrypt_new_${System.currentTimeMillis()}.zip")
 
-                        // 1. Copy to temp zip
-                        if (info.uri.scheme == "content") {
-                            context.contentResolver.openInputStream(info.uri)?.use { input ->
-                                tempZip.outputStream().use { output ->
-                                    input.copyTo(output)
+                            // 1. Copy to temp zip
+                            if (info.uri.scheme == "content") {
+                                context.contentResolver.openInputStream(info.uri)?.use { input ->
+                                    tempZip.outputStream().use { output ->
+                                        input.copyTo(output)
+                                    }
                                 }
+                            } else {
+                                File(info.uri.path!!).copyTo(tempZip, overwrite = true)
                             }
-                        } else {
-                            File(info.uri.path!!).copyTo(tempZip, overwrite = true)
-                        }
 
-                        // 2. Extract
-                        val zipFile = ZipFile(tempZip, oldPassword?.toCharArray())
-                        zipFile.extractAll(tempDir.absolutePath)
+                            // 2. Extract
+                            val zipFile = ZipFile(tempZip, oldPassword?.toCharArray())
+                            zipFile.extractAll(tempDir.absolutePath)
 
-                        // 3. Re-zip with new password
-                        tempZip.delete()
-                        val newZip = ZipFile(tempZip, newPassword?.toCharArray())
-                        val parameters =
-                            ZipParameters().apply {
-                                if (newPassword != null) {
-                                    isEncryptFiles = true
-                                    encryptionMethod = EncryptionMethod.AES
-                                    aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                            // 3. Re-zip with new password to separate temp path (atomic write)
+                            val newZip = ZipFile(newZipPath, newPassword?.toCharArray())
+                            val parameters =
+                                ZipParameters().apply {
+                                    if (newPassword != null) {
+                                        isEncryptFiles = true
+                                        encryptionMethod = EncryptionMethod.AES
+                                        aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                                    }
                                 }
-                            }
-                        newZip.addFile(tempJson, parameters)
+                            newZip.addFile(tempJson, parameters)
+                            newZip.close()
 
-                        // 4. Overwrite original
-                        if (info.uri.scheme == "content") {
-                            context.contentResolver.openOutputStream(info.uri, "wt")?.use { output ->
-                                tempZip.inputStream().use { it.copyTo(output) }
+                            // 4. Overwrite original (atomic rename-swap)
+                            if (info.uri.scheme == "content") {
+                                context.contentResolver.openOutputStream(info.uri, "wt")?.use { output ->
+                                    newZipPath.inputStream().use { it.copyTo(output) }
+                                }
+                            } else {
+                                newZipPath.renameTo(File(info.uri.path!!))
                             }
-                        } else {
-                            tempZip.copyTo(File(info.uri.path!!), overwrite = true)
+
+                            // 5. Cleanup per-backup temp files
+                            tempZip.delete()
+                            tempJson.delete()
+                            newZipPath.delete()
                         }
-
-                        tempZip.delete()
-                        tempJson.delete()
+                    } finally {
+                        tempDir.deleteRecursively()
                     }
-                    tempDir.deleteRecursively()
                 }.map { }
             }
 
@@ -207,76 +214,78 @@ class LocalBackupManager
             val workoutDao = healthDatabase.workoutDao()
             val dailySummaryDao = healthDatabase.dailySummaryDao()
 
-            JsonWriter(OutputStreamWriter(outputStream, "UTF-8")).use { writer ->
-                writer.setIndent("  ")
-                writer.beginObject()
+            withContext(Dispatchers.IO) {
+                JsonWriter(OutputStreamWriter(outputStream, "UTF-8")).use { writer ->
+                    writer.setIndent("  ")
+                    writer.beginObject()
 
-                writer.name("schemaVersion").value(HealthDatabase.DATABASE_VERSION.toLong())
-                writer.name("exportedAt").value(Instant.now().toString())
+                    writer.name("schemaVersion").value(HealthDatabase.DATABASE_VERSION.toLong())
+                    writer.name("exportedAt").value(Instant.now().toString())
 
-                writer.name("rowCounts")
-                writer.beginObject()
-                writer.name("sleepSessions").value(sleepSessionDao.count().toLong())
-                writer.name("heartRateRecords").value(heartRateDao.count().toLong())
-                writer.name("hrvRecords").value(hrvDao.count().toLong())
-                writer.name("workouts").value(workoutDao.count().toLong())
-                writer.name("dailySummaries").value(dailySummaryDao.count().toLong())
-                writer.endObject()
+                    writer.name("rowCounts")
+                    writer.beginObject()
+                    writer.name("sleepSessions").value(sleepSessionDao.count().toLong())
+                    writer.name("heartRateRecords").value(heartRateDao.count().toLong())
+                    writer.name("hrvRecords").value(hrvDao.count().toLong())
+                    writer.name("workouts").value(workoutDao.count().toLong())
+                    writer.name("dailySummaries").value(dailySummaryDao.count().toLong())
+                    writer.endObject()
 
-                writer.name("preferences")
-                writePreferences(writer)
+                    writer.name("preferences")
+                    writePreferences(writer)
 
-                writer.name("sleepSessions").beginArray()
-                var offset = 0
-                while (true) {
-                    val batch = sleepSessionDao.getPaged(0, 100, offset)
-                    if (batch.isEmpty()) break
-                    batch.forEach { writeSleepSession(writer, it) }
-                    offset += 100
+                    writer.name("sleepSessions").beginArray()
+                    var offset = 0
+                    while (true) {
+                        val batch = sleepSessionDao.getPaged(0, 100, offset)
+                        if (batch.isEmpty()) break
+                        batch.forEach { writeSleepSession(writer, it) }
+                        offset += 100
+                    }
+                    writer.endArray()
+
+                    writer.name("heartRateRecords").beginArray()
+                    offset = 0
+                    while (true) {
+                        val batch = heartRateDao.getPaged(0, 500, offset)
+                        if (batch.isEmpty()) break
+                        batch.forEach { writeHeartRateRecord(writer, it) }
+                        offset += 500
+                    }
+                    writer.endArray()
+
+                    writer.name("hrvRecords").beginArray()
+                    offset = 0
+                    while (true) {
+                        val batch = hrvDao.getPaged(0, 500, offset)
+                        if (batch.isEmpty()) break
+                        batch.forEach { writeHrvRecord(writer, it) }
+                        offset += 500
+                    }
+                    writer.endArray()
+
+                    writer.name("workouts").beginArray()
+                    offset = 0
+                    while (true) {
+                        val batch = workoutDao.getPaged(0, 100, offset)
+                        if (batch.isEmpty()) break
+                        batch.forEach { writeWorkout(writer, it) }
+                        offset += 100
+                    }
+                    writer.endArray()
+
+                    writer.name("dailySummaries").beginArray()
+                    offset = 0
+                    while (true) {
+                        val batch = dailySummaryDao.getPaged(0, 100, offset)
+                        if (batch.isEmpty()) break
+                        batch.forEach { writeDailySummary(writer, it) }
+                        offset += 100
+                    }
+                    writer.endArray()
+
+                    writer.endObject()
                 }
-                writer.endArray()
-
-                writer.name("heartRateRecords").beginArray()
-                offset = 0
-                while (true) {
-                    val batch = heartRateDao.getPaged(0, 500, offset)
-                    if (batch.isEmpty()) break
-                    batch.forEach { writeHeartRateRecord(writer, it) }
-                    offset += 500
-                }
-                writer.endArray()
-
-                writer.name("hrvRecords").beginArray()
-                offset = 0
-                while (true) {
-                    val batch = hrvDao.getPaged(0, 500, offset)
-                    if (batch.isEmpty()) break
-                    batch.forEach { writeHrvRecord(writer, it) }
-                    offset += 500
-                }
-                writer.endArray()
-
-                writer.name("workouts").beginArray()
-                offset = 0
-                while (true) {
-                    val batch = workoutDao.getPaged(0, 100, offset)
-                    if (batch.isEmpty()) break
-                    batch.forEach { writeWorkout(writer, it) }
-                    offset += 100
-                }
-                writer.endArray()
-
-                writer.name("dailySummaries").beginArray()
-                offset = 0
-                while (true) {
-                    val batch = dailySummaryDao.getPaged(0, 100, offset)
-                    if (batch.isEmpty()) break
-                    batch.forEach { writeDailySummary(writer, it) }
-                    offset += 100
-                }
-                writer.endArray()
-
-                writer.endObject()
             }
         }
 
@@ -289,11 +298,11 @@ class LocalBackupManager
             writer.name("startTime").value(s.startTime)
             writer.name("endTime").value(s.endTime)
             writer.name("durationMinutes").value(s.durationMinutes.toLong())
-            writer.name("efficiency").value(s.efficiency?.toDouble() ?: 0.0)
-            writer.name("deepSleepMinutes").value(s.deepSleepMinutes?.toLong() ?: 0)
-            writer.name("remSleepMinutes").value(s.remSleepMinutes?.toLong() ?: 0)
-            writer.name("lightSleepMinutes").value(s.lightSleepMinutes?.toLong() ?: 0)
-            writer.name("awakeMinutes").value(s.awakeMinutes?.toLong() ?: 0)
+            writer.name("efficiency").value(s.efficiency.toDouble())
+            writer.name("deepSleepMinutes").value(s.deepSleepMinutes.toLong())
+            writer.name("remSleepMinutes").value(s.remSleepMinutes.toLong())
+            writer.name("lightSleepMinutes").value(s.lightSleepMinutes.toLong())
+            writer.name("awakeMinutes").value(s.awakeMinutes.toLong())
             writer.name("sleepScore").value(s.sleepScore?.toDouble() ?: 0.0)
             writer.name("startZoneOffsetSeconds").value(s.startZoneOffsetSeconds?.toLong() ?: 0)
             writer.name("endZoneOffsetSeconds").value(s.endZoneOffsetSeconds?.toLong() ?: 0)
@@ -506,18 +515,13 @@ class LocalBackupManager
             } else {
                 writer.name("backupDirectoryUri").nullValue()
             }
-            if (prefs.backupPasswordHash != null) {
-                writer.name("backupPasswordHash").value(prefs.backupPasswordHash)
-            } else {
-                writer.name("backupPasswordHash").nullValue()
-            }
             writer.endObject()
         }
 
         suspend fun listBackups(): List<BackupFileInfo> =
             withContext(Dispatchers.IO) {
                 val prefs = settingsRepository.userPreferences.first()
-                val customUri = prefs.backupDirectoryUri?.let { Uri.parse(it) }
+                val customUri = prefs.backupDirectoryUri?.toUri()
 
                 if (customUri != null) {
                     val dir = DocumentFile.fromTreeUri(context, customUri)

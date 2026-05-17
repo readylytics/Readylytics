@@ -47,7 +47,7 @@ class HealthDashboardApplication :
                 .setWorkerFactory(workerFactory)
                 .build()
 
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
