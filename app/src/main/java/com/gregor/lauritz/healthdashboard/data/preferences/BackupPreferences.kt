@@ -35,4 +35,14 @@ internal class BackupPreferences
                 }
             }
         }
+
+        suspend fun updateBackupPasswordHash(hash: String?) {
+            dataStore.updateData { builder ->
+                if (hash != null) {
+                    builder.toBuilder().setBackupPasswordHash(hash).build()
+                } else {
+                    builder.toBuilder().clearBackupPasswordHash().build()
+                }
+            }
+        }
     }

@@ -161,6 +161,8 @@ class SettingsRepository
 
         suspend fun updateBackupDirectoryUri(uri: String?) = backup.updateBackupDirectoryUri(uri)
 
+        suspend fun updateBackupPasswordHash(hash: String?) = backup.updateBackupPasswordHash(hash)
+
         suspend fun updateAppTheme(theme: AppTheme) = ui.updateAppTheme(theme)
 
         suspend fun updateDynamicColorEnabled(enabled: Boolean) = ui.updateDynamicColorEnabled(enabled)

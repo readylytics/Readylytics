@@ -140,6 +140,7 @@ fun UserPreferences.toProto(): UserPreferencesProto {
     domain.circadianThresholdOverride?.let { builder.setCircadianThresholdOverride(it) }
     domain.primaryDeviceName?.let { builder.setPrimaryDeviceName(it) }
     domain.backupDirectoryUri?.let { builder.setBackupDirectoryUri(it) }
+    domain.backupPasswordHash?.let { builder.setBackupPasswordHash(it) }
 
     return builder.build()
 }
