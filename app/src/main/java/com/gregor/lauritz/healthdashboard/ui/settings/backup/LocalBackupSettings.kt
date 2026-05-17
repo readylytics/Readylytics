@@ -13,17 +13,26 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
@@ -58,6 +67,11 @@ fun LocalBackupSection(
 
         // Directory Picker
         BackupDirectoryItem(uiState = uiState, onEvent = onEvent)
+
+        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+
+        // Password Section
+        BackupPasswordSection(uiState = uiState, onEvent = onEvent)
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
 
@@ -125,6 +139,104 @@ fun LocalBackupSection(
                 TextButton(onClick = { onEvent(SettingsEvent.DismissBackupError) }) {
                     Text("Dismiss")
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BackupPasswordSection(
+    uiState: LocalBackupState,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    var password by remember { mutableStateOf("") }
+    var testPassword by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) }
+    var showTestPassword by remember { mutableStateOf(false) }
+
+    Column {
+        Text(
+            text = "Security",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
+
+        // Set Password
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Set Master Password") },
+            placeholder = { Text("Leave blank to disable encryption") },
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { showPassword = !showPassword }) {
+                    Icon(
+                        imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (showPassword) "Hide password" else "Show password",
+                    )
+                }
+            },
+            singleLine = true,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Used for AES-256 backup encryption.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = { onEvent(SettingsEvent.UpdateBackupPassword(password)) }) {
+                Text("Update")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+
+        // Test Password
+        OutlinedTextField(
+            value = testPassword,
+            onValueChange = {
+                testPassword = it
+                onEvent(SettingsEvent.ClearPasswordVerificationResult)
+            },
+            label = { Text("Test Backup Password") },
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = if (showTestPassword) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { showTestPassword = !showTestPassword }) {
+                    Icon(
+                        imageVector = if (showTestPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (showTestPassword) "Hide password" else "Show password",
+                    )
+                }
+            },
+            singleLine = true,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val result = uiState.passwordVerificationResult
+            if (result != null) {
+                Text(
+                    text = if (result) "Match! ✓" else "No match ✗",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (result) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+            TextButton(
+                onClick = { onEvent(SettingsEvent.VerifyBackupPassword(testPassword)) },
+                enabled = testPassword.isNotEmpty(),
+            ) {
+                Text("Verify")
             }
         }
     }

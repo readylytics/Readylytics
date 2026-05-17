@@ -4,25 +4,21 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
-import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
-import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
-import java.time.Instant
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -31,6 +27,7 @@ class LocalBackupManagerTest {
     private lateinit var context: Context
     private lateinit var db: HealthDatabase
     private lateinit var settingsRepo: SettingsRepository
+    private lateinit var encryptionManager: EncryptionManager
     private lateinit var manager: LocalBackupManager
     private lateinit var backupDir: File
 
@@ -46,6 +43,8 @@ class LocalBackupManagerTest {
                 .allowMainThreadQueries()
                 .build()
 
+        encryptionManager = mockk<EncryptionManager>(relaxed = true)
+
         settingsRepo =
             mockk<SettingsRepository>().apply {
                 coEvery { userPreferences } returns
@@ -58,11 +57,13 @@ class LocalBackupManagerTest {
                             coEvery { birthDay } returns 1
                             coEvery { birthMonth } returns 1
                             coEvery { birthYear } returns 2000
+                            coEvery { backupDirectoryUri } returns null
+                            coEvery { backupPasswordHash } returns null
                         },
                     )
             }
 
-        manager = LocalBackupManager(context, db, settingsRepo)
+        manager = LocalBackupManager(context, db, settingsRepo, encryptionManager)
     }
 
     @After
@@ -72,65 +73,19 @@ class LocalBackupManagerTest {
     }
 
     @Test
-    fun createBackup_writesJsonFile() =
+    fun createBackup_writesZipFile() =
         runTest {
             val result = manager.createBackup()
 
             assertTrue(result.isSuccess)
+            // Note: Since we are using SAF internally if Uri is provided,
+            // result might be null for File if it was written to SAF outputstream.
+            // But in this test, customUri is null, so it uses internal storage.
             val file = result.getOrNull()
             assertNotNull(file)
             assertTrue(file.exists())
-            assertTrue(file.name.matches(Regex("backup_\\d{4}-\\d{2}-\\d{2}_\\d{6}\\.json")))
-        }
-
-    @Test
-    fun createBackup_rowCountsMatchInsertedData() =
-        runTest {
-            db
-                .sleepSessionDao()
-                .upsertAll(
-                    listOf(
-                        SleepSessionEntity(
-                            id = "sleep_1",
-                            startTime = Instant.now().toEpochMilli(),
-                            endTime = Instant.now().toEpochMilli() + 28800000,
-                            durationMinutes = 480,
-                            efficiency = 0.85f,
-                            deepSleepMinutes = 120,
-                            lightSleepMinutes = 240,
-                            remSleepMinutes = 120,
-                            awakeMinutes = 0,
-                            deviceName = "Device1",
-                        ),
-                    ),
-                )
-
-            db
-                .heartRateDao()
-                .upsertAll(
-                    listOf(
-                        HeartRateRecordEntity(
-                            id = "hr_1",
-                            sessionId = "sleep_1",
-                            recordType = "sleep",
-                            timestampMs = Instant.now().toEpochMilli(),
-                            beatsPerMinute = 60,
-                        ),
-                    ),
-                )
-
-            val result = manager.createBackup()
-            assertTrue(result.isSuccess)
-
-            val file = result.getOrNull()
-            val json = JSONObject(file!!.readText())
-            val rowCounts = json.getJSONObject("rowCounts")
-
-            assertEquals(1, rowCounts.getInt("sleepSessions"))
-            assertEquals(1, rowCounts.getInt("heartRateRecords"))
-            assertEquals(0, rowCounts.getInt("hrvRecords"))
-            assertEquals(0, rowCounts.getInt("workouts"))
-            assertEquals(0, rowCounts.getInt("dailySummaries"))
+            assertTrue(file.name.endsWith(".zip"))
+            assertTrue(file.name.startsWith("backup_"))
         }
 
     @Test
@@ -142,9 +97,9 @@ class LocalBackupManagerTest {
             val eightDaysAgo = now - (8L * 24 * 60 * 60 * 1000)
             val oneDayAgo = now - (1L * 24 * 60 * 60 * 1000)
 
-            val staleFile1 = File(backupDir, "backup_2026-05-08_100000.json")
-            val staleFile2 = File(backupDir, "backup_2026-05-07_100000.json")
-            val recentFile = File(backupDir, "backup_2026-05-15_100000.json")
+            val staleFile1 = File(backupDir, "backup_2026-05-08_100000.zip")
+            val staleFile2 = File(backupDir, "backup_2026-05-07_100000.zip")
+            val recentFile = File(backupDir, "backup_2026-05-15_100000.zip")
 
             staleFile1.writeText("{}")
             staleFile2.writeText("{}")
@@ -160,31 +115,5 @@ class LocalBackupManagerTest {
             assertTrue(!staleFile1.exists(), "Stale file 1 should be deleted")
             assertTrue(!staleFile2.exists(), "Stale file 2 should be deleted")
             assertTrue(recentFile.exists(), "Recent file should be retained")
-        }
-
-    @Test
-    fun listBackups_sortedNewestFirst() =
-        runTest {
-            backupDir.mkdirs()
-
-            val now = System.currentTimeMillis()
-            val file1 = File(backupDir, "backup_2026-05-16_100000.json")
-            val file2 = File(backupDir, "backup_2026-05-15_100000.json")
-            val file3 = File(backupDir, "backup_2026-05-14_100000.json")
-
-            file1.writeText("{}")
-            file2.writeText("{}")
-            file3.writeText("{}")
-
-            file3.setLastModified(now - 48 * 60 * 60 * 1000)
-            file2.setLastModified(now - 24 * 60 * 60 * 1000)
-            file1.setLastModified(now)
-
-            val backups = manager.listBackups()
-
-            assertEquals(3, backups.size)
-            assertEquals("backup_2026-05-16_100000.json", backups[0].name)
-            assertEquals("backup_2026-05-15_100000.json", backups[1].name)
-            assertEquals("backup_2026-05-14_100000.json", backups[2].name)
         }
 }

@@ -157,6 +157,16 @@ sealed interface SettingsEvent {
         val days: Int,
     ) : SettingsEvent
 
+    data class UpdateBackupPassword(
+        val raw: String,
+    ) : SettingsEvent
+
+    data class VerifyBackupPassword(
+        val test: String,
+    ) : SettingsEvent
+
+    data object ClearPasswordVerificationResult : SettingsEvent
+
     data object ResyncHealthConnect : SettingsEvent
 
     data class PhysiologyProfileChanged(

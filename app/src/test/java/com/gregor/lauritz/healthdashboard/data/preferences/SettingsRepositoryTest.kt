@@ -40,7 +40,7 @@ class SettingsRepositoryTest {
                 sleep = SleepPreferences(dataStore),
                 ui = mockk<UIPreferences>(relaxed = true),
                 sync = mockk<SyncPreferences>(relaxed = true),
-                cloud = mockk<CloudPreferences>(relaxed = true),
+                backup = mockk<BackupPreferences>(relaxed = true),
             )
     }
 

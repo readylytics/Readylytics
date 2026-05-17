@@ -18,6 +18,9 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.CurrentNightHrvRe
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.HrCoverageValidator
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.SleepNadirAnalyzer
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.WakeWindowHrCollector
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.PaiScoringStrategy
+import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.SleepScoringStrategy
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

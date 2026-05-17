@@ -95,7 +95,7 @@ class SettingsRepository
 
         suspend fun updateHrvWarningThreshold(value: Float) = thresholds.updateHrvWarningThreshold(value)
 
-        suspend fun updateRhrOptimalThreshold(value: Float) = thresholds.updateHrvOptimalThreshold(value)
+        suspend fun updateRhrOptimalThreshold(value: Float) = thresholds.updateRhrOptimalThreshold(value)
 
         suspend fun updateRhrWarningThreshold(value: Float) = thresholds.updateRhrWarningThreshold(value)
 
@@ -149,6 +149,8 @@ class SettingsRepository
         suspend fun updateSyncPreference(pref: SyncPreference) = sync.updateSyncPreference(pref)
 
         suspend fun updateSyncIntervalHours(hours: Int) = sync.updateSyncIntervalHours(hours)
+
+        suspend fun updateDriveAccountEmail(email: String?) = sync.updateDriveAccountEmail(email)
 
         suspend fun updateCircadianThresholdOverride(encryptedMinutes: String?) =
             sync.updateCircadianThresholdOverride(encryptedMinutes)

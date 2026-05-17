@@ -2,10 +2,12 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 
 import android.content.Context
 import android.content.Intent
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.MainActivity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.domain.backup.LocalBackupManager
 import com.gregor.lauritz.healthdashboard.domain.backup.LocalRestoreManager
@@ -14,11 +16,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import androidx.core.net.toUri
 
 @HiltViewModel
 class LocalBackupViewModel
@@ -27,6 +29,7 @@ class LocalBackupViewModel
         private val settingsRepo: SettingsRepository,
         private val localBackupManager: LocalBackupManager,
         private val localRestoreManager: LocalRestoreManager,
+        private val encryptionManager: EncryptionManager,
     ) : ViewModel() {
         private val transientState = MutableStateFlow(TransientBackupState())
 
@@ -46,6 +49,7 @@ class LocalBackupViewModel
                     restoreSuccess = transient.restoreSuccess,
                     pendingRestoreFile = transient.pendingRestoreFile,
                     availableBackups = localBackupManager.listBackups(),
+                    passwordVerificationResult = transient.passwordVerificationResult,
                 )
             }.stateIn(
                 scope = viewModelScope,
@@ -150,6 +154,31 @@ class LocalBackupViewModel
                 SettingsEvent.DismissBackupError -> {
                     transientState.update { it.copy(backupError = null) }
                 }
+                is SettingsEvent.UpdateBackupPassword -> {
+                    viewModelScope.launch {
+                        val hash = if (event.raw.isBlank()) null else encryptionManager.encrypt(event.raw)
+                        settingsRepo.updateBackupPasswordHash(hash)
+                    }
+                }
+                is SettingsEvent.VerifyBackupPassword -> {
+                    viewModelScope.launch {
+                        val currentHash = settingsRepo.userPreferences.first().backupPasswordHash
+                        val matches =
+                            if (currentHash == null) {
+                                event.test.isEmpty()
+                            } else {
+                                try {
+                                    encryptionManager.decrypt(currentHash) == event.test
+                                } catch (_: Exception) {
+                                    false
+                                }
+                            }
+                        transientState.update { it.copy(passwordVerificationResult = matches) }
+                    }
+                }
+                SettingsEvent.ClearPasswordVerificationResult -> {
+                    transientState.update { it.copy(passwordVerificationResult = null) }
+                }
                 is SettingsEvent.BackupScheduleChanged ->
                     viewModelScope.launch { settingsRepo.updateBackupSchedule(schedule = event.schedule) }
                 else -> {}
@@ -163,5 +192,6 @@ class LocalBackupViewModel
             val backupError: String? = null,
             val restoreSuccess: Boolean = false,
             val pendingRestoreFile: BackupFileInfo? = null,
+            val passwordVerificationResult: Boolean? = null,
         )
     }
