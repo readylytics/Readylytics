@@ -157,8 +157,13 @@ sealed interface SettingsEvent {
         val days: Int,
     ) : SettingsEvent
 
+    data object OpenSetPasswordDialog : SettingsEvent
+
+    data object DismissSetPasswordDialog : SettingsEvent
+
     data class UpdateBackupPassword(
         val raw: String,
+        val autoStartBackup: Boolean = false,
     ) : SettingsEvent
 
     data class VerifyBackupPassword(
