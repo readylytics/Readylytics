@@ -162,6 +162,7 @@ dependencies {
     // WorkManager + Hilt integration
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.hilt.work)
+    implementation(libs.zip4j)
     ksp(libs.hilt.work.compiler)
 
     // Security

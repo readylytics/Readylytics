@@ -127,6 +127,10 @@ message UserPreferencesProto {
     oneof backup_directory_uri_oneof {
         string backup_directory_uri = 57;
     }
+
+    oneof backup_password_hash_oneof {
+        string backup_password_hash = 58;
+    }
 }
 
 enum TrimpMethodProto {
