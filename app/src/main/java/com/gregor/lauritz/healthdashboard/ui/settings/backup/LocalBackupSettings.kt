@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -48,6 +49,20 @@ fun LocalBackupSection(
     uiState: LocalBackupState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
+    if (uiState.showSetPasswordDialog) {
+        SetPasswordDialog(
+            onDismiss = { onEvent(SettingsEvent.DismissSetPasswordDialog) },
+            onConfirm = { password ->
+                onEvent(
+                    SettingsEvent.UpdateBackupPassword(
+                        password,
+                        autoStartBackup = !uiState.isPasswordSet,
+                    ),
+                )
+            },
+        )
+    }
+
     Column(
         modifier =
             Modifier.padding(
@@ -149,9 +164,7 @@ private fun BackupPasswordSection(
     uiState: LocalBackupState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
-    var password by remember { mutableStateOf("") }
     var testPassword by remember { mutableStateOf("") }
-    var showPassword by remember { mutableStateOf(false) }
     var showTestPassword by remember { mutableStateOf(false) }
 
     Column {
@@ -162,36 +175,21 @@ private fun BackupPasswordSection(
         )
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
 
-        // Set Password
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Set Master Password") },
-            placeholder = { Text("Leave blank to disable encryption") },
-            modifier = Modifier.fillMaxWidth(),
-            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                IconButton(onClick = { showPassword = !showPassword }) {
-                    Icon(
-                        imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (showPassword) "Hide password" else "Show password",
-                    )
-                }
-            },
-            singleLine = true,
-        )
+        // Change Password Row
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "Used for AES-256 backup encryption.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(onClick = { onEvent(SettingsEvent.UpdateBackupPassword(password)) }) {
-                Text("Update")
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Backup Password", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = if (uiState.isPasswordSet) "Encryption is enabled." else "Encryption is disabled.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            TextButton(onClick = { onEvent(SettingsEvent.OpenSetPasswordDialog) }) {
+                Text(if (uiState.isPasswordSet) "Change" else "Set")
             }
         }
 
@@ -240,6 +238,81 @@ private fun BackupPasswordSection(
             }
         }
     }
+}
+
+@Composable
+private fun SetPasswordDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var password by remember { mutableStateOf("") }
+    var repeatPassword by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Set Backup Password") },
+        text = {
+            Column {
+                Text(
+                    "This password will be used to encrypt your backups with AES-256. " +
+                        "If you lose it, you won't be able to restore your data.",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("New Password") },
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation =
+                        if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { showPassword = !showPassword }) {
+                            Icon(
+                                imageVector =
+                                    if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (showPassword) "Hide password" else "Show password",
+                            )
+                        }
+                    },
+                    singleLine = true,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = repeatPassword,
+                    onValueChange = { repeatPassword = it },
+                    label = { Text("Repeat Password") },
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation =
+                        if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    singleLine = true,
+                    isError = password != repeatPassword && repeatPassword.isNotEmpty(),
+                )
+                if (password != repeatPassword && repeatPassword.isNotEmpty()) {
+                    Text(
+                        text = "Passwords do not match",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(password) },
+                enabled = password.isNotEmpty() && password == repeatPassword,
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
 }
 
 @Composable
