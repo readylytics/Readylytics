@@ -18,7 +18,7 @@ data class CachedDailyMetrics(
         const val TTL_MS = 60 * 60 * 1000L // 1h
     }
 
-    fun isExpired(nowMs: Long = SystemClock.elapsedRealtime()): Boolean = nowMs - timestampMs > TTL_MS
+    fun isExpired(nowMs: Long): Boolean = nowMs - timestampMs > TTL_MS
 }
 
 @Singleton

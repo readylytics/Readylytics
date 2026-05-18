@@ -55,7 +55,7 @@ class HealthDashboardApplication :
 
     override fun onCreate() {
         super.onCreate()
-        if (!BuildConfig.DEBUG) {
+        if (BuildConfig.DEBUG) {
             setupPerformanceMonitoring()
         }
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
