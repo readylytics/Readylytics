@@ -32,7 +32,13 @@ object DataStoreModule {
     @Provides
     @Singleton
     @ApplicationScope
-    fun provideApplicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    fun provideApplicationScope(): CoroutineScope {
+        val handler =
+            kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
+                android.util.Log.e("ApplicationScope", "Uncaught exception in app scope", throwable)
+            }
+        return CoroutineScope(SupervisorJob() + Dispatchers.IO + handler)
+    }
 
     @Provides
     @Singleton
@@ -122,8 +128,9 @@ object DataStoreModule {
                                             "rhr_baseline_override",
                                         ),
                                     ]?.let { rhrBaselineOverride = it }
-                                    prefs[stringPreferencesKey("sync_preference")]?.let {
-                                        syncPreference = SyncPreferenceProto.valueOf("SYNC_$it")
+                                    prefs[stringPreferencesKey("sync_preference")]?.let { value ->
+                                        runCatching { SyncPreferenceProto.valueOf("SYNC_${value.uppercase()}") }
+                                            .onSuccess { syncPreference = it }
                                     }
                                     prefs[intPreferencesKey("sync_interval_hours")]?.let { syncIntervalHours = it }
                                     prefs[longPreferencesKey("last_sync_timestamp")]?.let { lastSyncTimestamp = it }
@@ -177,16 +184,18 @@ object DataStoreModule {
                                         restingHrAfterMinutes =
                                             it
                                     }
-                                    prefs[stringPreferencesKey("app_theme")]?.let {
-                                        appTheme = AppThemeProto.valueOf("THEME_$it")
+                                    prefs[stringPreferencesKey("app_theme")]?.let { value ->
+                                        runCatching { AppThemeProto.valueOf("THEME_${value.uppercase()}") }
+                                            .onSuccess { appTheme = it }
                                     }
                                     prefs[booleanPreferencesKey("dynamic_color_enabled")]?.let {
                                         dynamicColorEnabled =
                                             it
                                     }
                                     prefs[stringPreferencesKey("drive_account_email")]?.let { driveAccountEmail = it }
-                                    prefs[stringPreferencesKey("backup_schedule")]?.let {
-                                        backupSchedule = BackupScheduleProto.valueOf("BACKUP_$it")
+                                    prefs[stringPreferencesKey("backup_schedule")]?.let { value ->
+                                        runCatching { BackupScheduleProto.valueOf("BACKUP_${value.uppercase()}") }
+                                            .onSuccess { backupSchedule = it }
                                     }
                                     prefs[longPreferencesKey("last_backup_timestamp")]?.let { lastBackupTimestamp = it }
                                     prefs[intPreferencesKey("consistency_threshold_minutes")]?.let {
@@ -220,8 +229,9 @@ object DataStoreModule {
                                     prefs[booleanPreferencesKey("collapse_display")]?.let { collapseDisplay = it }
                                     prefs[booleanPreferencesKey("collapse_advanced")]?.let { collapseAdvanced = it }
                                     prefs[booleanPreferencesKey("about_dismissed")]?.let { aboutDismissed = it }
-                                    prefs[stringPreferencesKey("physiology_profile")]?.let {
-                                        physiologyProfile = PhysiologyProfileProto.valueOf("PROFILE_$it")
+                                    prefs[stringPreferencesKey("physiology_profile")]?.let { value ->
+                                        runCatching { PhysiologyProfileProto.valueOf("PROFILE_${value.uppercase()}") }
+                                            .onSuccess { physiologyProfile = it }
                                     }
                                     prefs[longPreferencesKey("install_date")]?.let { installDate = it }
                                     prefs[stringPreferencesKey("circadian_threshold_override_encrypted")]?.let {
