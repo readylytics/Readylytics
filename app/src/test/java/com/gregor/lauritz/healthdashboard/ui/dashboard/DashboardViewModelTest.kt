@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.dashboard
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.cache.DailyMetricCache
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
@@ -79,6 +80,7 @@ class DashboardViewModelTest {
                 settingsRepo = settingsRepo,
                 cardConfigRepository = cardConfigRepository,
                 circadianRepo = circadianRepo,
+                dailyMetricCache = DailyMetricCache(clockMs = { 1000L }),
             )
     }
 

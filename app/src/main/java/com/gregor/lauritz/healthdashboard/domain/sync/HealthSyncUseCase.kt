@@ -91,7 +91,12 @@ class HealthSyncUseCase
                                 )
                             }
                         val hrEntities = HeartRateMapper.mapToEntities(hrRecords, sleepEntities, initialWorkouts)
-                        val hrBySession = hrEntities.filter { it.sessionId != null }.groupBy { it.sessionId }
+                        val hrBySession =
+                            hrEntities
+                                .asSequence()
+                                .filter {
+                                    it.sessionId != null
+                                }.groupBy { it.sessionId }
                         val workoutEntities =
                             exerciseRecords.map { session ->
                                 val sessionSamples = hrBySession[session.metadata.id] ?: emptyList()

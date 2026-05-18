@@ -88,12 +88,15 @@ class ScoringRepositoryImpl
                     val workoutHrSamples =
                         heartRateDao
                             .getByTimeRange(workout.startTime, workout.endTime)
+                            .asSequence()
                             .filter { it.recordType == RecordType.EXERCISE.name }
                             .sortedBy { it.timestampMs }
+                            .toList()
 
                     val workoutAvgHr =
                         workoutHrSamples
                             .takeIf { it.isNotEmpty() }
+                            ?.asSequence()
                             ?.map { it.beatsPerMinute }
                             ?.average()
                             ?.toFloat()

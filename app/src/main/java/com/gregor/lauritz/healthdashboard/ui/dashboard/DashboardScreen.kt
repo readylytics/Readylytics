@@ -23,9 +23,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -92,7 +94,7 @@ fun DashboardScreen(
     val summary = uiState.summary
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
-    var showCardManagement by remember { mutableStateOf(false) }
+    var showCardManagement by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxSize()) {
         if (showCardManagement) {
@@ -109,7 +111,7 @@ fun DashboardScreen(
         }
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().testTag("dashboard_lazy_column"),
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
             item(key = "date_switcher") {
