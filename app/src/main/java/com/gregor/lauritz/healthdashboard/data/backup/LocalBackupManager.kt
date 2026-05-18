@@ -409,7 +409,7 @@ class LocalBackupManager
                 defaultBackupDir
                     .listFiles { f ->
                         f.name.startsWith("backup_") && f.name.endsWith(".zip") && f.isFile
-                    }?.filter { now - it.lastModified() > BACKUP_RETENTION_PERIOD_MS }
+                    }?.filter { now - it.lastModified() > RETENTION_PERIOD_MS }
                     ?.forEach { it.delete() }
             }
 
@@ -426,13 +426,13 @@ class LocalBackupManager
                     ?.listFiles()
                     ?.filter {
                         it.isFile && it.name?.startsWith("backup_") == true && it.name?.endsWith(".zip") == true
-                    }?.filter { now - it.lastModified() > BACKUP_RETENTION_PERIOD_MS }
+                    }?.filter { now - it.lastModified() > RETENTION_PERIOD_MS }
                     ?.forEach { it.delete() }
             }
         }
 
         companion object {
             private val FILENAME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")
-            private const val BACKUP_RETENTION_PERIOD_MS = 7L * 24 * 60 * 60 * 1000
+            private const val RETENTION_PERIOD_MS = 7L * 24 * 60 * 60 * 1000
         }
     }
