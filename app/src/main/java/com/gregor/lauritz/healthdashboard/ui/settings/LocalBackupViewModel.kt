@@ -235,6 +235,7 @@ class LocalBackupViewModel
                 .createBackup()
                 .onSuccess {
                     settingsRepo.updateLastBackupTimestamp(System.currentTimeMillis())
+                    transientState.update { it.copy(refreshTrigger = it.refreshTrigger + 1) }
                 }.onFailure { e ->
                     transientState.update { it.copy(backupError = e.message ?: "Backup failed") }
                 }
