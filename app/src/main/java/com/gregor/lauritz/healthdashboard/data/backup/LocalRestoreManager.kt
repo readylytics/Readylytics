@@ -331,11 +331,19 @@ class LocalRestoreManager
                 settingsRepository.updateRhrBaselineOverride(null)
             }
             if (json.has("syncPreference")) {
-                settingsRepository.updateSyncPreference(
-                    com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference.valueOf(
-                        json.getString("syncPreference"),
-                    ),
-                )
+                try {
+                    settingsRepository.updateSyncPreference(
+                        com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference.valueOf(
+                            json.getString("syncPreference"),
+                        ),
+                    )
+                } catch (e: IllegalArgumentException) {
+                    android.util.Log.w(
+                        "LocalRestoreManager",
+                        "Invalid SyncPreference value: ${json.optString("syncPreference")}",
+                        e,
+                    )
+                }
             }
             if (json.has("syncIntervalHours")) {
                 settingsRepository.updateSyncIntervalHours(json.getInt("syncIntervalHours"))
@@ -414,18 +422,34 @@ class LocalRestoreManager
                 settingsRepository.updateRestingHrAfterMinutes(json.getInt("restingHrAfterMinutes"))
             }
             if (json.has("appTheme")) {
-                settingsRepository.updateAppTheme(
-                    com.gregor.lauritz.healthdashboard.data.preferences.AppTheme.valueOf(
-                        json.getString("appTheme"),
-                    ),
-                )
+                try {
+                    settingsRepository.updateAppTheme(
+                        com.gregor.lauritz.healthdashboard.data.preferences.AppTheme.valueOf(
+                            json.getString("appTheme"),
+                        ),
+                    )
+                } catch (e: IllegalArgumentException) {
+                    android.util.Log.w(
+                        "LocalRestoreManager",
+                        "Invalid AppTheme value: ${json.optString("appTheme")}",
+                        e,
+                    )
+                }
             }
             if (json.has("backupSchedule")) {
-                settingsRepository.updateBackupSchedule(
-                    com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule.valueOf(
-                        json.getString("backupSchedule"),
-                    ),
-                )
+                try {
+                    settingsRepository.updateBackupSchedule(
+                        com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule.valueOf(
+                            json.getString("backupSchedule"),
+                        ),
+                    )
+                } catch (e: IllegalArgumentException) {
+                    android.util.Log.w(
+                        "LocalRestoreManager",
+                        "Invalid BackupSchedule value: ${json.optString("backupSchedule")}",
+                        e,
+                    )
+                }
             }
             if (json.has("lastBackupTimestamp")) {
                 settingsRepository.updateLastBackupTimestamp(json.getLong("lastBackupTimestamp"))
