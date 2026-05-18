@@ -64,6 +64,7 @@ data class UserPreferences(
     val primaryDeviceName: String? = null,
     val backupDirectoryUri: String? = null,
     val backupPasswordHash: String? = null,
+    val isBirthdayConfigured: Boolean = SettingsDefaults.IS_BIRTHDAY_CONFIGURED,
 )
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
@@ -132,5 +133,6 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         primaryDeviceName = if (hasPrimaryDeviceName()) primaryDeviceName else null,
         backupDirectoryUri = if (hasBackupDirectoryUri()) backupDirectoryUri else null,
         backupPasswordHash = if (hasBackupPasswordHash()) backupPasswordHash else null,
+        isBirthdayConfigured = isBirthdayConfigured,
     )
 }

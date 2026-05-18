@@ -131,6 +131,8 @@ message UserPreferencesProto {
     oneof backup_password_hash_oneof {
         string backup_password_hash = 58;
     }
+
+    bool is_birthday_configured = 59;
 }
 
 enum TrimpMethodProto {
