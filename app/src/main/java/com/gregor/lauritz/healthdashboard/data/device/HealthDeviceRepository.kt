@@ -42,7 +42,7 @@ class HealthDeviceRepository
             val devices: List<String>,
             val timestampMs: Long,
         ) {
-            fun isExpired(): Boolean = SystemClock.elapsedRealtime() - timestampMs > CACHE_TTL_MS
+            fun isExpired(nowMs: Long): Boolean = nowMs - timestampMs > CACHE_TTL_MS
         }
 
         // Flow-based cache (better than manual Mutex + mutable var)
@@ -60,8 +60,9 @@ class HealthDeviceRepository
          */
         suspend fun getAvailableDevices(): List<String> {
             // Check if cached and not expired
+            val now = SystemClock.elapsedRealtime()
             val cached = deviceCache.value
-            if (cached != null && !cached.isExpired()) {
+            if (cached != null && !cached.isExpired(now)) {
                 return cached.devices
             }
 
@@ -69,7 +70,7 @@ class HealthDeviceRepository
             return fetchMutex.withLock {
                 // Double-check after acquiring lock in case another coroutine fetched
                 val rechecked = deviceCache.value
-                if (rechecked != null && !rechecked.isExpired()) {
+                if (rechecked != null && !rechecked.isExpired(SystemClock.elapsedRealtime())) {
                     return@withLock rechecked.devices
                 }
                 fetchAndCacheDevices()

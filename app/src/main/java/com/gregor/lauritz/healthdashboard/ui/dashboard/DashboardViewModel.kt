@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.cache.DailyMetricCache
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardManagementDelegate
@@ -42,6 +43,7 @@ class DashboardViewModel
         private val settingsRepo: SettingsRepository,
         private val cardConfigRepository: CardConfigurationRepository,
         private val circadianRepo: CircadianConsistencyRepository,
+        private val dailyMetricCache: DailyMetricCache,
     ) : ViewModel() {
         private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
 
@@ -155,10 +157,21 @@ class DashboardViewModel
             cardManagementDelegate.onResetToDefaults()
         }
 
+        fun onEvent(event: DashboardEvent) {
+            when (event) {
+                is DashboardEvent.DateSelected -> selectedDateRepository.updateSelectedDate(event.date)
+                DashboardEvent.PreviousDay -> onPreviousDay()
+                DashboardEvent.NextDay -> onNextDay()
+                DashboardEvent.Refresh -> onRefresh()
+                DashboardEvent.ToggleCardManagement -> toggleCardManagement()
+            }
+        }
+
         fun onRefresh() {
             viewModelScope.launch {
                 try {
                     foregroundSyncController.triggerImmediateSync()
+                    dailyMetricCache.invalidate()
                 } catch (e: Exception) {
                     Log.e(TAG, "Refresh failed", e)
                     _errorMessage.value = e.message ?: "Sync failed"

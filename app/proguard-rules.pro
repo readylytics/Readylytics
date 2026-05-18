@@ -44,3 +44,8 @@
 # Hash computation uses direct Kotlin value access (not reflection),
 # so field name obfuscation does not affect hash stability.
 # Component classes are retained by Hilt's @Keep annotations.
+
+# Singleton repositories — prevent R8 from inlining or removing during release builds
+-keep class com.gregor.lauritz.healthdashboard.data.repository.ScoringRepositoryImpl { *; }
+-keep class com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository { *; }
+-keep class com.gregor.lauritz.healthdashboard.data.device.HealthDeviceRepository { *; }

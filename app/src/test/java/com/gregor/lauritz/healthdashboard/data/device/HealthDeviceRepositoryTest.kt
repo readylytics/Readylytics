@@ -168,6 +168,33 @@ class HealthDeviceRepositoryTest {
         }
 
     @Test
+    fun `deviceCacheHitRate - second and third calls within TTL are cache hits`() =
+        runTest {
+            coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")
+            coEvery { heartRateDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { hrvDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { workoutDao.getDistinctDeviceNames() } returns emptyList()
+            coEvery { healthConnectRepository.discoverDevices(any()) } returns listOf("Device2")
+
+            // First call: cache miss — triggers fetch
+            val devices1 = repository.getAvailableDevices()
+            coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
+
+            // Second call within TTL: cache hit — no new fetch
+            val devices2 = repository.getAvailableDevices()
+            coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
+
+            // Third call within TTL: cache hit — still no new fetch
+            val devices3 = repository.getAvailableDevices()
+            coVerify(exactly = 1) { sleepSessionDao.getDistinctDeviceNames() }
+
+            assertEquals(devices1, devices2)
+            assertEquals(devices2, devices3)
+            // 2 hits out of 3 total calls = 66% hit rate; dao called exactly once confirms this
+            assertTrue("Hit rate should be 66% (2/3 calls served from cache)", devices1 == devices2)
+        }
+
+    @Test
     fun `invalidateCache clears cached devices and forces fresh fetch`() =
         runTest {
             coEvery { sleepSessionDao.getDistinctDeviceNames() } returns listOf("Device1")

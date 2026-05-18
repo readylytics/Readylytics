@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.workers
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
@@ -37,6 +38,7 @@ class WorkerScheduler
                     Constraints
                         .Builder()
                         .setRequiresBatteryNotLow(true)
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
                         .build()
 
                 val request =
@@ -58,6 +60,7 @@ class WorkerScheduler
                     Constraints
                         .Builder()
                         .setRequiresBatteryNotLow(true)
+                        .setRequiresDeviceIdle(true)
                         .build()
 
                 val request =
@@ -79,6 +82,7 @@ class WorkerScheduler
                     Constraints
                         .Builder()
                         .setRequiresBatteryNotLow(true)
+                        .setRequiresDeviceIdle(true)
                         .build()
 
                 val request =

@@ -1,12 +1,14 @@
 package com.gregor.lauritz.healthdashboard
 
 import android.app.Application
+import android.os.StrictMode
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
+import com.gregor.lauritz.healthdashboard.BuildConfig
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.di.ApplicationScope
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
@@ -53,6 +55,9 @@ class HealthDashboardApplication :
 
     override fun onCreate() {
         super.onCreate()
+        if (BuildConfig.DEBUG) {
+            setupPerformanceMonitoring()
+        }
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
 
         appScope.launch(Dispatchers.IO) {
@@ -68,6 +73,24 @@ class HealthDashboardApplication :
         event: Lifecycle.Event,
     ) {
         // Redundant sync trigger removed. MainActivity handles foreground sync via SyncViewModel.
+    }
+
+    private fun setupPerformanceMonitoring() {
+        StrictMode.setThreadPolicy(
+            StrictMode.ThreadPolicy
+                .Builder()
+                .detectAll()
+                .penaltyLog()
+                .build(),
+        )
+        StrictMode.setVmPolicy(
+            StrictMode.VmPolicy
+                .Builder()
+                .detectLeakedSqlLiteObjects()
+                .detectLeakedClosableObjects()
+                .penaltyLog()
+                .build(),
+        )
     }
 
     override fun onTerminate() {
