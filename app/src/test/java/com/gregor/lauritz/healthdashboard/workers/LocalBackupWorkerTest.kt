@@ -1,6 +1,6 @@
 package com.gregor.lauritz.healthdashboard.workers
 
-import com.gregor.lauritz.healthdashboard.domain.backup.LocalBackupManager
+import com.gregor.lauritz.healthdashboard.data.backup.LocalBackupManager
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest

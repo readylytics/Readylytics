@@ -1,4 +1,4 @@
-package com.gregor.lauritz.healthdashboard.domain.backup
+package com.gregor.lauritz.healthdashboard.data.backup
 
 import android.content.Context
 import android.net.Uri

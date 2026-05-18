@@ -98,6 +98,12 @@ class CircadianConsistencyRepositoryTest {
                 override suspend fun deleteAll() = throw UnsupportedOperationException()
 
                 override suspend fun getDistinctDeviceNames(): List<String> = emptyList()
+
+                override suspend fun getPaged(
+                    fromMs: Long,
+                    limit: Int,
+                    offset: Int,
+                ): List<SleepSessionEntity> = throw UnsupportedOperationException()
             }
         val settingsRepo = mockk<SettingsRepository>()
         every { settingsRepo.userPreferences } returns MutableStateFlow(prefs)

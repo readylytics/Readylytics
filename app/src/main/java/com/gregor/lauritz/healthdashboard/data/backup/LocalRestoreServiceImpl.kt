@@ -1,7 +1,7 @@
 package com.gregor.lauritz.healthdashboard.data.backup
 
 import android.net.Uri
-import com.gregor.lauritz.healthdashboard.domain.backup.LocalRestoreManager
+import com.gregor.lauritz.healthdashboard.data.backup.LocalRestoreManager
 import com.gregor.lauritz.healthdashboard.domain.backup.RestoreResult
 import com.gregor.lauritz.healthdashboard.domain.backup.RestoreService
 import javax.inject.Inject

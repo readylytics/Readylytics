@@ -1,4 +1,4 @@
-package com.gregor.lauritz.healthdashboard.domain.backup
+package com.gregor.lauritz.healthdashboard.data.backup
 
 import android.content.Context
 import android.net.Uri
@@ -13,6 +13,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
+import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -554,10 +555,3 @@ class LocalBackupManager
             private val FILENAME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")
         }
     }
-
-data class BackupFileInfo(
-    val name: String,
-    val lastModified: Long,
-    val sizeBytes: Long,
-    val uri: Uri,
-)

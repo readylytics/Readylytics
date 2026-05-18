@@ -7,7 +7,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.gregor.lauritz.healthdashboard.BuildConfig
-import com.gregor.lauritz.healthdashboard.domain.backup.LocalBackupManager
+import com.gregor.lauritz.healthdashboard.data.backup.LocalBackupManager
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.io.IOException

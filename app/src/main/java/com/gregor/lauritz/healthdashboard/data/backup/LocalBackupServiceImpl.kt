@@ -3,7 +3,6 @@ package com.gregor.lauritz.healthdashboard.data.backup
 import android.net.Uri
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupService
-import com.gregor.lauritz.healthdashboard.domain.backup.LocalBackupManager
 import javax.inject.Inject
 import javax.inject.Singleton
 
