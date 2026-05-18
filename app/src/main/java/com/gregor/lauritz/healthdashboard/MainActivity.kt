@@ -7,7 +7,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -15,6 +14,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppNavHost
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncEvent
@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val viewModel: SyncViewModel = hiltViewModel()
-            val prefs by viewModel.userPreferences.collectAsState(initial = null)
+            val prefs by viewModel.userPreferences.collectAsStateWithLifecycle(initialValue = null)
 
             // Keep splash screen on until preferences are loaded to prevent theme flash
             splashScreen.setKeepOnScreenCondition { prefs == null }
