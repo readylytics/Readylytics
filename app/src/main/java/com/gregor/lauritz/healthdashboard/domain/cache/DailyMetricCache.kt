@@ -22,43 +22,43 @@ data class CachedDailyMetrics(
 }
 
 @Singleton
-class DailyMetricCache
+class DailyMetricCache(
+    private val clockMs: () -> Long,
+) {
     @Inject
-    constructor(
-        // Injectable clock for testability; production uses SystemClock.elapsedRealtime()
-        private val clockMs: () -> Long = { SystemClock.elapsedRealtime() },
-    ) {
-        private val cache = MutableStateFlow<CachedDailyMetrics?>(null)
-        private val mutex = Mutex()
+    constructor() : this({ SystemClock.elapsedRealtime() })
 
-        suspend fun getDailyMetrics(
-            date: LocalDate,
-            compute: suspend (LocalDate) -> Pair<Int, Int>,
-        ): CachedDailyMetrics {
-            val now = clockMs()
-            val cached = cache.value
-            if (cached?.date == date && !cached.isExpired(now)) {
-                return cached
-            }
+    private val cache = MutableStateFlow<CachedDailyMetrics?>(null)
+    private val mutex = Mutex()
 
-            return mutex.withLock {
-                val nowInner = clockMs()
-                val rechecked = cache.value
-                if (rechecked?.date == date && !rechecked.isExpired(nowInner)) {
-                    return@withLock rechecked
-                }
-
-                val (sleepScore, loadScore) = compute(date)
-                CachedDailyMetrics(
-                    sleepScore = sleepScore,
-                    loadScore = loadScore,
-                    date = date,
-                    timestampMs = clockMs(),
-                ).also { cache.value = it }
-            }
+    suspend fun getDailyMetrics(
+        date: LocalDate,
+        compute: suspend (LocalDate) -> Pair<Int, Int>,
+    ): CachedDailyMetrics {
+        val now = clockMs()
+        val cached = cache.value
+        if (cached?.date == date && !cached.isExpired(now)) {
+            return cached
         }
 
-        fun invalidate() {
-            cache.value = null
+        return mutex.withLock {
+            val nowInner = clockMs()
+            val rechecked = cache.value
+            if (rechecked?.date == date && !rechecked.isExpired(nowInner)) {
+                return@withLock rechecked
+            }
+
+            val (sleepScore, loadScore) = compute(date)
+            CachedDailyMetrics(
+                sleepScore = sleepScore,
+                loadScore = loadScore,
+                date = date,
+                timestampMs = clockMs(),
+            ).also { cache.value = it }
         }
     }
+
+    fun invalidate() {
+        cache.value = null
+    }
+}
