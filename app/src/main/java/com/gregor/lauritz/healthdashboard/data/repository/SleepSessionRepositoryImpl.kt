@@ -20,13 +20,13 @@ class SleepSessionRepositoryImpl
                     SleepSessionData(
                         id = entity.id,
                         deviceName = entity.deviceName,
-                        startTimeMs = entity.startTimeMs,
-                        endTimeMs = entity.endTimeMs,
-                        duration = entity.duration,
-                        deepSleepMs = entity.deepSleepMs,
-                        lightSleepMs = entity.lightSleepMs,
-                        remSleepMs = entity.remSleepMs,
-                        awakeSleepMs = entity.awakeSleepMs,
+                        startTime = entity.startTime,
+                        endTime = entity.endTime,
+                        durationMinutes = entity.durationMinutes,
+                        deepSleepMinutes = entity.deepSleepMinutes,
+                        lightSleepMinutes = entity.lightSleepMinutes,
+                        remSleepMinutes = entity.remSleepMinutes,
+                        awakeMinutes = entity.awakeMinutes,
                     )
                 }
             }
@@ -36,13 +36,13 @@ class SleepSessionRepositoryImpl
                 SleepSessionData(
                     id = entity.id,
                     deviceName = entity.deviceName,
-                    startTimeMs = entity.startTimeMs,
-                    endTimeMs = entity.endTimeMs,
-                    duration = entity.duration,
-                    deepSleepMs = entity.deepSleepMs,
-                    lightSleepMs = entity.lightSleepMs,
-                    remSleepMs = entity.remSleepMs,
-                    awakeSleepMs = entity.awakeSleepMs,
+                    startTime = entity.startTime,
+                    endTime = entity.endTime,
+                    durationMinutes = entity.durationMinutes,
+                    deepSleepMinutes = entity.deepSleepMinutes,
+                    lightSleepMinutes = entity.lightSleepMinutes,
+                    remSleepMinutes = entity.remSleepMinutes,
+                    awakeMinutes = entity.awakeMinutes,
                 )
             }
 
@@ -55,13 +55,13 @@ class SleepSessionRepositoryImpl
                 SleepSessionData(
                     id = entity.id,
                     deviceName = entity.deviceName,
-                    startTimeMs = entity.startTimeMs,
-                    endTimeMs = entity.endTimeMs,
-                    duration = entity.duration,
-                    deepSleepMs = entity.deepSleepMs,
-                    lightSleepMs = entity.lightSleepMs,
-                    remSleepMs = entity.remSleepMs,
-                    awakeSleepMs = entity.awakeSleepMs,
+                    startTime = entity.startTime,
+                    endTime = entity.endTime,
+                    durationMinutes = entity.durationMinutes,
+                    deepSleepMinutes = entity.deepSleepMinutes,
+                    lightSleepMinutes = entity.lightSleepMinutes,
+                    remSleepMinutes = entity.remSleepMinutes,
+                    awakeMinutes = entity.awakeMinutes,
                 )
             }
 

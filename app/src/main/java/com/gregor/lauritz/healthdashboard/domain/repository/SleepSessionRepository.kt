@@ -3,15 +3,15 @@ package com.gregor.lauritz.healthdashboard.domain.repository
 import kotlinx.coroutines.flow.Flow
 
 data class SleepSessionData(
-    val id: Long,
-    val deviceName: String,
-    val startTimeMs: Long,
-    val endTimeMs: Long,
-    val duration: Long,
-    val deepSleepMs: Long,
-    val lightSleepMs: Long,
-    val remSleepMs: Long,
-    val awakeSleepMs: Long,
+    val id: String,
+    val deviceName: String?,
+    val startTime: Long,
+    val endTime: Long,
+    val durationMinutes: Int,
+    val deepSleepMinutes: Int,
+    val lightSleepMinutes: Int,
+    val remSleepMinutes: Int,
+    val awakeMinutes: Int,
 )
 
 interface SleepSessionRepository {

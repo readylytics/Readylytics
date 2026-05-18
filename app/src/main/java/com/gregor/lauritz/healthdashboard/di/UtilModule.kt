@@ -2,8 +2,10 @@ package com.gregor.lauritz.healthdashboard.di
 
 import com.gregor.lauritz.healthdashboard.data.backup.LocalBackupServiceImpl
 import com.gregor.lauritz.healthdashboard.data.backup.LocalRestoreServiceImpl
+import com.gregor.lauritz.healthdashboard.data.repository.SleepSessionRepositoryImpl
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupService
 import com.gregor.lauritz.healthdashboard.domain.backup.RestoreService
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionRepository
 import com.gregor.lauritz.healthdashboard.domain.util.ResourceProvider
 import dagger.Binds
 import dagger.Module

@@ -14,7 +14,7 @@ import javax.inject.Singleton
 class ResyncHealthConnectUseCase
     @Inject
     constructor(
-        private val sleepDao: SleepSessionDao,
+        private val sleepSessionDao: SleepSessionDao,
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
@@ -25,7 +25,7 @@ class ResyncHealthConnectUseCase
             withContext(Dispatchers.Default) {
                 runCatching {
                     // Clear all HC-sourced data.
-                    sleepDao.deleteAll()
+                    sleepSessionDao.deleteAll()
                     heartRateDao.deleteAll()
                     hrvDao.deleteAll()
                     workoutDao.deleteAll()
