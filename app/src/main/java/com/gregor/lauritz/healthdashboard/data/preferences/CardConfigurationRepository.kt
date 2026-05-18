@@ -1,10 +1,9 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
 import androidx.datastore.core.DataStore
+import com.gregor.lauritz.healthdashboard.di.ApplicationScope
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -18,9 +17,8 @@ class CardConfigurationRepository
     @Inject
     constructor(
         private val dataStore: DataStore<CardConfigurationsProto>,
+        @ApplicationScope private val repositoryScope: CoroutineScope,
     ) {
-        private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
         init {
             repositoryScope.launch {
                 ensureDefaultCardsArePresent()

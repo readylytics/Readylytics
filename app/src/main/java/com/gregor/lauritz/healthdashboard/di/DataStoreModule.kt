@@ -79,6 +79,7 @@ object DataStoreModule {
     @Singleton
     fun provideUserPreferencesDataStore(
         @ApplicationContext context: Context,
+        @ApplicationScope appScope: CoroutineScope,
     ): DataStore<UserPreferencesProto> =
         DataStoreFactory.create(
             serializer = UserPreferencesSerializer,
@@ -86,7 +87,7 @@ object DataStoreModule {
                 ReplaceFileCorruptionHandler {
                     UserPreferencesProto.getDefaultInstance()
                 },
-            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            scope = appScope,
             migrations =
                 listOf(
                     object : DataMigration<UserPreferencesProto> {
