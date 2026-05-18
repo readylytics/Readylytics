@@ -278,7 +278,7 @@ class LocalRestoreManager
                     sb.append("]")
                 }
                 android.util.JsonToken.STRING -> {
-                    sb.append("\"").append(reader.nextString().replace("\"", "\\\"")).append("\"")
+                    sb.append(org.json.JSONObject.quote(reader.nextString()))
                 }
                 android.util.JsonToken.NUMBER -> {
                     sb.append(reader.nextString())
