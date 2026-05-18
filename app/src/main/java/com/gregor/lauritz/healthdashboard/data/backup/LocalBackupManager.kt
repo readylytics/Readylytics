@@ -84,6 +84,7 @@ class LocalBackupManager
                             tempZipFile.inputStream().use { it.copyTo(os) }
                         }
                         tempZipFile.delete()
+                        pruneOldSafBackups(customUri)
                         finalFile = null
                     } else {
                         defaultBackupDir.mkdirs()
@@ -549,6 +550,17 @@ class LocalBackupManager
                 .listFiles { f -> f.name.startsWith("backup_") && f.isFile }
                 ?.filter { now - it.lastModified() > sevenDaysMs }
                 ?.forEach { it.delete() }
+        }
+
+        private fun pruneOldSafBackups(treeUri: Uri) {
+            val treeDir = DocumentFile.fromTreeUri(context, treeUri) ?: return
+            val now = System.currentTimeMillis()
+            val sevenDaysMs = 7L * 24 * 60 * 60 * 1000
+            treeDir
+                .listFiles()
+                .filter { it.isFile && it.name?.startsWith("backup_") == true }
+                .filter { now - it.lastModified() > sevenDaysMs }
+                .forEach { it.delete() }
         }
 
         companion object {

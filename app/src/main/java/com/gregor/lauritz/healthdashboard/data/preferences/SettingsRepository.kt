@@ -174,4 +174,10 @@ class SettingsRepository
         suspend fun getAvailableDevices(): List<String> = ui.getAvailableDevices()
 
         suspend fun clearDeviceCache() = ui.clearDeviceCache()
+
+        suspend fun batchUpdate(block: UserPreferencesProto.Builder.() -> Unit) {
+            dataStore.updateData { proto ->
+                proto.toBuilder().apply(block).build()
+            }
+        }
     }
