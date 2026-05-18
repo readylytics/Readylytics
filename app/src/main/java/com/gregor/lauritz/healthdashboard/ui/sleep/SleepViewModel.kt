@@ -37,6 +37,11 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
+data class Baselines(
+    val hrv: Float? = null,
+    val rhr: Int? = null,
+)
+
 data class SleepUiState(
     val latestSummary: DailySummary? = null,
     val latestSession: SleepSessionEntity? = null,
@@ -77,76 +82,66 @@ class SleepViewModel
         val selectedRange: StateFlow<TimeRange> = _selectedRange.asStateFlow()
 
         /**
-         * Baseline HRV (calculated from past 30 days, constant across all views).
-         * This ensures the baseline shown in charts matches the dashboard baseline.
+         * Combined baselines (HRV & RHR calculated from past 30 days, constant across all views).
+         * Single subscription to selectedDate reduces flow overhead.
          */
         @OptIn(ExperimentalCoroutinesApi::class)
-        val baselineHrvFlow =
+        val baselinesFlow =
             selectedDateRepository.selectedDate
                 .flatMapLatest { date ->
-                    hrvDao
-                        .observeSleepHrvSince(TimeRange.THIRTY_DAYS.fromMs(date))
-                        .map { records ->
-                            if (records.isEmpty()) {
-                                null
-                            } else {
-                                val values =
-                                    records
-                                        .map { it.rmssdMs }
-                                        .sorted()
-                                val mid = values.size / 2
-                                if (values.size % 2 == 0) {
-                                    (values[mid - 1] + values[mid]) / 2f
+                    combine(
+                        hrvDao
+                            .observeSleepHrvSince(TimeRange.THIRTY_DAYS.fromMs(date))
+                            .map { records ->
+                                if (records.isEmpty()) {
+                                    null
                                 } else {
-                                    values[mid]
-                                }
-                            }
-                        }
-                }.stateIn(
-                    scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(5_000),
-                    initialValue = null,
-                )
-
-        /**
-         * Baseline RHR (calculated from past 30 days, constant across all views).
-         * This ensures the baseline shown in charts matches the dashboard baseline.
-         */
-        @OptIn(ExperimentalCoroutinesApi::class)
-        val baselineRhrFlow =
-            selectedDateRepository.selectedDate
-                .flatMapLatest { date ->
-                    heartRateDao
-                        .observeSleepHrSince(TimeRange.THIRTY_DAYS.fromMs(date))
-                        .map { records ->
-                            if (records.isEmpty()) {
-                                null
-                            } else {
-                                val sessionAvgs =
-                                    records
-                                        .groupBy { it.sessionId }
-                                        .values
-                                        .map { sess ->
-                                            sess
-                                                .map { it.beatsPerMinute }
-                                                .average()
-                                                .toFloat()
-                                        }
-                                val sorted = sessionAvgs.sorted()
-                                val mid = sorted.size / 2
-                                val median =
-                                    if (sorted.size % 2 == 0) {
-                                        (sorted[mid - 1] + sorted[mid]) / 2f
+                                    val values =
+                                        records
+                                            .map { it.rmssdMs }
+                                            .sorted()
+                                    val mid = values.size / 2
+                                    if (values.size % 2 == 0) {
+                                        (values[mid - 1] + values[mid]) / 2f
                                     } else {
-                                        sorted[mid]
+                                        values[mid]
                                     }
-                                median.toInt()
-                            }
-                        }
+                                }
+                            },
+                        heartRateDao
+                            .observeSleepHrSince(TimeRange.THIRTY_DAYS.fromMs(date))
+                            .map { records ->
+                                if (records.isEmpty()) {
+                                    null
+                                } else {
+                                    val sessionAvgs =
+                                        records
+                                            .groupBy { it.sessionId }
+                                            .values
+                                            .map { sess ->
+                                                sess
+                                                    .map { it.beatsPerMinute }
+                                                    .average()
+                                                    .toFloat()
+                                            }
+                                    val sorted = sessionAvgs.sorted()
+                                    val mid = sorted.size / 2
+                                    val median =
+                                        if (sorted.size % 2 == 0) {
+                                            (sorted[mid - 1] + sorted[mid]) / 2f
+                                        } else {
+                                            sorted[mid]
+                                        }
+                                    median.toInt()
+                                }
+                            },
+                    ) { hrv, rhr ->
+                        Baselines(hrv, rhr)
+                    }
                 }.stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
-                    initialValue = null,
+                    initialValue = Baselines(),
                 )
 
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -221,10 +216,10 @@ class SleepViewModel
 
                     combine(
                         dataFlow,
-                        baselineHrvFlow,
-                        baselineRhrFlow,
-                    ) { data, bHrv, bRhr ->
+                        baselinesFlow,
+                    ) { data, baselines ->
                         val (latestSummary, latestSession, summaries, prefs) = data
+                        val (bHrv, bRhr) = baselines
 
                         val startLocalDate = Instant.ofEpochMilli(startDayMs).atZone(zoneId).toLocalDate()
 
