@@ -122,7 +122,7 @@ class WorkoutsViewModel
                                             selectedMidnightMs,
                                         )?.let { DailySummaryMapper.toDomain(it) },
                                 )
-                            }
+                            }.flowOn(Dispatchers.IO)
                         }
 
                     val paiFromMs =
