@@ -31,6 +31,11 @@ import javax.inject.Singleton
 object DataStoreModule {
     @Provides
     @Singleton
+    @ApplicationScope
+    fun provideApplicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    @Provides
+    @Singleton
     fun provideCardConfigurationsDataStore(
         @ApplicationContext context: Context,
     ): DataStore<CardConfigurationsProto> =
