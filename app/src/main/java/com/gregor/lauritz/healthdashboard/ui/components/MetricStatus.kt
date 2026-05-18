@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
 
 @Composable
 fun MetricStatus.containerColor(): Color =
@@ -11,7 +12,7 @@ fun MetricStatus.containerColor(): Color =
         MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.surfaceVariant
         MetricStatus.OPTIMAL -> MaterialTheme.colorScheme.primaryContainer
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.surfaceContainerHighest
-        MetricStatus.WARNING -> MaterialTheme.colorScheme.tertiaryContainer
+        MetricStatus.WARNING -> LocalExtendedColors.current.warningContainer
         MetricStatus.POOR -> MaterialTheme.colorScheme.errorContainer
     }
 
@@ -21,7 +22,7 @@ fun MetricStatus.onContainerColor(): Color =
         MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.onSurfaceVariant
         MetricStatus.OPTIMAL -> MaterialTheme.colorScheme.onPrimaryContainer
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
-        MetricStatus.WARNING -> MaterialTheme.colorScheme.onTertiaryContainer
+        MetricStatus.WARNING -> LocalExtendedColors.current.onWarningContainer
         MetricStatus.POOR -> MaterialTheme.colorScheme.onErrorContainer
     }
 
@@ -29,7 +30,7 @@ fun MetricStatus.onContainerColor(): Color =
 fun MetricStatus.gaugeColor(): Color =
     when (this) {
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.outline
-        MetricStatus.WARNING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f)
+        MetricStatus.WARNING -> LocalExtendedColors.current.warning.copy(alpha = 0.7f)
         else -> this.onContainerColor()
     }
 
@@ -39,6 +40,6 @@ fun MetricStatus.contentColor(): Color =
         MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.onSurfaceVariant
         MetricStatus.OPTIMAL -> MaterialTheme.colorScheme.primary
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.outline
-        MetricStatus.WARNING -> MaterialTheme.colorScheme.tertiary
+        MetricStatus.WARNING -> LocalExtendedColors.current.warning
         MetricStatus.POOR -> MaterialTheme.colorScheme.error
     }

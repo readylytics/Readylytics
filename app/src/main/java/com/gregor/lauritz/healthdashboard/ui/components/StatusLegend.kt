@@ -58,7 +58,7 @@ fun StatusLegend(modifier: Modifier = Modifier) {
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         colors =
             CardDefaults.outlinedCardColors(
-                containerColor = colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                containerColor = colorScheme.surfaceContainerLow,
             ),
     ) {
         Column(modifier = Modifier.animateContentSize()) {

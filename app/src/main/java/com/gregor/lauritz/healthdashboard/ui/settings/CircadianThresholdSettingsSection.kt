@@ -41,7 +41,7 @@ fun CircadianThresholdSettingsSection(
         modifier = modifier.fillMaxWidth(),
         colors =
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             ),
     ) {
         Column(
