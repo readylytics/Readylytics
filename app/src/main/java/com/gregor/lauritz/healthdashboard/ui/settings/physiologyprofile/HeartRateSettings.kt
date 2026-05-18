@@ -32,7 +32,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.mergeDescendants
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -72,7 +71,10 @@ fun HeartRateZoneSection(
 
     Column(modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING)) {
         Row(
-            modifier = Modifier.semantics(mergeDescendants = true),
+            modifier =
+                Modifier.semantics {
+                    mergeDescendants = true
+                },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -151,7 +153,10 @@ fun HeartRateZoneSection(
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
 
         Row(
-            modifier = Modifier.semantics(mergeDescendants = true),
+            modifier =
+                Modifier.semantics {
+                    mergeDescendants = true
+                },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
