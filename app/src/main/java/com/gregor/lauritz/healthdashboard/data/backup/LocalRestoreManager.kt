@@ -313,229 +313,229 @@ class LocalRestoreManager
         }
 
         private suspend fun restorePreferences(json: JSONObject) {
-            if (json.has("goalSleepHours")) {
-                settingsRepository.updateGoalSleepHours(json.getDouble("goalSleepHours").toFloat())
-            }
-            if (!json.isNull("hrvBaselineOverride")) {
-                settingsRepository.updateHrvBaselineOverride(
-                    json.getDouble("hrvBaselineOverride").toFloat(),
-                )
-            } else if (json.has("hrvBaselineOverride")) {
-                settingsRepository.updateHrvBaselineOverride(null)
-            }
-            if (!json.isNull("rhrBaselineOverride")) {
-                settingsRepository.updateRhrBaselineOverride(
-                    json.getDouble("rhrBaselineOverride").toFloat(),
-                )
-            } else if (json.has("rhrBaselineOverride")) {
-                settingsRepository.updateRhrBaselineOverride(null)
-            }
-            if (json.has("syncPreference")) {
-                try {
-                    settingsRepository.updateSyncPreference(
-                        com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference.valueOf(
-                            json.getString("syncPreference"),
-                        ),
-                    )
-                } catch (e: IllegalArgumentException) {
-                    android.util.Log.w(
-                        "LocalRestoreManager",
-                        "Invalid SyncPreference value: ${json.optString("syncPreference")}",
-                        e,
-                    )
+            settingsRepository.batchUpdate {
+                if (json.has("goalSleepHours")) {
+                    goalSleepHours = json.getDouble("goalSleepHours").toFloat()
                 }
-            }
-            if (json.has("syncIntervalHours")) {
-                settingsRepository.updateSyncIntervalHours(json.getInt("syncIntervalHours"))
-            }
-            if (json.has("lastSyncTimestamp")) {
-                settingsRepository.updateLastSyncTimestamp(json.getLong("lastSyncTimestamp"))
-            }
-            if (json.has("maxHeartRate")) {
-                settingsRepository.updateMaxHeartRate(json.getInt("maxHeartRate"))
-            }
-            if (json.has("autoCalculateMaxHr")) {
-                settingsRepository.updateAutoCalculateMaxHr(json.getBoolean("autoCalculateMaxHr"))
-            }
-            if (json.has("manualZoneEditing")) {
-                settingsRepository.updateManualZoneEditing(json.getBoolean("manualZoneEditing"))
-            }
-            if (json.has("zone1MinPercent") &&
-                json.has("zone1MaxPercent") &&
-                json.has("zone2MaxPercent") &&
-                json.has("zone3MaxPercent") &&
-                json.has("zone4MaxPercent")
-            ) {
-                settingsRepository.updateZonePercentages(
-                    json.getDouble("zone1MinPercent").toFloat(),
-                    json.getDouble("zone1MaxPercent").toFloat(),
-                    json.getDouble("zone2MaxPercent").toFloat(),
-                    json.getDouble("zone3MaxPercent").toFloat(),
-                    json.getDouble("zone4MaxPercent").toFloat(),
-                )
-            }
-            if (json.has("zone1MinBpm") &&
-                json.has("zone1MaxBpm") &&
-                json.has("zone2MaxBpm") &&
-                json.has("zone3MaxBpm") &&
-                json.has("zone4MaxBpm")
-            ) {
-                settingsRepository.updateZoneBpms(
-                    json.getInt("zone1MinBpm"),
-                    json.getInt("zone1MaxBpm"),
-                    json.getInt("zone2MaxBpm"),
-                    json.getInt("zone3MaxBpm"),
-                    json.getInt("zone4MaxBpm"),
-                )
-            }
-            if (json.has("age")) {
-                settingsRepository.updateAge(json.getInt("age"))
-            }
-            if (json.has("birthDay") && json.has("birthMonth") && json.has("birthYear")) {
-                settingsRepository.updateBirthday(
-                    json.getInt("birthDay"),
-                    json.getInt("birthMonth"),
-                    json.getInt("birthYear"),
-                )
-            }
-            if (!json.isNull("gender")) {
-                settingsRepository.updateGender(json.getString("gender"))
-            } else if (json.has("gender")) {
-                settingsRepository.updateGender(null)
-            }
-            if (json.has("hrvOptimalThreshold")) {
-                settingsRepository.updateHrvOptimalThreshold(json.getDouble("hrvOptimalThreshold").toFloat())
-            }
-            if (json.has("hrvWarningThreshold")) {
-                settingsRepository.updateHrvWarningThreshold(json.getDouble("hrvWarningThreshold").toFloat())
-            }
-            if (json.has("rhrOptimalThreshold")) {
-                settingsRepository.updateRhrOptimalThreshold(json.getDouble("rhrOptimalThreshold").toFloat())
-            }
-            if (json.has("rhrWarningThreshold")) {
-                settingsRepository.updateRhrWarningThreshold(json.getDouble("rhrWarningThreshold").toFloat())
-            }
-            if (json.has("restingHrBeforeMinutes")) {
-                settingsRepository.updateRestingHrBeforeMinutes(json.getInt("restingHrBeforeMinutes"))
-            }
-            if (json.has("restingHrAfterMinutes")) {
-                settingsRepository.updateRestingHrAfterMinutes(json.getInt("restingHrAfterMinutes"))
-            }
-            if (json.has("appTheme")) {
-                try {
-                    settingsRepository.updateAppTheme(
-                        com.gregor.lauritz.healthdashboard.data.preferences.AppTheme.valueOf(
-                            json.getString("appTheme"),
-                        ),
-                    )
-                } catch (e: IllegalArgumentException) {
-                    android.util.Log.w(
-                        "LocalRestoreManager",
-                        "Invalid AppTheme value: ${json.optString("appTheme")}",
-                        e,
-                    )
+                if (!json.isNull("hrvBaselineOverride")) {
+                    hrvBaselineOverride = json.getDouble("hrvBaselineOverride").toFloat()
+                } else if (json.has("hrvBaselineOverride")) {
+                    clearHrvBaselineOverride()
                 }
-            }
-            if (json.has("backupSchedule")) {
-                try {
-                    settingsRepository.updateBackupSchedule(
-                        com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule.valueOf(
-                            json.getString("backupSchedule"),
-                        ),
-                    )
-                } catch (e: IllegalArgumentException) {
-                    android.util.Log.w(
-                        "LocalRestoreManager",
-                        "Invalid BackupSchedule value: ${json.optString("backupSchedule")}",
-                        e,
-                    )
+                if (!json.isNull("rhrBaselineOverride")) {
+                    rhrBaselineOverride = json.getDouble("rhrBaselineOverride").toFloat()
+                } else if (json.has("rhrBaselineOverride")) {
+                    clearRhrBaselineOverride()
                 }
-            }
-            if (json.has("lastBackupTimestamp")) {
-                settingsRepository.updateLastBackupTimestamp(json.getLong("lastBackupTimestamp"))
-            }
-            if (json.has("consistencyThresholdMinutes")) {
-                settingsRepository.updateConsistencyThresholdMinutes(json.getInt("consistencyThresholdMinutes"))
-            }
-            if (json.has("consistencyEvaluationDays")) {
-                settingsRepository.updateConsistencyEvaluationDays(json.getInt("consistencyEvaluationDays"))
-            }
-            if (json.has("consistencyBaselineDays")) {
-                settingsRepository.updateConsistencyBaselineDays(json.getInt("consistencyBaselineDays"))
-            }
-            if (json.has("paiScalingFactor")) {
-                settingsRepository.updatePaiScalingFactor(json.getDouble("paiScalingFactor").toFloat())
-            }
-            if (json.has("stepGoal")) {
-                settingsRepository.updateStepGoal(json.getInt("stepGoal"))
-            }
-            if (json.has("retentionDaysEnabled")) {
-                settingsRepository.updateRetentionDaysEnabled(json.getBoolean("retentionDaysEnabled"))
-            }
-            if (json.has("retentionDays")) {
-                settingsRepository.updateRetentionDays(json.getInt("retentionDays"))
-            }
-            if (json.has("collapseCloudData")) {
-                settingsRepository.updateCollapseCloudData(json.getBoolean("collapseCloudData"))
-            }
-            if (json.has("collapseHealthConnect")) {
-                settingsRepository.updateCollapseHealthConnect(json.getBoolean("collapseHealthConnect"))
-            }
-            if (json.has("collapseBaselinesThresholds")) {
-                settingsRepository.updateCollapseBaselinesThresholds(json.getBoolean("collapseBaselinesThresholds"))
-            }
-            if (json.has("collapseDisplay")) {
-                settingsRepository.updateCollapseDisplay(json.getBoolean("collapseDisplay"))
-            }
-            if (json.has("collapseAdvanced")) {
-                settingsRepository.updateCollapseAdvanced(json.getBoolean("collapseAdvanced"))
-            }
-            if (json.has("aboutDismissed")) {
-                settingsRepository.updateAboutDismissed(json.getBoolean("aboutDismissed"))
-            }
-            if (json.has("physiologyProfile")) {
-                settingsRepository.updatePhysiologyProfile(
-                    com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile.valueOf(
-                        json.getString("physiologyProfile"),
-                    ),
-                )
-            }
-            if (json.has("installDate")) {
-                settingsRepository.updateInstallDate(json.getLong("installDate"))
-            }
-            if (!json.isNull("circadianThresholdOverride")) {
-                settingsRepository.updateCircadianThresholdOverride(json.getString("circadianThresholdOverride"))
-            } else if (json.has("circadianThresholdOverride")) {
-                settingsRepository.updateCircadianThresholdOverride(null)
-            }
-            if (json.has("dynamicColorEnabled")) {
-                settingsRepository.updateDynamicColorEnabled(json.getBoolean("dynamicColorEnabled"))
-            }
-            if (json.has("trimpModel")) {
-                settingsRepository.updateTrimpModel(
-                    com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel.valueOf(
-                        json.getString("trimpModel"),
-                    ),
-                )
-            }
-            if (json.has("banisterMultiplier")) {
-                settingsRepository.updateBanisterMultiplier(json.getDouble("banisterMultiplier").toFloat())
-            }
-            if (json.has("chengBeta")) {
-                settingsRepository.updateChengBeta(json.getDouble("chengBeta").toFloat())
-            }
-            if (json.has("itrimB")) {
-                settingsRepository.updateItrimB(json.getDouble("itrimB").toFloat())
-            }
-            if (!json.isNull("primaryDeviceName")) {
-                settingsRepository.updatePrimaryDevice(json.getString("primaryDeviceName"))
-            } else if (json.has("primaryDeviceName")) {
-                settingsRepository.updatePrimaryDevice(null)
-            }
-            if (!json.isNull("backupDirectoryUri")) {
-                settingsRepository.updateBackupDirectoryUri(json.getString("backupDirectoryUri"))
-            } else if (json.has("backupDirectoryUri")) {
-                settingsRepository.updateBackupDirectoryUri(null)
+                if (json.has("syncPreference")) {
+                    try {
+                        syncPreference =
+                            com.gregor.lauritz.healthdashboard.data.preferences.SyncPreferenceProto.valueOf(
+                                json.getString("syncPreference"),
+                            )
+                    } catch (e: IllegalArgumentException) {
+                        android.util.Log.w(
+                            "LocalRestoreManager",
+                            "Invalid SyncPreference value: ${json.optString("syncPreference")}",
+                            e,
+                        )
+                    }
+                }
+                if (json.has("syncIntervalHours")) {
+                    syncIntervalHours = json.getInt("syncIntervalHours")
+                }
+                if (json.has("lastSyncTimestamp")) {
+                    lastSyncTimestamp = json.getLong("lastSyncTimestamp")
+                }
+                if (json.has("maxHeartRate")) {
+                    maxHeartRate = json.getInt("maxHeartRate")
+                }
+                if (json.has("autoCalculateMaxHr")) {
+                    autoCalculateMaxHr = json.getBoolean("autoCalculateMaxHr")
+                }
+                if (json.has("manualZoneEditing")) {
+                    manualZoneEditing = json.getBoolean("manualZoneEditing")
+                }
+                if (json.has("zone1MinPercent") &&
+                    json.has("zone1MaxPercent") &&
+                    json.has("zone2MaxPercent") &&
+                    json.has("zone3MaxPercent") &&
+                    json.has("zone4MaxPercent")
+                ) {
+                    zone1MinPercent = json.getDouble("zone1MinPercent").toFloat()
+                    zone1MaxPercent = json.getDouble("zone1MaxPercent").toFloat()
+                    zone2MaxPercent = json.getDouble("zone2MaxPercent").toFloat()
+                    zone3MaxPercent = json.getDouble("zone3MaxPercent").toFloat()
+                    zone4MaxPercent = json.getDouble("zone4MaxPercent").toFloat()
+                }
+                if (json.has("zone1MinBpm") &&
+                    json.has("zone1MaxBpm") &&
+                    json.has("zone2MaxBpm") &&
+                    json.has("zone3MaxBpm") &&
+                    json.has("zone4MaxBpm")
+                ) {
+                    zone1MinBpm = json.getInt("zone1MinBpm")
+                    zone1MaxBpm = json.getInt("zone1MaxBpm")
+                    zone2MaxBpm = json.getInt("zone2MaxBpm")
+                    zone3MaxBpm = json.getInt("zone3MaxBpm")
+                    zone4MaxBpm = json.getInt("zone4MaxBpm")
+                }
+                if (json.has("age")) {
+                    age = json.getInt("age")
+                }
+                if (json.has("birthDay") && json.has("birthMonth") && json.has("birthYear")) {
+                    birthDay = json.getInt("birthDay")
+                    birthMonth = json.getInt("birthMonth")
+                    birthYear = json.getInt("birthYear")
+                }
+                if (!json.isNull("gender")) {
+                    gender = json.getString("gender")
+                } else if (json.has("gender")) {
+                    clearGender()
+                }
+                if (json.has("hrvOptimalThreshold")) {
+                    hrvOptimalThreshold = json.getDouble("hrvOptimalThreshold").toFloat()
+                }
+                if (json.has("hrvWarningThreshold")) {
+                    hrvWarningThreshold = json.getDouble("hrvWarningThreshold").toFloat()
+                }
+                if (json.has("rhrOptimalThreshold")) {
+                    rhrOptimalThreshold = json.getDouble("rhrOptimalThreshold").toFloat()
+                }
+                if (json.has("rhrWarningThreshold")) {
+                    rhrWarningThreshold = json.getDouble("rhrWarningThreshold").toFloat()
+                }
+                if (json.has("restingHrBeforeMinutes")) {
+                    restingHrBeforeMinutes = json.getInt("restingHrBeforeMinutes")
+                }
+                if (json.has("restingHrAfterMinutes")) {
+                    restingHrAfterMinutes = json.getInt("restingHrAfterMinutes")
+                }
+                if (json.has("appTheme")) {
+                    try {
+                        appTheme =
+                            com.gregor.lauritz.healthdashboard.data.preferences.AppThemeProto.valueOf(
+                                json.getString("appTheme"),
+                            )
+                    } catch (e: IllegalArgumentException) {
+                        android.util.Log.w(
+                            "LocalRestoreManager",
+                            "Invalid AppTheme value: ${json.optString("appTheme")}",
+                            e,
+                        )
+                    }
+                }
+                if (json.has("backupSchedule")) {
+                    try {
+                        backupSchedule =
+                            com.gregor.lauritz.healthdashboard.data.preferences.BackupScheduleProto.valueOf(
+                                json.getString("backupSchedule"),
+                            )
+                    } catch (e: IllegalArgumentException) {
+                        android.util.Log.w(
+                            "LocalRestoreManager",
+                            "Invalid BackupSchedule value: ${json.optString("backupSchedule")}",
+                            e,
+                        )
+                    }
+                }
+                if (json.has("lastBackupTimestamp")) {
+                    lastBackupTimestamp = json.getLong("lastBackupTimestamp")
+                }
+                if (json.has("consistencyThresholdMinutes")) {
+                    consistencyThresholdMinutes = json.getInt("consistencyThresholdMinutes")
+                }
+                if (json.has("consistencyEvaluationDays")) {
+                    consistencyEvaluationDays = json.getInt("consistencyEvaluationDays")
+                }
+                if (json.has("consistencyBaselineDays")) {
+                    consistencyBaselineDays = json.getInt("consistencyBaselineDays")
+                }
+                if (json.has("paiScalingFactor")) {
+                    paiScalingFactor = json.getDouble("paiScalingFactor").toFloat()
+                }
+                if (json.has("stepGoal")) {
+                    stepGoal = json.getInt("stepGoal")
+                }
+                if (json.has("retentionDaysEnabled")) {
+                    retentionDaysEnabled = json.getBoolean("retentionDaysEnabled")
+                }
+                if (json.has("retentionDays")) {
+                    retentionDays = json.getInt("retentionDays")
+                }
+                if (json.has("collapseCloudData")) {
+                    collapseCloudData = json.getBoolean("collapseCloudData")
+                }
+                if (json.has("collapseHealthConnect")) {
+                    collapseHealthConnect = json.getBoolean("collapseHealthConnect")
+                }
+                if (json.has("collapseBaselinesThresholds")) {
+                    collapseBaselinesThresholds = json.getBoolean("collapseBaselinesThresholds")
+                }
+                if (json.has("collapseDisplay")) {
+                    collapseDisplay = json.getBoolean("collapseDisplay")
+                }
+                if (json.has("collapseAdvanced")) {
+                    collapseAdvanced = json.getBoolean("collapseAdvanced")
+                }
+                if (json.has("aboutDismissed")) {
+                    aboutDismissed = json.getBoolean("aboutDismissed")
+                }
+                if (json.has("physiologyProfile")) {
+                    try {
+                        physiologyProfile =
+                            com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfileProto.valueOf(
+                                json.getString("physiologyProfile"),
+                            )
+                    } catch (e: IllegalArgumentException) {
+                        android.util.Log.w(
+                            "LocalRestoreManager",
+                            "Invalid PhysiologyProfile value: ${json.optString("physiologyProfile")}",
+                            e,
+                        )
+                    }
+                }
+                if (json.has("installDate")) {
+                    installDate = json.getLong("installDate")
+                }
+                if (!json.isNull("circadianThresholdOverride")) {
+                    circadianThresholdOverride = json.getString("circadianThresholdOverride")
+                } else if (json.has("circadianThresholdOverride")) {
+                    clearCircadianThresholdOverride()
+                }
+                if (json.has("dynamicColorEnabled")) {
+                    dynamicColorEnabled = json.getBoolean("dynamicColorEnabled")
+                }
+                if (json.has("trimpMethod")) {
+                    try {
+                        trimpMethod =
+                            com.gregor.lauritz.healthdashboard.data.preferences.TrimpMethodProto.valueOf(
+                                json.getString("trimpMethod"),
+                            )
+                    } catch (e: IllegalArgumentException) {
+                        android.util.Log.w(
+                            "LocalRestoreManager",
+                            "Invalid TrimpMethod value: ${json.optString("trimpMethod")}",
+                            e,
+                        )
+                    }
+                }
+                if (json.has("chengBeta")) {
+                    chengBeta = json.getDouble("chengBeta").toFloat()
+                }
+                if (json.has("itrimB")) {
+                    itrimpB = json.getDouble("itrimB").toFloat()
+                }
+                if (!json.isNull("primaryDeviceName")) {
+                    primaryDeviceName = json.getString("primaryDeviceName")
+                } else if (json.has("primaryDeviceName")) {
+                    clearPrimaryDeviceName()
+                }
+                if (!json.isNull("backupDirectoryUri")) {
+                    backupDirectoryUri = json.getString("backupDirectoryUri")
+                } else if (json.has("backupDirectoryUri")) {
+                    clearBackupDirectoryUri()
+                }
             }
         }
     }
