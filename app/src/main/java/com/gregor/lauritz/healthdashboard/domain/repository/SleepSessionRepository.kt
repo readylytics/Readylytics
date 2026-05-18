@@ -8,6 +8,7 @@ data class SleepSessionData(
     val startTime: Long,
     val endTime: Long,
     val durationMinutes: Int,
+    val efficiency: Float,
     val deepSleepMinutes: Int,
     val lightSleepMinutes: Int,
     val remSleepMinutes: Int,

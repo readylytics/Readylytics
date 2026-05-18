@@ -1,13 +1,13 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
 import androidx.compose.runtime.Immutable
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardManagementDelegate
 import com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
@@ -46,7 +46,7 @@ data class DashboardBasicInputs(
 data class DashboardCardState(
     val isManagingCards: Boolean,
     val cardConfiguration: List<CardConfiguration>,
-    val lastSleepSession: SleepSessionEntity?,
+    val lastSleepSession: SleepSessionData?,
 )
 
 /**
