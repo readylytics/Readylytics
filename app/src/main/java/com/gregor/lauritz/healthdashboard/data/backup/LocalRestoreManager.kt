@@ -3,6 +3,8 @@ package com.gregor.lauritz.healthdashboard.data.backup
 import android.content.Context
 import android.net.Uri
 import android.util.JsonReader
+import android.util.JsonToken
+import android.util.Log
 import androidx.room.withTransaction
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
@@ -10,15 +12,20 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntit
 import com.gregor.lauritz.healthdashboard.data.local.entity.HrvRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
+import com.gregor.lauritz.healthdashboard.data.preferences.AppThemeProto
+import com.gregor.lauritz.healthdashboard.data.preferences.BackupScheduleProto
+import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfileProto
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreferenceProto
+import com.gregor.lauritz.healthdashboard.data.preferences.TrimpMethodProto
 import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.exception.ZipException
-import org.json.JSONObject
 import java.io.File
 import java.io.InputStreamReader
 import javax.inject.Inject
@@ -35,11 +42,7 @@ class LocalRestoreManager
         private val settingsRepository: SettingsRepository,
         private val encryptionManager: EncryptionManager,
     ) {
-        data class BackupManifest(
-            val schemaVersion: Int,
-            val exportedAt: String,
-            val rowCounts: Map<String, Int>,
-        )
+        private val json = Json { ignoreUnknownKeys = true }
 
         sealed class RestoreResult {
             data object Success : RestoreResult()
@@ -166,14 +169,15 @@ class LocalRestoreManager
             while (reader.hasNext()) {
                 when (val name = reader.nextName()) {
                     "preferences" -> {
-                        val prefsJson = readNextObjectAsJson(reader)
-                        restorePreferences(prefsJson)
+                        val prefsString = readNextObjectAsString(reader)
+                        val prefsBackup = json.decodeFromString<UserPreferencesBackup>(prefsString)
+                        restorePreferences(prefsBackup)
                     }
                     "sleepSessions" -> {
                         reader.beginArray()
                         val batch = mutableListOf<SleepSessionEntity>()
                         while (reader.hasNext()) {
-                            batch.add(SleepSessionEntity.fromJson(readNextObjectAsJson(reader)))
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
                             if (batch.size >= 100) {
                                 sleepSessionDao.upsertAll(batch)
                                 batch.clear()
@@ -186,7 +190,7 @@ class LocalRestoreManager
                         reader.beginArray()
                         val batch = mutableListOf<HeartRateRecordEntity>()
                         while (reader.hasNext()) {
-                            batch.add(HeartRateRecordEntity.fromJson(readNextObjectAsJson(reader)))
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
                             if (batch.size >= 500) {
                                 heartRateDao.upsertAll(batch)
                                 batch.clear()
@@ -199,7 +203,7 @@ class LocalRestoreManager
                         reader.beginArray()
                         val batch = mutableListOf<HrvRecordEntity>()
                         while (reader.hasNext()) {
-                            batch.add(HrvRecordEntity.fromJson(readNextObjectAsJson(reader)))
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
                             if (batch.size >= 500) {
                                 hrvDao.upsertAll(batch)
                                 batch.clear()
@@ -212,7 +216,7 @@ class LocalRestoreManager
                         reader.beginArray()
                         val batch = mutableListOf<WorkoutRecordEntity>()
                         while (reader.hasNext()) {
-                            batch.add(WorkoutRecordEntity.fromJson(readNextObjectAsJson(reader)))
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
                             if (batch.size >= 100) {
                                 workoutDao.upsertAll(batch)
                                 batch.clear()
@@ -225,7 +229,7 @@ class LocalRestoreManager
                         reader.beginArray()
                         val batch = mutableListOf<DailySummaryEntity>()
                         while (reader.hasNext()) {
-                            batch.add(DailySummaryEntity.fromJson(readNextObjectAsJson(reader)))
+                            batch.add(json.decodeFromString(readNextObjectAsString(reader)))
                             if (batch.size >= 100) {
                                 dailySummaryDao.upsertAll(batch)
                                 batch.clear()
@@ -240,11 +244,10 @@ class LocalRestoreManager
             reader.endObject()
         }
 
-        private fun readNextObjectAsJson(reader: JsonReader): JSONObject {
-            // This still creates a JSONObject but only for one record at a time
+        private fun readNextObjectAsString(reader: JsonReader): String {
             val sb = StringBuilder()
             parseValue(reader, sb)
-            return JSONObject(sb.toString())
+            return sb.toString()
         }
 
         private fun parseValue(
@@ -252,7 +255,7 @@ class LocalRestoreManager
             sb: StringBuilder,
         ) {
             when (val token = reader.peek()) {
-                android.util.JsonToken.BEGIN_OBJECT -> {
+                JsonToken.BEGIN_OBJECT -> {
                     reader.beginObject()
                     sb.append("{")
                     var first = true
@@ -265,7 +268,7 @@ class LocalRestoreManager
                     reader.endObject()
                     sb.append("}")
                 }
-                android.util.JsonToken.BEGIN_ARRAY -> {
+                JsonToken.BEGIN_ARRAY -> {
                     reader.beginArray()
                     sb.append("[")
                     var first = true
@@ -277,16 +280,16 @@ class LocalRestoreManager
                     reader.endArray()
                     sb.append("]")
                 }
-                android.util.JsonToken.STRING -> {
-                    sb.append(org.json.JSONObject.quote(reader.nextString()))
+                JsonToken.STRING -> {
+                    sb.append(json.encodeToString(reader.nextString()))
                 }
-                android.util.JsonToken.NUMBER -> {
+                JsonToken.NUMBER -> {
                     sb.append(reader.nextString())
                 }
-                android.util.JsonToken.BOOLEAN -> {
+                JsonToken.BOOLEAN -> {
                     sb.append(reader.nextBoolean())
                 }
-                android.util.JsonToken.NULL -> {
+                JsonToken.NULL -> {
                     reader.nextNull()
                     sb.append("null")
                 }
@@ -312,230 +315,136 @@ class LocalRestoreManager
             }
         }
 
-        private suspend fun restorePreferences(json: JSONObject) {
+        private suspend fun restorePreferences(backup: UserPreferencesBackup) {
             settingsRepository.batchUpdate {
-                if (json.has("goalSleepHours")) {
-                    goalSleepHours = json.getDouble("goalSleepHours").toFloat()
-                }
-                if (!json.isNull("hrvBaselineOverride")) {
-                    hrvBaselineOverride = json.getDouble("hrvBaselineOverride").toFloat()
-                } else if (json.has("hrvBaselineOverride")) {
+                backup.goalSleepHours?.let { goalSleepHours = it }
+                if (backup.hrvBaselineOverride !=
+                    null
+                ) {
+                    hrvBaselineOverride = backup.hrvBaselineOverride
+                } else {
                     clearHrvBaselineOverride()
                 }
-                if (!json.isNull("rhrBaselineOverride")) {
-                    rhrBaselineOverride = json.getDouble("rhrBaselineOverride").toFloat()
-                } else if (json.has("rhrBaselineOverride")) {
+                if (backup.rhrBaselineOverride !=
+                    null
+                ) {
+                    rhrBaselineOverride = backup.rhrBaselineOverride
+                } else {
                     clearRhrBaselineOverride()
                 }
-                if (json.has("syncPreference")) {
+
+                backup.syncPreference?.let {
                     try {
-                        syncPreference =
-                            com.gregor.lauritz.healthdashboard.data.preferences.SyncPreferenceProto.valueOf(
-                                json.getString("syncPreference"),
-                            )
+                        syncPreference = SyncPreferenceProto.valueOf(it)
                     } catch (e: IllegalArgumentException) {
-                        android.util.Log.w(
-                            "LocalRestoreManager",
-                            "Invalid SyncPreference value: ${json.optString("syncPreference")}",
-                            e,
-                        )
+                        Log.w("LocalRestoreManager", "Invalid SyncPreference: $it", e)
                     }
                 }
-                if (json.has("syncIntervalHours")) {
-                    syncIntervalHours = json.getInt("syncIntervalHours")
-                }
-                if (json.has("lastSyncTimestamp")) {
-                    lastSyncTimestamp = json.getLong("lastSyncTimestamp")
-                }
-                if (json.has("maxHeartRate")) {
-                    maxHeartRate = json.getInt("maxHeartRate")
-                }
-                if (json.has("autoCalculateMaxHr")) {
-                    autoCalculateMaxHr = json.getBoolean("autoCalculateMaxHr")
-                }
-                if (json.has("manualZoneEditing")) {
-                    manualZoneEditing = json.getBoolean("manualZoneEditing")
-                }
-                if (json.has("zone1MinPercent") &&
-                    json.has("zone1MaxPercent") &&
-                    json.has("zone2MaxPercent") &&
-                    json.has("zone3MaxPercent") &&
-                    json.has("zone4MaxPercent")
+                backup.syncIntervalHours?.let { syncIntervalHours = it }
+                backup.lastSyncTimestamp?.let { lastSyncTimestamp = it }
+                backup.maxHeartRate?.let { maxHeartRate = it }
+                backup.autoCalculateMaxHr?.let { autoCalculateMaxHr = it }
+                backup.manualZoneEditing?.let { manualZoneEditing = it }
+
+                if (backup.zone1MinPercent != null &&
+                    backup.zone1MaxPercent != null &&
+                    backup.zone2MaxPercent != null &&
+                    backup.zone3MaxPercent != null &&
+                    backup.zone4MaxPercent != null
                 ) {
-                    zone1MinPercent = json.getDouble("zone1MinPercent").toFloat()
-                    zone1MaxPercent = json.getDouble("zone1MaxPercent").toFloat()
-                    zone2MaxPercent = json.getDouble("zone2MaxPercent").toFloat()
-                    zone3MaxPercent = json.getDouble("zone3MaxPercent").toFloat()
-                    zone4MaxPercent = json.getDouble("zone4MaxPercent").toFloat()
+                    zone1MinPercent = backup.zone1MinPercent
+                    zone1MaxPercent = backup.zone1MaxPercent
+                    zone2MaxPercent = backup.zone2MaxPercent
+                    zone3MaxPercent = backup.zone3MaxPercent
+                    zone4MaxPercent = backup.zone4MaxPercent
                 }
-                if (json.has("zone1MinBpm") &&
-                    json.has("zone1MaxBpm") &&
-                    json.has("zone2MaxBpm") &&
-                    json.has("zone3MaxBpm") &&
-                    json.has("zone4MaxBpm")
+
+                if (backup.zone1MinBpm != null &&
+                    backup.zone1MaxBpm != null &&
+                    backup.zone2MaxBpm != null &&
+                    backup.zone3MaxBpm != null &&
+                    backup.zone4MaxBpm != null
                 ) {
-                    zone1MinBpm = json.getInt("zone1MinBpm")
-                    zone1MaxBpm = json.getInt("zone1MaxBpm")
-                    zone2MaxBpm = json.getInt("zone2MaxBpm")
-                    zone3MaxBpm = json.getInt("zone3MaxBpm")
-                    zone4MaxBpm = json.getInt("zone4MaxBpm")
+                    zone1MinBpm = backup.zone1MinBpm
+                    zone1MaxBpm = backup.zone1MaxBpm
+                    zone2MaxBpm = backup.zone2MaxBpm
+                    zone3MaxBpm = backup.zone3MaxBpm
+                    zone4MaxBpm = backup.zone4MaxBpm
                 }
-                if (json.has("age")) {
-                    age = json.getInt("age")
+
+                backup.age?.let { age = it }
+                if (backup.birthDay != null && backup.birthMonth != null && backup.birthYear != null) {
+                    birthDay = backup.birthDay
+                    birthMonth = backup.birthMonth
+                    birthYear = backup.birthYear
                 }
-                if (json.has("birthDay") && json.has("birthMonth") && json.has("birthYear")) {
-                    birthDay = json.getInt("birthDay")
-                    birthMonth = json.getInt("birthMonth")
-                    birthYear = json.getInt("birthYear")
-                }
-                if (!json.isNull("gender")) {
-                    gender = json.getString("gender")
-                } else if (json.has("gender")) {
-                    clearGender()
-                }
-                if (json.has("hrvOptimalThreshold")) {
-                    hrvOptimalThreshold = json.getDouble("hrvOptimalThreshold").toFloat()
-                }
-                if (json.has("hrvWarningThreshold")) {
-                    hrvWarningThreshold = json.getDouble("hrvWarningThreshold").toFloat()
-                }
-                if (json.has("rhrOptimalThreshold")) {
-                    rhrOptimalThreshold = json.getDouble("rhrOptimalThreshold").toFloat()
-                }
-                if (json.has("rhrWarningThreshold")) {
-                    rhrWarningThreshold = json.getDouble("rhrWarningThreshold").toFloat()
-                }
-                if (json.has("restingHrBeforeMinutes")) {
-                    restingHrBeforeMinutes = json.getInt("restingHrBeforeMinutes")
-                }
-                if (json.has("restingHrAfterMinutes")) {
-                    restingHrAfterMinutes = json.getInt("restingHrAfterMinutes")
-                }
-                if (json.has("appTheme")) {
+
+                backup.gender?.let { gender = it } ?: clearGender()
+                backup.hrvOptimalThreshold?.let { hrvOptimalThreshold = it }
+                backup.hrvWarningThreshold?.let { hrvWarningThreshold = it }
+                backup.rhrOptimalThreshold?.let { rhrOptimalThreshold = it }
+                backup.rhrWarningThreshold?.let { rhrWarningThreshold = it }
+                backup.restingHrBeforeMinutes?.let { restingHrBeforeMinutes = it }
+                backup.restingHrAfterMinutes?.let { restingHrAfterMinutes = it }
+
+                backup.appTheme?.let {
                     try {
-                        appTheme =
-                            com.gregor.lauritz.healthdashboard.data.preferences.AppThemeProto.valueOf(
-                                json.getString("appTheme"),
-                            )
+                        appTheme = AppThemeProto.valueOf(it)
                     } catch (e: IllegalArgumentException) {
-                        android.util.Log.w(
-                            "LocalRestoreManager",
-                            "Invalid AppTheme value: ${json.optString("appTheme")}",
-                            e,
-                        )
+                        Log.w("LocalRestoreManager", "Invalid AppTheme: $it", e)
                     }
                 }
-                if (json.has("backupSchedule")) {
+
+                backup.backupSchedule?.let {
                     try {
-                        backupSchedule =
-                            com.gregor.lauritz.healthdashboard.data.preferences.BackupScheduleProto.valueOf(
-                                json.getString("backupSchedule"),
-                            )
+                        backupSchedule = BackupScheduleProto.valueOf(it)
                     } catch (e: IllegalArgumentException) {
-                        android.util.Log.w(
-                            "LocalRestoreManager",
-                            "Invalid BackupSchedule value: ${json.optString("backupSchedule")}",
-                            e,
-                        )
+                        Log.w("LocalRestoreManager", "Invalid BackupSchedule: $it", e)
                     }
                 }
-                if (json.has("lastBackupTimestamp")) {
-                    lastBackupTimestamp = json.getLong("lastBackupTimestamp")
-                }
-                if (json.has("consistencyThresholdMinutes")) {
-                    consistencyThresholdMinutes = json.getInt("consistencyThresholdMinutes")
-                }
-                if (json.has("consistencyEvaluationDays")) {
-                    consistencyEvaluationDays = json.getInt("consistencyEvaluationDays")
-                }
-                if (json.has("consistencyBaselineDays")) {
-                    consistencyBaselineDays = json.getInt("consistencyBaselineDays")
-                }
-                if (json.has("paiScalingFactor")) {
-                    paiScalingFactor = json.getDouble("paiScalingFactor").toFloat()
-                }
-                if (json.has("stepGoal")) {
-                    stepGoal = json.getInt("stepGoal")
-                }
-                if (json.has("retentionDaysEnabled")) {
-                    retentionDaysEnabled = json.getBoolean("retentionDaysEnabled")
-                }
-                if (json.has("retentionDays")) {
-                    retentionDays = json.getInt("retentionDays")
-                }
-                if (json.has("collapseCloudData")) {
-                    collapseCloudData = json.getBoolean("collapseCloudData")
-                }
-                if (json.has("collapseHealthConnect")) {
-                    collapseHealthConnect = json.getBoolean("collapseHealthConnect")
-                }
-                if (json.has("collapseBaselinesThresholds")) {
-                    collapseBaselinesThresholds = json.getBoolean("collapseBaselinesThresholds")
-                }
-                if (json.has("collapseDisplay")) {
-                    collapseDisplay = json.getBoolean("collapseDisplay")
-                }
-                if (json.has("collapseAdvanced")) {
-                    collapseAdvanced = json.getBoolean("collapseAdvanced")
-                }
-                if (json.has("aboutDismissed")) {
-                    aboutDismissed = json.getBoolean("aboutDismissed")
-                }
-                if (json.has("physiologyProfile")) {
+
+                backup.lastBackupTimestamp?.let { lastBackupTimestamp = it }
+                backup.consistencyThresholdMinutes?.let { consistencyThresholdMinutes = it }
+                backup.consistencyEvaluationDays?.let { consistencyEvaluationDays = it }
+                backup.consistencyBaselineDays?.let { consistencyBaselineDays = it }
+                backup.paiScalingFactor?.let { paiScalingFactor = it }
+                backup.stepGoal?.let { stepGoal = it }
+                backup.retentionDaysEnabled?.let { retentionDaysEnabled = it }
+                backup.retentionDays?.let { retentionDays = it }
+                backup.collapseCloudData?.let { collapseCloudData = it }
+                backup.collapseHealthConnect?.let { collapseHealthConnect = it }
+                backup.collapseBaselinesThresholds?.let { collapseBaselinesThresholds = it }
+                backup.collapseDisplay?.let { collapseDisplay = it }
+                backup.collapseAdvanced?.let { collapseAdvanced = it }
+                backup.aboutDismissed?.let { aboutDismissed = it }
+
+                backup.physiologyProfile?.let {
                     try {
-                        physiologyProfile =
-                            com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfileProto.valueOf(
-                                json.getString("physiologyProfile"),
-                            )
+                        physiologyProfile = PhysiologyProfileProto.valueOf(it)
                     } catch (e: IllegalArgumentException) {
-                        android.util.Log.w(
-                            "LocalRestoreManager",
-                            "Invalid PhysiologyProfile value: ${json.optString("physiologyProfile")}",
-                            e,
-                        )
+                        Log.w("LocalRestoreManager", "Invalid PhysiologyProfile: $it", e)
                     }
                 }
-                if (json.has("installDate")) {
-                    installDate = json.getLong("installDate")
-                }
-                if (!json.isNull("circadianThresholdOverride")) {
-                    circadianThresholdOverride = json.getString("circadianThresholdOverride")
-                } else if (json.has("circadianThresholdOverride")) {
-                    clearCircadianThresholdOverride()
-                }
-                if (json.has("dynamicColorEnabled")) {
-                    dynamicColorEnabled = json.getBoolean("dynamicColorEnabled")
-                }
-                if (json.has("trimpMethod")) {
+
+                backup.installDate?.let { installDate = it }
+                backup.circadianThresholdOverride?.let { circadianThresholdOverride = it }
+                    ?: clearCircadianThresholdOverride()
+                backup.dynamicColorEnabled?.let { dynamicColorEnabled = it }
+
+                backup.banisterMultiplier?.let { paiCalibration = it }
+
+                backup.trimpModel?.let {
                     try {
-                        trimpMethod =
-                            com.gregor.lauritz.healthdashboard.data.preferences.TrimpMethodProto.valueOf(
-                                json.getString("trimpMethod"),
-                            )
+                        trimpMethod = TrimpMethodProto.valueOf(it)
                     } catch (e: IllegalArgumentException) {
-                        android.util.Log.w(
-                            "LocalRestoreManager",
-                            "Invalid TrimpMethod value: ${json.optString("trimpMethod")}",
-                            e,
-                        )
+                        Log.w("LocalRestoreManager", "Invalid TrimpModel: $it", e)
                     }
                 }
-                if (json.has("chengBeta")) {
-                    chengBeta = json.getDouble("chengBeta").toFloat()
-                }
-                if (json.has("itrimB")) {
-                    itrimpB = json.getDouble("itrimB").toFloat()
-                }
-                if (!json.isNull("primaryDeviceName")) {
-                    primaryDeviceName = json.getString("primaryDeviceName")
-                } else if (json.has("primaryDeviceName")) {
-                    clearPrimaryDeviceName()
-                }
-                if (!json.isNull("backupDirectoryUri")) {
-                    backupDirectoryUri = json.getString("backupDirectoryUri")
-                } else if (json.has("backupDirectoryUri")) {
-                    clearBackupDirectoryUri()
-                }
+
+                backup.chengBeta?.let { chengBeta = it }
+                backup.itrimB?.let { itrimpB = it }
+                backup.primaryDeviceName?.let { primaryDeviceName = it }
+                backup.backupDirectoryUri?.let { backupDirectoryUri = it }
             }
         }
     }
