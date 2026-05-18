@@ -25,4 +25,8 @@ abstract class UtilModule {
     @Binds
     @Singleton
     abstract fun bindRestoreService(impl: LocalRestoreServiceImpl): RestoreService
+
+    @Binds
+    @Singleton
+    abstract fun bindSleepSessionRepository(impl: SleepSessionRepositoryImpl): SleepSessionRepository
 }
