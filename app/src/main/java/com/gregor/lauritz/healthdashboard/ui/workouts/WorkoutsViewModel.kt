@@ -167,6 +167,12 @@ class WorkoutsViewModel
                                         dayMs to (summary.totalTrimp ?: 0f)
                                     }
 
+                            val trimpByDate: Map<LocalDate, Float> =
+                                trimpSummaries
+                                    .associate { summary ->
+                                        summary.date to (summary.totalTrimp ?: 0f)
+                                    }
+
                             val displayDayMidnights =
                                 buildList<Long> {
                                     var current = Instant.ofEpochMilli(displayStartDayMs).atZone(zoneId).toLocalDate()
@@ -197,27 +203,6 @@ class WorkoutsViewModel
                                 )
 
                                 val currentDayDate = Instant.ofEpochMilli(dayMidnight).atZone(zoneId).toLocalDate()
-                                val acuteFrom =
-                                    currentDayDate
-                                        .minusDays(
-                                            ScoringConstants.ACUTE_DAYS - 1,
-                                        ).atStartOfDay(zoneId)
-                                        .toInstant()
-                                        .toEpochMilli()
-                                val chronicFrom =
-                                    currentDayDate
-                                        .minusDays(
-                                            ScoringConstants.CHRONIC_DAYS - 1,
-                                        ).atStartOfDay(zoneId)
-                                        .toInstant()
-                                        .toEpochMilli()
-
-                                val acuteSum = trimpByDay.filterKeys { it in acuteFrom..dayMidnight }.values.sum()
-                                val chronicTrimpList =
-                                    trimpByDay
-                                        .filterKeys { it in chronicFrom..dayMidnight }
-                                        .values
-                                        .toList()
 
                                 val dataTenureDays =
                                     if (earliestLocalDate != null) {
@@ -227,9 +212,17 @@ class WorkoutsViewModel
                                     }
 
                                 val sr =
-                                    if (dataTenureDays >= 7 && chronicTrimpList.isNotEmpty()) {
-                                        val ctl = scoringCalculator.computeCtlEma(chronicTrimpList)
-                                        val atl = acuteSum / ScoringConstants.ACUTE_DAYS.toFloat()
+                                    if (dataTenureDays >= 7) {
+                                        val ctl =
+                                            scoringCalculator.computeCtlEmaWithDecay(
+                                                trimpByDate,
+                                                currentDayDate,
+                                            )
+                                        val atl =
+                                            scoringCalculator.computeAtlEmaWithDecay(
+                                                trimpByDate,
+                                                currentDayDate,
+                                            )
                                         scoringCalculator.computeStrainRatio(atl, ctl)
                                     } else {
                                         null

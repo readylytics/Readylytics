@@ -21,6 +21,7 @@ fun MetricStatus.gaugeColor(): Color =
     when (this) {
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.outline
         MetricStatus.WARNING -> LocalExtendedColors.current.warning
+        MetricStatus.POOR -> MaterialTheme.colorScheme.error
         else -> this.onContainerColor()
     }
 
@@ -41,5 +42,5 @@ fun MetricStatus.contentColor(): Color =
         MetricStatus.OPTIMAL -> MaterialTheme.colorScheme.primary
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.outline
         MetricStatus.WARNING -> LocalExtendedColors.current.warning
-        MetricStatus.POOR -> MaterialTheme.colorScheme.error
+        MetricStatus.POOR -> MaterialTheme.colorScheme.errorContainer
     }
