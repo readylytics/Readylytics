@@ -7,8 +7,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
+import io.mockk.coVerify
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
 import org.json.JSONObject
@@ -105,7 +105,7 @@ class LocalRestoreManagerTest {
             val result = manager.applyRestore(Uri.fromFile(backupFile))
 
             assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
-            verify { settingsRepo.updateGoalSleepHours(9.5f) }
+            coVerify { settingsRepo.updateGoalSleepHours(9.5f) }
         }
 
     private fun createValidBackupJson(): JSONObject {

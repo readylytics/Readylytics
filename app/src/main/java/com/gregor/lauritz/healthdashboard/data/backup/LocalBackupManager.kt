@@ -46,6 +46,9 @@ class LocalBackupManager
                     val prefs = settingsRepository.userPreferences.first()
                     val customUri = prefs.backupDirectoryUri?.toUri()
 
+                    // Prune old backups from both internal and custom locations
+                    pruneOldBackups(customUri)
+
                     val timestamp =
                         Instant.now().atZone(ZoneId.systemDefault()).format(FILENAME_FORMATTER)
                     val jsonFilename = "backup_$timestamp.json"
@@ -81,11 +84,9 @@ class LocalBackupManager
                             tempZipFile.inputStream().use { it.copyTo(os) }
                         }
                         tempZipFile.delete()
-                        pruneOldSafBackups(customUri)
                         finalFile = null
                     } else {
                         defaultBackupDir.mkdirs()
-                        pruneOldBackups(defaultBackupDir)
                         val file = File(defaultBackupDir, zipFilename)
                         createZip(tempJsonFile, file, password)
                         finalFile = file
@@ -400,27 +401,38 @@ class LocalBackupManager
                 }
             }
 
-        private fun pruneOldBackups(dir: File) {
+        private fun pruneOldBackups(customUri: Uri?) {
             val now = System.currentTimeMillis()
-            val sevenDaysMs = 7L * 24 * 60 * 60 * 1000
-            dir
-                .listFiles { f -> f.name.startsWith("backup_") && f.isFile }
-                ?.filter { now - it.lastModified() > sevenDaysMs }
-                ?.forEach { it.delete() }
-        }
 
-        private fun pruneOldSafBackups(treeUri: Uri) {
-            val treeDir = DocumentFile.fromTreeUri(context, treeUri) ?: return
-            val now = System.currentTimeMillis()
-            val sevenDaysMs = 7L * 24 * 60 * 60 * 1000
-            treeDir
-                .listFiles()
-                .filter { it.isFile && it.name?.startsWith("backup_") == true }
-                .filter { now - it.lastModified() > sevenDaysMs }
-                .forEach { it.delete() }
+            // 1. Prune internal directory
+            if (defaultBackupDir.exists()) {
+                defaultBackupDir
+                    .listFiles { f ->
+                        f.name.startsWith("backup_") && f.name.endsWith(".zip") && f.isFile
+                    }?.filter { now - it.lastModified() > BACKUP_RETENTION_PERIOD_MS }
+                    ?.forEach { it.delete() }
+            }
+
+            // 2. Prune custom SAF directory if provided
+            if (customUri != null) {
+                val treeDir =
+                    if (customUri.scheme == "content") {
+                        DocumentFile.fromTreeUri(context, customUri)
+                    } else {
+                        // Support for file:// URIs (e.g. in tests)
+                        customUri.path?.let { DocumentFile.fromFile(File(it)) }
+                    }
+                treeDir
+                    ?.listFiles()
+                    ?.filter {
+                        it.isFile && it.name?.startsWith("backup_") == true && it.name?.endsWith(".zip") == true
+                    }?.filter { now - it.lastModified() > BACKUP_RETENTION_PERIOD_MS }
+                    ?.forEach { it.delete() }
+            }
         }
 
         companion object {
             private val FILENAME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")
+            private const val BACKUP_RETENTION_PERIOD_MS = 7L * 24 * 60 * 60 * 1000
         }
     }

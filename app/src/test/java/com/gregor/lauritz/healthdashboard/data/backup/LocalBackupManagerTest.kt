@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.data.backup
 
 import android.content.Context
+import android.net.Uri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
@@ -115,5 +116,61 @@ class LocalBackupManagerTest {
             assertTrue(!staleFile1.exists(), "Stale file 1 should be deleted")
             assertTrue(!staleFile2.exists(), "Stale file 2 should be deleted")
             assertTrue(recentFile.exists(), "Recent file should be retained")
+        }
+
+    @Test
+    fun createBackup_prunesSafFilesOlderThan7Days() =
+        runTest {
+            val safDir = File(context.cacheDir, "saf_backups")
+            safDir.mkdirs()
+            val safUri = Uri.fromFile(safDir)
+
+            settingsRepo =
+                mockk<SettingsRepository>().apply {
+                    coEvery { userPreferences } returns
+                        flowOf(
+                            mockk(relaxed = true) {
+                                coEvery { backupDirectoryUri } returns safUri.toString()
+                            },
+                        )
+                }
+            manager = LocalBackupManager(context, db, settingsRepo, encryptionManager)
+
+            val now = System.currentTimeMillis()
+            val eightDaysAgo = now - (8L * 24 * 60 * 60 * 1000)
+            val oneDayAgo = now - (1L * 24 * 60 * 60 * 1000)
+
+            val staleFile = File(safDir, "backup_2026-05-08_100000.zip")
+            val recentFile = File(safDir, "backup_2026-05-15_100000.zip")
+
+            staleFile.writeText("{}")
+            recentFile.writeText("{}")
+
+            staleFile.setLastModified(eightDaysAgo)
+            recentFile.setLastModified(oneDayAgo)
+
+            // We need to use a real DocumentFile behavior.
+            // In Robolectric, Uri.fromFile(dir) works with DocumentFile.fromTreeUri.
+
+            val result = manager.createBackup()
+            // Note: createBackup might fail because of missing content resolver support for file:// outputstream in Robolectric
+            // but we only care about the pruning part which happens before it tries to write if we are lucky,
+            // or we just check the files after.
+            // Actually, pruning happens AFTER creation in my implementation for SAF?
+            // Let's check:
+            // if (customUri != null) { ... pruneOldBackups(customUri) ... }
+
+            // Wait, in my implementation:
+            // context.contentResolver.openOutputStream(file.uri)?.use { ... }
+            // pruneOldBackups(customUri)
+
+            // If openOutputStream fails, pruneOldBackups might not be called.
+            // I should move pruning BEFORE writing to ensure it happens even if write fails?
+            // Usually it's better to prune before to free up space.
+
+            assertTrue(!staleFile.exists(), "Stale SAF file should be deleted")
+            assertTrue(recentFile.exists(), "Recent SAF file should be retained")
+
+            safDir.deleteRecursively()
         }
 }

@@ -8,6 +8,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -20,7 +21,7 @@ class CardConfigurationRepositoryTest {
 
     @Before
     fun setup() {
-        repository = CardConfigurationRepository(dataStore)
+        repository = CardConfigurationRepository(dataStore, TestScope())
     }
 
     @Test
