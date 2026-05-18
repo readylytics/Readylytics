@@ -198,8 +198,9 @@ class SqlCipherKeyManager
         }
 
         private fun getOrCreateKeystoreKey(): SecretKey {
-            if (BuildConfig.DEBUG) {
-                // In unit tests / debug builds, we return a fixed key to avoid KeyStore dependency.
+            val isTest = System.getProperty("java.runtime.name")?.contains("Android", ignoreCase = true) == false
+            if (isTest) {
+                // In unit tests, we return a fixed key to avoid KeyStore dependency.
                 return javax.crypto.spec.SecretKeySpec(ByteArray(32), "AES")
             }
             val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
