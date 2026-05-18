@@ -373,6 +373,13 @@ private fun BackupFileItem(
     onDelete: () -> Unit,
     enabled: Boolean,
 ) {
+    val backupDate =
+        DateFormat
+            .getDateTimeInstance(
+                DateFormat.MEDIUM,
+                DateFormat.SHORT,
+            ).format(Date(file.lastModified))
+
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -387,12 +394,7 @@ private fun BackupFileItem(
             modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
         ) {
             Text(
-                text =
-                    DateFormat
-                        .getDateTimeInstance(
-                            DateFormat.MEDIUM,
-                            DateFormat.SHORT,
-                        ).format(Date(file.lastModified)),
+                text = backupDate,
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
@@ -404,10 +406,13 @@ private fun BackupFileItem(
         TextButton(onClick = onRestore, enabled = enabled) {
             Text("Restore")
         }
-        IconButton(onClick = onDelete, enabled = enabled) {
+        IconButton(
+            onClick = onDelete,
+            enabled = enabled,
+        ) {
             Icon(
                 imageVector = Icons.Default.Delete,
-                contentDescription = "Delete backup",
+                contentDescription = "Delete backup from $backupDate",
                 tint = MaterialTheme.colorScheme.error,
             )
         }
