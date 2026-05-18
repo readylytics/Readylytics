@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
@@ -32,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -217,6 +220,12 @@ private fun BackupPasswordSection(
             label = { Text("Test Backup Password") },
             modifier = Modifier.fillMaxWidth(),
             visualTransformation = if (showTestPassword) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    autoCorrectEnabled = false,
+                    imeAction = ImeAction.Done,
+                ),
             trailingIcon = {
                 IconButton(onClick = { showTestPassword = !showTestPassword }) {
                     Icon(
@@ -279,6 +288,12 @@ private fun SetPasswordDialog(
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation =
                         if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions =
+                        KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            autoCorrectEnabled = false,
+                            imeAction = ImeAction.Next,
+                        ),
                     trailingIcon = {
                         IconButton(onClick = { showPassword = !showPassword }) {
                             Icon(
@@ -298,6 +313,12 @@ private fun SetPasswordDialog(
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation =
                         if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions =
+                        KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            autoCorrectEnabled = false,
+                            imeAction = ImeAction.Done,
+                        ),
                     singleLine = true,
                     isError = password != repeatPassword && repeatPassword.isNotEmpty(),
                 )
