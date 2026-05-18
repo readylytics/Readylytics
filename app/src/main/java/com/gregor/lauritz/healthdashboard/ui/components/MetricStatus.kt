@@ -17,21 +17,21 @@ fun MetricStatus.containerColor(): Color =
     }
 
 @Composable
+fun MetricStatus.gaugeColor(): Color =
+    when (this) {
+        MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.outline
+        MetricStatus.WARNING -> LocalExtendedColors.current.warning
+        else -> this.onContainerColor()
+    }
+
+@Composable
 fun MetricStatus.onContainerColor(): Color =
     when (this) {
         MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.onSurfaceVariant
         MetricStatus.OPTIMAL -> MaterialTheme.colorScheme.onPrimaryContainer
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
-        MetricStatus.WARNING -> MaterialTheme.colorScheme.onTertiaryContainer
+        MetricStatus.WARNING -> LocalExtendedColors.current.onWarningContainer
         MetricStatus.POOR -> MaterialTheme.colorScheme.onErrorContainer
-    }
-
-@Composable
-fun MetricStatus.gaugeColor(): Color =
-    when (this) {
-        MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.outline
-        MetricStatus.WARNING -> MaterialTheme.colorScheme.tertiary
-        else -> this.onContainerColor()
     }
 
 @Composable
@@ -40,6 +40,6 @@ fun MetricStatus.contentColor(): Color =
         MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.onSurfaceVariant
         MetricStatus.OPTIMAL -> MaterialTheme.colorScheme.primary
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.outline
-        MetricStatus.WARNING -> MaterialTheme.colorScheme.tertiary
+        MetricStatus.WARNING -> LocalExtendedColors.current.warning
         MetricStatus.POOR -> MaterialTheme.colorScheme.error
     }

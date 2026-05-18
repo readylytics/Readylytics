@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
 
 data class StatusItem(
     val label: String,
@@ -47,7 +48,7 @@ fun StatusLegend(modifier: Modifier = Modifier) {
         listOf(
             StatusItem("Optimal", colorScheme.primary),
             StatusItem("Neutral", colorScheme.outline),
-            StatusItem("Warning", colorScheme.tertiary),
+            StatusItem("Warning", LocalExtendedColors.current.warning),
             StatusItem("Poor", colorScheme.error),
         )
 
