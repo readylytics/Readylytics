@@ -22,7 +22,7 @@ fun MetricStatus.onContainerColor(): Color =
         MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.onSurfaceVariant
         MetricStatus.OPTIMAL -> MaterialTheme.colorScheme.onPrimaryContainer
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
-        MetricStatus.WARNING -> LocalExtendedColors.current.onWarningContainer
+        MetricStatus.WARNING -> MaterialTheme.colorScheme.onTertiaryContainer
         MetricStatus.POOR -> MaterialTheme.colorScheme.onErrorContainer
     }
 
@@ -30,7 +30,7 @@ fun MetricStatus.onContainerColor(): Color =
 fun MetricStatus.gaugeColor(): Color =
     when (this) {
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.outline
-        MetricStatus.WARNING -> LocalExtendedColors.current.warning.copy(alpha = 0.7f)
+        MetricStatus.WARNING -> MaterialTheme.colorScheme.tertiary
         else -> this.onContainerColor()
     }
 
@@ -40,6 +40,6 @@ fun MetricStatus.contentColor(): Color =
         MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.onSurfaceVariant
         MetricStatus.OPTIMAL -> MaterialTheme.colorScheme.primary
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.outline
-        MetricStatus.WARNING -> LocalExtendedColors.current.warning
+        MetricStatus.WARNING -> MaterialTheme.colorScheme.tertiary
         MetricStatus.POOR -> MaterialTheme.colorScheme.error
     }
