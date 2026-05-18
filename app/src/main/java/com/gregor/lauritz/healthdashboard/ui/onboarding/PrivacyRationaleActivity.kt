@@ -13,11 +13,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
@@ -32,7 +32,7 @@ class PrivacyRationaleActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val prefs by settingsRepo.userPreferences.collectAsState(initial = null)
+            val prefs by settingsRepo.userPreferences.collectAsStateWithLifecycle(initialValue = null)
             val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM
 
             FitDashboardTheme(appTheme = appTheme) {

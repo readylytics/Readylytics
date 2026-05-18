@@ -73,3 +73,74 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
         t.writeTo(output)
     }
 }
+
+fun UserPreferences.toProto(): UserPreferencesProto {
+    val domain = this
+    val builder = UserPreferencesProto.newBuilder()
+    builder
+        .setGoalSleepHours(domain.goalSleepHours)
+        .setSyncPreference(SyncPreferenceProto.valueOf("SYNC_${domain.syncPreference.name}"))
+        .setSyncIntervalHours(domain.syncIntervalHours)
+        .setLastSyncTimestamp(domain.lastSyncTimestamp)
+        .setMaxHeartRate(domain.maxHeartRate)
+        .setAutoCalculateMaxHr(domain.autoCalculateMaxHr)
+        .setManualZoneEditing(domain.manualZoneEditing)
+        .setZone1MinPercent(domain.zone1MinPercent)
+        .setZone1MaxPercent(domain.zone1MaxPercent)
+        .setZone2MaxPercent(domain.zone2MaxPercent)
+        .setZone3MaxPercent(domain.zone3MaxPercent)
+        .setZone4MaxPercent(domain.zone4MaxPercent)
+        .setZone1MinBpm(domain.zone1MinBpm)
+        .setZone1MaxBpm(domain.zone1MaxBpm)
+        .setZone2MaxBpm(domain.zone2MaxBpm)
+        .setZone3MaxBpm(domain.zone3MaxBpm)
+        .setZone4MaxBpm(domain.zone4MaxBpm)
+        .setAge(domain.age)
+        .setBirthDay(domain.birthDay)
+        .setBirthMonth(domain.birthMonth)
+        .setBirthYear(domain.birthYear)
+        .setHrvOptimalThreshold(domain.hrvOptimalThreshold)
+        .setHrvWarningThreshold(domain.hrvWarningThreshold)
+        .setRhrOptimalThreshold(domain.rhrOptimalThreshold)
+        .setRhrWarningThreshold(domain.rhrWarningThreshold)
+        .setRestingHrBeforeMinutes(domain.restingHrBeforeMinutes)
+        .setRestingHrAfterMinutes(domain.restingHrAfterMinutes)
+        .setAppTheme(AppThemeProto.valueOf("THEME_${domain.appTheme.name}"))
+        .setDynamicColorEnabled(domain.dynamicColorEnabled)
+        .setBackupSchedule(BackupScheduleProto.valueOf("BACKUP_${domain.backupSchedule.name}"))
+        .setLastBackupTimestamp(domain.lastBackupTimestamp)
+        .setConsistencyThresholdMinutes(domain.consistencyThresholdMinutes)
+        .setConsistencyEvaluationDays(domain.consistencyEvaluationDays)
+        .setConsistencyBaselineDays(domain.consistencyBaselineDays)
+        .setPaiScalingFactor(domain.paiScalingFactor)
+        .setStepGoal(domain.stepGoal)
+        .setRetentionDaysEnabled(domain.retentionDaysEnabled)
+        .setRetentionDays(domain.retentionDays)
+        .setCollapseCloudData(domain.collapseCloudData)
+        .setCollapseHealthConnect(domain.collapseHealthConnect)
+        .setCollapseBaselinesThresholds(domain.collapseBaselinesThresholds)
+        .setCollapseDisplay(domain.collapseDisplay)
+        .setCollapseAdvanced(domain.collapseAdvanced)
+        .setAboutDismissed(domain.aboutDismissed)
+        .setPhysiologyProfile(PhysiologyProfileProto.valueOf("PROFILE_${domain.physiologyProfile.name}"))
+        .setInstallDate(domain.installDate)
+        .setTrimpMethod(
+            when (domain.trimpModel) {
+                com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel.BANISTER -> TrimpMethodProto.TRIMP_BANISTER
+                com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel.I_TRIMP -> TrimpMethodProto.TRIMP_ITRIMP
+                com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel.CHENG -> TrimpMethodProto.TRIMP_CHENG
+            },
+        ).setPaiCalibration(domain.banisterMultiplier)
+        .setChengBeta(domain.chengBeta)
+        .setItrimpB(domain.itrimB)
+
+    domain.hrvBaselineOverride?.let { builder.setHrvBaselineOverride(it) }
+    domain.rhrBaselineOverride?.let { builder.setRhrBaselineOverride(it) }
+    domain.gender?.let { builder.setGender(it.name) }
+    domain.circadianThresholdOverride?.let { builder.setCircadianThresholdOverride(it) }
+    domain.primaryDeviceName?.let { builder.setPrimaryDeviceName(it) }
+    domain.backupDirectoryUri?.let { builder.setBackupDirectoryUri(it) }
+    domain.backupPasswordHash?.let { builder.setBackupPasswordHash(it) }
+
+    return builder.build()
+}

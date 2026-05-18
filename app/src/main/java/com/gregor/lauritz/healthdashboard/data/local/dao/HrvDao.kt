@@ -24,6 +24,18 @@ interface HrvDao {
     fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordEntity>> =
         _observeSleepHrvSince(fromMs).distinctUntilChanged()
 
+    @Query("SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
+    suspend fun getSince(fromMs: Long): List<HrvRecordEntity>
+
+    @Query(
+        "SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset",
+    )
+    suspend fun getPaged(
+        fromMs: Long,
+        limit: Int,
+        offset: Int,
+    ): List<HrvRecordEntity>
+
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +
             "ORDER BY timestampMs ASC",
@@ -76,6 +88,9 @@ interface HrvDao {
 
     @Query("DELETE FROM hrv_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
+
+    @Query("SELECT COUNT(*) FROM hrv_records")
+    suspend fun count(): Int
 
     @Query("DELETE FROM hrv_records")
     suspend fun deleteAll(): Int

@@ -3,7 +3,6 @@ package com.gregor.lauritz.healthdashboard.workers
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
@@ -21,7 +20,7 @@ class WorkerScheduler
         private val workManager: Lazy<WorkManager>,
     ) {
         companion object {
-            const val BACKUP_WORK_NAME = "health_backup_periodic"
+            const val LOCAL_BACKUP_WORK_NAME = "local_backup_periodic"
             const val BIRTHDAY_WORK_NAME = "birthday_check_periodic"
             const val DATA_CLEANUP_WORK_NAME = "data_cleanup_periodic"
         }
@@ -29,7 +28,7 @@ class WorkerScheduler
         suspend fun scheduleBackupWorker(schedule: BackupSchedule) =
             withContext(Dispatchers.IO) {
                 if (schedule == BackupSchedule.MANUAL) {
-                    workManager.get().cancelUniqueWork(BACKUP_WORK_NAME)
+                    workManager.get().cancelUniqueWork(LOCAL_BACKUP_WORK_NAME)
                     return@withContext
                 }
 
@@ -37,18 +36,17 @@ class WorkerScheduler
                 val constraints =
                     Constraints
                         .Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
                         .setRequiresBatteryNotLow(true)
                         .build()
 
                 val request =
-                    PeriodicWorkRequestBuilder<BackupWorker>(intervalDays, TimeUnit.DAYS)
+                    PeriodicWorkRequestBuilder<LocalBackupWorker>(intervalDays, TimeUnit.DAYS)
                         .setConstraints(constraints)
                         .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
                         .build()
 
                 workManager.get().enqueueUniquePeriodicWork(
-                    BACKUP_WORK_NAME,
+                    LOCAL_BACKUP_WORK_NAME,
                     ExistingPeriodicWorkPolicy.UPDATE,
                     request,
                 )

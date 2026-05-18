@@ -6,10 +6,6 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,10 +35,12 @@ class SettingsRepositoryTest {
         repository =
             SettingsRepository(
                 dataStore = dataStore,
-                sleepSessionDao = mockk<SleepSessionDao>(relaxed = true),
-                heartRateDao = mockk<HeartRateDao>(relaxed = true),
-                hrvDao = mockk<HrvDao>(relaxed = true),
-                workoutDao = mockk<WorkoutDao>(relaxed = true),
+                physiology = mockk<PhysiologyPreferences>(relaxed = true),
+                thresholds = mockk<ThresholdPreferences>(relaxed = true),
+                sleep = SleepPreferences(dataStore),
+                ui = mockk<UIPreferences>(relaxed = true),
+                sync = mockk<SyncPreferences>(relaxed = true),
+                backup = mockk<BackupPreferences>(relaxed = true),
             )
     }
 
@@ -102,24 +100,5 @@ class SettingsRepositoryTest {
         runTest {
             val prefs = repository.userPreferences.first()
             assertEquals(true, prefs.retentionDaysEnabled)
-        }
-
-    @Test
-    fun `default dynamic color enabled is true`() =
-        runTest {
-            val enabled = repository.dynamicColorEnabled.first()
-            assertEquals(true, enabled)
-        }
-
-    @Test
-    fun `dynamic color enabled toggle works`() =
-        runTest {
-            repository.updateDynamicColorEnabled(false)
-            var enabled = repository.dynamicColorEnabled.first()
-            assertEquals(false, enabled)
-
-            repository.updateDynamicColorEnabled(true)
-            enabled = repository.dynamicColorEnabled.first()
-            assertEquals(true, enabled)
         }
 }

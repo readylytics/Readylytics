@@ -34,14 +34,11 @@ class SqlCipherKeyManager
             try {
                 System.loadLibrary("sqlcipher")
             } catch (e: UnsatisfiedLinkError) {
-                // In Robolectric or Unit tests, native libraries are often not available.
-                // We only throw if we're not in a test environment.
-                if (System.getProperty("java.runtime.name")?.contains("Android", ignoreCase = true) == true) {
-                    throw RuntimeException(
-                        "Failed to load sqlcipher native library. Ensure SQLCipher is properly integrated.",
-                        e,
-                    )
-                }
+                android.util.Log.w(
+                    "SqlCipherKeyManager",
+                    "Could not load 'sqlcipher' library via System.loadLibrary. This is expected in tests or if the library is loaded automatically.",
+                    e,
+                )
             }
         }
 
@@ -54,8 +51,8 @@ class SqlCipherKeyManager
          * The key is passed as a raw hex string (x'...') to skip SQLCipher's default KDF and
          * use the 256-bit AES key directly.
          */
-        fun getOrCreateFactory(): SupportSQLiteOpenHelper.Factory {
-            val decryptedKey = getOrCreateDbKey()
+        fun getOrCreateFactory(dbFile: File): SupportSQLiteOpenHelper.Factory {
+            val decryptedKey = getOrCreateDbKey(dbFile)
             return try {
                 val keyHex = decryptedKey.toHex()
                 val rawKeyBytes = "x'$keyHex'".toByteArray(Charsets.UTF_8)
@@ -89,7 +86,7 @@ class SqlCipherKeyManager
             }
 
             val tempFile = File(dbFile.parent, "${dbFile.name}.cipher_tmp")
-            val rawKey = getOrCreateDbKey()
+            val rawKey = getOrCreateDbKey(dbFile)
             try {
                 // Open plaintext DB with empty password
                 val db =
@@ -134,7 +131,7 @@ class SqlCipherKeyManager
             destFile: File,
         ) {
             if (!dbFile.exists()) return
-            val rawKey = getOrCreateDbKey()
+            val rawKey = getOrCreateDbKey(null)
             try {
                 val keyHex = rawKey.toHex()
                 val db =
@@ -154,19 +151,50 @@ class SqlCipherKeyManager
             }
         }
 
-        private fun getOrCreateDbKey(): ByteArray =
+        private fun getOrCreateDbKey(dbFile: File? = null): ByteArray =
             if (prefs.contains(PREF_ENCRYPTED_KEY)) {
-                decryptKey()
-            } else {
-                val rawKey = ByteArray(32)
-                SecureRandom().nextBytes(rawKey)
                 try {
-                    encryptAndStoreKey(rawKey)
-                    rawKey.clone()
-                } finally {
-                    rawKey.fill(0)
+                    decryptKey()
+                } catch (e: Exception) {
+                    android.util.Log.e(
+                        "SqlCipherKeyManager",
+                        "Failed to decrypt database key. KeyStore key may have changed or data is corrupted.",
+                        e,
+                    )
+                    // If we can't decrypt, we must clear the corrupted key and generate a new one.
+                    // We also MUST delete the database file if it exists, otherwise Room will fail to open it with the new key.
+                    prefs
+                        .edit()
+                        .remove(PREF_ENCRYPTED_KEY)
+                        .remove(PREF_IV)
+                        .commit()
+                    dbFile?.let {
+                        if (it.exists()) {
+                            android.util.Log.w(
+                                "SqlCipherKeyManager",
+                                "Deleting inaccessible database file: ${it.absolutePath}",
+                            )
+                            it.delete()
+                            File("${it.absolutePath}-wal").delete()
+                            File("${it.absolutePath}-shm").delete()
+                        }
+                    }
+                    generateAndStoreNewKey()
                 }
+            } else {
+                generateAndStoreNewKey()
             }
+
+        private fun generateAndStoreNewKey(): ByteArray {
+            val rawKey = ByteArray(32)
+            SecureRandom().nextBytes(rawKey)
+            try {
+                encryptAndStoreKey(rawKey)
+                return rawKey.clone()
+            } finally {
+                rawKey.fill(0)
+            }
+        }
 
         private fun getOrCreateKeystoreKey(): SecretKey {
             val isTest = System.getProperty("java.runtime.name")?.contains("Android", ignoreCase = true) == false

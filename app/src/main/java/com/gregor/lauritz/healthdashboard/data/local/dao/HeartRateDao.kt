@@ -19,6 +19,18 @@ interface HeartRateDao {
     fun observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordEntity>> =
         _observeSleepHrSince(fromMs).distinctUntilChanged()
 
+    @Query("SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
+    suspend fun getSince(fromMs: Long): List<HeartRateRecordEntity>
+
+    @Query(
+        "SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset",
+    )
+    suspend fun getPaged(
+        fromMs: Long,
+        limit: Int,
+        offset: Int,
+    ): List<HeartRateRecordEntity>
+
     @Query(
         "SELECT CAST(ROUND(AVG(beatsPerMinute)) AS INTEGER) FROM heart_rate_records " +
             "WHERE recordType = 'SLEEP' AND sessionId = :sessionId",
@@ -99,6 +111,9 @@ interface HeartRateDao {
 
     @Query("DELETE FROM heart_rate_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
+
+    @Query("SELECT COUNT(*) FROM heart_rate_records")
+    suspend fun count(): Int
 
     @Query("DELETE FROM heart_rate_records")
     suspend fun deleteAll(): Int

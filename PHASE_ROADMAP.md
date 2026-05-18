@@ -1,6 +1,6 @@
 # Master Roadmap: Phases 3–9
 
-**Status:** Phases 1–3 complete. Phase 4 complete. Phase 5.1 & 5.2 complete (PR#18 fixes merged). Phase 5.3 pending.
+**Status:** Phases 1–6 complete (including Phase 4 hardening: DataStore batch writes + SAF pruning). Phase 7 partial (~10% progress, 3 tests committed). Phases 8–9 pending.
 
 ---
 
@@ -304,11 +304,11 @@ Extract heavy transformation logic from ViewModel:
 | 3         | Large UI Refactor  | 10+       | 40–60       | Med-High | ✅ DONE      |
 | 4         | Scoring Domain     | 8         | 30–50       | High     | ✅ DONE      |
 | 5         | Data Layer         | 10+       | 25–40       | Med-High | ✅ DONE      |
-| 6         | Cloud/Backup       | 6         | 20–30       | Med-High | 📋 PENDING   |
-| 7         | Test Coverage      | +50 tests | 20–35       | Low      | 📋 PENDING   |
+| 6         | Cloud/Backup       | 6         | 20–30       | Med-High | ✅ DONE      |
+| 7         | Test Coverage      | +50 tests | 20–35       | Low      | ⚠️ PARTIAL   |
 | 8         | Performance        | —         | 25–40       | Med      | 📋 PENDING   |
 | 9         | Polish/Launch      | —         | 15–25       | Low      | 📋 PENDING   |
-| **TOTAL** | **Complete Audit** | **65–80** | **257–386** | **Med**  | **6/9 IN WORK** |
+| **TOTAL** | **Complete Audit** | **65–80** | **257–386** | **Med**  | **6/9 DONE, 1/9 PARTIAL** |
 
 ---
 

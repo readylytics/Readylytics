@@ -54,7 +54,7 @@ class HrvSigmaTest {
     fun `sigma floor is always respected`() {
         for (n in 0..65) {
             val lnList = uniformLnList(50f, n)
-            val sigma = calculator.hrvSigma(lnList)
+            val sigma = calculator.hrvSigma(lnList, sigmaPrior = PhysiologyProfile.GENERAL.lnSigmaPrior)
             assertTrue("Sigma floor violated at n=$n: sigma=$sigma", sigma >= ScoringConstants.Restoration.MIN_LN_SIGMA)
         }
     }

@@ -5,6 +5,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 
 sealed interface SettingsEvent {
@@ -124,23 +125,29 @@ sealed interface SettingsEvent {
         val enabled: Boolean,
     ) : SettingsEvent
 
-    data object DriveSignIn : SettingsEvent
+    data object CreateLocalBackup : SettingsEvent
 
-    data object DriveSignOut : SettingsEvent
-
-    data class BackupScheduleChanged(
-        val schedule: BackupSchedule,
+    data class RestoreLocalBackup(
+        val file: BackupFileInfo,
     ) : SettingsEvent
-
-    data object BackupNow : SettingsEvent
-
-    data object RestoreFromDrive : SettingsEvent
 
     data object RestoreConfirmed : SettingsEvent
 
     data object RestoreDismissed : SettingsEvent
 
-    data object DismissDriveError : SettingsEvent
+    data object DismissBackupError : SettingsEvent
+
+    data class DeleteLocalBackup(
+        val file: BackupFileInfo,
+    ) : SettingsEvent
+
+    data class ChangeBackupDirectory(
+        val path: String,
+    ) : SettingsEvent
+
+    data class BackupScheduleChanged(
+        val schedule: BackupSchedule,
+    ) : SettingsEvent
 
     data class RetentionDaysEnabledChanged(
         val enabled: Boolean,
@@ -149,6 +156,21 @@ sealed interface SettingsEvent {
     data class RetentionDaysChanged(
         val days: Int,
     ) : SettingsEvent
+
+    data object OpenSetPasswordDialog : SettingsEvent
+
+    data object DismissSetPasswordDialog : SettingsEvent
+
+    data class UpdateBackupPassword(
+        val raw: String,
+        val autoStartBackup: Boolean = false,
+    ) : SettingsEvent
+
+    data class VerifyBackupPassword(
+        val test: String,
+    ) : SettingsEvent
+
+    data object ClearPasswordVerificationResult : SettingsEvent
 
     data object ResyncHealthConnect : SettingsEvent
 

@@ -1,23 +1,19 @@
-package com.gregor.lauritz.healthdashboard.ui.settings.cloud
+package com.gregor.lauritz.healthdashboard.ui.settings.data
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -29,17 +25,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
-import com.gregor.lauritz.healthdashboard.ui.settings.CloudBackupState
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
 import com.gregor.lauritz.healthdashboard.ui.settings.SyncSettingsState
 import com.gregor.lauritz.healthdashboard.ui.settings.UIState
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
 import kotlinx.coroutines.launch
-import java.text.DateFormat
-import java.util.Date
 
 @Composable
 fun SyncSettingsSection(
@@ -57,6 +49,7 @@ fun SyncSettingsSection(
 @Composable
 fun DataManagementSection(
     uiState: UIState,
+    isResyncing: Boolean,
     onEvent: (SettingsEvent) -> Unit,
     onSyncEvent: (SettingsEvent) -> Unit,
 ) {
@@ -72,7 +65,10 @@ fun DataManagementSection(
                     vertical = SettingsConstants.VERTICAL_SPACER_LARGE,
                 ),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text("Retention Enabled", style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.weight(1f))
                 Switch(
@@ -127,10 +123,10 @@ fun DataManagementSection(
         ) {
             Button(
                 onClick = { onSyncEvent(SettingsEvent.ResyncHealthConnect) },
-                enabled = !uiState.isResyncing,
+                enabled = !isResyncing,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                if (uiState.isResyncing) {
+                if (isResyncing) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         color = MaterialTheme.colorScheme.onPrimary,
@@ -147,147 +143,6 @@ fun DataManagementSection(
             )
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CloudBackupSection(
-    uiState: CloudBackupState,
-    onEvent: (SettingsEvent) -> Unit,
-) {
-    val signedIn = uiState.driveAccountEmail != null
-
-    Column(
-        modifier =
-            Modifier.padding(
-                horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
-            ),
-    ) {
-        // Account row
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Google Account", style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    text = uiState.driveAccountEmail ?: "Not connected",
-                    style = MaterialTheme.typography.bodySmall,
-                    color =
-                        if (signedIn) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                )
-            }
-            if (signedIn) {
-                TextButton(onClick = { onEvent(SettingsEvent.DriveSignOut) }) {
-                    Text("Sign Out")
-                }
-            } else {
-                TextButton(onClick = { onEvent(SettingsEvent.DriveSignIn) }) {
-                    Text("Sign In")
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
-
-        // Backup schedule dropdown
-        BackupScheduleItem(uiState = uiState, onEvent = onEvent)
-
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
-
-        // Last backup timestamp
-        // Note: DateFormat.getDateTimeInstance uses device locale for formatting.
-        // TODO: Add locale-specific tests to verify formatting across different device locales.
-        val lastBackupText =
-            if (uiState.lastBackupTimestamp == 0L) {
-                "Never backed up"
-            } else {
-                "Last backup: ${DateFormat.getDateTimeInstance(
-                    DateFormat.SHORT,
-                    DateFormat.SHORT,
-                ).format(Date(uiState.lastBackupTimestamp))}"
-            }
-        Text(
-            text = lastBackupText,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
-
-        // Action buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Button(
-                onClick = { onEvent(SettingsEvent.BackupNow) },
-                enabled = signedIn && !uiState.isBackingUp && !uiState.isRestoring,
-                modifier = Modifier.weight(1f),
-            ) {
-                if (uiState.isBackingUp) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                } else {
-                    Text("Back Up Now")
-                }
-            }
-            Spacer(modifier = Modifier.size(SettingsConstants.VERTICAL_SPACER))
-            OutlinedButton(
-                onClick = { onEvent(SettingsEvent.RestoreFromDrive) },
-                enabled = signedIn && !uiState.isBackingUp && !uiState.isRestoring,
-                modifier = Modifier.weight(1f),
-            ) {
-                if (uiState.isRestoring) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    Text("Restore")
-                }
-            }
-        }
-
-        // Inline error display
-        if (uiState.driveError != null) {
-            Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = uiState.driveError,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = { onEvent(SettingsEvent.DismissDriveError) }) {
-                    Text("Dismiss")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BackupScheduleItem(
-    uiState: CloudBackupState,
-    onEvent: (SettingsEvent) -> Unit,
-) {
-    DropdownPreferenceItem(
-        label = "Auto Backup",
-        selectedDisplayValue = uiState.backupSchedule.displayName,
-        options = BackupSchedule.entries,
-        onOptionSelected = { onEvent(SettingsEvent.BackupScheduleChanged(it)) },
-        optionLabel = { it.displayName },
-        modifier = Modifier.fillMaxWidth(),
-    )
 }
 
 @Composable
@@ -336,16 +191,8 @@ private val SyncPreference.displayName: String
             SyncPreference.BY_TIME -> "By Time"
         }
 
-private val BackupSchedule.displayName: String
-    get() =
-        when (this) {
-            BackupSchedule.MANUAL -> "Manual only"
-            BackupSchedule.DAILY -> "Daily"
-            BackupSchedule.WEEKLY -> "Weekly"
-        }
-
 @Composable
-fun DeviceSelectionSection(viewModel: CloudSettingsViewModel = hiltViewModel()) {
+fun DeviceSelectionSection(viewModel: DeviceSettingsViewModel = hiltViewModel()) {
     val availableDevices by viewModel.availableDevices.collectAsStateWithLifecycle()
     val primaryDevice by viewModel.primaryDevice.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()

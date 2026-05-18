@@ -69,7 +69,10 @@ fun HeartRateZoneSection(
     var genderExpanded by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("Auto-calculate Max HR", style = MaterialTheme.typography.bodyLarge)
                 Text(
@@ -145,7 +148,10 @@ fun HeartRateZoneSection(
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("Manual Zone Editing", style = MaterialTheme.typography.bodyLarge)
                 Text(

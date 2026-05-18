@@ -1,4 +1,4 @@
-package com.gregor.lauritz.healthdashboard.ui.settings.cloud
+package com.gregor.lauritz.healthdashboard.ui.settings.data
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class CloudSettingsViewModel
+class DeviceSettingsViewModel
     @Inject
     constructor(
         private val settingsRepo: SettingsRepository,

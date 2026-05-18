@@ -32,14 +32,17 @@ workManager = "2.11.2"
 okhttp = "5.3.2"
 protobuf = "4.34.1"
 tink = "1.21.0"
+zip4j = "2.11.5"
 mockk = "1.14.9"
 robolectric = "4.16.1"
 androidxTestCore = "1.7.0"
 androidxTestRunner = "1.7.0"
 archCore = "2.2.0"
+documentfile = "1.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -98,6 +101,7 @@ androidx-test-core = { group = "androidx.test", name = "core", version.ref = "an
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 google-tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 material = { group = "com.google.android.material", name = "material", version = "1.14.0" }
+zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 androidx-arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "archCore" }
 
 [plugins]

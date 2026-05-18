@@ -32,6 +32,7 @@ class RecoveryFlagTest {
         stagesSuspicious,
         isLateNadir,
         isCalibrating,
+        emergencyFlags = null,
     )
 
     // ─── OVERREACHING ─────────────────────────────────────────────────────────

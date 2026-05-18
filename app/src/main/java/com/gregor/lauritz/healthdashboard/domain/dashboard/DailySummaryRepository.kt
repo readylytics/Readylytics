@@ -2,9 +2,9 @@ package com.gregor.lauritz.healthdashboard.domain.dashboard
 
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -29,5 +29,23 @@ class DailySummaryRepository
         fun observeFirstSessionEndingInRange(
             fromMs: Long,
             toMs: Long,
-        ): Flow<SleepSessionEntity?> = sleepSessionDao.observeFirstSessionEndingInRange(fromMs, toMs)
+        ): Flow<SleepSessionData?> =
+            sleepSessionDao
+                .observeFirstSessionEndingInRange(fromMs, toMs)
+                .map { entity ->
+                    entity?.let {
+                        SleepSessionData(
+                            id = it.id,
+                            deviceName = it.deviceName,
+                            startTime = it.startTime,
+                            endTime = it.endTime,
+                            durationMinutes = it.durationMinutes,
+                            efficiency = it.efficiency,
+                            deepSleepMinutes = it.deepSleepMinutes,
+                            lightSleepMinutes = it.lightSleepMinutes,
+                            remSleepMinutes = it.remSleepMinutes,
+                            awakeMinutes = it.awakeMinutes,
+                        )
+                    }
+                }
     }

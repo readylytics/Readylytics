@@ -5,7 +5,9 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.gregor.lauritz.healthdashboard.domain.model.ReadinessResult
+import kotlinx.serialization.Serializable
 
+@Serializable
 @Entity(
     tableName = "daily_summaries",
     indices = [Index(value = ["dateMidnightMs"])],

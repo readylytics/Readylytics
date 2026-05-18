@@ -1,12 +1,11 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
-import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionRepository
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -33,12 +32,12 @@ class CircadianConsistencyRepositoryTest {
         wakeHour: Int = 7,
         wakeMin: Int = 0,
         daysAgo: Int = 0,
-    ): SleepSessionEntity {
+    ): SleepSessionData {
         val baseMs = System.currentTimeMillis() - daysAgo * ONE_DAY_MS
         val startMs = baseMs - (24 - bedHour) * 3600_000L - bedMin * 60_000L
         val endMs = baseMs + wakeHour * 3600_000L + wakeMin * 60_000L
         val durationMinutes = ((endMs - startMs) / 60_000L).toInt().coerceAtLeast(FOUR_HOURS_MINUTES)
-        return SleepSessionEntity(
+        return SleepSessionData(
             id = id,
             startTime = startMs,
             endTime = endMs,
@@ -53,53 +52,15 @@ class CircadianConsistencyRepositoryTest {
     }
 
     private fun buildRepo(
-        sessions: List<SleepSessionEntity>,
+        sessions: List<SleepSessionData>,
         prefs: UserPreferences = defaultPrefs,
     ): CircadianConsistencyRepository {
         val sessionFlow = MutableStateFlow(sessions)
-        val dao =
-            object : SleepSessionDao {
-                override fun _observeSince(fromMs: Long) = sessionFlow
-
-                override fun observeSince(fromMs: Long): Flow<List<SleepSessionEntity>> = sessionFlow
-
-                override fun _observeLatest() = throw UnsupportedOperationException()
-
-                override fun observeLatest() = throw UnsupportedOperationException()
-
-                override suspend fun getLatest() = throw UnsupportedOperationException()
-
-                override suspend fun upsertAll(sessions: List<SleepSessionEntity>) =
-                    throw UnsupportedOperationException()
-
-                override suspend fun countSince(fromMs: Long) = throw UnsupportedOperationException()
-
-                override suspend fun getSince(fromMs: Long) = throw UnsupportedOperationException()
-
-                override suspend fun getSessionEndingInRange(
-                    fromMs: Long,
-                    toMs: Long,
-                ) = throw UnsupportedOperationException()
-
-                override fun _observeFirstSessionEndingInRange(
-                    fromMs: Long,
-                    toMs: Long,
-                ) = throw UnsupportedOperationException()
-
-                override fun observeFirstSessionEndingInRange(
-                    fromMs: Long,
-                    toMs: Long,
-                ) = throw UnsupportedOperationException()
-
-                override suspend fun deleteBeforeTimestamp(beforeMs: Long) = throw UnsupportedOperationException()
-
-                override suspend fun deleteAll() = throw UnsupportedOperationException()
-
-                override suspend fun getDistinctDeviceNames(): List<String> = emptyList()
-            }
+        val repository = mockk<SleepSessionRepository>()
+        every { repository.observeSince(any()) } returns sessionFlow
         val settingsRepo = mockk<SettingsRepository>()
         every { settingsRepo.userPreferences } returns MutableStateFlow(prefs)
-        return CircadianConsistencyRepository(dao, settingsRepo)
+        return CircadianConsistencyRepository(repository, settingsRepo)
     }
 
     @Test
@@ -115,7 +76,7 @@ class CircadianConsistencyRepositoryTest {
         runTest {
             val naps =
                 (1..10).map { i ->
-                    SleepSessionEntity(
+                    SleepSessionData(
                         id = "nap$i",
                         startTime = System.currentTimeMillis() - i * ONE_DAY_MS,
                         endTime = System.currentTimeMillis() - i * ONE_DAY_MS + 2 * 3600_000L,

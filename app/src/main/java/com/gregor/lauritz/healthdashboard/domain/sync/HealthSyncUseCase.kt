@@ -34,7 +34,7 @@ class HealthSyncUseCase
     @Inject
     constructor(
         private val hcRepo: HealthConnectRepository,
-        private val sleepDao: SleepSessionDao,
+        private val sleepSessionDao: SleepSessionDao,
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
@@ -119,7 +119,7 @@ class HealthSyncUseCase
                                 "hr=${filteredHr.size} hrv=${filteredHrv.size}"
                         }
 
-                        sleepDao.upsertAll(filteredSleep)
+                        sleepSessionDao.upsertAll(filteredSleep)
                         workoutDao.upsertAll(filteredWorkouts)
                         heartRateDao.upsertAll(filteredHr)
                         hrvDao.upsertAll(filteredHrv)

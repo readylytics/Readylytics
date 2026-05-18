@@ -28,6 +28,7 @@ object SettingsDefaults {
     const val BIRTH_DAY = 1
     const val BIRTH_MONTH = 1
     const val BIRTH_YEAR = 1994
+    const val IS_BIRTHDAY_CONFIGURED = false
     val GENDER: String? = null
     const val HRV_OPTIMAL_THRESHOLD = 1.10f
     const val HRV_WARNING_THRESHOLD = 0.90f

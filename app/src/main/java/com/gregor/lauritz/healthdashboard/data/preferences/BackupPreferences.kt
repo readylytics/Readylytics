@@ -3,21 +3,11 @@ package com.gregor.lauritz.healthdashboard.data.preferences
 import androidx.datastore.core.DataStore
 import javax.inject.Inject
 
-internal class CloudPreferences
+internal class BackupPreferences
     @Inject
     constructor(
         private val dataStore: DataStore<UserPreferencesProto>,
     ) {
-        suspend fun updateDriveAccountEmail(email: String?) {
-            dataStore.updateData { builder ->
-                if (email != null) {
-                    builder.toBuilder().setDriveAccountEmail(email).build()
-                } else {
-                    builder.toBuilder().clearDriveAccountEmail().build()
-                }
-            }
-        }
-
         suspend fun updateBackupSchedule(schedule: BackupSchedule) {
             dataStore.updateData {
                 it
@@ -34,5 +24,25 @@ internal class CloudPreferences
 
         suspend fun updateLastBackupTimestamp(timestamp: Long) {
             dataStore.updateData { it.toBuilder().setLastBackupTimestamp(timestamp).build() }
+        }
+
+        suspend fun updateBackupDirectoryUri(uri: String?) {
+            dataStore.updateData { builder ->
+                if (uri != null) {
+                    builder.toBuilder().setBackupDirectoryUri(uri).build()
+                } else {
+                    builder.toBuilder().clearBackupDirectoryUri().build()
+                }
+            }
+        }
+
+        suspend fun updateBackupPasswordHash(hash: String?) {
+            dataStore.updateData { builder ->
+                if (hash != null) {
+                    builder.toBuilder().setBackupPasswordHash(hash).build()
+                } else {
+                    builder.toBuilder().clearBackupPasswordHash().build()
+                }
+            }
         }
     }

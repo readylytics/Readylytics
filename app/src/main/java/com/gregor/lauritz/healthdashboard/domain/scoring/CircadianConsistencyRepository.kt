@@ -1,10 +1,10 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
-import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -56,7 +56,7 @@ fun Int.toTimeString(): String {
 class CircadianConsistencyRepository
     @Inject
     constructor(
-        private val sleepSessionDao: SleepSessionDao,
+        private val sleepSessionRepository: SleepSessionRepository,
         private val settingsRepo: SettingsRepository,
     ) {
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -69,14 +69,14 @@ class CircadianConsistencyRepository
                         .toInstant()
                         .toEpochMilli()
                 val fromMs = anchorMs - 60L * 24 * 60 * 60 * 1000L
-                sleepSessionDao.observeSince(fromMs).map { sessions ->
+                sleepSessionRepository.observeSince(fromMs).map { sessions ->
                     val filtered = sessions.filter { it.endTime < anchorMs }
                     compute(filtered, prefs, anchorDate)
                 }
             }
 
         private fun compute(
-            sessions: List<SleepSessionEntity>,
+            sessions: List<SleepSessionData>,
             prefs: UserPreferences,
             anchorDate: LocalDate,
         ): CircadianConsistencyResult {

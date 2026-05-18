@@ -191,7 +191,7 @@ fun ReorderableCardGrid(
                     if (isHovered) {
                         MaterialTheme.colorScheme.errorContainer
                     } else {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        MaterialTheme.colorScheme.surfaceContainer
                     },
                 shape = RoundedCornerShape(16.dp),
             ) {

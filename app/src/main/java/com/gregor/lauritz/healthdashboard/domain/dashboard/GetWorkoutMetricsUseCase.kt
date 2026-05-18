@@ -1,12 +1,11 @@
 package com.gregor.lauritz.healthdashboard.domain.dashboard
 
-import android.content.Context
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.util.ResourceProvider
 import com.gregor.lauritz.healthdashboard.ui.dashboard.CardData
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardAction
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -14,7 +13,7 @@ import javax.inject.Singleton
 class GetWorkoutMetricsUseCase
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
+        private val resourceProvider: ResourceProvider,
     ) {
         data class WorkoutMetrics(
             val strainRatioCard: CardData?,
@@ -33,7 +32,7 @@ class GetWorkoutMetricsUseCase
                         unit = "",
                         status = MetricStatus.CALIBRATING,
                         action = DashboardAction.NAVIGATE_WORKOUTS,
-                        tooltip = context.getString(R.string.tooltip_strain_ratio),
+                        tooltip = resourceProvider.getString(R.string.tooltip_strain_ratio),
                     )
 
             return WorkoutMetrics(strainRatioCard)
@@ -49,7 +48,7 @@ class GetWorkoutMetricsUseCase
                 unit = "",
                 status = status,
                 action = DashboardAction.NAVIGATE_WORKOUTS,
-                tooltip = context.getString(R.string.tooltip_strain_ratio),
+                tooltip = resourceProvider.getString(R.string.tooltip_strain_ratio),
             )
         }
 

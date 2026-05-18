@@ -98,6 +98,7 @@ protobuf {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.documentfile)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -161,6 +162,7 @@ dependencies {
     // WorkManager + Hilt integration
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.hilt.work)
+    implementation(libs.zip4j)
     ksp(libs.hilt.work.compiler)
 
     // Security

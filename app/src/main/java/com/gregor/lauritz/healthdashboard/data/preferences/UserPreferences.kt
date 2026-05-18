@@ -62,6 +62,9 @@ data class UserPreferences(
     val chengBeta: Float = PhysiologyProfile.GENERAL.defaultChengBeta,
     val itrimB: Float = PhysiologyProfile.GENERAL.defaultItrimB,
     val primaryDeviceName: String? = null,
+    val backupDirectoryUri: String? = null,
+    val backupPasswordHash: String? = null,
+    val isBirthdayConfigured: Boolean = SettingsDefaults.IS_BIRTHDAY_CONFIGURED,
 )
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
@@ -128,5 +131,8 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         chengBeta = if (this.chengBeta > 0f) this.chengBeta else profile.defaultChengBeta,
         itrimB = if (itrimpB > 0f) itrimpB else profile.defaultItrimB,
         primaryDeviceName = if (hasPrimaryDeviceName()) primaryDeviceName else null,
+        backupDirectoryUri = if (hasBackupDirectoryUri()) backupDirectoryUri else null,
+        backupPasswordHash = if (hasBackupPasswordHash()) backupPasswordHash else null,
+        isBirthdayConfigured = isBirthdayConfigured,
     )
 }

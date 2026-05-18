@@ -20,7 +20,7 @@ class SettingsRepository
         private val sleep: SleepPreferences,
         private val ui: UIPreferences,
         private val sync: SyncPreferences,
-        private val cloud: CloudPreferences,
+        private val backup: BackupPreferences,
     ) {
         /**
          * The primary flow of user preferences.
@@ -43,11 +43,11 @@ class SettingsRepository
 
         val dynamicColorEnabled: Flow<Boolean> = userPreferences.map { it.dynamicColorEnabled }
 
-        val driveAccountEmail: Flow<String?> = userPreferences.map { it.driveAccountEmail }
-
         val backupSchedule: Flow<BackupSchedule> = userPreferences.map { it.backupSchedule }
 
         val lastBackupTimestampFlow: Flow<Long> = userPreferences.map { it.lastBackupTimestamp }
+
+        val backupDirectoryUri: Flow<String?> = userPreferences.map { it.backupDirectoryUri }
 
         val primaryDeviceName: Flow<String?> = userPreferences.map { it.primaryDeviceName }
 
@@ -150,16 +150,20 @@ class SettingsRepository
 
         suspend fun updateSyncIntervalHours(hours: Int) = sync.updateSyncIntervalHours(hours)
 
+        suspend fun updateDriveAccountEmail(email: String?) = sync.updateDriveAccountEmail(email)
+
         suspend fun updateCircadianThresholdOverride(encryptedMinutes: String?) =
             sync.updateCircadianThresholdOverride(encryptedMinutes)
 
         suspend fun updateLastSyncTimestamp(timestamp: Long) = sync.updateLastSyncTimestamp(timestamp)
 
-        suspend fun updateDriveAccountEmail(email: String?) = cloud.updateDriveAccountEmail(email)
+        suspend fun updateBackupSchedule(schedule: BackupSchedule) = backup.updateBackupSchedule(schedule)
 
-        suspend fun updateBackupSchedule(schedule: BackupSchedule) = cloud.updateBackupSchedule(schedule)
+        suspend fun updateLastBackupTimestamp(timestamp: Long) = backup.updateLastBackupTimestamp(timestamp)
 
-        suspend fun updateLastBackupTimestamp(timestamp: Long) = cloud.updateLastBackupTimestamp(timestamp)
+        suspend fun updateBackupDirectoryUri(uri: String?) = backup.updateBackupDirectoryUri(uri)
+
+        suspend fun updateBackupPasswordHash(hash: String?) = backup.updateBackupPasswordHash(hash)
 
         suspend fun updateAppTheme(theme: AppTheme) = ui.updateAppTheme(theme)
 
@@ -170,4 +174,10 @@ class SettingsRepository
         suspend fun getAvailableDevices(): List<String> = ui.getAvailableDevices()
 
         suspend fun clearDeviceCache() = ui.clearDeviceCache()
+
+        suspend fun batchUpdate(block: UserPreferencesProto.Builder.() -> Unit) {
+            dataStore.updateData { proto ->
+                proto.toBuilder().apply(block).build()
+            }
+        }
     }

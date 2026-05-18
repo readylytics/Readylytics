@@ -19,6 +19,18 @@ interface WorkoutDao {
     fun observeSince(fromMs: Long): Flow<List<WorkoutRecordEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
     @Query(
+        "SELECT * FROM workout_records WHERE startTime >= :fromMs ORDER BY startTime ASC LIMIT :limit OFFSET :offset",
+    )
+    suspend fun getPaged(
+        fromMs: Long,
+        limit: Int,
+        offset: Int,
+    ): List<WorkoutRecordEntity>
+
+    @Query("SELECT * FROM workout_records WHERE startTime >= :fromMs ORDER BY startTime DESC")
+    suspend fun getSince(fromMs: Long): List<WorkoutRecordEntity>
+
+    @Query(
         "SELECT AVG(trimp) FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs",
     )
     suspend fun getAverageTrimp(
@@ -90,6 +102,9 @@ interface WorkoutDao {
 
     @Query("DELETE FROM workout_records WHERE startTime < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
+
+    @Query("SELECT COUNT(*) FROM workout_records")
+    suspend fun count(): Int
 
     @Query("DELETE FROM workout_records")
     suspend fun deleteAll(): Int

@@ -21,8 +21,8 @@ class BirthdayCheckWorker
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
             val prefs = settingsRepo.userPreferences.first()
-            // Skip if birthday was never configured (all still at defaults)
-            if (prefs.birthYear == 1994 && prefs.birthMonth == 1 && prefs.birthDay == 1) {
+            // Skip if birthday was never configured
+            if (!prefs.isBirthdayConfigured) {
                 return Result.success()
             }
             val newAge =

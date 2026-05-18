@@ -1,5 +1,7 @@
 package com.gregor.lauritz.healthdashboard.domain.model
 
+import kotlinx.serialization.Serializable
+
 enum class RecoveryFlag {
     OVERREACHING,
     ILLNESS_ONSET,
@@ -29,6 +31,7 @@ data class ReadinessResult(
      * Tracks which underlying factors drove the readiness score so the UI/debug
      * surface can explain the result.
      */
+    @Serializable
     data class Contributors(
         val hrvScore: Float? = null,
         val rhrScore: Float? = null,
@@ -41,6 +44,7 @@ data class ReadinessResult(
      * Complete metadata describing the readiness computation: z-scores, baseline
      * mu/sigma, and quality flags.
      */
+    @Serializable
     data class Diagnostics(
         val zLnHrv: Float? = null,
         val zRhr: Float? = null,

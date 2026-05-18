@@ -6,8 +6,8 @@ import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
-import java.io.File
 
 data class ThresholdSettingsState(
     val circadianThresholdOverride: Int? = null,
@@ -55,16 +55,21 @@ data class HeartRateZonesState(
     val zone4MaxBpm: Int = SettingsDefaults.ZONE_4_MAX_BPM,
 )
 
-data class CloudBackupState(
-    val driveAccountEmail: String? = SettingsDefaults.DRIVE_ACCOUNT_EMAIL,
-    val backupSchedule: BackupSchedule = SettingsDefaults.BACKUP_SCHEDULE,
+data class LocalBackupState(
     val lastBackupTimestamp: Long = SettingsDefaults.LAST_BACKUP_TIMESTAMP,
+    val backupSchedule: BackupSchedule = SettingsDefaults.BACKUP_SCHEDULE,
+    val backupDirectory: String? = null,
     val isBackingUp: Boolean = false,
     val isRestoring: Boolean = false,
+    val isReencrypting: Boolean = false,
+    val isPasswordSet: Boolean = false,
+    val showSetPasswordDialog: Boolean = false,
     val showRestoreConfirmDialog: Boolean = false,
-    val driveError: String? = null,
+    val backupError: String? = null,
     val restoreSuccess: Boolean = false,
-    val pendingRestoreDir: File? = null,
+    val pendingRestoreFile: BackupFileInfo? = null,
+    val availableBackups: List<BackupFileInfo> = emptyList(),
+    val passwordVerificationResult: Boolean? = null,
 )
 
 data class UIState(

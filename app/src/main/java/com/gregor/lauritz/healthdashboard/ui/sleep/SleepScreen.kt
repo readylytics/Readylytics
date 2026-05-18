@@ -54,14 +54,13 @@ import java.util.Locale
 @Composable
 fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val bHrv by viewModel.baselineHrvFlow.collectAsStateWithLifecycle()
-    val bRhr by viewModel.baselineRhrFlow.collectAsStateWithLifecycle()
+    val baselines by viewModel.baselinesFlow.collectAsStateWithLifecycle()
     val circadian by viewModel.circadianConsistencyFlow.collectAsStateWithLifecycle()
 
     SleepScreen(
         uiState = uiState,
-        baselineHrv = bHrv,
-        baselineRhr = bRhr,
+        baselineHrv = baselines.hrv,
+        baselineRhr = baselines.rhr,
         circadianConsistency = circadian,
         onRangeSelected = viewModel::onRangeSelected,
         onPreviousDay = viewModel::onPreviousDay,
