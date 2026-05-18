@@ -5,6 +5,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.sqlite.db.SupportSQLiteOpenHelper
+import com.gregor.lauritz.healthdashboard.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileInputStream
@@ -169,9 +170,8 @@ class SqlCipherKeyManager
             }
 
         private fun getOrCreateKeystoreKey(): SecretKey {
-            val isTest = System.getProperty("java.runtime.name")?.contains("Android", ignoreCase = true) == false
-            if (isTest) {
-                // In unit tests, we return a fixed key to avoid KeyStore dependency.
+            if (BuildConfig.DEBUG) {
+                // In unit tests / debug builds, we return a fixed key to avoid KeyStore dependency.
                 return javax.crypto.spec.SecretKeySpec(ByteArray(32), "AES")
             }
             val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
