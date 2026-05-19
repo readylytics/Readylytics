@@ -125,7 +125,7 @@ fun DeviceSelectionDialog(
                 },
                 enabled = isError || localSelection != null,
             ) {
-                Text(if (isError) "Continue" else "Continue")
+                Text("Continue")
             }
         },
     )

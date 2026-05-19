@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.sync
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectPermissionRevokedException
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.PermissionStatus
@@ -48,7 +49,7 @@ class SyncViewModel
         private val hcRepo: HealthConnectRepository,
         private val foregroundSyncController: ForegroundSyncController,
         private val settingsRepo: SettingsRepository,
-        private val selectedDateRepository: com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository,
+        private val selectedDateRepository: SelectedDateRepository,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<SyncUiState>(SyncUiState.CheckingPermissions)
         val uiState: StateFlow<SyncUiState> = _uiState.asStateFlow()
