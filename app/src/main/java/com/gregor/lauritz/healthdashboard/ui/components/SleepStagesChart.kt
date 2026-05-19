@@ -155,7 +155,8 @@ fun SleepStagesChart(
                     .forEach { stageData ->
                         val startOffset = stageData.getStartOffsetMinutes(session.startTime)
                         val startX = (startOffset.toFloat() / sessionDurationMinutesFloat.toFloat()) * chartWidth
-                        val width = (stageData.durationMinutes.toFloat() / sessionDurationMinutesFloat.toFloat()) * chartWidth
+                        val width =
+                            (stageData.durationMinutes.toFloat() / sessionDurationMinutesFloat.toFloat()) * chartWidth
 
                         drawRect(
                             color = color,
