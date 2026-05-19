@@ -330,6 +330,8 @@ object DatabaseMigrations {
                         diag_lateNadir INTEGER NOT NULL,
                         diag_hrvMissing INTEGER NOT NULL,
                         diag_timezoneJump INTEGER NOT NULL,
+                        diag_configHashCode INTEGER,
+                        diag_phaseName TEXT,
                         contrib_hrvScore REAL,
                         contrib_rhrScore REAL,
                         contrib_durationScore REAL,
@@ -357,6 +359,7 @@ object DatabaseMigrations {
                          zLnHrv, zRhr, recoveryFlags, hrvSigma,
                          diag_zLnHrv, diag_zRhr, diag_lnSigma, diag_rollingMu, diag_rhrDeltaBpm,
                          diag_isCalibrating, diag_stagesSuspicious, diag_lateNadir, diag_hrvMissing, diag_timezoneJump,
+                         diag_configHashCode, diag_phaseName,
                          contrib_hrvScore, contrib_rhrScore, contrib_durationScore, contrib_architectureScore, contrib_loadContribution,
                          rollingMu, rhrDeltaBpm, lateNadir, stagesSuspicious, isCalibrating,
                          hrvScoreContribution, rhrScoreContribution, durationScoreContribution,
@@ -369,6 +372,7 @@ object DatabaseMigrations {
                            zLnHrv, zRhr, hrvSigma, rollingMu, rhrDeltaBpm,
 
                            COALESCE(isCalibrating, 0), COALESCE(stagesSuspicious, 0), COALESCE(lateNadir, 0), 0, 0,
+                           NULL, NULL,
                            hrvScoreContribution, rhrScoreContribution, durationScoreContribution, architectureScoreContribution, loadContribution,
                            rollingMu, rhrDeltaBpm, lateNadir, stagesSuspicious, isCalibrating,
                            hrvScoreContribution, rhrScoreContribution, durationScoreContribution,
@@ -453,6 +457,80 @@ object DatabaseMigrations {
             }
         }
 
+    val MIGRATION_18_19 =
+        object : Migration(18, 19) {
+            private val sql =
+                listOf(
+                    """
+                    CREATE TABLE sleep_stages (
+                        `id` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        `sessionId` TEXT NOT NULL,
+                        `stageType` TEXT NOT NULL,
+                        `startTime` INTEGER NOT NULL,
+                        `endTime` INTEGER NOT NULL,
+                        `durationMinutes` INTEGER NOT NULL,
+                        FOREIGN KEY(`sessionId`) REFERENCES `sleep_sessions`(`id`) ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                    "CREATE INDEX IF NOT EXISTS `index_sleep_stages_sessionId` ON `sleep_stages` (`sessionId`)",
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_sleep_stages_sessionId_startTime` ON `sleep_stages` (`sessionId`, `startTime`)",
+                )
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                sql.forEach { db.execSQL(it) }
+            }
+
+            override fun migrate(connection: SQLiteConnection) {
+                sql.forEach { connection.execSQL(it) }
+            }
+        }
+
+    val MIGRATION_19_20 =
+        object : Migration(19, 20) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // These columns were supposed to be added in 15->16 but were missed in the manual SQL.
+                // However, fresh installs at 16+ already have them. We add them here for those who migrated.
+                // We use try-catch because they might already exist for fresh installers.
+                try {
+                    db.execSQL("ALTER TABLE daily_summaries ADD COLUMN diag_configHashCode INTEGER")
+                } catch (_: Exception) {
+                    // Ignore if column already exists
+                }
+                try {
+                    db.execSQL("ALTER TABLE daily_summaries ADD COLUMN diag_phaseName TEXT")
+                } catch (_: Exception) {
+                    // Ignore if column already exists
+                }
+                try {
+                    db.execSQL(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS `index_sleep_stages_sessionId_startTime` ON `sleep_stages` (`sessionId`, `startTime`)",
+                    )
+                } catch (_: Exception) {
+                    // Ignore if index already exists or data violates uniqueness
+                }
+            }
+
+            override fun migrate(connection: SQLiteConnection) {
+                try {
+                    connection.execSQL("ALTER TABLE daily_summaries ADD COLUMN diag_configHashCode INTEGER")
+                } catch (_: Exception) {
+                    // Ignore if column already exists
+                }
+                try {
+                    connection.execSQL("ALTER TABLE daily_summaries ADD COLUMN diag_phaseName TEXT")
+                } catch (_: Exception) {
+                    // Ignore if column already exists
+                }
+                try {
+                    connection.execSQL(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS `index_sleep_stages_sessionId_startTime` ON `sleep_stages` (`sessionId`, `startTime`)",
+                    )
+                } catch (_: Exception) {
+                    // Ignore if index already exists or data violates uniqueness
+                }
+            }
+        }
+
     val all =
         arrayOf(
             MIGRATION_1_2,
@@ -472,5 +550,7 @@ object DatabaseMigrations {
             MIGRATION_15_16,
             MIGRATION_16_17,
             MIGRATION_17_18,
+            MIGRATION_18_19,
+            MIGRATION_19_20,
         )
 }

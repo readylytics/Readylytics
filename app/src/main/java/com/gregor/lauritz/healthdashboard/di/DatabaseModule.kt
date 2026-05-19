@@ -10,6 +10,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepStageDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.security.SqlCipherKeyManager
 import dagger.Module
@@ -44,6 +45,7 @@ object DatabaseModule {
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             super.onOpen(db)
                             db.execSQL("PRAGMA synchronous = NORMAL")
+                            db.execSQL("PRAGMA foreign_keys = ON")
                         }
                     },
                 )
@@ -53,6 +55,9 @@ object DatabaseModule {
 
     @Provides
     fun provideSleepSessionDao(db: HealthDatabase): SleepSessionDao = db.sleepSessionDao()
+
+    @Provides
+    fun provideSleepStageDao(db: HealthDatabase): SleepStageDao = db.sleepStageDao()
 
     @Provides
     fun provideHeartRateDao(db: HealthDatabase): HeartRateDao = db.heartRateDao()

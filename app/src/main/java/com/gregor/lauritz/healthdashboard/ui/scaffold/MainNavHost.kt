@@ -19,6 +19,7 @@ import com.gregor.lauritz.healthdashboard.ui.navigation.AppDestination
 import com.gregor.lauritz.healthdashboard.ui.navigation.TabDestination
 import com.gregor.lauritz.healthdashboard.ui.rhr.RestingHrDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsRoute
+import com.gregor.lauritz.healthdashboard.ui.sleep.SleepDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.sleep.SleepRoute
 import com.gregor.lauritz.healthdashboard.ui.steps.StepDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.workouts.WorkoutDetailRoute
@@ -41,6 +42,7 @@ fun MainNavHost(
                 targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.SleepDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.About::class)
 
             val direction =
@@ -61,11 +63,13 @@ fun MainNavHost(
                 initialState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.StepDetail::class) ||
+                    initialState.destination.hasRoute(AppDestination.SleepDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.About::class)
             val isEnteringDetail =
                 targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.SleepDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.About::class)
 
             val direction =
@@ -122,7 +126,13 @@ fun MainNavHost(
                 },
             )
         }
-        composable<TabDestination.Sleep> { SleepRoute() }
+        composable<TabDestination.Sleep> {
+            SleepRoute(
+                onNavigateToDetail = {
+                    navController.navigate(AppDestination.SleepDetail)
+                },
+            )
+        }
         composable<TabDestination.Workouts> {
             WorkoutsRoute { id ->
                 navController.navigate(AppDestination.WorkoutDetail(id))
@@ -142,6 +152,11 @@ fun MainNavHost(
         }
         composable<AppDestination.StepDetail> {
             StepDetailRoute(
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable<AppDestination.SleepDetail> {
+            SleepDetailRoute(
                 onBack = { navController.popBackStack() },
             )
         }
@@ -173,6 +188,8 @@ private fun getTabIndex(destination: NavDestination?): Int {
     // RestingHrDetail and StepDetail are logically under Dashboard
     if (destination.hasRoute(AppDestination.RestingHrDetail::class)) return 0
     if (destination.hasRoute(AppDestination.StepDetail::class)) return 0
+    // SleepDetail is logically under Sleep
+    if (destination.hasRoute(AppDestination.SleepDetail::class)) return 1
     // About is logically under Settings
     if (destination.hasRoute(AppDestination.About::class)) return 3
 

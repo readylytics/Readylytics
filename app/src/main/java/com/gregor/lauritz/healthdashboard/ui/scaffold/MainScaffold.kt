@@ -45,6 +45,7 @@ fun MainScaffold(
             !dest.hasRoute(AppDestination.WorkoutDetail::class) &&
                 !dest.hasRoute(AppDestination.RestingHrDetail::class) &&
                 !dest.hasRoute(AppDestination.StepDetail::class) &&
+                !dest.hasRoute(AppDestination.SleepDetail::class) &&
                 !dest.hasRoute(AppDestination.About::class)
         } ?: true
 

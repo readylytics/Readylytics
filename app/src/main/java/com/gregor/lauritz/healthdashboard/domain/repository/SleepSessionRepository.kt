@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.repository
 
+import androidx.compose.runtime.Stable
 import kotlinx.coroutines.flow.Flow
 
 data class SleepSessionData(
@@ -15,6 +16,16 @@ data class SleepSessionData(
     val awakeMinutes: Int,
 )
 
+@Stable
+data class SleepStageData(
+    val stageType: String,
+    val startTime: Long,
+    val endTime: Long,
+    val durationMinutes: Int,
+) {
+    fun getStartOffsetMinutes(sessionStartTime: Long): Int = ((startTime - sessionStartTime) / 60_000L).toInt()
+}
+
 interface SleepSessionRepository {
     fun observeSince(fromMs: Long): Flow<List<SleepSessionData>>
 
@@ -27,4 +38,6 @@ interface SleepSessionRepository {
     ): List<SleepSessionData>
 
     suspend fun countSince(fromMs: Long): Int
+
+    fun observeSessionStages(sessionId: String): Flow<List<SleepStageData>>
 }

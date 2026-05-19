@@ -60,7 +60,6 @@ class WorkerScheduler
                     Constraints
                         .Builder()
                         .setRequiresBatteryNotLow(true)
-                        .setRequiresDeviceIdle(true)
                         .build()
 
                 val request =
@@ -82,7 +81,6 @@ class WorkerScheduler
                     Constraints
                         .Builder()
                         .setRequiresBatteryNotLow(true)
-                        .setRequiresDeviceIdle(true)
                         .build()
 
                 val request =

@@ -8,6 +8,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepStageDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
@@ -35,6 +36,7 @@ class HealthSyncUseCase
     constructor(
         private val hcRepo: HealthConnectRepository,
         private val sleepSessionDao: SleepSessionDao,
+        private val sleepStageDao: SleepStageDao,
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
@@ -125,6 +127,20 @@ class HealthSyncUseCase
                         }
 
                         sleepSessionDao.upsertAll(filteredSleep)
+                        val allStages = sleepSessions.flatMap { SleepDataMapper.mapSleepSessionStages(it) }
+
+                        // FILTER STAGES TO MATCH DEVICE-FILTERED SESSIONS (prevents orphaned stages)
+                        // Use Set for O(1) lookup instead of O(N) linear search (improves O(N×M) to O(N))
+                        val filteredSessionIds = filteredSleep.map { it.id }.toSet()
+                        val filteredStages =
+                            allStages.filter { stage ->
+                                stage.sessionId in filteredSessionIds
+                            }
+
+                        // DELETE OLD STAGES BEFORE UPSERT (prevents stale stage accumulation)
+                        sleepStageDao.deleteForSessions(filteredSessionIds.toList())
+
+                        sleepStageDao.upsertAll(filteredStages)
                         workoutDao.upsertAll(filteredWorkouts)
                         heartRateDao.upsertAll(filteredHr)
                         hrvDao.upsertAll(filteredHrv)

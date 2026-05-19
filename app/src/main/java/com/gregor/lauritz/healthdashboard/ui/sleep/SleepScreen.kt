@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.sleep
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,7 +56,10 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
-fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
+fun SleepRoute(
+    onNavigateToDetail: (() -> Unit)? = null,
+    viewModel: SleepViewModel = hiltViewModel(),
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val baselines by viewModel.baselinesFlow.collectAsStateWithLifecycle()
     val circadian by viewModel.circadianConsistencyFlow.collectAsStateWithLifecycle()
@@ -68,6 +72,7 @@ fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
         onRangeSelected = viewModel::onRangeSelected,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
+        onNavigateToDetail = onNavigateToDetail,
     )
 }
 
@@ -81,6 +86,7 @@ fun SleepScreen(
     onRangeSelected: (TimeRange) -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
+    onNavigateToDetail: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val chartScrollState = rememberVicoScrollState()
@@ -167,7 +173,15 @@ fun SleepScreen(
                             .atZone(ZoneId.systemDefault())
                             .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
                     } ?: "—"
-                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Card(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .clickable(enabled = onNavigateToDetail != null) {
+                                onNavigateToDetail?.invoke()
+                            },
+                ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
