@@ -195,7 +195,7 @@ fun buildCardDataMap(
     }
 
     cardMap[CardId.CIRCADIAN_CONSISTENCY] = {
-        if (isLoading && uiState.circadianConsistency == null) {
+        if (isLoading) {
             MetricCardSkeleton()
         } else if (uiState.circadianConsistency != null) {
             CircadianConsistencyCard(
