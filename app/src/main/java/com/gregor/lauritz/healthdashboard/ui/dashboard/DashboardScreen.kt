@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -106,23 +105,22 @@ fun DashboardScreen(
     Scaffold(
         modifier = modifier,
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = {
-                    if (!uiState.isManagingCards) {
-                        showCardManagement = true
-                    }
-                    onToggleCardManagement()
-                },
-                icon = {
-                    Icon(
-                        imageVector = if (uiState.isManagingCards) Icons.Filled.Close else Icons.Filled.Edit,
-                        contentDescription = if (uiState.isManagingCards) "Done editing" else "Edit layout",
-                    )
-                },
-                text = {
-                    Text(if (uiState.isManagingCards) "Done" else "Edit")
-                },
-            )
+            if (uiState.isManagingCards) {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        onToggleCardManagement()
+                    },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Done editing",
+                        )
+                    },
+                    text = {
+                        Text("Done")
+                    },
+                )
+            }
         },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -215,6 +213,30 @@ fun DashboardScreen(
 
                 item(key = "status_legend") {
                     StatusLegend()
+                }
+
+                if (!uiState.isManagingCards) {
+                    item(key = "customize_button") {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            androidx.compose.material3.TextButton(
+                                onClick = {
+                                    showCardManagement = true
+                                    onToggleCardManagement()
+                                },
+                            ) {
+                                Text(
+                                    text = "Customize",
+                                    style = MaterialTheme.typography.labelLarge,
+                                )
+                            }
+                        }
+                    }
                 }
             }
             SnackbarHost(
