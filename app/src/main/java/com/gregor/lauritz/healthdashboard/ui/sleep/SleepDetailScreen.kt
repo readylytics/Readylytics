@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.R
+import com.gregor.lauritz.healthdashboard.domain.model.SleepStage
 import com.gregor.lauritz.healthdashboard.ui.components.SleepStageBreakdownRow
 import com.gregor.lauritz.healthdashboard.ui.components.SleepStagesChart
 import java.time.Instant
@@ -32,7 +33,21 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-private const val MS_PER_HOUR = 1000f * 60 * 60
+private fun getStageMinutes(session: SleepSessionEntity?, stage: SleepStage): Int =
+    when (stage) {
+        SleepStage.AWAKE -> session?.awakeMinutes ?: 0
+        SleepStage.REM -> session?.remSleepMinutes ?: 0
+        SleepStage.LIGHT -> session?.lightSleepMinutes ?: 0
+        SleepStage.DEEP -> session?.deepSleepMinutes ?: 0
+    }
+
+private fun getStageColor(stage: SleepStage, colorScheme: androidx.compose.material3.ColorScheme): androidx.compose.ui.graphics.Color =
+    when (stage) {
+        SleepStage.DEEP -> colorScheme.primary
+        SleepStage.LIGHT -> colorScheme.tertiary.copy(alpha = 0.6f)
+        SleepStage.REM -> colorScheme.tertiary
+        SleepStage.AWAKE -> colorScheme.error
+    }
 
 @Composable
 fun SleepDetailRoute(
@@ -145,36 +160,21 @@ fun SleepDetailScreen(
 
             item {
                 val colorScheme = MaterialTheme.colorScheme
-                val stages =
-                    listOf(
-                        Triple(
-                            stringResource(R.string.sleep_stage_awake),
-                            uiState.session?.awakeMinutes ?: 0,
-                            colorScheme.error,
-                        ),
-                        Triple(
-                            stringResource(R.string.sleep_stage_rem),
-                            uiState.session?.remSleepMinutes ?: 0,
-                            colorScheme.tertiary,
-                        ),
-                        Triple(
-                            stringResource(R.string.sleep_stage_light),
-                            uiState.session?.lightSleepMinutes ?: 0,
-                            colorScheme.tertiary.copy(alpha = 0.6f),
-                        ),
-                        Triple(
-                            stringResource(R.string.sleep_stage_deep),
-                            uiState.session?.deepSleepMinutes ?: 0,
-                            colorScheme.primary,
-                        ),
-                    )
 
                 Column {
-                    stages.forEach { (stageName, minutes, color) ->
+                    SleepStage.values().forEach { stage ->
+                        val stageLabelRes =
+                            when (stage) {
+                                SleepStage.AWAKE -> R.string.sleep_stage_awake
+                                SleepStage.REM -> R.string.sleep_stage_rem
+                                SleepStage.LIGHT -> R.string.sleep_stage_light
+                                SleepStage.DEEP -> R.string.sleep_stage_deep
+                            }
+
                         SleepStageBreakdownRow(
-                            stageName = stageName,
-                            durationMinutes = minutes,
-                            color = color,
+                            stageName = stringResource(stageLabelRes),
+                            durationMinutes = getStageMinutes(uiState.session, stage),
+                            color = getStageColor(stage, colorScheme),
                         )
                     }
                 }

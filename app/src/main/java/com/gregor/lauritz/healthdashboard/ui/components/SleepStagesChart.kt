@@ -24,6 +24,14 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
+private fun getStageColor(stage: SleepStage, colorScheme: androidx.compose.material3.ColorScheme): Color =
+    when (stage) {
+        SleepStage.DEEP -> colorScheme.primary
+        SleepStage.LIGHT -> colorScheme.tertiary.copy(alpha = 0.6f)
+        SleepStage.REM -> colorScheme.tertiary
+        SleepStage.AWAKE -> colorScheme.error
+    }
+
 @Composable
 fun SleepStagesChart(
     session: SleepSessionEntity?,
@@ -40,10 +48,6 @@ fun SleepStagesChart(
     }
 
     val colorScheme = MaterialTheme.colorScheme
-    val deepColor = colorScheme.primary
-    val lightColor = colorScheme.tertiary.copy(alpha = 0.6f)
-    val remColor = colorScheme.tertiary
-    val awakeColor = colorScheme.error
 
     Column(modifier = modifier) {
         val timeFormatter =
@@ -64,32 +68,25 @@ fun SleepStagesChart(
         ) {
             val chartWidth = size.width
             val chartHeight = size.height
-            val totalMinutes =
-                session.deepSleepMinutes + session.remSleepMinutes +
-                    session.lightSleepMinutes + session.awakeMinutes
 
-            if (totalMinutes == 0) return@Canvas
+            // Scale based on actual session duration (not just stage data)
+            val sessionDurationMinutes = (session.endTime - session.startTime) / 60_000L
+
+            if (sessionDurationMinutes == 0L) return@Canvas
 
             val bandGap = 8.dp.toPx()
             val bandHeight = (chartHeight - (3 * bandGap)) / 4f
 
-            val stages: List<Pair<SleepStage, Color>> =
-                listOf(
-                    Pair(SleepStage.DEEP, deepColor),
-                    Pair(SleepStage.LIGHT, lightColor),
-                    Pair(SleepStage.REM, remColor),
-                    Pair(SleepStage.AWAKE, awakeColor),
-                )
-
-            stages.forEachIndexed { index, (stage, color) ->
+            SleepStage.values().forEachIndexed { index, stage ->
                 val yOffset = index * (bandHeight + bandGap)
+                val color = getStageColor(stage, colorScheme)
 
                 stageTimeline
-                    .filter { it.stageType == stage.label.uppercase() }
+                    .filter { it.stageType == stage.type }
                     .forEach { stageData ->
                         val startOffset = stageData.getStartOffsetMinutes(session.startTime)
-                        val startX = (startOffset.toFloat() / totalMinutes) * chartWidth
-                        val width = (stageData.durationMinutes.toFloat() / totalMinutes) * chartWidth
+                        val startX = (startOffset.toFloat() / sessionDurationMinutes) * chartWidth
+                        val width = (stageData.durationMinutes.toFloat() / sessionDurationMinutes) * chartWidth
 
                         drawRect(
                             color = color,
