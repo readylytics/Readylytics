@@ -148,7 +148,7 @@ fun SleepDetailScreen(
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text(
-                        stringResource(R.string.sleep_breakdown_title),
+                        stringResource(R.string.sleep_timeline_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )

@@ -147,44 +147,61 @@ private fun generateSleepSegments(
 
     if (totalMinutes == 0) return segments
 
+    val typicalCycleDuration = 90
+
     var currentMinute = 0
+    val stages = mutableListOf<Pair<SleepStage, Int>>()
 
-    segments.add(
-        StageSegment(
-            stage = SleepStage.REM,
-            startMinute = currentMinute,
-            durationMinutes = remMinutes,
-        )
-    )
-    currentMinute += remMinutes
-
-    segments.add(
-        StageSegment(
-            stage = SleepStage.DEEP,
-            startMinute = currentMinute,
-            durationMinutes = deepMinutes,
-        )
-    )
-    currentMinute += deepMinutes
-
-    segments.add(
-        StageSegment(
-            stage = SleepStage.LIGHT,
-            startMinute = currentMinute,
-            durationMinutes = lightMinutes,
-        )
-    )
-    currentMinute += lightMinutes
-
+    stages.add(SleepStage.LIGHT to lightMinutes)
+    stages.add(SleepStage.DEEP to deepMinutes)
+    stages.add(SleepStage.REM to remMinutes)
     if (awakeMinutes > 0) {
-        segments.add(
-            StageSegment(
-                stage = SleepStage.AWAKE,
-                startMinute = currentMinute,
-                durationMinutes = awakeMinutes,
-            )
-        )
+        stages.add(SleepStage.AWAKE to awakeMinutes)
     }
 
-    return segments
+    var remainingMinutes = mapOf(
+        SleepStage.LIGHT to lightMinutes,
+        SleepStage.DEEP to deepMinutes,
+        SleepStage.REM to remMinutes,
+        SleepStage.AWAKE to awakeMinutes,
+    )
+
+    val cycleDurations = mapOf(
+        SleepStage.LIGHT to 20,
+        SleepStage.DEEP to 35,
+        SleepStage.REM to 20,
+        SleepStage.AWAKE to 5,
+    )
+
+    while (currentMinute < totalMinutes && remainingMinutes.values.any { it > 0 }) {
+        for (stage in listOf(
+            SleepStage.LIGHT,
+            SleepStage.DEEP,
+            SleepStage.REM,
+            SleepStage.AWAKE,
+        )) {
+            val remaining = remainingMinutes[stage] ?: 0
+            if (remaining <= 0) continue
+
+            val cycleDuration = (cycleDurations[stage] ?: 20).coerceAtMost(remaining)
+            val durationForThisCycle = cycleDuration.coerceAtMost(remaining)
+
+            segments.add(
+                StageSegment(
+                    stage = stage,
+                    startMinute = currentMinute,
+                    durationMinutes = durationForThisCycle,
+                )
+            )
+
+            currentMinute += durationForThisCycle
+            remainingMinutes = remainingMinutes.toMutableMap().apply {
+                put(stage, get(stage)!! - durationForThisCycle)
+            }
+
+            if (currentMinute >= totalMinutes) break
+        }
+    }
+
+    return segments.sortedBy { it.startMinute }
 }
