@@ -61,47 +61,11 @@ class SleepDetailViewModel
                         .observeFirstSessionEndingInRange(startDayMs, endDayMs)
                         .flatMapLatest { session ->
                             if (session == null) {
-                                kotlinx.coroutines.flow.flowOf(
-                                    SleepDetailUiState(
-                                        selectedDate = date,
-                                    ),
-                                )
+                                flowOf(SleepDetailUiState(selectedDate = date))
                             } else {
                                 sleepSessionRepository
                                     .observeSessionStages(session.id)
-                                    .map { stages ->
-                                        val totalMinutes =
-                                            session.deepSleepMinutes + session.remSleepMinutes +
-                                                session.lightSleepMinutes +
-                                                session.awakeMinutes
-
-                                        val percentages =
-                                            if (totalMinutes > 0) {
-                                                PercentagesTriple(
-                                                    deepSleepPercent =
-                                                        session.deepSleepMinutes.toFloat() / totalMinutes * 100f,
-                                                    remSleepPercent =
-                                                        session.remSleepMinutes.toFloat() / totalMinutes * 100f,
-                                                    lightSleepPercent =
-                                                        session.lightSleepMinutes.toFloat() / totalMinutes * 100f,
-                                                    awakePercent = session.awakeMinutes.toFloat() / totalMinutes * 100f,
-                                                )
-                                            } else {
-                                                PercentagesTriple(0f, 0f, 0f, 0f)
-                                            }
-
-                                        SleepDetailUiState(
-                                            session = session,
-                                            stageTimeline = stages,
-                                            deepSleepPercent = percentages.deepSleepPercent,
-                                            remSleepPercent = percentages.remSleepPercent,
-                                            lightSleepPercent = percentages.lightSleepPercent,
-                                            awakePercent = percentages.awakePercent,
-                                            sleepScore = session.sleepScore,
-                                            typicalRanges = SleepTypicalRanges.DEFAULT,
-                                            selectedDate = date,
-                                        )
-                                    }
+                                    .map { stages -> buildDetailUiState(session, stages, date) }
                             }
                         }
                 }.flowOn(Dispatchers.Default)
@@ -110,4 +74,39 @@ class SleepDetailViewModel
                     started = SharingStarted.WhileSubscribed(5_000),
                     initialValue = SleepDetailUiState(),
                 )
+
+        private fun buildDetailUiState(
+            session: SleepSessionEntity,
+            stages: List<SleepStageData>,
+            date: LocalDate,
+        ): SleepDetailUiState {
+            val totalMinutes =
+                session.deepSleepMinutes + session.remSleepMinutes + session.lightSleepMinutes +
+                    session.awakeMinutes
+
+            val percentages =
+                if (totalMinutes > 0) {
+                    PercentagesTriple(
+                        deepSleepPercent = session.deepSleepMinutes.toFloat() / totalMinutes * 100f,
+                        remSleepPercent = session.remSleepMinutes.toFloat() / totalMinutes * 100f,
+                        lightSleepPercent =
+                            session.lightSleepMinutes.toFloat() / totalMinutes * 100f,
+                        awakePercent = session.awakeMinutes.toFloat() / totalMinutes * 100f,
+                    )
+                } else {
+                    PercentagesTriple(0f, 0f, 0f, 0f)
+                }
+
+            return SleepDetailUiState(
+                session = session,
+                stageTimeline = stages,
+                deepSleepPercent = percentages.deepSleepPercent,
+                remSleepPercent = percentages.remSleepPercent,
+                lightSleepPercent = percentages.lightSleepPercent,
+                awakePercent = percentages.awakePercent,
+                sleepScore = session.sleepScore,
+                typicalRanges = SleepTypicalRanges.DEFAULT,
+                selectedDate = date,
+            )
+        }
     }
