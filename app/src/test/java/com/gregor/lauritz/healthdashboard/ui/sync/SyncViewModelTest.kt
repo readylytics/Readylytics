@@ -6,6 +6,7 @@ import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectReposit
 import com.gregor.lauritz.healthdashboard.domain.repository.PermissionStatus
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -13,10 +14,12 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -84,5 +87,34 @@ class SyncViewModelTest {
 
         // UnconfinedTestDispatcher causes immediate transitions: SyncingCatchUp -> PermissionsGranted
         assertEquals(SyncUiState.PermissionsGranted, viewModel.uiState.value)
+    }
+
+    @Test
+    fun syncViewModel_onAppForeground_resetsDateWhenChanged() = runTest {
+        val yesterday = LocalDate.now().minusDays(1)
+        val dateFlow = MutableStateFlow(yesterday)
+        coEvery { selectedDateRepository.selectedDate } returns dateFlow
+        coEvery { selectedDateRepository.resetToToday() } returns Unit
+        coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Granted
+
+        viewModel.onAppForeground()
+
+        coVerify { selectedDateRepository.resetToToday() }
+    }
+
+    @Test
+    fun syncViewModel_onAppForeground_skipsSyncWhenAlreadySyncing() = runTest {
+        val dateFlow = MutableStateFlow(LocalDate.now())
+        coEvery { selectedDateRepository.selectedDate } returns dateFlow
+        coEvery { selectedDateRepository.resetToToday() } returns Unit
+        coEvery { foregroundSyncController.evaluateAndSync() } returns Unit
+
+        viewModel.onAppForeground()
+
+        // Second call should return early due to SyncingCatchUp state
+        viewModel.onAppForeground()
+
+        // Should not crash or double-sync
+        assertEquals(SyncUiState.SyncingCatchUp, viewModel.uiState.value)
     }
 }

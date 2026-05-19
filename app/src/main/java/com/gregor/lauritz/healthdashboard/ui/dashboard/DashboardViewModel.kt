@@ -125,11 +125,15 @@ class DashboardViewModel
         fun formatSleepDuration(minutes: Int?): String = getDashboardDataUseCase.formatSleepDuration(minutes)
 
         fun onPreviousDay() {
-            selectedDateRepository.selectPreviousDay()
+            viewModelScope.launch {
+                selectedDateRepository.selectPreviousDay()
+            }
         }
 
         fun onNextDay() {
-            selectedDateRepository.selectNextDay()
+            viewModelScope.launch {
+                selectedDateRepository.selectNextDay()
+            }
         }
 
         fun toggleCardManagement() {
@@ -160,7 +164,10 @@ class DashboardViewModel
 
         fun onEvent(event: DashboardEvent) {
             when (event) {
-                is DashboardEvent.DateSelected -> selectedDateRepository.updateSelectedDate(event.date)
+                is DashboardEvent.DateSelected ->
+                    viewModelScope.launch {
+                        selectedDateRepository.updateSelectedDate(event.date)
+                    }
                 DashboardEvent.PreviousDay -> onPreviousDay()
                 DashboardEvent.NextDay -> onNextDay()
                 DashboardEvent.Refresh -> onRefresh()

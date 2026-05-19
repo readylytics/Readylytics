@@ -96,11 +96,13 @@ class SyncViewModel
         }
 
         fun onAppForeground() {
-            // Only reset to today if the system date has changed (past midnight)
-            if (selectedDateRepository.selectedDate.value != LocalDate.now()) {
-                selectedDateRepository.resetToToday()
-            }
             foregroundCheckJob?.cancel()
+            viewModelScope.launch {
+                // Only reset to today if the system date has changed (past midnight)
+                if (selectedDateRepository.selectedDate.value != LocalDate.now()) {
+                    selectedDateRepository.resetToToday()
+                }
+            }
             // onPermissionsGranted() sets SyncingCatchUp synchronously before launching
             // its coroutine. If that already happened, skip the permission re-check.
             // Samsung's getGrantedPermissions() returns stale Missing immediately after
