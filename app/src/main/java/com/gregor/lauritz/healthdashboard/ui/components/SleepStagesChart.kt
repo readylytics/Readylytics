@@ -67,7 +67,7 @@ fun SleepStagesChart(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
+                    .height(200.dp)
                     .padding(horizontal = 16.dp),
         ) {
             val chartWidth = size.width

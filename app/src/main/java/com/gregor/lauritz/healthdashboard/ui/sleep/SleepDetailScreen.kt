@@ -111,16 +111,19 @@ fun SleepDetailScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    val durationHours =
+                    val durationStr =
                         if (uiState.session != null) {
                             val durationMs = uiState.session.endTime - uiState.session.startTime
-                            durationMs / MS_PER_HOUR
+                            val totalMinutes = (durationMs / 1000 / 60).toInt()
+                            val hours = totalMinutes / 60
+                            val minutes = totalMinutes % 60
+                            "$hours" + "h " + "$minutes" + "min"
                         } else {
-                            0f
+                            "--h --min"
                         }
 
                     Text(
-                        stringResource(R.string.sleep_duration_format, durationHours),
+                        durationStr,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -144,16 +147,6 @@ fun SleepDetailScreen(
 
             item {
                 Spacer(modifier = Modifier.height(24.dp))
-            }
-
-            item {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text(
-                        stringResource(R.string.sleep_timeline_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
             }
 
             item {
