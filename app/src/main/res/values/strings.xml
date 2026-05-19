@@ -156,4 +156,6 @@
     <string name="action_customize">Customize</string>
     <string name="action_done">Done</string>
     <string name="action_done_editing">Done editing</string>
+    <string name="dashboard_no_data">No data for this day</string>
+    <string name="action_delete_drop_zone">Drop here to remove</string>
 </resources>

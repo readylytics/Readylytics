@@ -35,8 +35,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import kotlin.math.roundToInt
@@ -232,7 +234,7 @@ fun ReorderableCardGrid(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Drop here to remove",
+                        text = stringResource(R.string.action_delete_drop_zone),
                         style = MaterialTheme.typography.labelSmall,
                         color =
                             if (isHovered) {

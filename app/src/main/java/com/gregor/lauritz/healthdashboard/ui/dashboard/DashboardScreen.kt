@@ -156,7 +156,7 @@ fun DashboardScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "No data for this day",
+                                text = stringResource(R.string.dashboard_no_data),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -221,7 +221,12 @@ fun DashboardScreen(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(16.dp),
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 16.dp,
+                    bottom = if (uiState.isManagingCards) 88.dp else 16.dp,
+                ),
             snackbar = { data ->
                 Snackbar(
                     data,
