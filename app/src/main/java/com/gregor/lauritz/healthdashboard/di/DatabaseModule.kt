@@ -45,6 +45,7 @@ object DatabaseModule {
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             super.onOpen(db)
                             db.execSQL("PRAGMA synchronous = NORMAL")
+                            db.execSQL("PRAGMA foreign_keys = ON")
                         }
                     },
                 )
