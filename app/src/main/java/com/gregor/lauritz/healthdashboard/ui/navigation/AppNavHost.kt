@@ -58,7 +58,7 @@ fun AppNavHost(
                         popUpTo(AppDestination.MainShell) { inclusive = true }
                     }
                 }
-            SyncUiState.PermissionsGranted ->
+            SyncUiState.SyncingCatchUp, SyncUiState.PermissionsGranted ->
                 if (currentDest?.hasRoute<AppDestination.MainShell>() != true) {
                     navController.navigate(AppDestination.MainShell) {
                         popUpTo(AppDestination.Onboarding) { inclusive = true }
