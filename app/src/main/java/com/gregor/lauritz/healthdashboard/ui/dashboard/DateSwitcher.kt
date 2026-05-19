@@ -26,8 +26,8 @@ fun DateSwitcher(
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     modifier: Modifier = Modifier,
+    today: LocalDate = LocalDate.now(),
 ) {
-    val today = LocalDate.now()
     val label = remember(selectedDate) { formatDateLabel(selectedDate, today) }
     val canGoForward = selectedDate < today
 

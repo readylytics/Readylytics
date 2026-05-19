@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.ui.common.MetricCardSkeleton
+import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
 import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
@@ -19,29 +21,38 @@ fun buildCardDataMap(
     onNavigateToRhr: () -> Unit,
     onNavigateToSteps: () -> Unit = {},
     isEditing: Boolean = false,
+    isLoading: Boolean = false,
 ): Map<CardId, @Composable () -> Unit> {
     val cardMap = mutableMapOf<CardId, @Composable () -> Unit>()
 
     val summary = uiState.summary
 
     cardMap[CardId.SLEEP_SCORE] = {
-        M3ScoreDial(
-            label = "Sleep Score",
-            score = summary?.sleepScore,
-            onClick = if (isEditing) ({}) else onNavigateToSleep,
-            tooltipDescription =
-                "Total quality of rest based on duration and cycles.\n\n• 80–100: Optimal\n• 60–79: Fair\n• < 60: Poor",
-        )
+        if (isLoading) {
+            ScoreDialSkeleton()
+        } else {
+            M3ScoreDial(
+                label = "Sleep Score",
+                score = summary?.sleepScore,
+                onClick = if (isEditing) ({}) else onNavigateToSleep,
+                tooltipDescription =
+                    "Total quality of rest based on duration and cycles.\n\n• 80–100: Optimal\n• 60–79: Fair\n• < 60: Poor",
+            )
+        }
     }
 
     cardMap[CardId.READINESS] = {
-        M3ScoreDial(
-            label = "Readiness",
-            score = summary?.readinessScore,
-            onClick = if (isEditing) ({}) else onNavigateToWorkouts,
-            tooltipDescription =
-                "Preparation for stress based on recent load & recovery.\n\n• 85–100: Peak\n• 30–69: Moderate\n• < 30: Rest",
-        )
+        if (isLoading) {
+            ScoreDialSkeleton()
+        } else {
+            M3ScoreDial(
+                label = "Readiness",
+                score = summary?.readinessScore,
+                onClick = if (isEditing) ({}) else onNavigateToWorkouts,
+                tooltipDescription =
+                    "Preparation for stress based on recent load & recovery.\n\n• 85–100: Peak\n• 30–69: Moderate\n• < 30: Rest",
+            )
+        }
     }
 
     cardMap[CardId.STEPS] = {
@@ -54,100 +65,128 @@ fun buildCardDataMap(
     }
 
     cardMap[CardId.HRV] = {
-        val hrvCard = uiState.cardDataMap[CardId.HRV]
-        if (hrvCard != null) {
-            MetricCard(
-                title = hrvCard.title,
-                value = hrvCard.value,
-                secondaryText = hrvCard.unit,
-                status = hrvCard.status,
-                onClick = if (isEditing) null else onNavigateToSleep,
-                tooltip = hrvCard.tooltip,
-            )
+        if (isLoading) {
+            MetricCardSkeleton()
+        } else {
+            val hrvCard = uiState.cardDataMap[CardId.HRV]
+            if (hrvCard != null) {
+                MetricCard(
+                    title = hrvCard.title,
+                    value = hrvCard.value,
+                    secondaryText = hrvCard.unit,
+                    status = hrvCard.status,
+                    onClick = if (isEditing) null else onNavigateToSleep,
+                    tooltip = hrvCard.tooltip,
+                )
+            }
         }
     }
 
     cardMap[CardId.SLEEP_RHR] = {
-        val sleepRhrCard = uiState.cardDataMap[CardId.SLEEP_RHR]
-        if (sleepRhrCard != null) {
-            MetricCard(
-                title = sleepRhrCard.title,
-                value = sleepRhrCard.value,
-                secondaryText = sleepRhrCard.unit,
-                status = sleepRhrCard.status,
-                onClick = if (isEditing) null else onNavigateToSleep,
-                tooltip = sleepRhrCard.tooltip,
-            )
+        if (isLoading) {
+            MetricCardSkeleton()
+        } else {
+            val sleepRhrCard = uiState.cardDataMap[CardId.SLEEP_RHR]
+            if (sleepRhrCard != null) {
+                MetricCard(
+                    title = sleepRhrCard.title,
+                    value = sleepRhrCard.value,
+                    secondaryText = sleepRhrCard.unit,
+                    status = sleepRhrCard.status,
+                    onClick = if (isEditing) null else onNavigateToSleep,
+                    tooltip = sleepRhrCard.tooltip,
+                )
+            }
         }
     }
 
     cardMap[CardId.STRAIN_RATIO] = {
-        val strainCard = uiState.cardDataMap[CardId.STRAIN_RATIO]
-        if (strainCard != null) {
-            MetricCard(
-                title = strainCard.title,
-                value = strainCard.value,
-                secondaryText = strainCard.unit,
-                status = strainCard.status,
-                onClick = if (isEditing) null else onNavigateToWorkouts,
-                tooltip = strainCard.tooltip,
-            )
+        if (isLoading) {
+            MetricCardSkeleton()
+        } else {
+            val strainCard = uiState.cardDataMap[CardId.STRAIN_RATIO]
+            if (strainCard != null) {
+                MetricCard(
+                    title = strainCard.title,
+                    value = strainCard.value,
+                    secondaryText = strainCard.unit,
+                    status = strainCard.status,
+                    onClick = if (isEditing) null else onNavigateToWorkouts,
+                    tooltip = strainCard.tooltip,
+                )
+            }
         }
     }
 
     cardMap[CardId.SLEEP_DURATION] = {
-        val durationCard = uiState.cardDataMap[CardId.SLEEP_DURATION]
-        if (durationCard != null) {
-            MetricCard(
-                title = durationCard.title,
-                value = durationCard.value,
-                secondaryText = durationCard.secondaryText ?: durationCard.unit,
-                status = durationCard.status,
-                onClick = if (isEditing) null else onNavigateToSleep,
-                tooltip = durationCard.tooltip,
-            )
+        if (isLoading) {
+            MetricCardSkeleton()
+        } else {
+            val durationCard = uiState.cardDataMap[CardId.SLEEP_DURATION]
+            if (durationCard != null) {
+                MetricCard(
+                    title = durationCard.title,
+                    value = durationCard.value,
+                    secondaryText = durationCard.secondaryText ?: durationCard.unit,
+                    status = durationCard.status,
+                    onClick = if (isEditing) null else onNavigateToSleep,
+                    tooltip = durationCard.tooltip,
+                )
+            }
         }
     }
 
     cardMap[CardId.SLEEP_EFFICIENCY] = {
-        val efficiencyCard = uiState.cardDataMap[CardId.SLEEP_EFFICIENCY]
-        if (efficiencyCard != null) {
-            MetricCard(
-                title = efficiencyCard.title,
-                value = efficiencyCard.value,
-                secondaryText = efficiencyCard.secondaryText ?: efficiencyCard.unit,
-                status = efficiencyCard.status,
-                onClick = if (isEditing) null else onNavigateToSleep,
-                tooltip = efficiencyCard.tooltip,
-            )
+        if (isLoading) {
+            MetricCardSkeleton()
+        } else {
+            val efficiencyCard = uiState.cardDataMap[CardId.SLEEP_EFFICIENCY]
+            if (efficiencyCard != null) {
+                MetricCard(
+                    title = efficiencyCard.title,
+                    value = efficiencyCard.value,
+                    secondaryText = efficiencyCard.secondaryText ?: efficiencyCard.unit,
+                    status = efficiencyCard.status,
+                    onClick = if (isEditing) null else onNavigateToSleep,
+                    tooltip = efficiencyCard.tooltip,
+                )
+            }
         }
     }
 
     cardMap[CardId.PAI_DAILY] = {
-        val paiCard = uiState.cardDataMap[CardId.PAI_DAILY]
-        if (paiCard != null) {
-            MetricCard(
-                title = paiCard.title,
-                value = paiCard.value,
-                secondaryText = paiCard.unit,
-                status = paiCard.status,
-                onClick = if (isEditing) null else onNavigateToWorkouts,
-                tooltip = paiCard.tooltip,
-            )
+        if (isLoading) {
+            MetricCardSkeleton()
+        } else {
+            val paiCard = uiState.cardDataMap[CardId.PAI_DAILY]
+            if (paiCard != null) {
+                MetricCard(
+                    title = paiCard.title,
+                    value = paiCard.value,
+                    secondaryText = paiCard.unit,
+                    status = paiCard.status,
+                    onClick = if (isEditing) null else onNavigateToWorkouts,
+                    tooltip = paiCard.tooltip,
+                )
+            }
         }
     }
 
     cardMap[CardId.RESTING_HR] = {
-        if (uiState.restingHrCard != null) {
-            val card = uiState.restingHrCard
-            MetricCard(
-                title = card.title,
-                value = card.value,
-                secondaryText = card.unit,
-                status = card.status,
-                onClick = if (isEditing) null else onNavigateToRhr,
-                tooltip = card.tooltip,
-            )
+        if (isLoading) {
+            MetricCardSkeleton()
+        } else {
+            if (uiState.restingHrCard != null) {
+                val card = uiState.restingHrCard
+                MetricCard(
+                    title = card.title,
+                    value = card.value,
+                    secondaryText = card.unit,
+                    status = card.status,
+                    onClick = if (isEditing) null else onNavigateToRhr,
+                    tooltip = card.tooltip,
+                )
+            }
         }
     }
 

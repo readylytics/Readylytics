@@ -117,6 +117,7 @@ class DashboardViewModel
                 cardConfigurations = cardState.cardConfiguration,
                 isManagingCards = cardState.isManagingCards,
                 isRefreshing = realtimeState.isSyncing,
+                isComputingMetrics = realtimeState.isSyncing && basicInputs.summary == null,
                 isCalibrating = basicInputs.summary?.isCalibrating ?: false,
             )
         }
@@ -190,7 +191,7 @@ class DashboardViewModel
 @Immutable
 data class DashboardUiState(
     val summary: DailySummary? = null,
-    val selectedDate: LocalDate = LocalDate.now(),
+    val selectedDate: LocalDate = LocalDate.of(1970, 1, 1),
     val cardDataMap: Map<CardId, CardData> = emptyMap(),
     val circadianConsistency: CircadianConsistencyResult? = null,
     val restingHrCard: CardData? = null,
@@ -201,6 +202,7 @@ data class DashboardUiState(
     val cardConfigurations: List<CardConfiguration> = emptyList(),
     val isManagingCards: Boolean = false,
     val isRefreshing: Boolean = false,
+    val isComputingMetrics: Boolean = false,
     val isCalibrating: Boolean = false,
     val errorMessage: String? = null,
 )

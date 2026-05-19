@@ -48,6 +48,7 @@ class SyncViewModel
         private val hcRepo: HealthConnectRepository,
         private val foregroundSyncController: ForegroundSyncController,
         private val settingsRepo: SettingsRepository,
+        private val selectedDateRepository: com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<SyncUiState>(SyncUiState.CheckingPermissions)
         val uiState: StateFlow<SyncUiState> = _uiState.asStateFlow()
@@ -93,6 +94,7 @@ class SyncViewModel
         }
 
         fun onAppForeground() {
+            selectedDateRepository.resetToToday()
             foregroundCheckJob?.cancel()
             // onPermissionsGranted() sets SyncingCatchUp synchronously before launching
             // its coroutine. If that already happened, skip the permission re-check.

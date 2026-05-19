@@ -19,6 +19,10 @@ class SelectedDateRepository
             _selectedDate.value = if (date > today) today else date
         }
 
+        fun resetToToday() {
+            _selectedDate.value = LocalDate.now()
+        }
+
         fun selectPreviousDay() {
             _selectedDate.value = _selectedDate.value.minusDays(1)
         }
