@@ -122,6 +122,19 @@ fun DashboardScreen(
                 )
             }
         },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(16.dp),
+                snackbar = { data ->
+                    Snackbar(
+                        data,
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                },
+            )
+        },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             if (showCardManagement) {
@@ -239,20 +252,6 @@ fun DashboardScreen(
                     }
                 }
             }
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(16.dp),
-                snackbar = { data ->
-                    Snackbar(
-                        data,
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    )
-                },
-            )
         }
     }
 }
