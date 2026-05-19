@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import java.time.Instant
@@ -17,9 +18,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-enum class SleepStage(
-    val label: String,
-) {
+enum class SleepStage(val label: String) {
     AWAKE("Awake"),
     REM("REM"),
     LIGHT("Light"),
@@ -50,45 +49,36 @@ fun SleepStagesChart(
         val timeLabels = generateTimeLabels(session.startTime, session.endTime)
 
         Canvas(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .padding(horizontal = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .padding(horizontal = 16.dp),
         ) {
             val chartWidth = size.width
             val chartHeight = size.height
 
-            val totalMinutes =
-                session.deepSleepMinutes + session.remSleepMinutes +
-                    session.lightSleepMinutes + session.awakeMinutes
+            val totalMinutes = session.deepSleepMinutes + session.remSleepMinutes +
+                session.lightSleepMinutes + session.awakeMinutes
             if (totalMinutes == 0) return@Canvas
 
             val bandHeight = chartHeight / 4f
             val bandGap = 8.dp.toPx()
 
-            val gap = 2.dp.toPx()
-            val minBlockWidth = 4.dp.toPx()
+            val stageBlocks = generateSleepBlocks(
+                awakeMinutes = session.awakeMinutes,
+                remMinutes = session.remSleepMinutes,
+                lightMinutes = session.lightSleepMinutes,
+                deepMinutes = session.deepSleepMinutes,
+                totalMinutes = totalMinutes,
+                chartWidth = chartWidth,
+            )
 
-            val stageBlocks =
-                generateSleepBlocks(
-                    awakeMinutes = session.awakeMinutes,
-                    remMinutes = session.remSleepMinutes,
-                    lightMinutes = session.lightSleepMinutes,
-                    deepMinutes = session.deepSleepMinutes,
-                    totalMinutes = totalMinutes,
-                    chartWidth = chartWidth,
-                    gap = gap,
-                    minBlockWidth = minBlockWidth,
-                )
-
-            val stages =
-                listOf(
-                    Triple(SleepStage.AWAKE, session.awakeMinutes, awakeColor),
-                    Triple(SleepStage.REM, session.remSleepMinutes, remColor),
-                    Triple(SleepStage.LIGHT, session.lightSleepMinutes, lightColor),
-                    Triple(SleepStage.DEEP, session.deepSleepMinutes, deepColor),
-                )
+            val stages = listOf(
+                Triple(SleepStage.DEEP, session.deepSleepMinutes, deepColor),
+                Triple(SleepStage.LIGHT, session.lightSleepMinutes, lightColor),
+                Triple(SleepStage.REM, session.remSleepMinutes, remColor),
+                Triple(SleepStage.AWAKE, session.awakeMinutes, awakeColor),
+            )
 
             stages.forEachIndexed { index, (stage, minutes, color) ->
                 val yOffset = index * (bandHeight + bandGap)
@@ -103,11 +93,10 @@ fun SleepStagesChart(
                 }
             }
 
-            val outlineVariant = colorScheme.outlineVariant
             timeLabels.forEach { label ->
                 val xPos = (label.percentage / 100f) * chartWidth
                 drawLine(
-                    color = outlineVariant,
+                    color = MaterialTheme.colorScheme.outlineVariant,
                     start = Offset(xPos, 0f),
                     end = Offset(xPos, chartHeight),
                     strokeWidth = 1.5f,
@@ -134,21 +123,20 @@ private fun generateSleepBlocks(
     deepMinutes: Int,
     totalMinutes: Int,
     chartWidth: Float,
-    gap: Float,
-    minBlockWidth: Float,
 ): Map<SleepStage, List<SleepBlock>> {
     if (totalMinutes == 0 || chartWidth <= 0) return emptyMap()
 
-    val stages =
-        listOf(
-            SleepStage.AWAKE to awakeMinutes,
-            SleepStage.REM to remMinutes,
-            SleepStage.LIGHT to lightMinutes,
-            SleepStage.DEEP to deepMinutes,
-        )
+    val stages = listOf(
+        SleepStage.AWAKE to awakeMinutes,
+        SleepStage.REM to remMinutes,
+        SleepStage.LIGHT to lightMinutes,
+        SleepStage.DEEP to deepMinutes,
+    )
 
     val blocks = mutableMapOf<SleepStage, List<SleepBlock>>()
     var globalXOffset = 0f
+    val gap = 2.dp.toPx()
+    val minBlockWidth = 4.dp.toPx()
 
     stages.forEach { (stage, minutes) ->
         if (minutes > 0) {
