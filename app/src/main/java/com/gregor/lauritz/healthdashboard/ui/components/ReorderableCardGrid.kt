@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -59,16 +60,25 @@ class ReorderableCardState {
     // Using SnapshotStateMap to avoid allocations on updates and trigger precise recompositions
     val cardHeights: SnapshotStateMap<CardId, Int> = mutableStateMapOf()
 
+    // Track global Y positions of cards for scroll-aware drag detection
+    val cardGlobalY: SnapshotStateMap<Int, Float> = mutableStateMapOf()
+
+    // Track the current pointer Y position in screen coordinates
+    var pointerY by mutableStateOf(0f)
+        internal set
+
     fun onDragStart(index: Int) {
         draggedIndex = index
         dragOffset = IntOffset.Zero
         targetIndex = index
+        pointerY = 0f
     }
 
     fun onDragEnd() {
         draggedIndex = null
         dragOffset = IntOffset.Zero
         targetIndex = null
+        pointerY = 0f
     }
 
     fun updateHeight(
@@ -78,6 +88,13 @@ class ReorderableCardState {
         if (cardHeights[cardId] != height) {
             cardHeights[cardId] = height
         }
+    }
+
+    fun updateCardGlobalY(
+        index: Int,
+        globalY: Float,
+    ) {
+        cardGlobalY[index] = globalY
     }
 }
 
@@ -295,6 +312,7 @@ private fun renderCardItem(
         onDrag = { x, y ->
             if (isEditing && state.draggedIndex != null && state.targetIndex != null) {
                 state.dragOffset += IntOffset(x.roundToInt(), y.roundToInt())
+                state.pointerY += y
 
                 val currentTarget = state.targetIndex!!
 
@@ -329,6 +347,9 @@ private fun renderCardItem(
         onHeightChanged = { height ->
             state.updateHeight(card.cardId, height)
         },
+        onGlobalPositionChanged = { globalY ->
+            state.updateCardGlobalY(linearIndex, globalY)
+        },
         modifier = modifier,
     )
 }
@@ -345,6 +366,7 @@ private fun ReorderableCardItem(
     onDrag: (Float, Float) -> Unit,
     onRemove: () -> Unit,
     onHeightChanged: (Int) -> Unit = {},
+    onGlobalPositionChanged: (Float) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var currentDragOffset by remember { mutableStateOf(IntOffset.Zero) }
@@ -354,7 +376,11 @@ private fun ReorderableCardItem(
             modifier
                 .onSizeChanged { size ->
                     onHeightChanged(size.height)
-                }.then(
+                }
+                .onGloballyPositioned { coordinates ->
+                    onGlobalPositionChanged(coordinates.positionInWindow().y)
+                }
+                .then(
                     if (isDragged) {
                         Modifier
                             .offset { currentDragOffset }
