@@ -151,4 +151,9 @@
     <string name="sleep_stage_deep">Deep</string>
     <string name="sleep_breakdown_row_format">%1$s • %2$s</string>
     <string name="sleep_hypnogram_title">Hypnogram</string>
+
+    <!-- Dashboard Grid Management -->
+    <string name="action_customize">Customize</string>
+    <string name="action_done">Done</string>
+    <string name="action_done_editing">Done editing</string>
 </resources>

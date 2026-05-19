@@ -20,6 +20,7 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,9 +33,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import com.gregor.lauritz.healthdashboard.ui.components.CardManagementBottomSheet
 import com.gregor.lauritz.healthdashboard.ui.components.ReorderableCardGrid
@@ -113,11 +116,11 @@ fun DashboardScreen(
                     icon = {
                         Icon(
                             imageVector = Icons.Filled.Close,
-                            contentDescription = "Done editing",
+                            contentDescription = stringResource(R.string.action_done_editing),
                         )
                     },
                     text = {
-                        Text("Done")
+                        Text(stringResource(R.string.action_done))
                     },
                 )
             }
@@ -237,14 +240,14 @@ fun DashboardScreen(
                                     .padding(vertical = 16.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            androidx.compose.material3.TextButton(
+                            TextButton(
                                 onClick = {
                                     showCardManagement = true
                                     onToggleCardManagement()
                                 },
                             ) {
                                 Text(
-                                    text = "Customize",
+                                    text = stringResource(R.string.action_customize),
                                     style = MaterialTheme.typography.labelLarge,
                                 )
                             }

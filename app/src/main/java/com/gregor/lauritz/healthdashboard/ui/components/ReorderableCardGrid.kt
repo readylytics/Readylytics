@@ -90,6 +90,9 @@ private val FULL_WIDTH_CARDS =
         CardId.STEPS,
     )
 
+// Default card height when measurement data is unavailable
+private const val DEFAULT_CARD_HEIGHT = 130
+
 // Grid component that supports drag-and-drop reordering of cards
 // Only visible cards (isVisible=true) are rendered and can be reordered
 // Provides visual feedback during drag (alpha, scale, elevation changes)
@@ -296,18 +299,21 @@ private fun renderCardItem(
                 val currentTarget = state.targetIndex!!
 
                 val currentCard = displayableCards.getOrNull(currentTarget)
+                val prevCard = displayableCards.getOrNull(currentTarget - 1)
                 val nextCard = displayableCards.getOrNull(currentTarget + 1)
 
-                val currentHeight = currentCard?.let { state.cardHeights[it.cardId] } ?: 130
-                val nextHeight = nextCard?.let { state.cardHeights[it.cardId] } ?: 130
+                val currentHeight = currentCard?.let { state.cardHeights[it.cardId] } ?: DEFAULT_CARD_HEIGHT
+                val prevHeight = prevCard?.let { state.cardHeights[it.cardId] } ?: DEFAULT_CARD_HEIGHT
+                val nextHeight = nextCard?.let { state.cardHeights[it.cardId] } ?: DEFAULT_CARD_HEIGHT
 
-                val swapThreshold = (currentHeight + nextHeight) / 8f
+                val downThreshold = (currentHeight + nextHeight) / 8f
+                val upThreshold = (currentHeight + prevHeight) / 8f
 
                 val maxIndex = displayableCards.size
                 val newTargetIndex =
-                    if (state.dragOffset.y > swapThreshold && currentTarget < maxIndex) {
+                    if (state.dragOffset.y > downThreshold && currentTarget < maxIndex) {
                         currentTarget + 1
-                    } else if (state.dragOffset.y < -swapThreshold && currentTarget > 0) {
+                    } else if (state.dragOffset.y < -upThreshold && currentTarget > 0) {
                         currentTarget - 1
                     } else {
                         currentTarget
