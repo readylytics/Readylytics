@@ -10,7 +10,6 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.gregor.lauritz.healthdashboard.ui.sync.SyncUiState
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
 
 @Composable
@@ -19,7 +18,6 @@ fun OnboardingRoute(
     onboardingViewModel: OnboardingViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
-    val uiState by syncViewModel.uiState.collectAsStateWithLifecycle()
     val userPrefs by syncViewModel.userPreferences.collectAsStateWithLifecycle(initialValue = null)
     val permissions = remember { syncViewModel.requiredPermissions }
 
@@ -68,6 +66,5 @@ fun OnboardingRoute(
             val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
             runCatching { context.startActivity(intent) }
         },
-        isLoading = uiState is SyncUiState.SyncingCatchUp,
     )
 }
