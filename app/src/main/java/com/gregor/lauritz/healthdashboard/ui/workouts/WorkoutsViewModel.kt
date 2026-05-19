@@ -49,8 +49,8 @@ data class WorkoutsUiState(
     val dailyStrainRatio: List<DailyDataPoint> = emptyList(),
     val recentWorkouts: List<WorkoutDisplayItem> = emptyList(),
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
-    val selectedDate: LocalDate = LocalDate.now(),
-    val rangeStartMs: Long = System.currentTimeMillis(),
+    val selectedDate: LocalDate = LocalDate.of(1970, 1, 1),
+    val rangeStartMs: Long = 0L,
     val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val todayPaiScore: Float? = null,
 )
