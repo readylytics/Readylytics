@@ -60,9 +60,9 @@ fun SkeletonCard(
                 .padding(16.dp)
                 .background(
                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                    RoundedCornerShape(4.dp)
+                    RoundedCornerShape(4.dp),
                 )
-                .shimmerAnimation()
+                .shimmerAnimation(),
         )
     }
 }

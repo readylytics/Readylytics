@@ -83,7 +83,7 @@ class SyncViewModelTest {
 
         viewModel.onPermissionsGranted()
 
-        // With UnconfinedTestDispatcher, transitions happen immediately: SyncingCatchUp -> PermissionsGranted
+        // UnconfinedTestDispatcher causes immediate transitions: SyncingCatchUp -> PermissionsGranted
         assertEquals(SyncUiState.PermissionsGranted, viewModel.uiState.value)
     }
 }
