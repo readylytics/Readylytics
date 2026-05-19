@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
+import androidx.compose.animation.core.animateOffsetAsState
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -294,15 +295,21 @@ private fun renderCardItem(
                 state.dragOffset += IntOffset(x.roundToInt(), y.roundToInt())
 
                 val currentTarget = state.targetIndex!!
-                val draggedCard = displayableCards.getOrNull(currentTarget)
-                val cardHeight = draggedCard?.let { state.cardHeights[it.cardId] } ?: 130
-                val movementThreshold = cardHeight / 2
+                val draggedIdx = state.draggedIndex!!
+
+                val currentCard = displayableCards.getOrNull(currentTarget)
+                val nextCard = displayableCards.getOrNull(currentTarget + 1)
+
+                val currentHeight = currentCard?.let { state.cardHeights[it.cardId] } ?: 130
+                val nextHeight = nextCard?.let { state.cardHeights[it.cardId] } ?: 130
+
+                val swapThreshold = (currentHeight + nextHeight) / 4f
 
                 val maxIndex = displayableCards.size
                 val newTargetIndex =
-                    if (state.dragOffset.y > movementThreshold && currentTarget < maxIndex) {
+                    if (state.dragOffset.y > swapThreshold && currentTarget < maxIndex - 1) {
                         currentTarget + 1
-                    } else if (state.dragOffset.y < -movementThreshold && currentTarget > 0) {
+                    } else if (state.dragOffset.y < -swapThreshold && currentTarget > 0) {
                         currentTarget - 1
                     } else {
                         currentTarget
@@ -337,6 +344,10 @@ private fun ReorderableCardItem(
     modifier: Modifier = Modifier,
 ) {
     var currentDragOffset by remember { mutableStateOf(IntOffset.Zero) }
+    val animatedOffset by animateOffsetAsState(
+        targetValue = if (isDragged) currentDragOffset else IntOffset.Zero,
+        label = "card_settlement",
+    )
 
     Box(
         modifier =
@@ -355,11 +366,12 @@ private fun ReorderableCardItem(
                             }
                     } else if (isTarget) {
                         Modifier
+                            .offset { animatedOffset }
                             .graphicsLayer {
                                 alpha = 0.6f
                             }
                     } else {
-                        Modifier
+                        Modifier.offset { animatedOffset }
                     },
                 ).then(
                     if (isEditing) {

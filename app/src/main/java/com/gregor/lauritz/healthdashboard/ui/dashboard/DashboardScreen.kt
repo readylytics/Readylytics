@@ -9,13 +9,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -98,135 +103,134 @@ fun DashboardScreen(
     var showCardManagement by rememberSaveable { mutableStateOf(false) }
     val today = remember { LocalDate.now(ZoneId.systemDefault()) }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        if (showCardManagement) {
-            CardManagementBottomSheet(
-                cards = uiState.cardConfigurations,
-                onCardVisibilityChanged = onCardVisibilityChanged,
-                onResetToDefaults = onResetToDefaults,
-                onDismiss = {
-                    scope.launch { sheetState.hide() }
-                    showCardManagement = false
+    Scaffold(
+        modifier = modifier,
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = {
+                    if (!uiState.isManagingCards) {
+                        showCardManagement = true
+                    }
+                    onToggleCardManagement()
                 },
-                sheetState = sheetState,
+                icon = {
+                    Icon(
+                        imageVector = if (uiState.isManagingCards) Icons.Filled.Close else Icons.Filled.Edit,
+                        contentDescription = if (uiState.isManagingCards) "Done editing" else "Edit layout",
+                    )
+                },
+                text = {
+                    Text(if (uiState.isManagingCards) "Done" else "Edit")
+                },
+            )
+        },
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            if (showCardManagement) {
+                CardManagementBottomSheet(
+                    cards = uiState.cardConfigurations,
+                    onCardVisibilityChanged = onCardVisibilityChanged,
+                    onResetToDefaults = onResetToDefaults,
+                    onDismiss = {
+                        scope.launch { sheetState.hide() }
+                        showCardManagement = false
+                    },
+                    sheetState = sheetState,
+                )
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().testTag("dashboard_lazy_column"),
+                contentPadding = PaddingValues(vertical = 16.dp),
+            ) {
+                item(key = "date_switcher") {
+                    Column(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                    ) {
+                        DateSwitcher(
+                            selectedDate = uiState.selectedDate,
+                            onPreviousDay = onPreviousDay,
+                            onNextDay = onNextDay,
+                            today = today,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+
+                if (uiState.isCalibrating) {
+                    item(key = "calibration_banner") {
+                        CalibrationBanner(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                    }
+                }
+
+                if (summary == null && !uiState.isComputingMetrics && (uiState.selectedDate < today)) {
+                    item(key = "no_data_placeholder") {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 48.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "No data for this day",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                } else {
+                    item(key = "metric_grid") {
+                        ReorderableCardGrid(
+                            cardConfigurations = uiState.cardConfigurations,
+                            cardDataMap =
+                                buildCardDataMap(
+                                    uiState = uiState,
+                                    onNavigateToSleep = onNavigateToSleep,
+                                    onNavigateToWorkouts = onNavigateToWorkouts,
+                                    onNavigateToRhr = onNavigateToRhr,
+                                    onNavigateToSteps = onNavigateToSteps,
+                                    isEditing = uiState.isManagingCards,
+                                    isLoading = uiState.isComputingMetrics,
+                                ),
+                            isEditing = uiState.isManagingCards,
+                            onCardRemove = { cardId ->
+                                onCardVisibilityChanged(cardId, false)
+                            },
+                            onCardReorder = onReorderCards,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                }
+
+                item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(16.dp)) }
+
+                item(key = "status_legend") {
+                    StatusLegend()
+                }
+            }
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp),
+                snackbar = { data ->
+                    Snackbar(
+                        data,
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                },
             )
         }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().testTag("dashboard_lazy_column"),
-            contentPadding = PaddingValues(vertical = 16.dp),
-        ) {
-            item(key = "date_switcher") {
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                ) {
-                    DateSwitcher(
-                        selectedDate = uiState.selectedDate,
-                        onPreviousDay = onPreviousDay,
-                        onNextDay = onNextDay,
-                        today = today,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-
-            if (uiState.isCalibrating) {
-                item(key = "calibration_banner") {
-                    CalibrationBanner(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                    )
-                }
-            }
-
-            if (summary == null && !uiState.isComputingMetrics && (uiState.selectedDate < today)) {
-                item(key = "no_data_placeholder") {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 48.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "No data for this day",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            } else {
-                item(key = "metric_grid") {
-                    ReorderableCardGrid(
-                        cardConfigurations = uiState.cardConfigurations,
-                        cardDataMap =
-                            buildCardDataMap(
-                                uiState = uiState,
-                                onNavigateToSleep = onNavigateToSleep,
-                                onNavigateToWorkouts = onNavigateToWorkouts,
-                                onNavigateToRhr = onNavigateToRhr,
-                                onNavigateToSteps = onNavigateToSteps,
-                                isEditing = uiState.isManagingCards,
-                                isLoading = uiState.isComputingMetrics,
-                            ),
-                        isEditing = uiState.isManagingCards,
-                        onCardRemove = { cardId ->
-                            onCardVisibilityChanged(cardId, false)
-                        },
-                        onCardReorder = onReorderCards,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                }
-            }
-
-            item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(16.dp)) }
-
-            item(key = "status_legend") {
-                StatusLegend()
-            }
-
-            item(key = "customize_button") {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TextButton(
-                        onClick = {
-                            if (!uiState.isManagingCards) {
-                                showCardManagement = true
-                            }
-                            onToggleCardManagement()
-                        },
-                    ) {
-                        Text(
-                            text = if (uiState.isManagingCards) "Done" else "Customize",
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
-                }
-            }
-        }
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(16.dp),
-            snackbar = { data ->
-                Snackbar(
-                    data,
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                )
-            },
-        )
     }
 }
