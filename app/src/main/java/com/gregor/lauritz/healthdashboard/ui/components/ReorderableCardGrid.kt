@@ -31,11 +31,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -47,12 +46,12 @@ import kotlin.math.roundToInt
 // State holder for reorderable card grid
 @Stable
 class ReorderableCardState {
-    // Tracks which card is currently being dragged
-    var draggedIndex by mutableStateOf<Int?>(null)
+    // Tracks which card ID is currently being dragged
+    var draggedCardId by mutableStateOf<CardId?>(null)
         private set
 
-    // Accumulates drag offset for visual feedback during drag
-    var dragOffset by mutableStateOf(IntOffset.Zero)
+    // Visual offset of the dragged card (relative to its current logical position)
+    var dragOffset by mutableStateOf(Offset.Zero)
         internal set
 
     // Tracks which card position would be the drop target
@@ -60,28 +59,21 @@ class ReorderableCardState {
         internal set
 
     // Store measured heights of cards for accurate drag-and-drop calculations
-    // Using SnapshotStateMap to avoid allocations on updates and trigger precise recompositions
     val cardHeights: SnapshotStateMap<CardId, Int> = mutableStateMapOf()
 
-    // Track global Y positions of cards for scroll-aware drag detection
-    val cardGlobalY: SnapshotStateMap<Int, Float> = mutableStateMapOf()
-
-    // Track the current pointer Y position in screen coordinates
-    var pointerY by mutableStateOf(0f)
-        internal set
-
-    fun onDragStart(index: Int) {
-        draggedIndex = index
-        dragOffset = IntOffset.Zero
+    fun onDragStart(
+        cardId: CardId,
+        index: Int,
+    ) {
+        draggedCardId = cardId
+        dragOffset = Offset.Zero
         targetIndex = index
-        pointerY = 0f
     }
 
     fun onDragEnd() {
-        draggedIndex = null
-        dragOffset = IntOffset.Zero
+        draggedCardId = null
+        dragOffset = Offset.Zero
         targetIndex = null
-        pointerY = 0f
     }
 
     fun updateHeight(
@@ -91,13 +83,6 @@ class ReorderableCardState {
         if (cardHeights[cardId] != height) {
             cardHeights[cardId] = height
         }
-    }
-
-    fun updateCardGlobalY(
-        index: Int,
-        globalY: Float,
-    ) {
-        cardGlobalY[index] = globalY
     }
 }
 
@@ -262,8 +247,8 @@ private fun RenderCardItem(
     onCardReorder: (List<CardConfiguration>) -> Unit,
     modifier: Modifier,
 ) {
-    val isDragged = state.draggedIndex == linearIndex
-    val isTarget = state.targetIndex == linearIndex && state.draggedIndex != null
+    val isDragged = state.draggedCardId == card.cardId
+    val isTarget = state.targetIndex == linearIndex && state.draggedCardId != null
     val cardContent = cardDataMap[card.cardId]!!
 
     val wrappedContent: @Composable () -> Unit =
@@ -288,38 +273,28 @@ private fun RenderCardItem(
         isTarget = isTarget,
         onDragStart = {
             if (isEditing) {
-                state.onDragStart(linearIndex)
+                state.onDragStart(card.cardId, linearIndex)
             }
         },
         onDragEnd = {
-            val draggedIdx = state.draggedIndex
+            val draggedCardId = state.draggedCardId
             val targetIdx = state.targetIndex
-            if (draggedIdx != null && targetIdx != null) {
+            if (draggedCardId != null && targetIdx != null) {
                 if (targetIdx == displayableCards.size) {
                     // Dropped in delete zone
-                    onCardRemove(displayableCards[draggedIdx].cardId)
-                } else if (targetIdx != draggedIdx) {
-                    val newCards = displayableCards.toMutableList()
-                    val draggedCard = newCards.removeAt(draggedIdx)
-                    newCards.add(targetIdx, draggedCard)
-
-                    val updated =
-                        newCards.mapIndexed { i, config ->
-                            config.copy(position = i)
-                        }
-                    onCardReorder(updated)
+                    onCardRemove(draggedCardId)
                 }
             }
             state.onDragEnd()
         },
         onDrag = { x, y ->
-            if (isEditing && state.draggedIndex != null && state.targetIndex != null) {
-                state.dragOffset += IntOffset(x.roundToInt(), y.roundToInt())
-                state.pointerY += y
+            if (isEditing && state.draggedCardId != null && state.targetIndex != null) {
+                state.dragOffset += Offset(x, y)
 
                 val currentTarget = state.targetIndex!!
-
                 val currentCard = displayableCards.getOrNull(currentTarget)
+
+                // Find potential next and previous cards in logical order
                 val prevCard = displayableCards.getOrNull(currentTarget - 1)
                 val nextCard = displayableCards.getOrNull(currentTarget + 1)
 
@@ -327,22 +302,62 @@ private fun RenderCardItem(
                 val prevHeight = prevCard?.let { state.cardHeights[it.cardId] } ?: DEFAULT_CARD_HEIGHT
                 val nextHeight = nextCard?.let { state.cardHeights[it.cardId] } ?: DEFAULT_CARD_HEIGHT
 
-                val downThreshold = (currentHeight + nextHeight) / 8f
-                val upThreshold = (currentHeight + prevHeight) / 8f
+                // Center-based thresholding for more natural feel
+                val downThreshold = (currentHeight + nextHeight) / 2f
+                val upThreshold = (currentHeight + prevHeight) / 2f
 
-                val maxIndex = displayableCards.size
-                val newTargetIndex =
-                    if (state.dragOffset.y > downThreshold && currentTarget < maxIndex) {
-                        currentTarget + 1
-                    } else if (state.dragOffset.y < -upThreshold && currentTarget > 0) {
-                        currentTarget - 1
-                    } else {
-                        currentTarget
-                    }
+                var newTargetIndex = currentTarget
+                if (state.dragOffset.y > downThreshold / 1.5f && currentTarget < displayableCards.size - 1) {
+                    newTargetIndex = currentTarget + 1
+                } else if (state.dragOffset.y < -upThreshold / 1.5f && currentTarget > 0) {
+                    newTargetIndex = currentTarget - 1
+                } else if (state.dragOffset.y > currentHeight && currentTarget == displayableCards.size - 1) {
+                    // Hovering towards delete zone
+                    newTargetIndex = displayableCards.size
+                } else if (state.dragOffset.y < -20f && currentTarget == displayableCards.size) {
+                    // Moving back from delete zone
+                    newTargetIndex = displayableCards.size - 1
+                }
 
                 if (newTargetIndex != state.targetIndex) {
-                    state.targetIndex = newTargetIndex
-                    state.dragOffset = IntOffset.Zero
+                    val fromIdx = state.targetIndex!!
+                    val toIdx = newTargetIndex
+
+                    if (toIdx < displayableCards.size) {
+                        val draggedCardId = state.draggedCardId!!
+
+                        // Find the index of the dragged card in the current displayable list
+                        val currentIdxOfDragged = displayableCards.indexOfFirst { it.cardId == draggedCardId }
+
+                        val newCards = displayableCards.toMutableList()
+                        val draggedConfig = newCards.removeAt(currentIdxOfDragged)
+                        newCards.add(toIdx, draggedConfig)
+
+                        val updated =
+                            newCards.mapIndexed { i, config ->
+                                config.copy(position = i)
+                            }
+
+                        // Update target index
+                        state.targetIndex = newTargetIndex
+
+                        // Compensate drag offset to keep the card under the finger
+                        val swappedCardId = displayableCards[toIdx].cardId
+                        val swappedHeight = (state.cardHeights[swappedCardId] ?: DEFAULT_CARD_HEIGHT).toFloat()
+
+                        if (toIdx > currentIdxOfDragged) {
+                            state.dragOffset =
+                                state.dragOffset.copy(y = state.dragOffset.y - (swappedHeight + 8.dp.value))
+                        } else {
+                            state.dragOffset =
+                                state.dragOffset.copy(y = state.dragOffset.y + (swappedHeight + 8.dp.value))
+                        }
+
+                        onCardReorder(updated)
+                    } else {
+                        // Hovering over delete zone
+                        state.targetIndex = newTargetIndex
+                    }
                 }
             }
         },
@@ -350,9 +365,7 @@ private fun RenderCardItem(
         onHeightChanged = { height ->
             state.updateHeight(card.cardId, height)
         },
-        onGlobalPositionChanged = { globalY ->
-            state.updateCardGlobalY(linearIndex, globalY)
-        },
+        state = state,
         modifier = modifier,
     )
 }
@@ -370,31 +383,33 @@ private fun ReorderableCardItem(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
     onHeightChanged: (Int) -> Unit = {},
-    onGlobalPositionChanged: (Float) -> Unit = {},
+    state: ReorderableCardState,
 ) {
-    var currentDragOffset by remember { mutableStateOf(IntOffset.Zero) }
-
     Box(
         modifier =
             modifier
                 .onSizeChanged { size ->
                     onHeightChanged(size.height)
-                }.onGloballyPositioned { coordinates ->
-                    onGlobalPositionChanged(coordinates.positionInWindow().y)
                 }.then(
                     if (isDragged) {
                         Modifier
-                            .offset { currentDragOffset }
-                            .graphicsLayer {
-                                alpha = 0.75f
-                                shadowElevation = 16.dp.toPx()
-                                scaleX = 1.02f
-                                scaleY = 1.02f
+                            .offset {
+                                IntOffset(
+                                    state.dragOffset.x.roundToInt(),
+                                    state.dragOffset.y.roundToInt(),
+                                )
+                            }.graphicsLayer {
+                                alpha = 0.9f
+                                shadowElevation = 12.dp.toPx()
+                                scaleX = 1.05f
+                                scaleY = 1.05f
                             }
                     } else if (isTarget) {
                         Modifier
                             .graphicsLayer {
-                                alpha = 0.6f
+                                alpha = 0.5f
+                                scaleX = 0.98f
+                                scaleY = 0.98f
                             }
                     } else {
                         Modifier
@@ -404,20 +419,16 @@ private fun ReorderableCardItem(
                         Modifier.pointerInput(Unit) {
                             detectDragGestures(
                                 onDragStart = {
-                                    currentDragOffset = IntOffset.Zero
                                     onDragStart()
                                 },
                                 onDragEnd = {
                                     onDragEnd()
-                                    currentDragOffset = IntOffset.Zero
+                                },
+                                onDragCancel = {
+                                    onDragEnd()
                                 },
                                 onDrag = { change, dragAmount ->
                                     change.consume()
-                                    currentDragOffset +=
-                                        IntOffset(
-                                            dragAmount.x.roundToInt(),
-                                            dragAmount.y.roundToInt(),
-                                        )
                                     onDrag(dragAmount.x, dragAmount.y)
                                 },
                             )

@@ -21,6 +21,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -140,20 +143,37 @@ class DashboardViewModelTest {
         }
 
     @Test
-    fun `toggleCardManagement delegates to cardManagementDelegate`() =
+    fun `toggleCardManagement enters edit mode with current configs`() =
         runTest {
+            assertFalse(viewModel.isManagingCards.value)
+
             viewModel.toggleCardManagement()
-            // This should not throw
+            advanceUntilIdle()
+
+            assertTrue(viewModel.isManagingCards.value)
+        }
+
+    @Test
+    fun `onCancelCardManagement exits edit mode without saving`() =
+        runTest {
+            viewModel.toggleCardManagement() // Enter edit mode
+            advanceUntilIdle()
+            assertTrue(viewModel.isManagingCards.value)
+
+            viewModel.onCancelCardManagement()
+            advanceUntilIdle()
+
+            assertFalse(viewModel.isManagingCards.value)
         }
 
     @Test
     fun `errorMessage exposes error state`() {
-        org.junit.Assert.assertNull(viewModel.errorMessage.value)
+        assertNull(viewModel.errorMessage.value)
     }
 
     @Test
     fun `isManagingCards exposes card management state`() {
         val managingState = viewModel.isManagingCards.value
-        org.junit.Assert.assertFalse(managingState)
+        assertFalse(managingState)
     }
 }

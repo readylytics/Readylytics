@@ -114,7 +114,7 @@ class DashboardViewModel
                 stepCount = basicInputs.summary?.stepCount,
                 stepGoal = basicInputs.userPreferences.stepGoal,
                 lastSleepSession = sessionSummary,
-                cardConfigurations = cardState.cardConfiguration,
+                cardConfigurations = cardState.pendingConfiguration ?: cardState.cardConfiguration,
                 isManagingCards = cardState.isManagingCards,
                 isRefreshing = realtimeState.isSyncing,
                 isComputingMetrics = realtimeState.isSyncing && basicInputs.summary == null,
@@ -137,7 +137,15 @@ class DashboardViewModel
         }
 
         fun toggleCardManagement() {
-            cardManagementDelegate.toggleCardManagement()
+            if (isManagingCards.value) {
+                cardManagementDelegate.saveChanges()
+            } else {
+                cardManagementDelegate.enterEditMode(uiState.value.cardConfigurations)
+            }
+        }
+
+        fun onCancelCardManagement() {
+            cardManagementDelegate.cancelChanges()
         }
 
         fun onToggleCardVisibility(

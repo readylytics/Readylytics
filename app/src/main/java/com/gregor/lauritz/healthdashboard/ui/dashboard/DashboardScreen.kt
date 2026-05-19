@@ -71,6 +71,7 @@ fun DashboardRoute(
         onNavigateToRhr = onNavigateToRhr,
         onNavigateToSteps = onNavigateToSteps,
         onToggleCardManagement = viewModel::toggleCardManagement,
+        onCancelCardManagement = viewModel::onCancelCardManagement,
         onCardVisibilityChanged = viewModel::onToggleCardVisibility,
         onReorderCards = viewModel::onReorderCards,
         onResetToDefaults = viewModel::onResetToDefaults,
@@ -90,6 +91,7 @@ fun DashboardScreen(
     onNavigateToRhr: () -> Unit,
     onNavigateToSteps: () -> Unit,
     onToggleCardManagement: () -> Unit = {},
+    onCancelCardManagement: () -> Unit = {},
     onCardVisibilityChanged: (CardId, Boolean) -> Unit = { _, _ -> },
     onReorderCards: (List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>) -> Unit = {},
     onResetToDefaults: () -> Unit = {},
@@ -241,6 +243,7 @@ fun DashboardScreen(
         EditModeFab(
             isVisible = uiState.isManagingCards,
             onDoneClick = onToggleCardManagement,
+            onCancelClick = onCancelCardManagement,
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
         )
     }
