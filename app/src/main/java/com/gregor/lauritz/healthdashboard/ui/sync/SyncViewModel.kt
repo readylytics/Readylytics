@@ -173,28 +173,28 @@ class SyncViewModel
 
         fun onPermissionsGranted() {
             foregroundCheckJob?.cancel()
-            _uiState.update { SyncUiState.DiscoveringDevices }
+            _uiState.update { SyncUiState.SyncingCatchUp }
             viewModelScope.launch {
                 try {
                     com.gregor.lauritz.healthdashboard.domain.util.logD("SyncViewModel") {
-                        "Discovering devices..."
+                        "Permissions granted. Starting sync with all devices..."
                     }
-                    val devices = hcRepo.discoverDevices(windowDays = 2)
+                    foregroundSyncController.triggerImmediateSync()
                     com.gregor.lauritz.healthdashboard.domain.util.logD("SyncViewModel") {
-                        "Device discovery completed: ${devices.size} devices found"
+                        "Initial sync completed. User can select device in settings later."
                     }
-                    _uiState.update { SyncUiState.DeviceSelectionReady(devices) }
+                    _uiState.update { SyncUiState.PermissionsGranted }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     com.gregor.lauritz.healthdashboard.domain.util.logE("SyncViewModel", e) {
-                        "Device discovery: permissions revoked"
+                        "Initial sync: permissions revoked"
                     }
                     _uiState.update { SyncUiState.NeedsPermissions }
                 } catch (e: Exception) {
                     com.gregor.lauritz.healthdashboard.domain.util.logE("SyncViewModel", e) {
-                        "Device discovery failed"
+                        "Initial sync failed"
                     }
                     _uiState.update {
-                        SyncUiState.Error(e.message ?: "Device discovery failed")
+                        SyncUiState.Error(e.message ?: "Sync failed")
                     }
                 }
             }
