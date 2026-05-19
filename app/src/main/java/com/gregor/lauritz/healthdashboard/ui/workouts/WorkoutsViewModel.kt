@@ -14,6 +14,7 @@ import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
 import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
+import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -53,6 +54,7 @@ data class WorkoutsUiState(
     val rangeStartMs: Long = System.currentTimeMillis(),
     val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val todayPaiScore: Float? = null,
+    val isLoading: Boolean = false,
 )
 
 private data class WorkoutData(
@@ -75,6 +77,7 @@ class WorkoutsViewModel
         private val settingsRepo: SettingsRepository,
         private val computeWorkoutTrimpUseCase:
             com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase,
+        private val foregroundSyncController: ForegroundSyncController,
         private val savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
         private val _selectedRange =
@@ -89,8 +92,9 @@ class WorkoutsViewModel
             combine(
                 _selectedRange,
                 selectedDateRepository.selectedDate,
-            ) { range, date -> range to date }
-                .flatMapLatest { (range, date) ->
+                foregroundSyncController.isSyncing,
+            ) { range, date, isSyncing -> Triple(range, date, isSyncing) }
+                .flatMapLatest { (range, date, isSyncing) ->
                     val earliestWorkoutMs = workoutDao.getEarliestWorkoutTimestamp() ?: 0L
                     val zoneId = ZoneId.systemDefault()
                     val earliestLocalDate =
@@ -287,6 +291,7 @@ class WorkoutsViewModel
                                 rangeStartMs = displayStartDayMs,
                                 paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries),
                                 todayPaiScore = latest?.paiScore,
+                                isLoading = isSyncing,
                             ).also { emit(it) }
                         }
                     }
@@ -315,10 +320,14 @@ class WorkoutsViewModel
         }
 
         fun onPreviousDay() {
-            selectedDateRepository.selectPreviousDay()
+            viewModelScope.launch {
+                selectedDateRepository.selectPreviousDay()
+            }
         }
 
         fun onNextDay() {
-            selectedDateRepository.selectNextDay()
+            viewModelScope.launch {
+                selectedDateRepository.selectNextDay()
+            }
         }
     }

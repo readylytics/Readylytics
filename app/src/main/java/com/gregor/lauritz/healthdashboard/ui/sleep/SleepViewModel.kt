@@ -14,6 +14,7 @@ import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
+import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -53,6 +54,7 @@ data class SleepUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val goalSleepMinutes: Int = 480,
     val rangeStartMs: Long = System.currentTimeMillis(),
+    val isLoading: Boolean = false,
 )
 
 private data class SleepData(
@@ -73,6 +75,7 @@ class SleepViewModel
         private val settingsRepo: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
         private val circadianRepo: CircadianConsistencyRepository,
+        private val foregroundSyncController: ForegroundSyncController,
         private val savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
         private val _selectedRange =
@@ -217,7 +220,8 @@ class SleepViewModel
                     combine(
                         dataFlow,
                         baselinesFlow,
-                    ) { data, baselines ->
+                        foregroundSyncController.isSyncing,
+                    ) { data, baselines, isSyncing ->
                         val (latestSummary, latestSession, summaries, prefs) = data
                         val (bHrv, bRhr) = baselines
 
@@ -259,6 +263,7 @@ class SleepViewModel
                             selectedRange = range,
                             selectedDate = date,
                             rangeStartMs = startDayMs,
+                            isLoading = isSyncing,
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(
@@ -281,10 +286,14 @@ class SleepViewModel
         }
 
         fun onPreviousDay() {
-            selectedDateRepository.selectPreviousDay()
+            viewModelScope.launch {
+                selectedDateRepository.selectPreviousDay()
+            }
         }
 
         fun onNextDay() {
-            selectedDateRepository.selectNextDay()
+            viewModelScope.launch {
+                selectedDateRepository.selectNextDay()
+            }
         }
     }
