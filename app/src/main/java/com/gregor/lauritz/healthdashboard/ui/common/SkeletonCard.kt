@@ -20,8 +20,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+@Composable
 private fun Modifier.shimmerAnimation(): Modifier {
     val transition = rememberInfiniteTransition(label = "skeleton_shimmer")
     val alpha = transition.animateFloat(
@@ -43,10 +45,10 @@ private fun Modifier.shimmerAnimation(): Modifier {
 @Composable
 fun SkeletonCard(
     modifier: Modifier = Modifier,
-    height: Float = 140f,
+    height: Dp = 140.dp,
 ) {
     Card(
-        modifier = modifier.height(height.dp),
+        modifier = modifier.height(height),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),

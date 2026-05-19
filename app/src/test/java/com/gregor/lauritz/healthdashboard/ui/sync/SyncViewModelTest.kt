@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.sync
 
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.PermissionStatus
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
@@ -24,6 +25,7 @@ class SyncViewModelTest {
     private val hcRepo = mockk<HealthConnectRepository>(relaxed = true)
     private val foregroundSyncController = mockk<ForegroundSyncController>(relaxed = true)
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
+    private val selectedDateRepository = mockk<SelectedDateRepository>(relaxed = true)
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var viewModel: SyncViewModel
@@ -34,7 +36,8 @@ class SyncViewModelTest {
         coEvery { settingsRepo.userPreferences } returns MutableStateFlow(mockk(relaxed = true))
         coEvery { foregroundSyncController.syncCompletedEvent } returns MutableSharedFlow()
         coEvery { foregroundSyncController.isSyncing } returns MutableStateFlow(false)
-        viewModel = SyncViewModel(hcRepo, foregroundSyncController, settingsRepo)
+        coEvery { selectedDateRepository.selectedDate } returns MutableStateFlow(mockk(relaxed = true))
+        viewModel = SyncViewModel(hcRepo, foregroundSyncController, settingsRepo, selectedDateRepository)
     }
 
     @After
@@ -75,12 +78,12 @@ class SyncViewModelTest {
     }
 
     @Test
-    fun syncViewModel_onPermissionsGranted_discoveringDevices() {
-        coEvery { hcRepo.discoverDevices(any()) } returns listOf("Device 1")
+    fun syncViewModel_onPermissionsGranted_permissionsGranted() {
+        coEvery { foregroundSyncController.triggerImmediateSync() } returns Unit
 
         viewModel.onPermissionsGranted()
 
-        // Note: It might transition quickly to DeviceSelectionReady because of UnconfinedTestDispatcher
-        assertTrue(viewModel.uiState.value is SyncUiState.DeviceSelectionReady)
+        // With UnconfinedTestDispatcher, transitions happen immediately: SyncingCatchUp -> PermissionsGranted
+        assertEquals(SyncUiState.PermissionsGranted, viewModel.uiState.value)
     }
 }
