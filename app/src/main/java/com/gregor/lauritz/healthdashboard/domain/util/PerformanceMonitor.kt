@@ -21,11 +21,12 @@ object PerformanceMonitor {
         operationName: String,
         block: () -> T,
     ): T {
+        var result: T? = null
         val duration = measureTimeMillis {
-            block()
+            result = block()
         }
         logDuration(operationName, duration)
-        return block()
+        return result!!
     }
 
     /**
@@ -35,11 +36,12 @@ object PerformanceMonitor {
         operationName: String,
         crossinline block: suspend () -> T,
     ): T {
+        var result: T? = null
         val duration = measureTimeMillis {
-            block()
+            result = block()
         }
         logDuration(operationName, duration)
-        return block()
+        return result!!
     }
 
     private fun logDuration(operationName: String, durationMs: Long) {

@@ -96,111 +96,123 @@ fun buildCardDataMap(
     }
 
     cardMap[CardId.SLEEP_RHR] = {
-        if (isLoading) {
-            MetricCardSkeleton()
-        } else {
-            val sleepRhrCard = uiState.cardDataMap[CardId.SLEEP_RHR]
-            if (sleepRhrCard != null) {
-                MetricCard(
-                    title = sleepRhrCard.title,
-                    value = sleepRhrCard.value,
-                    secondaryText = sleepRhrCard.unit,
-                    status = sleepRhrCard.status,
-                    onClick = if (isEditing) null else onNavigateToSleep,
-                    tooltip = sleepRhrCard.tooltip,
-                )
-            }
-        }
+        CardLoader(
+            isLoading = isLoading,
+            skeleton = { MetricCardSkeleton() },
+            content = {
+                val sleepRhrCard = uiState.cardDataMap[CardId.SLEEP_RHR]
+                if (sleepRhrCard != null) {
+                    MetricCard(
+                        title = sleepRhrCard.title,
+                        value = sleepRhrCard.value,
+                        secondaryText = sleepRhrCard.unit,
+                        status = sleepRhrCard.status,
+                        onClick = if (isEditing) null else onNavigateToSleep,
+                        tooltip = sleepRhrCard.tooltip,
+                    )
+                }
+            },
+        )
     }
 
     cardMap[CardId.STRAIN_RATIO] = {
-        if (isLoading) {
-            MetricCardSkeleton()
-        } else {
-            val strainCard = uiState.cardDataMap[CardId.STRAIN_RATIO]
-            if (strainCard != null) {
-                MetricCard(
-                    title = strainCard.title,
-                    value = strainCard.value,
-                    secondaryText = strainCard.unit,
-                    status = strainCard.status,
-                    onClick = if (isEditing) null else onNavigateToWorkouts,
-                    tooltip = strainCard.tooltip,
-                )
-            }
-        }
+        CardLoader(
+            isLoading = isLoading,
+            skeleton = { MetricCardSkeleton() },
+            content = {
+                val strainCard = uiState.cardDataMap[CardId.STRAIN_RATIO]
+                if (strainCard != null) {
+                    MetricCard(
+                        title = strainCard.title,
+                        value = strainCard.value,
+                        secondaryText = strainCard.unit,
+                        status = strainCard.status,
+                        onClick = if (isEditing) null else onNavigateToWorkouts,
+                        tooltip = strainCard.tooltip,
+                    )
+                }
+            },
+        )
     }
 
     cardMap[CardId.SLEEP_DURATION] = {
-        if (isLoading) {
-            MetricCardSkeleton()
-        } else {
-            val durationCard = uiState.cardDataMap[CardId.SLEEP_DURATION]
-            if (durationCard != null) {
-                MetricCard(
-                    title = durationCard.title,
-                    value = durationCard.value,
-                    secondaryText = durationCard.secondaryText ?: durationCard.unit,
-                    status = durationCard.status,
-                    onClick = if (isEditing) null else onNavigateToSleep,
-                    tooltip = durationCard.tooltip,
-                )
-            }
-        }
+        CardLoader(
+            isLoading = isLoading,
+            skeleton = { MetricCardSkeleton() },
+            content = {
+                val durationCard = uiState.cardDataMap[CardId.SLEEP_DURATION]
+                if (durationCard != null) {
+                    MetricCard(
+                        title = durationCard.title,
+                        value = durationCard.value,
+                        secondaryText = durationCard.secondaryText ?: durationCard.unit,
+                        status = durationCard.status,
+                        onClick = if (isEditing) null else onNavigateToSleep,
+                        tooltip = durationCard.tooltip,
+                    )
+                }
+            },
+        )
     }
 
     cardMap[CardId.SLEEP_EFFICIENCY] = {
-        if (isLoading) {
-            MetricCardSkeleton()
-        } else {
-            val efficiencyCard = uiState.cardDataMap[CardId.SLEEP_EFFICIENCY]
-            if (efficiencyCard != null) {
-                MetricCard(
-                    title = efficiencyCard.title,
-                    value = efficiencyCard.value,
-                    secondaryText = efficiencyCard.secondaryText ?: efficiencyCard.unit,
-                    status = efficiencyCard.status,
-                    onClick = if (isEditing) null else onNavigateToSleep,
-                    tooltip = efficiencyCard.tooltip,
-                )
-            }
-        }
+        CardLoader(
+            isLoading = isLoading,
+            skeleton = { MetricCardSkeleton() },
+            content = {
+                val efficiencyCard = uiState.cardDataMap[CardId.SLEEP_EFFICIENCY]
+                if (efficiencyCard != null) {
+                    MetricCard(
+                        title = efficiencyCard.title,
+                        value = efficiencyCard.value,
+                        secondaryText = efficiencyCard.secondaryText ?: efficiencyCard.unit,
+                        status = efficiencyCard.status,
+                        onClick = if (isEditing) null else onNavigateToSleep,
+                        tooltip = efficiencyCard.tooltip,
+                    )
+                }
+            },
+        )
     }
 
     cardMap[CardId.PAI_DAILY] = {
-        if (isLoading) {
-            MetricCardSkeleton()
-        } else {
-            val paiCard = uiState.cardDataMap[CardId.PAI_DAILY]
-            if (paiCard != null) {
-                MetricCard(
-                    title = paiCard.title,
-                    value = paiCard.value,
-                    secondaryText = paiCard.unit,
-                    status = paiCard.status,
-                    onClick = if (isEditing) null else onNavigateToWorkouts,
-                    tooltip = paiCard.tooltip,
-                )
-            }
-        }
+        CardLoader(
+            isLoading = isLoading,
+            skeleton = { MetricCardSkeleton() },
+            content = {
+                val paiCard = uiState.cardDataMap[CardId.PAI_DAILY]
+                if (paiCard != null) {
+                    MetricCard(
+                        title = paiCard.title,
+                        value = paiCard.value,
+                        secondaryText = paiCard.unit,
+                        status = paiCard.status,
+                        onClick = if (isEditing) null else onNavigateToWorkouts,
+                        tooltip = paiCard.tooltip,
+                    )
+                }
+            },
+        )
     }
 
     cardMap[CardId.RESTING_HR] = {
-        if (isLoading) {
-            MetricCardSkeleton()
-        } else {
-            if (uiState.restingHrCard != null) {
-                val card = uiState.restingHrCard
-                MetricCard(
-                    title = card.title,
-                    value = card.value,
-                    secondaryText = card.unit,
-                    status = card.status,
-                    onClick = if (isEditing) null else onNavigateToRhr,
-                    tooltip = card.tooltip,
-                )
-            }
-        }
+        CardLoader(
+            isLoading = isLoading,
+            skeleton = { MetricCardSkeleton() },
+            content = {
+                if (uiState.restingHrCard != null) {
+                    val card = uiState.restingHrCard
+                    MetricCard(
+                        title = card.title,
+                        value = card.value,
+                        secondaryText = card.unit,
+                        status = card.status,
+                        onClick = if (isEditing) null else onNavigateToRhr,
+                        tooltip = card.tooltip,
+                    )
+                }
+            },
+        )
     }
 
     cardMap[CardId.CIRCADIAN_CONSISTENCY] = {

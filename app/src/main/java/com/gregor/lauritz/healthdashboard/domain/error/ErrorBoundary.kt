@@ -23,14 +23,15 @@ sealed interface SafeResult<T> {
 /**
  * Wraps an operation in error handling with recovery strategies.
  *
- * @param operation The code to execute
- * @param fallback Value to return if operation fails
+ * @param operationName Human-readable name for logging context
  * @param onError Optional error handler for side effects (logging, metrics)
- * @return Success with operation result, or Failure with fallback/exception
+ * @param operation The code to execute
+ * @return Success with operation result, or Failure with exception
+ *
+ * For fallback values, use: safeOperation(...).getOrElse(fallbackValue)
  */
 inline fun <T> safeOperation(
     operationName: String,
-    fallback: T,
     onError: (Throwable) -> Unit = { Log.e("ErrorBoundary", "Error in $operationName", it) },
     operation: () -> T,
 ): SafeResult<T> =
