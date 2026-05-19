@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.repository
 
+import androidx.compose.runtime.Stable
 import kotlinx.coroutines.flow.Flow
 
 data class SleepSessionData(
@@ -15,6 +16,7 @@ data class SleepSessionData(
     val awakeMinutes: Int,
 )
 
+@Stable
 data class SleepStageData(
     val stageType: String,
     val startTime: Long,

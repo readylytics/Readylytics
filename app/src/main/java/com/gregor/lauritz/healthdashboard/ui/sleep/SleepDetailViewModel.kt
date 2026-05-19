@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.sleep
 
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
@@ -29,6 +30,7 @@ private data class PercentagesTriple(
     val awakePercent: Float,
 )
 
+@Stable
 data class SleepDetailUiState(
     val session: SleepSessionEntity? = null,
     val stageTimeline: List<SleepStageData> = emptyList(),
