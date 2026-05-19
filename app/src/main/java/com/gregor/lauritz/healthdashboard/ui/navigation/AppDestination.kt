@@ -25,4 +25,7 @@ sealed interface AppDestination {
 
     @Serializable
     data object StepDetail : AppDestination
+
+    @Serializable
+    data object SleepDetail : AppDestination
 }
