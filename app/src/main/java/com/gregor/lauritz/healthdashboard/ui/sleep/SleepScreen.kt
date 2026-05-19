@@ -35,10 +35,10 @@ import com.gregor.lauritz.healthdashboard.domain.model.efficiencyStatus
 import com.gregor.lauritz.healthdashboard.domain.model.remSleepStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
-import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.common.MetricCardSkeleton
-import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
+import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
+import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard

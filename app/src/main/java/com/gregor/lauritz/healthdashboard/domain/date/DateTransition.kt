@@ -15,7 +15,9 @@ sealed interface DateTransition {
     /**
      * Update to a specific date (capped at today, never in future).
      */
-    data class UpdateTo(val date: LocalDate) : DateTransition
+    data class UpdateTo(
+        val date: LocalDate,
+    ) : DateTransition
 
     /**
      * Move to the previous day.
@@ -71,7 +73,7 @@ fun DateTransition.isValidFrom(currentDate: LocalDate): Boolean {
     return when (this) {
         is DateTransition.NoChange -> true
         is DateTransition.UpdateTo -> true // applyDateTransition handles capping
-        DateTransition.PreviousDay -> true  // Always valid to go backward
+        DateTransition.PreviousDay -> true // Always valid to go backward
         DateTransition.NextDay -> currentDate < today // Only valid if not already at today
         DateTransition.ResetToToday -> true
     }

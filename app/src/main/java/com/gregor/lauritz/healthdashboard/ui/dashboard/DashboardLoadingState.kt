@@ -25,7 +25,9 @@ sealed interface DashboardLoadingState {
     /**
      * An error occurred during sync; fallback to last-known data if available.
      */
-    data class Error(val message: String) : DashboardLoadingState
+    data class Error(
+        val message: String,
+    ) : DashboardLoadingState
 }
 
 /**

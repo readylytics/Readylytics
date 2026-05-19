@@ -90,31 +90,33 @@ class SyncViewModelTest {
     }
 
     @Test
-    fun syncViewModel_onAppForeground_resetsDateWhenChanged() = runTest {
-        val yesterday = LocalDate.now().minusDays(1)
-        val dateFlow = MutableStateFlow(yesterday)
-        coEvery { selectedDateRepository.selectedDate } returns dateFlow
-        coEvery { selectedDateRepository.resetToToday() } returns Unit
-        coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Granted
+    fun syncViewModel_onAppForeground_resetsDateWhenChanged() =
+        runTest {
+            val yesterday = LocalDate.now().minusDays(1)
+            val dateFlow = MutableStateFlow(yesterday)
+            coEvery { selectedDateRepository.selectedDate } returns dateFlow
+            coEvery { selectedDateRepository.resetToToday() } returns Unit
+            coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Granted
 
-        viewModel.onAppForeground()
+            viewModel.onAppForeground()
 
-        coVerify { selectedDateRepository.resetToToday() }
-    }
+            coVerify { selectedDateRepository.resetToToday() }
+        }
 
     @Test
-    fun syncViewModel_onAppForeground_skipsSyncWhenAlreadySyncing() = runTest {
-        val dateFlow = MutableStateFlow(LocalDate.now())
-        coEvery { selectedDateRepository.selectedDate } returns dateFlow
-        coEvery { selectedDateRepository.resetToToday() } returns Unit
-        coEvery { foregroundSyncController.evaluateAndSync() } returns Unit
+    fun syncViewModel_onAppForeground_skipsSyncWhenAlreadySyncing() =
+        runTest {
+            val dateFlow = MutableStateFlow(LocalDate.now())
+            coEvery { selectedDateRepository.selectedDate } returns dateFlow
+            coEvery { selectedDateRepository.resetToToday() } returns Unit
+            coEvery { foregroundSyncController.evaluateAndSync() } returns Unit
 
-        viewModel.onAppForeground()
+            viewModel.onAppForeground()
 
-        // Second call should return early due to SyncingCatchUp state
-        viewModel.onAppForeground()
+            // Second call should return early due to SyncingCatchUp state
+            viewModel.onAppForeground()
 
-        // Should not crash or double-sync
-        assertEquals(SyncUiState.SyncingCatchUp, viewModel.uiState.value)
-    }
+            // Should not crash or double-sync
+            assertEquals(SyncUiState.SyncingCatchUp, viewModel.uiState.value)
+        }
 }

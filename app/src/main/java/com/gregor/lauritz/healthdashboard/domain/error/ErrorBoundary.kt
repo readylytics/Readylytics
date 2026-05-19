@@ -7,7 +7,9 @@ import android.util.Log
  * Provides safe fallback patterns without throwing.
  */
 sealed interface SafeResult<T> {
-    data class Success<T>(val value: T) : SafeResult<T>
+    data class Success<T>(
+        val value: T,
+    ) : SafeResult<T>
 
     data class Failure<T>(
         val error: Throwable,
@@ -63,7 +65,9 @@ fun <T> SafeResult<T>.getOrElse(fallback: T): T =
  * Error recovery strategies for common failure patterns.
  */
 sealed interface RecoveryStrategy<T> {
-    data class ReturnValue<T>(val value: T) : RecoveryStrategy<T>
+    data class ReturnValue<T>(
+        val value: T,
+    ) : RecoveryStrategy<T>
 
     data class Retry<T>(
         val maxAttempts: Int = 3,

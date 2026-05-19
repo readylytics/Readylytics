@@ -22,9 +22,10 @@ object PerformanceMonitor {
         block: () -> T,
     ): T {
         var result: T? = null
-        val duration = measureTimeMillis {
-            result = block()
-        }
+        val duration =
+            measureTimeMillis {
+                result = block()
+            }
         logDuration(operationName, duration)
         return result!!
     }
@@ -37,14 +38,18 @@ object PerformanceMonitor {
         crossinline block: suspend () -> T,
     ): T {
         var result: T? = null
-        val duration = measureTimeMillis {
-            result = block()
-        }
+        val duration =
+            measureTimeMillis {
+                result = block()
+            }
         logDuration(operationName, duration)
         return result!!
     }
 
-    private fun logDuration(operationName: String, durationMs: Long) {
+    private fun logDuration(
+        operationName: String,
+        durationMs: Long,
+    ) {
         val level =
             when {
                 durationMs > 1000 -> "SLOW"

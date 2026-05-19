@@ -6,9 +6,7 @@ import kotlin.system.measureTimeMillis
 /**
  * Utilities for load testing date operations and concurrent sync scenarios.
  * Used during development and pre-release testing to identify race conditions.
- */
-
-/**
+ *
  * Simulate rapid foreground/background cycles with concurrent date operations.
  * Useful for stress-testing date state consistency.
  *
@@ -23,22 +21,24 @@ suspend fun stressTestForegroundCycles(
     operation: suspend () -> Unit,
 ): LoadTestResult {
     val exceptions = mutableListOf<Throwable>()
-    val duration = measureTimeMillis {
-        repeat(iterations / concurrency) {
-            val jobs = (1..concurrency).map {
-                kotlinx.coroutines.launch {
-                    try {
-                        operation()
-                    } catch (e: Throwable) {
-                        exceptions.add(e)
+    val duration =
+        measureTimeMillis {
+            repeat(iterations / concurrency) {
+                val jobs =
+                    (1..concurrency).map {
+                        kotlinx.coroutines.launch {
+                            try {
+                                operation()
+                            } catch (e: Throwable) {
+                                exceptions.add(e)
+                            }
+                        }
                     }
-                }
+                // Synthetic delay to vary timing
+                kotlinx.coroutines.delay(Random.nextLong(1, 50))
+                jobs.forEach { it.join() }
             }
-            // Synthetic delay to vary timing
-            kotlinx.coroutines.delay(Random.nextLong(1, 50))
-            jobs.forEach { it.join() }
         }
-    }
     return LoadTestResult(
         durationMs = duration,
         iterationsCompleted = iterations,
@@ -59,15 +59,16 @@ suspend fun stressTestDateNavigation(
     operation: suspend () -> Unit,
 ): LoadTestResult {
     val exceptions = mutableListOf<Throwable>()
-    val duration = measureTimeMillis {
-        repeat(iterations) {
-            try {
-                operation()
-            } catch (e: Throwable) {
-                exceptions.add(e)
+    val duration =
+        measureTimeMillis {
+            repeat(iterations) {
+                try {
+                    operation()
+                } catch (e: Throwable) {
+                    exceptions.add(e)
+                }
             }
         }
-    }
     return LoadTestResult(
         durationMs = duration,
         iterationsCompleted = iterations,
