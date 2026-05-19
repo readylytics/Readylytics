@@ -9,9 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -102,46 +100,24 @@ fun DashboardScreen(
     var showCardManagement by rememberSaveable { mutableStateOf(false) }
     val today = remember { LocalDate.now(ZoneId.systemDefault()) }
 
-    Scaffold(
-        modifier = modifier,
-        floatingActionButton = {
-            EditModeFab(
-                isVisible = uiState.isManagingCards,
-                onDoneClick = onToggleCardManagement,
-            )
-        },
-        snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.padding(16.dp),
-                snackbar = { data ->
-                    Snackbar(
-                        data,
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    )
+    Box(modifier = modifier.fillMaxSize()) {
+        if (showCardManagement) {
+            CardManagementBottomSheet(
+                cards = uiState.cardConfigurations,
+                onCardVisibilityChanged = onCardVisibilityChanged,
+                onResetToDefaults = onResetToDefaults,
+                onDismiss = {
+                    scope.launch { sheetState.hide() }
+                    showCardManagement = false
                 },
+                sheetState = sheetState,
             )
-        },
-    ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            if (showCardManagement) {
-                CardManagementBottomSheet(
-                    cards = uiState.cardConfigurations,
-                    onCardVisibilityChanged = onCardVisibilityChanged,
-                    onResetToDefaults = onResetToDefaults,
-                    onDismiss = {
-                        scope.launch { sheetState.hide() }
-                        showCardManagement = false
-                    },
-                    sheetState = sheetState,
-                )
-            }
+        }
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().testTag("dashboard_lazy_column"),
-                contentPadding = PaddingValues(vertical = 16.dp),
-            ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().testTag("dashboard_lazy_column"),
+            contentPadding = PaddingValues(vertical = 16.dp),
+        ) {
                 item(key = "date_switcher") {
                     Column(
                         modifier =
@@ -238,8 +214,27 @@ fun DashboardScreen(
                             }
                         }
                     }
-                }
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp),
+            snackbar = { data ->
+                Snackbar(
+                    data,
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            },
+        )
+
+        EditModeFab(
+            isVisible = uiState.isManagingCards,
+            onDoneClick = onToggleCardManagement,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+        )
     }
 }
