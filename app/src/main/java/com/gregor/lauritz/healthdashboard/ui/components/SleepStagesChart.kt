@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,6 +36,37 @@ private fun getStageColor(
         SleepStage.AWAKE -> colorScheme.error
     }
 
+private fun calculateLabelTimes(
+    startMs: Long,
+    endMs: Long,
+    sessionDurationMinutes: Long,
+): List<String> {
+    if (sessionDurationMinutes <= 0L) return emptyList()
+
+    val labels = mutableListOf<String>()
+    val durationHours = sessionDurationMinutes / 60f
+
+    val intervalMinutes = when {
+        durationHours <= 4 -> 60
+        durationHours <= 8 -> 120
+        else -> 180
+    }
+
+    val timeFormatter =
+        DateTimeFormatter
+            .ofPattern("HH:mm")
+            .withZone(ZoneId.systemDefault())
+
+    var currentTime = startMs
+    while (currentTime < endMs) {
+        val timeStr = timeFormatter.format(Instant.ofEpochMilli(currentTime))
+        labels.add(timeStr)
+        currentTime += intervalMinutes * 60_000L
+    }
+
+    return labels
+}
+
 @Composable
 fun SleepStagesChart(
     session: SleepSessionEntity?,
@@ -61,6 +93,10 @@ fun SleepStagesChart(
         val startLabel = timeFormatter.format(startInstant)
         val endInstant = Instant.ofEpochMilli(session.endTime)
         val endLabel = timeFormatter.format(endInstant)
+
+        val sessionDurationMinutes = (session.endTime - session.startTime) / 60_000L
+        val intermediateLabels =
+            calculateLabelTimes(session.startTime, session.endTime, sessionDurationMinutes)
 
         Canvas(
             modifier =
@@ -98,6 +134,57 @@ fun SleepStagesChart(
                         )
                     }
             }
+
+            // Draw connectors between consecutive stages
+            stageTimeline.sortedBy { it.startTime }.zipWithNext().forEach { (currentStage, nextStage) ->
+                val currentIndex = SleepStage.values().indexOfFirst { it.type == currentStage.stageType }
+                val nextIndex = SleepStage.values().indexOfFirst { it.type == nextStage.stageType }
+
+                if (currentIndex >= 0 && nextIndex >= 0) {
+                    val currentYCenter = (currentIndex) * (bandHeight + bandGap) + bandHeight / 2f
+                    val nextYCenter = (nextIndex) * (bandHeight + bandGap) + bandHeight / 2f
+
+                    val endX =
+                        ((currentStage.getStartOffsetMinutes(session.startTime) +
+                            currentStage.durationMinutes)
+                            .toFloat() / sessionDurationMinutes) * chartWidth
+                    val nextStartX =
+                        (nextStage.getStartOffsetMinutes(session.startTime).toFloat() /
+                            sessionDurationMinutes) * chartWidth
+
+                    val nextStageColor = getStageColor(SleepStage.values()[nextIndex], colorScheme)
+                    val connectorColor = nextStageColor.copy(alpha = 0.5f)
+                    val connectorStroke = 2.dp.toPx()
+
+                    if (endX < nextStartX) {
+                        val midX = (endX + nextStartX) / 2f
+
+                        // Horizontal line from current stage end to midpoint
+                        drawLine(
+                            color = connectorColor,
+                            start = Offset(endX, currentYCenter),
+                            end = Offset(midX, currentYCenter),
+                            strokeWidth = connectorStroke,
+                        )
+
+                        // Vertical line from current to next stage
+                        drawLine(
+                            color = connectorColor,
+                            start = Offset(midX, currentYCenter),
+                            end = Offset(midX, nextYCenter),
+                            strokeWidth = connectorStroke,
+                        )
+
+                        // Horizontal line from midpoint to next stage start
+                        drawLine(
+                            color = connectorColor,
+                            start = Offset(midX, nextYCenter),
+                            end = Offset(nextStartX, nextYCenter),
+                            strokeWidth = connectorStroke,
+                        )
+                    }
+                }
+            }
         }
 
         Row(
@@ -106,13 +193,20 @@ fun SleepStagesChart(
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             Text(
                 text = startLabel,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Box(modifier = Modifier.weight(1f))
+            intermediateLabels.forEach { label ->
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Text(
                 text = endLabel,
                 style = MaterialTheme.typography.labelSmall,
