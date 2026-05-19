@@ -69,8 +69,7 @@ fun SkeletonCard(
                             alpha = 0.2f,
                         ),
                         RoundedCornerShape(4.dp),
-                    )
-                    .shimmerAnimation(),
+                    ).shimmerAnimation(),
         )
     }
 }
@@ -150,8 +149,7 @@ fun ScoreDialSkeleton(
                             alpha = 0.2f,
                         ),
                         RoundedCornerShape(8.dp),
-                    )
-                    .shimmerAnimation(),
+                    ).shimmerAnimation(),
         )
     }
 }
