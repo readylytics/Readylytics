@@ -25,16 +25,18 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.hiltViewModel
-import com.gregor.lauritz.healthdashboard.ui.components.SleepArchitectureBar
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.ui.components.SleepStageBreakdownRow
 import com.gregor.lauritz.healthdashboard.ui.components.SleepStagesChart
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @Composable
 fun SleepDetailRoute(
@@ -55,7 +57,12 @@ fun SleepDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val timeRanges = listOf("Day", "Week", "Month", "Year")
+    val timeRanges = listOf(
+        stringResource(R.string.time_range_day),
+        stringResource(R.string.time_range_week),
+        stringResource(R.string.time_range_month),
+        stringResource(R.string.time_range_year),
+    )
 
     Scaffold(
         modifier = modifier,
@@ -117,13 +124,13 @@ fun SleepDetailScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
-                            "Sleep timeline",
+                            stringResource(R.string.sleep_timeline_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         Text(
-                            "Learn more",
+                            stringResource(R.string.sleep_timeline_learn_more),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -131,7 +138,7 @@ fun SleepDetailScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    val timeFormatter = DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
+                    val timeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault())
 
                     val startTimeStr = if (uiState.session != null) {
                         timeFormatter.format(Instant.ofEpochMilli(uiState.session.startTime))
@@ -161,7 +168,7 @@ fun SleepDetailScreen(
                     }
 
                     Text(
-                        "Your sleep duration: ${String.format("%.1f", durationHours)} hours",
+                        stringResource(R.string.sleep_duration_format, durationHours),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -188,7 +195,7 @@ fun SleepDetailScreen(
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text(
-                        "Sleep Breakdown",
+                        stringResource(R.string.sleep_breakdown_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )

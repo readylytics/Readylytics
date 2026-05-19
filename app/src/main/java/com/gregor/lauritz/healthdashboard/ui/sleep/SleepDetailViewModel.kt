@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.SleepTypicalRanges
-import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,12 +42,9 @@ class SleepDetailViewModel
         val uiState: StateFlow<SleepDetailUiState> =
             selectedDateRepository.selectedDate
                 .flatMapLatest { date ->
-                    val startDayMs = date.atStartOfDay(ZoneId.systemDefault())
-                        .toInstant()
-                        .toEpochMilli()
-                        .truncateToDayMs()
-
-                    val endDayMs = startDayMs + (24 * 60 * 60 * 1000)
+                    val startDateTime = date.atStartOfDay(ZoneId.systemDefault())
+                    val startDayMs = startDateTime.toInstant().toEpochMilli()
+                    val endDayMs = startDateTime.plusDays(1).toInstant().toEpochMilli()
 
                     sleepSessionDao.observeFirstSessionEndingInRange(startDayMs, endDayMs)
                         .map { session ->

@@ -15,7 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 
 @Composable
 fun SleepStageBreakdownRow(
@@ -40,10 +42,12 @@ fun SleepStageBreakdownRow(
 
         val hours = durationMinutes / 60
         val minutes = durationMinutes % 60
+        val hoursStr = stringResource(R.string.time_unit_hours)
+        val minutesStr = stringResource(R.string.time_unit_minutes)
         val durationText = if (hours > 0) {
-            "$hours" + "h " + (if (minutes > 0) "$minutes" + "m" else "")
+            "$hours$hoursStr " + (if (minutes > 0) "$minutes$minutesStr" else "")
         } else {
-            "$minutes" + "m"
+            "$minutes$minutesStr"
         }
 
         Text(

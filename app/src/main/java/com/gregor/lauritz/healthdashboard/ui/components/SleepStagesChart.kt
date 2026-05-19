@@ -139,20 +139,19 @@ private fun generateSleepBlocks(
             val stageBlocks = mutableListOf<SleepBlock>()
 
             var currentX = 0f
+            val gap = 2.dp.toPx()
             val minBlockWidth = 4.dp.toPx()
-            val blockCount = (blockWidth / minBlockWidth).toInt().coerceAtLeast(1)
+            val blockCount = ((blockWidth + gap) / (minBlockWidth + gap)).toInt().coerceAtLeast(1)
+            val width = (blockWidth - (blockCount - 1) * gap) / blockCount
 
             repeat(blockCount) { index ->
-                val remainingWidth = blockWidth - (index * (blockWidth / blockCount))
-                val width = (blockWidth / blockCount).coerceAtLeast(2.dp.toPx())
-
                 stageBlocks.add(
                     SleepBlock(
                         startX = currentX,
                         width = width,
                     ),
                 )
-                currentX += width + 2.dp.toPx()
+                currentX += width + gap
             }
 
             blocks[stage] = stageBlocks

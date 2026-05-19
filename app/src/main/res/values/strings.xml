@@ -134,4 +134,16 @@
     <string name="about_header_disclaimer">## Scientific and medical disclaimer</string>
     <string name="about_disclaimer_p1">This app describes a wellness-oriented monitoring framework derived from consumer wearable signals and sports-science literature. The framework is **not validated for medical diagnosis, disease screening, treatment guidance, or injury prediction**. Physiological metrics such as HRV, sleep staging, and resting heart rate are non-specific and can be influenced by numerous behavioral, environmental, pharmacological, and measurement-related factors.</string>
     <string name="about_disclaimer_p2">If you have concerns about your health, sleep, or recovery, consult a qualified healthcare provider.</string>
+
+    <!-- Sleep Detail Screen -->
+    <string name="time_unit_hours">h</string>
+    <string name="time_unit_minutes">m</string>
+    <string name="sleep_duration_format">Your sleep duration: %.1f hours</string>
+    <string name="time_range_day">Day</string>
+    <string name="time_range_week">Week</string>
+    <string name="time_range_month">Month</string>
+    <string name="time_range_year">Year</string>
+    <string name="sleep_timeline_title">Sleep timeline</string>
+    <string name="sleep_timeline_learn_more">Learn more</string>
+    <string name="sleep_breakdown_title">Sleep Breakdown</string>
 </resources>
