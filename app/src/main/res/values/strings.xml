@@ -150,4 +150,5 @@
     <string name="sleep_stage_light">Light</string>
     <string name="sleep_stage_deep">Deep</string>
     <string name="sleep_breakdown_row_format">%1$s • %2$s</string>
+    <string name="sleep_hypnogram_title">Hypnogram</string>
 </resources>
