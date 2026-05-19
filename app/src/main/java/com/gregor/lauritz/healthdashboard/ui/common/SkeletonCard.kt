@@ -35,9 +35,9 @@ private fun Modifier.shimmerAnimation(): Modifier {
                     animation =
                         keyframes {
                             durationMillis = 1500
-                            0.3f at 0 with LinearEasing
-                            0.9f at 750 with LinearEasing
-                            0.3f at 1500 with LinearEasing
+                            0.3f at 0 using LinearEasing
+                            0.9f at 750 using LinearEasing
+                            0.3f at 1500 using LinearEasing
                         },
                 ),
             label = "skeleton_alpha",
