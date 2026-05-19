@@ -51,7 +51,7 @@ fun SleepStageBreakdownRow(
         }
 
         Text(
-            text = "$stageName • $durationText",
+            text = stringResource(R.string.sleep_breakdown_row_format, stageName, durationText),
             style = MaterialTheme.typography.bodyMedium,
         )
     }

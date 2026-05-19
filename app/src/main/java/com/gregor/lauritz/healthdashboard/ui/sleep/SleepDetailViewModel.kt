@@ -54,10 +54,10 @@ class SleepDetailViewModel
 
                             SleepDetailUiState(
                                 session = session,
-                                deepSleepPercent = if (totalMinutes > 0) (session?.deepSleepMinutes ?: 0).toFloat() / totalMinutes * 100f else 0f,
-                                remSleepPercent = if (totalMinutes > 0) (session?.remSleepMinutes ?: 0).toFloat() / totalMinutes * 100f else 0f,
-                                lightSleepPercent = if (totalMinutes > 0) (session?.lightSleepMinutes ?: 0).toFloat() / totalMinutes * 100f else 0f,
-                                awakePercent = if (totalMinutes > 0) (session?.awakeMinutes ?: 0).toFloat() / totalMinutes * 100f else 0f,
+                                deepSleepPercent = if (totalMinutes > 0) session!!.deepSleepMinutes.toFloat() / totalMinutes * 100f else 0f,
+                                remSleepPercent = if (totalMinutes > 0) session!!.remSleepMinutes.toFloat() / totalMinutes * 100f else 0f,
+                                lightSleepPercent = if (totalMinutes > 0) session!!.lightSleepMinutes.toFloat() / totalMinutes * 100f else 0f,
+                                awakePercent = if (totalMinutes > 0) session!!.awakeMinutes.toFloat() / totalMinutes * 100f else 0f,
                                 sleepScore = session?.sleepScore,
                                 typicalRanges = SleepTypicalRanges.DEFAULT,
                                 selectedDate = date,

@@ -15,6 +15,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 enum class SleepStage(val label: String) {
     AWAKE("Awake"),
@@ -132,18 +133,19 @@ private fun generateSleepBlocks(
     )
 
     val blocks = mutableMapOf<SleepStage, List<SleepBlock>>()
+    var globalXOffset = 0f
+    val gap = 2.dp.toPx()
+    val minBlockWidth = 4.dp.toPx()
 
     stages.forEach { (stage, minutes) ->
         if (minutes > 0) {
             val blockWidth = (minutes.toFloat() / totalMinutes) * chartWidth
             val stageBlocks = mutableListOf<SleepBlock>()
 
-            var currentX = 0f
-            val gap = 2.dp.toPx()
-            val minBlockWidth = 4.dp.toPx()
             val blockCount = ((blockWidth + gap) / (minBlockWidth + gap)).toInt().coerceAtLeast(1)
             val width = (blockWidth - (blockCount - 1) * gap) / blockCount
 
+            var currentX = globalXOffset
             repeat(blockCount) { index ->
                 stageBlocks.add(
                     SleepBlock(
@@ -155,6 +157,7 @@ private fun generateSleepBlocks(
             }
 
             blocks[stage] = stageBlocks
+            globalXOffset = currentX
         }
     }
 
@@ -169,7 +172,7 @@ private fun generateTimeLabels(
     val endInstant = Instant.ofEpochMilli(endTimeMs)
 
     val zoneId = ZoneId.systemDefault()
-    val timeFormatter = DateTimeFormatter.ofPattern("h:mm a").withZone(zoneId)
+    val timeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(zoneId)
 
     val durationMinutes = (endTimeMs - startTimeMs) / (1000 * 60)
     val labels = mutableListOf<TimeLabel>()

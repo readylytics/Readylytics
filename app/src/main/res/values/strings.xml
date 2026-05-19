@@ -146,4 +146,9 @@
     <string name="sleep_timeline_title">Sleep timeline</string>
     <string name="sleep_timeline_learn_more">Learn more</string>
     <string name="sleep_breakdown_title">Sleep Breakdown</string>
+    <string name="sleep_stage_awake">Awake</string>
+    <string name="sleep_stage_rem">REM</string>
+    <string name="sleep_stage_light">Light</string>
+    <string name="sleep_stage_deep">Deep</string>
+    <string name="sleep_breakdown_row_format">%1$s • %2$s</string>
 </resources>
