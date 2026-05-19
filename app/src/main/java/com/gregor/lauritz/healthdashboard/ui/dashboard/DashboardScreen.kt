@@ -37,6 +37,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.ReorderableCardGrid
 import com.gregor.lauritz.healthdashboard.ui.components.StatusLegend
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZoneId
 
 @Composable
 fun DashboardRoute(
@@ -95,6 +96,7 @@ fun DashboardScreen(
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
     var showCardManagement by rememberSaveable { mutableStateOf(false) }
+    val today = remember { LocalDate.now(ZoneId.systemDefault()) }
 
     Box(modifier = modifier.fillMaxSize()) {
         if (showCardManagement) {
@@ -125,6 +127,7 @@ fun DashboardScreen(
                         selectedDate = uiState.selectedDate,
                         onPreviousDay = onPreviousDay,
                         onNextDay = onNextDay,
+                        today = today,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -141,7 +144,7 @@ fun DashboardScreen(
                 }
             }
 
-            if (summary == null && (uiState.selectedDate < LocalDate.now())) {
+            if (summary == null && !uiState.isComputingMetrics && (uiState.selectedDate < today)) {
                 item(key = "no_data_placeholder") {
                     Box(
                         modifier =
@@ -169,6 +172,7 @@ fun DashboardScreen(
                                 onNavigateToRhr = onNavigateToRhr,
                                 onNavigateToSteps = onNavigateToSteps,
                                 isEditing = uiState.isManagingCards,
+                                isLoading = uiState.isComputingMetrics,
                             ),
                         isEditing = uiState.isManagingCards,
                         onCardRemove = { cardId ->

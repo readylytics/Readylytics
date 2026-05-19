@@ -1,7 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.onboarding
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,7 +18,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -57,33 +55,16 @@ fun OnboardingScreen(
     ) -> Unit,
     onOpenSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
-    isLoading: Boolean = false,
 ) {
     var step by remember { mutableIntStateOf(0) }
 
     Surface(modifier = modifier.fillMaxSize()) {
-        when {
-            isLoading -> LoadingContent()
-            step == 0 -> WelcomeScreen(onNext = { step = 1 })
-            else ->
-                ProfileSetupScreen(
-                    onGrantPermissionsClick = onGrantPermissionsClick,
-                    onOpenSettingsClick = onOpenSettingsClick,
-                )
-        }
-    }
-}
-
-@Composable
-private fun LoadingContent() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator()
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = "Syncing health data...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (step == 0) {
+            WelcomeScreen(onNext = { step = 1 })
+        } else {
+            ProfileSetupScreen(
+                onGrantPermissionsClick = onGrantPermissionsClick,
+                onOpenSettingsClick = onOpenSettingsClick,
             )
         }
     }

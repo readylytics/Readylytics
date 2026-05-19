@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.StatusLegend
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
@@ -72,21 +73,54 @@ fun WorkoutsScreen(
         }
 
         item(key = "stats_section") {
-            WorkoutStatsSection(
-                uiState = uiState,
-                onRangeSelected = onRangeSelected,
-            )
+            if (uiState.isLoading) {
+                WorkoutStatsSectionSkeleton()
+            } else {
+                WorkoutStatsSection(
+                    uiState = uiState,
+                    onRangeSelected = onRangeSelected,
+                )
+            }
         }
 
         item(key = "list_section") {
-            WorkoutListSection(
-                workouts = uiState.recentWorkouts,
-                onWorkoutClick = onWorkoutClick,
-            )
+            if (uiState.isLoading) {
+                WorkoutListSectionSkeleton()
+            } else {
+                WorkoutListSection(
+                    workouts = uiState.recentWorkouts,
+                    onWorkoutClick = onWorkoutClick,
+                )
+            }
         }
 
         item(key = "status_legend") {
             StatusLegend()
+        }
+    }
+}
+
+@Composable
+private fun WorkoutStatsSectionSkeleton() {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+    ) {
+        SkeletonCard(height = 200.dp, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
+        SkeletonCard(height = 120.dp, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
+        SkeletonCard(height = 180.dp, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
+private fun WorkoutListSectionSkeleton() {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+    ) {
+        repeat(3) {
+            SkeletonCard(
+                height = 80.dp,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            )
         }
     }
 }

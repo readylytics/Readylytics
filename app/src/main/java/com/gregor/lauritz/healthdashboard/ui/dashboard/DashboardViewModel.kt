@@ -117,6 +117,7 @@ class DashboardViewModel
                 cardConfigurations = cardState.cardConfiguration,
                 isManagingCards = cardState.isManagingCards,
                 isRefreshing = realtimeState.isSyncing,
+                isComputingMetrics = realtimeState.isSyncing && basicInputs.summary == null,
                 isCalibrating = basicInputs.summary?.isCalibrating ?: false,
             )
         }
@@ -124,11 +125,15 @@ class DashboardViewModel
         fun formatSleepDuration(minutes: Int?): String = getDashboardDataUseCase.formatSleepDuration(minutes)
 
         fun onPreviousDay() {
-            selectedDateRepository.selectPreviousDay()
+            viewModelScope.launch {
+                selectedDateRepository.selectPreviousDay()
+            }
         }
 
         fun onNextDay() {
-            selectedDateRepository.selectNextDay()
+            viewModelScope.launch {
+                selectedDateRepository.selectNextDay()
+            }
         }
 
         fun toggleCardManagement() {
@@ -159,7 +164,10 @@ class DashboardViewModel
 
         fun onEvent(event: DashboardEvent) {
             when (event) {
-                is DashboardEvent.DateSelected -> selectedDateRepository.updateSelectedDate(event.date)
+                is DashboardEvent.DateSelected ->
+                    viewModelScope.launch {
+                        selectedDateRepository.updateSelectedDate(event.date)
+                    }
                 DashboardEvent.PreviousDay -> onPreviousDay()
                 DashboardEvent.NextDay -> onNextDay()
                 DashboardEvent.Refresh -> onRefresh()
@@ -201,6 +209,7 @@ data class DashboardUiState(
     val cardConfigurations: List<CardConfiguration> = emptyList(),
     val isManagingCards: Boolean = false,
     val isRefreshing: Boolean = false,
+    val isComputingMetrics: Boolean = false,
     val isCalibrating: Boolean = false,
     val errorMessage: String? = null,
 )

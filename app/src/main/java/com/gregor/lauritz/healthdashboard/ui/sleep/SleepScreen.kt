@@ -35,6 +35,9 @@ import com.gregor.lauritz.healthdashboard.domain.model.efficiencyStatus
 import com.gregor.lauritz.healthdashboard.domain.model.remSleepStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
+import com.gregor.lauritz.healthdashboard.ui.common.MetricCardSkeleton
+import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
+import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
@@ -110,69 +113,80 @@ fun SleepScreen(
                         .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                val sleepScoreTooltip =
-                    remember {
-                        buildString {
-                            append("Total quality of rest based on duration and cycles.\n\n")
-                            append("• 80–100: Optimal\n")
-                            append("• 60–79: Fair\n")
-                            append("• < 60: Poor")
+                if (uiState.isLoading) {
+                    ScoreDialSkeleton()
+                } else {
+                    val sleepScoreTooltip =
+                        remember {
+                            buildString {
+                                append("Total quality of rest based on duration and cycles.\n\n")
+                                append("• 80–100: Optimal\n")
+                                append("• 60–79: Fair\n")
+                                append("• < 60: Poor")
+                            }
                         }
-                    }
-                M3ScoreDial(
-                    score = uiState.latestSummary?.sleepScore,
-                    label = "Sleep Score",
-                    tooltipDescription = sleepScoreTooltip,
-                )
+                    M3ScoreDial(
+                        score = uiState.latestSummary?.sleepScore,
+                        label = "Sleep Score",
+                        tooltipDescription = sleepScoreTooltip,
+                    )
+                }
             }
         }
 
         item(key = "architecture_bar") {
-            val sectionLabel =
-                remember(uiState.selectedDate) {
-                    val today = java.time.LocalDate.now()
-                    when (uiState.selectedDate) {
-                        today -> "Last Night"
-                        today.minusDays(1) -> "Night of Yesterday"
-                        else -> {
-                            val pattern = DateTimeFormatter.ofPattern("EEE MMM d", Locale.getDefault())
-                            "Night of ${uiState.selectedDate.format(pattern)}"
+            if (uiState.isLoading) {
+                SkeletonCard(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    height = 120.dp,
+                )
+            } else {
+                val sectionLabel =
+                    remember(uiState.selectedDate) {
+                        val today = java.time.LocalDate.now()
+                        when (uiState.selectedDate) {
+                            today -> "Last Night"
+                            today.minusDays(1) -> "Night of Yesterday"
+                            else -> {
+                                val pattern = DateTimeFormatter.ofPattern("EEE MMM d", Locale.getDefault())
+                                "Night of ${uiState.selectedDate.format(pattern)}"
+                            }
                         }
                     }
-                }
-            val bedTime =
-                uiState.latestSession?.let {
-                    Instant
-                        .ofEpochMilli(it.startTime)
-                        .atZone(ZoneId.systemDefault())
-                        .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
-                } ?: "—"
-            val wakeTime =
-                uiState.latestSession?.let {
-                    Instant
-                        .ofEpochMilli(it.endTime)
-                        .atZone(ZoneId.systemDefault())
-                        .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
-                } ?: "—"
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(sectionLabel, style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            text = "$bedTime – $wakeTime",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                val bedTime =
+                    uiState.latestSession?.let {
+                        Instant
+                            .ofEpochMilli(it.startTime)
+                            .atZone(ZoneId.systemDefault())
+                            .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
+                    } ?: "—"
+                val wakeTime =
+                    uiState.latestSession?.let {
+                        Instant
+                            .ofEpochMilli(it.endTime)
+                            .atZone(ZoneId.systemDefault())
+                            .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
+                    } ?: "—"
+                Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(sectionLabel, style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                text = "$bedTime – $wakeTime",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        SleepArchitectureBar(
+                            session = uiState.latestSession,
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    Spacer(Modifier.height(12.dp))
-                    SleepArchitectureBar(
-                        session = uiState.latestSession,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
                 }
             }
         }
@@ -206,38 +220,52 @@ fun SleepScreen(
         item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
 
         item(key = "hrv_chart") {
-            TrendCard(
-                title = "HRV",
-                modifier = Modifier.padding(horizontal = 16.dp),
-            ) {
-                TrendChart(
-                    points = uiState.dailyHrv,
-                    rangeStartMs = uiState.rangeStartMs,
-                    rangeDays = uiState.selectedRange.days,
-                    baselineUnit = "ms",
-                    baseline = baselineHrv,
-                    showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),
-                    scrollState = chartScrollState,
+            if (uiState.isLoading) {
+                SkeletonCard(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    height = 250.dp,
                 )
+            } else {
+                TrendCard(
+                    title = "HRV",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                ) {
+                    TrendChart(
+                        points = uiState.dailyHrv,
+                        rangeStartMs = uiState.rangeStartMs,
+                        rangeDays = uiState.selectedRange.days,
+                        baselineUnit = "ms",
+                        baseline = baselineHrv,
+                        showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),
+                        scrollState = chartScrollState,
+                    )
+                }
             }
         }
 
         item(key = "spacer_hrv") { Spacer(Modifier.height(8.dp)) }
 
         item(key = "rhr_chart") {
-            TrendCard(
-                title = "Resting Heart Rate",
-                modifier = Modifier.padding(horizontal = 16.dp),
-            ) {
-                TrendChart(
-                    points = uiState.dailyRhr,
-                    rangeStartMs = uiState.rangeStartMs,
-                    rangeDays = uiState.selectedRange.days,
-                    baselineUnit = "bpm",
-                    baseline = baselineRhr?.toFloat(),
-                    showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),
-                    scrollState = chartScrollState,
+            if (uiState.isLoading) {
+                SkeletonCard(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    height = 250.dp,
                 )
+            } else {
+                TrendCard(
+                    title = "Resting Heart Rate",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                ) {
+                    TrendChart(
+                        points = uiState.dailyRhr,
+                        rangeStartMs = uiState.rangeStartMs,
+                        rangeDays = uiState.selectedRange.days,
+                        baselineUnit = "bpm",
+                        baseline = baselineRhr?.toFloat(),
+                        showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),
+                        scrollState = chartScrollState,
+                    )
+                }
             }
         }
 
@@ -249,11 +277,15 @@ fun SleepScreen(
         }
 
         item(key = "metrics_grid") {
-            MetricsGrid(
-                uiState = uiState,
-                circadianResult = circadianConsistency,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
+            if (uiState.isLoading) {
+                MetricsGridSkeleton()
+            } else {
+                MetricsGrid(
+                    uiState = uiState,
+                    circadianResult = circadianConsistency,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
         }
 
         item(key = "spacer_bottom") { Spacer(Modifier.height(16.dp)) }
@@ -325,6 +357,37 @@ private fun MetricsGrid(
                     tooltip = "Time in Rapid Eye Movement. Target: 20–25% of total sleep.",
                     onClick = null,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetricsGridSkeleton(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                MetricCardSkeleton()
+            }
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                MetricCardSkeleton()
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                MetricCardSkeleton()
+            }
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                MetricCardSkeleton()
             }
         }
     }

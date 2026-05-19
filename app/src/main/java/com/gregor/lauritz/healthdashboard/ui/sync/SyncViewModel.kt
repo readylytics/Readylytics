@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.sync
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectPermissionRevokedException
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.PermissionStatus
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 sealed interface SyncUiState {
@@ -48,6 +50,7 @@ class SyncViewModel
         private val hcRepo: HealthConnectRepository,
         private val foregroundSyncController: ForegroundSyncController,
         private val settingsRepo: SettingsRepository,
+        private val selectedDateRepository: SelectedDateRepository,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow<SyncUiState>(SyncUiState.CheckingPermissions)
         val uiState: StateFlow<SyncUiState> = _uiState.asStateFlow()
@@ -94,6 +97,12 @@ class SyncViewModel
 
         fun onAppForeground() {
             foregroundCheckJob?.cancel()
+            viewModelScope.launch {
+                // Only reset to today if the system date has changed (past midnight)
+                if (selectedDateRepository.selectedDate.value != LocalDate.now()) {
+                    selectedDateRepository.resetToToday()
+                }
+            }
             // onPermissionsGranted() sets SyncingCatchUp synchronously before launching
             // its coroutine. If that already happened, skip the permission re-check.
             // Samsung's getGrantedPermissions() returns stale Missing immediately after
@@ -171,28 +180,28 @@ class SyncViewModel
 
         fun onPermissionsGranted() {
             foregroundCheckJob?.cancel()
-            _uiState.update { SyncUiState.DiscoveringDevices }
+            _uiState.update { SyncUiState.SyncingCatchUp }
             viewModelScope.launch {
                 try {
                     com.gregor.lauritz.healthdashboard.domain.util.logD("SyncViewModel") {
-                        "Discovering devices..."
+                        "Permissions granted. Starting sync with all devices..."
                     }
-                    val devices = hcRepo.discoverDevices(windowDays = 2)
+                    foregroundSyncController.triggerImmediateSync()
                     com.gregor.lauritz.healthdashboard.domain.util.logD("SyncViewModel") {
-                        "Device discovery completed: ${devices.size} devices found"
+                        "Initial sync completed. User can select device in settings later."
                     }
-                    _uiState.update { SyncUiState.DeviceSelectionReady(devices) }
+                    _uiState.update { SyncUiState.PermissionsGranted }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     com.gregor.lauritz.healthdashboard.domain.util.logE("SyncViewModel", e) {
-                        "Device discovery: permissions revoked"
+                        "Initial sync: permissions revoked"
                     }
                     _uiState.update { SyncUiState.NeedsPermissions }
                 } catch (e: Exception) {
                     com.gregor.lauritz.healthdashboard.domain.util.logE("SyncViewModel", e) {
-                        "Device discovery failed"
+                        "Initial sync failed"
                     }
                     _uiState.update {
-                        SyncUiState.Error(e.message ?: "Device discovery failed")
+                        SyncUiState.Error(e.message ?: "Sync failed")
                     }
                 }
             }
