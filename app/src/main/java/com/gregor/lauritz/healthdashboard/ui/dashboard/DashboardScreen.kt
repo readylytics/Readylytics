@@ -96,7 +96,7 @@ fun DashboardScreen(
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
     var showCardManagement by rememberSaveable { mutableStateOf(false) }
-    val today = LocalDate.now(ZoneId.systemDefault())
+    val today = remember { LocalDate.now(ZoneId.systemDefault()) }
 
     Box(modifier = modifier.fillMaxSize()) {
         if (showCardManagement) {
@@ -144,7 +144,7 @@ fun DashboardScreen(
                 }
             }
 
-            if (summary == null && (uiState.selectedDate < today)) {
+            if (summary == null && !uiState.isComputingMetrics && (uiState.selectedDate < today)) {
                 item(key = "no_data_placeholder") {
                     Box(
                         modifier =

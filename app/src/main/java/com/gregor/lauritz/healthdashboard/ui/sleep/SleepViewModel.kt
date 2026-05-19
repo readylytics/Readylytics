@@ -50,9 +50,9 @@ data class SleepUiState(
     val hrvBaseline: Float? = null,
     val rhrBaseline: Float? = null,
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
-    val selectedDate: LocalDate = LocalDate.of(1970, 1, 1),
+    val selectedDate: LocalDate = LocalDate.now(),
     val goalSleepMinutes: Int = 480,
-    val rangeStartMs: Long = 0L,
+    val rangeStartMs: Long = System.currentTimeMillis(),
 )
 
 private data class SleepData(

@@ -191,7 +191,7 @@ class DashboardViewModel
 @Immutable
 data class DashboardUiState(
     val summary: DailySummary? = null,
-    val selectedDate: LocalDate = LocalDate.of(1970, 1, 1),
+    val selectedDate: LocalDate = LocalDate.now(),
     val cardDataMap: Map<CardId, CardData> = emptyMap(),
     val circadianConsistency: CircadianConsistencyResult? = null,
     val restingHrCard: CardData? = null,

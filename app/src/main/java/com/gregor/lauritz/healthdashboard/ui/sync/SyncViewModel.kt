@@ -95,7 +95,10 @@ class SyncViewModel
         }
 
         fun onAppForeground() {
-            selectedDateRepository.resetToToday()
+            // Only reset to today if the system date has changed (past midnight)
+            if (selectedDateRepository.selectedDate.value != LocalDate.now()) {
+                selectedDateRepository.resetToToday()
+            }
             foregroundCheckJob?.cancel()
             // onPermissionsGranted() sets SyncingCatchUp synchronously before launching
             // its coroutine. If that already happened, skip the permission re-check.

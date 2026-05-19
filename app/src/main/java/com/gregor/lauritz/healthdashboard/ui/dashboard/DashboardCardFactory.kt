@@ -56,12 +56,16 @@ fun buildCardDataMap(
     }
 
     cardMap[CardId.STEPS] = {
-        StepsCard(
-            stepCount = uiState.stepCount,
-            stepGoal = uiState.stepGoal,
-            onClick = if (isEditing) ({}) else onNavigateToSteps,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        if (isLoading) {
+            MetricCardSkeleton()
+        } else {
+            StepsCard(
+                stepCount = uiState.stepCount,
+                stepGoal = uiState.stepGoal,
+                onClick = if (isEditing) ({}) else onNavigateToSteps,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 
     cardMap[CardId.HRV] = {
@@ -191,7 +195,9 @@ fun buildCardDataMap(
     }
 
     cardMap[CardId.CIRCADIAN_CONSISTENCY] = {
-        if (uiState.circadianConsistency != null) {
+        if (isLoading && uiState.circadianConsistency == null) {
+            MetricCardSkeleton()
+        } else if (uiState.circadianConsistency != null) {
             CircadianConsistencyCard(
                 result = uiState.circadianConsistency,
                 onClick = if (isEditing) ({}) else onNavigateToSleep,
