@@ -83,7 +83,7 @@ fun MetricCardSkeleton(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
-                .shimmerAnimation()
+                .shimmerAnimation(),
         ) {
             Box(
                 modifier = Modifier
@@ -91,8 +91,8 @@ fun MetricCardSkeleton(
                     .height(16.dp)
                     .background(
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                        RoundedCornerShape(4.dp)
-                    )
+                        RoundedCornerShape(4.dp),
+                    ),
             )
             Spacer(modifier = Modifier.height(12.dp))
             Box(
@@ -101,8 +101,8 @@ fun MetricCardSkeleton(
                     .height(32.dp)
                     .background(
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                        RoundedCornerShape(4.dp)
-                    )
+                        RoundedCornerShape(4.dp),
+                    ),
             )
         }
     }
@@ -127,9 +127,9 @@ fun ScoreDialSkeleton(
                 .padding(16.dp)
                 .background(
                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                    RoundedCornerShape(8.dp)
+                    RoundedCornerShape(8.dp),
                 )
-                .shimmerAnimation()
+                .shimmerAnimation(),
         )
     }
 }
