@@ -125,7 +125,7 @@ fun DeviceSelectionDialog(
                 },
                 enabled = isError || localSelection != null,
             ) {
-                Text("Continue")
+                Text(stringResource(R.string.device_selection_dialog_continue))
             }
         },
     )

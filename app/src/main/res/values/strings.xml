@@ -39,6 +39,7 @@
     <string name="device_selection_dialog_placeholder">Choose a device</string>
     <string name="device_selection_dialog_no_devices">No devices available</string>
     <string name="device_selection_dialog_hc_error">No devices found from Health Connect</string>
+    <string name="device_selection_dialog_continue">Continue</string>
 
     <!-- Workout Recovery Section -->
     <string name="workout_recovery_header">Heart Rate Recovery</string>

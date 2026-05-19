@@ -68,9 +68,12 @@ fun SkeletonCard(
 }
 
 @Composable
-fun MetricCardSkeleton(modifier: Modifier = Modifier) {
+fun MetricCardSkeleton(
+    modifier: Modifier = Modifier,
+    height: Dp = 140.dp,
+) {
     Card(
-        modifier = modifier.height(140.dp),
+        modifier = modifier.height(height),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -106,9 +109,12 @@ fun MetricCardSkeleton(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ScoreDialSkeleton(modifier: Modifier = Modifier) {
+fun ScoreDialSkeleton(
+    modifier: Modifier = Modifier,
+    height: Dp = 140.dp,
+) {
     Card(
-        modifier = modifier.height(140.dp),
+        modifier = modifier.height(height),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
