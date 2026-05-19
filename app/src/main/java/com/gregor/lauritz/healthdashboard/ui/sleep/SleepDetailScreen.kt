@@ -134,6 +134,7 @@ fun SleepDetailScreen(
             item {
                 SleepStagesChart(
                     session = uiState.session,
+                    stageTimeline = uiState.stageTimeline,
                     modifier =
                         Modifier
                             .fillMaxWidth()

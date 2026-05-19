@@ -1,8 +1,10 @@
 package com.gregor.lauritz.healthdashboard.data.repository
 
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepStageDao
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -13,6 +15,7 @@ class SleepSessionRepositoryImpl
     @Inject
     constructor(
         private val dao: SleepSessionDao,
+        private val stageDao: SleepStageDao,
     ) : SleepSessionRepository {
         override fun observeSince(fromMs: Long): Flow<List<SleepSessionData>> =
             dao.observeSince(fromMs).map { entities ->
@@ -69,4 +72,16 @@ class SleepSessionRepositoryImpl
             }
 
         override suspend fun countSince(fromMs: Long): Int = dao.countSince(fromMs)
+
+        override fun observeSessionStages(sessionId: String): Flow<List<SleepStageData>> =
+            stageDao.observeStagesForSession(sessionId).map { entities ->
+                entities.map { entity ->
+                    SleepStageData(
+                        stageType = entity.stageType,
+                        startTime = entity.startTime,
+                        endTime = entity.endTime,
+                        durationMinutes = entity.durationMinutes,
+                    )
+                }
+            }
     }

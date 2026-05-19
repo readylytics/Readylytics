@@ -6,12 +6,15 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.SleepTypicalRanges
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -28,6 +31,7 @@ private data class PercentagesTriple(
 
 data class SleepDetailUiState(
     val session: SleepSessionEntity? = null,
+    val stageTimeline: List<SleepStageData> = emptyList(),
     val deepSleepPercent: Float = 0f,
     val remSleepPercent: Float = 0f,
     val lightSleepPercent: Float = 0f,
@@ -43,6 +47,7 @@ class SleepDetailViewModel
     constructor(
         private val sleepSessionDao: SleepSessionDao,
         private val selectedDateRepository: SelectedDateRepository,
+        private val sleepSessionRepository: SleepSessionRepository,
     ) : ViewModel() {
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState: StateFlow<SleepDetailUiState> =
@@ -54,36 +59,44 @@ class SleepDetailViewModel
 
                     sleepSessionDao
                         .observeFirstSessionEndingInRange(startDayMs, endDayMs)
-                        .map { session ->
-                            val totalMinutes =
-                                session?.let {
-                                    it.deepSleepMinutes + it.remSleepMinutes + it.lightSleepMinutes + it.awakeMinutes
-                                } ?: 0
+                        .flatMapLatest { session ->
+                            if (session == null) {
+                                kotlinx.coroutines.flow.flowOf(
+                                    SleepDetailUiState(
+                                        selectedDate = date,
+                                    )
+                                )
+                            } else {
+                                sleepSessionRepository.observeSessionStages(session.id)
+                                    .map { stages ->
+                                        val totalMinutes =
+                                            session.deepSleepMinutes + session.remSleepMinutes + session.lightSleepMinutes + session.awakeMinutes
 
-                            val percentages =
-                                if (totalMinutes > 0 && session != null) {
-                                    session.let {
-                                        PercentagesTriple(
-                                            deepSleepPercent = it.deepSleepMinutes.toFloat() / totalMinutes * 100f,
-                                            remSleepPercent = it.remSleepMinutes.toFloat() / totalMinutes * 100f,
-                                            lightSleepPercent = it.lightSleepMinutes.toFloat() / totalMinutes * 100f,
-                                            awakePercent = it.awakeMinutes.toFloat() / totalMinutes * 100f,
+                                        val percentages =
+                                            if (totalMinutes > 0) {
+                                                PercentagesTriple(
+                                                    deepSleepPercent = session.deepSleepMinutes.toFloat() / totalMinutes * 100f,
+                                                    remSleepPercent = session.remSleepMinutes.toFloat() / totalMinutes * 100f,
+                                                    lightSleepPercent = session.lightSleepMinutes.toFloat() / totalMinutes * 100f,
+                                                    awakePercent = session.awakeMinutes.toFloat() / totalMinutes * 100f,
+                                                )
+                                            } else {
+                                                PercentagesTriple(0f, 0f, 0f, 0f)
+                                            }
+
+                                        SleepDetailUiState(
+                                            session = session,
+                                            stageTimeline = stages,
+                                            deepSleepPercent = percentages.deepSleepPercent,
+                                            remSleepPercent = percentages.remSleepPercent,
+                                            lightSleepPercent = percentages.lightSleepPercent,
+                                            awakePercent = percentages.awakePercent,
+                                            sleepScore = session.sleepScore,
+                                            typicalRanges = SleepTypicalRanges.DEFAULT,
+                                            selectedDate = date,
                                         )
                                     }
-                                } else {
-                                    PercentagesTriple(0f, 0f, 0f, 0f)
-                                }
-
-                            SleepDetailUiState(
-                                session = session,
-                                deepSleepPercent = percentages.deepSleepPercent,
-                                remSleepPercent = percentages.remSleepPercent,
-                                lightSleepPercent = percentages.lightSleepPercent,
-                                awakePercent = percentages.awakePercent,
-                                sleepScore = session?.sleepScore,
-                                typicalRanges = SleepTypicalRanges.DEFAULT,
-                                selectedDate = date,
-                            )
+                            }
                         }
                 }.flowOn(Dispatchers.Default)
                 .stateIn(

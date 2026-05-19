@@ -453,6 +453,33 @@ object DatabaseMigrations {
             }
         }
 
+    val MIGRATION_18_19 =
+        object : Migration(18, 19) {
+            private val sql =
+                listOf(
+                    """
+                    CREATE TABLE sleep_stages (
+                        `id` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        `sessionId` TEXT NOT NULL,
+                        `stageType` TEXT NOT NULL,
+                        `startTime` INTEGER NOT NULL,
+                        `endTime` INTEGER NOT NULL,
+                        `durationMinutes` INTEGER NOT NULL,
+                        FOREIGN KEY(`sessionId`) REFERENCES `sleep_sessions`(`id`) ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                    "CREATE INDEX IF NOT EXISTS `index_sleep_stages_sessionId` ON `sleep_stages` (`sessionId`)",
+                )
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                sql.forEach { db.execSQL(it) }
+            }
+
+            override fun migrate(connection: SQLiteConnection) {
+                sql.forEach { connection.execSQL(it) }
+            }
+        }
+
     val all =
         arrayOf(
             MIGRATION_1_2,
@@ -472,5 +499,6 @@ object DatabaseMigrations {
             MIGRATION_15_16,
             MIGRATION_16_17,
             MIGRATION_17_18,
+            MIGRATION_18_19,
         )
 }

@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.data.healthconnect
 
 import androidx.health.connect.client.records.SleepSessionRecord
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.data.local.entity.SleepStageEntity
 import kotlin.math.max
 
 object SleepDataMapper {
@@ -44,5 +45,32 @@ object SleepDataMapper {
             endZoneOffsetSeconds = session.endZoneOffset?.totalSeconds,
             deviceName = DeviceLabel.from(session.metadata.device, session.metadata.dataOrigin),
         )
+    }
+
+    fun mapSleepSessionStages(session: SleepSessionRecord): List<SleepStageEntity> {
+        return session.stages.map { stage ->
+            val durationMin =
+                ((stage.endTime.toEpochMilli() - stage.startTime.toEpochMilli()) / 60_000L)
+                    .toInt()
+            val stageType =
+                when (stage.stage) {
+                    SleepSessionRecord.STAGE_TYPE_DEEP -> "DEEP"
+                    SleepSessionRecord.STAGE_TYPE_REM -> "REM"
+                    SleepSessionRecord.STAGE_TYPE_LIGHT,
+                    SleepSessionRecord.STAGE_TYPE_SLEEPING,
+                    -> "LIGHT"
+                    SleepSessionRecord.STAGE_TYPE_AWAKE,
+                    SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED,
+                    -> "AWAKE"
+                    else -> "UNKNOWN"
+                }
+            SleepStageEntity(
+                sessionId = session.metadata.id,
+                stageType = stageType,
+                startTime = stage.startTime.toEpochMilli(),
+                endTime = stage.endTime.toEpochMilli(),
+                durationMinutes = durationMin,
+            )
+        }
     }
 }

@@ -15,6 +15,17 @@ data class SleepSessionData(
     val awakeMinutes: Int,
 )
 
+data class SleepStageData(
+    val stageType: String,
+    val startTime: Long,
+    val endTime: Long,
+    val durationMinutes: Int,
+) {
+    fun getStartOffsetMinutes(sessionStartTime: Long): Int {
+        return ((startTime - sessionStartTime) / 60_000L).toInt()
+    }
+}
+
 interface SleepSessionRepository {
     fun observeSince(fromMs: Long): Flow<List<SleepSessionData>>
 
@@ -27,4 +38,6 @@ interface SleepSessionRepository {
     ): List<SleepSessionData>
 
     suspend fun countSince(fromMs: Long): Int
+
+    fun observeSessionStages(sessionId: String): Flow<List<SleepStageData>>
 }
