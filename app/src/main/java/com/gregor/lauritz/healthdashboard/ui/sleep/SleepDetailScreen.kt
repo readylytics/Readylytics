@@ -33,7 +33,10 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-private fun getStageMinutes(session: SleepSessionEntity?, stage: SleepStage): Int =
+private fun getStageMinutes(
+    session: SleepSessionEntity?,
+    stage: SleepStage,
+): Int =
     when (stage) {
         SleepStage.AWAKE -> session?.awakeMinutes ?: 0
         SleepStage.REM -> session?.remSleepMinutes ?: 0
@@ -41,7 +44,10 @@ private fun getStageMinutes(session: SleepSessionEntity?, stage: SleepStage): In
         SleepStage.DEEP -> session?.deepSleepMinutes ?: 0
     }
 
-private fun getStageColor(stage: SleepStage, colorScheme: androidx.compose.material3.ColorScheme): androidx.compose.ui.graphics.Color =
+private fun getStageColor(
+    stage: SleepStage,
+    colorScheme: androidx.compose.material3.ColorScheme,
+): androidx.compose.ui.graphics.Color =
     when (stage) {
         SleepStage.DEEP -> colorScheme.primary
         SleepStage.LIGHT -> colorScheme.tertiary.copy(alpha = 0.6f)

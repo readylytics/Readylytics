@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Stable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -25,7 +24,10 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-private fun getStageColor(stage: SleepStage, colorScheme: androidx.compose.material3.ColorScheme): Color =
+private fun getStageColor(
+    stage: SleepStage,
+    colorScheme: androidx.compose.material3.ColorScheme,
+): Color =
     when (stage) {
         SleepStage.DEEP -> colorScheme.primary
         SleepStage.LIGHT -> colorScheme.tertiary.copy(alpha = 0.6f)
