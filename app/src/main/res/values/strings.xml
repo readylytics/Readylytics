@@ -138,7 +138,8 @@
     <!-- Sleep Detail Screen -->
     <string name="time_unit_hours">h</string>
     <string name="time_unit_minutes">m</string>
-    <string name="sleep_duration_format">Your sleep duration: %.1f hours</string>
+    <string name="sleep_duration_format">Your sleep duration: %1$dh %2$dm</string>
+    <string name="sleep_duration_unknown">Your sleep duration: --h --m</string>
     <string name="sleep_duration_hours_minutes">%1$dh %2$dm</string>
     <string name="sleep_duration_minutes_only">%1$dm</string>
     <string name="sleep_timeline_title">Sleep timeline</string>

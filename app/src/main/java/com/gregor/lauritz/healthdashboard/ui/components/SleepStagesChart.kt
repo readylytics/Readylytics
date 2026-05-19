@@ -78,8 +78,8 @@ fun SleepStagesChart(
 
             if (totalMinutes == 0) return@Canvas
 
-            val bandHeight = chartHeight / 4f
             val bandGap = 8.dp.toPx()
+            val bandHeight = (chartHeight - (3 * bandGap)) / 4f
 
             val stages: List<Pair<SleepStage, Color>> =
                 listOf(
@@ -112,7 +112,7 @@ fun SleepStagesChart(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(

@@ -57,7 +57,7 @@ fun SleepDetailScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.tab_sleep)) },
+                title = { Text(stringResource(R.string.sleep_timeline_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -74,12 +74,6 @@ fun SleepDetailScreen(
         ) {
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text(
-                        stringResource(R.string.sleep_timeline_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-
                     Spacer(modifier = Modifier.height(12.dp))
 
                     val timeFormatter =
@@ -111,19 +105,19 @@ fun SleepDetailScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    val durationStr =
+                    val durationText =
                         if (uiState.session != null) {
                             val durationMs = uiState.session.endTime - uiState.session.startTime
                             val totalMinutes = (durationMs / 1000 / 60).toInt()
                             val hours = totalMinutes / 60
                             val minutes = totalMinutes % 60
-                            "$hours" + "h " + "$minutes" + "min"
+                            stringResource(R.string.sleep_duration_format, hours, minutes)
                         } else {
-                            "--h --min"
+                            stringResource(R.string.sleep_duration_unknown)
                         }
 
                     Text(
-                        durationStr,
+                        durationText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -146,7 +140,7 @@ fun SleepDetailScreen(
             }
 
             item {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             item {
