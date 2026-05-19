@@ -117,11 +117,15 @@ fun DeviceSelectionDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    localSelection?.let { onDeviceSelected(it) }
+                    if (isError) {
+                        onDeviceSelected(null)
+                    } else {
+                        localSelection?.let { onDeviceSelected(it) }
+                    }
                 },
-                enabled = localSelection != null,
+                enabled = isError || localSelection != null,
             ) {
-                Text("Continue")
+                Text(if (isError) "Continue" else "Continue")
             }
         },
     )

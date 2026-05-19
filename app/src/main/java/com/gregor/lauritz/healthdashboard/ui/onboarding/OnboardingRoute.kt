@@ -60,11 +60,18 @@ fun OnboardingRoute(
                 "Primary device '$primaryDeviceName' already set; skipping dialog"
             }
             syncViewModel.onDeviceSelected()
+        } else if (currentState is SyncUiState.DeviceSelectionReady) {
+            com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") {
+                "Device selection ready: ${currentState.devices.size} devices found. primaryDeviceName=$primaryDeviceName"
+            }
         }
     }
 
     when (currentState) {
         is SyncUiState.DeviceSelectionReady -> {
+            com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") {
+                "Showing device selection dialog. Devices: ${currentState.devices}, Primary: $primaryDeviceName"
+            }
             // Render the loading onboarding shell behind the modal dialog so the user
             // has a stable backdrop while post-permission selection is required.
             OnboardingScreen(
@@ -76,6 +83,9 @@ fun OnboardingRoute(
                 availableDevices = currentState.devices,
                 selectedDevice = primaryDeviceName,
                 onDeviceSelected = { deviceName ->
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") {
+                        "Device selected: $deviceName"
+                    }
                     onboardingViewModel.selectDevice(deviceName) {
                         syncViewModel.onDeviceSelected()
                     }
