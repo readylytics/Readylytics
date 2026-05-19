@@ -26,19 +26,22 @@ import androidx.compose.ui.unit.dp
 @Composable
 private fun Modifier.shimmerAnimation(): Modifier {
     val transition = rememberInfiniteTransition(label = "skeleton_shimmer")
-    val alpha = transition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.9f,
-        animationSpec = infiniteRepeatable(
-            animation = keyframes {
-                durationMillis = 1500
-                0.3f at 0 with LinearEasing
-                0.9f at 750 with LinearEasing
-                0.3f at 1500 with LinearEasing
-            },
-        ),
-        label = "skeleton_alpha",
-    )
+    val alpha =
+        transition.animateFloat(
+            initialValue = 0.3f,
+            targetValue = 0.9f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation =
+                        keyframes {
+                            durationMillis = 1500
+                            0.3f at 0 with LinearEasing
+                            0.9f at 750 with LinearEasing
+                            0.3f at 1500 with LinearEasing
+                        },
+                ),
+            label = "skeleton_alpha",
+        )
     return this.graphicsLayer { this.alpha = alpha.value }
 }
 
@@ -50,19 +53,24 @@ fun SkeletonCard(
     Card(
         modifier = modifier.height(height),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            ),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .background(
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                    RoundedCornerShape(4.dp),
-                )
-                .shimmerAnimation(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .background(
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                            alpha = 0.2f,
+                        ),
+                        RoundedCornerShape(4.dp),
+                    )
+                    .shimmerAnimation(),
         )
     }
 }
@@ -75,34 +83,43 @@ fun MetricCardSkeleton(
     Card(
         modifier = modifier.height(height),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            ),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .shimmerAnimation(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .shimmerAnimation(),
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(16.dp)
-                    .background(
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                        RoundedCornerShape(4.dp),
-                    ),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(16.dp)
+                        .background(
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                alpha = 0.2f,
+                            ),
+                            RoundedCornerShape(4.dp),
+                        ),
             )
             Spacer(modifier = Modifier.height(12.dp))
             Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.6f)
-                    .height(32.dp)
-                    .background(
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                        RoundedCornerShape(4.dp),
-                    ),
+                modifier =
+                    Modifier
+                        .fillMaxWidth(0.6f)
+                        .height(32.dp)
+                        .background(
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                alpha = 0.2f,
+                            ),
+                            RoundedCornerShape(4.dp),
+                        ),
             )
         }
     }
@@ -116,20 +133,25 @@ fun ScoreDialSkeleton(
     Card(
         modifier = modifier.height(height),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            ),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-                .padding(16.dp)
-                .background(
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                    RoundedCornerShape(8.dp),
-                )
-                .shimmerAnimation(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+                    .padding(16.dp)
+                    .background(
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                            alpha = 0.2f,
+                        ),
+                        RoundedCornerShape(8.dp),
+                    )
+                    .shimmerAnimation(),
         )
     }
 }
