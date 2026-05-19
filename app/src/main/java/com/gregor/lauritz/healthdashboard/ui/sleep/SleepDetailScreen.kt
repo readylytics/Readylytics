@@ -37,6 +37,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
+private const val MS_PER_HOUR = 1000f * 60 * 60
+
 @Composable
 fun SleepDetailRoute(
     onBack: () -> Unit,
@@ -162,7 +164,7 @@ fun SleepDetailScreen(
 
                     val durationHours = if (uiState.session != null) {
                         val durationMs = uiState.session.endTime - uiState.session.startTime
-                        durationMs / (1000f * 60 * 60)
+                        durationMs / MS_PER_HOUR
                     } else {
                         0f
                     }

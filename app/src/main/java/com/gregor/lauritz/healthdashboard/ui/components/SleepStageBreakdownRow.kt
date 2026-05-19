@@ -42,12 +42,10 @@ fun SleepStageBreakdownRow(
 
         val hours = durationMinutes / 60
         val minutes = durationMinutes % 60
-        val hoursStr = stringResource(R.string.time_unit_hours)
-        val minutesStr = stringResource(R.string.time_unit_minutes)
         val durationText = if (hours > 0) {
-            "$hours$hoursStr " + (if (minutes > 0) "$minutes$minutesStr" else "")
+            stringResource(R.string.sleep_duration_hours_minutes, hours, minutes)
         } else {
-            "$minutes$minutesStr"
+            stringResource(R.string.sleep_duration_minutes_only, minutes)
         }
 
         Text(

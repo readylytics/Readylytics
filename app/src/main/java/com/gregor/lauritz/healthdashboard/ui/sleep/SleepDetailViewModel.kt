@@ -20,6 +20,13 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 
+private data class PercentagesTriple(
+    val deepSleepPercent: Float,
+    val remSleepPercent: Float,
+    val lightSleepPercent: Float,
+    val awakePercent: Float,
+)
+
 data class SleepDetailUiState(
     val session: SleepSessionEntity? = null,
     val deepSleepPercent: Float = 0f,
@@ -52,33 +59,25 @@ class SleepDetailViewModel
                                 it.deepSleepMinutes + it.remSleepMinutes + it.lightSleepMinutes + it.awakeMinutes
                             } ?: 0
 
-                            val deepPercent = if (totalMinutes > 0) {
-                                session!!.deepSleepMinutes.toFloat() / totalMinutes * 100f
+                            val percentages = if (totalMinutes > 0 && session != null) {
+                                session.let {
+                                    PercentagesTriple(
+                                        deepSleepPercent = it.deepSleepMinutes.toFloat() / totalMinutes * 100f,
+                                        remSleepPercent = it.remSleepMinutes.toFloat() / totalMinutes * 100f,
+                                        lightSleepPercent = it.lightSleepMinutes.toFloat() / totalMinutes * 100f,
+                                        awakePercent = it.awakeMinutes.toFloat() / totalMinutes * 100f,
+                                    )
+                                }
                             } else {
-                                0f
-                            }
-                            val remPercent = if (totalMinutes > 0) {
-                                session!!.remSleepMinutes.toFloat() / totalMinutes * 100f
-                            } else {
-                                0f
-                            }
-                            val lightPercent = if (totalMinutes > 0) {
-                                session!!.lightSleepMinutes.toFloat() / totalMinutes * 100f
-                            } else {
-                                0f
-                            }
-                            val awakePercent = if (totalMinutes > 0) {
-                                session!!.awakeMinutes.toFloat() / totalMinutes * 100f
-                            } else {
-                                0f
+                                PercentagesTriple(0f, 0f, 0f, 0f)
                             }
 
                             SleepDetailUiState(
                                 session = session,
-                                deepSleepPercent = deepPercent,
-                                remSleepPercent = remPercent,
-                                lightSleepPercent = lightPercent,
-                                awakePercent = awakePercent,
+                                deepSleepPercent = percentages.deepSleepPercent,
+                                remSleepPercent = percentages.remSleepPercent,
+                                lightSleepPercent = percentages.lightSleepPercent,
+                                awakePercent = percentages.awakePercent,
                                 sleepScore = session?.sleepScore,
                                 typicalRanges = SleepTypicalRanges.DEFAULT,
                                 selectedDate = date,
