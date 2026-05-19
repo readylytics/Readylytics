@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
@@ -22,7 +23,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-enum class SleepStage(val label: String) {
+enum class SleepStage(
+    val label: String,
+) {
     DEEP("Deep"),
     LIGHT("Light"),
     REM("REM"),
@@ -32,8 +35,8 @@ enum class SleepStage(val label: String) {
 @Composable
 fun SleepStagesChart(
     session: SleepSessionEntity?,
-    stageTimeline: List<SleepStageData> = emptyList(),
     modifier: Modifier = Modifier,
+    stageTimeline: List<SleepStageData> = emptyList(),
 ) {
     if (session == null) {
         CalibrationBar(
@@ -51,8 +54,10 @@ fun SleepStagesChart(
     val awakeColor = colorScheme.error
 
     Column(modifier = modifier) {
-        val timeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-            .withZone(ZoneId.systemDefault())
+        val timeFormatter =
+            DateTimeFormatter
+                .ofLocalizedTime(FormatStyle.SHORT)
+                .withZone(ZoneId.systemDefault())
         val startInstant = Instant.ofEpochMilli(session.startTime)
         val startLabel = timeFormatter.format(startInstant)
         val endInstant = Instant.ofEpochMilli(session.endTime)
@@ -76,12 +81,13 @@ fun SleepStagesChart(
             val bandHeight = chartHeight / 4f
             val bandGap = 8.dp.toPx()
 
-            val stages = listOf(
-                Triple(SleepStage.DEEP, deepColor),
-                Triple(SleepStage.LIGHT, lightColor),
-                Triple(SleepStage.REM, remColor),
-                Triple(SleepStage.AWAKE, awakeColor),
-            )
+            val stages: List<Pair<SleepStage, Color>> =
+                listOf(
+                    Pair(SleepStage.DEEP, deepColor),
+                    Pair(SleepStage.LIGHT, lightColor),
+                    Pair(SleepStage.REM, remColor),
+                    Pair(SleepStage.AWAKE, awakeColor),
+                )
 
             stages.forEachIndexed { index, (stage, color) ->
                 val yOffset = index * (bandHeight + bandGap)

@@ -47,8 +47,8 @@ object SleepDataMapper {
         )
     }
 
-    fun mapSleepSessionStages(session: SleepSessionRecord): List<SleepStageEntity> {
-        return session.stages.map { stage ->
+    fun mapSleepSessionStages(session: SleepSessionRecord): List<SleepStageEntity> =
+        session.stages.map { stage ->
             val durationMin =
                 ((stage.endTime.toEpochMilli() - stage.startTime.toEpochMilli()) / 60_000L)
                     .toInt()
@@ -72,5 +72,4 @@ object SleepDataMapper {
                 durationMinutes = durationMin,
             )
         }
-    }
 }

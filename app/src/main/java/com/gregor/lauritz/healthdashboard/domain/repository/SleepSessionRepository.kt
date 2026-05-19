@@ -21,9 +21,7 @@ data class SleepStageData(
     val endTime: Long,
     val durationMinutes: Int,
 ) {
-    fun getStartOffsetMinutes(sessionStartTime: Long): Int {
-        return ((startTime - sessionStartTime) / 60_000L).toInt()
-    }
+    fun getStartOffsetMinutes(sessionStartTime: Long): Int = ((startTime - sessionStartTime) / 60_000L).toInt()
 }
 
 interface SleepSessionRepository {

@@ -64,20 +64,26 @@ class SleepDetailViewModel
                                 kotlinx.coroutines.flow.flowOf(
                                     SleepDetailUiState(
                                         selectedDate = date,
-                                    )
+                                    ),
                                 )
                             } else {
-                                sleepSessionRepository.observeSessionStages(session.id)
+                                sleepSessionRepository
+                                    .observeSessionStages(session.id)
                                     .map { stages ->
                                         val totalMinutes =
-                                            session.deepSleepMinutes + session.remSleepMinutes + session.lightSleepMinutes + session.awakeMinutes
+                                            session.deepSleepMinutes + session.remSleepMinutes +
+                                                session.lightSleepMinutes +
+                                                session.awakeMinutes
 
                                         val percentages =
                                             if (totalMinutes > 0) {
                                                 PercentagesTriple(
-                                                    deepSleepPercent = session.deepSleepMinutes.toFloat() / totalMinutes * 100f,
-                                                    remSleepPercent = session.remSleepMinutes.toFloat() / totalMinutes * 100f,
-                                                    lightSleepPercent = session.lightSleepMinutes.toFloat() / totalMinutes * 100f,
+                                                    deepSleepPercent =
+                                                        session.deepSleepMinutes.toFloat() / totalMinutes * 100f,
+                                                    remSleepPercent =
+                                                        session.remSleepMinutes.toFloat() / totalMinutes * 100f,
+                                                    lightSleepPercent =
+                                                        session.lightSleepMinutes.toFloat() / totalMinutes * 100f,
                                                     awakePercent = session.awakeMinutes.toFloat() / totalMinutes * 100f,
                                                 )
                                             } else {
