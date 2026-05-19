@@ -469,6 +469,7 @@ object DatabaseMigrations {
                     )
                     """.trimIndent(),
                     "CREATE INDEX IF NOT EXISTS `index_sleep_stages_sessionId` ON `sleep_stages` (`sessionId`)",
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_sleep_stages_sessionId_startTime` ON `sleep_stages` (`sessionId`, `startTime`)",
                 )
 
             override fun migrate(db: SupportSQLiteDatabase) {

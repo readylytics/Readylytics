@@ -15,7 +15,10 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index(value = ["sessionId"])],
+    indices = [
+        Index(value = ["sessionId"]),
+        Index(value = ["sessionId", "startTime"], unique = true),
+    ],
 )
 data class SleepStageEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
