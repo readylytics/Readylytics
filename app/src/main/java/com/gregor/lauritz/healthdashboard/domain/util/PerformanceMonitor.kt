@@ -46,7 +46,8 @@ object PerformanceMonitor {
         return result!!
     }
 
-    private fun logDuration(
+    @PublishedApi
+    internal fun logDuration(
         operationName: String,
         durationMs: Long,
     ) {

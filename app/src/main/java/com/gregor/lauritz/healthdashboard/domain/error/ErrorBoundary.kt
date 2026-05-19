@@ -74,7 +74,7 @@ sealed interface RecoveryStrategy<T> {
         val delayMs: Long = 100,
     ) : RecoveryStrategy<T>
 
-    data class ReturnNull<T> : RecoveryStrategy<T>
+    class ReturnNull<T> : RecoveryStrategy<T>
 }
 
 /**
