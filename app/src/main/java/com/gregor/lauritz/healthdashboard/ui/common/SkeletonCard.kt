@@ -51,7 +51,7 @@ fun SkeletonCard(
     height: Dp = 140.dp,
 ) {
     Card(
-        modifier = modifier.height(height),
+        modifier = modifier.fillMaxWidth().height(height),
         shape = RoundedCornerShape(16.dp),
         colors =
             CardDefaults.cardColors(
@@ -81,7 +81,7 @@ fun MetricCardSkeleton(
     height: Dp = 140.dp,
 ) {
     Card(
-        modifier = modifier.height(height),
+        modifier = modifier.fillMaxWidth().height(height),
         shape = RoundedCornerShape(16.dp),
         colors =
             CardDefaults.cardColors(
@@ -131,7 +131,7 @@ fun ScoreDialSkeleton(
     height: Dp = 140.dp,
 ) {
     Card(
-        modifier = modifier.height(height),
+        modifier = modifier.fillMaxWidth().height(height),
         shape = RoundedCornerShape(16.dp),
         colors =
             CardDefaults.cardColors(
