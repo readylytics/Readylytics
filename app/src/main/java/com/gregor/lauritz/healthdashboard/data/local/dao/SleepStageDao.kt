@@ -16,4 +16,7 @@ interface SleepStageDao {
 
     @Query("DELETE FROM sleep_stages WHERE sessionId = :sessionId")
     suspend fun deleteForSession(sessionId: String): Int
+
+    @Query("DELETE FROM sleep_stages WHERE sessionId IN (:sessionIds)")
+    suspend fun deleteForSessions(sessionIds: List<String>): Int
 }

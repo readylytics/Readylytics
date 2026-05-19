@@ -136,9 +136,7 @@ class HealthSyncUseCase
                             }
 
                         // DELETE OLD STAGES BEFORE UPSERT (prevents stale stage accumulation)
-                        for (session in filteredSleep) {
-                            sleepStageDao.deleteForSession(session.id)
-                        }
+                        sleepStageDao.deleteForSessions(filteredSleep.map { it.id })
 
                         sleepStageDao.upsertAll(filteredStages)
                         workoutDao.upsertAll(filteredWorkouts)

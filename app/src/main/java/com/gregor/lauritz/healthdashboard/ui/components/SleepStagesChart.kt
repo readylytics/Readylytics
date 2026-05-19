@@ -17,20 +17,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.domain.model.SleepStage
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-
-enum class SleepStage(
-    val label: String,
-) {
-    DEEP("Deep"),
-    LIGHT("Light"),
-    REM("REM"),
-    AWAKE("Awake"),
-}
 
 @Composable
 fun SleepStagesChart(

@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.data.healthconnect
 import androidx.health.connect.client.records.SleepSessionRecord
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepStageEntity
+import com.gregor.lauritz.healthdashboard.domain.model.SleepStageType
 import kotlin.math.max
 
 object SleepDataMapper {
@@ -54,15 +55,15 @@ object SleepDataMapper {
                     .toInt()
             val stageType =
                 when (stage.stage) {
-                    SleepSessionRecord.STAGE_TYPE_DEEP -> "DEEP"
-                    SleepSessionRecord.STAGE_TYPE_REM -> "REM"
+                    SleepSessionRecord.STAGE_TYPE_DEEP -> SleepStageType.DEEP.value
+                    SleepSessionRecord.STAGE_TYPE_REM -> SleepStageType.REM.value
                     SleepSessionRecord.STAGE_TYPE_LIGHT,
                     SleepSessionRecord.STAGE_TYPE_SLEEPING,
-                    -> "LIGHT"
+                    -> SleepStageType.LIGHT.value
                     SleepSessionRecord.STAGE_TYPE_AWAKE,
                     SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED,
-                    -> "AWAKE"
-                    else -> "UNKNOWN"
+                    -> SleepStageType.AWAKE.value
+                    else -> SleepStageType.UNKNOWN.value
                 }
             SleepStageEntity(
                 sessionId = session.metadata.id,
