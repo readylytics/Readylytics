@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.sleep
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
+import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.SleepTypicalRanges
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +19,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 
 data class SleepDetailUiState(
     val session: SleepSessionEntity? = null,
