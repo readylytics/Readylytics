@@ -1,7 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
-import org.junit.Test
 import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class ReorderableCardGridThresholdTest {
     companion object {

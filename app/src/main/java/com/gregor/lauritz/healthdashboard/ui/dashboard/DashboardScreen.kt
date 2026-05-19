@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -118,115 +119,116 @@ fun DashboardScreen(
             modifier = Modifier.fillMaxSize().testTag("dashboard_lazy_column"),
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
-                item(key = "date_switcher") {
-                    Column(
+            item(key = "date_switcher") {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                ) {
+                    DateSwitcher(
+                        selectedDate = uiState.selectedDate,
+                        onPreviousDay = onPreviousDay,
+                        onNextDay = onNextDay,
+                        today = today,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            if (uiState.isCalibrating) {
+                item(key = "calibration_banner") {
+                    CalibrationBanner(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
+            }
+
+            if (summary == null && !uiState.isComputingMetrics && (uiState.selectedDate < today)) {
+                item(key = "no_data_placeholder") {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        DateSwitcher(
-                            selectedDate = uiState.selectedDate,
-                            onPreviousDay = onPreviousDay,
-                            onNextDay = onNextDay,
-                            today = today,
-                            modifier = Modifier.fillMaxWidth(),
+                        Text(
+                            text = stringResource(R.string.dashboard_no_data),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
-
-                if (uiState.isCalibrating) {
-                    item(key = "calibration_banner") {
-                        CalibrationBanner(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                        )
-                    }
+            } else {
+                item(key = "metric_grid") {
+                    ReorderableCardGrid(
+                        cardConfigurations = uiState.cardConfigurations,
+                        cardDataMap =
+                            buildCardDataMap(
+                                uiState = uiState,
+                                onNavigateToSleep = onNavigateToSleep,
+                                onNavigateToWorkouts = onNavigateToWorkouts,
+                                onNavigateToRhr = onNavigateToRhr,
+                                onNavigateToSteps = onNavigateToSteps,
+                                isEditing = uiState.isManagingCards,
+                                isLoading = uiState.isComputingMetrics,
+                            ),
+                        isEditing = uiState.isManagingCards,
+                        onCardRemove = { cardId ->
+                            onCardVisibilityChanged(cardId, false)
+                        },
+                        onCardReorder = onReorderCards,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
                 }
+            }
 
-                if (summary == null && !uiState.isComputingMetrics && (uiState.selectedDate < today)) {
-                    item(key = "no_data_placeholder") {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 48.dp),
-                            contentAlignment = Alignment.Center,
+            item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(16.dp)) }
+
+            item(key = "status_legend") {
+                StatusLegend()
+            }
+
+            if (!uiState.isManagingCards) {
+                item(key = "customize_button") {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TextButton(
+                            onClick = {
+                                showCardManagement = true
+                                onToggleCardManagement()
+                            },
                         ) {
                             Text(
-                                text = stringResource(R.string.dashboard_no_data),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                text = stringResource(R.string.action_customize),
+                                style = MaterialTheme.typography.labelLarge,
                             )
                         }
                     }
-                } else {
-                    item(key = "metric_grid") {
-                        ReorderableCardGrid(
-                            cardConfigurations = uiState.cardConfigurations,
-                            cardDataMap =
-                                buildCardDataMap(
-                                    uiState = uiState,
-                                    onNavigateToSleep = onNavigateToSleep,
-                                    onNavigateToWorkouts = onNavigateToWorkouts,
-                                    onNavigateToRhr = onNavigateToRhr,
-                                    onNavigateToSteps = onNavigateToSteps,
-                                    isEditing = uiState.isManagingCards,
-                                    isLoading = uiState.isComputingMetrics,
-                                ),
-                            isEditing = uiState.isManagingCards,
-                            onCardRemove = { cardId ->
-                                onCardVisibilityChanged(cardId, false)
-                            },
-                            onCardReorder = onReorderCards,
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                        )
-                    }
                 }
-
-                item(key = "spacer_bottom") { Spacer(modifier = Modifier.height(16.dp)) }
-
-                item(key = "status_legend") {
-                    StatusLegend()
-                }
-
-                if (!uiState.isManagingCards) {
-                    item(key = "customize_button") {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            TextButton(
-                                onClick = {
-                                    showCardManagement = true
-                                    onToggleCardManagement()
-                                },
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.action_customize),
-                                    style = MaterialTheme.typography.labelLarge,
-                                )
-                            }
-                        }
-                    }
             }
         }
 
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(
-                    start = 16.dp,
-                    end = 16.dp,
-                    top = 16.dp,
-                    bottom = if (uiState.isManagingCards) 88.dp else 16.dp,
-                ),
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 16.dp,
+                        bottom = if (uiState.isManagingCards) 88.dp else 16.dp,
+                    ),
             snackbar = { data ->
                 Snackbar(
                     data,

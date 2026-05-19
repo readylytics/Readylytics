@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -143,7 +144,7 @@ fun ReorderableCardGrid(
 
             if (card.cardId in FULL_WIDTH_CARDS) {
                 // Full-width card
-                renderCardItem(
+                RenderCardItem(
                     card = card,
                     linearIndex = cardIndex,
                     cardDataMap = cardDataMap,
@@ -163,7 +164,7 @@ fun ReorderableCardGrid(
                 ) {
                     if (cardIndex < displayableCards.size) {
                         Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                            renderCardItem(
+                            RenderCardItem(
                                 card = displayableCards[cardIndex],
                                 linearIndex = cardIndex,
                                 cardDataMap = cardDataMap,
@@ -180,7 +181,7 @@ fun ReorderableCardGrid(
 
                     if (cardIndex < displayableCards.size && displayableCards[cardIndex].cardId !in FULL_WIDTH_CARDS) {
                         Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                            renderCardItem(
+                            RenderCardItem(
                                 card = displayableCards[cardIndex],
                                 linearIndex = cardIndex,
                                 cardDataMap = cardDataMap,
@@ -250,7 +251,7 @@ fun ReorderableCardGrid(
 }
 
 @Composable
-private fun renderCardItem(
+private fun RenderCardItem(
     card: CardConfiguration,
     linearIndex: Int,
     cardDataMap: Map<CardId, @Composable () -> Unit>,
@@ -367,9 +368,9 @@ private fun ReorderableCardItem(
     onDragEnd: () -> Unit,
     onDrag: (Float, Float) -> Unit,
     onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
     onHeightChanged: (Int) -> Unit = {},
     onGlobalPositionChanged: (Float) -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     var currentDragOffset by remember { mutableStateOf(IntOffset.Zero) }
 
@@ -378,11 +379,9 @@ private fun ReorderableCardItem(
             modifier
                 .onSizeChanged { size ->
                     onHeightChanged(size.height)
-                }
-                .onGloballyPositioned { coordinates ->
+                }.onGloballyPositioned { coordinates ->
                     onGlobalPositionChanged(coordinates.positionInWindow().y)
-                }
-                .then(
+                }.then(
                     if (isDragged) {
                         Modifier
                             .offset { currentDragOffset }

@@ -4,7 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -41,7 +41,7 @@ fun EditModeFab(
             onClick = onDoneClick,
             icon = {
                 Icon(
-                    imageVector = Icons.Filled.Close,
+                    imageVector = Icons.Filled.Check,
                     contentDescription = stringResource(R.string.action_done_editing),
                 )
             },
