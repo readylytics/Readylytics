@@ -14,15 +14,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +28,7 @@ import androidx.lifecycle.viewmodel.compose.hiltViewModel
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.ui.components.SleepStageBreakdownRow
 import com.gregor.lauritz.healthdashboard.ui.components.SleepStagesChart
+import androidx.compose.material3.ExperimentalMaterial3Api
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -51,20 +48,13 @@ fun SleepDetailRoute(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SleepDetailScreen(
     uiState: SleepDetailUiState,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val timeRanges = listOf(
-        stringResource(R.string.time_range_day),
-        stringResource(R.string.time_range_week),
-        stringResource(R.string.time_range_month),
-        stringResource(R.string.time_range_year),
-    )
-
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -84,41 +74,11 @@ fun SleepDetailScreen(
         },
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier
+            modifier =
+            Modifier
                 .padding(paddingValues)
                 .fillMaxWidth(),
         ) {
-            item {
-                TabRow(
-                    selectedTabIndex = selectedTabIndex,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    divider = {},
-                ) {
-                    timeRanges.forEachIndexed { index, range ->
-                        Tab(
-                            selected = selectedTabIndex == index,
-                            onClick = { selectedTabIndex = index },
-                            text = {
-                                Text(
-                                    range,
-                                    color = if (selectedTabIndex == index) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                )
-                            },
-                        )
-                    }
-                }
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Row(
@@ -139,20 +99,24 @@ fun SleepDetailScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    val timeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-                        .withZone(ZoneId.systemDefault())
-
-                    val startTimeStr = if (uiState.session != null) {
-                        timeFormatter.format(Instant.ofEpochMilli(uiState.session.startTime))
-                    } else {
-                        "--:-- --"
+                    val timeFormatter = remember {
+                        DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                            .withZone(ZoneId.systemDefault())
                     }
 
-                    val endTimeStr = if (uiState.session != null) {
-                        timeFormatter.format(Instant.ofEpochMilli(uiState.session.endTime))
-                    } else {
-                        "--:-- --"
-                    }
+                    val startTimeStr =
+                        if (uiState.session != null) {
+                            timeFormatter.format(Instant.ofEpochMilli(uiState.session.startTime))
+                        } else {
+                            "--:-- --"
+                        }
+
+                    val endTimeStr =
+                        if (uiState.session != null) {
+                            timeFormatter.format(Instant.ofEpochMilli(uiState.session.endTime))
+                        } else {
+                            "--:-- --"
+                        }
 
                     Text(
                         "$startTimeStr – $endTimeStr",
@@ -162,12 +126,13 @@ fun SleepDetailScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    val durationHours = if (uiState.session != null) {
-                        val durationMs = uiState.session.endTime - uiState.session.startTime
-                        durationMs / MS_PER_HOUR
-                    } else {
-                        0f
-                    }
+                    val durationHours =
+                        if (uiState.session != null) {
+                            val durationMs = uiState.session.endTime - uiState.session.startTime
+                            durationMs / MS_PER_HOUR
+                        } else {
+                            0f
+                        }
 
                     Text(
                         stringResource(R.string.sleep_duration_format, durationHours),
@@ -184,7 +149,8 @@ fun SleepDetailScreen(
             item {
                 SleepStagesChart(
                     session = uiState.session,
-                    modifier = Modifier
+                    modifier =
+                    Modifier
                         .fillMaxWidth()
                         .padding(vertical = 16.dp),
                 )
@@ -206,28 +172,29 @@ fun SleepDetailScreen(
 
             item {
                 val colorScheme = MaterialTheme.colorScheme
-                val stages = listOf(
-                    Triple(
-                        stringResource(R.string.sleep_stage_awake),
-                        uiState.session?.awakeMinutes ?: 0,
-                        colorScheme.error,
-                    ),
-                    Triple(
-                        stringResource(R.string.sleep_stage_rem),
-                        uiState.session?.remSleepMinutes ?: 0,
-                        colorScheme.tertiary,
-                    ),
-                    Triple(
-                        stringResource(R.string.sleep_stage_light),
-                        uiState.session?.lightSleepMinutes ?: 0,
-                        colorScheme.tertiary.copy(alpha = 0.6f),
-                    ),
-                    Triple(
-                        stringResource(R.string.sleep_stage_deep),
-                        uiState.session?.deepSleepMinutes ?: 0,
-                        colorScheme.primary,
-                    ),
-                )
+                val stages =
+                    listOf(
+                        Triple(
+                            stringResource(R.string.sleep_stage_awake),
+                            uiState.session?.awakeMinutes ?: 0,
+                            colorScheme.error,
+                        ),
+                        Triple(
+                            stringResource(R.string.sleep_stage_rem),
+                            uiState.session?.remSleepMinutes ?: 0,
+                            colorScheme.tertiary,
+                        ),
+                        Triple(
+                            stringResource(R.string.sleep_stage_light),
+                            uiState.session?.lightSleepMinutes ?: 0,
+                            colorScheme.tertiary.copy(alpha = 0.6f),
+                        ),
+                        Triple(
+                            stringResource(R.string.sleep_stage_deep),
+                            uiState.session?.deepSleepMinutes ?: 0,
+                            colorScheme.primary,
+                        ),
+                    )
 
                 Column {
                     stages.forEach { (stageName, minutes, color) ->

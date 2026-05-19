@@ -141,10 +141,6 @@
     <string name="sleep_duration_format">Your sleep duration: %.1f hours</string>
     <string name="sleep_duration_hours_minutes">%1$dh %2$dm</string>
     <string name="sleep_duration_minutes_only">%1$dm</string>
-    <string name="time_range_day">Day</string>
-    <string name="time_range_week">Week</string>
-    <string name="time_range_month">Month</string>
-    <string name="time_range_year">Year</string>
     <string name="sleep_timeline_title">Sleep timeline</string>
     <string name="sleep_timeline_learn_more">Learn more</string>
     <string name="sleep_breakdown_title">Sleep Breakdown</string>
