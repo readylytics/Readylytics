@@ -27,26 +27,29 @@ fun SleepStageBreakdownRow(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp, horizontal = 16.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(8.dp)
-                .background(color = color, shape = CircleShape),
+            modifier =
+                Modifier
+                    .size(8.dp)
+                    .background(color = color, shape = CircleShape),
         )
 
         Spacer(modifier = Modifier.width(8.dp))
 
         val hours = durationMinutes / 60
         val minutes = durationMinutes % 60
-        val durationText = if (hours > 0) {
-            stringResource(R.string.sleep_duration_hours_minutes, hours, minutes)
-        } else {
-            stringResource(R.string.sleep_duration_minutes_only, minutes)
-        }
+        val durationText =
+            if (hours > 0) {
+                stringResource(R.string.sleep_duration_hours_minutes, hours, minutes)
+            } else {
+                stringResource(R.string.sleep_duration_minutes_only, minutes)
+            }
 
         Text(
             text = stringResource(R.string.sleep_breakdown_row_format, stageName, durationText),

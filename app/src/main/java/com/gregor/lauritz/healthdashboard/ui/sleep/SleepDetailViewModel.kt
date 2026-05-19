@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -53,24 +52,27 @@ class SleepDetailViewModel
                     val startDayMs = startDateTime.toInstant().toEpochMilli()
                     val endDayMs = startDateTime.plusDays(1).toInstant().toEpochMilli()
 
-                    sleepSessionDao.observeFirstSessionEndingInRange(startDayMs, endDayMs)
+                    sleepSessionDao
+                        .observeFirstSessionEndingInRange(startDayMs, endDayMs)
                         .map { session ->
-                            val totalMinutes = session?.let {
-                                it.deepSleepMinutes + it.remSleepMinutes + it.lightSleepMinutes + it.awakeMinutes
-                            } ?: 0
+                            val totalMinutes =
+                                session?.let {
+                                    it.deepSleepMinutes + it.remSleepMinutes + it.lightSleepMinutes + it.awakeMinutes
+                                } ?: 0
 
-                            val percentages = if (totalMinutes > 0 && session != null) {
-                                session.let {
-                                    PercentagesTriple(
-                                        deepSleepPercent = it.deepSleepMinutes.toFloat() / totalMinutes * 100f,
-                                        remSleepPercent = it.remSleepMinutes.toFloat() / totalMinutes * 100f,
-                                        lightSleepPercent = it.lightSleepMinutes.toFloat() / totalMinutes * 100f,
-                                        awakePercent = it.awakeMinutes.toFloat() / totalMinutes * 100f,
-                                    )
+                            val percentages =
+                                if (totalMinutes > 0 && session != null) {
+                                    session.let {
+                                        PercentagesTriple(
+                                            deepSleepPercent = it.deepSleepMinutes.toFloat() / totalMinutes * 100f,
+                                            remSleepPercent = it.remSleepMinutes.toFloat() / totalMinutes * 100f,
+                                            lightSleepPercent = it.lightSleepMinutes.toFloat() / totalMinutes * 100f,
+                                            awakePercent = it.awakeMinutes.toFloat() / totalMinutes * 100f,
+                                        )
+                                    }
+                                } else {
+                                    PercentagesTriple(0f, 0f, 0f, 0f)
                                 }
-                            } else {
-                                PercentagesTriple(0f, 0f, 0f, 0f)
-                            }
 
                             SleepDetailUiState(
                                 session = session,
@@ -83,8 +85,7 @@ class SleepDetailViewModel
                                 selectedDate = date,
                             )
                         }
-                }
-                .flowOn(Dispatchers.Default)
+                }.flowOn(Dispatchers.Default)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),

@@ -129,7 +129,7 @@ fun SleepArchitectureBar(
 }
 
 @Composable
-private fun CalibrationBar(
+internal fun CalibrationBar(
     modifier: Modifier = Modifier,
     color: Color,
     onSurfaceVariant: Color,

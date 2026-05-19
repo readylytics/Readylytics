@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,12 +24,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.hiltViewModel
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.ui.components.SleepStageBreakdownRow
 import com.gregor.lauritz.healthdashboard.ui.components.SleepStagesChart
-import androidx.compose.material3.ExperimentalMaterial3Api
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -75,9 +75,9 @@ fun SleepDetailScreen(
     ) { paddingValues ->
         LazyColumn(
             modifier =
-            Modifier
-                .padding(paddingValues)
-                .fillMaxWidth(),
+                Modifier
+                    .padding(paddingValues)
+                    .fillMaxWidth(),
         ) {
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
@@ -99,10 +99,12 @@ fun SleepDetailScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    val timeFormatter = remember {
-                        DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-                            .withZone(ZoneId.systemDefault())
-                    }
+                    val timeFormatter =
+                        remember {
+                            DateTimeFormatter
+                                .ofLocalizedTime(FormatStyle.SHORT)
+                                .withZone(ZoneId.systemDefault())
+                        }
 
                     val startTimeStr =
                         if (uiState.session != null) {
@@ -150,9 +152,9 @@ fun SleepDetailScreen(
                 SleepStagesChart(
                     session = uiState.session,
                     modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
                 )
             }
 

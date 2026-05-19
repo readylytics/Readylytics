@@ -175,12 +175,12 @@ fun SleepScreen(
                     } ?: "—"
                 Card(
                     modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clickable(enabled = onNavigateToDetail != null) {
-                            onNavigateToDetail?.invoke()
-                        },
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .clickable(enabled = onNavigateToDetail != null) {
+                                onNavigateToDetail?.invoke()
+                            },
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
