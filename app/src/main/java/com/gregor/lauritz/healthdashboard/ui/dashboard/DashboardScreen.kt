@@ -1,5 +1,8 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -108,7 +111,11 @@ fun DashboardScreen(
     Scaffold(
         modifier = modifier,
         floatingActionButton = {
-            if (uiState.isManagingCards) {
+            AnimatedVisibility(
+                visible = uiState.isManagingCards,
+                enter = slideInVertically { it },
+                exit = slideOutVertically { it },
+            ) {
                 ExtendedFloatingActionButton(
                     onClick = {
                         onToggleCardManagement()
