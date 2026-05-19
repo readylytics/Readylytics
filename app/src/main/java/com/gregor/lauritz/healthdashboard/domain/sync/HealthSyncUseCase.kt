@@ -130,13 +130,15 @@ class HealthSyncUseCase
                         val allStages = sleepSessions.flatMap { SleepDataMapper.mapSleepSessionStages(it) }
 
                         // FILTER STAGES TO MATCH DEVICE-FILTERED SESSIONS (prevents orphaned stages)
+                        // Use Set for O(1) lookup instead of O(N) linear search (improves O(N×M) to O(N))
+                        val filteredSessionIds = filteredSleep.map { it.id }.toSet()
                         val filteredStages =
                             allStages.filter { stage ->
-                                filteredSleep.any { it.id == stage.sessionId }
+                                stage.sessionId in filteredSessionIds
                             }
 
                         // DELETE OLD STAGES BEFORE UPSERT (prevents stale stage accumulation)
-                        sleepStageDao.deleteForSessions(filteredSleep.map { it.id })
+                        sleepStageDao.deleteForSessions(filteredSessionIds.toList())
 
                         sleepStageDao.upsertAll(filteredStages)
                         workoutDao.upsertAll(filteredWorkouts)

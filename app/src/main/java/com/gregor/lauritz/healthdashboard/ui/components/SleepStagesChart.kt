@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -104,11 +105,17 @@ fun SleepStagesChart(
 
     Column(modifier = modifier) {
         val timeFormatter =
-            DateTimeFormatter
-                .ofLocalizedTime(FormatStyle.SHORT)
-                .withZone(ZoneId.systemDefault())
+            remember {
+                DateTimeFormatter
+                    .ofLocalizedTime(FormatStyle.SHORT)
+                    .withZone(ZoneId.systemDefault())
+            }
 
         val labelTimestamps = getLabelTimestamps(session.startTime, session.endTime)
+        val sortedTimeline = remember { stageTimeline.sortedBy { it.startTime } }
+        val allStages = remember { SleepStage.values() }
+        val sessionDurationMinutesFloat =
+            remember { (session.endTime - session.startTime) / 60_000.0 }
 
         Canvas(
             modifier =
@@ -139,9 +146,7 @@ fun SleepStagesChart(
             val bandGap = 8.dp.toPx()
             val bandHeight = (chartHeight - (3 * bandGap)) / 4f
 
-            val sessionDurationMinutes = sessionDurationMs / 60_000L
-
-            SleepStage.values().forEachIndexed { index, stage ->
+            allStages.forEachIndexed { index, stage ->
                 val yOffset = index * (bandHeight + bandGap)
                 val color = getStageColor(stage, colorScheme)
 
@@ -149,8 +154,8 @@ fun SleepStagesChart(
                     .filter { it.stageType == stage.type }
                     .forEach { stageData ->
                         val startOffset = stageData.getStartOffsetMinutes(session.startTime)
-                        val startX = (startOffset.toFloat() / sessionDurationMinutes) * chartWidth
-                        val width = (stageData.durationMinutes.toFloat() / sessionDurationMinutes) * chartWidth
+                        val startX = (startOffset.toFloat() / sessionDurationMinutesFloat.toFloat()) * chartWidth
+                        val width = (stageData.durationMinutes.toFloat() / sessionDurationMinutesFloat.toFloat()) * chartWidth
 
                         drawRect(
                             color = color,
@@ -161,9 +166,9 @@ fun SleepStagesChart(
             }
 
             // Draw connectors between consecutive stages
-            stageTimeline.sortedBy { it.startTime }.zipWithNext().forEach { (currentStage, nextStage) ->
-                val currentIndex = SleepStage.values().indexOfFirst { it.type == currentStage.stageType }
-                val nextIndex = SleepStage.values().indexOfFirst { it.type == nextStage.stageType }
+            sortedTimeline.zipWithNext().forEach { (currentStage, nextStage) ->
+                val currentIndex = allStages.indexOfFirst { it.type == currentStage.stageType }
+                val nextIndex = allStages.indexOfFirst { it.type == nextStage.stageType }
 
                 if (currentIndex >= 0 && nextIndex >= 0) {
                     val currentYCenter = (currentIndex) * (bandHeight + bandGap) + bandHeight / 2f
@@ -174,15 +179,15 @@ fun SleepStagesChart(
                             (
                                 currentStage.getStartOffsetMinutes(session.startTime) +
                                     currentStage.durationMinutes
-                            ).toFloat() / sessionDurationMinutes
+                            ).toFloat() / sessionDurationMinutesFloat.toFloat()
                         ) * chartWidth
                     val nextStartX =
                         (
                             nextStage.getStartOffsetMinutes(session.startTime).toFloat() /
-                                sessionDurationMinutes
+                                sessionDurationMinutesFloat.toFloat()
                         ) * chartWidth
 
-                    val nextStageColor = getStageColor(SleepStage.values()[nextIndex], colorScheme)
+                    val nextStageColor = getStageColor(allStages[nextIndex], colorScheme)
                     val connectorColor = nextStageColor.copy(alpha = 0.5f)
                     val connectorStroke = 2.dp.toPx()
 
