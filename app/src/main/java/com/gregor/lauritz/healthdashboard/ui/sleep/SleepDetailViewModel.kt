@@ -52,12 +52,33 @@ class SleepDetailViewModel
                                 it.deepSleepMinutes + it.remSleepMinutes + it.lightSleepMinutes + it.awakeMinutes
                             } ?: 0
 
+                            val deepPercent = if (totalMinutes > 0) {
+                                session!!.deepSleepMinutes.toFloat() / totalMinutes * 100f
+                            } else {
+                                0f
+                            }
+                            val remPercent = if (totalMinutes > 0) {
+                                session!!.remSleepMinutes.toFloat() / totalMinutes * 100f
+                            } else {
+                                0f
+                            }
+                            val lightPercent = if (totalMinutes > 0) {
+                                session!!.lightSleepMinutes.toFloat() / totalMinutes * 100f
+                            } else {
+                                0f
+                            }
+                            val awakePercent = if (totalMinutes > 0) {
+                                session!!.awakeMinutes.toFloat() / totalMinutes * 100f
+                            } else {
+                                0f
+                            }
+
                             SleepDetailUiState(
                                 session = session,
-                                deepSleepPercent = if (totalMinutes > 0) session!!.deepSleepMinutes.toFloat() / totalMinutes * 100f else 0f,
-                                remSleepPercent = if (totalMinutes > 0) session!!.remSleepMinutes.toFloat() / totalMinutes * 100f else 0f,
-                                lightSleepPercent = if (totalMinutes > 0) session!!.lightSleepMinutes.toFloat() / totalMinutes * 100f else 0f,
-                                awakePercent = if (totalMinutes > 0) session!!.awakeMinutes.toFloat() / totalMinutes * 100f else 0f,
+                                deepSleepPercent = deepPercent,
+                                remSleepPercent = remPercent,
+                                lightSleepPercent = lightPercent,
+                                awakePercent = awakePercent,
                                 sleepScore = session?.sleepScore,
                                 typicalRanges = SleepTypicalRanges.DEFAULT,
                                 selectedDate = date,

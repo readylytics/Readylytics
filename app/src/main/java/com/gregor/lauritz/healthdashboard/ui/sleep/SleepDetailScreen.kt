@@ -138,7 +138,8 @@ fun SleepDetailScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    val timeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault())
+                    val timeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                        .withZone(ZoneId.systemDefault())
 
                     val startTimeStr = if (uiState.session != null) {
                         timeFormatter.format(Instant.ofEpochMilli(uiState.session.startTime))
@@ -205,10 +206,26 @@ fun SleepDetailScreen(
             item {
                 val colorScheme = MaterialTheme.colorScheme
                 val stages = listOf(
-                    Triple(stringResource(R.string.sleep_stage_awake), uiState.session?.awakeMinutes ?: 0, colorScheme.error),
-                    Triple(stringResource(R.string.sleep_stage_rem), uiState.session?.remSleepMinutes ?: 0, colorScheme.tertiary),
-                    Triple(stringResource(R.string.sleep_stage_light), uiState.session?.lightSleepMinutes ?: 0, colorScheme.tertiary.copy(alpha = 0.6f)),
-                    Triple(stringResource(R.string.sleep_stage_deep), uiState.session?.deepSleepMinutes ?: 0, colorScheme.primary),
+                    Triple(
+                        stringResource(R.string.sleep_stage_awake),
+                        uiState.session?.awakeMinutes ?: 0,
+                        colorScheme.error,
+                    ),
+                    Triple(
+                        stringResource(R.string.sleep_stage_rem),
+                        uiState.session?.remSleepMinutes ?: 0,
+                        colorScheme.tertiary,
+                    ),
+                    Triple(
+                        stringResource(R.string.sleep_stage_light),
+                        uiState.session?.lightSleepMinutes ?: 0,
+                        colorScheme.tertiary.copy(alpha = 0.6f),
+                    ),
+                    Triple(
+                        stringResource(R.string.sleep_stage_deep),
+                        uiState.session?.deepSleepMinutes ?: 0,
+                        colorScheme.primary,
+                    ),
                 )
 
                 Column {
