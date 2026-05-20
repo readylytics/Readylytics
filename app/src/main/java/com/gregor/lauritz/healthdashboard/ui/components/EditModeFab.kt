@@ -54,8 +54,8 @@ fun EditModeFab(
         ) {
             SmallFloatingActionButton(
                 onClick = onCancelClick,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
             ) {
                 Icon(
                     imageVector = Icons.Filled.Close,
@@ -65,6 +65,8 @@ fun EditModeFab(
 
             ExtendedFloatingActionButton(
                 onClick = onDoneClick,
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                 icon = {
                     Icon(
                         imageVector = Icons.Filled.Check,

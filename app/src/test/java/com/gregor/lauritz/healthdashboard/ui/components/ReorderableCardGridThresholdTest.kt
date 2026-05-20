@@ -1,166 +1,85 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.ui.components.reorder.DragController
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
+/**
+ * Integration tests verifying that ReorderableCardGrid wires bounds → DragController
+ * → center-cross detection correctly.
+ *
+ * Detailed algorithm unit tests live in DragControllerTest. These tests focus on
+ * the integration contract: correct bounds registration leads to correct detection.
+ */
 class ReorderableCardGridThresholdTest {
-    companion object {
-        private const val DEFAULT_CARD_HEIGHT = 130
+    private lateinit var controller: DragController
+
+    @Before
+    fun setUp() {
+        controller = DragController(listOf(CardId.SLEEP_SCORE, CardId.HRV, CardId.STEPS))
+        // SLEEP_SCORE: y 0..150, HRV: y 150..300, STEPS: y 300..450
+        controller.updateSlotBounds(CardId.SLEEP_SCORE, Rect(0f, 0f, 200f, 150f))
+        controller.updateSlotBounds(CardId.HRV, Rect(0f, 150f, 200f, 300f))
+        controller.updateSlotBounds(CardId.STEPS, Rect(0f, 300f, 200f, 450f))
     }
 
-    // Test downThreshold calculation: (currentHeight + nextHeight) / 8
+    // draggedCenter inside neighbor bounds → reorder fires
     @Test
-    fun downThreshold_calculatesCorrectly_withEqualHeights() {
-        val currentHeight = 100
-        val nextHeight = 100
-        val expected = (currentHeight + nextHeight) / 8f
-        val actual = (currentHeight + nextHeight) / 8f
-        assertEquals(expected, actual, 0.1f)
+    fun centerCrossDetection_draggedCenterInBounds_reorderFires() {
+        // SLEEP_SCORE center starts at y=75 (midpoint of 0..150).
+        // Drag down 150px → center.y = 75 + 150 = 225, inside HRV (y 150..300).
+        controller.onDragStart(CardId.SLEEP_SCORE)
+        controller.onDrag(Offset(0f, 150f), deleteZoneTop = null)
+
+        val order = controller.pendingOrder
+        assertEquals(CardId.HRV, order[0])
+        assertEquals(CardId.SLEEP_SCORE, order[1])
     }
 
+    // draggedCenter outside all neighbor bounds → no reorder
     @Test
-    fun downThreshold_calculatesCorrectly_withDifferentHeights() {
-        val currentHeight = 100
-        val nextHeight = 150
-        val expected = (100 + 150) / 8f // 31.25
-        val actual = (currentHeight + nextHeight) / 8f
-        assertEquals(expected, actual, 0.1f)
+    fun centerCrossDetection_draggedCenterNotInBounds_noReorder() {
+        // SLEEP_SCORE center starts at y=75. Drag only 10px → center.y = 85, still inside SLEEP_SCORE (0..150).
+        controller.onDragStart(CardId.SLEEP_SCORE)
+        controller.onDrag(Offset(0f, 10f), deleteZoneTop = null)
+
+        assertEquals(
+            listOf(CardId.SLEEP_SCORE, CardId.HRV, CardId.STEPS),
+            controller.pendingOrder,
+        )
     }
 
+    // draggedCenter.y >= deleteZoneTop → hoveringDeleteZone becomes true
     @Test
-    fun downThreshold_usesDefaultForMissingHeight() {
-        val currentHeight = 100
-        val nextHeight = DEFAULT_CARD_HEIGHT // Use default
-        val expected = (100 + DEFAULT_CARD_HEIGHT) / 8f
-        val actual = (currentHeight + nextHeight) / 8f
-        assertEquals(expected, actual, 0.1f)
+    fun deleteZoneDetection_draggedCenterCrossesZoneTop_hoveringTrue() {
+        // SLEEP_SCORE center starts at y=75; deleteZoneTop=200.
+        // Drag down 130px → center.y = 75 + 130 = 205 >= 200.
+        controller.onDragStart(CardId.SLEEP_SCORE)
+        controller.onDrag(Offset(0f, 130f), deleteZoneTop = 200f)
+
+        assertTrue(controller.hoveringDeleteZone)
     }
 
-    // Test upThreshold calculation: (currentHeight + prevHeight) / 8
+    // Asymmetric card heights: center-cross detection still picks the correct neighbor
     @Test
-    fun upThreshold_calculatesCorrectly_withEqualHeights() {
-        val currentHeight = 100
-        val prevHeight = 100
-        val expected = (currentHeight + prevHeight) / 8f
-        val actual = (currentHeight + prevHeight) / 8f
-        assertEquals(expected, actual, 0.1f)
-    }
+    fun centerCrossDetection_asymmetricHeights_stillDetectsCorrectly() {
+        // Asymmetric heights: SLEEP_SCORE 0..200, HRV 200..280, STEPS 280..400
+        val ctrl = DragController(listOf(CardId.SLEEP_SCORE, CardId.HRV, CardId.STEPS))
+        ctrl.updateSlotBounds(CardId.SLEEP_SCORE, Rect(0f, 0f, 200f, 200f))
+        ctrl.updateSlotBounds(CardId.HRV, Rect(0f, 200f, 200f, 280f))
+        ctrl.updateSlotBounds(CardId.STEPS, Rect(0f, 280f, 200f, 400f))
 
-    @Test
-    fun upThreshold_calculatesCorrectly_withDifferentHeights() {
-        val currentHeight = 150
-        val prevHeight = 100
-        val expected = (150 + 100) / 8f // 31.25
-        val actual = (currentHeight + prevHeight) / 8f
-        assertEquals(expected, actual, 0.1f)
-    }
+        // SLEEP_SCORE center = y 100. Drag down 150px → center.y = 250, inside HRV (200..280).
+        ctrl.onDragStart(CardId.SLEEP_SCORE)
+        ctrl.onDrag(Offset(0f, 150f), deleteZoneTop = null)
 
-    @Test
-    fun upThreshold_usesDefaultForMissingHeight() {
-        val currentHeight = 100
-        val prevHeight = DEFAULT_CARD_HEIGHT // Use default
-        val expected = (100 + DEFAULT_CARD_HEIGHT) / 8f
-        val actual = (currentHeight + prevHeight) / 8f
-        assertEquals(expected, actual, 0.1f)
-    }
-
-    // Test boundary conditions
-    @Test
-    fun downThreshold_atBoundary_dragOffsetEqualsThreshold() {
-        val currentHeight = 100
-        val nextHeight = 100
-        val dragOffset = (currentHeight + nextHeight) / 8f // Exactly at threshold
-
-        // At threshold, swap should NOT trigger (requires > threshold)
-        val shouldSwap = dragOffset > (currentHeight + nextHeight) / 8f
-        assertEquals(false, shouldSwap)
-    }
-
-    @Test
-    fun downThreshold_pastBoundary_dragOffsetExceedsThreshold() {
-        val currentHeight = 100
-        val nextHeight = 100
-        val threshold = (currentHeight + nextHeight) / 8f
-        val dragOffset = threshold + 1f
-
-        // Past threshold, swap should trigger
-        val shouldSwap = dragOffset > threshold
-        assertEquals(true, shouldSwap)
-    }
-
-    @Test
-    fun upThreshold_atBoundary_dragOffsetEqualsThreshold() {
-        val currentHeight = 100
-        val prevHeight = 100
-        val dragOffset = -((currentHeight + prevHeight) / 8f) // Exactly at threshold
-
-        // At threshold, swap should NOT trigger (requires < threshold)
-        val shouldSwap = dragOffset < -(currentHeight + prevHeight) / 8f
-        assertEquals(false, shouldSwap)
-    }
-
-    @Test
-    fun upThreshold_pastBoundary_dragOffsetExceedsThreshold() {
-        val currentHeight = 100
-        val prevHeight = 100
-        val threshold = (currentHeight + prevHeight) / 8f
-        val dragOffset = -(threshold + 1f)
-
-        // Past threshold (below), swap should trigger
-        val shouldSwap = dragOffset < -threshold
-        assertEquals(true, shouldSwap)
-    }
-
-    // Test realistic scenarios
-    @Test
-    fun threshold_smallCards_requiresLessDragDistance() {
-        val smallCard = 80
-        val threshold = (smallCard + smallCard) / 8f // 20
-
-        val largeCard = 200
-        val largeThreshold = (largeCard + largeCard) / 8f // 50
-
-        // Smaller cards require less drag distance
-        assertEquals(true, threshold < largeThreshold)
-    }
-
-    @Test
-    fun threshold_asymmetricHeights_calculatesIndependently() {
-        val currentHeight = 130
-        val prevHeight = 100
-        val nextHeight = 160
-
-        val upThreshold = (currentHeight + prevHeight) / 8f // (130 + 100) / 8 = 28.75
-        val downThreshold = (currentHeight + nextHeight) / 8f // (130 + 160) / 8 = 36.25
-
-        // Different thresholds for up and down
-        assertEquals(true, upThreshold != downThreshold)
-        assertEquals(true, downThreshold > upThreshold)
-    }
-
-    @Test
-    fun threshold_firstCard_usesDefaultForPrev() {
-        val firstCardHeight = 100
-        val secondCardHeight = 120
-
-        // First card has no previous, should use DEFAULT
-        val upThreshold = (firstCardHeight + DEFAULT_CARD_HEIGHT) / 8f
-        val downThreshold = (firstCardHeight + secondCardHeight) / 8f
-
-        assertEquals((100 + 130) / 8f, upThreshold, 0.1f)
-        assertEquals((100 + 120) / 8f, downThreshold, 0.1f)
-    }
-
-    @Test
-    fun threshold_lastCard_usesDefaultForNext() {
-        val lastCardHeight = 100
-        val secondToLastHeight = 120
-
-        // Last card has no next, should use DEFAULT
-        val upThreshold = (lastCardHeight + secondToLastHeight) / 8f
-        val downThreshold = (lastCardHeight + DEFAULT_CARD_HEIGHT) / 8f
-
-        assertEquals((100 + 120) / 8f, upThreshold, 0.1f)
-        assertEquals((100 + 130) / 8f, downThreshold, 0.1f)
+        val order = ctrl.pendingOrder
+        assertEquals(CardId.HRV, order[0])
+        assertEquals(CardId.SLEEP_SCORE, order[1])
     }
 }
