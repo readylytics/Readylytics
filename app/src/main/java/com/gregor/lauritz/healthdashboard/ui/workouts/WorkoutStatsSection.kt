@@ -33,6 +33,8 @@ import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
@@ -60,6 +62,22 @@ import kotlin.math.ceil
 fun WorkoutStatsSection(
     uiState: WorkoutsUiState,
     onRangeSelected: (TimeRange) -> Unit,
+    rangeDays: Int = uiState.selectedRange.days,
+    scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
+    zoomState: VicoZoomState =
+        rememberVicoZoomState(
+            zoomEnabled = rangeDays > 7,
+            initialZoom = Zoom.Content,
+            minZoom = Zoom.Content,
+            maxZoom =
+                remember(rangeDays) {
+                    when (rangeDays) {
+                        30 -> Zoom.fixed(6f)
+                        180 -> Zoom.fixed(25f)
+                        else -> Zoom.Content
+                    }
+                },
+        ),
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -184,7 +202,9 @@ fun WorkoutStatsSection(
             trimpPoints = uiState.dailyTrimp,
             ratioPoints = uiState.dailyStrainRatio,
             rangeStartMs = uiState.rangeStartMs,
-            rangeDays = uiState.selectedRange.days,
+            rangeDays = rangeDays,
+            scrollState = scrollState,
+            zoomState = zoomState,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
 
@@ -198,6 +218,8 @@ private fun AcwrChartCard(
     ratioPoints: List<DailyDataPoint>,
     rangeStartMs: Long,
     rangeDays: Int,
+    scrollState: VicoScrollState,
+    zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -229,6 +251,8 @@ private fun AcwrChartCard(
                     ratioPoints = ratioPoints,
                     rangeStartMs = rangeStartMs,
                     rangeDays = rangeDays,
+                    scrollState = scrollState,
+                    zoomState = zoomState,
                 )
             }
         }
@@ -241,6 +265,8 @@ private fun AcwrChart(
     ratioPoints: List<DailyDataPoint>,
     rangeStartMs: Long,
     rangeDays: Int,
+    scrollState: VicoScrollState,
+    zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
 ) {
     val ratioColor = MaterialTheme.colorScheme.primary
@@ -252,23 +278,6 @@ private fun AcwrChart(
     val ratioAxisFormatter = remember { CartesianValueFormatter { _, value, _ -> "%.2f".format(value) } }
 
     val modelProducer = remember { CartesianChartModelProducer() }
-
-    val scrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7)
-
-    val zoomState =
-        rememberVicoZoomState(
-            zoomEnabled = rangeDays > 7,
-            initialZoom = Zoom.Content,
-            minZoom = Zoom.Content,
-            maxZoom =
-                remember(rangeDays) {
-                    when (rangeDays) {
-                        30 -> Zoom.fixed(6f)
-                        180 -> Zoom.fixed(25f)
-                        else -> Zoom.Content
-                    }
-                },
-        )
 
     val trimpRangeProvider =
         remember(trimpPoints, rangeDays) {

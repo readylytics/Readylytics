@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.settings
 
 import android.content.Context
+import androidx.lifecycle.viewModelScope
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPreferences
@@ -14,6 +15,7 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
@@ -117,6 +119,7 @@ class SettingsViewModelTest {
 
             val state2 = viewModel.uiState.first { it.retentionDaysEnabled }
             assertTrue(state2.retentionDaysEnabled)
+            viewModel.viewModelScope.cancel()
         }
 
     @Test
@@ -144,6 +147,7 @@ class SettingsViewModelTest {
 
             val state2 = viewModel.uiState.first { it.retentionDays == 180 }
             assertEquals(180, state2.retentionDays)
+            viewModel.viewModelScope.cancel()
         }
 
     @Test

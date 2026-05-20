@@ -54,9 +54,19 @@ class StepDetailViewModel
                 .flatMapLatest { (range, date) ->
                     val fromMs = range.fromMs(date)
                     val startDayMs = fromMs.truncateToDayMs()
+                    val selectedDateMidnightMs =
+                        date
+                            .atStartOfDay()
+                            .atZone(
+                                ZoneId.systemDefault(),
+                            ).toInstant()
+                            .toEpochMilli()
 
                     combine(
-                        dailySummaryDao.observeLatest().map { it?.let { DailySummaryMapper.toDomain(it) } },
+                        dailySummaryDao
+                            .observeByDate(
+                                selectedDateMidnightMs,
+                            ).map { it?.let { DailySummaryMapper.toDomain(it) } },
                         dailySummaryDao.observeSince(fromMs).map { list ->
                             list.map { DailySummaryMapper.toDomain(it) }
                         },
