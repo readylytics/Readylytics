@@ -32,7 +32,6 @@ import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 
 @Composable
 fun RestingHrDetailRoute(
@@ -56,8 +55,6 @@ fun RestingHrDetailScreen(
     onRangeSelected: (TimeRange) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val chartScrollState = rememberVicoScrollState()
-
     Scaffold(
         modifier = modifier,
         contentWindowInsets = WindowInsets(0),
@@ -138,7 +135,6 @@ fun RestingHrDetailScreen(
                         baselineUnit = "bpm",
                         baseline = uiState.rhrBaseline,
                         showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),
-                        scrollState = chartScrollState,
                     )
                 }
             }

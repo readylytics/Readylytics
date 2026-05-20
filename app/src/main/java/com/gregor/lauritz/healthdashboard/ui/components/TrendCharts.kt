@@ -24,7 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
@@ -75,7 +75,6 @@ fun TrendChart(
     baselineUnit: String,
     baseline: Float? = null,
     showBaseline: Boolean = true,
-    scrollState: VicoScrollState = rememberVicoScrollState(),
     modifier: Modifier = Modifier,
 ) {
     if (points.none { it.value != null }) {
@@ -108,6 +107,23 @@ fun TrendChart(
     val baselineColor = MaterialTheme.colorScheme.onSurfaceVariant
     val guidelineComponent = ChartDefaults.guidelineComponent()
     val dotColor = MaterialTheme.colorScheme.primary
+
+    val scrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7)
+
+    val zoomState =
+        rememberVicoZoomState(
+            zoomEnabled = rangeDays > 7,
+            initialZoom = Zoom.Content,
+            minZoom = Zoom.Content,
+            maxZoom =
+                remember(rangeDays) {
+                    when (rangeDays) {
+                        30 -> Zoom.fixed(6f)
+                        180 -> Zoom.fixed(25f)
+                        else -> Zoom.Content
+                    }
+                },
+        )
 
     val modelProducer = remember { CartesianChartModelProducer() }
 
@@ -183,7 +199,7 @@ fun TrendChart(
             ),
         modelProducer = modelProducer,
         scrollState = scrollState,
-        zoomState = rememberVicoZoomState(zoomEnabled = false),
+        zoomState = zoomState,
         modifier = modifier.fillMaxWidth().height(180.dp),
     )
 

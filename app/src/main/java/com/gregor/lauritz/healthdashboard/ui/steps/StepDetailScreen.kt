@@ -33,7 +33,6 @@ import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 
 @Composable
 fun StepDetailRoute(
@@ -57,8 +56,6 @@ fun StepDetailScreen(
     onRangeSelected: (TimeRange) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val chartScrollState = rememberVicoScrollState()
-
     Scaffold(
         modifier = modifier,
         contentWindowInsets = WindowInsets(0),
@@ -136,7 +133,6 @@ fun StepDetailScreen(
                         rangeDays = uiState.selectedRange.days,
                         baselineUnit = "steps",
                         baseline = uiState.stepGoal.toFloat(),
-                        scrollState = chartScrollState,
                     )
                 }
             }

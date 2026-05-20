@@ -58,15 +58,26 @@ object ChartDefaults {
         }
 
     fun itemPlacerForRangeDays(rangeDays: Int): HorizontalAxis.ItemPlacer =
-        if (rangeDays == 7) {
-            HorizontalAxis.ItemPlacer.aligned(
-                spacing = { _ -> 2 },
-                addExtremeLabelPadding = true,
-            )
-        } else {
-            HorizontalAxis.ItemPlacer.aligned(
-                spacing = { _ -> 5 },
-                addExtremeLabelPadding = true,
-            )
+        when (rangeDays) {
+            7 ->
+                HorizontalAxis.ItemPlacer.aligned(
+                    spacing = { _ -> 1 },
+                    addExtremeLabelPadding = true,
+                )
+            30 ->
+                HorizontalAxis.ItemPlacer.aligned(
+                    spacing = { _ -> 5 },
+                    addExtremeLabelPadding = true,
+                )
+            180 ->
+                HorizontalAxis.ItemPlacer.aligned(
+                    spacing = { _ -> 30 },
+                    addExtremeLabelPadding = true,
+                )
+            else ->
+                HorizontalAxis.ItemPlacer.aligned(
+                    spacing = { _ -> 5 },
+                    addExtremeLabelPadding = true,
+                )
         }
 }

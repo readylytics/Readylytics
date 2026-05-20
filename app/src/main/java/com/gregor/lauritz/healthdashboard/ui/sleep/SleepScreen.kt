@@ -49,7 +49,6 @@ import com.gregor.lauritz.healthdashboard.ui.components.StatusLegend
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -89,8 +88,6 @@ fun SleepScreen(
     onNavigateToDetail: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val chartScrollState = rememberVicoScrollState()
-
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 16.dp),
@@ -251,7 +248,6 @@ fun SleepScreen(
                         baselineUnit = "ms",
                         baseline = baselineHrv,
                         showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),
-                        scrollState = chartScrollState,
                     )
                 }
             }
@@ -277,7 +273,6 @@ fun SleepScreen(
                         baselineUnit = "bpm",
                         baseline = baselineRhr?.toFloat(),
                         showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),
-                        scrollState = chartScrollState,
                     )
                 }
             }
