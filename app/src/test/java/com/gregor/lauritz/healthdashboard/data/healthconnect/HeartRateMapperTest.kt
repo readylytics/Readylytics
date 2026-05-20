@@ -32,7 +32,7 @@ class HeartRateMapperTest {
     fun `mapRestingToEntities classifies record during sleep as SLEEP`() {
         val ts = Instant.parse("2026-05-10T02:00:00Z")
         val record =
-            mockk<RestingHeartRateRecord> {
+            mockk<RestingHeartRateRecord>(relaxed = true) {
                 every { metadata.id } returns "r1"
                 every { time } returns ts
                 every { beatsPerMinute } returns 55L
@@ -51,7 +51,7 @@ class HeartRateMapperTest {
     fun `mapRestingToEntities classifies record outside sleep as RESTING`() {
         val ts = Instant.parse("2026-05-09T12:00:00Z")
         val record =
-            mockk<RestingHeartRateRecord> {
+            mockk<RestingHeartRateRecord>(relaxed = true) {
                 every { metadata.id } returns "r2"
                 every { time } returns ts
                 every { beatsPerMinute } returns 60L
@@ -75,7 +75,7 @@ class HeartRateMapperTest {
     @Test
     fun `mapToEntities handles empty samples list gracefully`() {
         val record =
-            mockk<HeartRateRecord> {
+            mockk<HeartRateRecord>(relaxed = true) {
                 every { metadata.id } returns "rec_empty"
                 every { samples } returns emptyList()
             }
@@ -103,12 +103,12 @@ class HeartRateMapperTest {
                 every { beatsPerMinute } returns 65L
             }
         val recordA =
-            mockk<HeartRateRecord> {
+            mockk<HeartRateRecord>(relaxed = true) {
                 every { metadata.id } returns "recA"
                 every { samples } returns listOf(sample1)
             }
         val recordB =
-            mockk<HeartRateRecord> {
+            mockk<HeartRateRecord>(relaxed = true) {
                 every { metadata.id } returns "recB"
                 every { samples } returns listOf(sample2)
             }
@@ -136,7 +136,7 @@ class HeartRateMapperTest {
                 every { beatsPerMinute } returns 62L
             }
         val record =
-            mockk<HeartRateRecord> {
+            mockk<HeartRateRecord>(relaxed = true) {
                 every { metadata.id } returns "rec_1"
                 every { samples } returns listOf(s1, s2)
             }
@@ -157,7 +157,7 @@ class HeartRateMapperTest {
                 every { beatsPerMinute } returns 72L
             }
         val record =
-            mockk<HeartRateRecord> {
+            mockk<HeartRateRecord>(relaxed = true) {
                 every { metadata.id } returns "rec_r"
                 every { samples } returns listOf(sample)
             }

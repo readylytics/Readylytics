@@ -17,9 +17,6 @@ import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -43,6 +40,7 @@ class HealthSyncUseCase
         private val dailySummaryDao: DailySummaryDao,
         private val settingsRepo: SettingsRepository,
         private val scoringRepository: ScoringRepository,
+        private val transactionRunner: com.gregor.lauritz.healthdashboard.domain.repository.TransactionRunner,
     ) {
         private val syncMutex = Mutex()
 
@@ -126,40 +124,37 @@ class HealthSyncUseCase
                                 "hr=${filteredHr.size} hrv=${filteredHrv.size}"
                         }
 
-                        sleepSessionDao.upsertAll(filteredSleep)
-                        val allStages = sleepSessions.flatMap { SleepDataMapper.mapSleepSessionStages(it) }
+                        transactionRunner.runInTransaction {
+                            sleepSessionDao.upsertAll(filteredSleep)
+                            val allStages = sleepSessions.flatMap { SleepDataMapper.mapSleepSessionStages(it) }
 
-                        // FILTER STAGES TO MATCH DEVICE-FILTERED SESSIONS (prevents orphaned stages)
-                        // Use Set for O(1) lookup instead of O(N) linear search (improves O(N×M) to O(N))
-                        val filteredSessionIds = filteredSleep.map { it.id }.toSet()
-                        val filteredStages =
-                            allStages.filter { stage ->
-                                stage.sessionId in filteredSessionIds
-                            }
+                            // FILTER STAGES TO MATCH DEVICE-FILTERED SESSIONS (prevents orphaned stages)
+                            // Use Set for O(1) lookup instead of O(N) linear search (improves O(N×M) to O(N))
+                            val filteredSessionIds = filteredSleep.map { it.id }.toSet()
+                            val filteredStages =
+                                allStages.filter { stage ->
+                                    stage.sessionId in filteredSessionIds
+                                }
 
-                        // DELETE OLD STAGES BEFORE UPSERT (prevents stale stage accumulation)
-                        sleepStageDao.deleteForSessions(filteredSessionIds.toList())
+                            // DELETE OLD STAGES BEFORE UPSERT (prevents stale stage accumulation)
+                            sleepStageDao.deleteForSessions(filteredSessionIds.toList())
 
-                        sleepStageDao.upsertAll(filteredStages)
-                        workoutDao.upsertAll(filteredWorkouts)
-                        heartRateDao.upsertAll(filteredHr)
-                        hrvDao.upsertAll(filteredHrv)
+                            sleepStageDao.upsertAll(filteredStages)
+                            workoutDao.upsertAll(filteredWorkouts)
+                            heartRateDao.upsertAll(filteredHr)
+                            hrvDao.upsertAll(filteredHrv)
+                        }
 
-                        // Bulk-fetch steps in parallel to avoid sequential IPC calls
+                        // Bulk-fetch steps per day using aggregate API to prevent overlap/duplication
                         logD("HealthSyncUseCase") { "Bulk fetching steps for $windowDays days..." }
-                        val stepsMap: Map<LocalDate, Long> =
-                            coroutineScope {
-                                (windowDays - 1 downTo 0)
-                                    .map { i ->
-                                        async {
-                                            val day = today.minusDays(i.toLong())
-                                            val dayStart = day.atStartOfDay(zoneId).toInstant()
-                                            val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
-                                            day to hcRepo.readSteps(dayStart, dayEnd)
-                                        }
-                                    }.awaitAll()
-                                    .toMap()
-                            }
+                        val stepsMap = mutableMapOf<LocalDate, Long>()
+                        for (i in (windowDays - 1) downTo 0) {
+                            val day = today.minusDays(i.toLong())
+                            val dayStart = day.atStartOfDay(zoneId).toInstant()
+                            val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
+                            val daySteps = hcRepo.readSteps(dayStart, dayEnd)
+                            stepsMap[day] = daySteps
+                        }
 
                         var successCount = 0
                         var failureCount = 0

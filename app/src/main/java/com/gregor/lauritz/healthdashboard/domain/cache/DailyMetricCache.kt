@@ -1,7 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.cache
 
 import android.os.SystemClock
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
@@ -28,37 +27,51 @@ class DailyMetricCache(
     @Inject
     constructor() : this({ SystemClock.elapsedRealtime() })
 
-    private val cache = MutableStateFlow<CachedDailyMetrics?>(null)
+    private val cache = mutableMapOf<LocalDate, CachedDailyMetrics>()
     private val mutex = Mutex()
+    private val maxCacheSize = 30
 
     suspend fun getDailyMetrics(
         date: LocalDate,
         compute: suspend (LocalDate) -> Pair<Int, Int>,
     ): CachedDailyMetrics {
         val now = clockMs()
-        val cached = cache.value
-        if (cached?.date == date && !cached.isExpired(now)) {
-            return cached
+        val cachedFast = synchronized(cache) { cache[date] }
+        if (cachedFast != null && !cachedFast.isExpired(now)) {
+            return cachedFast
         }
 
         return mutex.withLock {
-            val nowInner = clockMs()
-            val rechecked = cache.value
-            if (rechecked?.date == date && !rechecked.isExpired(nowInner)) {
-                return@withLock rechecked
+            val cachedInner = synchronized(cache) { cache[date] }
+            if (cachedInner != null && !cachedInner.isExpired(clockMs())) {
+                return@withLock cachedInner
             }
 
             val (sleepScore, loadScore) = compute(date)
-            CachedDailyMetrics(
-                sleepScore = sleepScore,
-                loadScore = loadScore,
-                date = date,
-                timestampMs = clockMs(),
-            ).also { cache.value = it }
+            val newMetrics =
+                CachedDailyMetrics(
+                    sleepScore = sleepScore,
+                    loadScore = loadScore,
+                    date = date,
+                    timestampMs = clockMs(),
+                )
+
+            synchronized(cache) {
+                if (cache.size >= maxCacheSize) {
+                    val oldestKey = cache.minByOrNull { it.value.timestampMs }?.key
+                    if (oldestKey != null) {
+                        cache.remove(oldestKey)
+                    }
+                }
+                cache[date] = newMetrics
+            }
+            newMetrics
         }
     }
 
     fun invalidate() {
-        cache.value = null
+        synchronized(cache) {
+            cache.clear()
+        }
     }
 }

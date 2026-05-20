@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.util
 
+import kotlinx.coroutines.launch
 import kotlin.random.Random
 import kotlin.system.measureTimeMillis
 
@@ -19,33 +20,34 @@ suspend fun stressTestForegroundCycles(
     iterations: Int = 100,
     concurrency: Int = 10,
     operation: suspend () -> Unit,
-): LoadTestResult {
-    val exceptions = mutableListOf<Throwable>()
-    val duration =
-        measureTimeMillis {
-            repeat(iterations / concurrency) {
-                val jobs =
-                    (1..concurrency).map {
-                        kotlinx.coroutines.launch {
-                            try {
-                                operation()
-                            } catch (e: Throwable) {
-                                exceptions.add(e)
+): LoadTestResult =
+    kotlinx.coroutines.coroutineScope {
+        val exceptions = java.util.Collections.synchronizedList(mutableListOf<Throwable>())
+        val duration =
+            measureTimeMillis {
+                repeat(iterations / concurrency) {
+                    val jobs =
+                        (1..concurrency).map {
+                            launch {
+                                try {
+                                    operation()
+                                } catch (e: Throwable) {
+                                    exceptions.add(e)
+                                }
                             }
                         }
-                    }
-                // Synthetic delay to vary timing
-                kotlinx.coroutines.delay(Random.nextLong(1, 50))
-                jobs.forEach { it.join() }
+                    // Synthetic delay to vary timing
+                    kotlinx.coroutines.delay(Random.nextLong(1, 50))
+                    jobs.forEach { it.join() }
+                }
             }
-        }
-    return LoadTestResult(
-        durationMs = duration,
-        iterationsCompleted = iterations,
-        exceptionCount = exceptions.size,
-        exceptions = exceptions,
-    )
-}
+        LoadTestResult(
+            durationMs = duration,
+            iterationsCompleted = iterations,
+            exceptionCount = exceptions.size,
+            exceptions = exceptions.toList(),
+        )
+    }
 
 /**
  * Simulate rapid date navigation (previous/next day) under load.

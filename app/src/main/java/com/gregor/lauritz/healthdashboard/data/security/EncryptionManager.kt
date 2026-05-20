@@ -47,11 +47,14 @@ class EncryptionManager
         /**
          * Decrypts a Base64 encoded ciphertext and returns the original string.
          */
-        fun decrypt(ciphertext: String): String {
-            val decoded = Base64.decode(ciphertext, Base64.NO_WRAP)
-            val plaintext = aead.decrypt(decoded, null)
-            return String(plaintext, Charsets.UTF_8)
-        }
+        fun decrypt(ciphertext: String): String? =
+            try {
+                val decoded = Base64.decode(ciphertext, Base64.NO_WRAP)
+                val plaintext = aead.decrypt(decoded, null)
+                String(plaintext, Charsets.UTF_8)
+            } catch (e: Exception) {
+                null
+            }
 
         companion object {
             private const val KEYSET_NAME = "master_keyset"

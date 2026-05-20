@@ -31,4 +31,10 @@ abstract class UtilModule {
     @Binds
     @Singleton
     abstract fun bindSleepSessionRepository(impl: SleepSessionRepositoryImpl): SleepSessionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindTimezoneProvider(
+        impl: com.gregor.lauritz.healthdashboard.data.util.TimezoneProviderImpl,
+    ): com.gregor.lauritz.healthdashboard.domain.util.TimezoneProvider
 }

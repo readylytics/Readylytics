@@ -9,10 +9,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -130,8 +132,8 @@ fun ScoreDialSkeleton(
     height: Dp = 140.dp,
 ) {
     Card(
-        modifier = modifier.fillMaxWidth().height(height),
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.size(height),
+        shape = CircleShape,
         colors =
             CardDefaults.cardColors(
                 containerColor =
@@ -141,14 +143,13 @@ fun ScoreDialSkeleton(
         Box(
             modifier =
                 Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight()
-                    .padding(16.dp)
+                    .fillMaxSize()
+                    .padding(24.dp)
                     .background(
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(
                             alpha = 0.2f,
                         ),
-                        RoundedCornerShape(8.dp),
+                        CircleShape,
                     ).shimmerAnimation(),
         )
     }

@@ -65,6 +65,7 @@ class PaiScoringStrategy
             rangeEnd: LocalDate,
         ): Float {
             if (dailyTrimpByDate.isEmpty()) return ScoringConstants.DEFAULT_FITNESS_LEVEL
+            if (dailyTrimpByDate.size == 1) return dailyTrimpByDate.values.first()
 
             val earliestDataDate = dailyTrimpByDate.keys.minOrNull() ?: rangeEnd
             val defaultStart = rangeEnd.minusDays(windowDays - 1)

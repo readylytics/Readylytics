@@ -15,7 +15,7 @@ class WorkoutMapperTest {
         val endTime = Instant.parse("2026-05-09T11:00:00Z")
 
         val session =
-            mockk<ExerciseSessionRecord> {
+            mockk<ExerciseSessionRecord>(relaxed = true) {
                 every { metadata.id } returns "test_session"
                 every { this@mockk.startTime } returns startTime
                 every { this@mockk.endTime } returns endTime
@@ -71,7 +71,7 @@ class WorkoutMapperTest {
         val endTime = Instant.parse("2026-05-09T10:10:00Z")
 
         val session =
-            mockk<ExerciseSessionRecord> {
+            mockk<ExerciseSessionRecord>(relaxed = true) {
                 every { metadata.id } returns "test_session"
                 every { this@mockk.startTime } returns startTime
                 every { this@mockk.endTime } returns endTime

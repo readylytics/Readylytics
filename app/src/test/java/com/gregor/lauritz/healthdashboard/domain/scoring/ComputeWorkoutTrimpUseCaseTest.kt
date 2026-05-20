@@ -13,8 +13,10 @@ class ComputeWorkoutTrimpUseCaseTest {
         UserPreferences(
             gender = Gender.MALE,
             maxHeartRate = 200,
+            autoCalculateMaxHr = false,
             rhrBaselineOverride = 60f,
             trimpModel = TrimpModel.BANISTER,
+            banisterMultiplier = 1.0f,
         )
 
     @Test

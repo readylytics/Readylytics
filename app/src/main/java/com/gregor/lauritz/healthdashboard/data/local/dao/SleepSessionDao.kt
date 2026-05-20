@@ -25,6 +25,9 @@ interface SleepSessionDao {
     @Upsert
     suspend fun upsertAll(sessions: List<SleepSessionEntity>)
 
+    @Query("DELETE FROM sleep_sessions WHERE id = :id")
+    suspend fun deleteById(id: String): Int
+
     @Query("SELECT COUNT(*) FROM sleep_sessions WHERE startTime >= :fromMs")
     suspend fun countSince(fromMs: Long): Int
 

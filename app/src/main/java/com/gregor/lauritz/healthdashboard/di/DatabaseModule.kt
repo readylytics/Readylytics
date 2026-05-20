@@ -54,6 +54,14 @@ object DatabaseModule {
     }
 
     @Provides
+    @Singleton
+    fun provideTransactionRunner(
+        db: HealthDatabase,
+    ): com.gregor.lauritz.healthdashboard.domain.repository.TransactionRunner =
+        com.gregor.lauritz.healthdashboard.data.local
+            .RoomTransactionRunner(db)
+
+    @Provides
     fun provideSleepSessionDao(db: HealthDatabase): SleepSessionDao = db.sleepSessionDao()
 
     @Provides

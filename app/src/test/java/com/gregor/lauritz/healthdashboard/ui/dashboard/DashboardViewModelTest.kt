@@ -21,6 +21,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -69,7 +72,10 @@ class DashboardViewModelTest {
             mockk<CircadianConsistencyRepository> {
                 every { resultFor(any()) } returns MutableStateFlow(CircadianConsistencyResult.Calibrating)
             }
-        syncController = mockk()
+        syncController =
+            mockk {
+                every { isSyncing } returns MutableStateFlow(false)
+            }
 
         viewModel =
             DashboardViewModel(
@@ -91,7 +97,7 @@ class DashboardViewModelTest {
 
     @Test
     fun `onRefresh sets isRefreshing true then false on success`() =
-        runTest {
+        runTest(testDispatcher) {
             coEvery { syncController.triggerImmediateSync() } returns Unit
 
             viewModel.onRefresh()
@@ -103,7 +109,7 @@ class DashboardViewModelTest {
 
     @Test
     fun `onRefresh sets isRefreshing false even when sync throws`() =
-        runTest {
+        runTest(testDispatcher) {
             coEvery { syncController.triggerImmediateSync() } throws RuntimeException("sync failed")
 
             viewModel.onRefresh()
@@ -114,7 +120,7 @@ class DashboardViewModelTest {
 
     @Test
     fun `uiState correctly aggregates basic inputs, card state, and realtime state`() =
-        runTest {
+        runTest(testDispatcher) {
             val initialState = viewModel.uiState.value
 
             // Verify that the state combines all three input flows
@@ -127,33 +133,52 @@ class DashboardViewModelTest {
 
     @Test
     fun `onPreviousDay delegates to selectedDateRepository`() =
-        runTest {
+        runTest(testDispatcher) {
             viewModel.onPreviousDay()
+            advanceUntilIdle()
             coVerify { selectedDateRepository.selectPreviousDay() }
         }
 
     @Test
     fun `onNextDay delegates to selectedDateRepository`() =
-        runTest {
+        runTest(testDispatcher) {
             viewModel.onNextDay()
+            advanceUntilIdle()
             coVerify { selectedDateRepository.selectNextDay() }
         }
 
     @Test
-    fun `toggleCardManagement delegates to cardManagementDelegate`() =
-        runTest {
+    fun `toggleCardManagement enters edit mode with current configs`() =
+        runTest(testDispatcher) {
+            assertFalse(viewModel.isManagingCards.value)
+
             viewModel.toggleCardManagement()
-            // This should not throw
+            advanceUntilIdle()
+
+            assertTrue(viewModel.isManagingCards.value)
+        }
+
+    @Test
+    fun `onCancelCardManagement exits edit mode without saving`() =
+        runTest(testDispatcher) {
+            viewModel.toggleCardManagement() // Enter edit mode
+            advanceUntilIdle()
+            assertTrue(viewModel.isManagingCards.value)
+
+            viewModel.onCancelCardManagement()
+            advanceUntilIdle()
+
+            assertFalse(viewModel.isManagingCards.value)
         }
 
     @Test
     fun `errorMessage exposes error state`() {
-        org.junit.Assert.assertNull(viewModel.errorMessage.value)
+        assertNull(viewModel.errorMessage.value)
     }
 
     @Test
     fun `isManagingCards exposes card management state`() {
         val managingState = viewModel.isManagingCards.value
-        org.junit.Assert.assertFalse(managingState)
+        assertFalse(managingState)
     }
 }

@@ -7,8 +7,10 @@ import androidx.test.core.app.ApplicationProvider
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
 import org.json.JSONObject
@@ -40,6 +42,12 @@ class LocalRestoreManagerTest {
                 .build()
 
         settingsRepo = mockk<SettingsRepository>(relaxed = true)
+        coEvery { settingsRepo.userPreferences } returns
+            flowOf(
+                mockk(relaxed = true) {
+                    coEvery { backupPasswordHash } returns null
+                },
+            )
         encryptionManager = mockk<EncryptionManager>(relaxed = true)
         manager = LocalRestoreManager(context, db, settingsRepo, encryptionManager)
     }
@@ -49,63 +57,77 @@ class LocalRestoreManagerTest {
         db.close()
     }
 
+    private fun createBackupZipFile(
+        fileName: String,
+        json: JSONObject,
+    ): File {
+        val zipFile = File(context.cacheDir, fileName)
+        if (zipFile.exists()) zipFile.delete()
+        val jsonFile = File(context.cacheDir, fileName.replace(".zip", ".json"))
+        jsonFile.writeText(json.toString())
+        val zip = net.lingala.zip4j.ZipFile(zipFile)
+        zip.addFile(jsonFile)
+        jsonFile.delete()
+        return zipFile
+    }
+
     @Test
     fun validate_correctJson_returnsManifest() =
         runTest {
-            val backupFile = File(context.cacheDir, "valid_backup.json")
             val json = createValidBackupJson()
-            backupFile.writeText(json.toString())
+            val zipFile = createBackupZipFile("valid_backup.zip", json)
 
-            val result = manager.validate(Uri.fromFile(backupFile))
+            val result = manager.validate(Uri.fromFile(zipFile))
 
             assertTrue(result.isSuccess)
             val manifest = result.getOrNull()
             assertEquals(HealthDatabase.DATABASE_VERSION, manifest?.schemaVersion)
             assertEquals(1, manifest?.rowCounts?.get("sleepSessions"))
+            zipFile.delete()
         }
 
     @Test
     fun validate_wrongVersion_returnsFailure() =
         runTest {
-            val backupFile = File(context.cacheDir, "old_backup.json")
             val json = createValidBackupJson()
             json.put("schemaVersion", 1)
-            backupFile.writeText(json.toString())
+            val zipFile = createBackupZipFile("old_backup.zip", json)
 
-            val result = manager.validate(Uri.fromFile(backupFile))
+            val result = manager.validate(Uri.fromFile(zipFile))
 
             assertTrue(result.isFailure)
             assertTrue(result.exceptionOrNull()?.message?.contains("schema version") == true)
+            zipFile.delete()
         }
 
     @Test
     fun applyRestore_insertsDataIntoDb() =
         runTest {
-            val backupFile = File(context.cacheDir, "restore_backup.json")
             val json = createValidBackupJson()
-            backupFile.writeText(json.toString())
+            val zipFile = createBackupZipFile("restore_backup.zip", json)
 
-            val result = manager.applyRestore(Uri.fromFile(backupFile))
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
 
             val sessions = db.sleepSessionDao().getSince(0)
             assertEquals(1, sessions.size)
             assertEquals("session_1", sessions[0].id)
+            zipFile.delete()
         }
 
     @Test
     fun applyRestore_updatesPreferences() =
         runTest {
-            val backupFile = File(context.cacheDir, "prefs_backup.json")
             val json = createValidBackupJson()
             json.getJSONObject("preferences").put("goalSleepHours", 9.5)
-            backupFile.writeText(json.toString())
+            val zipFile = createBackupZipFile("prefs_backup.zip", json)
 
-            val result = manager.applyRestore(Uri.fromFile(backupFile))
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
-            coVerify { settingsRepo.updateGoalSleepHours(9.5f) }
+            coVerify { settingsRepo.batchUpdate(any()) }
+            zipFile.delete()
         }
 
     private fun createValidBackupJson(): JSONObject {

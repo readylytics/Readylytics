@@ -7,13 +7,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepStageEntity
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class SleepStageDaoTest {
@@ -50,7 +50,7 @@ class SleepStageDaoTest {
                 endZoneOffsetSeconds = null,
                 deviceName = "Test Device",
             )
-        runTest { sessionDao.upsertAll(listOf(testSession)) }
+        kotlinx.coroutines.runBlocking { sessionDao.upsertAll(listOf(testSession)) }
     }
 
     @After
@@ -91,18 +91,7 @@ class SleepStageDaoTest {
             dao.upsertAll(stages)
 
             // Then: all 3 stages are in DB
-            val observed = dao.observeStagesForSession("session1")
-            val result = mutableListOf<SleepStageEntity>()
-            val job =
-                kotlinx.coroutines.launch {
-                    observed.collect { result.addAll(it) }
-                }
-
-            // Wait for collection
-            kotlinx.coroutines.runBlocking {
-                kotlinx.coroutines.delay(100)
-                job.cancel()
-            }
+            val result = dao.observeStagesForSession("session1").first()
 
             assertEquals(3, result.size)
         }
@@ -138,16 +127,7 @@ class SleepStageDaoTest {
             dao.upsertAll(stages)
 
             // When: observe stages
-            val result = mutableListOf<SleepStageEntity>()
-            val job =
-                kotlinx.coroutines.launch {
-                    dao.observeStagesForSession("session1").collect { result.addAll(it) }
-                }
-
-            kotlinx.coroutines.runBlocking {
-                kotlinx.coroutines.delay(100)
-                job.cancel()
-            }
+            val result = dao.observeStagesForSession("session1").first()
 
             // Then: stages returned ordered by startTime
             assertEquals(3, result.size)
@@ -159,6 +139,24 @@ class SleepStageDaoTest {
     @Test
     fun deleteForSession_removesAllStagesForSession() =
         runTest {
+            val testSession2 =
+                SleepSessionEntity(
+                    id = "session2",
+                    startTime = 0,
+                    endTime = 6_000_000,
+                    durationMinutes = 100,
+                    efficiency = 85f,
+                    deepSleepMinutes = 30,
+                    lightSleepMinutes = 40,
+                    remSleepMinutes = 20,
+                    awakeMinutes = 10,
+                    sleepScore = 85f,
+                    startZoneOffsetSeconds = null,
+                    endZoneOffsetSeconds = null,
+                    deviceName = "Test Device",
+                )
+            sessionDao.upsertAll(listOf(testSession2))
+
             // Given: stages for 2 sessions
             val session1Stages =
                 listOf(
@@ -193,16 +191,7 @@ class SleepStageDaoTest {
             dao.deleteForSession("session1")
 
             // Then: only session2 stages remain
-            val result = mutableListOf<SleepStageEntity>()
-            val job =
-                kotlinx.coroutines.launch {
-                    dao.observeStagesForSession("session2").collect { result.addAll(it) }
-                }
-
-            kotlinx.coroutines.runBlocking {
-                kotlinx.coroutines.delay(100)
-                job.cancel()
-            }
+            val result = dao.observeStagesForSession("session2").first()
 
             assertEquals(1, result.size)
             assertEquals("session2", result[0].sessionId)
@@ -255,16 +244,12 @@ class SleepStageDaoTest {
                     durationMinutes = 30,
                 )
 
-            // Then: should raise constraint violation
-            var constraintViolated = false
-            try {
-                dao.upsertAll(listOf(stage2))
-            } catch (e: Exception) {
-                // SQLite will raise exception for unique constraint
-                constraintViolated = true
-            }
+            dao.upsertAll(listOf(stage2))
 
-            assertTrue(constraintViolated, "Expected unique constraint violation")
+            // Then: unique constraint prevents insertion of second stage, only stage1 remains
+            val result = dao.observeStagesForSession("session1").first()
+            assertEquals(1, result.size)
+            assertEquals("DEEP", result[0].stageType)
         }
 
     @Test
@@ -287,16 +272,7 @@ class SleepStageDaoTest {
             sessionDao.deleteById("session1")
 
             // Then: stages are cascade-deleted
-            val result = mutableListOf<SleepStageEntity>()
-            val job =
-                kotlinx.coroutines.launch {
-                    dao.observeStagesForSession("session1").collect { result.addAll(it) }
-                }
-
-            kotlinx.coroutines.runBlocking {
-                kotlinx.coroutines.delay(100)
-                job.cancel()
-            }
+            val result = dao.observeStagesForSession("session1").first()
 
             assertEquals(0, result.size, "Expected stages to be cascade-deleted")
         }

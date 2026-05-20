@@ -155,6 +155,14 @@ class HealthConnectRepositoryImpl
                 readAllPages<ExerciseSessionRecord>(from, to)
             }
 
+        override suspend fun readStepsRecords(
+            from: Instant,
+            to: Instant,
+        ): List<StepsRecord> =
+            withContext(Dispatchers.IO) {
+                readAllPages<StepsRecord>(from, to)
+            }
+
         override suspend fun readSteps(
             from: Instant,
             to: Instant,
@@ -168,6 +176,30 @@ class HealthConnectRepositoryImpl
                         ),
                     )
                 result[StepsRecord.COUNT_TOTAL] ?: 0L
+            }
+
+        override suspend fun readStepsRange(
+            from: Instant,
+            to: Instant,
+        ): Map<java.time.LocalDate, Long> =
+            withContext(Dispatchers.IO) {
+                try {
+                    val records = readAllPages<StepsRecord>(from, to)
+                    val zoneId = java.time.ZoneId.systemDefault()
+                    records
+                        .groupBy { record ->
+                            record.startTime.atZone(zoneId).toLocalDate()
+                        }.mapValues { (_, dayRecords) ->
+                            dayRecords.sumOf { it.count }
+                        }
+                } catch (e: SecurityException) {
+                    throw HealthConnectPermissionRevokedException(e)
+                } catch (e: Exception) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logE("HealthConnectRepository", e) {
+                        "Error batch fetching steps"
+                    }
+                    emptyMap()
+                }
             }
 
         override suspend fun discoverDevices(windowDays: Int): List<String> =

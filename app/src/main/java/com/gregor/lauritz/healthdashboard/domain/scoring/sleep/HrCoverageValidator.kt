@@ -1,7 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring.sleep
 
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
-import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,7 +14,6 @@ class HrCoverageValidator
             durationMinutes: Int,
             hrRecords: List<HeartRateRecordEntity>,
         ): Boolean {
-            if (durationMinutes < ScoringConstants.MIN_VALID_SLEEP_DURATION_MINUTES) return false
             val filtered = hrRecords.filter { it.timestampMs in sessionStartMs..sessionEndMs }
             if (filtered.isEmpty()) return false
 

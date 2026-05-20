@@ -55,7 +55,7 @@ object ScoringConstants {
     const val HR_ELEVATION_AT_EXERCISE = 20 // bpm elevation during light-moderate exercise
     const val MINIMUM_FALLBACK_RHR = 40f // physiological floor; <40 indicates measurement error or extreme bradycardia
 
-    const val TIMEZONE_JUMP_THRESHOLD_SECONDS = 7200L
+    const val TIMEZONE_JUMP_THRESHOLD_SECONDS = 3600L
 
     object Strain {
         const val OPTIMAL_SWEET_SPOT_SCORE = 100f

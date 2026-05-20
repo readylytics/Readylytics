@@ -14,31 +14,60 @@ class CardManagementDelegate(
     private val _isManagingCards = MutableStateFlow(false)
     val isManagingCards: StateFlow<Boolean> = _isManagingCards.asStateFlow()
 
+    private val _pendingConfigs = MutableStateFlow<List<CardConfiguration>?>(null)
+    val pendingConfigs: StateFlow<List<CardConfiguration>?> = _pendingConfigs.asStateFlow()
+
+    fun enterEditMode(currentConfigs: List<CardConfiguration>) {
+        _pendingConfigs.value = currentConfigs
+        _isManagingCards.value = true
+    }
+
+    fun saveChanges() =
+        viewModelScope.launch {
+            _pendingConfigs.value?.let { configs ->
+                cardConfigRepository.updateDashboardCardConfigurations(configs)
+            }
+            _isManagingCards.value = false
+            _pendingConfigs.value = null
+        }
+
+    fun cancelChanges() {
+        _isManagingCards.value = false
+        _pendingConfigs.value = null
+    }
+
     fun toggleCardManagement() {
-        _isManagingCards.value = !_isManagingCards.value
+        // Legacy toggle support if needed, but preferred to use enterEditMode/saveChanges
+        if (_isManagingCards.value) {
+            cancelChanges()
+        } else {
+            _isManagingCards.value = true
+        }
     }
 
     fun onToggleCardVisibility(
         currentConfigs: List<CardConfiguration>,
         cardId: CardId,
         visible: Boolean,
-    ) = viewModelScope.launch {
-        val updated = toggleCardVisibility(currentConfigs, cardId, visible)
-        cardConfigRepository.updateDashboardCardConfigurations(updated)
+    ) {
+        val baseConfigs = _pendingConfigs.value ?: currentConfigs
+        val updated = toggleCardVisibility(baseConfigs, cardId, visible)
+        _pendingConfigs.value = updated
     }
 
     fun onReorderCards(
         currentConfigs: List<CardConfiguration>,
         newOrder: List<CardConfiguration>,
-    ) = viewModelScope.launch {
-        val updated = reorderCards(currentConfigs, newOrder)
-        cardConfigRepository.updateDashboardCardConfigurations(updated)
+    ) {
+        val baseConfigs = _pendingConfigs.value ?: currentConfigs
+        val updated = reorderCards(baseConfigs, newOrder)
+        _pendingConfigs.value = updated
     }
 
     fun onResetToDefaults() =
         viewModelScope.launch {
             val defaults = com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults.DEFAULT_DASHBOARD_CARDS
-            cardConfigRepository.updateDashboardCardConfigurations(defaults)
+            _pendingConfigs.value = defaults
         }
 
     private fun toggleCardVisibility(

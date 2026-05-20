@@ -9,6 +9,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -46,22 +47,27 @@ class DeviceSettingsViewModelTest {
 
     @Test
     fun `initial state loads primary device and available devices`() =
-        runTest {
+        runTest(testDispatcher) {
+            val job =
+                backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+                    viewModel.primaryDevice.collect { }
+                }
             advanceUntilIdle()
             assertEquals("Test Device", viewModel.primaryDevice.value)
             assertEquals(listOf("Test Device", "Other Device"), viewModel.availableDevices.value)
+            job.cancel()
         }
 
     @Test
     fun `updatePrimaryDevice calls repository`() =
-        runTest {
+        runTest(testDispatcher) {
             viewModel.updatePrimaryDevice("Other Device")
             coVerify { settingsRepo.updatePrimaryDevice("Other Device") }
         }
 
     @Test
     fun `refreshAvailableDevices clears cache and reloads`() =
-        runTest {
+        runTest(testDispatcher) {
             viewModel.refreshAvailableDevices()
             advanceUntilIdle()
             coVerify { settingsRepo.clearDeviceCache() }

@@ -4,12 +4,14 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepStageDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.TransactionRunner
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
@@ -25,27 +27,36 @@ import java.time.ZoneId
 class HealthSyncUseCaseTest {
     private val hcRepo = mockk<HealthConnectRepository>(relaxed = true)
     private val sleepDao = mockk<SleepSessionDao>(relaxed = true)
+    private val sleepStageDao = mockk<SleepStageDao>(relaxed = true)
     private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
     private val hrvDao = mockk<HrvDao>(relaxed = true)
     private val workoutDao = mockk<WorkoutDao>(relaxed = true)
     private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val scoringRepository = mockk<ScoringRepository>(relaxed = true)
+    private val transactionRunner = mockk<TransactionRunner>(relaxed = true)
 
     private lateinit var useCase: HealthSyncUseCase
 
     @Before
     fun setup() {
+        coEvery { transactionRunner.runInTransaction<Any>(any()) } coAnswers {
+            val block = firstArg<suspend () -> Any>()
+            block()
+        }
+
         useCase =
             HealthSyncUseCase(
-                hcRepo,
-                sleepDao,
-                heartRateDao,
-                hrvDao,
-                workoutDao,
-                dailySummaryDao,
-                settingsRepo,
-                scoringRepository,
+                hcRepo = hcRepo,
+                sleepSessionDao = sleepDao,
+                sleepStageDao = sleepStageDao,
+                heartRateDao = heartRateDao,
+                hrvDao = hrvDao,
+                workoutDao = workoutDao,
+                dailySummaryDao = dailySummaryDao,
+                settingsRepo = settingsRepo,
+                scoringRepository = scoringRepository,
+                transactionRunner = transactionRunner,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
     }
@@ -81,12 +92,14 @@ class HealthSyncUseCaseTest {
             // Mock non-empty returns to ensure mapping logic is triggered
             coEvery { hcRepo.readHeartRateSamples(any(), any()) } returns listOf(mockk(relaxed = true))
             coEvery { hcRepo.readHrvSamples(any(), any()) } returns listOf(mockk(relaxed = true))
+            coEvery { hcRepo.readSteps(any(), any()) } returns 0L
 
             useCase.sync()
 
             coVerify {
                 hcRepo.readHeartRateSamples(any(), any())
                 hcRepo.readHrvSamples(any(), any())
+                hcRepo.readSteps(any(), any())
                 heartRateDao.upsertAll(any())
                 hrvDao.upsertAll(any())
             }

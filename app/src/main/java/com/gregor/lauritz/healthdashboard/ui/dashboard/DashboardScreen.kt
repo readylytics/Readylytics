@@ -28,11 +28,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.ui.components.CardConfigurationsList
+import com.gregor.lauritz.healthdashboard.ui.components.CardDataMap
 import com.gregor.lauritz.healthdashboard.ui.components.CardManagementBottomSheet
+import com.gregor.lauritz.healthdashboard.ui.components.EditModeFab
 import com.gregor.lauritz.healthdashboard.ui.components.ReorderableCardGrid
 import com.gregor.lauritz.healthdashboard.ui.components.StatusLegend
 import kotlinx.coroutines.launch
@@ -68,6 +73,7 @@ fun DashboardRoute(
         onNavigateToRhr = onNavigateToRhr,
         onNavigateToSteps = onNavigateToSteps,
         onToggleCardManagement = viewModel::toggleCardManagement,
+        onCancelCardManagement = viewModel::onCancelCardManagement,
         onCardVisibilityChanged = viewModel::onToggleCardVisibility,
         onReorderCards = viewModel::onReorderCards,
         onResetToDefaults = viewModel::onResetToDefaults,
@@ -87,6 +93,7 @@ fun DashboardScreen(
     onNavigateToRhr: () -> Unit,
     onNavigateToSteps: () -> Unit,
     onToggleCardManagement: () -> Unit = {},
+    onCancelCardManagement: () -> Unit = {},
     onCardVisibilityChanged: (CardId, Boolean) -> Unit = { _, _ -> },
     onReorderCards: (List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>) -> Unit = {},
     onResetToDefaults: () -> Unit = {},
@@ -154,7 +161,7 @@ fun DashboardScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "No data for this day",
+                            text = stringResource(R.string.dashboard_no_data),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -163,16 +170,18 @@ fun DashboardScreen(
             } else {
                 item(key = "metric_grid") {
                     ReorderableCardGrid(
-                        cardConfigurations = uiState.cardConfigurations,
+                        cardConfigurations = CardConfigurationsList(uiState.cardConfigurations),
                         cardDataMap =
-                            buildCardDataMap(
-                                uiState = uiState,
-                                onNavigateToSleep = onNavigateToSleep,
-                                onNavigateToWorkouts = onNavigateToWorkouts,
-                                onNavigateToRhr = onNavigateToRhr,
-                                onNavigateToSteps = onNavigateToSteps,
-                                isEditing = uiState.isManagingCards,
-                                isLoading = uiState.isComputingMetrics,
+                            CardDataMap(
+                                buildCardDataMap(
+                                    uiState = uiState,
+                                    onNavigateToSleep = onNavigateToSleep,
+                                    onNavigateToWorkouts = onNavigateToWorkouts,
+                                    onNavigateToRhr = onNavigateToRhr,
+                                    onNavigateToSteps = onNavigateToSteps,
+                                    isEditing = uiState.isManagingCards,
+                                    isLoading = uiState.isComputingMetrics,
+                                ),
                             ),
                         isEditing = uiState.isManagingCards,
                         onCardRemove = { cardId ->
@@ -190,36 +199,42 @@ fun DashboardScreen(
                 StatusLegend()
             }
 
-            item(key = "customize_button") {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TextButton(
-                        onClick = {
-                            if (!uiState.isManagingCards) {
-                                showCardManagement = true
-                            }
-                            onToggleCardManagement()
-                        },
+            if (!uiState.isManagingCards) {
+                item(key = "customize_button") {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            text = if (uiState.isManagingCards) "Done" else "Customize",
-                            style = MaterialTheme.typography.labelLarge,
-                        )
+                        TextButton(
+                            onClick = {
+                                showCardManagement = true
+                                onToggleCardManagement()
+                            },
+                        ) {
+                            Text(
+                                text = stringResource(R.string.action_customize),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
                     }
                 }
             }
         }
+
         SnackbarHost(
             hostState = snackbarHostState,
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(16.dp),
+                    .padding(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 16.dp,
+                        bottom = if (uiState.isManagingCards) 88.dp else 16.dp,
+                    ),
             snackbar = { data ->
                 Snackbar(
                     data,
@@ -227,6 +242,13 @@ fun DashboardScreen(
                     contentColor = MaterialTheme.colorScheme.onErrorContainer,
                 )
             },
+        )
+
+        EditModeFab(
+            isVisible = uiState.isManagingCards,
+            onDoneClick = onToggleCardManagement,
+            onCancelClick = onCancelCardManagement,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
         )
     }
 }

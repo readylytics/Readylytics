@@ -47,6 +47,7 @@ data class DashboardCardState(
     val isManagingCards: Boolean,
     val cardConfiguration: List<CardConfiguration>,
     val lastSleepSession: SleepSessionData?,
+    val pendingConfiguration: List<CardConfiguration>?,
 )
 
 /**
@@ -138,6 +139,7 @@ fun createDashboardCardStateFlow(
 
     return combine(
         cardManagementDelegate.isManagingCards,
+        cardManagementDelegate.pendingConfigs,
         cardConfigRepository.dashboardCardConfigurations(),
         selectedDate.flatMapLatest { date ->
             // Get the most recent sleep session ending on the selected date
@@ -151,11 +153,12 @@ fun createDashboardCardStateFlow(
                         .toEpochMilli(),
             )
         },
-    ) { isManaging, cardConfig, session ->
+    ) { isManaging, pendingConfig, cardConfig, session ->
         DashboardCardState(
             isManagingCards = isManaging,
             cardConfiguration = cardConfig,
             lastSleepSession = session,
+            pendingConfiguration = pendingConfig,
         )
     }
 }

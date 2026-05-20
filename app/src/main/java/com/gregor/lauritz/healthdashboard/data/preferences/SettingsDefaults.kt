@@ -75,7 +75,7 @@ object SettingsDefaults {
             CardConfiguration(CardId.PAI_DAILY, isVisible = true, position = 6),
             CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 7),
             CardConfiguration(CardId.CIRCADIAN_CONSISTENCY, isVisible = true, position = 8),
-            CardConfiguration(CardId.STRAIN_RATIO, isVisible = false, position = 9),
+            CardConfiguration(CardId.STRAIN_RATIO, isVisible = true, position = 9),
             CardConfiguration(CardId.SLEEP_EFFICIENCY, isVisible = true, position = 10),
         )
 }
