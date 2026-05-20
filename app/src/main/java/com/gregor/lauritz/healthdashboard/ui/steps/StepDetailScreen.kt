@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -29,11 +30,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.domain.model.stepsStatus
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
+import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 
 @Composable
 fun StepDetailRoute(
@@ -57,7 +58,11 @@ fun StepDetailScreen(
     onRangeSelected: (TimeRange) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val chartScrollState = rememberVicoScrollState()
+    val (chartScrollState, chartZoomState) =
+        ChartDefaults.rememberChartState(
+            rangeDays = uiState.selectedRange.days,
+            key = uiState.selectedRange,
+        )
 
     Scaffold(
         modifier = modifier,
@@ -137,6 +142,7 @@ fun StepDetailScreen(
                         baselineUnit = "steps",
                         baseline = uiState.stepGoal.toFloat(),
                         scrollState = chartScrollState,
+                        zoomState = chartZoomState,
                     )
                 }
             }

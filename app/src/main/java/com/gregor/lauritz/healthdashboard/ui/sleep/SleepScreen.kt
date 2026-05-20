@@ -23,6 +23,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,6 +41,7 @@ import com.gregor.lauritz.healthdashboard.ui.common.MetricCardSkeleton
 import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
 import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
+import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
@@ -49,7 +51,6 @@ import com.gregor.lauritz.healthdashboard.ui.components.StatusLegend
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -89,7 +90,11 @@ fun SleepScreen(
     onNavigateToDetail: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val chartScrollState = rememberVicoScrollState()
+    val (chartScrollState, chartZoomState) =
+        ChartDefaults.rememberChartState(
+            rangeDays = uiState.selectedRange.days,
+            key = uiState.selectedRange,
+        )
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -252,6 +257,7 @@ fun SleepScreen(
                         baseline = baselineHrv,
                         showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),
                         scrollState = chartScrollState,
+                        zoomState = chartZoomState,
                     )
                 }
             }
@@ -278,6 +284,7 @@ fun SleepScreen(
                         baseline = baselineRhr?.toFloat(),
                         showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),
                         scrollState = chartScrollState,
+                        zoomState = chartZoomState,
                     )
                 }
             }

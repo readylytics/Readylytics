@@ -33,6 +33,9 @@ import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
+import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
@@ -46,6 +49,8 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
@@ -57,6 +62,22 @@ import kotlin.math.ceil
 fun WorkoutStatsSection(
     uiState: WorkoutsUiState,
     onRangeSelected: (TimeRange) -> Unit,
+    rangeDays: Int = uiState.selectedRange.days,
+    scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
+    zoomState: VicoZoomState =
+        rememberVicoZoomState(
+            zoomEnabled = rangeDays > 7,
+            initialZoom = Zoom.Content,
+            minZoom = Zoom.Content,
+            maxZoom =
+                remember(rangeDays) {
+                    when (rangeDays) {
+                        30 -> Zoom.fixed(6f)
+                        180 -> Zoom.fixed(25f)
+                        else -> Zoom.Content
+                    }
+                },
+        ),
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -181,7 +202,9 @@ fun WorkoutStatsSection(
             trimpPoints = uiState.dailyTrimp,
             ratioPoints = uiState.dailyStrainRatio,
             rangeStartMs = uiState.rangeStartMs,
-            rangeDays = uiState.selectedRange.days,
+            rangeDays = rangeDays,
+            scrollState = scrollState,
+            zoomState = zoomState,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
 
@@ -195,6 +218,8 @@ private fun AcwrChartCard(
     ratioPoints: List<DailyDataPoint>,
     rangeStartMs: Long,
     rangeDays: Int,
+    scrollState: VicoScrollState,
+    zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -226,6 +251,8 @@ private fun AcwrChartCard(
                     ratioPoints = ratioPoints,
                     rangeStartMs = rangeStartMs,
                     rangeDays = rangeDays,
+                    scrollState = scrollState,
+                    zoomState = zoomState,
                 )
             }
         }
@@ -238,6 +265,8 @@ private fun AcwrChart(
     ratioPoints: List<DailyDataPoint>,
     rangeStartMs: Long,
     rangeDays: Int,
+    scrollState: VicoScrollState,
+    zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
 ) {
     val ratioColor = MaterialTheme.colorScheme.primary
@@ -391,11 +420,16 @@ private fun AcwrChart(
                     HorizontalAxis.rememberBottom(
                         label = labelComponent,
                         valueFormatter = xAxisFormatter,
-                        itemPlacer = remember(rangeDays) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                        itemPlacer =
+                            remember(
+                                rangeDays,
+                            ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
                         guideline = guidelineComponent,
                     ),
             ),
         modelProducer = modelProducer,
+        scrollState = scrollState,
+        zoomState = zoomState,
         modifier = modifier.fillMaxWidth().height(220.dp),
     )
 }

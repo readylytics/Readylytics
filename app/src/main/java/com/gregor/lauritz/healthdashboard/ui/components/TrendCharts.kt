@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
+import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
@@ -75,7 +77,21 @@ fun TrendChart(
     baselineUnit: String,
     baseline: Float? = null,
     showBaseline: Boolean = true,
-    scrollState: VicoScrollState = rememberVicoScrollState(),
+    scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
+    zoomState: VicoZoomState =
+        rememberVicoZoomState(
+            zoomEnabled = rangeDays > 7,
+            initialZoom = Zoom.Content,
+            minZoom = Zoom.Content,
+            maxZoom =
+                remember(rangeDays) {
+                    when (rangeDays) {
+                        30 -> Zoom.fixed(6f)
+                        180 -> Zoom.fixed(25f)
+                        else -> Zoom.Content
+                    }
+                },
+        ),
     modifier: Modifier = Modifier,
 ) {
     if (points.none { it.value != null }) {
@@ -166,7 +182,10 @@ fun TrendChart(
                     HorizontalAxis.rememberBottom(
                         label = labelComponent,
                         valueFormatter = xAxisFormatter,
-                        itemPlacer = remember(rangeDays) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                        itemPlacer =
+                            remember(
+                                rangeDays,
+                            ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
                         guideline = guidelineComponent,
                     ),
                 decorations =
@@ -183,7 +202,7 @@ fun TrendChart(
             ),
         modelProducer = modelProducer,
         scrollState = scrollState,
-        zoomState = rememberVicoZoomState(zoomEnabled = false),
+        zoomState = zoomState,
         modifier = modifier.fillMaxWidth().height(180.dp),
     )
 

@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.settings.data
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -8,6 +9,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -42,6 +44,9 @@ class DeviceSettingsViewModelTest {
 
     @After
     fun tearDown() {
+        if (::viewModel.isInitialized) {
+            viewModel.viewModelScope.cancel()
+        }
         Dispatchers.resetMain()
     }
 

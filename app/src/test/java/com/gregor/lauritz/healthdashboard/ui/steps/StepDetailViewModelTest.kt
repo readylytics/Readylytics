@@ -1,4 +1,4 @@
-package com.gregor.lauritz.healthdashboard.ui.rhr
+package com.gregor.lauritz.healthdashboard.ui.steps
 
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
@@ -26,10 +26,10 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class RestingHrDetailViewModelTest {
+class StepDetailViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
-    private lateinit var viewModel: RestingHrDetailViewModel
+    private lateinit var viewModel: StepDetailViewModel
     private lateinit var dao: DailySummaryDao
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var selectedDateRepo: SelectedDateRepository
@@ -50,8 +50,8 @@ class RestingHrDetailViewModelTest {
         selectedDateRepo = SelectedDateRepository()
     }
 
-    private fun createViewModel(): RestingHrDetailViewModel =
-        RestingHrDetailViewModel(
+    private fun createViewModel(): StepDetailViewModel =
+        StepDetailViewModel(
             dailySummaryDao = dao,
             selectedDateRepository = selectedDateRepo,
             settingsRepo = settingsRepo,
@@ -71,7 +71,7 @@ class RestingHrDetailViewModelTest {
             viewModel = createViewModel()
             val state = viewModel.uiState.value
             assertEquals(TimeRange.SEVEN_DAYS, state.selectedRange)
-            assertEquals(emptyList<com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint>(), state.dailyRhr)
+            assertEquals(emptyList<com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint>(), state.dailySteps)
         }
 
     @Test
@@ -88,21 +88,20 @@ class RestingHrDetailViewModelTest {
         runTest {
             val today = LocalDate.now()
             val midnightMs = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            val latestSummary = DailySummaryEntity(dateMidnightMs = midnightMs, restingHeartRate = 60)
+            val latestSummary = DailySummaryEntity(dateMidnightMs = midnightMs, stepCount = 8500)
 
             every { dao.observeByDate(any()) } returns MutableStateFlow(latestSummary)
             every { dao.observeSince(any()) } returns MutableStateFlow(listOf(latestSummary))
 
             viewModel = createViewModel()
 
-            // Trigger collection
             val state = viewModel.uiState.first { it.latestSummary != null }
 
-            assertEquals(60, state.latestSummary?.restingHeartRate)
-            assertEquals(7, state.dailyRhr.size) // Padded to 7 days
-            val dataEntry = state.dailyRhr.last { it.value != null }
-            assertEquals(60f, dataEntry.value)
-            val nullCount = state.dailyRhr.count { it.value == null }
+            assertEquals(8500, state.latestSummary?.stepCount)
+            assertEquals(7, state.dailySteps.size)
+            val dataEntry = state.dailySteps.last { it.value != null }
+            assertEquals(8500f, dataEntry.value)
+            val nullCount = state.dailySteps.count { it.value == null }
             assertEquals(6, nullCount)
         }
 }

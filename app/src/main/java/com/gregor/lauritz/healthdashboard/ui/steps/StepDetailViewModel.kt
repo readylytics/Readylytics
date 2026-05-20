@@ -7,6 +7,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
+import com.gregor.lauritz.healthdashboard.domain.util.toMidnightEpochMilli
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -54,9 +55,13 @@ class StepDetailViewModel
                 .flatMapLatest { (range, date) ->
                     val fromMs = range.fromMs(date)
                     val startDayMs = fromMs.truncateToDayMs()
+                    val selectedDateMidnightMs = date.toMidnightEpochMilli()
 
                     combine(
-                        dailySummaryDao.observeLatest().map { it?.let { DailySummaryMapper.toDomain(it) } },
+                        dailySummaryDao
+                            .observeByDate(
+                                selectedDateMidnightMs,
+                            ).map { it?.let { DailySummaryMapper.toDomain(it) } },
                         dailySummaryDao.observeSince(fromMs).map { list ->
                             list.map { DailySummaryMapper.toDomain(it) }
                         },
