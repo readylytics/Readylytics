@@ -5,60 +5,70 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
+import com.gregor.lauritz.healthdashboard.domain.util.TimezoneProvider
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SleepDetailViewModelTest {
-    private val testDispatcher = StandardTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
+    // A single UnconfinedTestDispatcher serves as both Main and ioDispatcher.
+    // This ensures flowOn(ioDispatcher) stays on the test scheduler, preventing
+    // any coroutines from leaking onto real thread pools between tests.
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var sleepSessionDao: SleepSessionDao
     private lateinit var selectedDateRepository: SelectedDateRepository
     private lateinit var sleepSessionRepository: SleepSessionRepository
-    private lateinit var viewModel: SleepDetailViewModel
+    private lateinit var timezoneProvider: TimezoneProvider
 
     @Before
     fun setup() {
+        Dispatchers.setMain(testDispatcher)
         sleepSessionDao = mockk()
         selectedDateRepository = mockk()
         sleepSessionRepository = mockk()
+        timezoneProvider = mockk()
+        every { timezoneProvider.timezone } returns flowOf(ZoneId.systemDefault())
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
     fun whenSessionIsNull_emitsEmptyState() =
-        testScope.runTest {
-            // Given: no session for today
+        runTest(testDispatcher) {
             val date = LocalDate.now()
-            every { selectedDateRepository.selectedDate } returns flowOf(date)
+            every { selectedDateRepository.selectedDate } returns MutableStateFlow(date)
             coEvery {
                 sleepSessionDao.observeFirstSessionEndingInRange(any(), any())
             } returns flowOf(null)
 
-            // When: create viewModel
-            viewModel =
-                SleepDetailViewModel(
-                    sleepSessionDao = sleepSessionDao,
-                    selectedDateRepository = selectedDateRepository,
-                    sleepSessionRepository = sleepSessionRepository,
-                )
+            val viewModel = createViewModel()
+            val state =
+                viewModel.uiState
+                    .filter { it.selectedDate == date }
+                    .first()
 
-            advanceUntilIdle()
-
-            // Then: uiState has null session and empty stages
-            val state = viewModel.uiState.value
             assertNull(state.session)
             assertEquals(0, state.stageTimeline.size)
             assertEquals(0f, state.deepSleepPercent)
@@ -67,8 +77,7 @@ class SleepDetailViewModelTest {
 
     @Test
     fun whenSessionExists_emitsStateWithStages() =
-        testScope.runTest {
-            // Given: session with 3 stages (deep=30, light=40, rem=20, awake=10)
+        runTest(testDispatcher) {
             val date = LocalDate.now()
             val session =
                 createMockSession(
@@ -86,7 +95,7 @@ class SleepDetailViewModelTest {
                     SleepStageData("AWAKE", 5_400_000, 6_000_000, 10),
                 )
 
-            every { selectedDateRepository.selectedDate } returns flowOf(date)
+            every { selectedDateRepository.selectedDate } returns MutableStateFlow(date)
             coEvery {
                 sleepSessionDao.observeFirstSessionEndingInRange(any(), any())
             } returns flowOf(session)
@@ -94,30 +103,23 @@ class SleepDetailViewModelTest {
                 sleepSessionRepository.observeSessionStages("session1")
             } returns flowOf(stages)
 
-            // When: create viewModel
-            viewModel =
-                SleepDetailViewModel(
-                    sleepSessionDao = sleepSessionDao,
-                    selectedDateRepository = selectedDateRepository,
-                    sleepSessionRepository = sleepSessionRepository,
-                )
+            val viewModel = createViewModel()
+            val state =
+                viewModel.uiState
+                    .filter { it.session != null }
+                    .first()
 
-            advanceUntilIdle()
-
-            // Then: state contains session and stages with calculated percentages
-            val state = viewModel.uiState.value
             assertEquals(session, state.session)
             assertEquals(stages, state.stageTimeline)
-            assertEquals(30f, state.deepSleepPercent) // 30 / 100 * 100
-            assertEquals(40f, state.lightSleepPercent) // 40 / 100 * 100
-            assertEquals(20f, state.remSleepPercent) // 20 / 100 * 100
-            assertEquals(10f, state.awakePercent) // 10 / 100 * 100
+            org.junit.Assert.assertEquals(30f, state.deepSleepPercent, 0.01f)
+            org.junit.Assert.assertEquals(40f, state.lightSleepPercent, 0.01f)
+            org.junit.Assert.assertEquals(20f, state.remSleepPercent, 0.01f)
+            org.junit.Assert.assertEquals(10f, state.awakePercent, 0.01f)
         }
 
     @Test
     fun whenTotalMinutesIsZero_percentagesAreZero() =
-        testScope.runTest {
-            // Given: session with 0 minutes total
+        runTest(testDispatcher) {
             val date = LocalDate.now()
             val session =
                 createMockSession(
@@ -128,7 +130,7 @@ class SleepDetailViewModelTest {
                     awakeMinutes = 0,
                 )
 
-            every { selectedDateRepository.selectedDate } returns flowOf(date)
+            every { selectedDateRepository.selectedDate } returns MutableStateFlow(date)
             coEvery {
                 sleepSessionDao.observeFirstSessionEndingInRange(any(), any())
             } returns flowOf(session)
@@ -136,18 +138,12 @@ class SleepDetailViewModelTest {
                 sleepSessionRepository.observeSessionStages("session1")
             } returns flowOf(emptyList())
 
-            // When: create viewModel
-            viewModel =
-                SleepDetailViewModel(
-                    sleepSessionDao = sleepSessionDao,
-                    selectedDateRepository = selectedDateRepository,
-                    sleepSessionRepository = sleepSessionRepository,
-                )
+            val viewModel = createViewModel()
+            val state =
+                viewModel.uiState
+                    .filter { it.session != null }
+                    .first()
 
-            advanceUntilIdle()
-
-            // Then: all percentages are 0
-            val state = viewModel.uiState.value
             assertEquals(0f, state.deepSleepPercent)
             assertEquals(0f, state.lightSleepPercent)
             assertEquals(0f, state.remSleepPercent)
@@ -156,7 +152,6 @@ class SleepDetailViewModelTest {
 
     @Test
     fun buildDetailUiState_calculatesPercentagesCorrectly() {
-        // Given: session with deep=25, light=50, rem=15, awake=10 (total=100)
         val session =
             createMockSession(
                 id = "test",
@@ -172,45 +167,53 @@ class SleepDetailViewModelTest {
             )
         val date = LocalDate.now()
 
-        // When: call buildDetailUiState
-        val state = createViewModel().buildDetailUiState(session, stages, date)
+        val state = createHelper().buildDetailUiState(session, stages, date)
 
-        // Then: percentages calculated correctly
-        assertEquals(25f, state.deepSleepPercent)
-        assertEquals(50f, state.lightSleepPercent)
-        assertEquals(15f, state.remSleepPercent)
-        assertEquals(10f, state.awakePercent)
+        org.junit.Assert.assertEquals(25f, state.deepSleepPercent, 0.01f)
+        org.junit.Assert.assertEquals(50f, state.lightSleepPercent, 0.01f)
+        org.junit.Assert.assertEquals(15f, state.remSleepPercent, 0.01f)
+        org.junit.Assert.assertEquals(10f, state.awakePercent, 0.01f)
     }
 
     @Test
     fun buildDetailUiState_presentsAllRequiredFields() {
-        // Given: session and stages
         val session = createMockSession(id = "test", deepMinutes = 50, lightMinutes = 50)
         val stages = listOf(SleepStageData("DEEP", 0, 3_000_000, 50))
         val date = LocalDate.of(2026, 5, 19)
 
-        // When: call buildDetailUiState
-        val state = createViewModel().buildDetailUiState(session, stages, date)
+        val state = createHelper().buildDetailUiState(session, stages, date)
 
-        // Then: all fields are populated
         assertEquals(session, state.session)
         assertEquals(stages, state.stageTimeline)
         assertEquals(date, state.selectedDate)
-        assertEquals(50f, state.deepSleepPercent)
+        org.junit.Assert.assertEquals(50f, state.deepSleepPercent, 0.01f)
         assertEquals(session.sleepScore, state.sleepScore)
     }
 
-    // Helper functions
-    private fun createViewModel(): SleepDetailViewModel {
-        every { selectedDateRepository.selectedDate } returns flowOf(LocalDate.now())
+    // ─── Helpers ────────────────────────────────────────────────────────────────
+
+    /** Creates a ViewModel that passes testDispatcher as ioDispatcher — no real threads. */
+    private fun createViewModel(): SleepDetailViewModel =
+        SleepDetailViewModel(
+            sleepSessionDao = sleepSessionDao,
+            selectedDateRepository = selectedDateRepository,
+            sleepSessionRepository = sleepSessionRepository,
+            timezoneProvider = timezoneProvider,
+            ioDispatcher = testDispatcher,
+        )
+
+    /** For pure-function tests that don't need a live flow. */
+    private fun createHelper(): SleepDetailViewModel {
+        every { selectedDateRepository.selectedDate } returns MutableStateFlow(LocalDate.now())
         coEvery {
             sleepSessionDao.observeFirstSessionEndingInRange(any(), any())
         } returns flowOf(null)
-
         return SleepDetailViewModel(
             sleepSessionDao = sleepSessionDao,
             selectedDateRepository = selectedDateRepository,
             sleepSessionRepository = sleepSessionRepository,
+            timezoneProvider = timezoneProvider,
+            ioDispatcher = testDispatcher,
         )
     }
 

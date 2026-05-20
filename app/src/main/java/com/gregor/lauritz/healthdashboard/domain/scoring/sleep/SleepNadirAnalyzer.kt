@@ -30,7 +30,7 @@ class SleepNadirAnalyzer
             val isTimezoneJump =
                 currentOffset != null &&
                     previousOffset != null &&
-                    abs(currentOffset - previousOffset) > ScoringConstants.TIMEZONE_JUMP_THRESHOLD_SECONDS
+                    abs(currentOffset - previousOffset) >= ScoringConstants.TIMEZONE_JUMP_THRESHOLD_SECONDS
 
             val minHrTimestamp = heartRateDao.getMinHrTimestamp(session.id)
             val isLateNadirRaw =

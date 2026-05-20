@@ -55,7 +55,7 @@ class ComputeSleepMetricsUseCase
                 }
             val decryptedOverride =
                 prefs.circadianThresholdOverride?.let { encrypted ->
-                    runCatching { encryptionManager.decrypt(encrypted).toInt() }.getOrNull()
+                    runCatching { encryptionManager.decrypt(encrypted)?.toInt() }.getOrNull()
                 }
             val scoringConfig =
                 scoringConfigFactory.build(

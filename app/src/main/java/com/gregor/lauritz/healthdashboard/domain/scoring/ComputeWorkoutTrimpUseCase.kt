@@ -30,9 +30,15 @@ class ComputeWorkoutTrimpUseCase
                     ?: prefs.rhrBaselineOverride
                     ?: ScoringConstants.DEFAULT_RHR_BPM
 
-            // If no samples are provided, calculate a "pseudo-integrated" TRIMP based on the session average.
+            // STRICT FILTER: Only use samples within the workout boundaries
+            val filteredSamples =
+                samples
+                    .filter { it.timestamp.toEpochMilli() in workoutStartTime..workoutEndTime }
+                    .sortedBy { it.timestamp }
+
+            // If no valid samples are in range, calculate a "pseudo-integrated" TRIMP based on the session average.
             // This ensures that the fallback matches the integrated logic as closely as possible.
-            if (samples.isEmpty()) {
+            if (filteredSamples.isEmpty()) {
                 val durationMinutes = (workoutEndTime - workoutStartTime) / 60_000f
                 return if (durationMinutes > 0f) {
                     PaiCalculator.calculateDailyTrimp(
@@ -50,14 +56,6 @@ class ComputeWorkoutTrimpUseCase
                     storedTrimp ?: 0f
                 }
             }
-
-            // STRICT FILTER: Only use samples within the workout boundaries
-            val filteredSamples =
-                samples
-                    .filter { it.timestamp.toEpochMilli() in workoutStartTime..workoutEndTime }
-                    .sortedBy { it.timestamp }
-
-            if (filteredSamples.isEmpty()) return storedTrimp ?: 0f
 
             var computedTrimp = 0f
 

@@ -59,5 +59,10 @@ interface HealthConnectRepository {
         to: Instant,
     ): Long
 
+    suspend fun readStepsRange(
+        from: Instant,
+        to: Instant,
+    ): Map<java.time.LocalDate, Long>
+
     suspend fun discoverDevices(windowDays: Int = 2): List<String>
 }

@@ -11,9 +11,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -26,9 +29,12 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppDestination
 import com.gregor.lauritz.healthdashboard.ui.navigation.TabDestination
+import com.gregor.lauritz.healthdashboard.ui.sync.SyncEvent
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,12 +55,26 @@ fun MainScaffold(
                 !dest.hasRoute(AppDestination.About::class)
         } ?: true
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val syncCompletedMessage = stringResource(R.string.sync_completed)
+
+    LaunchedEffect(Unit) {
+        syncViewModel.syncEvents.collectLatest { event ->
+            when (event) {
+                SyncEvent.SyncCompleted -> {
+                    snackbarHostState.showSnackbar(syncCompletedMessage)
+                }
+            }
+        }
+    }
+
     PullToRefreshBox(
         isRefreshing = isSyncing,
         onRefresh = { syncViewModel.triggerManualSync() },
     ) {
         Scaffold(
             modifier = modifier,
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             bottomBar = {
                 AnimatedVisibility(
                     visible = showBottomBar,

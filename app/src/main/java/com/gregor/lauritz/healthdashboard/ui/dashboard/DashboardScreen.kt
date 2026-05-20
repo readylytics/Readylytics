@@ -34,6 +34,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.ui.components.CardConfigurationsList
+import com.gregor.lauritz.healthdashboard.ui.components.CardDataMap
 import com.gregor.lauritz.healthdashboard.ui.components.CardManagementBottomSheet
 import com.gregor.lauritz.healthdashboard.ui.components.EditModeFab
 import com.gregor.lauritz.healthdashboard.ui.components.ReorderableCardGrid
@@ -168,16 +170,18 @@ fun DashboardScreen(
             } else {
                 item(key = "metric_grid") {
                     ReorderableCardGrid(
-                        cardConfigurations = uiState.cardConfigurations,
+                        cardConfigurations = CardConfigurationsList(uiState.cardConfigurations),
                         cardDataMap =
-                            buildCardDataMap(
-                                uiState = uiState,
-                                onNavigateToSleep = onNavigateToSleep,
-                                onNavigateToWorkouts = onNavigateToWorkouts,
-                                onNavigateToRhr = onNavigateToRhr,
-                                onNavigateToSteps = onNavigateToSteps,
-                                isEditing = uiState.isManagingCards,
-                                isLoading = uiState.isComputingMetrics,
+                            CardDataMap(
+                                buildCardDataMap(
+                                    uiState = uiState,
+                                    onNavigateToSleep = onNavigateToSleep,
+                                    onNavigateToWorkouts = onNavigateToWorkouts,
+                                    onNavigateToRhr = onNavigateToRhr,
+                                    onNavigateToSteps = onNavigateToSteps,
+                                    isEditing = uiState.isManagingCards,
+                                    isLoading = uiState.isComputingMetrics,
+                                ),
                             ),
                         isEditing = uiState.isManagingCards,
                         onCardRemove = { cardId ->

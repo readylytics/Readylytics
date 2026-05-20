@@ -288,8 +288,8 @@ class ScoringRepositoryN1Test {
     fun `batch fetch replaces per-session getMinHrInRange calls`() =
         runTest {
             repo.computeAndPersistDailySummary(LocalDate.now())
-            coVerify(exactly = 1) { heartRateDao.getByTimeRange(any(), any()) }
-            coVerify(exactly = 1) { heartRateDao.getMinHrInRange(any(), any()) }
+            coVerify(exactly = 2) { heartRateDao.getByTimeRange(any(), any()) }
+            coVerify(exactly = 0) { heartRateDao.getMinHrInRange(any(), any()) }
         }
 
     @Test

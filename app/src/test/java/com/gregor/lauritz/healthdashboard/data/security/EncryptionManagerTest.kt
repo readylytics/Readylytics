@@ -26,7 +26,7 @@ class EncryptionManagerTest {
         val encrypted = encryptionManager.encrypt(original)
         val decrypted = encryptionManager.decrypt(encrypted)
 
-        assertTrue(decrypted.isNotEmpty(), "Decrypted value should not be empty")
+        assertTrue(decrypted?.isNotEmpty() == true, "Decrypted value should not be empty")
         assertTrue(original == decrypted, "Decrypted should equal original: '$original' != '$decrypted'")
     }
 

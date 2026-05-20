@@ -390,7 +390,6 @@ fun SettingsScreen(
                                 isLoading = thresholdState.isUpdatingThreshold,
                                 error = thresholdState.thresholdError,
                                 onErrorDismissed = { onThresholdEvent(SettingsEvent.DismissThresholdError) },
-                                modifier = Modifier.padding(horizontal = 16.dp),
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Thresholds")

@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class HealthDeviceRepositoryTest {
     private lateinit var sleepSessionDao: SleepSessionDao
@@ -191,7 +192,10 @@ class HealthDeviceRepositoryTest {
             assertEquals(devices1, devices2)
             assertEquals(devices2, devices3)
             // 2 hits out of 3 total calls = 66% hit rate; dao called exactly once confirms this
-            assertTrue("Hit rate should be 66% (2/3 calls served from cache)", devices1 == devices2)
+            assertTrue(
+                actual = devices1 == devices2,
+                message = "Hit rate should be 66% (2/3 calls served from cache)",
+            )
         }
 
     @Test

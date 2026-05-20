@@ -43,7 +43,7 @@ class WakeWindowHrCollector
 
             val currentRestingHr =
                 allWakeHrRecords
-                    .filter { it.timestampMs in (session.endTime - beforeMs)..(session.endTime + afterMs) }
+                    .filter { it.timestampMs in session.endTime..(session.endTime + afterMs) }
                     .minOfOrNull { it.beatsPerMinute }
 
             val historicSessions = sessions.filter { it.id != session.id }

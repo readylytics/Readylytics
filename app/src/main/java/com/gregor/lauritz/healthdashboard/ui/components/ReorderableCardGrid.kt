@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,29 +59,42 @@ private val FULL_WIDTH_CARDS = setOf(CardId.STEPS)
  * All slot bounds are stored in a single shared coordinate space: the root Column's
  * local space. This is what makes the 2-D hit test in DragController correct.
  */
+@Immutable
+data class CardConfigurationsList(
+    val items: List<CardConfiguration>,
+)
+
+@Immutable
+data class CardDataMap(
+    val map: Map<CardId, @Composable () -> Unit>,
+)
+
 @Composable
 fun ReorderableCardGrid(
-    cardConfigurations: List<CardConfiguration>,
-    cardDataMap: Map<CardId, @Composable () -> Unit>,
+    cardConfigurations: CardConfigurationsList,
+    cardDataMap: CardDataMap,
     isEditing: Boolean,
     onCardRemove: (CardId) -> Unit,
     onCardReorder: (List<CardConfiguration>) -> Unit,
     modifier: Modifier = Modifier,
     controller: DragController? = null,
 ) {
+    val items = cardConfigurations.items
+    val dataMap = cardDataMap.map
+
     // Visible + renderable configs, keyed for O(1) lookup at render and drop time.
     val configByCardId: Map<CardId, CardConfiguration> =
-        remember(cardConfigurations, cardDataMap) {
-            cardConfigurations
-                .filter { it.isVisible && cardDataMap.containsKey(it.cardId) }
+        remember(items, dataMap) {
+            items
+                .filter { it.isVisible && dataMap.containsKey(it.cardId) }
                 .associateBy { it.cardId }
         }
 
     val dragController =
         remember {
             controller ?: DragController(
-                cardConfigurations
-                    .filter { it.isVisible && cardDataMap.containsKey(it.cardId) }
+                items
+                    .filter { it.isVisible && dataMap.containsKey(it.cardId) }
                     .sortedBy { it.position }
                     .map { it.cardId },
             )
@@ -88,10 +102,10 @@ fun ReorderableCardGrid(
 
     // Sync controller from upstream when not actively dragging. Only the filtered + sorted
     // ids enter the controller so pendingOrder always matches what we actually render.
-    LaunchedEffect(cardConfigurations) {
+    LaunchedEffect(items) {
         val upstreamOrder =
-            cardConfigurations
-                .filter { it.isVisible && cardDataMap.containsKey(it.cardId) }
+            items
+                .filter { it.isVisible && dataMap.containsKey(it.cardId) }
                 .sortedBy { it.position }
                 .map { it.cardId }
         dragController.syncFromUpstream(upstreamOrder)
@@ -182,7 +196,7 @@ fun ReorderableCardGrid(
                 ) {
                     RenderCardItem(
                         card = card,
-                        cardDataMap = cardDataMap,
+                        cardDataMap = dataMap,
                         isEditing = isEditing,
                         controller = dragController,
                         modifier = Modifier.fillMaxWidth(),
@@ -212,7 +226,7 @@ fun ReorderableCardGrid(
                     ) {
                         RenderCardItem(
                             card = leftCard,
-                            cardDataMap = cardDataMap,
+                            cardDataMap = dataMap,
                             isEditing = isEditing,
                             controller = dragController,
                             modifier = Modifier.fillMaxWidth().fillMaxHeight(),
@@ -242,7 +256,7 @@ fun ReorderableCardGrid(
                         ) {
                             RenderCardItem(
                                 card = rightCard,
-                                cardDataMap = cardDataMap,
+                                cardDataMap = dataMap,
                                 isEditing = isEditing,
                                 controller = dragController,
                                 modifier = Modifier.fillMaxWidth().fillMaxHeight(),

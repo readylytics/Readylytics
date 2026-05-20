@@ -12,9 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.domain.circadian.CircadianThresholdDefaults
+import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
 
 private const val THRESHOLD_SLIDER_STEPS = 8 // Results in: 0, 10, 20, ..., 90 (Issue #9)
 
@@ -37,115 +39,79 @@ fun CircadianThresholdSettingsSection(
         mutableStateOf((currentOverride ?: profileDefault).toFloat())
     }
 
-    Card(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            ),
+        verticalArrangement = Arrangement.spacedBy(SettingsConstants.VERTICAL_SPACER),
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+        if (isLoading) {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth().height(2.dp),
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+
+        // Show error state (Issue #8)
+        if (error != null) {
+            ElevatedCard(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = SettingsConstants.HORIZONTAL_PADDING, vertical = 4.dp),
+                colors =
+                    CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                    ),
             ) {
-                Text(
-                    "Circadian Consistency",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-
-            // Show error state (Issue #8)
-            if (error != null) {
-                ElevatedCard(
+                Row(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                    colors =
-                        CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                        ),
+                            .padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Icon(
+                        imageVector = Icons.Default.Error,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        error,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        onClick = onErrorDismissed,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.heightIn(min = 32.dp),
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Error,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Text(
-                            error,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.weight(1f),
-                        )
-                        TextButton(
-                            onClick = onErrorDismissed,
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.heightIn(min = 32.dp),
-                        ) {
-                            Text("Dismiss", style = MaterialTheme.typography.labelMedium)
-                        }
+                        Text("Dismiss", style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
+        }
 
-            if (profile == PhysiologyProfile.SHIFT_WORKER) {
-                // Shift worker mode selection
-                ShiftWorkerModeSelector(
-                    useStandardRollingAnchor = useStandardRollingAnchor,
-                    profileDefault = profileDefault,
-                    onModeChanged = { useStandard ->
-                        useStandardRollingAnchor = useStandard
-                        if (!useStandard) {
-                            // Clear override when switching to within-week mode
-                            onOverrideChanged(null)
-                            thresholdValue = profileDefault.toFloat()
-                        }
-                    },
-                )
+        if (profile == PhysiologyProfile.SHIFT_WORKER) {
+            // Shift worker mode selection
+            ShiftWorkerModeSelector(
+                useStandardRollingAnchor = useStandardRollingAnchor,
+                profileDefault = profileDefault,
+                onModeChanged = { useStandard ->
+                    useStandardRollingAnchor = useStandard
+                    if (!useStandard) {
+                        // Clear override when switching to within-week mode
+                        onOverrideChanged(null)
+                        thresholdValue = profileDefault.toFloat()
+                    }
+                },
+                modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+            )
 
-                // Show slider only if using standard rolling anchor
-                if (useStandardRollingAnchor) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    ThresholdSlider(
-                        value = thresholdValue,
-                        profileDefault = profileDefault,
-                        onValueChanged = { newValue ->
-                            thresholdValue = newValue
-                            onOverrideChanged(newValue.toInt())
-                        },
-                        onReset = {
-                            thresholdValue = profileDefault.toFloat()
-                            onOverrideChanged(null)
-                        },
-                    )
-                }
-            } else {
-                // Regular user mode - show slider with profile default
+            // Show slider only if using standard rolling anchor
+            if (useStandardRollingAnchor) {
+                Spacer(modifier = Modifier.height(8.dp))
                 ThresholdSlider(
                     value = thresholdValue,
                     profileDefault = profileDefault,
@@ -157,8 +123,24 @@ fun CircadianThresholdSettingsSection(
                         thresholdValue = profileDefault.toFloat()
                         onOverrideChanged(null)
                     },
+                    modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
                 )
             }
+        } else {
+            // Regular user mode - show slider with profile default
+            ThresholdSlider(
+                value = thresholdValue,
+                profileDefault = profileDefault,
+                onValueChanged = { newValue ->
+                    thresholdValue = newValue
+                    onOverrideChanged(newValue.toInt())
+                },
+                onReset = {
+                    thresholdValue = profileDefault.toFloat()
+                    onOverrideChanged(null)
+                },
+                modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+            )
         }
     }
 }
@@ -340,5 +322,34 @@ private fun ThresholdSlider(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp),
         )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CircadianThresholdSettingsSectionPreview() {
+    MaterialTheme {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text("General Profile", style = MaterialTheme.typography.titleSmall)
+            CircadianThresholdSettingsSection(
+                profile = PhysiologyProfile.GENERAL,
+                currentOverride = null,
+                isShiftWorkerMode = false,
+                onOverrideChanged = {},
+            )
+
+            HorizontalDivider()
+
+            Text("Shift Worker Profile", style = MaterialTheme.typography.titleSmall)
+            CircadianThresholdSettingsSection(
+                profile = PhysiologyProfile.SHIFT_WORKER,
+                currentOverride = 30,
+                isShiftWorkerMode = true,
+                onOverrideChanged = {},
+            )
+        }
     }
 }

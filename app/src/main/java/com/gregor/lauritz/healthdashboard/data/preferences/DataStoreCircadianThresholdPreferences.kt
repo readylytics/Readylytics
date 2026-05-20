@@ -16,7 +16,7 @@ class DataStoreCircadianThresholdPreferences
             settingsRepo.userPreferences.map { prefs ->
                 prefs.circadianThresholdOverride?.let { encrypted ->
                     runCatching {
-                        encryptionManager.decrypt(encrypted).toInt()
+                        encryptionManager.decrypt(encrypted)?.toInt()
                     }.onFailure { e ->
                         SecureLogger.error("Failed to decrypt circadian threshold override", e)
                         // If decryption fails, the key might be invalid or rotated.

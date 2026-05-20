@@ -6,6 +6,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.components.RestorationW
 import com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargets
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.round
 
 @Singleton
 class SleepScoringStrategy
@@ -55,7 +56,8 @@ class SleepScoringStrategy
                 }
             val deepComponent = (deepPct / deepTarget).coerceAtMost(1f) * 100f
             val remComponent = (remPct / remTarget).coerceAtMost(1f) * 100f
-            return Sleep.WEIGHT_DEEP_COMPONENT * deepComponent + Sleep.WEIGHT_REM_COMPONENT * remComponent
+            val result = Sleep.WEIGHT_DEEP_COMPONENT * deepComponent + Sleep.WEIGHT_REM_COMPONENT * remComponent
+            return round(result * 10) / 10
         }
 
         fun computeRestorationSubScore(

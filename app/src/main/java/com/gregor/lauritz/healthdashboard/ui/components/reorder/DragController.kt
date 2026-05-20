@@ -82,6 +82,8 @@ class DragController(
 
         hoveringDeleteZone = deleteZoneTop != null && draggedCenter.y >= deleteZoneTop
 
+        if (hoveringDeleteZone) return
+
         // 2-D hit test: which slot is the finger currently over?
         val targetId =
             pendingOrder.firstOrNull { otherId ->
