@@ -9,6 +9,7 @@ import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
 @Composable
 fun MetricStatus.containerColor(): Color =
     when (this) {
+        MetricStatus.NO_DATA -> MaterialTheme.colorScheme.surfaceVariant
         MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.surfaceVariant
         MetricStatus.OPTIMAL -> MaterialTheme.colorScheme.primaryContainer
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.surfaceContainerHighest
@@ -28,6 +29,7 @@ fun MetricStatus.gaugeColor(): Color =
 @Composable
 fun MetricStatus.onContainerColor(): Color =
     when (this) {
+        MetricStatus.NO_DATA -> MaterialTheme.colorScheme.onSurfaceVariant
         MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.onSurfaceVariant
         MetricStatus.OPTIMAL -> MaterialTheme.colorScheme.onPrimaryContainer
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -38,6 +40,7 @@ fun MetricStatus.onContainerColor(): Color =
 @Composable
 fun MetricStatus.contentColor(): Color =
     when (this) {
+        MetricStatus.NO_DATA -> MaterialTheme.colorScheme.onSurfaceVariant
         MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.onSurfaceVariant
         MetricStatus.OPTIMAL -> MaterialTheme.colorScheme.primary
         MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.outline

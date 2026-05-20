@@ -23,7 +23,7 @@ fun SleepSessionSummary.efficiencyStatus(): MetricStatus {
 
 fun DailySummary.deepSleepStatus(): MetricStatus =
     when (deepSleepPercent) {
-        null -> MetricStatus.CALIBRATING
+        null -> if (sleepDurationMinutes != null && isCalibrating) MetricStatus.CALIBRATING else MetricStatus.NO_DATA
         in 25f..30f -> MetricStatus.NEUTRAL
         in 15f..25f -> MetricStatus.OPTIMAL
         in 10f..15f -> MetricStatus.NEUTRAL
@@ -32,7 +32,7 @@ fun DailySummary.deepSleepStatus(): MetricStatus =
 
 fun DailySummary.remSleepStatus(): MetricStatus =
     when (remSleepPercent) {
-        null -> MetricStatus.CALIBRATING
+        null -> if (sleepDurationMinutes != null && isCalibrating) MetricStatus.CALIBRATING else MetricStatus.NO_DATA
         in 20f..25f -> MetricStatus.OPTIMAL
         in 15f..20f -> MetricStatus.NEUTRAL
         else -> MetricStatus.WARNING

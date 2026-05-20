@@ -319,9 +319,9 @@ private fun MetricsGrid(
     val session = uiState.latestSession
     val summary = uiState.latestSummary
 
-    val efficiencyStatus = session?.efficiencyStatus() ?: MetricStatus.CALIBRATING
-    val deepStatus = summary?.deepSleepStatus() ?: MetricStatus.CALIBRATING
-    val remStatus = summary?.remSleepStatus() ?: MetricStatus.CALIBRATING
+    val efficiencyStatus = session?.efficiencyStatus() ?: MetricStatus.NO_DATA
+    val deepStatus = summary?.deepSleepStatus() ?: MetricStatus.NO_DATA
+    val remStatus = summary?.remSleepStatus() ?: MetricStatus.NO_DATA
 
     Column(
         modifier = modifier.fillMaxWidth(),

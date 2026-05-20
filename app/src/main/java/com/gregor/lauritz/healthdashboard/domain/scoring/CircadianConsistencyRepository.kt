@@ -35,7 +35,7 @@ sealed class CircadianConsistencyResult {
 fun CircadianConsistencyResult.toStatus(): MetricStatus =
     when (this) {
         is CircadianConsistencyResult.Calibrating -> MetricStatus.CALIBRATING
-        is CircadianConsistencyResult.MissingData -> MetricStatus.CALIBRATING
+        is CircadianConsistencyResult.MissingData -> MetricStatus.NO_DATA
         is CircadianConsistencyResult.Ready ->
             when {
                 score >= 80f -> MetricStatus.OPTIMAL
