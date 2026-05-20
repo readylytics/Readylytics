@@ -185,8 +185,7 @@ fun TrendChart(
                         itemPlacer =
                             remember(
                                 rangeDays,
-                                zoomState,
-                            ) { ChartDefaults.itemPlacerForRangeDays(rangeDays, zoomState) },
+                            ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
                         guideline = guidelineComponent,
                     ),
                 decorations =

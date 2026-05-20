@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.domain.util
 
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 
 fun Long.truncateToDayMs(): Long {
@@ -13,3 +14,6 @@ fun Long.truncateToDayMs(): Long {
         .toInstant()
         .toEpochMilli()
 }
+
+fun LocalDate.toMidnightEpochMilli(zoneId: ZoneId = ZoneId.systemDefault()): Long =
+    this.atStartOfDay(zoneId).toInstant().toEpochMilli()

@@ -2,14 +2,19 @@ package com.gregor.lauritz.healthdashboard.ui.components
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.ui.common.DateFormatUtils
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
+import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
+import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.LineComponent
 import com.patrykandpatrick.vico.compose.common.component.TextComponent
@@ -59,10 +64,31 @@ object ChartDefaults {
             }
         }
 
-    fun itemPlacerForRangeDays(
+    @Composable
+    fun rememberChartState(
         rangeDays: Int,
-        zoomState: VicoZoomState? = null,
-    ): HorizontalAxis.ItemPlacer {
+        key: Any,
+    ): Pair<VicoScrollState, VicoZoomState> =
+        key(key) {
+            val scrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7)
+            val zoomState =
+                rememberVicoZoomState(
+                    zoomEnabled = rangeDays > 7,
+                    initialZoom = Zoom.Content,
+                    minZoom = Zoom.Content,
+                    maxZoom =
+                        remember(rangeDays) {
+                            when (rangeDays) {
+                                30 -> Zoom.fixed(6f)
+                                180 -> Zoom.fixed(25f)
+                                else -> Zoom.Content
+                            }
+                        },
+                )
+            scrollState to zoomState
+        }
+
+    fun itemPlacerForRangeDays(rangeDays: Int): HorizontalAxis.ItemPlacer {
         val basePlacer =
             HorizontalAxis.ItemPlacer.aligned(
                 spacing = { 1 },

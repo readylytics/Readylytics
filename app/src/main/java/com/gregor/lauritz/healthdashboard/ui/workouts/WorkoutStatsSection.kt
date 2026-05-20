@@ -423,8 +423,7 @@ private fun AcwrChart(
                         itemPlacer =
                             remember(
                                 rangeDays,
-                                zoomState,
-                            ) { ChartDefaults.itemPlacerForRangeDays(rangeDays, zoomState) },
+                            ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
                         guideline = guidelineComponent,
                     ),
             ),

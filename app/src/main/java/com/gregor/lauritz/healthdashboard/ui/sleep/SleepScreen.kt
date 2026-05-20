@@ -41,6 +41,7 @@ import com.gregor.lauritz.healthdashboard.ui.common.MetricCardSkeleton
 import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
 import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
+import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
@@ -50,9 +51,6 @@ import com.gregor.lauritz.healthdashboard.ui.components.StatusLegend
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
-import com.patrykandpatrick.vico.compose.cartesian.Zoom
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -92,26 +90,11 @@ fun SleepScreen(
     onNavigateToDetail: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val rangeDays = uiState.selectedRange.days
     val (chartScrollState, chartZoomState) =
-        key(uiState.selectedRange) {
-            val scrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7)
-            val zoomState =
-                rememberVicoZoomState(
-                    zoomEnabled = rangeDays > 7,
-                    initialZoom = Zoom.Content,
-                    minZoom = Zoom.Content,
-                    maxZoom =
-                        remember(rangeDays) {
-                            when (rangeDays) {
-                                30 -> Zoom.fixed(6f)
-                                180 -> Zoom.fixed(25f)
-                                else -> Zoom.Content
-                            }
-                        },
-                )
-            scrollState to zoomState
-        }
+        ChartDefaults.rememberChartState(
+            rangeDays = uiState.selectedRange.days,
+            key = uiState.selectedRange,
+        )
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),

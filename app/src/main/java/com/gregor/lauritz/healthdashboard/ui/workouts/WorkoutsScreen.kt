@@ -13,7 +13,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,11 +22,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
 import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
+import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.StatusLegend
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
-import com.patrykandpatrick.vico.compose.cartesian.Zoom
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
-import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 
 @Composable
 fun WorkoutsRoute(
@@ -60,26 +57,11 @@ fun WorkoutsScreen(
         listState
     }
 
-    val rangeDays = uiState.selectedRange.days
     val (chartScrollState, chartZoomState) =
-        key(uiState.selectedRange) {
-            val scrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7)
-            val zoomState =
-                rememberVicoZoomState(
-                    zoomEnabled = rangeDays > 7,
-                    initialZoom = Zoom.Content,
-                    minZoom = Zoom.Content,
-                    maxZoom =
-                        remember(rangeDays) {
-                            when (rangeDays) {
-                                30 -> Zoom.fixed(6f)
-                                180 -> Zoom.fixed(25f)
-                                else -> Zoom.Content
-                            }
-                        },
-                )
-            scrollState to zoomState
-        }
+        ChartDefaults.rememberChartState(
+            rangeDays = uiState.selectedRange.days,
+            key = uiState.selectedRange,
+        )
 
     LazyColumn(
         state = listState,

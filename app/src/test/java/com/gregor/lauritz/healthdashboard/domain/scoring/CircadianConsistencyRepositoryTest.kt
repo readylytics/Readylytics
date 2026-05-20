@@ -13,6 +13,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
 private const val ONE_DAY_MS = 24 * 60 * 60 * 1000L
 private const val FOUR_HOURS_MINUTES = 240
@@ -32,8 +33,10 @@ class CircadianConsistencyRepositoryTest {
         wakeHour: Int = 7,
         wakeMin: Int = 0,
         daysAgo: Int = 0,
+        anchorDate: LocalDate = LocalDate.now(),
     ): SleepSessionData {
-        val baseMs = System.currentTimeMillis() - daysAgo * ONE_DAY_MS
+        val midnight = anchorDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val baseMs = midnight - daysAgo * ONE_DAY_MS
         val startMs = baseMs - (24 - bedHour) * 3600_000L - bedMin * 60_000L
         val endMs = baseMs + wakeHour * 3600_000L + wakeMin * 60_000L
         val durationMinutes = ((endMs - startMs) / 60_000L).toInt().coerceAtLeast(FOUR_HOURS_MINUTES)
