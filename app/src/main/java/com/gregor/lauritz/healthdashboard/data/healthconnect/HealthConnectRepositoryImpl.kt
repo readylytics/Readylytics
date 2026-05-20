@@ -155,6 +155,14 @@ class HealthConnectRepositoryImpl
                 readAllPages<ExerciseSessionRecord>(from, to)
             }
 
+        override suspend fun readStepsRecords(
+            from: Instant,
+            to: Instant,
+        ): List<StepsRecord> =
+            withContext(Dispatchers.IO) {
+                readAllPages<StepsRecord>(from, to)
+            }
+
         override suspend fun readSteps(
             from: Instant,
             to: Instant,

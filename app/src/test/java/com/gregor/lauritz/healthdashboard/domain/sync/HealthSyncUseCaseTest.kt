@@ -92,14 +92,14 @@ class HealthSyncUseCaseTest {
             // Mock non-empty returns to ensure mapping logic is triggered
             coEvery { hcRepo.readHeartRateSamples(any(), any()) } returns listOf(mockk(relaxed = true))
             coEvery { hcRepo.readHrvSamples(any(), any()) } returns listOf(mockk(relaxed = true))
-            coEvery { hcRepo.readStepsRange(any(), any()) } returns emptyMap()
+            coEvery { hcRepo.readSteps(any(), any()) } returns 0L
 
             useCase.sync()
 
             coVerify {
                 hcRepo.readHeartRateSamples(any(), any())
                 hcRepo.readHrvSamples(any(), any())
-                hcRepo.readStepsRange(any(), any())
+                hcRepo.readSteps(any(), any())
                 heartRateDao.upsertAll(any())
                 hrvDao.upsertAll(any())
             }

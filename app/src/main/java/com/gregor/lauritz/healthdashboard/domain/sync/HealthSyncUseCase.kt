@@ -145,9 +145,16 @@ class HealthSyncUseCase
                             hrvDao.upsertAll(filteredHrv)
                         }
 
-                        // Bulk-fetch steps in a single range query to prevent IPC rate-limiting and sequential overhead
+                        // Bulk-fetch steps per day using aggregate API to prevent overlap/duplication
                         logD("HealthSyncUseCase") { "Bulk fetching steps for $windowDays days..." }
-                        val stepsMap = hcRepo.readStepsRange(windowStart, windowEnd)
+                        val stepsMap = mutableMapOf<LocalDate, Long>()
+                        for (i in (windowDays - 1) downTo 0) {
+                            val day = today.minusDays(i.toLong())
+                            val dayStart = day.atStartOfDay(zoneId).toInstant()
+                            val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
+                            val daySteps = hcRepo.readSteps(dayStart, dayEnd)
+                            stepsMap[day] = daySteps
+                        }
 
                         var successCount = 0
                         var failureCount = 0

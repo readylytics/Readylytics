@@ -5,6 +5,7 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.StepsRecord
 import java.time.Instant
 
 class HealthConnectPermissionRevokedException(
@@ -53,6 +54,11 @@ interface HealthConnectRepository {
         from: Instant,
         to: Instant,
     ): List<ExerciseSessionRecord>
+
+    suspend fun readStepsRecords(
+        from: Instant,
+        to: Instant,
+    ): List<StepsRecord>
 
     suspend fun readSteps(
         from: Instant,
