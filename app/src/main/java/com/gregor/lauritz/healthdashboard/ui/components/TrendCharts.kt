@@ -182,7 +182,11 @@ fun TrendChart(
                     HorizontalAxis.rememberBottom(
                         label = labelComponent,
                         valueFormatter = xAxisFormatter,
-                        itemPlacer = remember(rangeDays) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                        itemPlacer =
+                            remember(
+                                rangeDays,
+                                zoomState,
+                            ) { ChartDefaults.itemPlacerForRangeDays(rangeDays, zoomState) },
                         guideline = guidelineComponent,
                     ),
                 decorations =

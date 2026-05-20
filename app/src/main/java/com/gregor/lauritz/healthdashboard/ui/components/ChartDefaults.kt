@@ -6,6 +6,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.ui.common.DateFormatUtils
+import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
+import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.common.Fill
@@ -57,27 +59,78 @@ object ChartDefaults {
             }
         }
 
-    fun itemPlacerForRangeDays(rangeDays: Int): HorizontalAxis.ItemPlacer =
-        when (rangeDays) {
-            7 ->
-                HorizontalAxis.ItemPlacer.aligned(
-                    spacing = { _ -> 1 },
-                    addExtremeLabelPadding = true,
-                )
-            30 ->
-                HorizontalAxis.ItemPlacer.aligned(
-                    spacing = { _ -> 5 },
-                    addExtremeLabelPadding = true,
-                )
-            180 ->
-                HorizontalAxis.ItemPlacer.aligned(
-                    spacing = { _ -> 30 },
-                    addExtremeLabelPadding = true,
-                )
-            else ->
-                HorizontalAxis.ItemPlacer.aligned(
-                    spacing = { _ -> 5 },
-                    addExtremeLabelPadding = true,
-                )
+    fun itemPlacerForRangeDays(
+        rangeDays: Int,
+        zoomState: VicoZoomState? = null,
+    ): HorizontalAxis.ItemPlacer {
+        val basePlacer =
+            HorizontalAxis.ItemPlacer.aligned(
+                spacing = {
+                    val zoomFactor = zoomState?.value ?: 1f
+                    val visibleDays = rangeDays / zoomFactor
+                    when {
+                        visibleDays <= 8 -> 1
+                        visibleDays <= 15 -> 2
+                        visibleDays <= 35 -> 5
+                        visibleDays <= 70 -> 10
+                        visibleDays <= 120 -> 15
+                        else -> 30
+                    }
+                },
+                addExtremeLabelPadding = true,
+            )
+
+        return object : HorizontalAxis.ItemPlacer by basePlacer {
+            override fun getLabelValues(
+                context: CartesianDrawingContext,
+                visibleXRange: ClosedFloatingPointRange<Double>,
+                fullXRange: ClosedFloatingPointRange<Double>,
+                maxLabelWidth: Float,
+            ): List<Double> {
+                val zoomFactor = zoomState?.value ?: 1f
+                val visibleDays = rangeDays / zoomFactor
+
+                // Special case for 30d range fully/mostly zoomed out:
+                // "for 30d we only show the first day. also always show the last day so the current selected date"
+                if (rangeDays == 30 && visibleDays > 15) {
+                    return listOf(0.0, 29.0)
+                }
+
+                // Default behavior: get the base placer's calculated values
+                val baseValues =
+                    basePlacer
+                        .getLabelValues(
+                            context,
+                            visibleXRange,
+                            fullXRange,
+                            maxLabelWidth,
+                        ).toMutableList()
+
+                // Always ensure the first day is included if visible
+                val firstDay = 0.0
+                if (firstDay in visibleXRange && !baseValues.contains(firstDay)) {
+                    baseValues.add(0, firstDay)
+                }
+
+                // Always ensure the last day is included if visible
+                val lastDay = (rangeDays - 1).toDouble()
+                if (lastDay in visibleXRange && !baseValues.contains(lastDay)) {
+                    // Filter out any base values that are extremely close to the last day to prevent visual overlaps
+                    val minSeparation =
+                        when {
+                            visibleDays <= 8 -> 0.8
+                            visibleDays <= 15 -> 1.6
+                            visibleDays <= 35 -> 4.0
+                            visibleDays <= 70 -> 8.0
+                            visibleDays <= 120 -> 12.0
+                            else -> 24.0
+                        }
+                    baseValues.removeAll { it >= lastDay - minSeparation && it < lastDay }
+                    baseValues.add(lastDay)
+                }
+
+                return baseValues.sorted()
+            }
         }
+    }
 }

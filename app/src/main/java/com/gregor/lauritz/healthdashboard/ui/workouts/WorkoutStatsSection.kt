@@ -33,6 +33,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
@@ -46,6 +47,8 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
@@ -250,6 +253,23 @@ private fun AcwrChart(
 
     val modelProducer = remember { CartesianChartModelProducer() }
 
+    val scrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7)
+
+    val zoomState =
+        rememberVicoZoomState(
+            zoomEnabled = rangeDays > 7,
+            initialZoom = Zoom.Content,
+            minZoom = Zoom.Content,
+            maxZoom =
+                remember(rangeDays) {
+                    when (rangeDays) {
+                        30 -> Zoom.fixed(6f)
+                        180 -> Zoom.fixed(25f)
+                        else -> Zoom.Content
+                    }
+                },
+        )
+
     val trimpRangeProvider =
         remember(trimpPoints, rangeDays) {
             object : CartesianLayerRangeProvider {
@@ -391,11 +411,17 @@ private fun AcwrChart(
                     HorizontalAxis.rememberBottom(
                         label = labelComponent,
                         valueFormatter = xAxisFormatter,
-                        itemPlacer = remember(rangeDays) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                        itemPlacer =
+                            remember(
+                                rangeDays,
+                                zoomState,
+                            ) { ChartDefaults.itemPlacerForRangeDays(rangeDays, zoomState) },
                         guideline = guidelineComponent,
                     ),
             ),
         modelProducer = modelProducer,
+        scrollState = scrollState,
+        zoomState = zoomState,
         modifier = modifier.fillMaxWidth().height(220.dp),
     )
 }
