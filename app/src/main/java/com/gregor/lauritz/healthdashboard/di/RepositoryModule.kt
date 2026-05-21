@@ -1,10 +1,16 @@
 package com.gregor.lauritz.healthdashboard.di
 
+import com.gregor.lauritz.healthdashboard.data.repository.BodyFatRepositoryImpl
+import com.gregor.lauritz.healthdashboard.data.repository.BloodPressureRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.repository.DailySummaryRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.repository.HeartRateRepositoryImpl
+import com.gregor.lauritz.healthdashboard.data.repository.WeightRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.repository.WorkoutRepositoryImpl
+import com.gregor.lauritz.healthdashboard.domain.repository.BodyFatRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.BloodPressureRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.WeightRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutRepository
 import dagger.Binds
 import dagger.Module
@@ -26,4 +32,16 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindHeartRateRepository(impl: HeartRateRepositoryImpl): HeartRateRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWeightRepository(impl: WeightRepositoryImpl): WeightRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBodyFatRepository(impl: BodyFatRepositoryImpl): BodyFatRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBloodPressureRepository(impl: BloodPressureRepositoryImpl): BloodPressureRepository
 }
