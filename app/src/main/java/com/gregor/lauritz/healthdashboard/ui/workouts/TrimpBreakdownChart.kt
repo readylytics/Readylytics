@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -16,14 +17,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltipData
+import com.gregor.lauritz.healthdashboard.ui.components.InvisibleMarker
 import com.gregor.lauritz.healthdashboard.ui.components.VicoChartTooltipOverlay
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
+import com.gregor.lauritz.healthdashboard.ui.components.rememberChartMarkerVisibilityListener
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
@@ -48,7 +49,10 @@ fun TrimpBreakdownChart(
     chartData: List<Pair<Double, Double>>,
     durationMinutes: Int,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+    ) {
         Column(Modifier.padding(16.dp)) {
             Text("Heart Rate", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(16.dp))
@@ -67,6 +71,14 @@ private fun HrChart(
     durationMinutes: Int,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+    var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
+
+    LaunchedEffect(tooltipState) {
+        if (tooltipState == null) {
+            selectedPointOffset = null
+        }
+    }
+
     val modelProducer = remember { CartesianChartModelProducer() }
 
     LaunchedEffect(chartData) {
@@ -118,12 +130,25 @@ private fun HrChart(
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
 
-    // Convert chart data to DailyDataPoint format for tooltip overlay
-    val dailyPoints = remember(chartData) {
-        chartData.map { (minute, bpm) ->
-            DailyDataPoint(dayOffset = minute.toInt(), value = bpm.toFloat())
-        }
-    }
+    val markerVisibilityListener =
+        rememberChartMarkerVisibilityListener(
+            onPointSelected = { x, y, canvasX, canvasY ->
+                val minute = x.toInt().coerceIn(0, durationMinutes - 1)
+                val valueText = "HR: ${y.toInt()} bpm"
+                val dateText = "Time: $minute min"
+                selectedPointOffset = Offset(canvasX, canvasY)
+                tooltipState =
+                    DataPointTooltipData(
+                        valueText = valueText,
+                        dateText = dateText,
+                        offset =
+                            androidx.compose.ui.unit.IntOffset(
+                                canvasX.toInt(),
+                                canvasY.toInt(),
+                            ),
+                    )
+            },
+        )
 
     Box(modifier = Modifier.fillMaxWidth()) {
         CartesianChartHost(
@@ -155,6 +180,8 @@ private fun HrChart(
                             valueFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() },
                             itemPlacer = itemPlacer,
                         ),
+                    marker = InvisibleMarker,
+                    markerVisibilityListener = markerVisibilityListener,
                 ),
             modelProducer = modelProducer,
             zoomState =
@@ -166,18 +193,7 @@ private fun HrChart(
         )
 
         VicoChartTooltipOverlay(
-            points = dailyPoints,
-            rangeDays = durationMinutes,
-            onDataPointSelected = { dayOffset, value ->
-                val minute = dayOffset.coerceIn(0, durationMinutes - 1)
-                val valueText = "HR: ${value.toInt()} bpm"
-                val dateText = "Time: $minute min"
-                tooltipState =
-                    DataPointTooltipData(
-                        valueText = valueText,
-                        dateText = dateText,
-                    )
-            },
+            selectedPointOffset = selectedPointOffset,
             modifier = Modifier.fillMaxWidth().height(200.dp),
         )
     }

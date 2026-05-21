@@ -1,7 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 
 data class SegmentHitBox(
@@ -13,13 +13,13 @@ data class SegmentHitBox(
 
 fun Modifier.detectCanvasTap(
     segments: List<SegmentHitBox>,
-    onSegmentTapped: (index: Int, label: String) -> Unit,
+    onSegmentTapped: (index: Int, label: String, tapOffset: androidx.compose.ui.geometry.Offset) -> Unit,
 ): Modifier =
     this.pointerInput(segments) {
         awaitPointerEventScope {
             while (true) {
                 val event = awaitPointerEvent()
-                if (event.type == PointerEvent.Type.Press) {
+                if (event.type == PointerEventType.Press) {
                     val position = event.changes[0].position
                     val tapX = position.x
                     val canvasWidth = size.width
@@ -34,7 +34,11 @@ fun Modifier.detectCanvasTap(
                         }
 
                     if (tappedSegment != null) {
-                        onSegmentTapped(tappedSegment.index, tappedSegment.label)
+                        val snappedX = ((tappedSegment.xStart + tappedSegment.xEnd) / 2f) * canvasWidth
+                        val snappedOffset =
+                            androidx.compose.ui.geometry
+                                .Offset(snappedX, position.y)
+                        onSegmentTapped(tappedSegment.index, tappedSegment.label, snappedOffset)
                     }
                 }
             }

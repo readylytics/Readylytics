@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
@@ -100,6 +101,15 @@ fun TrendChart(
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+    var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
+
+    // Clear highlight when tooltip is hidden
+    LaunchedEffect(tooltipState) {
+        if (tooltipState == null) {
+            selectedPointOffset = null
+        }
+    }
+
     if (points.none { it.value != null }) {
         EmptyChartPlaceholder(modifier = modifier)
         return
@@ -169,6 +179,29 @@ fun TrendChart(
                 ),
         )
 
+    val markerVisibilityListener =
+        rememberChartMarkerVisibilityListener(
+            onPointSelected = { x, y, canvasX, canvasY ->
+                val dayOffset = x.toInt()
+                val value = y.toFloat()
+                val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
+                val dateString = ChartUtils.formatTooltipDate(date)
+                val valueText = "$metricName: ${value.toInt()} $baselineUnit"
+                val dateText = "Date: $dateString"
+                selectedPointOffset = Offset(canvasX, canvasY)
+                tooltipState =
+                    DataPointTooltipData(
+                        valueText = valueText,
+                        dateText = dateText,
+                        offset =
+                            androidx.compose.ui.unit.IntOffset(
+                                canvasX.toInt(),
+                                canvasY.toInt(),
+                            ),
+                    )
+            },
+        )
+
     Box(modifier = modifier.fillMaxWidth()) {
         CartesianChartHost(
             chart =
@@ -206,6 +239,8 @@ fun TrendChart(
                         } else {
                             emptyList()
                         },
+                    marker = InvisibleMarker,
+                    markerVisibilityListener = markerVisibilityListener,
                 ),
             modelProducer = modelProducer,
             scrollState = scrollState,
@@ -214,19 +249,7 @@ fun TrendChart(
         )
 
         VicoChartTooltipOverlay(
-            points = points,
-            rangeDays = rangeDays,
-            onDataPointSelected = { dayOffset, value ->
-                val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
-                val dateString = ChartUtils.formatTooltipDate(date)
-                val valueText = "$metricName: ${value.toInt()} $baselineUnit"
-                val dateText = "Date: $dateString"
-                tooltipState =
-                    DataPointTooltipData(
-                        valueText = valueText,
-                        dateText = dateText,
-                    )
-            },
+            selectedPointOffset = selectedPointOffset,
             modifier = Modifier.fillMaxWidth().height(180.dp),
         )
     }

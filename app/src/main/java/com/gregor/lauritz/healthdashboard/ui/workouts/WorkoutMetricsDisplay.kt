@@ -106,7 +106,10 @@ private fun ZoneBreakdownCard(workout: WorkoutRecordEntity) {
             Triple("Zone 2", workout.zone2Minutes, statusColors.neutral),
             Triple("Zone 1", workout.zone1Minutes, MaterialTheme.colorScheme.onSurfaceVariant),
         )
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+    ) {
         Column(Modifier.padding(16.dp)) {
             Text("Heart Rate Zones", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(12.dp))

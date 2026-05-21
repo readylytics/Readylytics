@@ -30,7 +30,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
-import java.time.LocalDate
 
 // 100 PAI fills 75% of the bar width
 private const val BAR_MAX = 100f / 0.75f
@@ -42,6 +41,7 @@ fun PaiWeeklyBar(
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+    var activeTapOffset by remember { mutableStateOf<Offset?>(null) }
 
     val status =
         when {
@@ -54,6 +54,7 @@ fun PaiWeeklyBar(
     val trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+    val primaryColor = MaterialTheme.colorScheme.primary
 
     if (dailyBreakdown.isEmpty()) return
 
@@ -84,7 +85,8 @@ fun PaiWeeklyBar(
                                 }
                                 hitBoxes
                             },
-                        onSegmentTapped = { index, label ->
+                        onSegmentTapped = { index, label, tapOffset ->
+                            activeTapOffset = tapOffset
                             val pai = dailyBreakdown[index].second
                             val valueText = "PAI: ${pai.toInt()}"
                             val dateText = "Day: $label"
@@ -92,6 +94,11 @@ fun PaiWeeklyBar(
                                 DataPointTooltipData(
                                     valueText = valueText,
                                     dateText = dateText,
+                                    offset =
+                                        androidx.compose.ui.unit.IntOffset(
+                                            x = tapOffset.x.toInt(),
+                                            y = tapOffset.y.toInt(),
+                                        ),
                                 )
                         },
                     ),
@@ -136,6 +143,31 @@ fun PaiWeeklyBar(
                 cornerRadius = CornerRadius(radius),
                 style = Stroke(width = 1.dp.toPx()),
             )
+
+            // Draw highlight overlay and indicator line
+            if (activeTapOffset != null) {
+                val tapX = activeTapOffset!!.x.coerceIn(0f, totalWidth)
+
+                // Vertical indicator line through the bar
+                drawLine(
+                    color = primaryColor.copy(alpha = 0.4f),
+                    start = Offset(tapX, 0f),
+                    end = Offset(tapX, barHeight),
+                    strokeWidth = 2.dp.toPx(),
+                )
+
+                // Concentric highlight circles (Material Design 3 style)
+                drawCircle(
+                    color = primaryColor.copy(alpha = 0.2f),
+                    center = Offset(tapX, barHeight / 2f),
+                    radius = 8.dp.toPx(),
+                )
+                drawCircle(
+                    color = primaryColor,
+                    center = Offset(tapX, barHeight / 2f),
+                    radius = 4.dp.toPx(),
+                )
+            }
         }
 
         Spacer(Modifier.height(6.dp))
@@ -179,7 +211,10 @@ fun PaiWeeklyBar(
         DataPointTooltip(
             isVisible = true,
             data = tooltipState!!,
-            onDismissRequest = { tooltipState = null },
+            onDismissRequest = {
+                tooltipState = null
+                activeTapOffset = null
+            },
         )
     }
 }

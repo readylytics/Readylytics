@@ -97,6 +97,7 @@ fun SleepStagesChart(
     stageTimeline: List<SleepStageData> = emptyList(),
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+    var activeTapOffset by remember { mutableStateOf<Offset?>(null) }
 
     if (session == null) {
         CalibrationBar(
@@ -136,32 +137,50 @@ fun SleepStagesChart(
                                 sortedTimeline.mapIndexed { index, stageData ->
                                     SegmentHitBox(
                                         index = index,
-                                        xStart = stageData.getStartOffsetMinutes(session.startTime).toFloat() / (session.endTime - session.startTime) * 60_000f,
-                                        xEnd = (stageData.getStartOffsetMinutes(session.startTime) + stageData.durationMinutes).toFloat() / (session.endTime - session.startTime) * 60_000f,
+                                        xStart =
+                                            stageData.getStartOffsetMinutes(session.startTime).toFloat() /
+                                                (session.endTime - session.startTime) *
+                                                60_000f,
+                                        xEnd =
+                                            (
+                                                stageData.getStartOffsetMinutes(session.startTime) +
+                                                    stageData.durationMinutes
+                                            ).toFloat() /
+                                                (session.endTime - session.startTime) *
+                                                60_000f,
                                         label = stageData.stageType,
                                     )
                                 }
                             },
-                        onSegmentTapped = { index, _ ->
+                        onSegmentTapped = { index, _, tapOffset ->
+                            activeTapOffset = tapOffset
                             val tappedStage = sortedTimeline[index]
-                            val stageName = when (tappedStage.stageType) {
-                                SleepStageType.DEEP.value -> "Deep Sleep"
-                                SleepStageType.REM.value -> "REM Sleep"
-                                SleepStageType.LIGHT.value -> "Light Sleep"
-                                SleepStageType.AWAKE.value -> "Awake"
-                                else -> tappedStage.stageType
-                            }
-                            val dateString = ChartUtils.formatTooltipDate(
-                                Instant.ofEpochMilli(session.startTimeMs)
-                                    .atZone(ZoneId.systemDefault())
-                                    .toLocalDate()
-                            )
+                            val stageName =
+                                when (tappedStage.stageType) {
+                                    SleepStageType.DEEP.value -> "Deep Sleep"
+                                    SleepStageType.REM.value -> "REM Sleep"
+                                    SleepStageType.LIGHT.value -> "Light Sleep"
+                                    SleepStageType.AWAKE.value -> "Awake"
+                                    else -> tappedStage.stageType
+                                }
+                            val dateString =
+                                ChartUtils.formatTooltipDate(
+                                    Instant
+                                        .ofEpochMilli(session.startTime)
+                                        .atZone(ZoneId.systemDefault())
+                                        .toLocalDate(),
+                                )
                             val valueText = "$stageName: ${tappedStage.durationMinutes} min"
                             val dateText = "Date: $dateString"
                             tooltipState =
                                 DataPointTooltipData(
                                     valueText = valueText,
                                     dateText = dateText,
+                                    offset =
+                                        androidx.compose.ui.unit.IntOffset(
+                                            x = tapOffset.x.toInt(),
+                                            y = tapOffset.y.toInt(),
+                                        ),
                                 )
                         },
                     ),
@@ -263,6 +282,32 @@ fun SleepStagesChart(
                     }
                 }
             }
+
+            // Draw highlight overlay and indicator line
+            if (activeTapOffset != null) {
+                val tapX = activeTapOffset!!.x.coerceIn(0f, chartWidth)
+                val tapY = activeTapOffset!!.y.coerceIn(0f, chartHeight)
+
+                // Vertical indicator line through the chart
+                drawLine(
+                    color = colorScheme.primary.copy(alpha = 0.4f),
+                    start = Offset(tapX, 0f),
+                    end = Offset(tapX, chartHeight),
+                    strokeWidth = 1.5.dp.toPx(),
+                )
+
+                // Concentric highlight circles (Material Design 3 style)
+                drawCircle(
+                    color = colorScheme.primary.copy(alpha = 0.2f),
+                    center = Offset(tapX, tapY),
+                    radius = 8.dp.toPx(),
+                )
+                drawCircle(
+                    color = colorScheme.primary,
+                    center = Offset(tapX, tapY),
+                    radius = 4.dp.toPx(),
+                )
+            }
         }
 
         Box(
@@ -296,7 +341,10 @@ fun SleepStagesChart(
         DataPointTooltip(
             isVisible = true,
             data = tooltipState!!,
-            onDismissRequest = { tooltipState = null },
+            onDismissRequest = {
+                tooltipState = null
+                activeTapOffset = null
+            },
         )
     }
 }

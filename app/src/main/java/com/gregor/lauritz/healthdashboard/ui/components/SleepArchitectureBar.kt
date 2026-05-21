@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 
 private data class StageSegment(
@@ -45,6 +44,7 @@ fun SleepArchitectureBar(
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+    var activeTapOffset by remember { mutableStateOf<Offset?>(null) }
 
     val colorScheme = MaterialTheme.colorScheme
     val deepColor = colorScheme.primary
@@ -73,6 +73,7 @@ fun SleepArchitectureBar(
             StageSegment("Awake", session.awakeMinutes) { awakeColor },
         )
 
+    val primaryColor = MaterialTheme.colorScheme.primary
     val resolvedColors = segments.map { it.color() }
 
     Column(modifier = modifier) {
@@ -101,19 +102,27 @@ fun SleepArchitectureBar(
                                 }
                                 hitBoxes
                             },
-                        onSegmentTapped = { index, label ->
+                        onSegmentTapped = { index, label, tapOffset ->
+                            activeTapOffset = tapOffset
                             val segment = segments[index]
-                            val dateString = ChartUtils.formatTooltipDate(
-                                Instant.ofEpochMilli(session.startTimeMs)
-                                    .atZone(ZoneId.systemDefault())
-                                    .toLocalDate()
-                            )
-                            val valueText = "${label} Sleep: ${segment.minutes} min"
+                            val dateString =
+                                ChartUtils.formatTooltipDate(
+                                    Instant
+                                        .ofEpochMilli(session.startTime)
+                                        .atZone(ZoneId.systemDefault())
+                                        .toLocalDate(),
+                                )
+                            val valueText = "$label Sleep: ${segment.minutes} min"
                             val dateText = "Date: $dateString"
                             tooltipState =
                                 DataPointTooltipData(
                                     valueText = valueText,
                                     dateText = dateText,
+                                    offset =
+                                        androidx.compose.ui.unit.IntOffset(
+                                            x = tapOffset.x.toInt(),
+                                            y = tapOffset.y.toInt(),
+                                        ),
                                 )
                         },
                     ),
@@ -154,6 +163,31 @@ fun SleepArchitectureBar(
                 cornerRadius = CornerRadius(radius),
                 style = Stroke(width = 1.dp.toPx()),
             )
+
+            // Draw highlight overlay and indicator line
+            if (activeTapOffset != null) {
+                val tapX = activeTapOffset!!.x.coerceIn(0f, totalWidth)
+
+                // Vertical indicator line through the bar
+                drawLine(
+                    color = primaryColor.copy(alpha = 0.4f),
+                    start = Offset(tapX, 0f),
+                    end = Offset(tapX, barHeight),
+                    strokeWidth = 2.dp.toPx(),
+                )
+
+                // Concentric highlight circles (Material Design 3 style)
+                drawCircle(
+                    color = primaryColor.copy(alpha = 0.2f),
+                    center = Offset(tapX, barHeight / 2f),
+                    radius = 8.dp.toPx(),
+                )
+                drawCircle(
+                    color = primaryColor,
+                    center = Offset(tapX, barHeight / 2f),
+                    radius = 4.dp.toPx(),
+                )
+            }
         }
 
         Spacer(Modifier.height(8.dp))
@@ -177,7 +211,10 @@ fun SleepArchitectureBar(
         DataPointTooltip(
             isVisible = true,
             data = tooltipState!!,
-            onDismissRequest = { tooltipState = null },
+            onDismissRequest = {
+                tooltipState = null
+                activeTapOffset = null
+            },
         )
     }
 }
