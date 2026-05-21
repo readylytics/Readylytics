@@ -15,10 +15,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 
 data class DataPointTooltipData(
-    val metricName: String,
-    val value: Float,
-    val unit: String,
-    val dateString: String,
+    val valueText: String,
+    val dateText: String,
 )
 
 @Composable
@@ -28,36 +26,36 @@ fun DataPointTooltip(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (!isVisible) return
-
-    Popup(
-        onDismissRequest = onDismissRequest,
-        alignment = androidx.compose.ui.Alignment.TopStart,
-    ) {
-        AnimatedVisibility(
-            visible = isVisible,
-            enter = fadeIn(initialAlpha = 0.5f),
-            exit = fadeOut(),
+    if (isVisible) {
+        Popup(
+            onDismissRequest = onDismissRequest,
+            alignment = androidx.compose.ui.Alignment.TopStart,
         ) {
-            Surface(
-                shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.inverseSurface,
-                modifier =
-                    modifier
-                        .widthIn(min = 140.dp, max = 200.dp)
-                        .padding(horizontal = 8.dp),
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn(initialAlpha = 0.5f),
+                exit = fadeOut(),
             ) {
-                Column(modifier = Modifier.padding(8.dp)) {
-                    Text(
-                        text = "${data.metricName}: ${data.value.toInt()} ${data.unit}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.inverseOnSurface,
-                    )
-                    Text(
-                        text = "Date: ${data.dateString}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.9f),
-                    )
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.inverseSurface,
+                    modifier =
+                        modifier
+                            .widthIn(min = 140.dp, max = 200.dp)
+                            .padding(horizontal = 8.dp),
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Text(
+                            text = data.valueText,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.inverseOnSurface,
+                        )
+                        Text(
+                            text = data.dateText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.9f),
+                        )
+                    }
                 }
             }
         }

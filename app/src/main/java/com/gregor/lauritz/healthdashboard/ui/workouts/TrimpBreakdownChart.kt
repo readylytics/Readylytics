@@ -124,7 +124,6 @@ private fun HrChart(
             DailyDataPoint(dayOffset = index, value = bpm.toFloat())
         }
     }
-    val startTimeMs = remember { System.currentTimeMillis() - (durationMinutes * 60L * 1000L) }
 
     Box(modifier = Modifier.fillMaxWidth()) {
         CartesianChartHost(
@@ -168,18 +167,15 @@ private fun HrChart(
 
         VicoChartTooltipOverlay(
             points = dailyPoints,
-            rangeStartMs = startTimeMs,
             rangeDays = durationMinutes,
-            metricName = "HR",
-            unit = "bpm",
             onDataPointSelected = { dayOffset, value ->
                 val minute = dayOffset.coerceIn(0, durationMinutes - 1)
+                val valueText = "HR: ${value.toInt()} bpm"
+                val dateText = "Time: $minute min"
                 tooltipState =
                     DataPointTooltipData(
-                        metricName = "HR",
-                        value = value,
-                        unit = "bpm",
-                        dateString = "$minute min",
+                        valueText = valueText,
+                        dateText = dateText,
                     )
             },
             modifier = Modifier.fillMaxWidth().height(200.dp),

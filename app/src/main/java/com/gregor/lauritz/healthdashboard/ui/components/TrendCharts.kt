@@ -215,19 +215,16 @@ fun TrendChart(
 
         VicoChartTooltipOverlay(
             points = points,
-            rangeStartMs = rangeStartMs,
             rangeDays = rangeDays,
-            metricName = metricName,
-            unit = baselineUnit,
             onDataPointSelected = { dayOffset, value ->
                 val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
                 val dateString = ChartUtils.formatTooltipDate(date)
+                val valueText = "$metricName: ${value.toInt()} $baselineUnit"
+                val dateText = "Date: $dateString"
                 tooltipState =
                     DataPointTooltipData(
-                        metricName = metricName,
-                        value = value,
-                        unit = baselineUnit,
-                        dateString = dateString,
+                        valueText = valueText,
+                        dateText = dateText,
                     )
             },
             modifier = Modifier.fillMaxWidth().height(180.dp),

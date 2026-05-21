@@ -141,29 +141,27 @@ fun SleepStagesChart(
                                     )
                                 }
                             },
-                        onSegmentTapped = { _, label ->
-                            val tappedStage = sortedTimeline.find { it.stageType == label }
-                            if (tappedStage != null) {
-                                val stageName = when (tappedStage.stageType) {
-                                    SleepStageType.DEEP.value -> "Deep Sleep"
-                                    SleepStageType.REM.value -> "REM Sleep"
-                                    SleepStageType.LIGHT.value -> "Light Sleep"
-                                    SleepStageType.AWAKE.value -> "Awake"
-                                    else -> tappedStage.stageType
-                                }
-                                val dateString = ChartUtils.formatTooltipDate(
-                                    Instant.ofEpochMilli(session.startTimeMs)
-                                        .atZone(ZoneId.systemDefault())
-                                        .toLocalDate()
-                                )
-                                tooltipState =
-                                    DataPointTooltipData(
-                                        metricName = stageName,
-                                        value = tappedStage.durationMinutes.toFloat(),
-                                        unit = "min",
-                                        dateString = dateString,
-                                    )
+                        onSegmentTapped = { index, _ ->
+                            val tappedStage = sortedTimeline[index]
+                            val stageName = when (tappedStage.stageType) {
+                                SleepStageType.DEEP.value -> "Deep Sleep"
+                                SleepStageType.REM.value -> "REM Sleep"
+                                SleepStageType.LIGHT.value -> "Light Sleep"
+                                SleepStageType.AWAKE.value -> "Awake"
+                                else -> tappedStage.stageType
                             }
+                            val dateString = ChartUtils.formatTooltipDate(
+                                Instant.ofEpochMilli(session.startTimeMs)
+                                    .atZone(ZoneId.systemDefault())
+                                    .toLocalDate()
+                            )
+                            val valueText = "$stageName: ${tappedStage.durationMinutes} min"
+                            val dateText = "Date: $dateString"
+                            tooltipState =
+                                DataPointTooltipData(
+                                    valueText = valueText,
+                                    dateText = dateText,
+                                )
                         },
                     ),
         ) {

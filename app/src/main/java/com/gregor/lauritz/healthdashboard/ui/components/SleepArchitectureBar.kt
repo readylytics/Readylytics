@@ -108,12 +108,12 @@ fun SleepArchitectureBar(
                                     .atZone(ZoneId.systemDefault())
                                     .toLocalDate()
                             )
+                            val valueText = "${label} Sleep: ${segment.minutes} min"
+                            val dateText = "Date: $dateString"
                             tooltipState =
                                 DataPointTooltipData(
-                                    metricName = label + " Sleep",
-                                    value = segment.minutes.toFloat(),
-                                    unit = "min",
-                                    dateString = dateString,
+                                    valueText = valueText,
+                                    dateText = dateText,
                                 )
                         },
                     ),

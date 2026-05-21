@@ -4,30 +4,29 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.toSize
-import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import kotlin.math.abs
 
 @Composable
 fun VicoChartTooltipOverlay(
     points: List<DailyDataPoint>,
-    rangeStartMs: Long,
     rangeDays: Int,
-    metricName: String,
-    unit: String,
     onDataPointSelected: (dayOffset: Int, value: Float) -> Unit,
     modifier: Modifier = Modifier,
     chartHeight: Dp = 180.dp,
 ) {
-    var containerWidthPx = 0f
-    var containerHeightPx = 0f
+    var containerWidthPx by remember { mutableStateOf(0f) }
+    val validPoints = remember(points) { points.filter { it.value != null } }
 
     Box(
         modifier =
@@ -55,7 +54,7 @@ fun VicoChartTooltipOverlay(
 
                                     // Find the closest point with a non-null value
                                     val nearestPoint =
-                                        findNearestPoint(points, dayOffset, tolerance = 2)
+                                        findNearestPoint(validPoints, dayOffset, tolerance = 2)
                                     if (nearestPoint != null) {
                                         onDataPointSelected(nearestPoint.dayOffset, nearestPoint.value)
                                     }
@@ -68,11 +67,10 @@ fun VicoChartTooltipOverlay(
 }
 
 private fun findNearestPoint(
-    points: List<DailyDataPoint>,
+    validPoints: List<DailyDataPoint>,
     dayOffset: Int,
     tolerance: Int = 2,
 ): DailyDataPoint? {
-    val validPoints = points.filter { it.value != null }
     if (validPoints.isEmpty()) return null
 
     // First try exact or nearby match within tolerance

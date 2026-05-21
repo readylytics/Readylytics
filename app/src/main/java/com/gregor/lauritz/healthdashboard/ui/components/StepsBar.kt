@@ -66,12 +66,12 @@ fun StepsBar(
                         onSegmentTapped = { _, _ ->
                             if (stepCount != null && dateForTooltip != null) {
                                 val dateString = ChartUtils.formatTooltipDate(dateForTooltip)
+                                val valueText = "Steps: $stepCount"
+                                val dateText = "Date: $dateString"
                                 tooltipState =
                                     DataPointTooltipData(
-                                        metricName = "Steps",
-                                        value = stepCount.toFloat(),
-                                        unit = "",
-                                        dateString = dateString,
+                                        valueText = valueText,
+                                        dateText = dateText,
                                     )
                             }
                         },
