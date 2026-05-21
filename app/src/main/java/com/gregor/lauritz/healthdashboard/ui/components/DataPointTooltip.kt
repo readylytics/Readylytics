@@ -79,6 +79,7 @@ class TooltipCaretShape(
 
 class TooltipPopupPositionProvider(
     private val tapOffset: IntOffset,
+    private val yOffsetPx: Int = 0,
 ) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
@@ -88,8 +89,8 @@ class TooltipPopupPositionProvider(
     ): IntOffset {
         // Horizontally center the popup above the tap point
         val x = anchorBounds.left + tapOffset.x - (popupContentSize.width / 2)
-        // Position it always at the top of the diagram (overlaying the top of the diagram bounds)
-        val y = anchorBounds.top
+        // Position it always at the top of the diagram plus custom offset
+        val y = anchorBounds.top + yOffsetPx
 
         // Keep popup on screen horizontally
         val maxX = windowSize.width - popupContentSize.width
@@ -108,12 +109,18 @@ fun DataPointTooltip(
     data: DataPointTooltipData,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
+    yOffsetDp: Dp = 0.dp,
 ) {
     if (isVisible) {
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val yOffsetPx =
+            remember(yOffsetDp, density) {
+                with(density) { yOffsetDp.roundToPx() }
+            }
         Popup(
             popupPositionProvider =
-                remember(data.offset) {
-                    TooltipPopupPositionProvider(data.offset)
+                remember(data.offset, yOffsetPx) {
+                    TooltipPopupPositionProvider(data.offset, yOffsetPx)
                 },
             onDismissRequest = onDismissRequest,
         ) {

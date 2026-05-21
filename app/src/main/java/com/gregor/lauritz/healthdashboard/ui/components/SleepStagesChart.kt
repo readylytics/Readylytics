@@ -24,7 +24,6 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.domain.model.SleepStage
 import com.gregor.lauritz.healthdashboard.domain.model.SleepStageType
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
-import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -98,6 +97,8 @@ fun SleepStagesChart(
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var activeTapOffset by remember { mutableStateOf<Offset?>(null) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val paddingPx = remember(density) { with(density) { 24.dp.roundToPx() } }
 
     if (session == null) {
         CalibrationBar(
@@ -133,21 +134,16 @@ fun SleepStagesChart(
                     .padding(horizontal = 24.dp)
                     .detectCanvasTap(
                         segments =
-                            remember(sortedTimeline) {
+                            remember(sortedTimeline, session.startTime, sessionDurationMs) {
                                 sortedTimeline.mapIndexed { index, stageData ->
+                                    val startFraction =
+                                        (stageData.startTime - session.startTime).toFloat() / sessionDurationMs
+                                    val endFraction =
+                                        (stageData.endTime - session.startTime).toFloat() / sessionDurationMs
                                     SegmentHitBox(
                                         index = index,
-                                        xStart =
-                                            stageData.getStartOffsetMinutes(session.startTime).toFloat() /
-                                                (session.endTime - session.startTime) *
-                                                60_000f,
-                                        xEnd =
-                                            (
-                                                stageData.getStartOffsetMinutes(session.startTime) +
-                                                    stageData.durationMinutes
-                                            ).toFloat() /
-                                                (session.endTime - session.startTime) *
-                                                60_000f,
+                                        xStart = startFraction,
+                                        xEnd = endFraction,
                                         label = stageData.stageType,
                                     )
                                 }
@@ -163,22 +159,15 @@ fun SleepStagesChart(
                                     SleepStageType.AWAKE.value -> "Awake"
                                     else -> tappedStage.stageType
                                 }
-                            val dateString =
-                                ChartUtils.formatTooltipDate(
-                                    Instant
-                                        .ofEpochMilli(session.startTime)
-                                        .atZone(ZoneId.systemDefault())
-                                        .toLocalDate(),
-                                )
                             val valueText = "${tappedStage.durationMinutes} min"
-                            val dateText = dateString
+                            val dateText = timeFormatter.format(Instant.ofEpochMilli(tappedStage.startTime))
                             tooltipState =
                                 DataPointTooltipData(
                                     valueText = valueText,
                                     dateText = dateText,
                                     offset =
                                         androidx.compose.ui.unit.IntOffset(
-                                            x = tapOffset.x.toInt(),
+                                            x = tapOffset.x.toInt() + paddingPx,
                                             y = tapOffset.y.toInt(),
                                         ),
                                 )
@@ -187,7 +176,6 @@ fun SleepStagesChart(
         ) {
             val chartWidth = size.width
             val chartHeight = size.height
-            val sessionDurationMs = (session.endTime - session.startTime).coerceAtLeast(1L)
 
             if (session.endTime - session.startTime == 0L) return@Canvas
 
@@ -214,10 +202,10 @@ fun SleepStagesChart(
                 stageTimeline
                     .filter { it.stageType == stage.type }
                     .forEach { stageData ->
-                        val startOffset = stageData.getStartOffsetMinutes(session.startTime)
-                        val startX = (startOffset.toFloat() / sessionDurationMinutesFloat.toFloat()) * chartWidth
-                        val width =
-                            (stageData.durationMinutes.toFloat() / sessionDurationMinutesFloat.toFloat()) * chartWidth
+                        val startFraction = (stageData.startTime - session.startTime).toFloat() / sessionDurationMs
+                        val endFraction = (stageData.endTime - session.startTime).toFloat() / sessionDurationMs
+                        val startX = startFraction * chartWidth
+                        val width = (endFraction - startFraction) * chartWidth
 
                         drawRect(
                             color = color,
@@ -236,18 +224,9 @@ fun SleepStagesChart(
                     val currentYCenter = (currentIndex) * (bandHeight + bandGap) + bandHeight / 2f
                     val nextYCenter = (nextIndex) * (bandHeight + bandGap) + bandHeight / 2f
 
-                    val endX =
-                        (
-                            (
-                                currentStage.getStartOffsetMinutes(session.startTime) +
-                                    currentStage.durationMinutes
-                            ).toFloat() / sessionDurationMinutesFloat.toFloat()
-                        ) * chartWidth
+                    val endX = ((currentStage.endTime - session.startTime).toFloat() / sessionDurationMs) * chartWidth
                     val nextStartX =
-                        (
-                            nextStage.getStartOffsetMinutes(session.startTime).toFloat() /
-                                sessionDurationMinutesFloat.toFloat()
-                        ) * chartWidth
+                        ((nextStage.startTime - session.startTime).toFloat() / sessionDurationMs) * chartWidth
 
                     val nextStageColor = getStageColor(allStages[nextIndex], colorScheme)
                     val connectorColor = nextStageColor.copy(alpha = 0.5f)
@@ -286,7 +265,6 @@ fun SleepStagesChart(
             // Draw highlight overlay and indicator line
             if (activeTapOffset != null) {
                 val tapX = activeTapOffset!!.x.coerceIn(0f, chartWidth)
-                val tapY = activeTapOffset!!.y.coerceIn(0f, chartHeight)
 
                 // Vertical indicator line through the chart
                 drawLine(
@@ -294,18 +272,6 @@ fun SleepStagesChart(
                     start = Offset(tapX, 0f),
                     end = Offset(tapX, chartHeight),
                     strokeWidth = 1.5.dp.toPx(),
-                )
-
-                // Concentric highlight circles (Material Design 3 style)
-                drawCircle(
-                    color = colorScheme.primary.copy(alpha = 0.2f),
-                    center = Offset(tapX, tapY),
-                    radius = 8.dp.toPx(),
-                )
-                drawCircle(
-                    color = colorScheme.primary,
-                    center = Offset(tapX, tapY),
-                    radius = 4.dp.toPx(),
                 )
             }
         }
@@ -341,6 +307,7 @@ fun SleepStagesChart(
         DataPointTooltip(
             isVisible = true,
             data = tooltipState!!,
+            yOffsetDp = (-28).dp,
             onDismissRequest = {
                 tooltipState = null
                 activeTapOffset = null
