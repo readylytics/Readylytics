@@ -13,8 +13,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,9 +26,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
-import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
-import java.time.Instant
-import java.time.ZoneId
 
 private data class StageSegment(
     val label: String,
@@ -43,9 +38,6 @@ fun SleepArchitectureBar(
     session: SleepSessionEntity?,
     modifier: Modifier = Modifier,
 ) {
-    var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
-    var activeTapOffset by remember { mutableStateOf<Offset?>(null) }
-
     val colorScheme = MaterialTheme.colorScheme
     val deepColor = colorScheme.primary
     val remColor = colorScheme.tertiary
@@ -81,51 +73,7 @@ fun SleepArchitectureBar(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(28.dp)
-                    .detectCanvasTap(
-                        segments =
-                            remember(segments, totalMinutes) {
-                                val hitBoxes = mutableListOf<SegmentHitBox>()
-                                var xOffset = 0f
-                                segments.forEachIndexed { index, segment ->
-                                    val fraction = segment.minutes.toFloat() / totalMinutes
-                                    val segmentWidth = 1f * fraction // Will multiply by actual width later
-                                    hitBoxes.add(
-                                        SegmentHitBox(
-                                            index = index,
-                                            xStart = xOffset,
-                                            xEnd = xOffset + segmentWidth,
-                                            label = segment.label,
-                                        ),
-                                    )
-                                    xOffset += segmentWidth
-                                }
-                                hitBoxes
-                            },
-                        onSegmentTapped = { index, label, tapOffset ->
-                            activeTapOffset = tapOffset
-                            val segment = segments[index]
-                            val dateString =
-                                ChartUtils.formatTooltipDate(
-                                    Instant
-                                        .ofEpochMilli(session.startTime)
-                                        .atZone(ZoneId.systemDefault())
-                                        .toLocalDate(),
-                                )
-                            val valueText = "${segment.minutes} min"
-                            val dateText = dateString
-                            tooltipState =
-                                DataPointTooltipData(
-                                    valueText = valueText,
-                                    dateText = dateText,
-                                    offset =
-                                        androidx.compose.ui.unit.IntOffset(
-                                            x = tapOffset.x.toInt(),
-                                            y = tapOffset.y.toInt(),
-                                        ),
-                                )
-                        },
-                    ),
+                    .height(28.dp),
         ) {
             val totalWidth = size.width
             val barHeight = size.height
@@ -163,31 +111,6 @@ fun SleepArchitectureBar(
                 cornerRadius = CornerRadius(radius),
                 style = Stroke(width = 1.dp.toPx()),
             )
-
-            // Draw highlight overlay and indicator line
-            if (activeTapOffset != null) {
-                val tapX = activeTapOffset!!.x.coerceIn(0f, totalWidth)
-
-                // Vertical indicator line through the bar
-                drawLine(
-                    color = primaryColor.copy(alpha = 0.4f),
-                    start = Offset(tapX, 0f),
-                    end = Offset(tapX, barHeight),
-                    strokeWidth = 2.dp.toPx(),
-                )
-
-                // Concentric highlight circles (Material Design 3 style)
-                drawCircle(
-                    color = primaryColor.copy(alpha = 0.2f),
-                    center = Offset(tapX, barHeight / 2f),
-                    radius = 8.dp.toPx(),
-                )
-                drawCircle(
-                    color = primaryColor,
-                    center = Offset(tapX, barHeight / 2f),
-                    radius = 4.dp.toPx(),
-                )
-            }
         }
 
         Spacer(Modifier.height(8.dp))
@@ -205,17 +128,6 @@ fun SleepArchitectureBar(
                 )
             }
         }
-    }
-
-    if (tooltipState != null) {
-        DataPointTooltip(
-            isVisible = true,
-            data = tooltipState!!,
-            onDismissRequest = {
-                tooltipState = null
-                activeTapOffset = null
-            },
-        )
     }
 }
 
