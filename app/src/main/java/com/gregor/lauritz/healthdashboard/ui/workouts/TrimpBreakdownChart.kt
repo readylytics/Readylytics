@@ -120,8 +120,8 @@ private fun HrChart(
 
     // Convert chart data to DailyDataPoint format for tooltip overlay
     val dailyPoints = remember(chartData) {
-        chartData.mapIndexed { index, (minute, bpm) ->
-            DailyDataPoint(dayOffset = index, value = bpm.toFloat())
+        chartData.map { (minute, bpm) ->
+            DailyDataPoint(dayOffset = minute.toInt(), value = bpm.toFloat())
         }
     }
 

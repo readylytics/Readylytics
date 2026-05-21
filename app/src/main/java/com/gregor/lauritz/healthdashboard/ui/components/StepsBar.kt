@@ -55,14 +55,16 @@ fun StepsBar(
                     .height(28.dp)
                     .detectCanvasTap(
                         segments =
-                            listOf(
-                                SegmentHitBox(
-                                    index = 0,
-                                    xStart = 0f,
-                                    xEnd = 1f,
-                                    label = "Steps",
-                                ),
-                            ),
+                            remember {
+                                listOf(
+                                    SegmentHitBox(
+                                        index = 0,
+                                        xStart = 0f,
+                                        xEnd = 1f,
+                                        label = "Steps",
+                                    ),
+                                )
+                            },
                         onSegmentTapped = { _, _ ->
                             if (stepCount != null && dateForTooltip != null) {
                                 val dateString = ChartUtils.formatTooltipDate(dateForTooltip)
