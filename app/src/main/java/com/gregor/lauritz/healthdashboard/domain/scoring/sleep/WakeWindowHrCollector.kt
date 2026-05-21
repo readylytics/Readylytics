@@ -28,7 +28,7 @@ class WakeWindowHrCollector
             if (isEmpty()) return null
             if (size == 1) return first()
             val sorted = sorted()
-            val index = ((percentile / 100.0) * (sorted.size - 1)).toInt().coerceIn(0, sorted.size - 1)
+            val index = Math.round((percentile / 100.0) * (sorted.size - 1)).toInt().coerceIn(0, sorted.size - 1)
             return sorted[index]
         }
 

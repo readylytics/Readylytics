@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -32,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
 import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
@@ -212,7 +211,9 @@ fun AdvancedSettingsSection(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Resting HR: Percentile")
                 MetricTooltip(
-                    description = "Use the Nth lowest heart rate reading in the time window (e.g., 5th = 5th lowest). Lower values = lower RHR estimate. Default: 5.",
+                    description =
+                        "Use the Nth percentile lowest heart rate reading in the time window " +
+                            "(e.g., 5% = lowest 5% threshold). Lower values = lower RHR estimate. Default: 5%.",
                 )
             }
             Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
