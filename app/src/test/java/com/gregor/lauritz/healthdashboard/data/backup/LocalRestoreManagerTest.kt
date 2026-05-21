@@ -49,6 +49,7 @@ class LocalRestoreManagerTest {
                 },
             )
         encryptionManager = mockk<EncryptionManager>(relaxed = true)
+        io.mockk.every { encryptionManager.decryptBytes(any()) } answers { firstArg() }
         manager = LocalRestoreManager(context, db, settingsRepo, encryptionManager)
     }
 

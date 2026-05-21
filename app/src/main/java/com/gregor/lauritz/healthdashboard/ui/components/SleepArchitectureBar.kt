@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -23,7 +25,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 
 private data class StageSegment(
     val label: String,
@@ -33,7 +35,7 @@ private data class StageSegment(
 
 @Composable
 fun SleepArchitectureBar(
-    session: SleepSessionEntity?,
+    session: SleepSessionData?,
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -63,6 +65,7 @@ fun SleepArchitectureBar(
             StageSegment("Awake", session.awakeMinutes) { awakeColor },
         )
 
+    val primaryColor = MaterialTheme.colorScheme.primary
     val resolvedColors = segments.map { it.color() }
 
     Column(modifier = modifier) {

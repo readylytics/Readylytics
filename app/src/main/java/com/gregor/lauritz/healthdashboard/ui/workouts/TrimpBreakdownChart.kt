@@ -1,19 +1,30 @@
 package com.gregor.lauritz.healthdashboard.ui.workouts
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
+import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltip
+import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltipData
+import com.gregor.lauritz.healthdashboard.ui.components.InvisibleMarker
+import com.gregor.lauritz.healthdashboard.ui.components.VicoChartTooltipOverlay
+import com.gregor.lauritz.healthdashboard.ui.components.rememberChartMarkerVisibilityListener
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
@@ -38,7 +49,10 @@ fun TrimpBreakdownChart(
     chartData: List<Pair<Double, Double>>,
     durationMinutes: Int,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+    ) {
         Column(Modifier.padding(16.dp)) {
             Text("Heart Rate", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(16.dp))
@@ -56,6 +70,15 @@ private fun HrChart(
     chartData: List<Pair<Double, Double>>,
     durationMinutes: Int,
 ) {
+    var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+    var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
+
+    LaunchedEffect(tooltipState) {
+        if (tooltipState == null) {
+            selectedPointOffset = null
+        }
+    }
+
     val modelProducer = remember { CartesianChartModelProducer() }
 
     LaunchedEffect(chartData) {
@@ -107,44 +130,81 @@ private fun HrChart(
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
 
-    CartesianChartHost(
-        chart =
-            rememberCartesianChart(
-                rememberLineCartesianLayer(
-                    lineProvider =
-                        LineCartesianLayer.LineProvider.series(
-                            LineCartesianLayer.rememberLine(
-                                fill = LineCartesianLayer.LineFill.single(Fill(MaterialTheme.colorScheme.primary)),
+    val markerVisibilityListener =
+        rememberChartMarkerVisibilityListener(
+            onPointSelected = { x, y, canvasX, canvasY ->
+                val minute = x.toInt().coerceIn(0, durationMinutes - 1)
+                val valueText = "${y.toInt()} bpm"
+                val dateText = "$minute min"
+                selectedPointOffset = Offset(canvasX, canvasY)
+                tooltipState =
+                    DataPointTooltipData(
+                        valueText = valueText,
+                        dateText = dateText,
+                        offset =
+                            androidx.compose.ui.unit.IntOffset(
+                                canvasX.toInt(),
+                                canvasY.toInt(),
                             ),
+                    )
+            },
+        )
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        CartesianChartHost(
+            chart =
+                rememberCartesianChart(
+                    rememberLineCartesianLayer(
+                        lineProvider =
+                            LineCartesianLayer.LineProvider.series(
+                                LineCartesianLayer.rememberLine(
+                                    fill = LineCartesianLayer.LineFill.single(Fill(MaterialTheme.colorScheme.primary)),
+                                ),
+                            ),
+                        rangeProvider = rangeProvider,
+                    ),
+                    startAxis =
+                        VerticalAxis.rememberStart(
+                            label = labelComponent,
+                            title = { "bpm" },
+                            titleComponent = axisLabelComponent,
+                            guideline = guidelineComponent,
+                            valueFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() },
                         ),
-                    rangeProvider = rangeProvider,
+                    bottomAxis =
+                        HorizontalAxis.rememberBottom(
+                            label = labelComponent,
+                            title = { "Minutes" },
+                            titleComponent = axisLabelComponent,
+                            guideline = guidelineComponent,
+                            valueFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() },
+                            itemPlacer = itemPlacer,
+                        ),
+                    marker = InvisibleMarker,
+                    markerVisibilityListener = markerVisibilityListener,
                 ),
-                startAxis =
-                    VerticalAxis.rememberStart(
-                        label = labelComponent,
-                        title = { "bpm" },
-                        titleComponent = axisLabelComponent,
-                        guideline = guidelineComponent,
-                        valueFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() },
-                    ),
-                bottomAxis =
-                    HorizontalAxis.rememberBottom(
-                        label = labelComponent,
-                        title = { "Minutes" },
-                        titleComponent = axisLabelComponent,
-                        guideline = guidelineComponent,
-                        valueFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() },
-                        itemPlacer = itemPlacer,
-                    ),
-            ),
-        modelProducer = modelProducer,
-        zoomState =
-            rememberVicoZoomState(
-                zoomEnabled = false,
-                initialZoom = Zoom.Content,
-            ),
-        modifier = Modifier.fillMaxWidth().height(200.dp),
-    )
+            modelProducer = modelProducer,
+            zoomState =
+                rememberVicoZoomState(
+                    zoomEnabled = false,
+                    initialZoom = Zoom.Content,
+                ),
+            modifier = Modifier.fillMaxWidth().height(200.dp),
+        )
+
+        VicoChartTooltipOverlay(
+            selectedPointOffset = selectedPointOffset,
+            modifier = Modifier.fillMaxWidth().height(200.dp),
+        )
+    }
+
+    if (tooltipState != null) {
+        DataPointTooltip(
+            isVisible = true,
+            data = tooltipState!!,
+            onDismissRequest = { tooltipState = null },
+        )
+    }
 }
 
 private fun computeLabelMinutes(

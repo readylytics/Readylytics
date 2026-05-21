@@ -1,9 +1,18 @@
 package com.gregor.lauritz.healthdashboard.domain.model
 
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
 
 fun SleepSessionEntity.efficiencyStatus(): MetricStatus =
+    when {
+        efficiency >= 85f -> MetricStatus.OPTIMAL
+        efficiency >= 80f -> MetricStatus.NEUTRAL
+        efficiency >= 70f -> MetricStatus.WARNING
+        else -> MetricStatus.POOR
+    }
+
+fun SleepSessionData.efficiencyStatus(): MetricStatus =
     when {
         efficiency >= 85f -> MetricStatus.OPTIMAL
         efficiency >= 80f -> MetricStatus.NEUTRAL

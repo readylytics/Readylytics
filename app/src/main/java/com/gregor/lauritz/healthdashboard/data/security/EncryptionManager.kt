@@ -56,6 +56,16 @@ class EncryptionManager
                 null
             }
 
+        /**
+         * Encrypts arbitrary bytes using Tink AES-256-GCM.
+         */
+        fun encryptBytes(plaintext: ByteArray): ByteArray = aead.encrypt(plaintext, null)
+
+        /**
+         * Decrypts arbitrary bytes using Tink AES-256-GCM.
+         */
+        fun decryptBytes(ciphertext: ByteArray): ByteArray = aead.decrypt(ciphertext, null)
+
         companion object {
             private const val KEYSET_NAME = "master_keyset"
             private const val PREF_FILE_NAME = "master_key_preference"

@@ -3,10 +3,9 @@ package com.gregor.lauritz.healthdashboard.ui.sleep
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.SleepTypicalRanges
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
 import com.gregor.lauritz.healthdashboard.domain.util.TimezoneProvider
@@ -33,7 +32,7 @@ private data class PercentagesTriple(
 
 @Stable
 data class SleepDetailUiState(
-    val session: SleepSessionEntity? = null,
+    val session: SleepSessionData? = null,
     val stageTimeline: List<SleepStageData> = emptyList(),
     val deepSleepPercent: Float = 0f,
     val remSleepPercent: Float = 0f,
@@ -46,7 +45,6 @@ data class SleepDetailUiState(
 
 @HiltViewModel
 class SleepDetailViewModel(
-    private val sleepSessionDao: SleepSessionDao,
     private val selectedDateRepository: SelectedDateRepository,
     private val sleepSessionRepository: SleepSessionRepository,
     private val timezoneProvider: TimezoneProvider,
@@ -57,12 +55,10 @@ class SleepDetailViewModel(
      */
     @Inject
     constructor(
-        sleepSessionDao: SleepSessionDao,
         selectedDateRepository: SelectedDateRepository,
         sleepSessionRepository: SleepSessionRepository,
         timezoneProvider: TimezoneProvider,
     ) : this(
-        sleepSessionDao,
         selectedDateRepository,
         sleepSessionRepository,
         timezoneProvider,
@@ -82,7 +78,7 @@ class SleepDetailViewModel(
                 val startDayMs = startDateTime.toInstant().toEpochMilli()
                 val endDayMs = startDateTime.plusDays(1).toInstant().toEpochMilli()
 
-                sleepSessionDao
+                sleepSessionRepository
                     .observeFirstSessionEndingInRange(startDayMs, endDayMs)
                     .flatMapLatest { session ->
                         if (session == null) {
@@ -101,7 +97,7 @@ class SleepDetailViewModel(
             )
 
     internal fun buildDetailUiState(
-        session: SleepSessionEntity,
+        session: SleepSessionData,
         stages: List<SleepStageData>,
         date: LocalDate,
     ): SleepDetailUiState {

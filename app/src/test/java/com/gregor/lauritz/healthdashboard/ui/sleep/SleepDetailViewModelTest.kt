@@ -1,8 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.sleep
 
-import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
 import com.gregor.lauritz.healthdashboard.domain.util.TimezoneProvider
@@ -34,7 +33,6 @@ class SleepDetailViewModelTest {
     // any coroutines from leaking onto real thread pools between tests.
     private val testDispatcher = UnconfinedTestDispatcher()
 
-    private lateinit var sleepSessionDao: SleepSessionDao
     private lateinit var selectedDateRepository: SelectedDateRepository
     private lateinit var sleepSessionRepository: SleepSessionRepository
     private lateinit var timezoneProvider: TimezoneProvider
@@ -42,7 +40,6 @@ class SleepDetailViewModelTest {
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        sleepSessionDao = mockk()
         selectedDateRepository = mockk()
         sleepSessionRepository = mockk()
         timezoneProvider = mockk()
@@ -60,7 +57,7 @@ class SleepDetailViewModelTest {
             val date = LocalDate.now()
             every { selectedDateRepository.selectedDate } returns MutableStateFlow(date)
             coEvery {
-                sleepSessionDao.observeFirstSessionEndingInRange(any(), any())
+                sleepSessionRepository.observeFirstSessionEndingInRange(any(), any())
             } returns flowOf(null)
 
             val viewModel = createViewModel()
@@ -97,7 +94,7 @@ class SleepDetailViewModelTest {
 
             every { selectedDateRepository.selectedDate } returns MutableStateFlow(date)
             coEvery {
-                sleepSessionDao.observeFirstSessionEndingInRange(any(), any())
+                sleepSessionRepository.observeFirstSessionEndingInRange(any(), any())
             } returns flowOf(session)
             coEvery {
                 sleepSessionRepository.observeSessionStages("session1")
@@ -132,7 +129,7 @@ class SleepDetailViewModelTest {
 
             every { selectedDateRepository.selectedDate } returns MutableStateFlow(date)
             coEvery {
-                sleepSessionDao.observeFirstSessionEndingInRange(any(), any())
+                sleepSessionRepository.observeFirstSessionEndingInRange(any(), any())
             } returns flowOf(session)
             coEvery {
                 sleepSessionRepository.observeSessionStages("session1")
@@ -195,7 +192,6 @@ class SleepDetailViewModelTest {
     /** Creates a ViewModel that passes testDispatcher as ioDispatcher — no real threads. */
     private fun createViewModel(): SleepDetailViewModel =
         SleepDetailViewModel(
-            sleepSessionDao = sleepSessionDao,
             selectedDateRepository = selectedDateRepository,
             sleepSessionRepository = sleepSessionRepository,
             timezoneProvider = timezoneProvider,
@@ -206,10 +202,9 @@ class SleepDetailViewModelTest {
     private fun createHelper(): SleepDetailViewModel {
         every { selectedDateRepository.selectedDate } returns MutableStateFlow(LocalDate.now())
         coEvery {
-            sleepSessionDao.observeFirstSessionEndingInRange(any(), any())
+            sleepSessionRepository.observeFirstSessionEndingInRange(any(), any())
         } returns flowOf(null)
         return SleepDetailViewModel(
-            sleepSessionDao = sleepSessionDao,
             selectedDateRepository = selectedDateRepository,
             sleepSessionRepository = sleepSessionRepository,
             timezoneProvider = timezoneProvider,
@@ -223,8 +218,8 @@ class SleepDetailViewModelTest {
         lightMinutes: Int = 0,
         remMinutes: Int = 0,
         awakeMinutes: Int = 0,
-    ): SleepSessionEntity =
-        SleepSessionEntity(
+    ): SleepSessionData =
+        SleepSessionData(
             id = id,
             startTime = 0,
             endTime = 0,

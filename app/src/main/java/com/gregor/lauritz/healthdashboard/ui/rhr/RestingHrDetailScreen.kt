@@ -140,6 +140,7 @@ fun RestingHrDetailScreen(
                         points = uiState.dailyRhr,
                         rangeStartMs = uiState.rangeStartMs,
                         rangeDays = uiState.selectedRange.days,
+                        metricName = "RHR",
                         baselineUnit = "bpm",
                         baseline = uiState.rhrBaseline,
                         showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),

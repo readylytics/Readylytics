@@ -21,8 +21,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
 import com.gregor.lauritz.healthdashboard.ui.common.DateFormatUtils
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
 import com.gregor.lauritz.healthdashboard.ui.theme.LocalStatusColors
@@ -32,7 +32,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun WorkoutMetricsDisplay(
-    workout: WorkoutRecordEntity,
+    workout: WorkoutData,
     computedTrimp: Int?,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -65,7 +65,7 @@ fun WorkoutMetricsDisplay(
 }
 
 @Composable
-private fun WorkoutHeader(workout: WorkoutRecordEntity) {
+private fun WorkoutHeader(workout: WorkoutData) {
     val type = remember(workout.exerciseType) { exerciseTypeToDisplayName(workout.exerciseType) }
 
     val (start, end, date) =
@@ -95,7 +95,7 @@ private fun WorkoutHeader(workout: WorkoutRecordEntity) {
 }
 
 @Composable
-private fun ZoneBreakdownCard(workout: WorkoutRecordEntity) {
+private fun ZoneBreakdownCard(workout: WorkoutData) {
     val totalMinutes = workout.durationMinutes.toFloat().coerceAtLeast(1f)
     val statusColors = LocalStatusColors.current
     val zones =
@@ -106,7 +106,10 @@ private fun ZoneBreakdownCard(workout: WorkoutRecordEntity) {
             Triple("Zone 2", workout.zone2Minutes, statusColors.neutral),
             Triple("Zone 1", workout.zone1Minutes, MaterialTheme.colorScheme.onSurfaceVariant),
         )
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+    ) {
         Column(Modifier.padding(16.dp)) {
             Text("Heart Rate Zones", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(12.dp))

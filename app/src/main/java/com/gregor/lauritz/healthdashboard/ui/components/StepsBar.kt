@@ -9,6 +9,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -21,7 +25,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.stepsStatus
+import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import java.text.NumberFormat
+import java.time.LocalDate
 
 // stepGoal fills bar to 75% width — mirrors PAI bar design
 private fun barMax(stepGoal: Int): Float = stepGoal / 0.75f
@@ -31,15 +37,56 @@ fun StepsBar(
     stepCount: Int?,
     stepGoal: Int,
     modifier: Modifier = Modifier,
+    dateForTooltip: LocalDate? = null,
 ) {
+    var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+    var activeTapOffset by remember { mutableStateOf<Offset?>(null) }
+
     val count = stepCount ?: 0
     val status = if (stepCount != null) stepsStatus(count, stepGoal) else MetricStatus.CALIBRATING
     val fillColor = status.gaugeColor()
     val trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
+    val primaryColor = MaterialTheme.colorScheme.primary
 
     Column(modifier = modifier) {
-        Canvas(modifier = Modifier.fillMaxWidth().height(28.dp)) {
+        Canvas(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(28.dp)
+                    .detectCanvasTap(
+                        segments =
+                            remember {
+                                listOf(
+                                    SegmentHitBox(
+                                        index = 0,
+                                        xStart = 0f,
+                                        xEnd = 1f,
+                                        label = "Steps",
+                                    ),
+                                )
+                            },
+                        onSegmentTapped = { _, _, tapOffset ->
+                            if (stepCount != null && dateForTooltip != null) {
+                                activeTapOffset = tapOffset
+                                val dateString = ChartUtils.formatTooltipDate(dateForTooltip)
+                                val valueText = "$stepCount"
+                                val dateText = dateString
+                                tooltipState =
+                                    DataPointTooltipData(
+                                        valueText = valueText,
+                                        dateText = dateText,
+                                        offset =
+                                            androidx.compose.ui.unit.IntOffset(
+                                                x = tapOffset.x.toInt(),
+                                                y = tapOffset.y.toInt(),
+                                            ),
+                                    )
+                            }
+                        },
+                    ),
+        ) {
             val totalWidth = size.width
             val barHeight = size.height
             val radius = barHeight / 2f
@@ -75,6 +122,31 @@ fun StepsBar(
                 cornerRadius = CornerRadius(radius),
                 style = Stroke(width = 1.dp.toPx()),
             )
+
+            // Draw highlight overlay and indicator line
+            if (activeTapOffset != null) {
+                val tapX = activeTapOffset!!.x.coerceIn(0f, totalWidth)
+
+                // Vertical indicator line through the bar
+                drawLine(
+                    color = primaryColor.copy(alpha = 0.4f),
+                    start = Offset(tapX, 0f),
+                    end = Offset(tapX, barHeight),
+                    strokeWidth = 2.dp.toPx(),
+                )
+
+                // Concentric highlight circles (Material Design 3 style)
+                drawCircle(
+                    color = primaryColor.copy(alpha = 0.2f),
+                    center = Offset(tapX, barHeight / 2f),
+                    radius = 8.dp.toPx(),
+                )
+                drawCircle(
+                    color = primaryColor,
+                    center = Offset(tapX, barHeight / 2f),
+                    radius = 4.dp.toPx(),
+                )
+            }
         }
 
         Spacer(Modifier.height(6.dp))
@@ -93,6 +165,17 @@ fun StepsBar(
                 color = if (stepCount != null) fillColor else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+
+    if (tooltipState != null) {
+        DataPointTooltip(
+            isVisible = true,
+            data = tooltipState!!,
+            onDismissRequest = {
+                tooltipState = null
+                activeTapOffset = null
+            },
+        )
     }
 }
 

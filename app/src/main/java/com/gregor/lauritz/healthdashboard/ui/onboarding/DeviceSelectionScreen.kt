@@ -89,7 +89,10 @@ fun DeviceSelectionScreen(
                     contentPadding = PaddingValues(vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(devices) { device ->
+                    items(
+                        items = devices,
+                        key = { it },
+                    ) { device ->
                         DeviceCard(
                             name = device,
                             onClick = { onDeviceSelected(device) },
