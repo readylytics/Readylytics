@@ -1,11 +1,14 @@
 package com.gregor.lauritz.healthdashboard.domain.repository
 
+import androidx.health.connect.client.records.BloodPressureRecord
+import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.WeightRecord
 import java.time.Instant
 
 class HealthConnectPermissionRevokedException(
@@ -71,4 +74,19 @@ interface HealthConnectRepository {
     ): Map<java.time.LocalDate, Long>
 
     suspend fun discoverDevices(windowDays: Int = 2): List<String>
+
+    suspend fun readWeightRecords(
+        from: Instant,
+        to: Instant,
+    ): List<WeightRecord>
+
+    suspend fun readBodyFatRecords(
+        from: Instant,
+        to: Instant,
+    ): List<BodyFatRecord>
+
+    suspend fun readBloodPressureRecords(
+        from: Instant,
+        to: Instant,
+    ): List<BloodPressureRecord>
 }
