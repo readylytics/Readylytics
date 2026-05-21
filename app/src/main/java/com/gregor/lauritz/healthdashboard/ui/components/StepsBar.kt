@@ -9,6 +9,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -21,7 +25,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.stepsStatus
+import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import java.text.NumberFormat
+import java.time.LocalDate
 
 // stepGoal fills bar to 75% width — mirrors PAI bar design
 private fun barMax(stepGoal: Int): Float = stepGoal / 0.75f
@@ -31,7 +37,10 @@ fun StepsBar(
     stepCount: Int?,
     stepGoal: Int,
     modifier: Modifier = Modifier,
+    dateForTooltip: LocalDate? = null,
 ) {
+    var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+
     val count = stepCount ?: 0
     val status = if (stepCount != null) stepsStatus(count, stepGoal) else MetricStatus.CALIBRATING
     val fillColor = status.gaugeColor()
@@ -39,7 +48,35 @@ fun StepsBar(
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
 
     Column(modifier = modifier) {
-        Canvas(modifier = Modifier.fillMaxWidth().height(28.dp)) {
+        Canvas(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(28.dp)
+                    .detectCanvasTap(
+                        segments =
+                            listOf(
+                                SegmentHitBox(
+                                    index = 0,
+                                    xStart = 0f,
+                                    xEnd = 1f,
+                                    label = "Steps",
+                                ),
+                            ),
+                        onSegmentTapped = { _, _ ->
+                            if (stepCount != null && dateForTooltip != null) {
+                                val dateString = ChartUtils.formatTooltipDate(dateForTooltip)
+                                tooltipState =
+                                    DataPointTooltipData(
+                                        metricName = "Steps",
+                                        value = stepCount.toFloat(),
+                                        unit = "",
+                                        dateString = dateString,
+                                    )
+                            }
+                        },
+                    ),
+        ) {
             val totalWidth = size.width
             val barHeight = size.height
             val radius = barHeight / 2f
@@ -93,6 +130,14 @@ fun StepsBar(
                 color = if (stepCount != null) fillColor else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+
+    if (tooltipState != null) {
+        DataPointTooltip(
+            isVisible = true,
+            data = tooltipState!!,
+            onDismissRequest = { tooltipState = null },
+        )
     }
 }
 

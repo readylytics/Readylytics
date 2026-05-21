@@ -9,7 +9,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -21,6 +24,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.domain.model.SleepStage
 import com.gregor.lauritz.healthdashboard.domain.model.SleepStageType
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
+import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -92,6 +96,8 @@ fun SleepStagesChart(
     modifier: Modifier = Modifier,
     stageTimeline: List<SleepStageData> = emptyList(),
 ) {
+    var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+
     if (session == null) {
         CalibrationBar(
             modifier = modifier,
@@ -122,7 +128,44 @@ fun SleepStagesChart(
                 Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 24.dp)
+                    .detectCanvasTap(
+                        segments =
+                            remember(sortedTimeline) {
+                                sortedTimeline.mapIndexed { index, stageData ->
+                                    SegmentHitBox(
+                                        index = index,
+                                        xStart = stageData.getStartOffsetMinutes(session.startTime).toFloat() / (session.endTime - session.startTime) * 60_000f,
+                                        xEnd = (stageData.getStartOffsetMinutes(session.startTime) + stageData.durationMinutes).toFloat() / (session.endTime - session.startTime) * 60_000f,
+                                        label = stageData.stageType,
+                                    )
+                                }
+                            },
+                        onSegmentTapped = { _, label ->
+                            val tappedStage = sortedTimeline.find { it.stageType == label }
+                            if (tappedStage != null) {
+                                val stageName = when (tappedStage.stageType) {
+                                    SleepStageType.DEEP.value -> "Deep Sleep"
+                                    SleepStageType.REM.value -> "REM Sleep"
+                                    SleepStageType.LIGHT.value -> "Light Sleep"
+                                    SleepStageType.AWAKE.value -> "Awake"
+                                    else -> tappedStage.stageType
+                                }
+                                val dateString = ChartUtils.formatTooltipDate(
+                                    Instant.ofEpochMilli(session.startTimeMs)
+                                        .atZone(ZoneId.systemDefault())
+                                        .toLocalDate()
+                                )
+                                tooltipState =
+                                    DataPointTooltipData(
+                                        metricName = stageName,
+                                        value = tappedStage.durationMinutes.toFloat(),
+                                        unit = "min",
+                                        dateString = dateString,
+                                    )
+                            }
+                        },
+                    ),
         ) {
             val chartWidth = size.width
             val chartHeight = size.height
@@ -248,6 +291,14 @@ fun SleepStagesChart(
                 )
             }
         }
+    }
+
+    if (tooltipState != null) {
+        DataPointTooltip(
+            isVisible = true,
+            data = tooltipState!!,
+            onDismissRequest = { tooltipState = null },
+        )
     }
 }
 

@@ -12,6 +12,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -26,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
+import java.time.LocalDate
 
 // 100 PAI fills 75% of the bar width
 private const val BAR_MAX = 100f / 0.75f
@@ -36,6 +41,8 @@ fun PaiWeeklyBar(
     totalPai: Float,
     modifier: Modifier = Modifier,
 ) {
+    var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+
     val status =
         when {
             totalPai >= 100f -> MetricStatus.OPTIMAL
@@ -51,7 +58,44 @@ fun PaiWeeklyBar(
     if (dailyBreakdown.isEmpty()) return
 
     Column(modifier = modifier) {
-        Canvas(modifier = Modifier.fillMaxWidth().height(28.dp)) {
+        Canvas(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(28.dp)
+                    .detectCanvasTap(
+                        segments =
+                            remember(dailyBreakdown) {
+                                val hitBoxes = mutableListOf<SegmentHitBox>()
+                                var xOffset = 0f
+                                dailyBreakdown.forEachIndexed { index, (label, pai) ->
+                                    if (pai > 0f) {
+                                        val fraction = pai / BAR_MAX
+                                        hitBoxes.add(
+                                            SegmentHitBox(
+                                                index = index,
+                                                xStart = xOffset,
+                                                xEnd = xOffset + fraction,
+                                                label = label,
+                                            ),
+                                        )
+                                        xOffset += fraction
+                                    }
+                                }
+                                hitBoxes
+                            },
+                        onSegmentTapped = { index, label ->
+                            val pai = dailyBreakdown[index].second
+                            tooltipState =
+                                DataPointTooltipData(
+                                    metricName = "PAI",
+                                    value = pai,
+                                    unit = "",
+                                    dateString = label,
+                                )
+                        },
+                    ),
+        ) {
             val totalWidth = size.width
             val barHeight = size.height
             val radius = barHeight / 2f
@@ -129,6 +173,14 @@ fun PaiWeeklyBar(
                 )
             }
         }
+    }
+
+    if (tooltipState != null) {
+        DataPointTooltip(
+            isVisible = true,
+            data = tooltipState!!,
+            onDismissRequest = { tooltipState = null },
+        )
     }
 }
 
