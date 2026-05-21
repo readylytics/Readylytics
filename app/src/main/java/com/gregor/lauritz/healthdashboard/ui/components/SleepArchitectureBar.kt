@@ -12,6 +12,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -24,6 +28,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 private data class StageSegment(
     val label: String,
@@ -36,6 +44,8 @@ fun SleepArchitectureBar(
     session: SleepSessionEntity?,
     modifier: Modifier = Modifier,
 ) {
+    var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+
     val colorScheme = MaterialTheme.colorScheme
     val deepColor = colorScheme.primary
     val remColor = colorScheme.tertiary
@@ -70,7 +80,43 @@ fun SleepArchitectureBar(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(28.dp),
+                    .height(28.dp)
+                    .detectCanvasTap(
+                        segments =
+                            remember(segments, totalMinutes) {
+                                val hitBoxes = mutableListOf<SegmentHitBox>()
+                                var xOffset = 0f
+                                segments.forEachIndexed { index, segment ->
+                                    val fraction = segment.minutes.toFloat() / totalMinutes
+                                    val segmentWidth = 1f * fraction // Will multiply by actual width later
+                                    hitBoxes.add(
+                                        SegmentHitBox(
+                                            index = index,
+                                            xStart = xOffset,
+                                            xEnd = xOffset + segmentWidth,
+                                            label = segment.label,
+                                        ),
+                                    )
+                                    xOffset += segmentWidth
+                                }
+                                hitBoxes
+                            },
+                        onSegmentTapped = { index, label ->
+                            val segment = segments[index]
+                            val dateString = ChartUtils.formatTooltipDate(
+                                Instant.ofEpochMilli(session.startTimeMs)
+                                    .atZone(ZoneId.systemDefault())
+                                    .toLocalDate()
+                            )
+                            tooltipState =
+                                DataPointTooltipData(
+                                    metricName = label + " Sleep",
+                                    value = segment.minutes.toFloat(),
+                                    unit = "min",
+                                    dateString = dateString,
+                                )
+                        },
+                    ),
         ) {
             val totalWidth = size.width
             val barHeight = size.height
@@ -125,6 +171,14 @@ fun SleepArchitectureBar(
                 )
             }
         }
+    }
+
+    if (tooltipState != null) {
+        DataPointTooltip(
+            isVisible = true,
+            data = tooltipState!!,
+            onDismissRequest = { tooltipState = null },
+        )
     }
 }
 

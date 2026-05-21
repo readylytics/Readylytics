@@ -17,11 +17,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -74,6 +78,7 @@ fun TrendChart(
     points: List<DailyDataPoint>,
     rangeStartMs: Long,
     rangeDays: Int,
+    metricName: String,
     baselineUnit: String,
     baseline: Float? = null,
     showBaseline: Boolean = true,
@@ -94,6 +99,7 @@ fun TrendChart(
         ),
     modifier: Modifier = Modifier,
 ) {
+    var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     if (points.none { it.value != null }) {
         EmptyChartPlaceholder(modifier = modifier)
         return
@@ -163,48 +169,78 @@ fun TrendChart(
                 ),
         )
 
-    CartesianChartHost(
-        chart =
-            rememberCartesianChart(
-                rememberLineCartesianLayer(
-                    lineProvider = LineCartesianLayer.LineProvider.series(line),
-                    rangeProvider = rangeProvider,
+    Box(modifier = modifier.fillMaxWidth()) {
+        CartesianChartHost(
+            chart =
+                rememberCartesianChart(
+                    rememberLineCartesianLayer(
+                        lineProvider = LineCartesianLayer.LineProvider.series(line),
+                        rangeProvider = rangeProvider,
+                    ),
+                    startAxis =
+                        VerticalAxis.rememberStart(
+                            label = labelComponent,
+                            valueFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() },
+                            guideline = guidelineComponent,
+                            title = { baselineUnit },
+                            titleComponent = axisLabelComponent,
+                        ),
+                    bottomAxis =
+                        HorizontalAxis.rememberBottom(
+                            label = labelComponent,
+                            valueFormatter = xAxisFormatter,
+                            itemPlacer =
+                                remember(
+                                    rangeDays,
+                                ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                            guideline = guidelineComponent,
+                        ),
+                    decorations =
+                        if (showBaseline) {
+                            listOf(
+                                HorizontalLine(
+                                    y = { baselineValue.toDouble() },
+                                    line = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp),
+                                ),
+                            )
+                        } else {
+                            emptyList()
+                        },
                 ),
-                startAxis =
-                    VerticalAxis.rememberStart(
-                        label = labelComponent,
-                        valueFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() },
-                        guideline = guidelineComponent,
-                        title = { baselineUnit },
-                        titleComponent = axisLabelComponent,
-                    ),
-                bottomAxis =
-                    HorizontalAxis.rememberBottom(
-                        label = labelComponent,
-                        valueFormatter = xAxisFormatter,
-                        itemPlacer =
-                            remember(
-                                rangeDays,
-                            ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
-                        guideline = guidelineComponent,
-                    ),
-                decorations =
-                    if (showBaseline) {
-                        listOf(
-                            HorizontalLine(
-                                y = { baselineValue.toDouble() },
-                                line = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp),
-                            ),
-                        )
-                    } else {
-                        emptyList()
-                    },
-            ),
-        modelProducer = modelProducer,
-        scrollState = scrollState,
-        zoomState = zoomState,
-        modifier = modifier.fillMaxWidth().height(180.dp),
-    )
+            modelProducer = modelProducer,
+            scrollState = scrollState,
+            zoomState = zoomState,
+            modifier = Modifier.fillMaxWidth().height(180.dp),
+        )
+
+        VicoChartTooltipOverlay(
+            points = points,
+            rangeStartMs = rangeStartMs,
+            rangeDays = rangeDays,
+            metricName = metricName,
+            unit = baselineUnit,
+            onDataPointSelected = { dayOffset, value ->
+                val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
+                val dateString = ChartUtils.formatTooltipDate(date)
+                tooltipState =
+                    DataPointTooltipData(
+                        metricName = metricName,
+                        value = value,
+                        unit = baselineUnit,
+                        dateString = dateString,
+                    )
+            },
+            modifier = Modifier.fillMaxWidth().height(180.dp),
+        )
+    }
+
+    if (tooltipState != null) {
+        DataPointTooltip(
+            isVisible = true,
+            data = tooltipState!!,
+            onDismissRequest = { tooltipState = null },
+        )
+    }
 
     if (showBaseline) {
         Spacer(Modifier.height(6.dp))
