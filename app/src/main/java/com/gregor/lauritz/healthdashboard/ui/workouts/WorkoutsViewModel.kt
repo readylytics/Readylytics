@@ -3,14 +3,13 @@ package com.gregor.lauritz.healthdashboard.ui.workouts
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
-import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
+import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
+import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
@@ -41,7 +40,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 data class WorkoutDisplayItem(
-    val workout: WorkoutRecordEntity,
+    val workout: WorkoutData,
     val computedTrimp: Float,
 )
 
@@ -58,9 +57,9 @@ data class WorkoutsUiState(
     val isLoading: Boolean = false,
 )
 
-private data class WorkoutData(
+private data class WorkoutFlowData(
     val latestSummary: DailySummary?,
-    val allWorkouts: List<WorkoutRecordEntity>,
+    val allWorkouts: List<WorkoutData>,
     val trimpSummaries: List<DailySummary>,
     val paiSummaries: List<DailySummary>,
     val prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences,
@@ -70,9 +69,9 @@ private data class WorkoutData(
 class WorkoutsViewModel
     @Inject
     constructor(
-        private val dailySummaryDao: DailySummaryDao,
-        private val workoutDao: WorkoutDao,
-        private val heartRateDao: HeartRateDao,
+        private val dailySummaryRepository: DailySummaryRepository,
+        private val workoutRepository: WorkoutRepository,
+        private val heartRateRepository: HeartRateRepository,
         private val selectedDateRepository: SelectedDateRepository,
         private val scoringCalculator: ScoringCalculator,
         private val settingsRepo: SettingsRepository,
@@ -96,7 +95,7 @@ class WorkoutsViewModel
                 foregroundSyncController.isSyncing,
             ) { range, date, isSyncing -> Triple(range, date, isSyncing) }
                 .flatMapLatest { (range, date, isSyncing) ->
-                    val earliestWorkoutMs = workoutDao.getEarliestWorkoutTimestamp() ?: 0L
+                    val earliestWorkoutMs = workoutRepository.getEarliestWorkoutTimestamp() ?: 0L
                     val zoneId = ZoneId.systemDefault()
                     val earliestLocalDate =
                         if (earliestWorkoutMs > 0) {
@@ -118,15 +117,10 @@ class WorkoutsViewModel
 
                     val summaryFlow =
                         if (date == LocalDate.now(zoneId)) {
-                            dailySummaryDao.observeLatest().map { it?.let { DailySummaryMapper.toDomain(it) } }
+                            dailySummaryRepository.observeLatest()
                         } else {
                             flow {
-                                emit(
-                                    dailySummaryDao
-                                        .getByDate(
-                                            selectedMidnightMs,
-                                        )?.let { DailySummaryMapper.toDomain(it) },
-                                )
+                                emit(dailySummaryRepository.getByDate(selectedMidnightMs))
                             }.flowOn(Dispatchers.IO)
                         }
 
@@ -140,16 +134,12 @@ class WorkoutsViewModel
                     val dataFlow =
                         combine(
                             summaryFlow,
-                            workoutDao.observeSince(fetchFromMs),
-                            dailySummaryDao.observeSince(fetchFromMs).map { list ->
-                                list.map { DailySummaryMapper.toDomain(it) }
-                            },
-                            dailySummaryDao.observeSince(paiFromMs).map { list ->
-                                list.map { DailySummaryMapper.toDomain(it) }
-                            },
+                            workoutRepository.observeSince(fetchFromMs),
+                            dailySummaryRepository.observeSince(fetchFromMs),
+                            dailySummaryRepository.observeSince(paiFromMs),
                             settingsRepo.userPreferences,
                         ) { latest, allWorkouts, trimpSummaries, paiSummaries, prefs ->
-                            WorkoutData(latest, allWorkouts, trimpSummaries, paiSummaries, prefs)
+                            WorkoutFlowData(latest, allWorkouts, trimpSummaries, paiSummaries, prefs)
                         }
 
                     dataFlow.flatMapLatest { data ->
@@ -246,7 +236,7 @@ class WorkoutsViewModel
                                     List<ComputeWorkoutTrimpUseCase.HeartRateSample>,
                                 >()
                             for (workout in recentWorkouts) {
-                                val samples = heartRateDao.getByTimeRange(workout.startTime, workout.endTime)
+                                val samples = heartRateRepository.getByTimeRange(workout.startTime, workout.endTime)
                                 samplesByWorkoutId[workout.id] =
                                     samples.map {
                                         com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase

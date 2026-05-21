@@ -2,12 +2,12 @@ package com.gregor.lauritz.healthdashboard.ui.workouts
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
+import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutRepository
 import com.gregor.lauritz.healthdashboard.ui.workouts.mappers.ChartDataMapper
 import com.gregor.lauritz.healthdashboard.ui.workouts.mappers.DailyPaiBreakdownMapper
 import com.gregor.lauritz.healthdashboard.ui.workouts.mappers.RecoveryMetricsMapper
@@ -29,7 +29,7 @@ data class HeartRatePoint(
 )
 
 data class WorkoutDetailUiState(
-    val workout: WorkoutRecordEntity? = null,
+    val workout: WorkoutData? = null,
     val hrSamples: List<HeartRatePoint> = emptyList(),
     val hrChartData: List<Pair<Double, Double>> = emptyList(),
     val durationMinutes: Int = 0,
@@ -46,10 +46,10 @@ data class WorkoutDetailUiState(
 class WorkoutDetailViewModel
     @Inject
     constructor(
-        private val workoutDao: WorkoutDao,
+        private val workoutRepository: WorkoutRepository,
         private val hcRepo: HealthConnectRepository,
-        private val heartRateDao: HeartRateDao,
-        private val dailySummaryDao: DailySummaryDao,
+        private val heartRateRepository: HeartRateRepository,
+        private val dailySummaryRepository: DailySummaryRepository,
         private val settingsRepo: SettingsRepository,
         private val computeWorkoutTrimpUseCase:
             com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase,
@@ -60,7 +60,7 @@ class WorkoutDetailViewModel
         fun loadWorkout(workoutId: String) {
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
-                val workout = workoutDao.getById(workoutId)
+                val workout = workoutRepository.getById(workoutId)
                 if (workout == null) {
                     _uiState.update { it.copy(isLoading = false) }
                     return@launch
@@ -78,7 +78,7 @@ class WorkoutDetailViewModel
                             record.samples.map { HeartRatePoint(it.time, it.beatsPerMinute.toInt()) }
                         }.toList()
                 val dbSamples =
-                    heartRateDao
+                    heartRateRepository
                         .getByTimeRange(start.toEpochMilli(), endPlus3Min.toEpochMilli())
                         .map { HeartRatePoint(Instant.ofEpochMilli(it.timestampMs), it.beatsPerMinute) }
                 val allSamples =
@@ -94,7 +94,7 @@ class WorkoutDetailViewModel
 
                 val workoutDate = start.atZone(ZoneId.systemDefault()).toLocalDate()
                 val midnight = workoutDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val summary = dailySummaryDao.getByDate(midnight)
+                val summary = dailySummaryRepository.getByDate(midnight)
 
                 val sevenDaysAgo =
                     workoutDate
@@ -102,7 +102,7 @@ class WorkoutDetailViewModel
                         .atStartOfDay(ZoneId.systemDefault())
                         .toInstant()
                         .toEpochMilli()
-                val summaries = dailySummaryDao.getSince(sevenDaysAgo)
+                val summaries = dailySummaryRepository.getSince(sevenDaysAgo)
                 val paiBreakdown = DailyPaiBreakdownMapper.mapDailyBreakdown(workoutDate, summaries)
 
                 val recoveryMetrics = RecoveryMetricsMapper.mapRecoveryMetrics(allSamples, workout.endTime, endHr)

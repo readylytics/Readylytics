@@ -151,6 +151,35 @@ class SqlCipherKeyManager
             }
         }
 
+        class KeyDecryptionException(
+            message: String,
+            cause: Throwable? = null,
+        ) : Exception(message, cause)
+
+        fun validateKeyDecryption() {
+            if (prefs.contains(PREF_ENCRYPTED_KEY)) {
+                try {
+                    val decrypted = decryptKey()
+                    decrypted.fill(0)
+                } catch (e: Exception) {
+                    throw KeyDecryptionException("Failed to decrypt SQLite database key from KeyStore", e)
+                }
+            }
+        }
+
+        fun resetKeyAndDatabase(dbFile: File) {
+            prefs
+                .edit()
+                .remove(PREF_ENCRYPTED_KEY)
+                .remove(PREF_IV)
+                .commit()
+            if (dbFile.exists()) {
+                dbFile.delete()
+                File("${dbFile.absolutePath}-wal").delete()
+                File("${dbFile.absolutePath}-shm").delete()
+            }
+        }
+
         private fun getOrCreateDbKey(dbFile: File? = null): ByteArray =
             if (prefs.contains(PREF_ENCRYPTED_KEY)) {
                 try {
@@ -161,25 +190,7 @@ class SqlCipherKeyManager
                         "Failed to decrypt database key. KeyStore key may have changed or data is corrupted.",
                         e,
                     )
-                    // If we can't decrypt, we must clear the corrupted key and generate a new one.
-                    // We also MUST delete the database file if it exists, otherwise Room will fail to open it with the new key.
-                    prefs
-                        .edit()
-                        .remove(PREF_ENCRYPTED_KEY)
-                        .remove(PREF_IV)
-                        .commit()
-                    dbFile?.let {
-                        if (it.exists()) {
-                            android.util.Log.w(
-                                "SqlCipherKeyManager",
-                                "Deleting inaccessible database file: ${it.absolutePath}",
-                            )
-                            it.delete()
-                            File("${it.absolutePath}-wal").delete()
-                            File("${it.absolutePath}-shm").delete()
-                        }
-                    }
-                    generateAndStoreNewKey()
+                    throw KeyDecryptionException("Database key decryption failed", e)
                 }
             } else {
                 generateAndStoreNewKey()

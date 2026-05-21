@@ -1,11 +1,11 @@
 package com.gregor.lauritz.healthdashboard.ui.steps
 
 import androidx.lifecycle.viewModelScope
-import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import io.mockk.every
 import io.mockk.mockk
@@ -23,14 +23,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
-import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class StepDetailViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var viewModel: StepDetailViewModel
-    private lateinit var dao: DailySummaryDao
+    private lateinit var repository: DailySummaryRepository
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var selectedDateRepo: SelectedDateRepository
 
@@ -38,7 +37,7 @@ class StepDetailViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
 
-        dao =
+        repository =
             mockk {
                 every { observeByDate(any()) } returns MutableStateFlow(null)
                 every { observeSince(any()) } returns MutableStateFlow(emptyList())
@@ -52,7 +51,7 @@ class StepDetailViewModelTest {
 
     private fun createViewModel(): StepDetailViewModel =
         StepDetailViewModel(
-            dailySummaryDao = dao,
+            dailySummaryRepository = repository,
             selectedDateRepository = selectedDateRepo,
             settingsRepo = settingsRepo,
         )
@@ -84,14 +83,13 @@ class StepDetailViewModelTest {
         }
 
     @Test
-    fun `uiState updates when dao emits data`() =
+    fun `uiState updates when repository emits data`() =
         runTest {
             val today = LocalDate.now()
-            val midnightMs = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            val latestSummary = DailySummaryEntity(dateMidnightMs = midnightMs, stepCount = 8500)
+            val latestSummary = DailySummary(date = today, stepCount = 8500)
 
-            every { dao.observeByDate(any()) } returns MutableStateFlow(latestSummary)
-            every { dao.observeSince(any()) } returns MutableStateFlow(listOf(latestSummary))
+            every { repository.observeByDate(any()) } returns MutableStateFlow(latestSummary)
+            every { repository.observeSince(any()) } returns MutableStateFlow(listOf(latestSummary))
 
             viewModel = createViewModel()
 

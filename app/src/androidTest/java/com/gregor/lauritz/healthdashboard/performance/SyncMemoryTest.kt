@@ -2,7 +2,7 @@ package com.gregor.lauritz.healthdashboard.performance
 
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.gregor.lauritz.healthdashboard.ui.MainActivity
+import com.gregor.lauritz.healthdashboard.MainActivity
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test

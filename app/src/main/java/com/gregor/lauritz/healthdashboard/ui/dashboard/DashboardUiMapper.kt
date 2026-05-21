@@ -1,6 +1,5 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.hrvStatus
@@ -8,6 +7,7 @@ import com.gregor.lauritz.healthdashboard.domain.model.paiStatus
 import com.gregor.lauritz.healthdashboard.domain.model.restingHrStatus
 import com.gregor.lauritz.healthdashboard.domain.model.rhrStatus
 import com.gregor.lauritz.healthdashboard.domain.model.sleepDurationStatus
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -24,7 +24,7 @@ class DashboardUiMapper
             summary: DailySummary?,
             prefs: UserPreferences,
             selectedDate: LocalDate,
-            lastSleepSession: SleepSessionEntity?,
+            lastSleepSession: SleepSessionData?,
         ): List<CardData> {
             if (summary == null) return emptyList()
 
@@ -168,7 +168,7 @@ class DashboardUiMapper
         fun sleepDurationCard(
             summary: DailySummary,
             prefs: UserPreferences,
-            lastSleepSession: SleepSessionEntity?,
+            lastSleepSession: SleepSessionData?,
         ): CardData {
             val durationStatus = summary.sleepDurationStatus((prefs.goalSleepHours * 60).toInt())
             val lastNightText =

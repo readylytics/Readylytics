@@ -14,6 +14,9 @@ data class SleepSessionData(
     val lightSleepMinutes: Int,
     val remSleepMinutes: Int,
     val awakeMinutes: Int,
+    val sleepScore: Float? = null,
+    val startZoneOffsetSeconds: Int? = null,
+    val endZoneOffsetSeconds: Int? = null,
 )
 
 @Stable
@@ -40,4 +43,9 @@ interface SleepSessionRepository {
     suspend fun countSince(fromMs: Long): Int
 
     fun observeSessionStages(sessionId: String): Flow<List<SleepStageData>>
+
+    fun observeFirstSessionEndingInRange(
+        fromMs: Long,
+        toMs: Long,
+    ): Flow<SleepSessionData?>
 }

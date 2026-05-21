@@ -3,15 +3,13 @@ package com.gregor.lauritz.healthdashboard.ui.sleep
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
-import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
+import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
@@ -46,7 +44,7 @@ data class Baselines(
 
 data class SleepUiState(
     val latestSummary: DailySummary? = null,
-    val latestSession: SleepSessionEntity? = null,
+    val latestSession: SleepSessionData? = null,
     val dailyHrv: List<DailyDataPoint> = emptyList(),
     val dailyRhr: List<DailyDataPoint> = emptyList(),
     val hrvBaseline: Float? = null,
@@ -60,7 +58,7 @@ data class SleepUiState(
 
 private data class SleepData(
     val latestSummary: DailySummary?,
-    val lastSession: SleepSessionEntity?,
+    val lastSession: SleepSessionData?,
     val summaries: List<DailySummary>,
     val prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences,
 )
@@ -69,10 +67,9 @@ private data class SleepData(
 class SleepViewModel
     @Inject
     constructor(
-        private val dailySummaryDao: DailySummaryDao,
-        private val sleepSessionDao: SleepSessionDao,
-        private val hrvDao: HrvDao,
-        private val heartRateDao: HeartRateDao,
+        private val dailySummaryRepository: DailySummaryRepository,
+        private val sleepSessionRepository: SleepSessionRepository,
+        private val heartRateRepository: HeartRateRepository,
         private val settingsRepo: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
         private val circadianRepo: CircadianConsistencyRepository,
@@ -94,7 +91,7 @@ class SleepViewModel
             selectedDateRepository.selectedDate
                 .flatMapLatest { date ->
                     combine(
-                        hrvDao
+                        heartRateRepository
                             .observeSleepHrvSince(TimeRange.THIRTY_DAYS.fromMs(date))
                             .map { records ->
                                 if (records.isEmpty()) {
@@ -112,7 +109,7 @@ class SleepViewModel
                                     }
                                 }
                             },
-                        heartRateDao
+                        heartRateRepository
                             .observeSleepHrSince(TimeRange.THIRTY_DAYS.fromMs(date))
                             .map { records ->
                                 if (records.isEmpty()) {
@@ -189,16 +186,16 @@ class SleepViewModel
                                     .atStartOfDay(zoneId)
                                     .toInstant()
                                     .toEpochMilli()
-                            dailySummaryDao
+                            dailySummaryRepository
                                 .observeSince(todayMs)
-                                .map { it.firstOrNull()?.let { DailySummaryMapper.toDomain(it) } }
+                                .map { it.firstOrNull() }
                         } else {
                             flow {
                                 emit(
-                                    dailySummaryDao
+                                    dailySummaryRepository
                                         .getByDate(
                                             selectedMidnightMs,
-                                        )?.let { DailySummaryMapper.toDomain(it) },
+                                        ),
                                 )
                             }
                         }
@@ -206,13 +203,11 @@ class SleepViewModel
                     val dataFlow =
                         combine(
                             summaryFlow,
-                            sleepSessionDao.observeFirstSessionEndingInRange(
+                            sleepSessionRepository.observeFirstSessionEndingInRange(
                                 selectedMidnightMs,
                                 nextDayMidnightMs,
                             ),
-                            dailySummaryDao.observeSince(fromMs).map { list ->
-                                list.map { DailySummaryMapper.toDomain(it) }
-                            },
+                            dailySummaryRepository.observeSince(fromMs),
                             settingsRepo.userPreferences,
                         ) { latestSummary, latestSession, summaries, prefs ->
                             SleepData(latestSummary, latestSession, summaries, prefs)

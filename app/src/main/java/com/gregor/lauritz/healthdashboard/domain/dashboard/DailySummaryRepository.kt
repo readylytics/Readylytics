@@ -45,6 +45,9 @@ class DailySummaryRepository
                             lightSleepMinutes = it.lightSleepMinutes,
                             remSleepMinutes = it.remSleepMinutes,
                             awakeMinutes = it.awakeMinutes,
+                            sleepScore = it.sleepScore,
+                            startZoneOffsetSeconds = it.startZoneOffsetSeconds,
+                            endZoneOffsetSeconds = it.endZoneOffsetSeconds,
                         )
                     }
                 }

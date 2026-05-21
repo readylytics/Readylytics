@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 
 private data class StageSegment(
     val label: String,
@@ -35,7 +35,7 @@ private data class StageSegment(
 
 @Composable
 fun SleepArchitectureBar(
-    session: SleepSessionEntity?,
+    session: SleepSessionData?,
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme

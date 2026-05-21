@@ -18,11 +18,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.domain.model.SleepStage
 import com.gregor.lauritz.healthdashboard.domain.model.SleepStageType
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
 import java.time.Instant
 import java.time.ZoneId
@@ -91,7 +92,7 @@ private fun getLabelTimestamps(
 
 @Composable
 fun SleepStagesChart(
-    session: SleepSessionEntity?,
+    session: SleepSessionData?,
     modifier: Modifier = Modifier,
     stageTimeline: List<SleepStageData> = emptyList(),
 ) {
@@ -132,6 +133,7 @@ fun SleepStagesChart(
                     .fillMaxWidth()
                     .height(200.dp)
                     .padding(horizontal = 24.dp)
+                    .testTag("SleepStagesChartCanvas")
                     .detectCanvasTap(
                         segments =
                             remember(sortedTimeline, session.startTime, sessionDurationMs) {
@@ -323,7 +325,7 @@ fun SleepStagesChartPreview() {
     val endTime = 1716188400000L // 2024-05-20 09:00:00 UTC
 
     val session =
-        SleepSessionEntity(
+        SleepSessionData(
             id = "session1",
             startTime = startTime,
             endTime = endTime,

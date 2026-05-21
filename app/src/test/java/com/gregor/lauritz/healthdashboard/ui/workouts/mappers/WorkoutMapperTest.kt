@@ -1,13 +1,12 @@
 package com.gregor.lauritz.healthdashboard.ui.workouts.mappers
 
-import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
+import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.ui.workouts.HeartRatePoint
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 
 class WorkoutMapperTest {
     @Test
@@ -100,7 +99,7 @@ class WorkoutMapperTest {
     @Test
     fun dailyPaiBreakdownMapper_sevenDayLookback_correctLabels() {
         val today = LocalDate.of(2026, 5, 16)
-        val summaries = emptyList<DailySummaryEntity>()
+        val summaries = emptyList<DailySummary>()
 
         val result = DailyPaiBreakdownMapper.mapDailyBreakdown(today, summaries)
 
@@ -112,10 +111,9 @@ class WorkoutMapperTest {
     @Test
     fun dailyPaiBreakdownMapper_withSummaries_populatesPaiScores() {
         val today = LocalDate.of(2026, 5, 16)
-        val todayMs = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val summaries =
             listOf(
-                DailySummaryEntity(dateMidnightMs = todayMs, paiScore = 85f, restingHrBaseline = 60, totalPai = 85f),
+                DailySummary(date = today, paiScore = 85f, restingHrBaseline = 60, totalPai = 85f),
             )
 
         val result = DailyPaiBreakdownMapper.mapDailyBreakdown(today, summaries)

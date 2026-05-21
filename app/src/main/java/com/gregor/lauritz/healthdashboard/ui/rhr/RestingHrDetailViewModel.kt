@@ -2,13 +2,12 @@ package com.gregor.lauritz.healthdashboard.ui.rhr
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
-import com.gregor.lauritz.healthdashboard.domain.model.DailySummaryMapper
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.restingHrStatus
+import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.util.toMidnightEpochMilli
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
@@ -44,7 +43,7 @@ data class RestingHrDetailUiState(
 class RestingHrDetailViewModel
     @Inject
     constructor(
-        private val dailySummaryDao: DailySummaryDao,
+        private val dailySummaryRepository: DailySummaryRepository,
         private val selectedDateRepository: SelectedDateRepository,
         private val settingsRepo: SettingsRepository,
     ) : ViewModel() {
@@ -63,13 +62,8 @@ class RestingHrDetailViewModel
                     val selectedDateMidnightMs = date.toMidnightEpochMilli()
 
                     combine(
-                        dailySummaryDao
-                            .observeByDate(
-                                selectedDateMidnightMs,
-                            ).map { it?.let { DailySummaryMapper.toDomain(it) } },
-                        dailySummaryDao.observeSince(fromMs).map { list ->
-                            list.map { DailySummaryMapper.toDomain(it) }
-                        },
+                        dailySummaryRepository.observeByDate(selectedDateMidnightMs),
+                        dailySummaryRepository.observeSince(fromMs),
                         settingsRepo.userPreferences,
                     ) { latest, history, prefs ->
                         val points =

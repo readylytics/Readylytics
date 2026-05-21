@@ -12,47 +12,90 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import com.gregor.lauritz.healthdashboard.data.backup.LocalRestoreManager
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
+import com.gregor.lauritz.healthdashboard.data.security.SqlCipherKeyManager
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppNavHost
+import com.gregor.lauritz.healthdashboard.ui.recovery.DatabaseRecoveryScreen
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var sqlCipherKeyManager: SqlCipherKeyManager
+
+    @Inject
+    lateinit var localRestoreManager: LocalRestoreManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        val dbFile = getDatabasePath("health_dashboard.db")
+        var isDatabaseCorrupted = false
+        try {
+            sqlCipherKeyManager.validateKeyDecryption()
+        } catch (e: Exception) {
+            isDatabaseCorrupted = true
+        }
+
         setContent {
-            val viewModel: SyncViewModel = hiltViewModel()
-            val prefs by viewModel.userPreferences.collectAsStateWithLifecycle(initialValue = null)
-
-            // Keep splash screen on until preferences are loaded to prevent theme flash
-            splashScreen.setKeepOnScreenCondition { prefs == null }
-
-            val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM
-
-            FitDashboardTheme(
-                appTheme = appTheme,
-            ) {
-                // Trigger permission check every time the activity comes to the foreground
-                val lifecycleOwner = LocalLifecycleOwner.current
-                DisposableEffect(lifecycleOwner) {
-                    val observer =
-                        LifecycleEventObserver { _, event ->
-                            if (event == Lifecycle.Event.ON_RESUME) {
-                                viewModel.onAppForeground()
+            if (isDatabaseCorrupted) {
+                FitDashboardTheme {
+                    DatabaseRecoveryScreen(
+                        onResetDatabase = {
+                            sqlCipherKeyManager.resetKeyAndDatabase(dbFile)
+                            recreate()
+                        },
+                        onRestoreBackup = { uri, onResult ->
+                            lifecycleScope.launch {
+                                val result = localRestoreManager.applyRestore(uri)
+                                if (result is LocalRestoreManager.RestoreResult.Success ||
+                                    result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart
+                                ) {
+                                    onResult(true, null)
+                                } else if (result is LocalRestoreManager.RestoreResult.Failure) {
+                                    onResult(false, result.cause.message)
+                                }
                             }
-                        }
-                    lifecycleOwner.lifecycle.addObserver(observer)
-                    onDispose {
-                        lifecycleOwner.lifecycle.removeObserver(observer)
-                    }
+                        },
+                    )
                 }
+            } else {
+                val viewModel: SyncViewModel = hiltViewModel()
+                val prefs by viewModel.userPreferences.collectAsStateWithLifecycle(initialValue = null)
 
-                AppNavHost(viewModel = viewModel)
+                // Keep splash screen on until preferences are loaded to prevent theme flash
+                splashScreen.setKeepOnScreenCondition { prefs == null }
+
+                val appTheme = prefs?.appTheme ?: AppTheme.SYSTEM
+
+                FitDashboardTheme(
+                    appTheme = appTheme,
+                ) {
+                    // Trigger permission check every time the activity comes to the foreground
+                    val lifecycleOwner = LocalLifecycleOwner.current
+                    DisposableEffect(lifecycleOwner) {
+                        val observer =
+                            LifecycleEventObserver { _, event ->
+                                if (event == Lifecycle.Event.ON_RESUME) {
+                                    viewModel.onAppForeground()
+                                }
+                            }
+                        lifecycleOwner.lifecycle.addObserver(observer)
+                        onDispose {
+                            lifecycleOwner.lifecycle.removeObserver(observer)
+                        }
+                    }
+
+                    AppNavHost(viewModel = viewModel)
+                }
             }
         }
     }

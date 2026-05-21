@@ -34,12 +34,6 @@ android {
             unitTests.isReturnDefaultValues = true
             unitTests.isIncludeAndroidResources = true
         }
-
-        buildConfigField(
-            "String",
-            "OAUTH_WEB_CLIENT_ID",
-            "\"${project.findProperty("OAUTH_WEB_CLIENT_ID") ?: "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com"}\"",
-        )
     }
 
     buildTypes {
@@ -171,6 +165,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(kotlin("test"))
+    testImplementation("com.lemonappdev:konsist:0.13.0")
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)
@@ -183,6 +178,7 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation("androidx.compose.ui:ui-test")
     androidTestImplementation(libs.androidx.benchmark.macro)
     androidTestImplementation(libs.play.services.stats)
     debugImplementation(libs.androidx.compose.ui.tooling)

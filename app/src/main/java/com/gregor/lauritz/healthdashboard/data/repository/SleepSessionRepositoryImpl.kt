@@ -31,6 +31,9 @@ class SleepSessionRepositoryImpl
                         lightSleepMinutes = entity.lightSleepMinutes,
                         remSleepMinutes = entity.remSleepMinutes,
                         awakeMinutes = entity.awakeMinutes,
+                        sleepScore = entity.sleepScore,
+                        startZoneOffsetSeconds = entity.startZoneOffsetSeconds,
+                        endZoneOffsetSeconds = entity.endZoneOffsetSeconds,
                     )
                 }
             }
@@ -48,6 +51,9 @@ class SleepSessionRepositoryImpl
                     lightSleepMinutes = entity.lightSleepMinutes,
                     remSleepMinutes = entity.remSleepMinutes,
                     awakeMinutes = entity.awakeMinutes,
+                    sleepScore = entity.sleepScore,
+                    startZoneOffsetSeconds = entity.startZoneOffsetSeconds,
+                    endZoneOffsetSeconds = entity.endZoneOffsetSeconds,
                 )
             }
 
@@ -68,6 +74,9 @@ class SleepSessionRepositoryImpl
                     lightSleepMinutes = entity.lightSleepMinutes,
                     remSleepMinutes = entity.remSleepMinutes,
                     awakeMinutes = entity.awakeMinutes,
+                    sleepScore = entity.sleepScore,
+                    startZoneOffsetSeconds = entity.startZoneOffsetSeconds,
+                    endZoneOffsetSeconds = entity.endZoneOffsetSeconds,
                 )
             }
 
@@ -81,6 +90,30 @@ class SleepSessionRepositoryImpl
                         startTime = entity.startTime,
                         endTime = entity.endTime,
                         durationMinutes = entity.durationMinutes,
+                    )
+                }
+            }
+
+        override fun observeFirstSessionEndingInRange(
+            fromMs: Long,
+            toMs: Long,
+        ): Flow<SleepSessionData?> =
+            dao.observeFirstSessionEndingInRange(fromMs, toMs).map { entity ->
+                entity?.let {
+                    SleepSessionData(
+                        id = it.id,
+                        deviceName = it.deviceName,
+                        startTime = it.startTime,
+                        endTime = it.endTime,
+                        durationMinutes = it.durationMinutes,
+                        efficiency = it.efficiency,
+                        deepSleepMinutes = it.deepSleepMinutes,
+                        lightSleepMinutes = it.lightSleepMinutes,
+                        remSleepMinutes = it.remSleepMinutes,
+                        awakeMinutes = it.awakeMinutes,
+                        sleepScore = it.sleepScore,
+                        startZoneOffsetSeconds = it.startZoneOffsetSeconds,
+                        endZoneOffsetSeconds = it.endZoneOffsetSeconds,
                     )
                 }
             }

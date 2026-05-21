@@ -25,8 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.R
-import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.domain.model.SleepStage
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.ui.components.SleepStageBreakdownRow
 import com.gregor.lauritz.healthdashboard.ui.components.SleepStagesChart
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
@@ -36,7 +36,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 private fun getStageMinutes(
-    session: SleepSessionEntity?,
+    session: SleepSessionData?,
     stage: SleepStage,
 ): Int =
     when (stage) {

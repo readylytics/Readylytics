@@ -15,8 +15,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.containerColor
 import com.gregor.lauritz.healthdashboard.ui.components.onContainerColor
@@ -113,7 +113,7 @@ private fun IntensityBadge(
     }
 }
 
-private fun WorkoutRecordEntity.intensityLabel(): String =
+private fun WorkoutData.intensityLabel(): String =
     when {
         trimp > 200 -> "Very Hard"
         trimp > 150 -> "Hard"
@@ -122,7 +122,7 @@ private fun WorkoutRecordEntity.intensityLabel(): String =
         else -> "Very Light"
     }
 
-private fun WorkoutRecordEntity.intensityStatus(): MetricStatus =
+private fun WorkoutData.intensityStatus(): MetricStatus =
     when {
         trimp > 200 -> MetricStatus.POOR
         trimp > 150 -> MetricStatus.WARNING

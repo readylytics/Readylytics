@@ -301,11 +301,19 @@ class LocalRestoreManager
             uri: Uri,
             tempFile: File,
         ) {
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                tempFile.outputStream().use { output ->
-                    input.copyTo(output)
+            val bytes =
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    input.readBytes()
+                } ?: throw IllegalStateException("Could not open backup URI")
+
+            val decryptedBytes =
+                try {
+                    encryptionManager.decryptBytes(bytes)
+                } catch (e: Exception) {
+                    // Fallback to raw bytes if Tink decryption fails (e.g. it is not Tink-encrypted)
+                    bytes
                 }
-            } ?: throw IllegalStateException("Could not open backup URI")
+            tempFile.writeBytes(decryptedBytes)
         }
 
         private suspend fun getDecryptedPassword(): String? {
