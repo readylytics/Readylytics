@@ -24,6 +24,9 @@ object SettingsValidators {
     // Resting HR minutes (before/after sleep)
     val RESTING_HR_MINUTES_RULE = RestingHrMinutesRule()
 
+    // Resting HR percentile (1–15)
+    val RESTING_HR_PERCENTILE_RULE = IntRangeRule(1, 15, "Percentile: 1–15")
+
     // Step goal
     val STEP_GOAL_RULE = StepGoalRule()
 

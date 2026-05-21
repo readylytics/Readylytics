@@ -97,7 +97,7 @@ class ComputeSleepMetricsUseCase
 
             val beforeMs = prefs.restingHrBeforeMinutes * 60 * 1000L
             val afterMs = prefs.restingHrAfterMinutes * 60 * 1000L
-            val wakeHrResult = wakeHrCollector.collect(session, dayMidnight, beforeMs, afterMs)
+            val wakeHrResult = wakeHrCollector.collect(session, dayMidnight, beforeMs, afterMs, prefs.restingHrPercentile)
             val currentRestingHr = wakeHrResult.currentRestingHr
             val restingHrBaseline = wakeHrResult.restingHrBaseline
             val restingHrRatio = wakeHrResult.restingHrRatio

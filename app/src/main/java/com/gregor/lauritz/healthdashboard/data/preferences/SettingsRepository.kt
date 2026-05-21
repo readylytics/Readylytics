@@ -103,6 +103,8 @@ class SettingsRepository
 
         suspend fun updateRestingHrAfterMinutes(minutes: Int) = physiology.updateRestingHrAfterMinutes(minutes)
 
+        suspend fun updateRestingHrPercentile(percentile: Int) = physiology.updateRestingHrPercentile(percentile)
+
         suspend fun updateConsistencyThresholdMinutes(minutes: Int) = sleep.updateConsistencyThresholdMinutes(minutes)
 
         suspend fun updateConsistencyEvaluationDays(days: Int) = sleep.updateConsistencyEvaluationDays(days)

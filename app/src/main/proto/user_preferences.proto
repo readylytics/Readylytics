@@ -78,7 +78,8 @@ message UserPreferencesProto {
     
     int32 resting_hr_before_minutes = 29;
     int32 resting_hr_after_minutes = 30;
-    
+    int32 resting_hr_percentile = 60;
+
     AppThemeProto app_theme = 31;
     bool dynamic_color_enabled = 51;
     

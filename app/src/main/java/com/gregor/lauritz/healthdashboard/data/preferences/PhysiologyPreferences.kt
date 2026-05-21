@@ -21,6 +21,8 @@ internal class PhysiologyPreferences
 
         private fun Int.toValidRestMinutes() = coerceIn(0, 60)
 
+        private fun Int.toValidRestingHrPercentile() = coerceIn(1, 15)
+
         private fun Float.toValidBanisterMultiplier() = coerceIn(0.5f, 2.5f)
 
         private fun Float.toValidChengBeta() = coerceIn(0.04f, 0.12f)
@@ -146,6 +148,12 @@ internal class PhysiologyPreferences
         suspend fun updateRestingHrAfterMinutes(minutes: Int) {
             dataStore.updateData {
                 it.toBuilder().setRestingHrAfterMinutes(minutes.toValidRestMinutes()).build()
+            }
+        }
+
+        suspend fun updateRestingHrPercentile(percentile: Int) {
+            dataStore.updateData {
+                it.toBuilder().setRestingHrPercentile(percentile.toValidRestingHrPercentile()).build()
             }
         }
 

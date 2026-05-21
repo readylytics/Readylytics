@@ -36,6 +36,7 @@ object SettingsDefaults {
     const val RHR_WARNING_THRESHOLD = 1.1f
     const val RESTING_HR_BEFORE_MINUTES = 5
     const val RESTING_HR_AFTER_MINUTES = 15
+    const val RESTING_HR_PERCENTILE = 5
     val APP_THEME = AppTheme.SYSTEM
     const val DYNAMIC_COLOR_ENABLED = true
     val DRIVE_ACCOUNT_EMAIL: String? = null

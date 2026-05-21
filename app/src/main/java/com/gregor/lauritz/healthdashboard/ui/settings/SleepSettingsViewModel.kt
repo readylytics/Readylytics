@@ -30,6 +30,7 @@ class SleepSettingsViewModel
                         rhrBaselineOverride = prefs.rhrBaselineOverride,
                         restingHrBeforeMinutes = prefs.restingHrBeforeMinutes,
                         restingHrAfterMinutes = prefs.restingHrAfterMinutes,
+                        restingHrPercentile = prefs.restingHrPercentile,
                     )
                 }.stateIn(
                     scope = viewModelScope,
@@ -98,6 +99,17 @@ class SleepSettingsViewModel
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             settingsRepo.updateRestingHrAfterMinutes(minutes = event.minutes)
+                            scoringRepository.computeAndPersistDailySummary()
+                        }
+                    }
+                }
+
+                is SettingsEvent.RestingHrPercentileChanged -> {
+                    val validation =
+                        SettingsValidators.RESTING_HR_PERCENTILE_RULE.validate(event.percentile.toString())
+                    if (validation is ValidationResult.Valid) {
+                        viewModelScope.launch {
+                            settingsRepo.updateRestingHrPercentile(percentile = event.percentile)
                             scoringRepository.computeAndPersistDailySummary()
                         }
                     }

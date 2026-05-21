@@ -28,6 +28,7 @@ data class SleepSettingsState(
     val rhrBaselineOverride: Float? = SettingsDefaults.RHR_BASELINE_OVERRIDE,
     val restingHrBeforeMinutes: Int = SettingsDefaults.RESTING_HR_BEFORE_MINUTES,
     val restingHrAfterMinutes: Int = SettingsDefaults.RESTING_HR_AFTER_MINUTES,
+    val restingHrPercentile: Int = SettingsDefaults.RESTING_HR_PERCENTILE,
 )
 
 data class PhysiologySettingsState(
