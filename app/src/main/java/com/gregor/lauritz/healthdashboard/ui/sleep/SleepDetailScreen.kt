@@ -25,37 +25,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.R
-import com.gregor.lauritz.healthdashboard.domain.model.SleepStage
-import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
-import com.gregor.lauritz.healthdashboard.ui.components.SleepStageBreakdownRow
+import com.gregor.lauritz.healthdashboard.ui.components.SleepArchitectureBar
 import com.gregor.lauritz.healthdashboard.ui.components.SleepStagesChart
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-
-private fun getStageMinutes(
-    session: SleepSessionData?,
-    stage: SleepStage,
-): Int =
-    when (stage) {
-        SleepStage.AWAKE -> session?.awakeMinutes ?: 0
-        SleepStage.REM -> session?.remSleepMinutes ?: 0
-        SleepStage.LIGHT -> session?.lightSleepMinutes ?: 0
-        SleepStage.DEEP -> session?.deepSleepMinutes ?: 0
-    }
-
-private fun getStageColor(
-    stage: SleepStage,
-    colorScheme: androidx.compose.material3.ColorScheme,
-): androidx.compose.ui.graphics.Color =
-    when (stage) {
-        SleepStage.DEEP -> colorScheme.primary
-        SleepStage.LIGHT -> colorScheme.tertiary.copy(alpha = 0.6f)
-        SleepStage.REM -> colorScheme.tertiary
-        SleepStage.AWAKE -> colorScheme.error
-    }
 
 @Composable
 fun SleepDetailRoute(
@@ -169,25 +145,13 @@ fun SleepDetailScreen(
             }
 
             item {
-                val colorScheme = MaterialTheme.colorScheme
-
-                Column {
-                    SleepStage.values().forEach { stage ->
-                        val stageLabelRes =
-                            when (stage) {
-                                SleepStage.AWAKE -> R.string.sleep_stage_awake
-                                SleepStage.REM -> R.string.sleep_stage_rem
-                                SleepStage.LIGHT -> R.string.sleep_stage_light
-                                SleepStage.DEEP -> R.string.sleep_stage_deep
-                            }
-
-                        SleepStageBreakdownRow(
-                            stageName = stringResource(stageLabelRes),
-                            durationMinutes = getStageMinutes(uiState.session, stage),
-                            color = getStageColor(stage, colorScheme),
-                        )
-                    }
-                }
+                SleepArchitectureBar(
+                    session = uiState.session,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp),
+                )
             }
 
             item {

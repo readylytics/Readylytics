@@ -1,5 +1,11 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
+import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,6 +47,29 @@ fun StepsBar(
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var activeTapOffset by remember { mutableStateOf<Offset?>(null) }
+
+    // Breathing halo animation on selection
+    val infiniteTransition = rememberInfiniteTransition(label = "stepsHaloTransition")
+    val haloRadiusCoeff by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 1.6f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(1200, easing = EaseInOutSine),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "stepsHaloRadiusCoeff",
+    )
+    val haloAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.15f,
+        targetValue = 0.4f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(1200, easing = EaseInOutSine),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "stepsHaloAlpha",
+    )
 
     val count = stepCount ?: 0
     val status = if (stepCount != null) stepsStatus(count, stepGoal) else MetricStatus.CALIBRATING
@@ -135,11 +164,11 @@ fun StepsBar(
                     strokeWidth = 2.dp.toPx(),
                 )
 
-                // Concentric highlight circles (Material Design 3 style)
+                // Concentric highlight circles with breathing pulsing animation
                 drawCircle(
-                    color = primaryColor.copy(alpha = 0.2f),
+                    color = primaryColor.copy(alpha = haloAlpha),
                     center = Offset(tapX, barHeight / 2f),
-                    radius = 8.dp.toPx(),
+                    radius = (8.dp.toPx() * haloRadiusCoeff),
                 )
                 drawCircle(
                     color = primaryColor,
