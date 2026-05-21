@@ -88,8 +88,8 @@ fun PaiWeeklyBar(
                         onSegmentTapped = { index, label, tapOffset ->
                             activeTapOffset = tapOffset
                             val pai = dailyBreakdown[index].second
-                            val valueText = "PAI: ${pai.toInt()}"
-                            val dateText = "Day: $label"
+                            val valueText = "${pai.toInt()} PAI"
+                            val dateText = label
                             tooltipState =
                                 DataPointTooltipData(
                                     valueText = valueText,

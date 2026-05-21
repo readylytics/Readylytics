@@ -134,8 +134,8 @@ private fun HrChart(
         rememberChartMarkerVisibilityListener(
             onPointSelected = { x, y, canvasX, canvasY ->
                 val minute = x.toInt().coerceIn(0, durationMinutes - 1)
-                val valueText = "HR: ${y.toInt()} bpm"
-                val dateText = "Time: $minute min"
+                val valueText = "${y.toInt()} bpm"
+                val dateText = "$minute min"
                 selectedPointOffset = Offset(canvasX, canvasY)
                 tooltipState =
                     DataPointTooltipData(

@@ -186,8 +186,13 @@ fun TrendChart(
                 val value = y.toFloat()
                 val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
                 val dateString = ChartUtils.formatTooltipDate(date)
-                val valueText = "$metricName: ${value.toInt()} $baselineUnit"
-                val dateText = "Date: $dateString"
+                val valueText =
+                    if (baselineUnit.equals("steps", ignoreCase = true)) {
+                        "${value.toInt()}"
+                    } else {
+                        "${value.toInt()} $baselineUnit"
+                    }
+                val dateText = dateString
                 selectedPointOffset = Offset(canvasX, canvasY)
                 tooltipState =
                     DataPointTooltipData(

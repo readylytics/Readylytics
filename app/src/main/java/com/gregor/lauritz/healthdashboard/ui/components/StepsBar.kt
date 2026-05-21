@@ -71,8 +71,8 @@ fun StepsBar(
                             if (stepCount != null && dateForTooltip != null) {
                                 activeTapOffset = tapOffset
                                 val dateString = ChartUtils.formatTooltipDate(dateForTooltip)
-                                val valueText = "Steps: $stepCount"
-                                val dateText = "Date: $dateString"
+                                val valueText = "$stepCount"
+                                val dateText = dateString
                                 tooltipState =
                                     DataPointTooltipData(
                                         valueText = valueText,

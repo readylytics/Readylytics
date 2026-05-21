@@ -11,6 +11,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
@@ -87,8 +88,8 @@ class TooltipPopupPositionProvider(
     ): IntOffset {
         // Horizontally center the popup above the tap point
         val x = anchorBounds.left + tapOffset.x - (popupContentSize.width / 2)
-        // Position it just above the tap point
-        val y = anchorBounds.top + tapOffset.y - popupContentSize.height - 4 // 4px gap
+        // Position it always at the top of the diagram (above the diagram bounds)
+        val y = anchorBounds.top - popupContentSize.height - 4 // 4px gap above the diagram
 
         // Keep popup on screen horizontally
         val maxX = windowSize.width - popupContentSize.width
@@ -126,13 +127,14 @@ fun DataPointTooltip(
                     color = MaterialTheme.colorScheme.inverseSurface,
                     modifier =
                         modifier
-                            .widthIn(min = 140.dp, max = 200.dp)
+                            .widthIn(min = 70.dp, max = 150.dp)
                             .padding(horizontal = 8.dp),
                 ) {
                     Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         modifier =
                             Modifier
-                                .padding(8.dp)
+                                .padding(horizontal = 8.dp, vertical = 6.dp)
                                 .padding(bottom = 6.dp), // extra padding to clear caret
                     ) {
                         Text(

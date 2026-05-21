@@ -170,8 +170,8 @@ fun SleepStagesChart(
                                         .atZone(ZoneId.systemDefault())
                                         .toLocalDate(),
                                 )
-                            val valueText = "$stageName: ${tappedStage.durationMinutes} min"
-                            val dateText = "Date: $dateString"
+                            val valueText = "${tappedStage.durationMinutes} min"
+                            val dateText = dateString
                             tooltipState =
                                 DataPointTooltipData(
                                     valueText = valueText,
