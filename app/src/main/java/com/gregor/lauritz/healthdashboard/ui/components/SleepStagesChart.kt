@@ -120,8 +120,9 @@ fun SleepStagesChart(
         val labelTimestamps = getLabelTimestamps(session.startTime, session.endTime)
         val sortedTimeline = remember { stageTimeline.sortedBy { it.startTime } }
         val allStages = remember { SleepStage.values() }
+        val sessionDurationMs = (session.endTime - session.startTime).coerceAtLeast(1L)
         val sessionDurationMinutesFloat =
-            remember { (session.endTime - session.startTime) / 60_000.0 }
+            remember(session) { sessionDurationMs / 60_000.0 }
 
         Canvas(
             modifier =
@@ -167,9 +168,9 @@ fun SleepStagesChart(
         ) {
             val chartWidth = size.width
             val chartHeight = size.height
-            val sessionDurationMs = session.endTime - session.startTime
+            val sessionDurationMs = (session.endTime - session.startTime).coerceAtLeast(1L)
 
-            if (sessionDurationMs == 0L) return@Canvas
+            if (session.endTime - session.startTime == 0L) return@Canvas
 
             // Draw vertical grid lines
             val gridColor = colorScheme.outlineVariant.copy(alpha = 0.5f)

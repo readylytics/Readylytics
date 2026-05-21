@@ -24,19 +24,13 @@ fun Modifier.detectCanvasTap(
                     val tapX = position.x
                     val canvasWidth = size.width
 
-                    // Scale segment x coordinates from [0,1] to actual canvas width
-                    val scaledSegments =
-                        segments.map { segment ->
-                            segment.copy(
-                                xStart = segment.xStart * canvasWidth,
-                                xEnd = segment.xEnd * canvasWidth,
-                            )
-                        }
+                    // Normalize tap position to [0,1] range
+                    val relativeX = if (canvasWidth > 0) tapX / canvasWidth else 0f
 
                     // Find which segment was tapped
                     val tappedSegment =
-                        scaledSegments.find { segment ->
-                            tapX >= segment.xStart && tapX <= segment.xEnd
+                        segments.find { segment ->
+                            relativeX >= segment.xStart && relativeX <= segment.xEnd
                         }
 
                     if (tappedSegment != null) {

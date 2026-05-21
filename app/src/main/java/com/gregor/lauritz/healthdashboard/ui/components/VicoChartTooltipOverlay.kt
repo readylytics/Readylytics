@@ -35,7 +35,6 @@ fun VicoChartTooltipOverlay(
                 .height(chartHeight)
                 .onSizeChanged { size ->
                     containerWidthPx = size.width.toFloat()
-                    containerHeightPx = size.height.toFloat()
                 }
                 .pointerInput(points, rangeDays) {
                     awaitPointerEventScope {
@@ -46,11 +45,12 @@ fun VicoChartTooltipOverlay(
                                 val tapX = position.x
 
                                 // Map screen x to dayOffset
-                                if (containerWidthPx > 0) {
+                                if (containerWidthPx > 0 && rangeDays > 0) {
                                     val relativeX = tapX / containerWidthPx
+                                    val maxDayOffset = (rangeDays - 1).coerceAtLeast(0)
                                     val dayOffset =
-                                        (relativeX * (rangeDays - 1)).toInt()
-                                            .coerceIn(0, rangeDays - 1)
+                                        (relativeX * maxDayOffset).toInt()
+                                            .coerceIn(0, maxDayOffset)
 
                                     // Find the closest point with a non-null value
                                     val nearestPoint =
@@ -73,16 +73,10 @@ private fun findNearestPoint(
 ): DailyDataPoint? {
     if (validPoints.isEmpty()) return null
 
-    // First try exact or nearby match within tolerance
-    val nearby =
-        validPoints.filter {
-            abs(it.dayOffset - dayOffset) <= tolerance
+    return validPoints.minWithOrNull(
+        compareBy { point ->
+            val distance = abs(point.dayOffset - dayOffset)
+            Pair(if (distance > tolerance) 1 else 0, distance)
         }
-
-    return if (nearby.isNotEmpty()) {
-        nearby.minByOrNull { abs(it.dayOffset - dayOffset) }
-    } else {
-        // If no points within tolerance, return closest
-        validPoints.minByOrNull { abs(it.dayOffset - dayOffset) }
-    }
+    )
 }
