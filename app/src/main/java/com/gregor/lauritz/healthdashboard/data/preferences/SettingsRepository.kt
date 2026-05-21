@@ -91,6 +91,8 @@ class SettingsRepository
 
         suspend fun updateGender(gender: String?) = physiology.updateGender(gender)
 
+        suspend fun updateHeight(heightCm: Float?) = physiology.updateHeight(heightCm)
+
         suspend fun updateHrvOptimalThreshold(value: Float) = thresholds.updateHrvOptimalThreshold(value)
 
         suspend fun updateHrvWarningThreshold(value: Float) = thresholds.updateHrvWarningThreshold(value)

@@ -70,7 +70,11 @@ message UserPreferencesProto {
     oneof gender_oneof {
         string gender = 24;
     }
-    
+
+    oneof height_cm_oneof {
+        float height_cm = 61;
+    }
+
     float hrv_optimal_threshold = 25;
     float hrv_warning_threshold = 26;
     float rhr_optimal_threshold = 27;

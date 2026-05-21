@@ -30,6 +30,7 @@ object SettingsDefaults {
     const val BIRTH_YEAR = 1994
     const val IS_BIRTHDAY_CONFIGURED = false
     val GENDER: String? = null
+    val HEIGHT_CM: Float? = 175f
     const val HRV_OPTIMAL_THRESHOLD = 1.10f
     const val HRV_WARNING_THRESHOLD = 0.90f
     const val RHR_OPTIMAL_THRESHOLD = 0.90f

@@ -19,6 +19,8 @@ internal class PhysiologyPreferences
 
         private fun Int.toValidAge() = coerceIn(1, 120)
 
+        private fun Float.toValidHeight() = coerceIn(120f, 250f)
+
         private fun Int.toValidRestMinutes() = coerceIn(0, 60)
 
         private fun Int.toValidRestingHrPercentile() = coerceIn(1, 15)
@@ -115,6 +117,16 @@ internal class PhysiologyPreferences
                     builder.toBuilder().setGender(gender).build()
                 } else {
                     builder.toBuilder().clearGender().build()
+                }
+            }
+        }
+
+        suspend fun updateHeight(heightCm: Float?) {
+            dataStore.updateData { builder ->
+                if (heightCm != null) {
+                    builder.toBuilder().setHeightCm(heightCm.toValidHeight()).build()
+                } else {
+                    builder.toBuilder().clearHeightCm().build()
                 }
             }
         }
