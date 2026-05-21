@@ -18,16 +18,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
 import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
@@ -65,6 +68,9 @@ fun AdvancedSettingsSection(
     }
     var afterMinutesText by remember(sleepState.restingHrAfterMinutes) {
         mutableStateOf(sleepState.restingHrAfterMinutes.toString())
+    }
+    var percentileValue by remember(sleepState.restingHrPercentile) {
+        mutableIntStateOf(sleepState.restingHrPercentile)
     }
 
     val hrvValidation = SettingsValidators.HRV_BASELINE_RULE.validate(hrvText)
@@ -199,6 +205,40 @@ fun AdvancedSettingsSection(
                     .fillMaxWidth()
                     .padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
         )
+        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+
+        Column(modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Resting HR: Percentile")
+                MetricTooltip(
+                    description =
+                        "Use the Nth percentile lowest heart rate reading in the time window " +
+                            "(e.g., 5% = lowest 5% threshold). Lower values = lower RHR estimate. Default: 5%.",
+                )
+            }
+            Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Slider(
+                    value = percentileValue.toFloat(),
+                    onValueChange = { percentileValue = it.toInt() },
+                    onValueChangeFinished = {
+                        val validation =
+                            SettingsValidators.RESTING_HR_PERCENTILE_RULE.validate(percentileValue.toString())
+                        if (validation is ValidationResult.Valid) {
+                            onEvent(SettingsEvent.RestingHrPercentileChanged(percentileValue))
+                        }
+                    },
+                    valueRange = 1f..15f,
+                    steps = 13,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "$percentileValue",
+                    modifier = Modifier.padding(start = 16.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
 
         var paiScaling by remember(paiScalingFactor) { mutableFloatStateOf(paiScalingFactor) }

@@ -37,7 +37,8 @@ class SleepAndThresholdSettingsViewModelTest {
         coEvery { settingsRepo.userPreferences } returns MutableStateFlow(UserPreferences())
         coEvery { circadianPrefs.overrideMinutesFlow } returns MutableStateFlow(null)
 
-        sleepViewModel = SleepSettingsViewModel(settingsRepo, scoringRepo)
+        sleepViewModel =
+            SleepSettingsViewModel(settingsRepo, scoringRepo, kotlinx.coroutines.CoroutineScope(testDispatcher))
         thresholdViewModel = ThresholdSettingsViewModel(settingsRepo, scoringRepo, circadianPrefs)
     }
 
@@ -53,6 +54,16 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             coVerify { settingsRepo.updateHrvBaselineOverride(50f) }
+            coVerify { scoringRepo.computeAndPersistDailySummary() }
+        }
+
+    @Test
+    fun sleepSettingsViewModel_restingHrPercentileChanged_persisted() =
+        runTest {
+            sleepViewModel.onEvent(SettingsEvent.RestingHrPercentileChanged(8))
+            advanceUntilIdle()
+
+            coVerify { settingsRepo.updateRestingHrPercentile(8) }
             coVerify { scoringRepo.computeAndPersistDailySummary() }
         }
 

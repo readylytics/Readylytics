@@ -35,6 +35,7 @@ data class UserPreferences(
     val rhrWarningThreshold: Float = SettingsDefaults.RHR_WARNING_THRESHOLD,
     val restingHrBeforeMinutes: Int = SettingsDefaults.RESTING_HR_BEFORE_MINUTES,
     val restingHrAfterMinutes: Int = SettingsDefaults.RESTING_HR_AFTER_MINUTES,
+    val restingHrPercentile: Int = SettingsDefaults.RESTING_HR_PERCENTILE,
     val appTheme: AppTheme = SettingsDefaults.APP_THEME,
     val driveAccountEmail: String? = SettingsDefaults.DRIVE_ACCOUNT_EMAIL,
     val backupSchedule: BackupSchedule = SettingsDefaults.BACKUP_SCHEDULE,
@@ -100,6 +101,14 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         rhrWarningThreshold = rhrWarningThreshold,
         restingHrBeforeMinutes = restingHrBeforeMinutes,
         restingHrAfterMinutes = restingHrAfterMinutes,
+        restingHrPercentile =
+            if (restingHrPercentile ==
+                0
+            ) {
+                SettingsDefaults.RESTING_HR_PERCENTILE
+            } else {
+                restingHrPercentile.coerceIn(1, 15)
+            },
         appTheme = AppTheme.valueOf(appTheme.name.removePrefix("THEME_")),
         driveAccountEmail = if (hasDriveAccountEmail()) driveAccountEmail else null,
         backupSchedule = BackupSchedule.valueOf(backupSchedule.name.removePrefix("BACKUP_")),

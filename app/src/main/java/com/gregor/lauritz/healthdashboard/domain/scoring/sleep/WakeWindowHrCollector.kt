@@ -24,11 +24,20 @@ class WakeWindowHrCollector
             val restingHrRatio: Float?,
         )
 
+        private fun List<Int>.getPercentile(percentile: Int): Int? {
+            if (isEmpty()) return null
+            if (size == 1) return first()
+            val sorted = sorted()
+            val index = Math.round((percentile / 100.0) * (sorted.size - 1)).toInt().coerceIn(0, sorted.size - 1)
+            return sorted[index]
+        }
+
         suspend fun collect(
             session: SleepSessionEntity,
             dayMidnight: Instant,
             beforeMs: Long,
             afterMs: Long,
+            percentile: Int = 5,
         ): WakeHrResult {
             val baselineFrom = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
             val sessions = sleepSessionDao.getSince(baselineFrom)
@@ -43,8 +52,9 @@ class WakeWindowHrCollector
 
             val currentRestingHr =
                 allWakeHrRecords
-                    .filter { it.timestampMs in session.endTime..(session.endTime + afterMs) }
-                    .minOfOrNull { it.beatsPerMinute }
+                    .filter { it.timestampMs in (session.endTime - beforeMs)..(session.endTime + afterMs) }
+                    .map { it.beatsPerMinute }
+                    .getPercentile(percentile)
 
             val historicSessions = sessions.filter { it.id != session.id }
             val historicRestingHrs =
@@ -56,20 +66,20 @@ class WakeWindowHrCollector
                             s.id to
                                 (s.endTime - beforeMs to s.endTime + afterMs)
                         }
-                    val sessionMinHrs = mutableMapOf<String, Int>()
+                    val sessionHrValues = mutableMapOf<String, MutableList<Int>>()
                     for ((sessionId, _) in sessionWindows) {
-                        sessionMinHrs[sessionId] = Int.MAX_VALUE
+                        sessionHrValues[sessionId] = mutableListOf()
                     }
                     // O(R * S) single-pass algorithm: iterate records once, check all windows.
                     // Preferred over nested filtering which requires O(S) separate record scans.
                     for (record in allWakeHrRecords) {
                         for ((sessionId, window) in sessionWindows) {
                             if (record.timestampMs in window.first..window.second) {
-                                sessionMinHrs[sessionId] = minOf(sessionMinHrs[sessionId]!!, record.beatsPerMinute)
+                                sessionHrValues[sessionId]!!.add(record.beatsPerMinute)
                             }
                         }
                     }
-                    sessionMinHrs.values.filter { it != Int.MAX_VALUE }
+                    sessionHrValues.values.mapNotNull { hrs -> hrs.getPercentile(percentile) }
                 }
 
             val restingHrBaseline =

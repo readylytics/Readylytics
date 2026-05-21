@@ -95,6 +95,10 @@ sealed interface SettingsEvent {
         val minutes: Int,
     ) : SettingsEvent
 
+    data class RestingHrPercentileChanged(
+        val percentile: Int,
+    ) : SettingsEvent
+
     data class ConsistencyThresholdChanged(
         val minutes: Int,
     ) : SettingsEvent
