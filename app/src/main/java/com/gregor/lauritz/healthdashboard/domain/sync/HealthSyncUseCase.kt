@@ -4,12 +4,18 @@ import com.gregor.lauritz.healthdashboard.data.healthconnect.HeartRateMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HrvMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.SleepDataMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.WorkoutMapper
+import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.BloodPressureRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepStageDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.WeightRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import com.gregor.lauritz.healthdashboard.data.mapper.BloodPressureDataMapper
+import com.gregor.lauritz.healthdashboard.data.mapper.BodyFatDataMapper
+import com.gregor.lauritz.healthdashboard.data.mapper.WeightDataMapper
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
@@ -37,6 +43,9 @@ class HealthSyncUseCase
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
+        private val weightRecordDao: WeightRecordDao,
+        private val bodyFatRecordDao: BodyFatRecordDao,
+        private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val dailySummaryDao: DailySummaryDao,
         private val settingsRepo: SettingsRepository,
         private val scoringRepository: ScoringRepository,
@@ -67,10 +76,14 @@ class HealthSyncUseCase
                         val exerciseRecords = hcRepo.readExerciseSessions(windowStart, windowEnd)
                         val hrRecords = hcRepo.readHeartRateSamples(windowStart, windowEnd)
                         val hrvRecords = hcRepo.readHrvSamples(windowStart, windowEnd)
+                        val weightRecords = hcRepo.readWeightRecords(windowStart, windowEnd)
+                        val bodyFatRecords = hcRepo.readBodyFatRecords(windowStart, windowEnd)
+                        val bloodPressureRecords = hcRepo.readBloodPressureRecords(windowStart, windowEnd)
 
                         logD("HealthSyncUseCase") {
                             "Bulk HC fetch complete: sleep=${sleepEntities.size} " +
-                                "hrv_rmssd=${hrvRecords.size} hr_records=${hrRecords.size}"
+                                "hrv_rmssd=${hrvRecords.size} hr_records=${hrRecords.size} " +
+                                "weight=${weightRecords.size} bodyfat=${bodyFatRecords.size} bp=${bloodPressureRecords.size}"
                         }
 
                         val thresholds =
@@ -119,9 +132,37 @@ class HealthSyncUseCase
                         val filteredHrv =
                             filterByDevicePreference(hrvEntities, primaryDevice, { it.deviceName }, { it.timestampMs })
 
+                        val weightEntities = WeightDataMapper.toEntities(weightRecords)
+                        val filteredWeight =
+                            filterByDevicePreference(
+                                weightEntities,
+                                primaryDevice,
+                                { it.deviceName },
+                                { it.timestampMs },
+                            )
+
+                        val bodyFatEntities = BodyFatDataMapper.toEntities(bodyFatRecords)
+                        val filteredBodyFat =
+                            filterByDevicePreference(
+                                bodyFatEntities,
+                                primaryDevice,
+                                { it.deviceName },
+                                { it.timestampMs },
+                            )
+
+                        val bloodPressureEntities = BloodPressureDataMapper.toEntities(bloodPressureRecords)
+                        val filteredBloodPressure =
+                            filterByDevicePreference(
+                                bloodPressureEntities,
+                                primaryDevice,
+                                { it.deviceName },
+                                { it.timestampMs },
+                            )
+
                         logD("HealthSyncUseCase") {
                             "Device filtering: sleep=${filteredSleep.size} workouts=${filteredWorkouts.size} " +
-                                "hr=${filteredHr.size} hrv=${filteredHrv.size}"
+                                "hr=${filteredHr.size} hrv=${filteredHrv.size} " +
+                                "weight=${filteredWeight.size} bodyfat=${filteredBodyFat.size} bp=${filteredBloodPressure.size}"
                         }
 
                         transactionRunner.runInTransaction {
@@ -143,6 +184,9 @@ class HealthSyncUseCase
                             workoutDao.upsertAll(filteredWorkouts)
                             heartRateDao.upsertAll(filteredHr)
                             hrvDao.upsertAll(filteredHrv)
+                            weightRecordDao.upsertAll(filteredWeight)
+                            bodyFatRecordDao.upsertAll(filteredBodyFat)
+                            bloodPressureRecordDao.upsertAll(filteredBloodPressure)
                         }
 
                         // Bulk-fetch steps per day using aggregate API to prevent overlap/duplication
