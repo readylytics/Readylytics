@@ -101,7 +101,7 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         rhrWarningThreshold = rhrWarningThreshold,
         restingHrBeforeMinutes = restingHrBeforeMinutes,
         restingHrAfterMinutes = restingHrAfterMinutes,
-        restingHrPercentile = restingHrPercentile.coerceIn(1, 15).let { if (it == 0) SettingsDefaults.RESTING_HR_PERCENTILE else it },
+        restingHrPercentile = if (restingHrPercentile == 0) SettingsDefaults.RESTING_HR_PERCENTILE else restingHrPercentile.coerceIn(1, 15),
         appTheme = AppTheme.valueOf(appTheme.name.removePrefix("THEME_")),
         driveAccountEmail = if (hasDriveAccountEmail()) driveAccountEmail else null,
         backupSchedule = BackupSchedule.valueOf(backupSchedule.name.removePrefix("BACKUP_")),
