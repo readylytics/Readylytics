@@ -126,6 +126,7 @@ fun HeartRateZoneSection(
                 HeightInputField(
                     heightCm = physiologyState.heightCm,
                     onHeightChange = { onPhysiologyEvent(SettingsEvent.HeightChanged(it)) },
+                    unitSystem = physiologyState.unitSystem,
                 )
             }
         }

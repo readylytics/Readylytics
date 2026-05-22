@@ -21,7 +21,7 @@ class BloodPressureRepositoryImpl
         override fun observeByDateRange(
             fromMs: Long,
             toMs: Long,
-        ): Flow<List<BloodPressureRecordEntity>> = dao.observeSince(fromMs) // Note: approximation using observeSince
+        ): Flow<List<BloodPressureRecordEntity>> = dao.observeByTimeRange(fromMs, toMs)
 
         override suspend fun getLatest(): BloodPressureRecordEntity? = dao.getLatest()
 

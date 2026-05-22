@@ -21,7 +21,7 @@ class BodyFatRepositoryImpl
         override fun observeByDateRange(
             fromMs: Long,
             toMs: Long,
-        ): Flow<List<BodyFatRecordEntity>> = dao.observeSince(fromMs) // Note: approximation using observeSince
+        ): Flow<List<BodyFatRecordEntity>> = dao.observeByTimeRange(fromMs, toMs)
 
         override suspend fun getLatest(): BodyFatRecordEntity? = dao.getLatest()
 

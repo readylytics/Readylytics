@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
@@ -36,6 +37,8 @@ import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
 import java.util.Locale
+import kotlin.math.floor
+import kotlin.math.roundToInt
 
 @Composable
 fun WeightDetailRoute(
@@ -64,6 +67,8 @@ fun WeightDetailScreen(
             rangeDays = uiState.selectedRange.days,
             key = uiState.selectedRange,
         )
+
+    val unitLabel = if (uiState.unitSystem == UnitSystem.METRIC) "kg" else "lbs"
 
     Scaffold(
         modifier = modifier,
@@ -98,6 +103,20 @@ fun WeightDetailScreen(
                 } ?: MetricStatus.CALIBRATING
 
             item(key = "score_dials") {
+                val weightMaxScore = if (uiState.unitSystem == UnitSystem.METRIC) 150f else 330f
+                val heightTooltip =
+                    uiState.heightCm?.let { cm ->
+                        if (uiState.unitSystem == UnitSystem.METRIC) {
+                            String.format(Locale.getDefault(), "%.0f cm", cm)
+                        } else {
+                            val totalInches = cm / 2.54f
+                            val feet = floor(totalInches / 12f).toInt()
+                            val inches = (totalInches % 12f).roundToInt()
+                            val (finalFeet, finalInches) = if (inches == 12) Pair(feet + 1, 0) else Pair(feet, inches)
+                            "$finalFeet'$finalInches\""
+                        }
+                    } ?: "—"
+
                 Row(
                     modifier =
                         Modifier
@@ -108,18 +127,19 @@ fun WeightDetailScreen(
                 ) {
                     M3ScoreDial(
                         score = uiState.latestWeight,
-                        label = "Weight",
-                        maxScore = 150f,
+                        label = "Weight ($unitLabel)",
+                        maxScore = weightMaxScore,
                         status = bmiStatus,
-                        displayText = uiState.latestWeight?.let { String.format(Locale.getDefault(), "%.1f", it) },
-                        tooltipDescription = "Latest weight measurement.\nHeight: ${uiState.heightCm?.let {
-                            String
-                                .format(
+                        displayText =
+                            uiState.latestWeight?.let {
+                                String.format(
                                     Locale.getDefault(),
-                                    "%.0f cm",
+                                    "%.1f %s",
                                     it,
+                                    unitLabel,
                                 )
-                        } ?: "—"}",
+                            },
+                        tooltipDescription = "Latest weight measurement.\nHeight: $heightTooltip",
                     )
                     M3ScoreDial(
                         score = uiState.bmi,
@@ -172,7 +192,7 @@ fun WeightDetailScreen(
                         rangeStartMs = uiState.rangeStartMs,
                         rangeDays = uiState.selectedRange.days,
                         metricName = "Weight",
-                        baselineUnit = "kg",
+                        baselineUnit = unitLabel,
                         baseline = uiState.averageWeight,
                         baselineLabel = "Average",
                         baselineDecimalPlaces = 1,

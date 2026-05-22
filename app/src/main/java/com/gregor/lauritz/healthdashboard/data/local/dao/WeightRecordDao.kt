@@ -14,6 +14,20 @@ interface WeightRecordDao {
 
     fun observeSince(fromMs: Long): Flow<List<WeightRecordEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
+    @Query(
+        "SELECT * FROM weight_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
+            "ORDER BY timestampMs ASC",
+    )
+    fun _observeByTimeRange(
+        startMs: Long,
+        endMs: Long,
+    ): Flow<List<WeightRecordEntity>>
+
+    fun observeByTimeRange(
+        startMs: Long,
+        endMs: Long,
+    ): Flow<List<WeightRecordEntity>> = _observeByTimeRange(startMs, endMs).distinctUntilChanged()
+
     @Query("SELECT * FROM weight_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
     suspend fun getSince(fromMs: Long): List<WeightRecordEntity>
 

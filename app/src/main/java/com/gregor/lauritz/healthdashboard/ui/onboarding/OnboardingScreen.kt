@@ -302,6 +302,7 @@ private fun ProfileSetupScreen(
         HeightInputField(
             heightCm = heightCm,
             onHeightChange = { heightCm = it },
+            unitSystem = unitSystem,
             onHasErrorChange = { heightHasError = it },
             modifier = Modifier.fillMaxWidth(),
         )

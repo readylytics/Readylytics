@@ -411,7 +411,7 @@ class GetDashboardDataUseCase
                 unit = "",
                 status = status,
                 action = DashboardAction.NAVIGATE_BODY_FAT,
-                tooltip = "Body fat percentage based on age and gender norms.",
+                tooltip = "Body fat percentage.",
             )
         }
 

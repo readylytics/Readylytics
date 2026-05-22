@@ -6,6 +6,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 
@@ -39,6 +40,7 @@ data class PhysiologySettingsState(
     val birthYear: Int = SettingsDefaults.BIRTH_YEAR,
     val gender: Gender? = null,
     val heightCm: Float? = SettingsDefaults.HEIGHT_CM,
+    val unitSystem: UnitSystem = UnitSystem.METRIC,
 )
 
 data class HeartRateZonesState(

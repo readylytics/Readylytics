@@ -36,6 +36,7 @@ class PhysiologySettingsViewModel
                         birthYear = prefs.birthYear,
                         gender = prefs.gender,
                         heightCm = prefs.heightCm,
+                        unitSystem = prefs.unitSystem,
                     )
                 }.stateIn(
                     scope = viewModelScope,

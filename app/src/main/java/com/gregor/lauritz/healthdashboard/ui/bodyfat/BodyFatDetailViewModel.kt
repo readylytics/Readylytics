@@ -11,11 +11,13 @@ import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.common.padToRange
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -52,42 +54,62 @@ class BodyFatDetailViewModel
                 selectedDateRepository.selectedDate,
                 settingsRepo.userPreferences,
             ) { range, selectedDate, userPrefs ->
-                val zoneId = ZoneId.systemDefault()
-                val rangeStart =
-                    selectedDate.minusDays((range.days - 1).toLong()).atStartOfDay(zoneId).toInstant()
-                val rangeEnd = selectedDate.plusDays(1).atStartOfDay(zoneId).toInstant()
+                withContext(Dispatchers.IO) {
+                    val zoneId = ZoneId.systemDefault()
+                    val rangeStart =
+                        selectedDate.minusDays((range.days - 1).toLong()).atStartOfDay(zoneId).toInstant()
+                    val rangeEnd = selectedDate.plusDays(1).atStartOfDay(zoneId).toInstant()
 
-                val records = bodyFatRepository.getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
-                val latest = bodyFatRepository.getLatest()
+                    val records = bodyFatRepository.getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
+                    val latest = bodyFatRepository.getLatest()
 
-                val dailyBodyFat =
-                    records
-                        .map { record ->
-                            val dayOffset =
-                                ChronoUnit.DAYS
-                                    .between(
-                                        rangeStart.atZone(zoneId).toLocalDate(),
-                                        Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
-                                    ).toInt()
-                            DailyDataPoint(dayOffset, record.bodyFatPercent)
-                        }.padToRange(range.days)
+                    val recordsByDay =
+                        records.groupBy { record ->
+                            ChronoUnit.DAYS
+                                .between(
+                                    rangeStart.atZone(zoneId).toLocalDate(),
+                                    Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
+                                ).toInt()
+                        }
 
-                val (optimalMin, optimalMax) = calculateOptimalRange(userPrefs.age, userPrefs.gender?.name ?: "Unknown")
-                val status = latest?.bodyFatPercent?.let { bodyFatStatus(it, optimalMax) }
-                val average = if (records.isNotEmpty()) records.map { it.bodyFatPercent }.average().toFloat() else null
-                BodyFatDetailUiState(
-                    latestBodyFat = latest?.bodyFatPercent,
-                    latestDate = latest?.timestampMs?.let { Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() },
-                    age = userPrefs.age,
-                    gender = userPrefs.gender?.name ?: "Unknown",
-                    optimalRangeMin = optimalMin,
-                    optimalRangeMax = optimalMax,
-                    bodyFatStatus = status,
-                    averageBodyFat = average,
-                    selectedRange = range,
-                    dailyBodyFat = dailyBodyFat,
-                    rangeStartMs = rangeStart.toEpochMilli(),
-                )
+                    val dailyBodyFat =
+                        recordsByDay
+                            .map { (dayOffset, dayRecords) ->
+                                val avgBodyFat = dayRecords.map { it.bodyFatPercent }.average().toFloat()
+                                DailyDataPoint(dayOffset, avgBodyFat)
+                            }.sortedBy { it.dayOffset }
+                            .padToRange(range.days)
+
+                    val (optimalMin, optimalMax) =
+                        calculateOptimalRange(
+                            userPrefs.age,
+                            userPrefs.gender?.name ?: "Unknown",
+                        )
+                    val status = latest?.bodyFatPercent?.let { bodyFatStatus(it, optimalMax) }
+                    val average =
+                        if (records.isNotEmpty()) {
+                            records
+                                .map {
+                                    it.bodyFatPercent
+                                }.average()
+                                .toFloat()
+                        } else {
+                            null
+                        }
+                    BodyFatDetailUiState(
+                        latestBodyFat = latest?.bodyFatPercent,
+                        latestDate = latest?.timestampMs?.let { Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() },
+                        age = userPrefs.age,
+                        gender = userPrefs.gender?.name ?: "Unknown",
+                        optimalRangeMin = optimalMin,
+                        optimalRangeMax = optimalMax,
+                        bodyFatStatus = status,
+                        averageBodyFat = average,
+                        selectedRange = range,
+                        dailyBodyFat = dailyBodyFat,
+                        rangeStartMs = rangeStart.toEpochMilli(),
+                    )
+                }
             }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
