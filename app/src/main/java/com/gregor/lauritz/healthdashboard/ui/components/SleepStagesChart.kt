@@ -188,7 +188,13 @@ fun SleepStagesChart(
                 .withZone(ZoneId.systemDefault())
         }
 
-    val labelTimestamps = getLabelTimestamps(session.startTime, session.endTime)
+    val labelTimestamps =
+        remember(session.startTime, session.endTime) {
+            getLabelTimestamps(
+                session.startTime,
+                session.endTime,
+            )
+        }
     val sortedTimeline = remember(stageTimeline) { stageTimeline.sortedBy { it.startTime } }
     val mergedTimeline = remember(sortedTimeline) { mergeConsecutiveStages(sortedTimeline) }
     val sessionDurationMs = (session.endTime - session.startTime).coerceAtLeast(1L)
