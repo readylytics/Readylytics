@@ -35,7 +35,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.domain.model.SleepStage
 import com.gregor.lauritz.healthdashboard.domain.model.SleepStageType
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
@@ -45,14 +44,15 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 private fun getStageColor(
-    stage: SleepStage,
+    stageType: String,
     colorScheme: androidx.compose.material3.ColorScheme,
 ): Color =
-    when (stage) {
-        SleepStage.DEEP -> colorScheme.primary
-        SleepStage.LIGHT -> colorScheme.secondary
-        SleepStage.REM -> colorScheme.tertiary
-        SleepStage.AWAKE -> colorScheme.error
+    when (stageType) {
+        SleepStageType.DEEP.value -> colorScheme.primary
+        SleepStageType.LIGHT.value -> colorScheme.secondary
+        SleepStageType.REM.value -> colorScheme.tertiary
+        SleepStageType.AWAKE.value -> colorScheme.error
+        else -> colorScheme.secondary
     }
 
 private const val AWAKE_LANE_INDEX = 0
@@ -156,7 +156,6 @@ fun SleepStagesChart(
         remember(density, horizontalPadding, labelWidth, spacing) {
             with(density) { (horizontalPadding + labelWidth + spacing).roundToPx() }
         }
-    val sleepStages = remember { SleepStage.values() }
 
     if (session == null) {
         CalibrationBar(
@@ -340,9 +339,7 @@ fun SleepStagesChart(
                             startX
                         }
 
-                    val stageEnum =
-                        sleepStages.firstOrNull { it.type == stageData.stageType } ?: SleepStage.LIGHT
-                    val baseColor = getStageColor(stageEnum, colorScheme)
+                    val baseColor = getStageColor(stageData.stageType, colorScheme)
 
                     drawRoundRect(
                         color = baseColor,
@@ -367,11 +364,7 @@ fun SleepStagesChart(
 
                     val midX = (currentEndX + nextStartX) / 2f
 
-                    val nextStageEnum =
-                        sleepStages.firstOrNull {
-                            it.type == nextStage.stageType
-                        } ?: SleepStage.LIGHT
-                    val nextColor = getStageColor(nextStageEnum, colorScheme)
+                    val nextColor = getStageColor(nextStage.stageType, colorScheme)
                     val connectorColor = nextColor.copy(alpha = 0.3f)
                     val connectorStroke = 2.dp.toPx()
 
@@ -432,9 +425,7 @@ fun SleepStagesChart(
                                 startX
                             }
 
-                        val stageEnum =
-                            sleepStages.firstOrNull { it.type == stageData.stageType } ?: SleepStage.LIGHT
-                        val baseColor = getStageColor(stageEnum, colorScheme)
+                        val baseColor = getStageColor(stageData.stageType, colorScheme)
 
                         val haloPadding = 6.dp.toPx()
                         val haloHeight = capsuleHeight + 2 * haloPadding
