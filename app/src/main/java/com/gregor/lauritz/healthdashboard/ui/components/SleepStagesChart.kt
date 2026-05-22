@@ -65,11 +65,10 @@ private fun getStageLaneIndex(stageType: String): Int =
 
 private fun mergeConsecutiveStages(stages: List<SleepStageData>): List<SleepStageData> {
     if (stages.isEmpty()) return emptyList()
-    val sorted = stages.sortedBy { it.startTime }
     val merged = mutableListOf<SleepStageData>()
-    var current = sorted[0]
-    for (i in 1 until sorted.size) {
-        val next = sorted[i]
+    var current = stages[0]
+    for (i in 1 until stages.size) {
+        val next = stages[i]
         if (next.stageType == current.stageType) {
             current =
                 current.copy(
@@ -144,8 +143,8 @@ fun SleepStagesChart(
     var activeTapOffset by remember { mutableStateOf<Offset?>(null) }
     var activeSegmentIndex by remember { mutableStateOf<Int?>(null) }
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val paddingPx = remember(density) { with(density) { 24.dp.roundToPx() } }
     val canvasLeftOffsetPx = remember(density) { with(density) { (24.dp + 52.dp + 8.dp).roundToPx() } }
+    val sleepStages = remember { SleepStage.values() }
 
     if (session == null) {
         CalibrationBar(
@@ -258,14 +257,6 @@ fun SleepStagesChart(
                                 activeSegmentIndex = index
                                 activeTapOffset = tapOffset
                                 val tappedStage = sortedTimeline[index]
-                                val stageName =
-                                    when (tappedStage.stageType) {
-                                        SleepStageType.DEEP.value -> "Deep Sleep"
-                                        SleepStageType.REM.value -> "REM Sleep"
-                                        SleepStageType.LIGHT.value -> "Light Sleep"
-                                        SleepStageType.AWAKE.value -> "Awake"
-                                        else -> tappedStage.stageType
-                                    }
                                 val valueText = "${tappedStage.durationMinutes} min"
                                 val dateText = timeFormatter.format(Instant.ofEpochMilli(tappedStage.startTime))
                                 tooltipState =
@@ -330,7 +321,7 @@ fun SleepStagesChart(
                         ((currentStage.endTime - session.startTime).toFloat() / sessionDurationMs) * chartWidth
 
                     val nextStageEnum =
-                        SleepStage.values().firstOrNull {
+                        sleepStages.firstOrNull {
                             it.type == nextStage.stageType
                         } ?: SleepStage.LIGHT
                     val nextColor = getStageColor(nextStageEnum, colorScheme)
@@ -370,7 +361,7 @@ fun SleepStagesChart(
                         }
 
                     val stageEnum =
-                        SleepStage.values().firstOrNull { it.type == stageData.stageType } ?: SleepStage.LIGHT
+                        sleepStages.firstOrNull { it.type == stageData.stageType } ?: SleepStage.LIGHT
                     val baseColor = getStageColor(stageEnum, colorScheme)
 
                     drawRoundRect(
@@ -403,7 +394,7 @@ fun SleepStagesChart(
                             }
 
                         val stageEnum =
-                            SleepStage.values().firstOrNull { it.type == stageData.stageType } ?: SleepStage.LIGHT
+                            sleepStages.firstOrNull { it.type == stageData.stageType } ?: SleepStage.LIGHT
                         val baseColor = getStageColor(stageEnum, colorScheme)
 
                         val haloPadding = 6.dp.toPx()
