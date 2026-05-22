@@ -55,30 +55,31 @@ class BloodPressureDetailViewModel
                     )
                 val latest = bloodPressureRepository.getLatest()
 
+                val recordsByDay = records.groupBy { record ->
+                    ChronoUnit.DAYS.between(
+                        rangeStart.atZone(zoneId).toLocalDate(),
+                        Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
+                    ).toInt()
+                }
+
                 val dailySystolic =
-                    records.map { record ->
-                        val dayOffset =
-                            ChronoUnit.DAYS.between(
-                                rangeStart.atZone(zoneId).toLocalDate(),
-                                Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
-                            ).toInt()
-                        DailyDataPoint(dayOffset, record.systolicMmHg.toFloat())
-                    }.padToRange(range.days)
+                    recordsByDay.map { (dayOffset, dayRecords) ->
+                        val avgSystolic = dayRecords.map { it.systolicMmHg }.average().toFloat()
+                        DailyDataPoint(dayOffset, avgSystolic)
+                    }.sortedBy { it.dayOffset }
+                        .padToRange(range.days)
 
                 val dailyDiastolic =
-                    records.map { record ->
-                        val dayOffset =
-                            ChronoUnit.DAYS.between(
-                                rangeStart.atZone(zoneId).toLocalDate(),
-                                Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
-                            ).toInt()
-                        DailyDataPoint(dayOffset, record.diastolicMmHg.toFloat())
-                    }.padToRange(range.days)
+                    recordsByDay.map { (dayOffset, dayRecords) ->
+                        val avgDiastolic = dayRecords.map { it.diastolicMmHg }.average().toFloat()
+                        DailyDataPoint(dayOffset, avgDiastolic)
+                    }.sortedBy { it.dayOffset }
+                        .padToRange(range.days)
 
                 BloodPressureDetailUiState(
                     latestSystolic = latest?.systolicMmHg,
                     latestDiastolic = latest?.diastolicMmHg,
-                    latestDate = Instant.ofEpochMilli(latest?.timestampMs ?: 0).atZone(zoneId).toLocalDate(),
+                    latestDate = latest?.timestampMs?.let { Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() },
                     selectedRange = range,
                     dailySystolic = dailySystolic,
                     dailyDiastolic = dailyDiastolic,

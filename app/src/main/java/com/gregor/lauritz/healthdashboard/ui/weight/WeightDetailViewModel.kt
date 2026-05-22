@@ -44,7 +44,8 @@ class WeightDetailViewModel
             combine(
                 _selectedRange,
                 selectedDateRepository.selectedDate,
-            ) { range, selectedDate ->
+                settingsRepo.userPreferences,
+            ) { range, selectedDate, userPrefs ->
                 val zoneId = ZoneId.systemDefault()
                 val rangeStart =
                     selectedDate.minusDays((range.days - 1).toLong()).atStartOfDay(zoneId).toInstant()
@@ -52,36 +53,33 @@ class WeightDetailViewModel
 
                 val records = weightRepository.getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
                 val latest = weightRepository.getLatest()
-                val prefs = settingsRepo.userPreferences
 
-                combine(prefs) { userPrefs ->
-                    val dailyWeights =
-                        records.map { record ->
-                            val dayOffset =
-                                ChronoUnit.DAYS.between(
-                                    rangeStart.atZone(zoneId).toLocalDate(),
-                                    Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
-                                ).toInt()
-                            DailyDataPoint(dayOffset, record.weightKg)
-                        }.padToRange(range.days)
+                val dailyWeights =
+                    records.map { record ->
+                        val dayOffset =
+                            ChronoUnit.DAYS.between(
+                                rangeStart.atZone(zoneId).toLocalDate(),
+                                Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
+                            ).toInt()
+                        DailyDataPoint(dayOffset, record.weightKg)
+                    }.padToRange(range.days)
 
-                    val bmi =
-                        if (latest != null && userPrefs.heightCm != null) {
-                            latest.weightKg / ((userPrefs.heightCm / 100f) * (userPrefs.heightCm / 100f))
-                        } else {
-                            null
-                        }
+                val bmi =
+                    if (latest != null && userPrefs.heightCm != null) {
+                        latest.weightKg / ((userPrefs.heightCm / 100f) * (userPrefs.heightCm / 100f))
+                    } else {
+                        null
+                    }
 
-                    WeightDetailUiState(
-                        latestWeight = latest?.weightKg,
-                        latestDate = Instant.ofEpochMilli(latest?.timestampMs ?: 0).atZone(zoneId).toLocalDate(),
-                        bmi = bmi,
-                        heightCm = userPrefs.heightCm,
-                        selectedRange = range,
-                        dailyWeights = dailyWeights,
-                        rangeStartMs = rangeStart.toEpochMilli(),
-                    )
-                }
+                WeightDetailUiState(
+                    latestWeight = latest?.weightKg,
+                    latestDate = latest?.timestampMs?.let { Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() },
+                    bmi = bmi,
+                    heightCm = userPrefs.heightCm,
+                    selectedRange = range,
+                    dailyWeights = dailyWeights,
+                    rangeStartMs = rangeStart.toEpochMilli(),
+                )
             }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),

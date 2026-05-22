@@ -146,6 +146,11 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         backupDirectoryUri = if (hasBackupDirectoryUri()) backupDirectoryUri else null,
         backupPasswordHash = if (hasBackupPasswordHash()) backupPasswordHash else null,
         isBirthdayConfigured = isBirthdayConfigured,
-        unitSystem = UnitSystem.valueOf(unitSystem.name.removePrefix("UNIT_")),
+        unitSystem =
+            when (unitSystem) {
+                UnitSystemProto.UNIT_METRIC -> UnitSystem.METRIC
+                UnitSystemProto.UNIT_IMPERIAL -> UnitSystem.IMPERIAL
+                else -> SettingsDefaults.UNIT_SYSTEM
+            },
     )
 }

@@ -160,4 +160,11 @@
     <string name="action_cancel_editing">Cancel editing</string>
     <string name="dashboard_no_data">No data for this day</string>
     <string name="action_delete_drop_zone">Drop here to remove</string>
+
+    <!-- Unit System -->
+    <string name="unit_metric_cm">cm</string>
+    <string name="unit_metric_kg">kg</string>
+    <string name="unit_imperial_ft">\'</string>
+    <string name="unit_imperial_in">\"</string>
+    <string name="unit_imperial_lbs">lbs</string>
 </resources>

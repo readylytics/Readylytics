@@ -44,7 +44,8 @@ class BodyFatDetailViewModel
             combine(
                 _selectedRange,
                 selectedDateRepository.selectedDate,
-            ) { range, selectedDate ->
+                settingsRepo.userPreferences,
+            ) { range, selectedDate, userPrefs ->
                 val zoneId = ZoneId.systemDefault()
                 val rangeStart =
                     selectedDate.minusDays((range.days - 1).toLong()).atStartOfDay(zoneId).toInstant()
@@ -52,28 +53,25 @@ class BodyFatDetailViewModel
 
                 val records = bodyFatRepository.getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
                 val latest = bodyFatRepository.getLatest()
-                val prefs = settingsRepo.userPreferences
 
-                combine(prefs) { userPrefs ->
-                    val dailyBodyFat =
-                        records.map { record ->
-                            val dayOffset =
-                                ChronoUnit.DAYS.between(
-                                    rangeStart.atZone(zoneId).toLocalDate(),
-                                    Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
-                                ).toInt()
-                            DailyDataPoint(dayOffset, record.bodyFatPercent)
-                        }.padToRange(range.days)
+                val dailyBodyFat =
+                    records.map { record ->
+                        val dayOffset =
+                            ChronoUnit.DAYS.between(
+                                rangeStart.atZone(zoneId).toLocalDate(),
+                                Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
+                            ).toInt()
+                        DailyDataPoint(dayOffset, record.bodyFatPercent)
+                    }.padToRange(range.days)
 
-                    BodyFatDetailUiState(
-                        latestBodyFat = latest?.bodyFatPercent,
-                        latestDate = Instant.ofEpochMilli(latest?.timestampMs ?: 0).atZone(zoneId).toLocalDate(),
-                        age = userPrefs.age,
-                        selectedRange = range,
-                        dailyBodyFat = dailyBodyFat,
-                        rangeStartMs = rangeStart.toEpochMilli(),
-                    )
-                }
+                BodyFatDetailUiState(
+                    latestBodyFat = latest?.bodyFatPercent,
+                    latestDate = latest?.timestampMs?.let { Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() },
+                    age = userPrefs.age,
+                    selectedRange = range,
+                    dailyBodyFat = dailyBodyFat,
+                    rangeStartMs = rangeStart.toEpochMilli(),
+                )
             }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),

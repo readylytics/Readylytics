@@ -4,45 +4,44 @@ import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import kotlin.math.floor
 
 object UnitConverter {
-    // Height conversions
-    fun heightCmToString(heightCm: Float?, unitSystem: UnitSystem): String = when {
-        heightCm == null -> "—"
-        unitSystem == UnitSystem.METRIC -> "${heightCm.toInt()} cm"
-        else -> {
-            val totalInches = heightCm / 2.54f
-            val feet = floor(totalInches / 12f).toInt()
-            val inches = (totalInches % 12f).toInt()
-            "'$feet\"$inches"
-        }
-    }
-
-    fun heightCmToStringShort(heightCm: Float?, unitSystem: UnitSystem): String = when {
-        heightCm == null -> "—"
-        unitSystem == UnitSystem.METRIC -> "${heightCm.toInt()} cm"
-        else -> {
-            val totalInches = heightCm / 2.54f
-            val feet = floor(totalInches / 12f).toInt()
-            val inches = (totalInches % 12f).toInt()
-            "$feet'$inches\""
-        }
-    }
-
-    // Weight conversions
-    fun weightKgToString(weightKg: Float?, unitSystem: UnitSystem): String = when {
-        weightKg == null -> "—"
-        unitSystem == UnitSystem.METRIC -> "%.1f kg".format(weightKg)
-        else -> "%.1f lbs".format(weightKg * 2.20462f)
-    }
-
-    fun weightKgToStringShort(weightKg: Float?, unitSystem: UnitSystem): String = when {
-        weightKg == null -> "—"
-        unitSystem == UnitSystem.METRIC -> "${weightKg.toInt()} kg"
-        else -> "${(weightKg * 2.20462f).toInt()} lbs"
-    }
-
     // Conversion factors
     const val KG_TO_LBS = 2.20462f
     const val LBS_TO_KG = 0.453592f
     const val CM_TO_INCHES = 0.393701f
     const val INCHES_TO_CM = 2.54f
+
+    // Height conversions - returns raw values and format info for UI layer to apply i18n
+    data class HeightDisplay(
+        val value: String,
+        val unit: String,
+    )
+
+    fun heightCmToDisplay(heightCm: Float?, unitSystem: UnitSystem): HeightDisplay = when {
+        heightCm == null -> HeightDisplay("—", "")
+        unitSystem == UnitSystem.METRIC -> HeightDisplay("${heightCm.toInt()}", "unit_metric_cm")
+        else -> {
+            val totalInches = heightCm / INCHES_TO_CM
+            val feet = floor(totalInches / 12f).toInt()
+            val inches = (totalInches % 12f).toInt()
+            HeightDisplay("$feet$inches", "height_imperial_format")
+        }
+    }
+
+    // Weight conversions - returns raw values and format info for UI layer to apply i18n
+    data class WeightDisplay(
+        val value: String,
+        val unit: String,
+    )
+
+    fun weightKgToDisplay(weightKg: Float?, unitSystem: UnitSystem): WeightDisplay = when {
+        weightKg == null -> WeightDisplay("—", "")
+        unitSystem == UnitSystem.METRIC -> WeightDisplay("%.1f".format(weightKg), "unit_metric_kg")
+        else -> WeightDisplay("%.1f".format(weightKg * KG_TO_LBS), "unit_imperial_lbs")
+    }
+
+    fun weightKgToDisplayShort(weightKg: Float?, unitSystem: UnitSystem): WeightDisplay = when {
+        weightKg == null -> WeightDisplay("—", "")
+        unitSystem == UnitSystem.METRIC -> WeightDisplay("${weightKg.toInt()}", "unit_metric_kg")
+        else -> WeightDisplay("${(weightKg * KG_TO_LBS).toInt()}", "unit_imperial_lbs")
+    }
 }
