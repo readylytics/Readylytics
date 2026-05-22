@@ -35,6 +35,7 @@ class PhysiologySettingsViewModel
                         birthMonth = prefs.birthMonth,
                         birthYear = prefs.birthYear,
                         gender = prefs.gender,
+                        heightCm = prefs.heightCm,
                     )
                 }.stateIn(
                     scope = viewModelScope,
@@ -63,6 +64,11 @@ class PhysiologySettingsViewModel
                     viewModelScope.launch {
                         settingsRepo.updateGender(gender = event.gender?.displayName)
                         healthSyncUseCase.sync()
+                    }
+                }
+                is SettingsEvent.HeightChanged -> {
+                    viewModelScope.launch {
+                        settingsRepo.updateHeight(heightCm = event.heightCm)
                     }
                 }
                 is SettingsEvent.PhysiologyProfileChanged ->

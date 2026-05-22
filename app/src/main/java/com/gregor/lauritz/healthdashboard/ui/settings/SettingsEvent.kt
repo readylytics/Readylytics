@@ -71,6 +71,10 @@ sealed interface SettingsEvent {
         val gender: Gender?,
     ) : SettingsEvent
 
+    data class HeightChanged(
+        val heightCm: Float?,
+    ) : SettingsEvent
+
     data class HrvOptimalThresholdChanged(
         val value: Float,
     ) : SettingsEvent
