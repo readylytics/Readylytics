@@ -40,6 +40,19 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
 
+      - name: Generate coverage report
+        run: ./gradlew jacocoTestReport
+
+      - name: Enforce coverage gate (>= 25%)
+        run: ./gradlew jacocoCoverageVerification
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: app/build/reports/jacoco/jacocoTestReport/
+
       - name: Upload lint report
         if: failure()
         uses: actions/upload-artifact@v4
