@@ -33,6 +33,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.SleepStage
 import com.gregor.lauritz.healthdashboard.domain.model.SleepStageType
@@ -54,13 +55,18 @@ private fun getStageColor(
         SleepStage.AWAKE -> colorScheme.error
     }
 
+private const val AWAKE_LANE_INDEX = 0
+private const val REM_LANE_INDEX = 1
+private const val LIGHT_LANE_INDEX = 2
+private const val DEEP_LANE_INDEX = 3
+
 private fun getStageLaneIndex(stageType: String): Int =
     when (stageType) {
-        SleepStageType.AWAKE.value -> 0
-        SleepStageType.REM.value -> 1
-        SleepStageType.LIGHT.value -> 2
-        SleepStageType.DEEP.value -> 3
-        else -> 2 // Default to Light sleep if unknown
+        SleepStageType.AWAKE.value -> AWAKE_LANE_INDEX
+        SleepStageType.REM.value -> REM_LANE_INDEX
+        SleepStageType.LIGHT.value -> LIGHT_LANE_INDEX
+        SleepStageType.DEEP.value -> DEEP_LANE_INDEX
+        else -> LIGHT_LANE_INDEX // Default to Light sleep lane if unknown
     }
 
 private fun mergeConsecutiveStages(stages: List<SleepStageData>): List<SleepStageData> {
@@ -138,12 +144,18 @@ fun SleepStagesChart(
     session: SleepSessionData?,
     modifier: Modifier = Modifier,
     stageTimeline: List<SleepStageData> = emptyList(),
+    labelWidth: Dp = 52.dp,
+    horizontalPadding: Dp = 24.dp,
+    spacing: Dp = 8.dp,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var activeTapOffset by remember { mutableStateOf<Offset?>(null) }
     var activeSegmentIndex by remember { mutableStateOf<Int?>(null) }
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val canvasLeftOffsetPx = remember(density) { with(density) { (24.dp + 52.dp + 8.dp).roundToPx() } }
+    val canvasLeftOffsetPx =
+        remember(density, horizontalPadding, labelWidth, spacing) {
+            with(density) { (horizontalPadding + labelWidth + spacing).roundToPx() }
+        }
     val sleepStages = remember { SleepStage.values() }
 
     if (session == null) {
@@ -186,13 +198,13 @@ fun SleepStagesChart(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = horizontalPadding),
     ) {
         // Left Column: Lane Labels
         Column(
             modifier =
                 Modifier
-                    .width(52.dp)
+                    .width(labelWidth)
                     .height(200.dp)
                     .padding(vertical = 24.dp),
             // Matched with vertical paddings on Canvas
@@ -225,7 +237,7 @@ fun SleepStagesChart(
             )
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(spacing))
 
         // Right Column: Canvas & Time Labels
         Column(
@@ -239,8 +251,8 @@ fun SleepStagesChart(
                         .testTag("SleepStagesChartCanvas")
                         .detectCanvasTap(
                             segments =
-                                remember(sortedTimeline, session.startTime, sessionDurationMs) {
-                                    sortedTimeline.mapIndexed { index, stageData ->
+                                remember(mergedTimeline, session.startTime, sessionDurationMs) {
+                                    mergedTimeline.mapIndexed { index, stageData ->
                                         val startFraction =
                                             (stageData.startTime - session.startTime).toFloat() / sessionDurationMs
                                         val endFraction =
@@ -256,7 +268,7 @@ fun SleepStagesChart(
                             onSegmentTapped = { index, _, tapOffset ->
                                 activeSegmentIndex = index
                                 activeTapOffset = tapOffset
-                                val tappedStage = sortedTimeline[index]
+                                val tappedStage = mergedTimeline[index]
                                 val valueText = "${tappedStage.durationMinutes} min"
                                 val dateText = timeFormatter.format(Instant.ofEpochMilli(tappedStage.startTime))
                                 tooltipState =
@@ -374,8 +386,8 @@ fun SleepStagesChart(
 
                 // 5. Draw glowing selected breathing halo for tapped segment
                 activeSegmentIndex?.let { index ->
-                    if (index in sortedTimeline.indices) {
-                        val stageData = sortedTimeline[index]
+                    if (index in mergedTimeline.indices) {
+                        val stageData = mergedTimeline[index]
                         val stageIndex = getStageLaneIndex(stageData.stageType)
                         val yOffset = paddingY + stageIndex * laneSpacing
 
@@ -416,7 +428,7 @@ fun SleepStagesChart(
                     val tapX = activeTapOffset!!.x.coerceIn(0f, chartWidth)
 
                     drawLine(
-                        color = Color(0xFFFF9100), // Distinct Amber color (not in chart)
+                        color = colorScheme.secondary, // Theme-aware color
                         start = Offset(tapX, 0f),
                         end = Offset(tapX, chartHeight),
                         strokeWidth = 1.5.dp.toPx(),
