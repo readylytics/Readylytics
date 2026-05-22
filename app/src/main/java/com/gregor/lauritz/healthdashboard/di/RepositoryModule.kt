@@ -1,13 +1,13 @@
 package com.gregor.lauritz.healthdashboard.di
 
-import com.gregor.lauritz.healthdashboard.data.repository.BodyFatRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.repository.BloodPressureRepositoryImpl
+import com.gregor.lauritz.healthdashboard.data.repository.BodyFatRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.repository.DailySummaryRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.repository.HeartRateRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.repository.WeightRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.repository.WorkoutRepositoryImpl
-import com.gregor.lauritz.healthdashboard.domain.repository.BodyFatRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.BloodPressureRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.BodyFatRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.WeightRepository

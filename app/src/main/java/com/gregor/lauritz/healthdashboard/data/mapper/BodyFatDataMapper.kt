@@ -1,8 +1,8 @@
 package com.gregor.lauritz.healthdashboard.data.mapper
 
 import androidx.health.connect.client.records.BodyFatRecord
-import com.gregor.lauritz.healthdashboard.data.local.entity.BodyFatRecordEntity
 import com.gregor.lauritz.healthdashboard.data.healthconnect.DeviceLabel
+import com.gregor.lauritz.healthdashboard.data.local.entity.BodyFatRecordEntity
 
 object BodyFatDataMapper {
     fun toEntity(record: BodyFatRecord): BodyFatRecordEntity =
@@ -13,6 +13,5 @@ object BodyFatDataMapper {
             deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
         )
 
-    fun toEntities(records: List<BodyFatRecord>): List<BodyFatRecordEntity> =
-        records.map { toEntity(it) }
+    fun toEntities(records: List<BodyFatRecord>): List<BodyFatRecordEntity> = records.map { toEntity(it) }
 }

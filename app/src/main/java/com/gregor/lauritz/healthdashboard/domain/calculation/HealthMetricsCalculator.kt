@@ -2,11 +2,14 @@ package com.gregor.lauritz.healthdashboard.domain.calculation
 
 import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.domain.model.BloodPressureStatus
-import com.gregor.lauritz.healthdashboard.domain.model.BodyFatStatus
 import com.gregor.lauritz.healthdashboard.domain.model.BmiStatus
+import com.gregor.lauritz.healthdashboard.domain.model.BodyFatStatus
 
 object HealthMetricsCalculator {
-    fun calculateBmi(weightKg: Float, heightCm: Float): Float {
+    fun calculateBmi(
+        weightKg: Float,
+        heightCm: Float,
+    ): Float {
         val heightM = heightCm / 100f
         return weightKg / (heightM * heightM)
     }
@@ -19,7 +22,10 @@ object HealthMetricsCalculator {
             else -> BmiStatus.Poor
         }
 
-    fun assessBloodPressure(systolic: Int, diastolic: Int): BloodPressureStatus =
+    fun assessBloodPressure(
+        systolic: Int,
+        diastolic: Int,
+    ): BloodPressureStatus =
         when {
             systolic < 120 && diastolic < 80 -> BloodPressureStatus.Optimal
             systolic <= 129 && diastolic < 80 -> BloodPressureStatus.Neutral
@@ -59,7 +65,10 @@ object HealthMetricsCalculator {
         }
     }
 
-    fun calculateDailyBpAverage(systolics: List<Int>, diastolics: List<Int>): Pair<Int, Int> {
+    fun calculateDailyBpAverage(
+        systolics: List<Int>,
+        diastolics: List<Int>,
+    ): Pair<Int, Int> {
         if (systolics.isEmpty() || diastolics.isEmpty()) return Pair(0, 0)
         return Pair(
             systolics.average().toInt(),

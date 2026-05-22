@@ -4,8 +4,8 @@ import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.calculation.HealthMetricsCalculator
 import com.gregor.lauritz.healthdashboard.domain.model.BloodPressureStatus
-import com.gregor.lauritz.healthdashboard.domain.model.BodyFatStatus
 import com.gregor.lauritz.healthdashboard.domain.model.BmiStatus
+import com.gregor.lauritz.healthdashboard.domain.model.BodyFatStatus
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.SleepSessionSummary
@@ -333,13 +333,14 @@ class GetDashboardDataUseCase
             summary: DailySummary,
             prefs: UserPreferences,
         ): CardData {
-            val weightKg = summary.weightKg ?: return CardData(
-                title = "Weight",
-                value = "—",
-                unit = "kg",
-                status = MetricStatus.NEUTRAL,
-                tooltip = "Weight from Health Connect",
-            )
+            val weightKg =
+                summary.weightKg ?: return CardData(
+                    title = "Weight",
+                    value = "—",
+                    unit = "kg",
+                    status = MetricStatus.NEUTRAL,
+                    tooltip = "Weight from Health Connect",
+                )
 
             val heightCm = prefs.heightCm
             val bmiStatus =
@@ -379,19 +380,21 @@ class GetDashboardDataUseCase
             summary: DailySummary,
             prefs: UserPreferences,
         ): CardData {
-            val bodyFatPercent = summary.bodyFatPercent ?: return CardData(
-                title = "Body Fat",
-                value = "—",
-                unit = "%",
-                status = MetricStatus.NEUTRAL,
-                tooltip = "Body fat percentage from Health Connect",
-            )
+            val bodyFatPercent =
+                summary.bodyFatPercent ?: return CardData(
+                    title = "Body Fat",
+                    value = "—",
+                    unit = "%",
+                    status = MetricStatus.NEUTRAL,
+                    tooltip = "Body fat percentage from Health Connect",
+                )
 
-            val bodyFatStatus = HealthMetricsCalculator.assessBodyFatPercent(
-                bodyFatPercent,
-                prefs.age,
-                prefs.gender,
-            )
+            val bodyFatStatus =
+                HealthMetricsCalculator.assessBodyFatPercent(
+                    bodyFatPercent,
+                    prefs.age,
+                    prefs.gender,
+                )
             val status =
                 when (bodyFatStatus) {
                     BodyFatStatus.Optimal -> MetricStatus.OPTIMAL

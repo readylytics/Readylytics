@@ -21,8 +21,7 @@ class WeightRepositoryImpl
         override fun observeByDateRange(
             fromMs: Long,
             toMs: Long,
-        ): Flow<List<WeightRecordEntity>> =
-            dao.observeSince(fromMs) // Note: approximation using observeSince
+        ): Flow<List<WeightRecordEntity>> = dao.observeSince(fromMs) // Note: approximation using observeSince
 
         override suspend fun getLatest(): WeightRecordEntity? = dao.getLatest()
 

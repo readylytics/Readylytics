@@ -14,6 +14,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
 import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
+import java.util.Locale
 
 @Composable
 fun HeightInputField(
@@ -21,7 +22,7 @@ fun HeightInputField(
     onHeightChange: (Float?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val heightText = heightCm?.let { String.format("%.0f", it) } ?: ""
+    val heightText = heightCm?.let { String.format(Locale.getDefault(), "%.0f", it) } ?: ""
     val validation = SettingsValidators.HEIGHT_CM_RULE.validate(heightText)
     val isError = heightText.isNotEmpty() && validation is ValidationResult.Invalid
 
@@ -34,7 +35,7 @@ fun HeightInputField(
                 } else {
                     val validation = SettingsValidators.HEIGHT_CM_RULE.validate(newValue)
                     if (validation is ValidationResult.Valid) {
-                        onHeightChange((validation.parsedValue as? Float))
+                        onHeightChange(newValue.toFloatOrNull())
                     }
                 }
             },
@@ -43,7 +44,7 @@ fun HeightInputField(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             isError = isError,
             supportingText = {
-                if (isError && validation is ValidationResult.Invalid) {
+                if (isError) {
                     Text(
                         validation.message,
                         color = MaterialTheme.colorScheme.error,

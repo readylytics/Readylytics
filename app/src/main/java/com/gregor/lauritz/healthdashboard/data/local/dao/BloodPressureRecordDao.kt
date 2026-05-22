@@ -12,8 +12,7 @@ interface BloodPressureRecordDao {
     @Query("SELECT * FROM blood_pressure_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
     fun _observeSince(fromMs: Long): Flow<List<BloodPressureRecordEntity>>
 
-    fun observeSince(fromMs: Long): Flow<List<BloodPressureRecordEntity>> =
-        _observeSince(fromMs).distinctUntilChanged()
+    fun observeSince(fromMs: Long): Flow<List<BloodPressureRecordEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
     @Query("SELECT * FROM blood_pressure_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
     suspend fun getSince(fromMs: Long): List<BloodPressureRecordEntity>

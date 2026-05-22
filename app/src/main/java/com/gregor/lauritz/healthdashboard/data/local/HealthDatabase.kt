@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.BloodPressureRecordDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
@@ -13,8 +13,8 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepStageDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WeightRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.BodyFatRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.BloodPressureRecordEntity
+import com.gregor.lauritz.healthdashboard.data.local.entity.BodyFatRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.HrvRecordEntity

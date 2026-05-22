@@ -33,6 +33,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
+import java.util.Locale
 
 @Composable
 fun WeightDetailRoute(
@@ -93,9 +94,16 @@ fun WeightDetailScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     M3ScoreDial(
-                        score = uiState.bmi?.times(10)?.toInt()?.div(10f)?.times(10f),
+                        score =
+                            uiState.bmi
+                                ?.times(10)
+                                ?.toInt()
+                                ?.div(10f)
+                                ?.times(10f),
                         label = "BMI",
-                        tooltipDescription = "Body Mass Index (50% = 20)\n\nUnder 25: Normal\n25-30: Overweight\n30+: Obese",
+                        tooltipDescription =
+                            "Body Mass Index (50% = 20)\n\n" +
+                                "Under 25: Normal\n25-30: Overweight\n30+: Obese",
                     )
                 }
             }
@@ -103,8 +111,14 @@ fun WeightDetailScreen(
             item(key = "weight_info") {
                 TrendCard(
                     title = "Current Weight",
-                    value = uiState.latestWeight?.let { String.format("%.1f kg", it) } ?: "—",
-                    subtitle = uiState.heightCm?.let { "Height: ${String.format("%.0f cm", it)}" } ?: "",
+                    value =
+                        uiState.latestWeight?.let {
+                            String.format(Locale.getDefault(), "%.1f kg", it)
+                        } ?: "—",
+                    subtitle =
+                        uiState.heightCm?.let {
+                            "Height: ${String.format(Locale.getDefault(), "%.0f cm", it)}"
+                        } ?: "",
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }

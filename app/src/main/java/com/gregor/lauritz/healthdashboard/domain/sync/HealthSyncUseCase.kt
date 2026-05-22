@@ -4,8 +4,8 @@ import com.gregor.lauritz.healthdashboard.data.healthconnect.HeartRateMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HrvMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.SleepDataMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.WorkoutMapper
-import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.BloodPressureRecordDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao

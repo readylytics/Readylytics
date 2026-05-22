@@ -32,6 +32,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
+import java.util.Locale
 
 @Composable
 fun BodyFatDetailRoute(
@@ -86,7 +87,10 @@ fun BodyFatDetailScreen(
             item(key = "body_fat_info") {
                 TrendCard(
                     title = "Current Body Fat",
-                    value = uiState.latestBodyFat?.let { String.format("%.1f %%", it) } ?: "—",
+                    value =
+                        uiState.latestBodyFat?.let {
+                            String.format(Locale.getDefault(), "%.1f %%", it)
+                        } ?: "—",
                     subtitle = "Age: ${uiState.age} years",
                 )
                 Spacer(modifier = Modifier.height(8.dp))

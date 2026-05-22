@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
-import com.gregor.lauritz.healthdashboard.domain.calculation.HealthMetricsCalculator
 import com.gregor.lauritz.healthdashboard.domain.repository.BodyFatRepository
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -38,11 +37,11 @@ class BodyFatDetailViewModel
         private val settingsRepo: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
     ) : ViewModel() {
-        private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
+        private val selectedRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
 
         val uiState: StateFlow<BodyFatDetailUiState> =
             combine(
-                _selectedRange,
+                selectedRangeFlow,
                 selectedDateRepository.selectedDate,
                 settingsRepo.userPreferences,
             ) { range, selectedDate, userPrefs ->
@@ -55,14 +54,16 @@ class BodyFatDetailViewModel
                 val latest = bodyFatRepository.getLatest()
 
                 val dailyBodyFat =
-                    records.map { record ->
-                        val dayOffset =
-                            ChronoUnit.DAYS.between(
-                                rangeStart.atZone(zoneId).toLocalDate(),
-                                Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
-                            ).toInt()
-                        DailyDataPoint(dayOffset, record.bodyFatPercent)
-                    }.padToRange(range.days)
+                    records
+                        .map { record ->
+                            val dayOffset =
+                                ChronoUnit.DAYS
+                                    .between(
+                                        rangeStart.atZone(zoneId).toLocalDate(),
+                                        Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
+                                    ).toInt()
+                            DailyDataPoint(dayOffset, record.bodyFatPercent)
+                        }.padToRange(range.days)
 
                 BodyFatDetailUiState(
                     latestBodyFat = latest?.bodyFatPercent,
@@ -79,6 +80,6 @@ class BodyFatDetailViewModel
             )
 
         fun onRangeSelected(range: TimeRange) {
-            _selectedRange.value = range
+            selectedRangeFlow.value = range
         }
     }

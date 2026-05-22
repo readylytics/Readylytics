@@ -12,8 +12,7 @@ interface WeightRecordDao {
     @Query("SELECT * FROM weight_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
     fun _observeSince(fromMs: Long): Flow<List<WeightRecordEntity>>
 
-    fun observeSince(fromMs: Long): Flow<List<WeightRecordEntity>> =
-        _observeSince(fromMs).distinctUntilChanged()
+    fun observeSince(fromMs: Long): Flow<List<WeightRecordEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
     @Query("SELECT * FROM weight_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
     suspend fun getSince(fromMs: Long): List<WeightRecordEntity>

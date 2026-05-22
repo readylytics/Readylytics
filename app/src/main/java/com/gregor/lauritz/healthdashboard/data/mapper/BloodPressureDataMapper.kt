@@ -1,8 +1,8 @@
 package com.gregor.lauritz.healthdashboard.data.mapper
 
 import androidx.health.connect.client.records.BloodPressureRecord
-import com.gregor.lauritz.healthdashboard.data.local.entity.BloodPressureRecordEntity
 import com.gregor.lauritz.healthdashboard.data.healthconnect.DeviceLabel
+import com.gregor.lauritz.healthdashboard.data.local.entity.BloodPressureRecordEntity
 
 object BloodPressureDataMapper {
     fun toEntity(record: BloodPressureRecord): BloodPressureRecordEntity =
@@ -14,6 +14,5 @@ object BloodPressureDataMapper {
             deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
         )
 
-    fun toEntities(records: List<BloodPressureRecord>): List<BloodPressureRecordEntity> =
-        records.map { toEntity(it) }
+    fun toEntities(records: List<BloodPressureRecord>): List<BloodPressureRecordEntity> = records.map { toEntity(it) }
 }

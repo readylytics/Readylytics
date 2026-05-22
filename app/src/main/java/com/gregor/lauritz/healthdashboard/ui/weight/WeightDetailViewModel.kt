@@ -38,11 +38,11 @@ class WeightDetailViewModel
         private val settingsRepo: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
     ) : ViewModel() {
-        private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
+        private val selectedRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
 
         val uiState: StateFlow<WeightDetailUiState> =
             combine(
-                _selectedRange,
+                selectedRangeFlow,
                 selectedDateRepository.selectedDate,
                 settingsRepo.userPreferences,
             ) { range, selectedDate, userPrefs ->
@@ -55,14 +55,16 @@ class WeightDetailViewModel
                 val latest = weightRepository.getLatest()
 
                 val dailyWeights =
-                    records.map { record ->
-                        val dayOffset =
-                            ChronoUnit.DAYS.between(
-                                rangeStart.atZone(zoneId).toLocalDate(),
-                                Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
-                            ).toInt()
-                        DailyDataPoint(dayOffset, record.weightKg)
-                    }.padToRange(range.days)
+                    records
+                        .map { record ->
+                            val dayOffset =
+                                ChronoUnit.DAYS
+                                    .between(
+                                        rangeStart.atZone(zoneId).toLocalDate(),
+                                        Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
+                                    ).toInt()
+                            DailyDataPoint(dayOffset, record.weightKg)
+                        }.padToRange(range.days)
 
                 val bmi =
                     if (latest != null && userPrefs.heightCm != null) {
@@ -87,6 +89,6 @@ class WeightDetailViewModel
             )
 
         fun onRangeSelected(range: TimeRange) {
-            _selectedRange.value = range
+            selectedRangeFlow.value = range
         }
     }

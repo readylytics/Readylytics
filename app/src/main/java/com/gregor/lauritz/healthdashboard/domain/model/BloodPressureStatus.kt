@@ -2,8 +2,11 @@ package com.gregor.lauritz.healthdashboard.domain.model
 
 sealed class BloodPressureStatus {
     object Optimal : BloodPressureStatus()
+
     object Neutral : BloodPressureStatus()
+
     object HypertensionStage1 : BloodPressureStatus()
+
     object HypertensionStage2 : BloodPressureStatus()
 
     val displayName: String

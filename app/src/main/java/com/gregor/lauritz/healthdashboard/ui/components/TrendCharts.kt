@@ -75,6 +75,31 @@ fun TrendCard(
 }
 
 @Composable
+fun TrendCard(
+    title: String,
+    value: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+) {
+    TrendCard(title = title, modifier = modifier) {
+        Column {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            if (subtitle.isNotEmpty()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun TrendChart(
     points: List<DailyDataPoint>,
     rangeStartMs: Long,

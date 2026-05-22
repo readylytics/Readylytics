@@ -36,11 +36,11 @@ class BloodPressureDetailViewModel
         private val bloodPressureRepository: BloodPressureRepository,
         private val selectedDateRepository: SelectedDateRepository,
     ) : ViewModel() {
-        private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
+        private val selectedRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
 
         val uiState: StateFlow<BloodPressureDetailUiState> =
             combine(
-                _selectedRange,
+                selectedRangeFlow,
                 selectedDateRepository.selectedDate,
             ) { range, selectedDate ->
                 val zoneId = ZoneId.systemDefault()
@@ -55,25 +55,29 @@ class BloodPressureDetailViewModel
                     )
                 val latest = bloodPressureRepository.getLatest()
 
-                val recordsByDay = records.groupBy { record ->
-                    ChronoUnit.DAYS.between(
-                        rangeStart.atZone(zoneId).toLocalDate(),
-                        Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
-                    ).toInt()
-                }
+                val recordsByDay =
+                    records.groupBy { record ->
+                        ChronoUnit.DAYS
+                            .between(
+                                rangeStart.atZone(zoneId).toLocalDate(),
+                                Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate(),
+                            ).toInt()
+                    }
 
                 val dailySystolic =
-                    recordsByDay.map { (dayOffset, dayRecords) ->
-                        val avgSystolic = dayRecords.map { it.systolicMmHg }.average().toFloat()
-                        DailyDataPoint(dayOffset, avgSystolic)
-                    }.sortedBy { it.dayOffset }
+                    recordsByDay
+                        .map { (dayOffset, dayRecords) ->
+                            val avgSystolic = dayRecords.map { it.systolicMmHg }.average().toFloat()
+                            DailyDataPoint(dayOffset, avgSystolic)
+                        }.sortedBy { it.dayOffset }
                         .padToRange(range.days)
 
                 val dailyDiastolic =
-                    recordsByDay.map { (dayOffset, dayRecords) ->
-                        val avgDiastolic = dayRecords.map { it.diastolicMmHg }.average().toFloat()
-                        DailyDataPoint(dayOffset, avgDiastolic)
-                    }.sortedBy { it.dayOffset }
+                    recordsByDay
+                        .map { (dayOffset, dayRecords) ->
+                            val avgDiastolic = dayRecords.map { it.diastolicMmHg }.average().toFloat()
+                            DailyDataPoint(dayOffset, avgDiastolic)
+                        }.sortedBy { it.dayOffset }
                         .padToRange(range.days)
 
                 BloodPressureDetailUiState(
@@ -92,6 +96,6 @@ class BloodPressureDetailViewModel
             )
 
         fun onRangeSelected(range: TimeRange) {
-            _selectedRange.value = range
+            selectedRangeFlow.value = range
         }
     }

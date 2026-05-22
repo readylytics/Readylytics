@@ -2,7 +2,6 @@ package com.gregor.lauritz.healthdashboard.domain.repository
 
 import com.gregor.lauritz.healthdashboard.data.local.entity.WeightRecordEntity
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
 
 interface WeightRepository {
     suspend fun getByDateRange(
