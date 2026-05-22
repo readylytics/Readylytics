@@ -40,8 +40,8 @@ fun SleepArchitectureBar(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val deepColor = colorScheme.primary
+    val lightSleep = colorScheme.secondary
     val remColor = colorScheme.tertiary
-    val lightSleep = colorScheme.outline
     val awakeColor = colorScheme.error
     val surfaceVariant = colorScheme.surfaceVariant
     val outlineColor = colorScheme.outlineVariant

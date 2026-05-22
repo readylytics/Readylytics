@@ -1,5 +1,11 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
+import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -101,6 +107,29 @@ fun VicoChartTooltipOverlay(
 ) {
     var containerWidthPx by remember { mutableStateOf(0f) }
 
+    // Breathing halo animation on selection
+    val infiniteTransition = rememberInfiniteTransition(label = "vicoHaloTransition")
+    val haloRadiusCoeff by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 1.6f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(1200, easing = EaseInOutSine),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "vicoHaloRadiusCoeff",
+    )
+    val haloAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.15f,
+        targetValue = 0.4f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(1200, easing = EaseInOutSine),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "vicoHaloAlpha",
+    )
+
     Box(
         modifier =
             modifier
@@ -125,11 +154,11 @@ fun VicoChartTooltipOverlay(
                     strokeWidth = 1.5.dp.toPx(),
                 )
 
-                // Concentric highlight circles (Material Design 3 style)
+                // Concentric highlight circles with breathing pulsing animation
                 drawCircle(
-                    color = primaryColor.copy(alpha = 0.2f),
+                    color = primaryColor.copy(alpha = haloAlpha),
                     center = Offset(tapX, tapY),
-                    radius = 8.dp.toPx(),
+                    radius = (8.dp.toPx() * haloRadiusCoeff),
                 )
                 drawCircle(
                     color = primaryColor,
