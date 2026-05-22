@@ -57,6 +57,7 @@ class SyncViewModel
 
         val userPreferences = settingsRepo.userPreferences
         val requiredPermissions = hcRepo.requiredPermissions
+        val allPermissions = hcRepo.allPermissions
         val isSyncing = foregroundSyncController.isSyncing
 
         private val _syncEvents = Channel<SyncEvent>()

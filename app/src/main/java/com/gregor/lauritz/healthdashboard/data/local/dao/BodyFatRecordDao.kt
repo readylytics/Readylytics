@@ -40,6 +40,9 @@ interface BodyFatRecordDao {
     @Query("SELECT * FROM body_fat_records ORDER BY timestampMs DESC LIMIT 1")
     suspend fun getLatest(): BodyFatRecordEntity?
 
+    @Query("SELECT * FROM body_fat_records WHERE timestampMs <= :endMs ORDER BY timestampMs DESC LIMIT 1")
+    suspend fun getLatestUpTo(endMs: Long): BodyFatRecordEntity?
+
     @Upsert
     suspend fun upsertAll(records: List<BodyFatRecordEntity>)
 

@@ -40,6 +40,9 @@ interface BloodPressureRecordDao {
     @Query("SELECT * FROM blood_pressure_records ORDER BY timestampMs DESC LIMIT 1")
     suspend fun getLatest(): BloodPressureRecordEntity?
 
+    @Query("SELECT * FROM blood_pressure_records WHERE timestampMs <= :endMs ORDER BY timestampMs DESC LIMIT 1")
+    suspend fun getLatestUpTo(endMs: Long): BloodPressureRecordEntity?
+
     @Upsert
     suspend fun upsertAll(records: List<BloodPressureRecordEntity>)
 

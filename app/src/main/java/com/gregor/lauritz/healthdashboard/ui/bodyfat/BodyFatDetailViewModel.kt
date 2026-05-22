@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.bodyFatStatus
 import com.gregor.lauritz.healthdashboard.domain.repository.BodyFatRepository
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -24,6 +26,11 @@ data class BodyFatDetailUiState(
     val latestBodyFat: Float? = null,
     val latestDate: LocalDate? = null,
     val age: Int = 30,
+    val gender: String = "Unknown",
+    val optimalRangeMin: Float = 0f,
+    val optimalRangeMax: Float = 0f,
+    val bodyFatStatus: MetricStatus? = null,
+    val averageBodyFat: Float? = null,
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val dailyBodyFat: List<DailyDataPoint> = emptyList(),
     val rangeStartMs: Long = 0,
@@ -65,10 +72,18 @@ class BodyFatDetailViewModel
                             DailyDataPoint(dayOffset, record.bodyFatPercent)
                         }.padToRange(range.days)
 
+                val (optimalMin, optimalMax) = calculateOptimalRange(userPrefs.age, userPrefs.gender?.name ?: "Unknown")
+                val status = latest?.bodyFatPercent?.let { bodyFatStatus(it, optimalMax) }
+                val average = if (records.isNotEmpty()) records.map { it.bodyFatPercent }.average().toFloat() else null
                 BodyFatDetailUiState(
                     latestBodyFat = latest?.bodyFatPercent,
                     latestDate = latest?.timestampMs?.let { Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() },
                     age = userPrefs.age,
+                    gender = userPrefs.gender?.name ?: "Unknown",
+                    optimalRangeMin = optimalMin,
+                    optimalRangeMax = optimalMax,
+                    bodyFatStatus = status,
+                    averageBodyFat = average,
                     selectedRange = range,
                     dailyBodyFat = dailyBodyFat,
                     rangeStartMs = rangeStart.toEpochMilli(),
@@ -81,5 +96,27 @@ class BodyFatDetailViewModel
 
         fun onRangeSelected(range: TimeRange) {
             selectedRangeFlow.value = range
+        }
+
+        private fun calculateOptimalRange(
+            age: Int,
+            genderName: String,
+        ): Pair<Float, Float> {
+            val ageCoerced = age.coerceIn(1, 120)
+            return when (genderName) {
+                "MALE" ->
+                    when {
+                        ageCoerced in 20..40 -> Pair(0f, 19f)
+                        ageCoerced in 41..60 -> Pair(0f, 22f)
+                        else -> Pair(0f, 24f)
+                    }
+                "FEMALE" ->
+                    when {
+                        ageCoerced in 20..40 -> Pair(0f, 32f)
+                        ageCoerced in 41..60 -> Pair(0f, 34f)
+                        else -> Pair(0f, 36f)
+                    }
+                else -> Pair(0f, 30f)
+            }
         }
     }

@@ -9,7 +9,7 @@ object BodyFatDataMapper {
         BodyFatRecordEntity(
             id = "${record.metadata.id}_${record.time.toEpochMilli()}",
             timestampMs = record.time.toEpochMilli(),
-            bodyFatPercent = (record.percentage.value * 100f).toFloat(),
+            bodyFatPercent = record.percentage.value.toFloat(),
             deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
         )
 

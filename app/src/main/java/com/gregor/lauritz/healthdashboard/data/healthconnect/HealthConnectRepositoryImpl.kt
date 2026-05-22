@@ -39,14 +39,21 @@ class HealthConnectRepositoryImpl
                 HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
                 HealthPermission.getReadPermission(ExerciseSessionRecord::class),
                 HealthPermission.getReadPermission(StepsRecord::class),
-                HealthPermission.getReadPermission(WeightRecord::class),
-                HealthPermission.getReadPermission(BodyFatRecord::class),
-                HealthPermission.getReadPermission(BloodPressureRecord::class),
             )
 
         override val requiredPermissions: Set<String> =
             criticalPermissions +
                 setOf("android.permission.health.READ_HEALTH_DATA_HISTORY")
+
+        override val optionalPermissions: Set<String> =
+            setOf(
+                HealthPermission.getReadPermission(WeightRecord::class),
+                HealthPermission.getReadPermission(BodyFatRecord::class),
+                HealthPermission.getReadPermission(BloodPressureRecord::class),
+            )
+
+        override val allPermissions: Set<String> =
+            requiredPermissions + optionalPermissions
 
         private val client: HealthConnectClient by lazy {
             HealthConnectClient.getOrCreate(context)
@@ -215,8 +222,16 @@ class HealthConnectRepositoryImpl
             withContext(Dispatchers.IO) {
                 try {
                     readAllPages(from, to)
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                        "Weight record permission not granted: ${e.message}"
+                    }
+                    emptyList()
                 } catch (e: SecurityException) {
-                    throw HealthConnectPermissionRevokedException(e)
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                        "Weight record permission not granted: ${e.message}"
+                    }
+                    emptyList()
                 } catch (e: Exception) {
                     com.gregor.lauritz.healthdashboard.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading weight records"
@@ -232,8 +247,16 @@ class HealthConnectRepositoryImpl
             withContext(Dispatchers.IO) {
                 try {
                     readAllPages(from, to)
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                        "Body fat record permission not granted: ${e.message}"
+                    }
+                    emptyList()
                 } catch (e: SecurityException) {
-                    throw HealthConnectPermissionRevokedException(e)
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                        "Body fat record permission not granted: ${e.message}"
+                    }
+                    emptyList()
                 } catch (e: Exception) {
                     com.gregor.lauritz.healthdashboard.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading body fat records"
@@ -249,8 +272,16 @@ class HealthConnectRepositoryImpl
             withContext(Dispatchers.IO) {
                 try {
                     readAllPages(from, to)
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                        "Blood pressure record permission not granted: ${e.message}"
+                    }
+                    emptyList()
                 } catch (e: SecurityException) {
-                    throw HealthConnectPermissionRevokedException(e)
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                        "Blood pressure record permission not granted: ${e.message}"
+                    }
+                    emptyList()
                 } catch (e: Exception) {
                     com.gregor.lauritz.healthdashboard.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading blood pressure records"

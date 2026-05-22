@@ -107,6 +107,9 @@ fun TrendChart(
     metricName: String,
     baselineUnit: String,
     baseline: Float? = null,
+    baselineLabel: String = "Baseline",
+    baselineDecimalPlaces: Int = 0,
+    axisDecimalPlaces: Int = 0,
     showBaseline: Boolean = true,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
     zoomState: VicoZoomState =
@@ -157,7 +160,9 @@ fun TrendChart(
             if (values.isEmpty()) return@remember 0.0 to 0.0
             val lo = values.minOrNull() ?: 0f
             val hi = values.maxOrNull() ?: 0f
-            (lo * 0.9f).toDouble() to (hi * 1.1f).toDouble()
+            val scaledMin = lo * 0.9f
+            val scaledMax = hi * 1.1f
+            kotlin.math.floor(scaledMin).toDouble() to kotlin.math.ceil(scaledMax).toDouble()
         }
 
     val labelComponent = ChartDefaults.labelTextComponent()
@@ -243,7 +248,14 @@ fun TrendChart(
                     startAxis =
                         VerticalAxis.rememberStart(
                             label = labelComponent,
-                            valueFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() },
+                            valueFormatter =
+                                CartesianValueFormatter { _, value, _ ->
+                                    if (axisDecimalPlaces == 0) {
+                                        value.roundToInt().toString()
+                                    } else {
+                                        String.format("%.${axisDecimalPlaces}f", value)
+                                    }
+                                },
                             guideline = guidelineComponent,
                             title = { baselineUnit },
                             titleComponent = axisLabelComponent,
@@ -297,7 +309,9 @@ fun TrendChart(
         BaselineLegend(
             value = baselineValue,
             unit = baselineUnit,
+            label = baselineLabel,
             color = baselineColor,
+            decimalPlaces = baselineDecimalPlaces,
         )
     }
 }
@@ -306,7 +320,9 @@ fun TrendChart(
 fun BaselineLegend(
     value: Float,
     unit: String,
+    label: String = "Baseline",
     color: Color,
+    decimalPlaces: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -320,8 +336,14 @@ fun BaselineLegend(
                     .background(color),
         )
         Spacer(Modifier.width(8.dp))
+        val formattedValue =
+            if (decimalPlaces == 0) {
+                value.roundToInt().toString()
+            } else {
+                String.format("%.${decimalPlaces}f", value)
+            }
         Text(
-            text = "Baseline: ${value.roundToInt()} $unit",
+            text = "$label: $formattedValue $unit",
             style = MaterialTheme.typography.labelSmall,
             color = color,
         )

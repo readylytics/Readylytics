@@ -9,6 +9,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -21,32 +26,42 @@ fun HeightInputField(
     heightCm: Float?,
     onHeightChange: (Float?) -> Unit,
     modifier: Modifier = Modifier,
+    onHasErrorChange: (Boolean) -> Unit = {},
 ) {
-    val heightText = heightCm?.let { String.format(Locale.getDefault(), "%.0f", it) } ?: ""
-    val validation = SettingsValidators.HEIGHT_CM_RULE.validate(heightText)
-    val isError = heightText.isNotEmpty() && validation is ValidationResult.Invalid
+    var textState by remember(heightCm) {
+        mutableStateOf(heightCm?.let { String.format(Locale.getDefault(), "%.0f", it) } ?: "")
+    }
+
+    val validation = SettingsValidators.HEIGHT_CM_RULE.validate(textState)
+    val isError = textState.isNotEmpty() && validation is ValidationResult.Invalid
+
+    LaunchedEffect(isError) {
+        onHasErrorChange(isError)
+    }
 
     Column(modifier = modifier) {
         OutlinedTextField(
-            value = heightText,
+            value = textState,
             onValueChange = { newValue ->
-                if (newValue.isEmpty()) {
+                val filtered = newValue.filter { it.isDigit() }
+                textState = filtered
+                if (filtered.isEmpty()) {
                     onHeightChange(null)
                 } else {
-                    val validation = SettingsValidators.HEIGHT_CM_RULE.validate(newValue)
-                    if (validation is ValidationResult.Valid) {
-                        onHeightChange(newValue.toFloatOrNull())
+                    val validationResult = SettingsValidators.HEIGHT_CM_RULE.validate(filtered)
+                    if (validationResult is ValidationResult.Valid) {
+                        onHeightChange(filtered.toFloatOrNull())
                     }
                 }
             },
             label = { Text("Height") },
             suffix = { Text("cm") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             isError = isError,
             supportingText = {
                 if (isError) {
                     Text(
-                        validation.message,
+                        (validation as ValidationResult.Invalid).message,
                         color = MaterialTheme.colorScheme.error,
                     )
                 } else {

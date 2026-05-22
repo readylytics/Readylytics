@@ -1,10 +1,13 @@
 package com.gregor.lauritz.healthdashboard.domain.sync
 
+import com.gregor.lauritz.healthdashboard.data.local.dao.BloodPressureRecordDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepStageDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.WeightRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
@@ -35,6 +38,9 @@ class HealthSyncUseCaseTest {
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val scoringRepository = mockk<ScoringRepository>(relaxed = true)
     private val transactionRunner = mockk<TransactionRunner>(relaxed = true)
+    private val weightRecordDao = mockk<WeightRecordDao>(relaxed = true)
+    private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
+    private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
 
     private lateinit var useCase: HealthSyncUseCase
 
@@ -53,6 +59,9 @@ class HealthSyncUseCaseTest {
                 heartRateDao = heartRateDao,
                 hrvDao = hrvDao,
                 workoutDao = workoutDao,
+                weightRecordDao = weightRecordDao,
+                bodyFatRecordDao = bodyFatRecordDao,
+                bloodPressureRecordDao = bloodPressureRecordDao,
                 dailySummaryDao = dailySummaryDao,
                 settingsRepo = settingsRepo,
                 scoringRepository = scoringRepository,

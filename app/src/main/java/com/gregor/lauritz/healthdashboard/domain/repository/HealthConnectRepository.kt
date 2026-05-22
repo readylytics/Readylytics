@@ -28,6 +28,8 @@ sealed interface PermissionStatus {
 interface HealthConnectRepository {
     val criticalPermissions: Set<String>
     val requiredPermissions: Set<String>
+    val optionalPermissions: Set<String>
+    val allPermissions: Set<String>
 
     fun isAvailable(): Boolean
 

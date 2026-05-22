@@ -29,6 +29,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
+import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
@@ -84,59 +85,84 @@ fun BodyFatDetailScreen(
                     .fillMaxSize(),
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
-            item(key = "body_fat_info") {
-                TrendCard(
-                    title = "Current Body Fat",
-                    value =
-                        uiState.latestBodyFat?.let {
-                            String.format(Locale.getDefault(), "%.1f %%", it)
-                        } ?: "—",
-                    subtitle = "Age: ${uiState.age} years",
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            item(key = "ranges_info") {
-                TrendCard(
-                    title = "Optimal Ranges",
-                    value = "Age & Gender Based",
-                    subtitle = "Male 20-40: 8-19%\nFemale 20-40: 21-32%",
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            item(key = "time_range") {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    SingleChoiceSegmentedButtonRow {
-                        TimeRange.entries.forEachIndexed { index, range ->
-                            SegmentedButton(
-                                selected = uiState.selectedRange == range,
-                                onClick = { onRangeSelected(range) },
-                                shape = SegmentedButtonDefaults.itemShape(index, TimeRange.entries.size),
-                                label = { Text(range.label) },
-                            )
-                        }
+            if (uiState.optimalRangeMax > 0f) {
+                item(key = "score_dial") {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        M3ScoreDial(
+                            score = uiState.latestBodyFat,
+                            label = "Body Fat",
+                            maxScore = uiState.optimalRangeMax * 2f,
+                            status = uiState.bodyFatStatus,
+                            displayText =
+                                uiState.latestBodyFat?.let {
+                                    String.format(Locale.getDefault(), "%.1f%%", it)
+                                },
+                            tooltipDescription =
+                                "Optimal: 0-${String.format(
+                                    Locale.getDefault(),
+                                    "%.0f",
+                                    uiState.optimalRangeMax,
+                                )}%\n\n" +
+                                    "${uiState.gender}, Age ${uiState.age}",
+                        )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            item(key = "trend_chart") {
-                SectionHeader(title = "Body Fat Trend")
-                TrendChart(
-                    points = uiState.dailyBodyFat,
-                    rangeStartMs = uiState.rangeStartMs,
-                    rangeDays = uiState.selectedRange.days,
-                    metricName = "Body Fat",
-                    baselineUnit = "%",
-                    scrollState = chartScrollState,
-                    zoomState = chartZoomState,
-                    modifier = Modifier.fillMaxWidth().height(250.dp),
-                )
+            item(key = "trends_header") {
+                SectionHeader(title = "Trends")
+                Spacer(Modifier.height(8.dp))
+                SingleChoiceSegmentedButtonRow(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                ) {
+                    TimeRange.entries.forEachIndexed { index, range ->
+                        SegmentedButton(
+                            selected = uiState.selectedRange == range,
+                            onClick = { onRangeSelected(range) },
+                            shape =
+                                SegmentedButtonDefaults.itemShape(
+                                    index = index,
+                                    count = TimeRange.entries.size,
+                                ),
+                            label = { Text(range.label) },
+                        )
+                    }
+                }
             }
+
+            item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
+
+            item(key = "body_fat_chart") {
+                TrendCard(
+                    title = "Body Fat Trend",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                ) {
+                    TrendChart(
+                        points = uiState.dailyBodyFat,
+                        rangeStartMs = uiState.rangeStartMs,
+                        rangeDays = uiState.selectedRange.days,
+                        metricName = "Body Fat",
+                        baselineUnit = "%",
+                        baseline = uiState.averageBodyFat,
+                        baselineLabel = "Average",
+                        baselineDecimalPlaces = 1,
+                        axisDecimalPlaces = 1,
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
+                    )
+                }
+            }
+
+            item(key = "spacer_bottom") { Spacer(Modifier.height(16.dp)) }
         }
     }
 }

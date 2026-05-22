@@ -23,6 +23,7 @@ class OnboardingViewModel
             physiologyProfile: PhysiologyProfile,
             dynamicColorEnabled: Boolean,
             unitSystem: UnitSystem,
+            heightCm: Float?,
             onComplete: () -> Unit,
         ) {
             viewModelScope.launch {
@@ -31,6 +32,7 @@ class OnboardingViewModel
                 settingsRepo.updatePhysiologyProfile(physiologyProfile)
                 settingsRepo.updateDynamicColorEnabled(dynamicColorEnabled)
                 settingsRepo.updateUnitSystem(unitSystem)
+                settingsRepo.updateHeight(heightCm)
                 onComplete()
             }
         }

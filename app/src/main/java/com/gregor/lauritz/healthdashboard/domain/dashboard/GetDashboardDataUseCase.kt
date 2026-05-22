@@ -77,11 +77,9 @@ class GetDashboardDataUseCase
             metrics.strainRatioCard?.let { mapBuilder[CardId.STRAIN_RATIO] = it }
 
             // Add new health metrics
-            summary.weightKg?.let { mapBuilder[CardId.WEIGHT] = weightCard(summary, prefs) }
-            summary.bodyFatPercent?.let { mapBuilder[CardId.BODY_FAT] = bodyFatCard(summary, prefs) }
-            if (summary.bloodPressureSystolic != null && summary.bloodPressureDiastolic != null) {
-                mapBuilder[CardId.BLOOD_PRESSURE] = bloodPressureCard(summary)
-            }
+            mapBuilder[CardId.WEIGHT] = weightCard(summary, prefs)
+            mapBuilder[CardId.BODY_FAT] = bodyFatCard(summary, prefs)
+            mapBuilder[CardId.BLOOD_PRESSURE] = bloodPressureCard(summary)
 
             return mapBuilder.toMap()
         }
@@ -405,8 +403,8 @@ class GetDashboardDataUseCase
 
             return CardData(
                 title = "Body Fat",
-                value = String.format(Locale.getDefault(), "%.1f", bodyFatPercent),
-                unit = "%",
+                value = String.format(Locale.getDefault(), "%.1f%%", bodyFatPercent),
+                unit = "",
                 status = status,
                 action = DashboardAction.NAVIGATE_BODY_FAT,
                 tooltip = "Body fat percentage based on age and gender norms.",

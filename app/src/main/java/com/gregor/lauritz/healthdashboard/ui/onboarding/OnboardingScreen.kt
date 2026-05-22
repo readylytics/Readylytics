@@ -42,6 +42,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
 import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
+import com.gregor.lauritz.healthdashboard.ui.settings.HeightInputField
 import com.gregor.lauritz.healthdashboard.ui.settings.common.UnitSystemSelector
 import java.time.LocalDate
 
@@ -55,6 +56,7 @@ fun OnboardingScreen(
         physiologyProfile: PhysiologyProfile,
         dynamicColorEnabled: Boolean,
         unitSystem: UnitSystem,
+        heightCm: Float?,
     ) -> Unit,
     onOpenSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -183,6 +185,7 @@ private fun ProfileSetupScreen(
         physiologyProfile: PhysiologyProfile,
         dynamicColorEnabled: Boolean,
         unitSystem: UnitSystem,
+        heightCm: Float?,
     ) -> Unit,
     onOpenSettingsClick: () -> Unit,
 ) {
@@ -193,6 +196,8 @@ private fun ProfileSetupScreen(
     var physiologyProfile by remember { mutableStateOf(PhysiologyProfile.GENERAL) }
     var dynamicColorEnabled by remember { mutableStateOf(true) }
     var unitSystem by remember { mutableStateOf(UnitSystem.METRIC) }
+    var heightCm: Float? by remember { mutableStateOf(null) }
+    var heightHasError by remember { mutableStateOf(false) }
 
     Column(
         modifier =
@@ -294,6 +299,15 @@ private fun ProfileSetupScreen(
 
         Spacer(Modifier.height(16.dp))
 
+        HeightInputField(
+            heightCm = heightCm,
+            onHeightChange = { heightCm = it },
+            onHasErrorChange = { heightHasError = it },
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(16.dp))
+
         Text(
             text = "Appearance",
             style = MaterialTheme.typography.titleSmall,
@@ -349,7 +363,8 @@ private fun ProfileSetupScreen(
             dayInt in 1..31 &&
                 monthInt in 1..12 &&
                 yearInt != null &&
-                yearInt in 1900..LocalDate.now().year
+                yearInt in 1900..LocalDate.now().year &&
+                !heightHasError
 
         Button(
             onClick = {
@@ -361,6 +376,7 @@ private fun ProfileSetupScreen(
                     physiologyProfile,
                     dynamicColorEnabled,
                     unitSystem,
+                    heightCm,
                 )
             },
             modifier = Modifier.fillMaxWidth(),
