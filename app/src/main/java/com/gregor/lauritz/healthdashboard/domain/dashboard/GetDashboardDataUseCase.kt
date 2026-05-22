@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.domain.dashboard
 
 import com.gregor.lauritz.healthdashboard.R
+import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.calculation.HealthMetricsCalculator
 import com.gregor.lauritz.healthdashboard.domain.model.BloodPressureStatus
@@ -16,6 +17,7 @@ import com.gregor.lauritz.healthdashboard.domain.model.restingHrStatus
 import com.gregor.lauritz.healthdashboard.domain.model.rhrStatus
 import com.gregor.lauritz.healthdashboard.domain.model.sleepDurationStatus
 import com.gregor.lauritz.healthdashboard.domain.util.ResourceProvider
+import com.gregor.lauritz.healthdashboard.domain.util.UnitConverter
 import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
 import com.gregor.lauritz.healthdashboard.ui.dashboard.CardData
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardAction
@@ -331,11 +333,12 @@ class GetDashboardDataUseCase
             summary: DailySummary,
             prefs: UserPreferences,
         ): CardData {
+            val unitStr = if (prefs.unitSystem == UnitSystem.METRIC) "kg" else "lbs"
             val weightKg =
                 summary.weightKg ?: return CardData(
                     title = "Weight",
                     value = "—",
-                    unit = "kg",
+                    unit = unitStr,
                     status = MetricStatus.NEUTRAL,
                     tooltip = "Weight from Health Connect",
                 )
@@ -355,22 +358,23 @@ class GetDashboardDataUseCase
                     MetricStatus.NEUTRAL
                 }
 
-            val bmiText =
-                if (heightCm != null) {
-                    val bmi = HealthMetricsCalculator.calculateBmi(weightKg, heightCm)
-                    String.format(Locale.getDefault(), "BMI: %.1f", bmi)
+            val displayWeight =
+                if (prefs.unitSystem ==
+                    UnitSystem.METRIC
+                ) {
+                    weightKg
                 } else {
-                    "Height not set"
+                    weightKg * UnitConverter.KG_TO_LBS
                 }
 
             return CardData(
                 title = "Weight",
-                value = String.format(Locale.getDefault(), "%.1f", weightKg),
-                unit = "kg",
+                value = String.format(Locale.getDefault(), "%.1f", displayWeight),
+                unit = unitStr,
                 status = bmiStatus,
                 action = DashboardAction.NAVIGATE_WEIGHT,
-                tooltip = "Latest weight measurement. $bmiText",
-                secondaryText = bmiText,
+                tooltip = "Latest weight measurement.",
+                secondaryText = null,
             )
         }
 

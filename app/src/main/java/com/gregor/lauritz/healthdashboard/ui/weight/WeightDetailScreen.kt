@@ -1,7 +1,8 @@
 package com.gregor.lauritz.healthdashboard.ui.weight
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
@@ -85,76 +87,103 @@ fun WeightDetailScreen(
                     .fillMaxSize(),
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
-            item(key = "bmi_gauge") {
-                Box(
+            val bmiStatus =
+                uiState.bmi?.let { bmi ->
+                    when {
+                        bmi < 25f -> MetricStatus.OPTIMAL
+                        bmi < 30f -> MetricStatus.NEUTRAL
+                        bmi < 35f -> MetricStatus.WARNING
+                        else -> MetricStatus.POOR
+                    }
+                } ?: MetricStatus.CALIBRATING
+
+            item(key = "score_dials") {
+                Row(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                    contentAlignment = Alignment.Center,
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     M3ScoreDial(
-                        score =
-                            uiState.bmi
-                                ?.times(10)
-                                ?.toInt()
-                                ?.div(10f)
-                                ?.times(10f),
+                        score = uiState.latestWeight,
+                        label = "Weight",
+                        maxScore = 150f,
+                        status = bmiStatus,
+                        displayText = uiState.latestWeight?.let { String.format(Locale.getDefault(), "%.1f", it) },
+                        tooltipDescription = "Latest weight measurement.\nHeight: ${uiState.heightCm?.let {
+                            String
+                                .format(
+                                    Locale.getDefault(),
+                                    "%.0f cm",
+                                    it,
+                                )
+                        } ?: "—"}",
+                    )
+                    M3ScoreDial(
+                        score = uiState.bmi,
                         label = "BMI",
+                        maxScore = 40f,
+                        status = bmiStatus,
+                        displayText = uiState.bmi?.let { String.format(Locale.getDefault(), "%.1f", it) },
                         tooltipDescription =
-                            "Body Mass Index (50% = 20)\n\n" +
-                                "Under 25: Normal\n25-30: Overweight\n30+: Obese",
+                            "Body Mass Index (Normal: 18.5–24.9)\n\n" +
+                                "Under 25: Normal\n" +
+                                "25-30: Overweight\n" +
+                                "30+: Obese",
                     )
                 }
             }
 
-            item(key = "weight_info") {
-                TrendCard(
-                    title = "Current Weight",
-                    value =
-                        uiState.latestWeight?.let {
-                            String.format(Locale.getDefault(), "%.1f kg", it)
-                        } ?: "—",
-                    subtitle =
-                        uiState.heightCm?.let {
-                            "Height: ${String.format(Locale.getDefault(), "%.0f cm", it)}"
-                        } ?: "",
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            item(key = "time_range") {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center,
+            item(key = "trends_header") {
+                SectionHeader(title = "Trends")
+                Spacer(Modifier.height(8.dp))
+                SingleChoiceSegmentedButtonRow(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
                 ) {
-                    SingleChoiceSegmentedButtonRow {
-                        TimeRange.entries.forEachIndexed { index, range ->
-                            SegmentedButton(
-                                selected = uiState.selectedRange == range,
-                                onClick = { onRangeSelected(range) },
-                                shape = SegmentedButtonDefaults.itemShape(index, TimeRange.entries.size),
-                                label = { Text(range.label) },
-                            )
-                        }
+                    TimeRange.entries.forEachIndexed { index, range ->
+                        SegmentedButton(
+                            selected = uiState.selectedRange == range,
+                            onClick = { onRangeSelected(range) },
+                            shape =
+                                SegmentedButtonDefaults.itemShape(
+                                    index = index,
+                                    count = TimeRange.entries.size,
+                                ),
+                            label = { Text(range.label) },
+                        )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            item(key = "trend_chart") {
-                SectionHeader(title = "Weight Trend")
-                TrendChart(
-                    points = uiState.dailyWeights,
-                    rangeStartMs = uiState.rangeStartMs,
-                    rangeDays = uiState.selectedRange.days,
-                    metricName = "Weight",
-                    baselineUnit = "kg",
-                    scrollState = chartScrollState,
-                    zoomState = chartZoomState,
-                    modifier = Modifier.fillMaxWidth().height(250.dp),
-                )
+            item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
+
+            item(key = "weight_chart") {
+                TrendCard(
+                    title = "Weight Trend",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                ) {
+                    TrendChart(
+                        points = uiState.dailyWeights,
+                        rangeStartMs = uiState.rangeStartMs,
+                        rangeDays = uiState.selectedRange.days,
+                        metricName = "Weight",
+                        baselineUnit = "kg",
+                        baseline = uiState.averageWeight,
+                        baselineLabel = "Average",
+                        baselineDecimalPlaces = 1,
+                        axisDecimalPlaces = 1,
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
+                    )
+                }
             }
+
+            item(key = "spacer_bottom") { Spacer(Modifier.height(16.dp)) }
         }
     }
 }

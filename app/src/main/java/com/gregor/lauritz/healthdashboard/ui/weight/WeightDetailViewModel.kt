@@ -25,6 +25,7 @@ data class WeightDetailUiState(
     val latestDate: LocalDate? = null,
     val bmi: Float? = null,
     val heightCm: Float? = null,
+    val averageWeight: Float? = null,
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val dailyWeights: List<DailyDataPoint> = emptyList(),
     val rangeStartMs: Long = 0,
@@ -73,11 +74,14 @@ class WeightDetailViewModel
                         null
                     }
 
+                val average = if (records.isNotEmpty()) records.map { it.weightKg }.average().toFloat() else null
+
                 WeightDetailUiState(
                     latestWeight = latest?.weightKg,
                     latestDate = latest?.timestampMs?.let { Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() },
                     bmi = bmi,
                     heightCm = userPrefs.heightCm,
+                    averageWeight = average,
                     selectedRange = range,
                     dailyWeights = dailyWeights,
                     rangeStartMs = rangeStart.toEpochMilli(),
