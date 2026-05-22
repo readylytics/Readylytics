@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -21,6 +22,7 @@ class OnboardingViewModel
             gender: String?,
             physiologyProfile: PhysiologyProfile,
             dynamicColorEnabled: Boolean,
+            unitSystem: UnitSystem,
             onComplete: () -> Unit,
         ) {
             viewModelScope.launch {
@@ -28,6 +30,7 @@ class OnboardingViewModel
                 settingsRepo.updateGender(gender)
                 settingsRepo.updatePhysiologyProfile(physiologyProfile)
                 settingsRepo.updateDynamicColorEnabled(dynamicColorEnabled)
+                settingsRepo.updateUnitSystem(unitSystem)
                 onComplete()
             }
         }

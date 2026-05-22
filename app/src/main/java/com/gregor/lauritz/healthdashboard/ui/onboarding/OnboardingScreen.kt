@@ -39,8 +39,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
+import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
 import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
+import com.gregor.lauritz.healthdashboard.ui.settings.common.UnitSystemSelector
 import java.time.LocalDate
 
 @Composable
@@ -52,6 +54,7 @@ fun OnboardingScreen(
         gender: String,
         physiologyProfile: PhysiologyProfile,
         dynamicColorEnabled: Boolean,
+        unitSystem: UnitSystem,
     ) -> Unit,
     onOpenSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -179,6 +182,7 @@ private fun ProfileSetupScreen(
         gender: String,
         physiologyProfile: PhysiologyProfile,
         dynamicColorEnabled: Boolean,
+        unitSystem: UnitSystem,
     ) -> Unit,
     onOpenSettingsClick: () -> Unit,
 ) {
@@ -188,6 +192,7 @@ private fun ProfileSetupScreen(
     var gender by remember { mutableStateOf("Other") }
     var physiologyProfile by remember { mutableStateOf(PhysiologyProfile.GENERAL) }
     var dynamicColorEnabled by remember { mutableStateOf(true) }
+    var unitSystem by remember { mutableStateOf(UnitSystem.METRIC) }
 
     Column(
         modifier =
@@ -307,6 +312,21 @@ private fun ProfileSetupScreen(
         Spacer(Modifier.height(24.dp))
 
         Text(
+            text = "Measurement Units",
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+
+        UnitSystemSelector(
+            selectedUnit = unitSystem,
+            onUnitSelected = { unitSystem = it },
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        Text(
             text = "Health Connect Permissions",
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.fillMaxWidth(),
@@ -340,6 +360,7 @@ private fun ProfileSetupScreen(
                     gender,
                     physiologyProfile,
                     dynamicColorEnabled,
+                    unitSystem,
                 )
             },
             modifier = Modifier.fillMaxWidth(),

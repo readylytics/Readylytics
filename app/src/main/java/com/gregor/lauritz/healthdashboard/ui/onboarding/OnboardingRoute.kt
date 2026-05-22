@@ -43,7 +43,7 @@ fun OnboardingRoute(
         }
 
     OnboardingScreen(
-        onGrantPermissionsClick = { day, month, year, gender, physiologyProfile, dynamicColorEnabled ->
+        onGrantPermissionsClick = { day, month, year, gender, physiologyProfile, dynamicColorEnabled, unitSystem ->
             com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") {
                 "Grant Access clicked. Saving profile first..."
             }
@@ -54,6 +54,7 @@ fun OnboardingRoute(
                 gender = gender,
                 physiologyProfile = physiologyProfile,
                 dynamicColorEnabled = dynamicColorEnabled,
+                unitSystem = unitSystem,
                 onComplete = {
                     com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") {
                         "Profile saved. Launching HC permissions: $permissions"

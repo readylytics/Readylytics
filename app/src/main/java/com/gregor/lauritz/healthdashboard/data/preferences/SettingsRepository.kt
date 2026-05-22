@@ -179,6 +179,8 @@ class SettingsRepository
 
         suspend fun clearDeviceCache() = ui.clearDeviceCache()
 
+        suspend fun updateUnitSystem(unitSystem: UnitSystem) = ui.updateUnitSystem(unitSystem)
+
         suspend fun batchUpdate(block: UserPreferencesProto.Builder.() -> Unit) {
             dataStore.updateData { proto ->
                 proto.toBuilder().apply(block).build()

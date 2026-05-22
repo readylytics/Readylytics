@@ -87,6 +87,7 @@ data class UIState(
     val banisterMultiplier: Float = PhysiologyProfile.GENERAL.banisterMultiplier,
     val chengBeta: Float = PhysiologyProfile.GENERAL.defaultChengBeta,
     val itrimB: Float = PhysiologyProfile.GENERAL.defaultItrimB,
+    val unitSystem: com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem = SettingsDefaults.UNIT_SYSTEM,
 )
 
 data class SyncSettingsState(

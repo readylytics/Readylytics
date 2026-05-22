@@ -32,6 +32,11 @@ enum PhysiologyProfileProto {
     PROFILE_SHIFT_WORKER = 4;
 }
 
+enum UnitSystemProto {
+    UNIT_METRIC = 0;
+    UNIT_IMPERIAL = 1;
+}
+
 message UserPreferencesProto {
     float goal_sleep_hours = 1;
     
@@ -138,6 +143,8 @@ message UserPreferencesProto {
     }
 
     bool is_birthday_configured = 59;
+
+    UnitSystemProto unit_system = 62;
 }
 
 enum TrimpMethodProto {

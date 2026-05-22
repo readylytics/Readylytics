@@ -211,4 +211,8 @@ sealed interface SettingsEvent {
     ) : SettingsEvent
 
     data object ResetTrimpToProfileDefaults : SettingsEvent
+
+    data class UnitSystemChanged(
+        val unitSystem: com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem,
+    ) : SettingsEvent
 }

@@ -65,6 +65,7 @@ object SettingsDefaults {
     const val INSTALL_DATE = 0L // Set to System.currentTimeMillis() on first app run
     val CIRCADIAN_THRESHOLD_OVERRIDE: String? = null // null = use profile default
     val TRIMP_MODEL = TrimpModel.BANISTER
+    val UNIT_SYSTEM = UnitSystem.METRIC
 
     val DEFAULT_DASHBOARD_CARDS =
         listOf(
