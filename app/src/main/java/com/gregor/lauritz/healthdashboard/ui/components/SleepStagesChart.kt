@@ -50,7 +50,7 @@ private fun getStageColor(
 ): Color =
     when (stage) {
         SleepStage.DEEP -> colorScheme.primary
-        SleepStage.LIGHT -> colorScheme.tertiary.copy(alpha = 0.85f)
+        SleepStage.LIGHT -> colorScheme.secondary
         SleepStage.REM -> colorScheme.tertiary
         SleepStage.AWAKE -> colorScheme.error
     }
@@ -318,41 +318,9 @@ fun SleepStagesChart(
                     )
                 }
 
-                // 3. Draw thin semi-transparent transition connectors between stages
+                // 3. Draw horizontal capsules of consistent thickness for stages
                 val capsuleHeight = 12.dp.toPx()
                 val radius = capsuleHeight / 2f
-
-                mergedTimeline.zipWithNext().forEach { (currentStage, nextStage) ->
-                    val currentIndex = getStageLaneIndex(currentStage.stageType)
-                    val nextIndex = getStageLaneIndex(nextStage.stageType)
-
-                    val currentY = paddingY + currentIndex * laneSpacing
-                    val nextY = paddingY + nextIndex * laneSpacing
-
-                    val transitionX =
-                        ((currentStage.endTime - session.startTime).toFloat() / sessionDurationMs) * chartWidth
-
-                    val nextStageEnum =
-                        sleepStages.firstOrNull {
-                            it.type == nextStage.stageType
-                        } ?: SleepStage.LIGHT
-                    val nextColor = getStageColor(nextStageEnum, colorScheme)
-                    val connectorColor = nextColor.copy(alpha = 0.3f)
-                    val connectorStroke = 2.dp.toPx()
-
-                    // Bound vertical stem to capsule boundaries to prevent line bleed-through
-                    val startY = currentY + (if (nextY > currentY) radius else -radius)
-                    val endY = nextY + (if (currentY > nextY) radius else -radius)
-
-                    drawLine(
-                        color = connectorColor,
-                        start = Offset(transitionX, startY),
-                        end = Offset(transitionX, endY),
-                        strokeWidth = connectorStroke,
-                    )
-                }
-
-                // 4. Draw horizontal capsules of consistent thickness for stages
 
                 mergedTimeline.forEach { stageData ->
                     val stageIndex = getStageLaneIndex(stageData.stageType)
@@ -382,6 +350,65 @@ fun SleepStagesChart(
                         size = Size(width, capsuleHeight),
                         cornerRadius = CornerRadius(radius, radius),
                     )
+                }
+
+                // 4. Draw thin semi-transparent transition connectors between stages on top of capsules (prevents gaps)
+                mergedTimeline.zipWithNext().forEach { (currentStage, nextStage) ->
+                    val currentIndex = getStageLaneIndex(currentStage.stageType)
+                    val nextIndex = getStageLaneIndex(nextStage.stageType)
+
+                    val currentY = paddingY + currentIndex * laneSpacing
+                    val nextY = paddingY + nextIndex * laneSpacing
+
+                    val currentEndX =
+                        ((currentStage.endTime - session.startTime).toFloat() / sessionDurationMs) * chartWidth
+                    val nextStartX =
+                        ((nextStage.startTime - session.startTime).toFloat() / sessionDurationMs) * chartWidth
+
+                    val midX = (currentEndX + nextStartX) / 2f
+
+                    val nextStageEnum =
+                        sleepStages.firstOrNull {
+                            it.type == nextStage.stageType
+                        } ?: SleepStage.LIGHT
+                    val nextColor = getStageColor(nextStageEnum, colorScheme)
+                    val connectorColor = nextColor.copy(alpha = 0.3f)
+                    val connectorStroke = 2.dp.toPx()
+
+                    val startY = currentY
+                    val endY = nextY
+
+                    if (nextStartX > currentEndX) {
+                        // Draw horizontal connector on current lane
+                        drawLine(
+                            color = connectorColor,
+                            start = Offset(currentEndX, currentY),
+                            end = Offset(midX, currentY),
+                            strokeWidth = connectorStroke,
+                        )
+                        // Draw vertical stem at midX
+                        drawLine(
+                            color = connectorColor,
+                            start = Offset(midX, startY),
+                            end = Offset(midX, endY),
+                            strokeWidth = connectorStroke,
+                        )
+                        // Draw horizontal connector on next lane
+                        drawLine(
+                            color = connectorColor,
+                            start = Offset(midX, nextY),
+                            end = Offset(nextStartX, nextY),
+                            strokeWidth = connectorStroke,
+                        )
+                    } else {
+                        // Standard vertical transition at midX
+                        drawLine(
+                            color = connectorColor,
+                            start = Offset(midX, startY),
+                            end = Offset(midX, endY),
+                            strokeWidth = connectorStroke,
+                        )
+                    }
                 }
 
                 // 5. Draw glowing selected breathing halo for tapped segment
