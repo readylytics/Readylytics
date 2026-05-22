@@ -87,28 +87,30 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         html.outputLocation.set(layout.buildDirectory.dir("reports/jacoco/jacocoTestReport/html"))
     }
 
-    val fileFilter = listOf(
-        "**/R.class",
-        "**/R$*.class",
-        "**/BuildConfig.*",
-        "**/Manifest*.*",
-        "**/*Test*.*",
-        "android/**/*.*",
-        "**/hilt_aggregated_deps/**",
-        "**/*_HiltModules*",
-        "**/*_MembersInjector*",
-        "**/*Hilt_*",
-        "**/*_Factory*",
-        "**/Dagger*Component*.*",
-        "**/*ComposableSingletons*",
-        "**/*_Impl*",
-        "**/databinding/**",
-        "**/di/**",
-    )
+    val fileFilter =
+        listOf(
+            "**/R.class",
+            "**/R$*.class",
+            "**/BuildConfig.*",
+            "**/Manifest*.*",
+            "**/*Test*.*",
+            "android/**/*.*",
+            "**/hilt_aggregated_deps/**",
+            "**/*_HiltModules*",
+            "**/*_MembersInjector*",
+            "**/*Hilt_*",
+            "**/*_Factory*",
+            "**/Dagger*Component*.*",
+            "**/*ComposableSingletons*",
+            "**/*_Impl*",
+            "**/databinding/**",
+            "**/di/**",
+        )
 
-    val debugTree = fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
-        exclude(fileFilter)
-    }
+    val debugTree =
+        fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
+            exclude(fileFilter)
+        }
 
     val mainSrc = "${project.projectDir}/src/main/java"
 
@@ -124,18 +126,20 @@ tasks.register<JacocoReport>("jacocoTestReport") {
 tasks.register("jacocoCoverageVerification") {
     dependsOn("jacocoTestReport")
     doLast {
-        val reportFile = layout.buildDirectory
-            .file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
-            .get()
-            .asFile
+        val reportFile =
+            layout.buildDirectory
+                .file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
+                .get()
+                .asFile
         if (!reportFile.exists()) {
             throw GradleException("Coverage report not found: ${reportFile.absolutePath}")
         }
         val xml = reportFile.readText()
         // Parse missed/covered instruction counts from the BUNDLE counter
         val regex = Regex("""<counter type="INSTRUCTION" missed="(\d+)" covered="(\d+)"/>""")
-        val match = regex.findAll(xml).lastOrNull()
-            ?: throw GradleException("Could not parse coverage report")
+        val match =
+            regex.findAll(xml).lastOrNull()
+                ?: throw GradleException("Could not parse coverage report")
         val missed = match.groupValues[1].toLong()
         val covered = match.groupValues[2].toLong()
         val total = missed + covered

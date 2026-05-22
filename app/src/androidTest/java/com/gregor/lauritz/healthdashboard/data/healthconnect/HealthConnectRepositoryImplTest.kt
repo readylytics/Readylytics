@@ -1,14 +1,5 @@
 package com.gregor.lauritz.healthdashboard.data.healthconnect
 
-import androidx.health.connect.client.records.BloodPressureRecord
-import androidx.health.connect.client.records.BodyFatRecord
-import androidx.health.connect.client.records.ExerciseSessionRecord
-import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
-import androidx.health.connect.client.records.RestingHeartRateRecord
-import androidx.health.connect.client.records.SleepSessionRecord
-import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.records.WeightRecord
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectPermissionRevokedException
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository

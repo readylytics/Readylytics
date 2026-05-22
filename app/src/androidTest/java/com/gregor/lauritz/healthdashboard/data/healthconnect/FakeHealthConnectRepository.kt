@@ -279,8 +279,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             .values
             .sum()
 
-    private fun pagesFor(total: Int): Int =
-        if (total == 0) 0 else (total + pageSize - 1) / pageSize
+    private fun pagesFor(total: Int): Int = if (total == 0) 0 else (total + pageSize - 1) / pageSize
 
     /**
      * Build a typed list of [n] placeholder records. Tests only inspect [List.size];
