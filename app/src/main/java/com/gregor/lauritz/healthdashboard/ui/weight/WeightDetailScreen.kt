@@ -107,7 +107,7 @@ fun WeightDetailScreen(
                 val heightTooltip =
                     uiState.heightCm?.let { cm ->
                         if (uiState.unitSystem == UnitSystem.METRIC) {
-                            String.format(Locale.getDefault(), "%.0f cm", cm)
+                            String.format(Locale.US, "%.0f cm", cm)
                         } else {
                             val totalInches = cm / 2.54f
                             val feet = floor(totalInches / 12f).toInt()
@@ -133,7 +133,7 @@ fun WeightDetailScreen(
                         displayText =
                             uiState.latestWeight?.let {
                                 String.format(
-                                    Locale.getDefault(),
+                                    Locale.US,
                                     "%.1f %s",
                                     it,
                                     unitLabel,
@@ -146,7 +146,7 @@ fun WeightDetailScreen(
                         label = "BMI",
                         maxScore = 40f,
                         status = bmiStatus,
-                        displayText = uiState.bmi?.let { String.format(Locale.getDefault(), "%.1f", it) },
+                        displayText = uiState.bmi?.let { String.format(Locale.US, "%.1f", it) },
                         tooltipDescription =
                             "Body Mass Index (Normal: 18.5–24.9)\n\n" +
                                 "Under 25: Normal\n" +

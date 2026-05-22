@@ -101,11 +101,11 @@ fun BodyFatDetailScreen(
                             status = uiState.bodyFatStatus,
                             displayText =
                                 uiState.latestBodyFat?.let {
-                                    String.format(Locale.getDefault(), "%.1f%%", it)
+                                    String.format(Locale.US, "%.1f%%", it)
                                 },
                             tooltipDescription =
                                 "Optimal: 0-${String.format(
-                                    Locale.getDefault(),
+                                    Locale.US,
                                     "%.0f",
                                     uiState.optimalRangeMax,
                                 )}%\n\n" +
