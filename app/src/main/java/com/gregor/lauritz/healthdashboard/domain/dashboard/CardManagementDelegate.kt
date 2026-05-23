@@ -4,14 +4,15 @@ import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepo
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
  * Aggregated card-management UI state derived purely from upstream flows.
@@ -63,27 +64,22 @@ class CardManagementDelegate(
 ) {
     private val _isManagingCards = MutableStateFlow(false)
     private val _pendingConfigs = MutableStateFlow<List<CardConfiguration>?>(null)
+    private val _persistTrigger = MutableStateFlow<List<CardConfiguration>?>(null)
 
-    // Save-trigger flow; emissions cause the suspend persistence call to run
-    // inside the stateIn-bound pipeline (cancellation-safe, scope-bound).
-    private val saveTrigger = MutableSharedFlow<List<CardConfiguration>>(extraBufferCapacity = 1)
+    // Suspend persistence via repository. Called reactively on SaveChanges event.
+    private suspend fun persistConfigs(configs: List<CardConfiguration>) {
+        cardConfigRepository.updateDashboardCardConfigurations(configs)
+    }
 
-    /**
-     * Persistence pipeline. Hot, lifecycle-bound via stateIn(). When the parent
-     * scope is cancelled this flow stops collecting and the suspend persistence
-     * call is cancelled cooperatively — no leaked coroutine.
-     */
-    @Suppress("unused")
-    private val persistencePipeline: StateFlow<Unit> =
-        saveTrigger
-            .flatMapLatest { configs ->
-                flowOf(configs).onEach { cardConfigRepository.updateDashboardCardConfigurations(it) }
-            }.map { }
-            .stateIn(
-                scope = scope,
-                started = SharingStarted.Eagerly,
-                initialValue = Unit,
-            )
+    init {
+        scope.launch {
+            _persistTrigger
+                .filterNotNull()
+                .collect { configs ->
+                    persistConfigs(configs)
+                }
+        }
+    }
 
     /**
      * Aggregated state — derived via combine().stateIn() from the source flows.
@@ -93,7 +89,7 @@ class CardManagementDelegate(
             CardManagementState(isManagingCards = isManaging, pendingConfigs = pending)
         }.stateIn(
             scope = scope,
-            started = SharingStarted.WhileSubscribed(5_000),
+            started = SharingStarted.Lazily,
             initialValue = CardManagementState(),
         )
 
@@ -111,7 +107,9 @@ class CardManagementDelegate(
                 _isManagingCards.value = true
             }
             CardManagementEvent.SaveChanges -> {
-                _pendingConfigs.value?.let { saveTrigger.tryEmit(it) }
+                _pendingConfigs.value?.let { configs ->
+                    _persistTrigger.value = configs
+                }
                 _isManagingCards.value = false
                 _pendingConfigs.value = null
             }
