@@ -4,7 +4,6 @@ import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepo
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
