@@ -8,8 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -100,20 +99,18 @@ private fun IntensityBadge(
     status: MetricStatus,
     modifier: Modifier = Modifier,
 ) {
-    SuggestionChip(
-        onClick = {},
-        label = {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-            )
-        },
+    Surface(
         modifier = modifier,
-        colors = SuggestionChipDefaults.suggestionChipColors(
-            containerColor = status.containerColor(),
-            labelColor = status.onContainerColor(),
-        ),
-    )
+        shape = RoundedCornerShape(12.dp),
+        color = status.containerColor(),
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = status.onContainerColor(),
+        )
+    }
 }
 
 private fun WorkoutData.intensityLabel(): String =
