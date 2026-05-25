@@ -41,7 +41,7 @@ object ChartDefaults {
     @Composable
     fun guidelineComponent(): LineComponent =
         rememberLineComponent(
-            fill = Fill(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)),
+            fill = Fill(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)),
             thickness = 1.dp,
         )
 

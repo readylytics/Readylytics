@@ -36,7 +36,7 @@ fun MetricTooltip(
         Box(
             modifier =
                 Modifier
-                    .size(24.dp)
+                    .size(48.dp)
                     .clickable(
                         interactionSource = interactionSource,
                         indication = null,

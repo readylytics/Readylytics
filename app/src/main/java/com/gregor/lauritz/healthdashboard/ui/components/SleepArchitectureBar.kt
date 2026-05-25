@@ -93,6 +93,7 @@ fun SleepArchitectureBar(
                 }
 
             clipPath(clipRoundRect) {
+                val gapWidth = 1.dp.toPx()
                 var xOffset = 0f
                 segments.forEachIndexed { index, segment ->
                     val fraction = segment.minutes.toFloat() / totalMinutes
@@ -102,7 +103,7 @@ fun SleepArchitectureBar(
                         topLeft = Offset(xOffset, 0f),
                         size = Size(segmentWidth, barHeight),
                     )
-                    xOffset += segmentWidth
+                    xOffset += segmentWidth + gapWidth
                 }
             }
 

@@ -47,7 +47,7 @@ fun DateSwitcher(
         }
         Text(
             text = label,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleLarge,
         )
         IconButton(
             onClick = onNextDay,

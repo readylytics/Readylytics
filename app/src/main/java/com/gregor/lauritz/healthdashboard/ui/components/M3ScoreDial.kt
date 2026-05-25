@@ -84,7 +84,7 @@ fun M3ScoreDial(
                 if (scoreText.length >= 5) {
                     MaterialTheme.typography.headlineMedium
                 } else {
-                    MaterialTheme.typography.displaySmall
+                    MaterialTheme.typography.displayMedium
                 }
             Text(
                 text = scoreText,
@@ -93,7 +93,7 @@ fun M3ScoreDial(
             )
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (tooltipDescription != null) {
