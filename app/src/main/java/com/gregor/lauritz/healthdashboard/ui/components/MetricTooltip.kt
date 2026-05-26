@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material.ripple.ripple
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Icon
@@ -40,7 +39,6 @@ fun MetricTooltip(
                     .size(48.dp)
                     .clickable(
                         interactionSource = interactionSource,
-                        indication = ripple(bounded = false, radius = 20.dp),
                         onClick = { showPopup = true },
                     ),
             contentAlignment = Alignment.Center,
