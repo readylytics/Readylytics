@@ -34,4 +34,9 @@ interface HeartRateRepository {
     ): List<HeartRateRecordData>
 
     fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordData>>
+
+    fun observeByTimeRange(
+        startMs: Long,
+        endMs: Long,
+    ): Flow<List<HeartRateRecordData>>
 }

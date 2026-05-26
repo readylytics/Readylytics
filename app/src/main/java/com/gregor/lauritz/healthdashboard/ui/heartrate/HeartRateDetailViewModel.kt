@@ -2,10 +2,10 @@ package com.gregor.lauritz.healthdashboard.ui.heartrate
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.heartrate.HrZoneClassifier
+import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,7 +22,7 @@ import javax.inject.Inject
 class HeartRateDetailViewModel
     @Inject
     constructor(
-        private val heartRateDao: HeartRateDao,
+        private val heartRateRepository: HeartRateRepository,
         private val settingsRepository: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
     ) : ViewModel() {
@@ -42,7 +42,7 @@ class HeartRateDetailViewModel
                             .toInstant()
                             .toEpochMilli()
 
-                    heartRateDao.observeByTimeRange(startMs, endMs).map { entities ->
+                    heartRateRepository.observeByTimeRange(startMs, endMs).map { entities ->
                         if (entities.isEmpty()) {
                             return@map HeartRateDetailUiState(
                                 selectedDate = date,

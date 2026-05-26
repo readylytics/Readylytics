@@ -3,7 +3,6 @@ package com.gregor.lauritz.healthdashboard.ui.dashboard
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
-import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
@@ -18,6 +17,7 @@ import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.model.SleepSessionSummary
 import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
+import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
@@ -48,7 +48,7 @@ class DashboardViewModel
         private val cardConfigRepository: CardConfigurationRepository,
         private val circadianRepo: CircadianConsistencyRepository,
         private val dailyMetricCache: DailyMetricCache,
-        private val heartRateDao: HeartRateDao,
+        private val heartRateRepository: HeartRateRepository,
     ) : BaseViewModel() {
         fun validateSelectedDate(date: LocalDate): Result<LocalDate> =
             if (date <= LocalDate.now()) {
@@ -56,7 +56,6 @@ class DashboardViewModel
             } else {
                 Result.failure("Cannot select future dates", "INVALID_DATE")
             }
-
 
         private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
 
@@ -77,7 +76,7 @@ class DashboardViewModel
                     dailySummaryRepository,
                 ),
                 createDashboardRealtimeStateFlow(foregroundSyncController),
-                createDashboardHrFlow(selectedDateRepository.selectedDate, heartRateDao),
+                createDashboardHrFlow(selectedDateRepository.selectedDate, heartRateRepository),
             ) { basicInputs, cardState, realtimeState, hrSummary ->
                 val combined =
                     DashboardCombinedInputs(

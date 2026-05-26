@@ -1,13 +1,13 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
 import androidx.compose.runtime.Immutable
-import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardManagementDelegate
 import com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
@@ -210,7 +210,7 @@ data class DashboardCombinedInputs(
 @OptIn(ExperimentalCoroutinesApi::class)
 fun createDashboardHrFlow(
     selectedDate: Flow<LocalDate>,
-    heartRateDao: HeartRateDao,
+    heartRateRepository: HeartRateRepository,
 ): Flow<HeartRateDaySummary?> =
     selectedDate.flatMapLatest { date ->
         val zoneId = ZoneId.systemDefault()
@@ -221,7 +221,7 @@ fun createDashboardHrFlow(
                 .atStartOfDay(zoneId)
                 .toInstant()
                 .toEpochMilli()
-        heartRateDao.observeByTimeRange(startMs, endMs).map { entities ->
+        heartRateRepository.observeByTimeRange(startMs, endMs).map { entities ->
             if (entities.isEmpty()) return@map null
             // entities already sorted ASC by the DAO query; single pass for stats
             var minBpm = Int.MAX_VALUE
