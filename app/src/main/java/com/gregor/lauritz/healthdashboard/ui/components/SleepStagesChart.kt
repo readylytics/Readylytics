@@ -304,6 +304,7 @@ fun SleepStagesChart(
                     }
 
                     // 2. Stage shapes — full-height fills with 4dp vertical inset and 6dp corners
+                    val minShapeWidthPx = with(density) { 4.dp.toPx() }
                     mergedTimeline.forEach { stageData ->
                         val laneIndex = getStageLaneIndex(stageData.stageType)
                         val shapeTop = laneIndex * laneHeightPx + insetPx
@@ -313,8 +314,7 @@ fun SleepStagesChart(
                         val endFraction =
                             (stageData.endTime - session.startTime).toFloat() / sessionDurationMs
                         val startX = startFraction * canvasWidth
-                        val minWidthPx = with(density) { 4.dp.toPx() }
-                        val shapeWidth = ((endFraction - startFraction) * canvasWidth).coerceAtLeast(minWidthPx)
+                        val shapeWidth = ((endFraction - startFraction) * canvasWidth).coerceAtLeast(minShapeWidthPx)
 
                         drawRoundRect(
                             color = getStageColor(stageData.stageType, colorScheme),
