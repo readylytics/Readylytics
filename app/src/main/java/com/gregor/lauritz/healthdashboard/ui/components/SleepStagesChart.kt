@@ -77,10 +77,11 @@ private fun mergeConsecutiveStages(stages: List<SleepStageData>): List<SleepStag
     for (i in 1 until stages.size) {
         val next = stages[i]
         if (next.stageType == current.stageType) {
-            current = current.copy(
-                endTime = next.endTime,
-                durationMinutes = current.durationMinutes + next.durationMinutes,
-            )
+            current =
+                current.copy(
+                    endTime = next.endTime,
+                    durationMinutes = current.durationMinutes + next.durationMinutes,
+                )
         } else {
             merged.add(current)
             current = next
@@ -90,23 +91,32 @@ private fun mergeConsecutiveStages(stages: List<SleepStageData>): List<SleepStag
     return merged
 }
 
-private fun getLabelTimestamps(startMs: Long, endMs: Long): List<Long> {
+private fun getLabelTimestamps(
+    startMs: Long,
+    endMs: Long,
+): List<Long> {
     val sessionDurationMinutes = (endMs - startMs) / 60_000L
     if (sessionDurationMinutes <= 0L) return emptyList()
 
     val durationHours = sessionDurationMinutes / 60f
-    val intervalMinutes = when {
-        durationHours <= 4 -> 60
-        durationHours <= 8 -> 120
-        else -> 180
-    }
+    val intervalMinutes =
+        when {
+            durationHours <= 4 -> 60
+            durationHours <= 8 -> 120
+            else -> 180
+        }
 
     val timestamps = mutableListOf<Long>()
     timestamps.add(startMs)
 
     val zoneId = ZoneId.systemDefault()
     val startZDT = Instant.ofEpochMilli(startMs).atZone(zoneId)
-    var currentZDT = startZDT.plusHours(1).withMinute(0).withSecond(0).withNano(0)
+    var currentZDT =
+        startZDT
+            .plusHours(1)
+            .withMinute(0)
+            .withSecond(0)
+            .withNano(0)
 
     while (currentZDT.toInstant().toEpochMilli() < endMs - (intervalMinutes * 30_000L)) {
         val ts = currentZDT.toInstant().toEpochMilli()
@@ -133,14 +143,18 @@ private fun formatStageDuration(minutes: Int): String {
     return if (h > 0) "${h}h ${m}m" else "${m}m"
 }
 
-private data class LaneInfo(val stageType: String, val label: String)
-
-private val LANES = listOf(
-    LaneInfo(SleepStageType.AWAKE.value, "Awake"),
-    LaneInfo(SleepStageType.REM.value, "REM"),
-    LaneInfo(SleepStageType.LIGHT.value, "Light"),
-    LaneInfo(SleepStageType.DEEP.value, "Deep"),
+private data class LaneInfo(
+    val stageType: String,
+    val label: String,
 )
+
+private val LANES =
+    listOf(
+        LaneInfo(SleepStageType.AWAKE.value, "Awake"),
+        LaneInfo(SleepStageType.REM.value, "REM"),
+        LaneInfo(SleepStageType.LIGHT.value, "Light"),
+        LaneInfo(SleepStageType.DEEP.value, "Deep"),
+    )
 
 @Composable
 fun SleepStagesChart(
@@ -162,32 +176,37 @@ fun SleepStagesChart(
     }
 
     val colorScheme = MaterialTheme.colorScheme
-    val timeFormatter = remember {
-        DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault())
-    }
+    val timeFormatter =
+        remember {
+            DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault())
+        }
 
     val sessionDurationMs = (session.endTime - session.startTime).coerceAtLeast(1L)
     val needsScroll = sessionDurationMs > NINE_HOURS_MS
     val scaleFactor = if (needsScroll) sessionDurationMs.toFloat() / NINE_HOURS_MS.toFloat() else 1f
 
-    val labelTimestamps = remember(session.startTime, session.endTime) {
-        getLabelTimestamps(session.startTime, session.endTime)
-    }
+    val labelTimestamps =
+        remember(session.startTime, session.endTime) {
+            getLabelTimestamps(session.startTime, session.endTime)
+        }
     val sortedTimeline = remember(stageTimeline) { stageTimeline.sortedBy { it.startTime } }
     val mergedTimeline = remember(sortedTimeline) { mergeConsecutiveStages(sortedTimeline) }
-    val stageDurations = remember(stageTimeline) {
-        stageTimeline.groupBy { it.stageType }
-            .mapValues { (_, stages) -> stages.sumOf { it.durationMinutes } }
-    }
+    val stageDurations =
+        remember(stageTimeline) {
+            stageTimeline
+                .groupBy { it.stageType }
+                .mapValues { (_, stages) -> stages.sumOf { it.durationMinutes } }
+        }
 
     Row(modifier = modifier.fillMaxWidth()) {
         // Left column: fixed-width lane labels with stage name + duration
         Column(modifier = Modifier.width(LABEL_WIDTH)) {
             LANES.forEach { lane ->
                 Column(
-                    modifier = Modifier
-                        .height(LANE_HEIGHT)
-                        .fillMaxWidth(),
+                    modifier =
+                        Modifier
+                            .height(LANE_HEIGHT)
+                            .fillMaxWidth(),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.Start,
                 ) {
@@ -215,49 +234,54 @@ fun SleepStagesChart(
             val chartWidth = if (needsScroll) naturalWidth * scaleFactor else naturalWidth
 
             Column(
-                modifier = if (needsScroll) {
-                    Modifier.horizontalScroll(scrollState)
-                } else {
-                    Modifier
-                },
+                modifier =
+                    if (needsScroll) {
+                        Modifier.horizontalScroll(scrollState)
+                    } else {
+                        Modifier
+                    },
             ) {
                 Canvas(
-                    modifier = Modifier
-                        .width(chartWidth)
-                        .height(CHART_TOTAL_HEIGHT)
-                        .testTag("SleepStagesChartCanvas")
-                        .detectCanvasTap(
-                            segments = remember(mergedTimeline, session.startTime, sessionDurationMs) {
-                                mergedTimeline.mapIndexed { index, stageData ->
-                                    val startFraction =
-                                        (stageData.startTime - session.startTime).toFloat() / sessionDurationMs
-                                    val endFraction =
-                                        (stageData.endTime - session.startTime).toFloat() / sessionDurationMs
-                                    SegmentHitBox(
-                                        index = index,
-                                        xStart = startFraction,
-                                        xEnd = endFraction,
-                                        label = stageData.stageType,
-                                    )
-                                }
-                            },
-                            onSegmentTapped = { index, _, tapOffset ->
-                                activeSegmentIndex = index
-                                val tappedStage = mergedTimeline[index]
-                                val valueText = "${tappedStage.durationMinutes} min"
-                                val dateText =
-                                    timeFormatter.format(Instant.ofEpochMilli(tappedStage.startTime))
-                                val labelWidthPx = with(density) { LABEL_WIDTH.roundToPx() }
-                                tooltipState = DataPointTooltipData(
-                                    valueText = valueText,
-                                    dateText = dateText,
-                                    offset = androidx.compose.ui.unit.IntOffset(
-                                        x = tapOffset.x.toInt() - scrollState.value + labelWidthPx,
-                                        y = tapOffset.y.toInt(),
-                                    ),
-                                )
-                            },
-                        ),
+                    modifier =
+                        Modifier
+                            .width(chartWidth)
+                            .height(CHART_TOTAL_HEIGHT)
+                            .testTag("SleepStagesChartCanvas")
+                            .detectCanvasTap(
+                                segments =
+                                    remember(mergedTimeline, session.startTime, sessionDurationMs) {
+                                        mergedTimeline.mapIndexed { index, stageData ->
+                                            val startFraction =
+                                                (stageData.startTime - session.startTime).toFloat() / sessionDurationMs
+                                            val endFraction =
+                                                (stageData.endTime - session.startTime).toFloat() / sessionDurationMs
+                                            SegmentHitBox(
+                                                index = index,
+                                                xStart = startFraction,
+                                                xEnd = endFraction,
+                                                label = stageData.stageType,
+                                            )
+                                        }
+                                    },
+                                onSegmentTapped = { index, _, tapOffset ->
+                                    activeSegmentIndex = index
+                                    val tappedStage = mergedTimeline[index]
+                                    val valueText = "${tappedStage.durationMinutes} min"
+                                    val dateText =
+                                        timeFormatter.format(Instant.ofEpochMilli(tappedStage.startTime))
+                                    val labelWidthPx = with(density) { LABEL_WIDTH.roundToPx() }
+                                    tooltipState =
+                                        DataPointTooltipData(
+                                            valueText = valueText,
+                                            dateText = dateText,
+                                            offset =
+                                                androidx.compose.ui.unit.IntOffset(
+                                                    x = tapOffset.x.toInt() + labelWidthPx,
+                                                    y = tapOffset.y.toInt(),
+                                                ),
+                                        )
+                                },
+                            ),
                 ) {
                     val canvasWidth = size.width
                     val laneHeightPx = with(density) { LANE_HEIGHT.toPx() }
@@ -265,7 +289,7 @@ fun SleepStagesChart(
                     val cornerPx = with(density) { SHAPE_CORNER.toPx() }
                     val strokePx = with(density) { 1.dp.toPx() }
 
-                    if (session.endTime - session.startTime == 0L) return@Canvas
+                    if (session.endTime <= session.startTime) return@Canvas
 
                     // 1. Dividers between lanes (not at top/bottom chart edges)
                     val dividerColor = colorScheme.onSurface.copy(alpha = 0.08f)
@@ -302,22 +326,23 @@ fun SleepStagesChart(
 
                     // 3. Vertical connector lines at stage transitions between different lanes
                     val connectorColor = colorScheme.onSurface.copy(alpha = 0.20f)
-                    mergedTimeline.zipWithNext().forEach { (current, next) ->
+                    for (i in 0 until mergedTimeline.size - 1) {
+                        val current = mergedTimeline[i]
+                        val next = mergedTimeline[i + 1]
                         val currentLaneIndex = getStageLaneIndex(current.stageType)
                         val nextLaneIndex = getStageLaneIndex(next.stageType)
-                        if (currentLaneIndex == nextLaneIndex) return@forEach
-
-                        val transitionX =
-                            (current.endTime - session.startTime).toFloat() / sessionDurationMs * canvasWidth
-                        val currentCenter = (currentLaneIndex + 0.5f) * laneHeightPx
-                        val nextCenter = (nextLaneIndex + 0.5f) * laneHeightPx
-
-                        drawLine(
-                            color = connectorColor,
-                            start = Offset(transitionX, currentCenter),
-                            end = Offset(transitionX, nextCenter),
-                            strokeWidth = strokePx,
-                        )
+                        if (currentLaneIndex != nextLaneIndex) {
+                            val transitionX =
+                                (current.endTime - session.startTime).toFloat() / sessionDurationMs * canvasWidth
+                            val currentCenter = (currentLaneIndex + 0.5f) * laneHeightPx
+                            val nextCenter = (nextLaneIndex + 0.5f) * laneHeightPx
+                            drawLine(
+                                color = connectorColor,
+                                start = Offset(transitionX, currentCenter),
+                                end = Offset(transitionX, nextCenter),
+                                strokeWidth = strokePx,
+                            )
+                        }
                     }
                 }
 
@@ -331,13 +356,14 @@ fun SleepStagesChart(
                             text = timeFormatter.format(Instant.ofEpochMilli(ts)),
                             style = MaterialTheme.typography.labelSmall,
                             color = colorScheme.onSurfaceVariant,
-                            modifier = Modifier.layout { measurable, constraints ->
-                                val placeable = measurable.measure(constraints)
-                                layout(constraints.maxWidth, placeable.height) {
-                                    val x = (fraction * constraints.maxWidth).toInt()
-                                    placeable.placeRelative(x - placeable.width / 2, 0)
-                                }
-                            },
+                            modifier =
+                                Modifier.layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints)
+                                    layout(constraints.maxWidth, placeable.height) {
+                                        val x = (fraction * constraints.maxWidth).toInt()
+                                        placeable.placeRelative(x - placeable.width / 2, 0)
+                                    }
+                                },
                         )
                     }
                 }
@@ -364,33 +390,35 @@ fun SleepStagesChartPreview() {
     val startTime = 1716159600000L // 2024-05-20 01:00:00 UTC
     val endTime = 1716188400000L // 2024-05-20 09:00:00 UTC
 
-    val session = SleepSessionData(
-        id = "session1",
-        startTime = startTime,
-        endTime = endTime,
-        durationMinutes = 8 * 60,
-        efficiency = 0.9f,
-        deepSleepMinutes = 60,
-        remSleepMinutes = 60,
-        lightSleepMinutes = 300,
-        awakeMinutes = 60,
-        sleepScore = 85f,
-        startZoneOffsetSeconds = 0,
-        endZoneOffsetSeconds = 0,
-        deviceName = "Preview Device",
-    )
+    val session =
+        SleepSessionData(
+            id = "session1",
+            startTime = startTime,
+            endTime = endTime,
+            durationMinutes = 8 * 60,
+            efficiency = 0.9f,
+            deepSleepMinutes = 60,
+            remSleepMinutes = 60,
+            lightSleepMinutes = 300,
+            awakeMinutes = 60,
+            sleepScore = 85f,
+            startZoneOffsetSeconds = 0,
+            endZoneOffsetSeconds = 0,
+            deviceName = "Preview Device",
+        )
 
-    val stageTimeline = listOf(
-        SleepStageData(SleepStageType.AWAKE.value, startTime, startTime + 15 * 60_000L, 15),
-        SleepStageData(SleepStageType.LIGHT.value, startTime + 15 * 60_000L, startTime + 60 * 60_000L, 45),
-        SleepStageData(SleepStageType.DEEP.value, startTime + 60 * 60_000L, startTime + 120 * 60_000L, 60),
-        SleepStageData(SleepStageType.REM.value, startTime + 120 * 60_000L, startTime + 150 * 60_000L, 30),
-        SleepStageData(SleepStageType.LIGHT.value, startTime + 150 * 60_000L, startTime + 270 * 60_000L, 120),
-        SleepStageData(SleepStageType.DEEP.value, startTime + 270 * 60_000L, startTime + 330 * 60_000L, 60),
-        SleepStageData(SleepStageType.REM.value, startTime + 330 * 60_000L, startTime + 360 * 60_000L, 30),
-        SleepStageData(SleepStageType.LIGHT.value, startTime + 360 * 60_000L, startTime + 470 * 60_000L, 110),
-        SleepStageData(SleepStageType.AWAKE.value, startTime + 470 * 60_000L, startTime + 480 * 60_000L, 10),
-    )
+    val stageTimeline =
+        listOf(
+            SleepStageData(SleepStageType.AWAKE.value, startTime, startTime + 15 * 60_000L, 15),
+            SleepStageData(SleepStageType.LIGHT.value, startTime + 15 * 60_000L, startTime + 60 * 60_000L, 45),
+            SleepStageData(SleepStageType.DEEP.value, startTime + 60 * 60_000L, startTime + 120 * 60_000L, 60),
+            SleepStageData(SleepStageType.REM.value, startTime + 120 * 60_000L, startTime + 150 * 60_000L, 30),
+            SleepStageData(SleepStageType.LIGHT.value, startTime + 150 * 60_000L, startTime + 270 * 60_000L, 120),
+            SleepStageData(SleepStageType.DEEP.value, startTime + 270 * 60_000L, startTime + 330 * 60_000L, 60),
+            SleepStageData(SleepStageType.REM.value, startTime + 330 * 60_000L, startTime + 360 * 60_000L, 30),
+            SleepStageData(SleepStageType.LIGHT.value, startTime + 360 * 60_000L, startTime + 470 * 60_000L, 110),
+            SleepStageData(SleepStageType.AWAKE.value, startTime + 470 * 60_000L, startTime + 480 * 60_000L, 10),
+        )
 
     MaterialTheme {
         SleepStagesChart(

@@ -130,13 +130,15 @@ fun SleepDetailScreen(
 
             item {
                 ElevatedCard(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .fillMaxWidth(),
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 16.dp)
+                            .fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    ),
+                    colors =
+                        CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        ),
                     elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
