@@ -115,6 +115,11 @@ fun PaiWeeklyBar(
                 fontWeight = FontWeight.Bold,
                 color = fillColor,
             )
+            Text(
+                text = status.name,
+                style = MaterialTheme.typography.labelSmall,
+                color = fillColor,
+            )
         }
 
         Spacer(Modifier.height(8.dp))

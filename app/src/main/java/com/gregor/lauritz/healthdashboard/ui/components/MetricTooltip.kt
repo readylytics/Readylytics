@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalIndication
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,6 +40,7 @@ fun MetricTooltip(
                     .size(48.dp)
                     .clickable(
                         interactionSource = interactionSource,
+                        indication = LocalIndication.current,
                         onClick = { showPopup = true },
                     ),
             contentAlignment = Alignment.Center,

@@ -94,8 +94,8 @@ fun SleepArchitectureBar(
 
             clipPath(clipRoundRect) {
                 val gapWidth = 1.dp.toPx()
-                val activeSegments = segments.filter { it.minutes > 0 }
-                val totalGapWidth = (activeSegments.size - 1).coerceAtLeast(0) * gapWidth
+                val activeSegmentsCount = segments.count { it.minutes > 0 }
+                val totalGapWidth = (activeSegmentsCount - 1).coerceAtLeast(0) * gapWidth
                 val availableWidth = (totalWidth - totalGapWidth).coerceAtLeast(0f)
 
                 var xOffset = 0f
