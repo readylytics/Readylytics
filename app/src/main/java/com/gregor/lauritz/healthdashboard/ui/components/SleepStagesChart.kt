@@ -247,11 +247,12 @@ fun SleepStagesChart(
                                 val valueText = "${tappedStage.durationMinutes} min"
                                 val dateText =
                                     timeFormatter.format(Instant.ofEpochMilli(tappedStage.startTime))
+                                val labelWidthPx = with(density) { LABEL_WIDTH.roundToPx() }
                                 tooltipState = DataPointTooltipData(
                                     valueText = valueText,
                                     dateText = dateText,
                                     offset = androidx.compose.ui.unit.IntOffset(
-                                        x = tapOffset.x.toInt(),
+                                        x = tapOffset.x.toInt() - scrollState.value + labelWidthPx,
                                         y = tapOffset.y.toInt(),
                                     ),
                                 )
@@ -288,9 +289,8 @@ fun SleepStagesChart(
                         val endFraction =
                             (stageData.endTime - session.startTime).toFloat() / sessionDurationMs
                         val startX = startFraction * canvasWidth
-                        val shapeWidth = (endFraction - startFraction) * canvasWidth
-
-                        if (shapeWidth <= 0f) return@forEach
+                        val minWidthPx = with(density) { 4.dp.toPx() }
+                        val shapeWidth = ((endFraction - startFraction) * canvasWidth).coerceAtLeast(minWidthPx)
 
                         drawRoundRect(
                             color = getStageColor(stageData.stageType, colorScheme),
