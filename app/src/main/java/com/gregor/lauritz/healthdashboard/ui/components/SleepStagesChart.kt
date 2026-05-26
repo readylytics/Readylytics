@@ -27,8 +27,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.SleepStageType
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
@@ -137,23 +139,28 @@ private fun getLabelTimestamps(
     return timestamps.distinct()
 }
 
+@Composable
 private fun formatStageDuration(minutes: Int): String {
     val h = minutes / 60
     val m = minutes % 60
-    return if (h > 0) "${h}h ${m}m" else "${m}m"
+    return if (h > 0) {
+        stringResource(R.string.sleep_duration_hours_minutes, h, m)
+    } else {
+        stringResource(R.string.sleep_duration_minutes_only, m)
+    }
 }
 
 private data class LaneInfo(
     val stageType: String,
-    val label: String,
+    val labelResId: Int,
 )
 
 private val LANES =
     listOf(
-        LaneInfo(SleepStageType.AWAKE.value, "Awake"),
-        LaneInfo(SleepStageType.REM.value, "REM"),
-        LaneInfo(SleepStageType.LIGHT.value, "Light"),
-        LaneInfo(SleepStageType.DEEP.value, "Deep"),
+        LaneInfo(SleepStageType.AWAKE.value, R.string.sleep_stage_awake),
+        LaneInfo(SleepStageType.REM.value, R.string.sleep_stage_rem),
+        LaneInfo(SleepStageType.LIGHT.value, R.string.sleep_stage_light),
+        LaneInfo(SleepStageType.DEEP.value, R.string.sleep_stage_deep),
     )
 
 @Composable
@@ -163,7 +170,6 @@ fun SleepStagesChart(
     stageTimeline: List<SleepStageData> = emptyList(),
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
-    var activeSegmentIndex by remember { mutableStateOf<Int?>(null) }
     val density = LocalDensity.current
 
     if (session == null) {
@@ -211,7 +217,7 @@ fun SleepStagesChart(
                     horizontalAlignment = Alignment.Start,
                 ) {
                     Text(
-                        text = lane.label,
+                        text = stringResource(lane.labelResId),
                         style = MaterialTheme.typography.labelMedium,
                         color = colorScheme.onSurfaceVariant,
                     )
@@ -264,7 +270,6 @@ fun SleepStagesChart(
                                         }
                                     },
                                 onSegmentTapped = { index, _, tapOffset ->
-                                    activeSegmentIndex = index
                                     val tappedStage = mergedTimeline[index]
                                     val valueText = "${tappedStage.durationMinutes} min"
                                     val dateText =
@@ -276,7 +281,7 @@ fun SleepStagesChart(
                                             dateText = dateText,
                                             offset =
                                                 androidx.compose.ui.unit.IntOffset(
-                                                    x = tapOffset.x.toInt() + labelWidthPx,
+                                                    x = tapOffset.x.toInt() - scrollState.value + labelWidthPx,
                                                     y = tapOffset.y.toInt(),
                                                 ),
                                         )
@@ -284,10 +289,10 @@ fun SleepStagesChart(
                             ),
                 ) {
                     val canvasWidth = size.width
-                    val laneHeightPx = with(density) { LANE_HEIGHT.toPx() }
-                    val insetPx = with(density) { SHAPE_INSET.toPx() }
-                    val cornerPx = with(density) { SHAPE_CORNER.toPx() }
-                    val strokePx = with(density) { 1.dp.toPx() }
+                    val laneHeightPx = LANE_HEIGHT.toPx()
+                    val insetPx = SHAPE_INSET.toPx()
+                    val cornerPx = SHAPE_CORNER.toPx()
+                    val strokePx = 1.dp.toPx()
 
                     if (session.endTime <= session.startTime) return@Canvas
 
@@ -304,7 +309,7 @@ fun SleepStagesChart(
                     }
 
                     // 2. Stage shapes — full-height fills with 4dp vertical inset and 6dp corners
-                    val minShapeWidthPx = with(density) { 4.dp.toPx() }
+                    val minShapeWidthPx = 4.dp.toPx()
                     mergedTimeline.forEach { stageData ->
                         val laneIndex = getStageLaneIndex(stageData.stageType)
                         val shapeTop = laneIndex * laneHeightPx + insetPx
@@ -378,7 +383,6 @@ fun SleepStagesChart(
             yOffsetDp = (-28).dp,
             onDismissRequest = {
                 tooltipState = null
-                activeSegmentIndex = null
             },
         )
     }
