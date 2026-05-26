@@ -61,7 +61,8 @@ fun HeartRateCard(
                     color = contentColor,
                 )
                 MetricTooltip(
-                    description = "Today's heart rate range across all activities. Tap to see full timeline and zone breakdown.",
+                    description =
+                        "Today's heart rate range across all activities. Tap to see full timeline and zone breakdown.",
                     iconTint = contentColor,
                 )
             }

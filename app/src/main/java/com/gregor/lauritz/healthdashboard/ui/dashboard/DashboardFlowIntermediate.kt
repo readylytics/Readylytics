@@ -215,7 +215,12 @@ fun createDashboardHrFlow(
     selectedDate.flatMapLatest { date ->
         val zoneId = ZoneId.systemDefault()
         val startMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
-        val endMs = date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val endMs =
+            date
+                .plusDays(1)
+                .atStartOfDay(zoneId)
+                .toInstant()
+                .toEpochMilli()
         heartRateDao.observeByTimeRange(startMs, endMs).map { entities ->
             if (entities.isEmpty()) return@map null
             // entities already sorted ASC by the DAO query; single pass for stats

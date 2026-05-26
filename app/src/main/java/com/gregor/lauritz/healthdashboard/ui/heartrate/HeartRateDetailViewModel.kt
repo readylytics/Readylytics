@@ -35,7 +35,12 @@ class HeartRateDetailViewModel
                 .flatMapLatest { (date, prefs) ->
                     val zoneId = ZoneId.systemDefault()
                     val startMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                    val endMs = date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+                    val endMs =
+                        date
+                            .plusDays(1)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
 
                     heartRateDao.observeByTimeRange(startMs, endMs).map { entities ->
                         if (entities.isEmpty()) {

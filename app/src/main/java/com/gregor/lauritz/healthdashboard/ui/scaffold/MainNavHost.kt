@@ -17,9 +17,9 @@ import com.gregor.lauritz.healthdashboard.ui.about.AboutScreen
 import com.gregor.lauritz.healthdashboard.ui.bloodpressure.BloodPressureDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.bodyfat.BodyFatDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardRoute
+import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppDestination
 import com.gregor.lauritz.healthdashboard.ui.navigation.TabDestination
-import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.rhr.RestingHrDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsRoute
 import com.gregor.lauritz.healthdashboard.ui.sleep.SleepDetailRoute

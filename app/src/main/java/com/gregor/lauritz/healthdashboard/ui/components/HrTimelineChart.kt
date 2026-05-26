@@ -24,7 +24,6 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -72,19 +71,22 @@ fun HrTimelineChart(
     val density = LocalDensity.current
     val labelStyle = TextStyle(color = axisTextColor, fontSize = 10.sp)
 
-    val yMin = remember(samples, zone1MinBpm) {
-        (minOf(samples.minOf { it.bpm }, zone1MinBpm) - 10).coerceAtLeast(30)
-    }
-    val yMax = remember(samples, zone4MaxBpm) {
-        maxOf(samples.maxOf { it.bpm }, zone4MaxBpm) + 10
-    }
+    val yMin =
+        remember(samples, zone1MinBpm) {
+            (minOf(samples.minOf { it.bpm }, zone1MinBpm) - 10).coerceAtLeast(30)
+        }
+    val yMax =
+        remember(samples, zone4MaxBpm) {
+            maxOf(samples.maxOf { it.bpm }, zone4MaxBpm) + 10
+        }
 
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
 
     val segments = remember(samples) { splitIntoSegments(samples, GAP_THRESHOLD_MS) }
-    val yLabels = remember(zone1MinBpm, zone1MaxBpm, zone2MaxBpm, zone3MaxBpm, zone4MaxBpm) {
-        listOf(zone1MinBpm, zone1MaxBpm, zone2MaxBpm, zone3MaxBpm, zone4MaxBpm)
-    }
+    val yLabels =
+        remember(zone1MinBpm, zone1MaxBpm, zone2MaxBpm, zone3MaxBpm, zone4MaxBpm) {
+            listOf(zone1MinBpm, zone1MaxBpm, zone2MaxBpm, zone3MaxBpm, zone4MaxBpm)
+        }
 
     Box(modifier = modifier) {
         Canvas(
@@ -104,7 +106,8 @@ fun HrTimelineChart(
                             if (!plotRect.contains(tapOffset)) return@detectTapGestures
 
                             val tapMinuteOfDay =
-                                ((tapOffset.x - plotRect.left) / plotRect.width * 1440f).toInt()
+                                ((tapOffset.x - plotRect.left) / plotRect.width * 1440f)
+                                    .toInt()
                                     .coerceIn(0, 1439)
                             val tapMs = dayStartMs + tapMinuteOfDay * 60_000L
 
@@ -142,8 +145,7 @@ fun HrTimelineChart(
             val plotH = plotBottom - plotTop
             val plotRect = Rect(plotLeft, plotTop, plotRight, plotBottom)
 
-            fun bpmToY(bpm: Int): Float =
-                plotTop + (1f - (bpm - yMin).toFloat() / (yMax - yMin).toFloat()) * plotH
+            fun bpmToY(bpm: Int): Float = plotTop + (1f - (bpm - yMin).toFloat() / (yMax - yMin).toFloat()) * plotH
 
             fun minuteToX(minute: Int): Float = plotLeft + minute / 1440f * plotW
 

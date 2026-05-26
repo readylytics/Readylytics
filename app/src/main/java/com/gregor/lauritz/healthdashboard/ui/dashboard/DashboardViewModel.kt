@@ -7,7 +7,6 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
-import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateDaySummary
 import com.gregor.lauritz.healthdashboard.domain.cache.DailyMetricCache
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
@@ -23,6 +22,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRep
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.ui.common.BaseViewModel
+import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateDaySummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
