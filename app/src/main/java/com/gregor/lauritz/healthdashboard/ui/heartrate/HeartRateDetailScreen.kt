@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -65,12 +66,14 @@ fun HeartRateDetailScreen(
     onNextDay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val today = LocalDate.now(ZoneId.systemDefault())
+    val today = remember { LocalDate.now(ZoneId.systemDefault()) }
     val dayStartMs =
-        uiState.selectedDate
-            .atStartOfDay(ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
+        remember(uiState.selectedDate) {
+            uiState.selectedDate
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+        }
 
     Scaffold(
         modifier = modifier,

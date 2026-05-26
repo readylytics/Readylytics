@@ -40,6 +40,7 @@ import kotlin.math.roundToInt
 
 private const val GAP_THRESHOLD_MS = 10 * 60 * 1000L // 10 minutes
 private val hourFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val HOUR_LABELS = listOf(0, 4, 8, 12, 16, 20)
 
 @Composable
 fun HrTimelineChart(
@@ -79,6 +80,11 @@ fun HrTimelineChart(
     }
 
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+
+    val segments = remember(samples) { splitIntoSegments(samples, GAP_THRESHOLD_MS) }
+    val yLabels = remember(zone1MinBpm, zone1MaxBpm, zone2MaxBpm, zone3MaxBpm, zone4MaxBpm) {
+        listOf(zone1MinBpm, zone1MaxBpm, zone2MaxBpm, zone3MaxBpm, zone4MaxBpm)
+    }
 
     // tap hit-test data captured from last draw
     var lastPlotRect by remember { mutableStateOf<Rect?>(null) }
@@ -160,8 +166,7 @@ fun HrTimelineChart(
                 strokeWidth = 1.dp.toPx(),
             )
 
-            // Draw y-axis labels (zone boundaries)
-            val yLabels = listOf(zone1MinBpm, zone1MaxBpm, zone2MaxBpm, zone3MaxBpm, zone4MaxBpm)
+            // Draw y-axis labels (zone boundaries) — yLabels is remembered in outer scope
             for (bpm in yLabels) {
                 val y = bpmToY(bpm)
                 if (y < plotBottom - 4.dp.toPx() && y > plotTop + 4.dp.toPx()) {
@@ -178,7 +183,7 @@ fun HrTimelineChart(
             }
 
             // Draw x-axis hour labels (every 4 hours)
-            for (hour in listOf(0, 4, 8, 12, 16, 20)) {
+            for (hour in HOUR_LABELS) {
                 val x = minuteToX(hour * 60)
                 val label = "%02d:00".format(hour)
                 val measured = textMeasurer.measure(label, labelStyle)
@@ -192,8 +197,7 @@ fun HrTimelineChart(
                 )
             }
 
-            // Draw HR line with gap breaks
-            val segments = splitIntoSegments(samples, GAP_THRESHOLD_MS)
+            // Draw HR line with gap breaks — segments is remembered in outer scope
             for (segment in segments) {
                 if (segment.size < 2) continue
                 val path = Path()

@@ -218,10 +218,18 @@ fun createDashboardHrFlow(
         val endMs = date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
         heartRateDao.observeByTimeRange(startMs, endMs).map { entities ->
             if (entities.isEmpty()) return@map null
-            val sorted = entities.sortedBy { it.timestampMs }
-            val bpms = sorted.map { it.beatsPerMinute }
+            // entities already sorted ASC by the DAO query; single pass for stats
+            var minBpm = Int.MAX_VALUE
+            var maxBpm = Int.MIN_VALUE
+            var sumBpm = 0
+            for (entity in entities) {
+                val bpm = entity.beatsPerMinute
+                if (bpm < minBpm) minBpm = bpm
+                if (bpm > maxBpm) maxBpm = bpm
+                sumBpm += bpm
+            }
             val hourlyMap =
-                sorted.groupBy { entity ->
+                entities.groupBy { entity ->
                     ((entity.timestampMs - startMs) / 60_000L).toInt() / 60
                 }
             val hourly =
@@ -231,9 +239,9 @@ fun createDashboardHrFlow(
                     }
                 }
             HeartRateDaySummary(
-                minBpm = bpms.min(),
-                maxBpm = bpms.max(),
-                avgBpm = bpms.sum() / bpms.size,
+                minBpm = minBpm,
+                maxBpm = maxBpm,
+                avgBpm = sumBpm / entities.size,
                 hourlySamples = hourly,
             )
         }
