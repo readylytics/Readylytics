@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
 import androidx.compose.runtime.Immutable
+import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
@@ -11,6 +12,7 @@ import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
+import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateDaySummary
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -204,3 +206,35 @@ data class DashboardCombinedInputs(
     val cardState: DashboardCardState,
     val realtimeState: DashboardRealtimeState,
 )
+
+@OptIn(ExperimentalCoroutinesApi::class)
+fun createDashboardHrFlow(
+    selectedDate: Flow<LocalDate>,
+    heartRateDao: HeartRateDao,
+): Flow<HeartRateDaySummary?> =
+    selectedDate.flatMapLatest { date ->
+        val zoneId = ZoneId.systemDefault()
+        val startMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val endMs = date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+        heartRateDao.observeByTimeRange(startMs, endMs).map { entities ->
+            if (entities.isEmpty()) return@map null
+            val sorted = entities.sortedBy { it.timestampMs }
+            val bpms = sorted.map { it.beatsPerMinute }
+            val hourlyMap =
+                sorted.groupBy { entity ->
+                    ((entity.timestampMs - startMs) / 60_000L).toInt() / 60
+                }
+            val hourly =
+                (0..23).mapNotNull { hour ->
+                    hourlyMap[hour]?.let { group ->
+                        hour to group.sumOf { it.beatsPerMinute } / group.size
+                    }
+                }
+            HeartRateDaySummary(
+                minBpm = bpms.min(),
+                maxBpm = bpms.max(),
+                avgBpm = bpms.sum() / bpms.size,
+                hourlySamples = hourly,
+            )
+        }
+    }

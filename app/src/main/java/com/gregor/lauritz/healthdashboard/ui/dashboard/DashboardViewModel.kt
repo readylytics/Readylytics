@@ -3,9 +3,11 @@ package com.gregor.lauritz.healthdashboard.ui.dashboard
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
+import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateDaySummary
 import com.gregor.lauritz.healthdashboard.domain.cache.DailyMetricCache
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
@@ -46,6 +48,7 @@ class DashboardViewModel
         private val cardConfigRepository: CardConfigurationRepository,
         private val circadianRepo: CircadianConsistencyRepository,
         private val dailyMetricCache: DailyMetricCache,
+        private val heartRateDao: HeartRateDao,
     ) : BaseViewModel() {
         fun validateSelectedDate(date: LocalDate): Result<LocalDate> =
             if (date <= LocalDate.now()) {
@@ -53,6 +56,7 @@ class DashboardViewModel
             } else {
                 Result.failure("Cannot select future dates", "INVALID_DATE")
             }
+
 
         private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
 
@@ -73,14 +77,15 @@ class DashboardViewModel
                     dailySummaryRepository,
                 ),
                 createDashboardRealtimeStateFlow(foregroundSyncController),
-            ) { basicInputs, cardState, realtimeState ->
+                createDashboardHrFlow(selectedDateRepository.selectedDate, heartRateDao),
+            ) { basicInputs, cardState, realtimeState, hrSummary ->
                 val combined =
                     DashboardCombinedInputs(
                         basicInputs = basicInputs,
                         cardState = cardState,
                         realtimeState = realtimeState,
                     )
-                transformToUiState(combined, basicInputs.selectedDate)
+                transformToUiState(combined, basicInputs.selectedDate, hrSummary)
             }.flowOn(Dispatchers.Default).stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
@@ -90,6 +95,7 @@ class DashboardViewModel
         private fun transformToUiState(
             combined: DashboardCombinedInputs,
             selectedDate: LocalDate,
+            hrSummary: HeartRateDaySummary? = null,
         ): DashboardUiState {
             val basicInputs = combined.basicInputs
             val cardState = combined.cardState
@@ -130,6 +136,7 @@ class DashboardViewModel
                 isComputingMetrics = realtimeState.isSyncing && basicInputs.summary == null,
                 isCalibrating = basicInputs.summary?.isCalibrating ?: false,
                 errorMessage = if (cardsResult.isFailure) "Failed to load dashboard data" else null,
+                heartRateDaySummary = hrSummary,
             )
         }
 
@@ -231,6 +238,7 @@ data class DashboardUiState(
     val isComputingMetrics: Boolean = false,
     val isCalibrating: Boolean = false,
     val errorMessage: String? = null,
+    val heartRateDaySummary: HeartRateDaySummary? = null,
 )
 
 @Immutable
