@@ -32,9 +32,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.ui.components.HrTimelineChart
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
@@ -79,10 +81,10 @@ fun HeartRateDetailScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Heart Rate") },
+                title = { Text(stringResource(R.string.heart_rate_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
             )
@@ -177,9 +179,9 @@ fun HeartRateDetailScreen(
                             listOf(
                                 Triple(0, "Zone 0", "< ${uiState.zone1MinBpm} bpm"),
                                 Triple(1, "Zone 1", "${uiState.zone1MinBpm}–${uiState.zone1MaxBpm} bpm"),
-                                Triple(2, "Zone 2", "${uiState.zone1MaxBpm}–${uiState.zone2MaxBpm} bpm"),
-                                Triple(3, "Zone 3", "${uiState.zone2MaxBpm}–${uiState.zone3MaxBpm} bpm"),
-                                Triple(4, "Zone 4", "${uiState.zone3MaxBpm}–${uiState.zone4MaxBpm} bpm"),
+                                Triple(2, "Zone 2", "${uiState.zone1MaxBpm + 1}–${uiState.zone2MaxBpm} bpm"),
+                                Triple(3, "Zone 3", "${uiState.zone2MaxBpm + 1}–${uiState.zone3MaxBpm} bpm"),
+                                Triple(4, "Zone 4", "${uiState.zone3MaxBpm + 1}–${uiState.zone4MaxBpm} bpm"),
                                 Triple(5, "Zone 5", "> ${uiState.zone4MaxBpm} bpm"),
                             )
 

@@ -107,7 +107,7 @@ interface HeartRateDao {
     ): List<HeartRateRecordEntity>
 
     @Query(
-        "SELECT * FROM heart_rate_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
+        "SELECT * FROM heart_rate_records WHERE timestampMs >= :startMs AND timestampMs < :endMs " +
             "ORDER BY timestampMs ASC",
     )
     fun _observeByTimeRange(
@@ -119,15 +119,6 @@ interface HeartRateDao {
         startMs: Long,
         endMs: Long,
     ): Flow<List<HeartRateRecordEntity>> = _observeByTimeRange(startMs, endMs).distinctUntilChanged()
-
-    @Query(
-        "SELECT MAX(beatsPerMinute) FROM heart_rate_records " +
-            "WHERE timestampMs >= :startTimeMs AND timestampMs <= :endTimeMs",
-    )
-    suspend fun getMaxHrInRange(
-        startTimeMs: Long,
-        endTimeMs: Long,
-    ): Int?
 
     @Upsert
     suspend fun upsertAll(records: List<HeartRateRecordEntity>)

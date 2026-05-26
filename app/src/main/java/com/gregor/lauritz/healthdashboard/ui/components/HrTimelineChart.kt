@@ -86,11 +86,6 @@ fun HrTimelineChart(
         listOf(zone1MinBpm, zone1MaxBpm, zone2MaxBpm, zone3MaxBpm, zone4MaxBpm)
     }
 
-    // tap hit-test data captured from last draw
-    var lastPlotRect by remember { mutableStateOf<Rect?>(null) }
-    var lastPlotYMin by remember { mutableStateOf(yMin.toFloat()) }
-    var lastPlotYMax by remember { mutableStateOf(yMax.toFloat()) }
-
     Box(modifier = modifier) {
         Canvas(
             modifier =
@@ -99,7 +94,13 @@ fun HrTimelineChart(
                     .height(220.dp)
                     .pointerInput(samples, dayStartMs) {
                         detectTapGestures { tapOffset ->
-                            val plotRect = lastPlotRect ?: return@detectTapGestures
+                            val leftLabelWidthPx = 36.dp.toPx()
+                            val bottomLabelHeightPx = 20.dp.toPx()
+                            val plotLeft = leftLabelWidthPx
+                            val plotTop = 0f
+                            val plotRight = size.width.toFloat()
+                            val plotBottom = size.height.toFloat() - bottomLabelHeightPx
+                            val plotRect = Rect(plotLeft, plotTop, plotRight, plotBottom)
                             if (!plotRect.contains(tapOffset)) return@detectTapGestures
 
                             val tapMinuteOfDay =
@@ -113,7 +114,7 @@ fun HrTimelineChart(
                             val sampleX = plotRect.left + nearestMinute / 1440f * plotRect.width
                             val sampleY =
                                 plotRect.top +
-                                    (1f - (nearest.bpm - lastPlotYMin) / (lastPlotYMax - lastPlotYMin)) *
+                                    (1f - (nearest.bpm - yMin).toFloat() / (yMax - yMin).toFloat()) *
                                     plotRect.height
 
                             val timeStr =
@@ -140,10 +141,6 @@ fun HrTimelineChart(
             val plotW = plotRight - plotLeft
             val plotH = plotBottom - plotTop
             val plotRect = Rect(plotLeft, plotTop, plotRight, plotBottom)
-
-            lastPlotRect = plotRect
-            lastPlotYMin = yMin.toFloat()
-            lastPlotYMax = yMax.toFloat()
 
             fun bpmToY(bpm: Int): Float =
                 plotTop + (1f - (bpm - yMin).toFloat() / (yMax - yMin).toFloat()) * plotH
@@ -199,31 +196,30 @@ fun HrTimelineChart(
 
             // Draw HR line with gap breaks — segments is remembered in outer scope
             for (segment in segments) {
-                if (segment.size < 2) continue
-                val path = Path()
-                segment.forEachIndexed { i, sample ->
-                    val minute = ((sample.timeMs - dayStartMs) / 60_000L).toInt().coerceIn(0, 1439)
-                    val x = minuteToX(minute)
-                    val y = bpmToY(sample.bpm)
-                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                }
-                drawPath(
-                    path = path,
-                    color = lineColor,
-                    style =
-                        Stroke(
-                            width = 2.dp.toPx(),
-                            cap = StrokeCap.Round,
-                            join = StrokeJoin.Round,
-                        ),
-                )
-                // Draw dot for single-sample segments
                 if (segment.size == 1) {
                     val minute = ((segment[0].timeMs - dayStartMs) / 60_000L).toInt().coerceIn(0, 1439)
                     drawCircle(
                         color = lineColor,
                         radius = 3.dp.toPx(),
                         center = Offset(minuteToX(minute), bpmToY(segment[0].bpm)),
+                    )
+                } else {
+                    val path = Path()
+                    segment.forEachIndexed { i, sample ->
+                        val minute = ((sample.timeMs - dayStartMs) / 60_000L).toInt().coerceIn(0, 1439)
+                        val x = minuteToX(minute)
+                        val y = bpmToY(sample.bpm)
+                        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    }
+                    drawPath(
+                        path = path,
+                        color = lineColor,
+                        style =
+                            Stroke(
+                                width = 2.dp.toPx(),
+                                cap = StrokeCap.Round,
+                                join = StrokeJoin.Round,
+                            ),
                     )
                 }
             }

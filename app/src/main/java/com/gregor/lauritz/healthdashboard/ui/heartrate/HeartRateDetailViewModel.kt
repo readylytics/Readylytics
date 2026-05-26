@@ -98,8 +98,7 @@ private fun computeZoneTotals(samples: List<HrSample>): Map<Int, ZoneTotal> {
     val durationByZone = mutableMapOf<Int, Long>()
     for (i in 0 until samples.size - 1) {
         val segmentMs = samples[i + 1].timeMs - samples[i].timeMs
-        // Only attribute time within a gap threshold (10 minutes) to avoid dead segments
-        if (segmentMs <= 10 * 60 * 1000L) {
+        if (segmentMs in 0L..10 * 60 * 1000L) {
             durationByZone[samples[i].zone] =
                 (durationByZone[samples[i].zone] ?: 0L) + segmentMs
         }
