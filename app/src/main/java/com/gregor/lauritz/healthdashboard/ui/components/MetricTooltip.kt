@@ -1,7 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,7 +29,6 @@ fun MetricTooltip(
     iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
     var showPopup by remember { mutableStateOf(false) }
-    val interactionSource = remember { MutableInteractionSource() }
 
     Box(modifier = modifier) {
         Box(
