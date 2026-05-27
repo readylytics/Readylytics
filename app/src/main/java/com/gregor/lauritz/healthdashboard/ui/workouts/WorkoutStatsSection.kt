@@ -24,8 +24,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
@@ -235,7 +237,7 @@ private fun AcwrChartCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Training Load",
+                text = stringResource(R.string.acwr_training_load),
                 style = MaterialTheme.typography.titleSmall,
             )
             Spacer(Modifier.height(16.dp))
@@ -269,18 +271,23 @@ private fun AcwrChart(
     // chart range or underlying data changes, preventing stale coordinates and values.
     var selectedState by remember(trimpPoints, ratioPoints, rangeStartMs) { mutableStateOf<AcwrSelectedState?>(null) }
 
+    // Read string resources outside remember so they can be used as keys and accessed
+    // inside the lambda (where Composable calls are not permitted).
+    val trimpFormat = stringResource(R.string.acwr_tooltip_trimp_format)
+    val strainFormat = stringResource(R.string.acwr_tooltip_strain_format)
+
     // Derive tooltipState directly from selectedState to avoid separate side-effects.
     // This eliminates extra LaunchedEffect recomposition passes and keeps the state flow simple.
-    val tooltipState = remember(selectedState, rangeStartMs) {
+    val tooltipState = remember(selectedState, rangeStartMs, trimpFormat, strainFormat) {
         selectedState?.let { s ->
             val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
             val anchorY = s.lineCanvasY ?: s.barCanvasYTop ?: 0f
             val trimpText = s.trimpValue?.toInt()?.toString() ?: "—"
             val strainText = s.strainRatioValue?.let { "%.2f".format(it) } ?: "—"
             DataPointTooltipData(
-                valueText = "TRIMP: $trimpText",
+                valueText = trimpFormat.format(trimpText),
                 dateText = ChartUtils.formatTooltipDate(date),
-                extraLine = "Strain: $strainText",
+                extraLine = strainFormat.format(strainText),
                 offset = IntOffset(s.canvasX.toInt(), anchorY.toInt()),
             )
         }
@@ -415,6 +422,7 @@ private fun AcwrChart(
     )
 
     // ── Chart host + animated overlay ────────────────────────────────────────
+    val chartHeight = 220.dp
     Box(modifier = modifier.fillMaxWidth()) {
         CartesianChartHost(
             chart =
@@ -459,14 +467,15 @@ private fun AcwrChart(
             modelProducer = modelProducer,
             scrollState = scrollState,
             zoomState = zoomState,
-            modifier = Modifier.fillMaxWidth().height(220.dp),
+            modifier = Modifier.fillMaxWidth().height(chartHeight),
         )
 
         AcwrChartOverlay(
             selectedState = selectedState,
             trimpColor = trimpColor,
             ratioColor = ratioColor,
-            modifier = Modifier.fillMaxWidth().height(220.dp),
+            chartHeight = chartHeight,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 

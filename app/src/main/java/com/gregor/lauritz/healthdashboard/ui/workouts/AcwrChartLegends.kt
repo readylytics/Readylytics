@@ -14,7 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 
 /**
  * Horizontal legend row shown **below** the ACWR chart.
@@ -53,7 +55,7 @@ fun AcwrChartLegends(
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                text = "Daily TRIMP",
+                text = stringResource(R.string.acwr_legend_daily_trimp),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -69,7 +71,7 @@ fun AcwrChartLegends(
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                text = "Strain Ratio",
+                text = stringResource(R.string.acwr_legend_strain_ratio),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

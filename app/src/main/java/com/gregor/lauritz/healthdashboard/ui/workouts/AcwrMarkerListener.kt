@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.ui.workouts
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
@@ -35,7 +36,12 @@ fun rememberAcwrMarkerVisibilityListener(
     val trimpMap = remember(trimpPoints) { trimpPoints.associateBy { it.dayOffset } }
     val ratioMap = remember(ratioPoints) { ratioPoints.associateBy { it.dayOffset } }
 
-    return remember(trimpMap, ratioMap, onStateChanged) {
+    // Capture the latest callback without invalidating the remembered listener object.
+    // Using rememberUpdatedState ensures the listener always calls the current lambda
+    // even if it changes between recompositions (e.g. due to selectedState updates).
+    val currentOnStateChanged = rememberUpdatedState(onStateChanged)
+
+    return remember(trimpMap, ratioMap) {
         object : CartesianMarkerVisibilityListener {
             override fun onShown(
                 marker: CartesianMarker,
@@ -82,7 +88,7 @@ fun rememberAcwrMarkerVisibilityListener(
                 val trimpValue = trimpMap[resolvedOffset]?.value
                 val ratioValue = ratioMap[resolvedOffset]?.value
 
-                onStateChanged(
+                currentOnStateChanged.value(
                     AcwrSelectedState(
                         dayOffset = resolvedOffset,
                         trimpValue = trimpValue,

@@ -152,6 +152,13 @@
     <string name="sleep_breakdown_row_format">%1$s • %2$s</string>
     <string name="sleep_hypnogram_title">Hypnogram</string>
 
+    <!-- ACWR / Training Load Chart -->
+    <string name="acwr_training_load">Training Load</string>
+    <string name="acwr_legend_daily_trimp">Daily TRIMP</string>
+    <string name="acwr_legend_strain_ratio">Strain Ratio</string>
+    <string name="acwr_tooltip_trimp_format">TRIMP: %1$s</string>
+    <string name="acwr_tooltip_strain_format">Strain: %1$s</string>
+
     <!-- Dashboard Grid Management -->
     <string name="action_customize">Customize</string>
     <string name="action_done">Save</string>
