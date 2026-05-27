@@ -19,14 +19,22 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
+import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltip
+import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltipData
+import com.gregor.lauritz.healthdashboard.ui.components.InvisibleMarker
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
@@ -227,20 +235,10 @@ private fun AcwrChartCard(
         shape = RoundedCornerShape(16.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = "Daily TRIMP",
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                Text(
-                    text = "Strain Ratio →",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Text(
+                text = "Training Load",
+                style = MaterialTheme.typography.titleSmall,
+            )
             Spacer(Modifier.height(16.dp))
             if (trimpPoints.isEmpty() && ratioPoints.isEmpty()) {
                 EmptyChartPlaceholder()
@@ -268,6 +266,30 @@ private fun AcwrChart(
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
 ) {
+    // ── Interactive selection state (UI-only; not hoisted) ────────────────────
+    var selectedState by remember { mutableStateOf<AcwrSelectedState?>(null) }
+    var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+
+    // When the tooltip is dismissed, clear the canvas highlight as well.
+    LaunchedEffect(tooltipState) {
+        if (tooltipState == null) selectedState = null
+    }
+
+    // Build tooltip content whenever a new point is selected.
+    LaunchedEffect(selectedState) {
+        selectedState?.let { s ->
+            val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
+            val anchorY = s.lineCanvasY ?: s.barCanvasYTop ?: 0f
+            tooltipState = DataPointTooltipData(
+                valueText = "TRIMP: ${s.trimpValue?.toInt() ?: "—"}",
+                dateText = ChartUtils.formatTooltipDate(date),
+                extraLine = "Strain: ${"%.2f".format(s.strainRatioValue ?: 0f)}",
+                offset = IntOffset(s.canvasX.toInt(), anchorY.toInt()),
+            )
+        }
+    }
+
+    // ── Colours & Vico style helpers ─────────────────────────────────────────
     val ratioColor = MaterialTheme.colorScheme.primary
     val trimpColor = MaterialTheme.colorScheme.outline
     val labelComponent = ChartDefaults.labelTextComponent()
@@ -388,48 +410,83 @@ private fun AcwrChart(
     val trimpAxisItemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) }
     val ratioAxisItemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) }
 
-    CartesianChartHost(
-        chart =
-            com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart(
-                trimpColumn,
-                rememberLineCartesianLayer(
-                    lineProvider = LineCartesianLayer.LineProvider.series(ratioLine),
-                    rangeProvider = ratioRangeProvider,
-                    verticalAxisPosition = Axis.Position.Vertical.End,
+    // ── Marker listener bridges Vico touch → Compose state ───────────────────
+    val markerVisibilityListener = rememberAcwrMarkerVisibilityListener(
+        trimpPoints = trimpPoints,
+        ratioPoints = ratioPoints,
+        onStateChanged = { selectedState = it },
+    )
+
+    // ── Chart host + animated overlay ────────────────────────────────────────
+    Box(modifier = modifier.fillMaxWidth()) {
+        CartesianChartHost(
+            chart =
+                com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart(
+                    trimpColumn,
+                    rememberLineCartesianLayer(
+                        lineProvider = LineCartesianLayer.LineProvider.series(ratioLine),
+                        rangeProvider = ratioRangeProvider,
+                        verticalAxisPosition = Axis.Position.Vertical.End,
+                    ),
+                    startAxis =
+                        VerticalAxis.rememberStart(
+                            label = labelComponent,
+                            valueFormatter = trimpAxisFormatter,
+                            titleComponent = axisLabelComponent,
+                            title = { "TRIMP" },
+                            itemPlacer = trimpAxisItemPlacer,
+                            guideline = guidelineComponent,
+                        ),
+                    endAxis =
+                        VerticalAxis.rememberEnd(
+                            label = labelComponent,
+                            valueFormatter = ratioAxisFormatter,
+                            titleComponent = axisLabelComponent,
+                            title = { "Strain" },
+                            itemPlacer = ratioAxisItemPlacer,
+                            guideline = null,
+                        ),
+                    bottomAxis =
+                        HorizontalAxis.rememberBottom(
+                            label = labelComponent,
+                            valueFormatter = xAxisFormatter,
+                            itemPlacer =
+                                remember(
+                                    rangeDays,
+                                ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                            guideline = guidelineComponent,
+                        ),
+                    marker = InvisibleMarker,
+                    markerVisibilityListener = markerVisibilityListener,
                 ),
-                startAxis =
-                    VerticalAxis.rememberStart(
-                        label = labelComponent,
-                        valueFormatter = trimpAxisFormatter,
-                        titleComponent = axisLabelComponent,
-                        title = { "TRIMP" },
-                        itemPlacer = trimpAxisItemPlacer,
-                        guideline = guidelineComponent,
-                    ),
-                endAxis =
-                    VerticalAxis.rememberEnd(
-                        label = labelComponent,
-                        valueFormatter = ratioAxisFormatter,
-                        titleComponent = axisLabelComponent,
-                        title = { "Strain" },
-                        itemPlacer = ratioAxisItemPlacer,
-                        guideline = null,
-                    ),
-                bottomAxis =
-                    HorizontalAxis.rememberBottom(
-                        label = labelComponent,
-                        valueFormatter = xAxisFormatter,
-                        itemPlacer =
-                            remember(
-                                rangeDays,
-                            ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
-                        guideline = guidelineComponent,
-                    ),
-            ),
-        modelProducer = modelProducer,
-        scrollState = scrollState,
-        zoomState = zoomState,
-        modifier = modifier.fillMaxWidth().height(220.dp),
+            modelProducer = modelProducer,
+            scrollState = scrollState,
+            zoomState = zoomState,
+            modifier = Modifier.fillMaxWidth().height(220.dp),
+        )
+
+        AcwrChartOverlay(
+            selectedState = selectedState,
+            trimpColor = trimpColor,
+            ratioColor = ratioColor,
+            modifier = Modifier.fillMaxWidth().height(220.dp),
+        )
+    }
+
+    // ── Tooltip popup ─────────────────────────────────────────────────────────
+    tooltipState?.let { data ->
+        DataPointTooltip(
+            isVisible = true,
+            data = data,
+            onDismissRequest = { tooltipState = null },
+        )
+    }
+
+    // ── Legends (below chart) ─────────────────────────────────────────────────
+    Spacer(Modifier.height(8.dp))
+    AcwrChartLegends(
+        trimpColor = trimpColor,
+        ratioColor = ratioColor,
     )
 }
 
