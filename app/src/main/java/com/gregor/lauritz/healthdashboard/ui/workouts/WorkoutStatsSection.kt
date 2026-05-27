@@ -266,9 +266,10 @@ private fun AcwrChart(
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
 ) {
-    // ── Interactive selection state (UI-only; not hoisted) ────────────────────
-    var selectedState by remember { mutableStateOf<AcwrSelectedState?>(null) }
-    var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+    // Selection state is keyed on the data inputs so it clears automatically when the
+    // chart range or underlying data changes, preventing stale coordinates and values.
+    var selectedState by remember(trimpPoints, ratioPoints, rangeStartMs) { mutableStateOf<AcwrSelectedState?>(null) }
+    var tooltipState by remember(trimpPoints, ratioPoints, rangeStartMs) { mutableStateOf<DataPointTooltipData?>(null) }
 
     // When the tooltip is dismissed, clear the canvas highlight as well.
     LaunchedEffect(tooltipState) {
@@ -280,10 +281,13 @@ private fun AcwrChart(
         selectedState?.let { s ->
             val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
             val anchorY = s.lineCanvasY ?: s.barCanvasYTop ?: 0f
+            // Use "—" for missing values; "0.00" would be a misleading placeholder.
+            val trimpText = s.trimpValue?.toInt()?.toString() ?: "—"
+            val strainText = s.strainRatioValue?.let { "%.2f".format(it) } ?: "—"
             tooltipState = DataPointTooltipData(
-                valueText = "TRIMP: ${s.trimpValue?.toInt() ?: "—"}",
+                valueText = "TRIMP: $trimpText",
                 dateText = ChartUtils.formatTooltipDate(date),
-                extraLine = "Strain: ${"%.2f".format(s.strainRatioValue ?: 0f)}",
+                extraLine = "Strain: $strainText",
                 offset = IntOffset(s.canvasX.toInt(), anchorY.toInt()),
             )
         }

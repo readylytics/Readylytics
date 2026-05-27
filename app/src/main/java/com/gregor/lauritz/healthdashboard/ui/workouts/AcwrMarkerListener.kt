@@ -36,12 +36,16 @@ fun rememberAcwrMarkerVisibilityListener(
             override fun onShown(
                 marker: CartesianMarker,
                 targets: List<CartesianMarker.Target>,
-            ) = handleTargets(targets)
+            ) {
+                handleTargets(targets)
+            }
 
             override fun onUpdated(
                 marker: CartesianMarker,
                 targets: List<CartesianMarker.Target>,
-            ) = handleTargets(targets)
+            ) {
+                handleTargets(targets)
+            }
 
             override fun onHidden(marker: CartesianMarker) {
                 // Intentionally empty: tooltip stays until explicitly dismissed.
@@ -56,8 +60,8 @@ fun rememberAcwrMarkerVisibilityListener(
                 for (target in targets) {
                     when (target) {
                         is ColumnCartesianLayerMarkerTarget -> {
-                            canvasX = target.canvasX
-                            dayOffset = target.x.toInt()
+                            if (canvasX == null) canvasX = target.canvasX
+                            if (dayOffset == null) dayOffset = target.x.toInt()
                             barCanvasYTop = target.columns.firstOrNull()?.canvasY
                         }
                         is LineCartesianLayerMarkerTarget -> {

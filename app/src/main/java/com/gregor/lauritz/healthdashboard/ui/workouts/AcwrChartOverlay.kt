@@ -11,19 +11,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -35,11 +30,11 @@ import androidx.compose.ui.unit.dp
  * 2. A pulsing rounded-rectangle **outline** around the selected TRIMP bar.
  * 3. Pulsing concentric circles (halo + solid dot) around the selected Strain Ratio node.
  *
- * The infinite transition always runs; when [selectedState] is null nothing is drawn,
- * avoiding recomposition cost on show/hide transitions.
+ * Animations are only active while [selectedState] is non-null, saving CPU/GPU resources
+ * when nothing is selected and ensuring the pulse always starts fresh on each new tap.
  *
  * @param selectedState  Active selection produced by [rememberAcwrMarkerVisibilityListener];
- *                       null means nothing is drawn.
+ *                       null means nothing is drawn and no animation runs.
  * @param trimpColor     Fill colour for the TRIMP bar series (used for bar outline).
  * @param ratioColor     Fill colour for the Strain Ratio line series (used for dot halo).
  * @param barThicknessDp Width of the column bars as declared in the Vico layer (default 8 dp).
@@ -54,53 +49,52 @@ fun AcwrChartOverlay(
     chartHeight: Dp = 220.dp,
     modifier: Modifier = Modifier,
 ) {
-    var containerWidthPx by remember { mutableStateOf(0f) }
-
-    // ----- Shared breathing animation -----
-    val infiniteTransition = rememberInfiniteTransition(label = "acwrHaloTransition")
-    val haloRadiusCoeff by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 1.6f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(1200, easing = EaseInOutSine),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "acwrHaloRadiusCoeff",
-    )
-    val haloAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.15f,
-        targetValue = 0.4f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(1200, easing = EaseInOutSine),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "acwrHaloAlpha",
-    )
-    // Stroke width for the bar outline pulses independently for a distinct feel
-    val barStrokeCoeff by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 1.8f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(1200, easing = EaseInOutSine),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "acwrBarStrokeCoeff",
-    )
-
     Box(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(chartHeight)
-                .onSizeChanged { size -> containerWidthPx = size.width.toFloat() },
+                .height(chartHeight),
     ) {
-        if (selectedState != null && containerWidthPx > 0f) {
-            val canvasX = selectedState.canvasX.coerceIn(0f, containerWidthPx)
+        if (selectedState != null) {
+            // Animations only run while a point is selected; they start from their
+            // initial values on every new tap, giving a predictable "fresh pulse" feel.
+            val infiniteTransition = rememberInfiniteTransition(label = "acwrHaloTransition")
+            val haloRadiusCoeff by infiniteTransition.animateFloat(
+                initialValue = 1.0f,
+                targetValue = 1.6f,
+                animationSpec =
+                    infiniteRepeatable(
+                        animation = tween(1200, easing = EaseInOutSine),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                label = "acwrHaloRadiusCoeff",
+            )
+            val haloAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.15f,
+                targetValue = 0.4f,
+                animationSpec =
+                    infiniteRepeatable(
+                        animation = tween(1200, easing = EaseInOutSine),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                label = "acwrHaloAlpha",
+            )
+            // Bar stroke pulses at its own rate for a visually distinct feel from the dot.
+            val barStrokeCoeff by infiniteTransition.animateFloat(
+                initialValue = 1.0f,
+                targetValue = 1.8f,
+                animationSpec =
+                    infiniteRepeatable(
+                        animation = tween(1200, easing = EaseInOutSine),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                label = "acwrBarStrokeCoeff",
+            )
 
             Canvas(modifier = Modifier.fillMaxSize()) {
+                // size.width is used directly — no external measurement state needed.
+                val canvasX = selectedState.canvasX.coerceIn(0f, size.width)
+
                 // 1. Vertical guideline
                 drawLine(
                     color = ratioColor.copy(alpha = 0.35f),
@@ -109,13 +103,13 @@ fun AcwrChartOverlay(
                     strokeWidth = 1.5.dp.toPx(),
                 )
 
-                // 2. Pulsing bar outline (only when bar position is known)
+                // 2. Pulsing bar outline (only when bar canvas position is known)
                 selectedState.barCanvasYTop?.let { barTop ->
                     val halfBar = (barThicknessDp / 2).toPx()
                     val barLeft = canvasX - halfBar
                     val barHeight = size.height - barTop
                     if (barHeight > 0f) {
-                        // Halo fill behind the outline
+                        // Translucent halo fill behind the stroke outline
                         drawRoundRect(
                             color = trimpColor.copy(alpha = haloAlpha * 0.5f),
                             topLeft = Offset(barLeft, barTop),
@@ -133,7 +127,7 @@ fun AcwrChartOverlay(
                     }
                 }
 
-                // 3. Pulsing halo + solid dot on Strain Ratio line (only when line position is known)
+                // 3. Pulsing halo + solid dot on the Strain Ratio line node
                 selectedState.lineCanvasY?.let { dotY ->
                     val dotCenter = Offset(canvasX, dotY)
                     // Breathing outer halo

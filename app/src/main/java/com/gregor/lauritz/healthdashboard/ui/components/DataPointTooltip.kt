@@ -30,7 +30,7 @@ data class DataPointTooltipData(
     val valueText: String,
     val dateText: String,
     val offset: IntOffset = IntOffset(0, 0),
-    /** Optional third line rendered below [dateText]; null means the row is omitted. */
+    // Optional third line rendered below dateText; null omits the row entirely.
     val extraLine: String? = null,
 )
 
