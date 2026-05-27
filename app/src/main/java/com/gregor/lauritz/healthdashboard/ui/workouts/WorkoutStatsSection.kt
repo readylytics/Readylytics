@@ -278,20 +278,21 @@ private fun AcwrChart(
 
     // Derive tooltipState directly from selectedState to avoid separate side-effects.
     // This eliminates extra LaunchedEffect recomposition passes and keeps the state flow simple.
-    val tooltipState = remember(selectedState, rangeStartMs, trimpFormat, strainFormat) {
-        selectedState?.let { s ->
-            val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
-            val anchorY = s.lineCanvasY ?: s.barCanvasYTop ?: 0f
-            val trimpText = s.trimpValue?.toInt()?.toString() ?: "—"
-            val strainText = s.strainRatioValue?.let { "%.2f".format(it) } ?: "—"
-            DataPointTooltipData(
-                valueText = trimpFormat.format(trimpText),
-                dateText = ChartUtils.formatTooltipDate(date),
-                extraLine = strainFormat.format(strainText),
-                offset = IntOffset(s.canvasX.toInt(), anchorY.toInt()),
-            )
+    val tooltipState =
+        remember(selectedState, rangeStartMs, trimpFormat, strainFormat) {
+            selectedState?.let { s ->
+                val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
+                val anchorY = s.lineCanvasY ?: s.barCanvasYTop ?: 0f
+                val trimpText = s.trimpValue?.toInt()?.toString() ?: "—"
+                val strainText = s.strainRatioValue?.let { "%.2f".format(it) } ?: "—"
+                DataPointTooltipData(
+                    valueText = trimpFormat.format(trimpText),
+                    dateText = ChartUtils.formatTooltipDate(date),
+                    extraLine = strainFormat.format(strainText),
+                    offset = IntOffset(s.canvasX.toInt(), anchorY.toInt()),
+                )
+            }
         }
-    }
 
     // ── Colours & Vico style helpers ─────────────────────────────────────────
     val ratioColor = MaterialTheme.colorScheme.primary
@@ -415,11 +416,12 @@ private fun AcwrChart(
     val ratioAxisItemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) }
 
     // ── Marker listener bridges Vico touch → Compose state ───────────────────
-    val markerVisibilityListener = rememberAcwrMarkerVisibilityListener(
-        trimpPoints = trimpPoints,
-        ratioPoints = ratioPoints,
-        onStateChanged = { selectedState = it },
-    )
+    val markerVisibilityListener =
+        rememberAcwrMarkerVisibilityListener(
+            trimpPoints = trimpPoints,
+            ratioPoints = ratioPoints,
+            onStateChanged = { selectedState = it },
+        )
 
     // ── Chart host + animated overlay ────────────────────────────────────────
     val chartHeight = 220.dp
