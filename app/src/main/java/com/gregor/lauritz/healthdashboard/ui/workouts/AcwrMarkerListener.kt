@@ -30,8 +30,12 @@ fun rememberAcwrMarkerVisibilityListener(
     trimpPoints: List<DailyDataPoint>,
     ratioPoints: List<DailyDataPoint>,
     onStateChanged: (AcwrSelectedState) -> Unit,
-): CartesianMarkerVisibilityListener =
-    remember(trimpPoints, ratioPoints, onStateChanged) {
+): CartesianMarkerVisibilityListener {
+    // Pre-map the data points by dayOffset to avoid O(n) linear searches on every touch frame.
+    val trimpMap = remember(trimpPoints) { trimpPoints.associateBy { it.dayOffset } }
+    val ratioMap = remember(ratioPoints) { ratioPoints.associateBy { it.dayOffset } }
+
+    return remember(trimpMap, ratioMap, onStateChanged) {
         object : CartesianMarkerVisibilityListener {
             override fun onShown(
                 marker: CartesianMarker,
@@ -75,12 +79,8 @@ fun rememberAcwrMarkerVisibilityListener(
                 val resolvedX = canvasX ?: return
                 val resolvedOffset = dayOffset ?: return
 
-                val trimpValue = trimpPoints
-                    .firstOrNull { it.dayOffset == resolvedOffset }
-                    ?.value
-                val ratioValue = ratioPoints
-                    .firstOrNull { it.dayOffset == resolvedOffset }
-                    ?.value
+                val trimpValue = trimpMap[resolvedOffset]?.value
+                val ratioValue = ratioMap[resolvedOffset]?.value
 
                 onStateChanged(
                     AcwrSelectedState(
@@ -95,3 +95,4 @@ fun rememberAcwrMarkerVisibilityListener(
             }
         }
     }
+}

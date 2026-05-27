@@ -18,7 +18,6 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -269,22 +268,16 @@ private fun AcwrChart(
     // Selection state is keyed on the data inputs so it clears automatically when the
     // chart range or underlying data changes, preventing stale coordinates and values.
     var selectedState by remember(trimpPoints, ratioPoints, rangeStartMs) { mutableStateOf<AcwrSelectedState?>(null) }
-    var tooltipState by remember(trimpPoints, ratioPoints, rangeStartMs) { mutableStateOf<DataPointTooltipData?>(null) }
 
-    // When the tooltip is dismissed, clear the canvas highlight as well.
-    LaunchedEffect(tooltipState) {
-        if (tooltipState == null) selectedState = null
-    }
-
-    // Build tooltip content whenever a new point is selected.
-    LaunchedEffect(selectedState) {
+    // Derive tooltipState directly from selectedState to avoid separate side-effects.
+    // This eliminates extra LaunchedEffect recomposition passes and keeps the state flow simple.
+    val tooltipState = remember(selectedState, rangeStartMs) {
         selectedState?.let { s ->
             val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
             val anchorY = s.lineCanvasY ?: s.barCanvasYTop ?: 0f
-            // Use "—" for missing values; "0.00" would be a misleading placeholder.
             val trimpText = s.trimpValue?.toInt()?.toString() ?: "—"
             val strainText = s.strainRatioValue?.let { "%.2f".format(it) } ?: "—"
-            tooltipState = DataPointTooltipData(
+            DataPointTooltipData(
                 valueText = "TRIMP: $trimpText",
                 dateText = ChartUtils.formatTooltipDate(date),
                 extraLine = "Strain: $strainText",
@@ -482,7 +475,7 @@ private fun AcwrChart(
         DataPointTooltip(
             isVisible = true,
             data = data,
-            onDismissRequest = { tooltipState = null },
+            onDismissRequest = { selectedState = null },
         )
     }
 
