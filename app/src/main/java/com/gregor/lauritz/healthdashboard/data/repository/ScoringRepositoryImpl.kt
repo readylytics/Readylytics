@@ -13,6 +13,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.model.ReadinessResult
 import com.gregor.lauritz.healthdashboard.domain.model.RecordType
 import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
+import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.BaselineComputer
 import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeSleepMetricsUseCase
@@ -111,7 +112,7 @@ class ScoringRepositoryImpl
                                 sample.beatsPerMinute,
                             )
                         }
-                    val workoutTrimp =
+                    val workoutTrimpResult =
                         computeWorkoutTrimpUseCase.execute(
                             workoutStartTime = workout.startTime,
                             workoutEndTime = workout.endTime,
@@ -121,6 +122,7 @@ class ScoringRepositoryImpl
                             restingHrBaseline = rhrBaselineValue,
                             storedTrimp = workout.trimp,
                         )
+                    val workoutTrimp = workoutTrimpResult.getOrNull() ?: 0f
                     dailyTrimpRaw += workoutTrimp
                 }
 

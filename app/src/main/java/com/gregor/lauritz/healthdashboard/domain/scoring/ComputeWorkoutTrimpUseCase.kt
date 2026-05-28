@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import java.time.Instant
 import javax.inject.Inject
@@ -16,7 +17,7 @@ class ComputeWorkoutTrimpUseCase
             prefs: UserPreferences,
             restingHrBaseline: Float? = null,
             storedTrimp: Float? = null,
-        ): Float {
+        ): Result<Float> = try {
             val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
 
             // RHR baseline resolution with exercise-aware fallback:
@@ -40,21 +41,23 @@ class ComputeWorkoutTrimpUseCase
             // This ensures that the fallback matches the integrated logic as closely as possible.
             if (filteredSamples.isEmpty()) {
                 val durationMinutes = (workoutEndTime - workoutStartTime) / 60_000f
-                return if (durationMinutes > 0f) {
-                    PaiCalculator.calculateDailyTrimp(
-                        durationMinutes = durationMinutes,
-                        hrAvg = workoutAvgHr,
-                        rhrBaseline = rhrBaseline,
-                        hrMax = hrMax,
-                        gender = prefs.gender,
-                        trimpModel = prefs.trimpModel,
-                        banisterMultiplier = prefs.banisterMultiplier,
-                        chengBeta = prefs.chengBeta,
-                        itrimB = prefs.itrimB,
-                    )
-                } else {
-                    storedTrimp ?: 0f
-                }
+                return@execute Result.success(
+                    if (durationMinutes > 0f) {
+                        PaiCalculator.calculateDailyTrimp(
+                            durationMinutes = durationMinutes,
+                            hrAvg = workoutAvgHr,
+                            rhrBaseline = rhrBaseline,
+                            hrMax = hrMax,
+                            gender = prefs.gender,
+                            trimpModel = prefs.trimpModel,
+                            banisterMultiplier = prefs.banisterMultiplier,
+                            chengBeta = prefs.chengBeta,
+                            itrimB = prefs.itrimB,
+                        )
+                    } else {
+                        storedTrimp ?: 0f
+                    }
+                )
             }
 
             var computedTrimp = 0f
@@ -101,7 +104,9 @@ class ComputeWorkoutTrimpUseCase
                         )
                 }
             }
-            return computedTrimp
+            Result.success(computedTrimp)
+        } catch (e: Exception) {
+            Result.failure("Failed to compute workout TRIMP", "TRIMP_COMPUTATION_ERROR")
         }
 
         data class HeartRateSample(
