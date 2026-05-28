@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.model.Result
+import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
@@ -81,7 +82,7 @@ class PhysiologySettingsViewModel
                         yearValidation is ValidationResult.Valid
                     ) {
                         viewModelScope.launch {
-                            userUseCase.updateBirthday(day = event.day, month = event.month, year = event.year)
+                            userUseCase.updateBirthday(day = event.day, month = event.month, year = event.year).getOrNull()
                             healthSyncUseCase.sync()
                         }
                     }
