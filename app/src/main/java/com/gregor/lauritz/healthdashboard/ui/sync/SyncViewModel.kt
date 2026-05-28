@@ -1,13 +1,14 @@
 package com.gregor.lauritz.healthdashboard.ui.sync
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectPermissionRevokedException
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.PermissionStatus
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
+import com.gregor.lauritz.healthdashboard.ui.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -51,7 +52,10 @@ class SyncViewModel
         private val foregroundSyncController: ForegroundSyncController,
         private val settingsRepo: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
-    ) : ViewModel() {
+    ) : BaseViewModel() {
+        fun validateSyncNecessary(): Result<Unit> {
+            return Result.success(Unit)
+        }
         private val _uiState = MutableStateFlow<SyncUiState>(SyncUiState.CheckingPermissions)
         val uiState: StateFlow<SyncUiState> = _uiState.asStateFlow()
 

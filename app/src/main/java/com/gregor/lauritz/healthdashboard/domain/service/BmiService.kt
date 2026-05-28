@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.domain.service
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.domain.model.BmiStatus
 import com.gregor.lauritz.healthdashboard.domain.model.Result
+import javax.inject.Inject
 
 /**
  * Computed BMI payload returned on a successful calculation.
@@ -22,7 +23,7 @@ data class BmiData(
  * Returns [Result]s instead of throwing for invalid input — failure codes are stable strings
  * defined in [Codes] so callers can branch on them without depending on enum identities.
  */
-class BmiService {
+class BmiService @Inject constructor() {
     /**
      * Compute BMI from a metric or imperial input, plus its classification.
      *

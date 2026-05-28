@@ -2,7 +2,6 @@ package com.gregor.lauritz.healthdashboard.ui.dashboard
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
@@ -15,10 +14,12 @@ import com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepositor
 import com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.model.SleepSessionSummary
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
+import com.gregor.lauritz.healthdashboard.ui.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,7 +45,14 @@ class DashboardViewModel
         private val cardConfigRepository: CardConfigurationRepository,
         private val circadianRepo: CircadianConsistencyRepository,
         private val dailyMetricCache: DailyMetricCache,
-    ) : ViewModel() {
+    ) : BaseViewModel() {
+        fun validateSelectedDate(date: LocalDate): Result<LocalDate> {
+            return if (date <= LocalDate.now()) {
+                Result.success(date)
+            } else {
+                Result.failure("Cannot select future dates", "INVALID_DATE")
+            }
+        }
         private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
 
         val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards

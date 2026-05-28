@@ -3,34 +3,24 @@ package com.gregor.lauritz.healthdashboard.ui.onboarding
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
+import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.service.BmiService
-import com.gregor.lauritz.healthdashboard.domain.service.PreferenceService
-import com.gregor.lauritz.healthdashboard.domain.service.ValidationService
 import io.mockk.coVerify
 import io.mockk.mockk
-import io.mockk.verify
 import org.junit.Before
 import org.junit.Test
 
 class OnboardingViewModelTest {
     private lateinit var settingsRepo: SettingsRepository
-    private lateinit var preferenceService: PreferenceService
-    private lateinit var bmiService: BmiService
-    private lateinit var validationService: ValidationService
     private lateinit var viewModel: OnboardingViewModel
 
     @Before
     fun setUp() {
         settingsRepo = mockk(relaxed = true)
-        preferenceService = mockk(relaxed = true)
-        bmiService = mockk(relaxed = true)
-        validationService = mockk(relaxed = true)
         viewModel =
             OnboardingViewModel(
                 settingsRepo = settingsRepo,
-                preferenceService = preferenceService,
-                bmiService = bmiService,
-                validationService = validationService,
+                bmiService = BmiService(),
             )
     }
 
@@ -151,7 +141,7 @@ class OnboardingViewModelTest {
     fun calculateBmi_70kg_175cm_succeeds() {
         val result = viewModel.calculateBmi(weight = 70f, height = 175f)
         assert(result.isSuccess) { "BMI calculation should succeed" }
-        assert((result.data?.bmi ?: -1f) > 0) { "BMI should be positive" }
+        assert((result.getOrNull()?.bmi ?: -1f) > 0) { "BMI should be positive" }
     }
 
     @Test

@@ -20,9 +20,7 @@ class OnboardingViewModel
     @Inject
     constructor(
         private val settingsRepo: SettingsRepository,
-        private val preferenceService: PreferenceService,
         private val bmiService: BmiService,
-        private val validationService: ValidationService,
     ) : BaseViewModel() {
         fun validateBirthdayDay(day: String): Result<Int> {
             return try {
