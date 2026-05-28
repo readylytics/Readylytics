@@ -48,8 +48,8 @@ class GetDashboardDataUseCase
             date: LocalDate,
             lastSleepSession: SleepSessionSummary?,
             paiSummaries: List<DailySummary>,
-        ): Result<DashboardCards> {
-            return try {
+        ): Result<DashboardCards> =
+            try {
                 val cardDataMap = calculateCardData(summary, prefs, date, lastSleepSession)
                 val paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries)
 
@@ -57,12 +57,11 @@ class GetDashboardDataUseCase
                     DashboardCards(
                         cardDataMap = cardDataMap,
                         paiDailyBreakdown = paiDailyBreakdown,
-                    )
+                    ),
                 )
             } catch (e: Exception) {
                 Result.failure("Failed to build dashboard data", "CARD_GENERATION_ERROR")
             }
-        }
 
         private fun calculateCardData(
             summary: DailySummary?,

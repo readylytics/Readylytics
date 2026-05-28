@@ -228,7 +228,8 @@ class ScoringRepositoryImpl
 
                 val session = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
                 if (session != null) {
-                    val sleepMetricsResult = computeSleepMetricsUseCase(session, dayMidnight, targetDate, prefs, summary, loadScore, zoneId)
+                    val sleepMetricsResult =
+                        computeSleepMetricsUseCase(session, dayMidnight, targetDate, prefs, summary, loadScore, zoneId)
                     summary = sleepMetricsResult.getOrNull() ?: summary
                 }
 
