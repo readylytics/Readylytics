@@ -72,7 +72,7 @@ class CardManagementDelegate(
 
     init {
         scope.launch {
-            _persistTrigger
+            persistTrigger
                 .filterNotNull()
                 .collect { configs ->
                     persistConfigs(configs)
@@ -107,7 +107,7 @@ class CardManagementDelegate(
             }
             CardManagementEvent.SaveChanges -> {
                 _pendingConfigs.value?.let { configs ->
-                    _persistTrigger.value = configs
+                    persistTrigger.value = configs
                 }
                 _isManagingCards.value = false
                 _pendingConfigs.value = null
