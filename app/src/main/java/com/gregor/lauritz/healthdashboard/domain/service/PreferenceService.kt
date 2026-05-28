@@ -146,8 +146,9 @@ class PreferenceService(
         return if (type.isInstance(raw)) {
             Result.Success(raw as T)
         } else {
+            val actualType = raw::class.java.simpleName
             Result.Failure(
-                reason = "Type mismatch for key '$key': expected $expectedTypeName but got ${raw::class.java.simpleName}",
+                reason = "Type mismatch for key '$key': expected $expectedTypeName but got $actualType",
                 code = Codes.TYPE_MISMATCH,
             )
         }

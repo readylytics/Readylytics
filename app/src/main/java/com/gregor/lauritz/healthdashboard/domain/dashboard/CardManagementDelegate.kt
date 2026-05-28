@@ -63,7 +63,7 @@ class CardManagementDelegate(
 ) {
     private val _isManagingCards = MutableStateFlow(false)
     private val _pendingConfigs = MutableStateFlow<List<CardConfiguration>?>(null)
-    private val _persistTrigger = MutableStateFlow<List<CardConfiguration>?>(null)
+    private val persistTrigger = MutableStateFlow<List<CardConfiguration>?>(null)
 
     // Suspend persistence via repository. Called reactively on SaveChanges event.
     private suspend fun persistConfigs(configs: List<CardConfiguration>) {
