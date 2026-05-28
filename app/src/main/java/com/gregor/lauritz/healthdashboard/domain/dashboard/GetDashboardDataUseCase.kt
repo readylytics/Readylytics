@@ -11,6 +11,7 @@ import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.model.SleepSessionSummary
+import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.model.efficiencyStatus
 import com.gregor.lauritz.healthdashboard.domain.model.hrvStatus
 import com.gregor.lauritz.healthdashboard.domain.model.paiStatus
@@ -81,8 +82,9 @@ class GetDashboardDataUseCase
                     CardId.SLEEP_EFFICIENCY to sleepEfficiencyCard(lastSleepSession),
                 )
 
-            val metrics = getWorkoutMetricsUseCase(summary)
-            metrics.strainRatioCard?.let { mapBuilder[CardId.STRAIN_RATIO] = it }
+            val metricsResult = getWorkoutMetricsUseCase(summary)
+            val metrics = metricsResult.getOrNull()
+            metrics?.strainRatioCard?.let { mapBuilder[CardId.STRAIN_RATIO] = it }
 
             // Add new health metrics
             mapBuilder[CardId.WEIGHT] = weightCard(summary, prefs)

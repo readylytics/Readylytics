@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.domain.dashboard
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.util.ResourceProvider
 import com.gregor.lauritz.healthdashboard.ui.dashboard.CardData
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardAction
@@ -19,9 +20,9 @@ class GetWorkoutMetricsUseCase
             val strainRatioCard: CardData?,
         )
 
-        operator fun invoke(summary: DailySummary?): WorkoutMetrics {
+        operator fun invoke(summary: DailySummary?): Result<WorkoutMetrics> = try {
             if (summary == null) {
-                return WorkoutMetrics(null)
+                return@invoke Result.success(WorkoutMetrics(null))
             }
 
             val strainRatioCard =
@@ -35,7 +36,9 @@ class GetWorkoutMetricsUseCase
                         tooltip = resourceProvider.getString(R.string.tooltip_strain_ratio),
                     )
 
-            return WorkoutMetrics(strainRatioCard)
+            Result.success(WorkoutMetrics(strainRatioCard))
+        } catch (e: Exception) {
+            Result.failure("Failed to compute workout metrics", "WORKOUT_METRICS_ERROR")
         }
 
         private fun createStrainRatioCard(strainRatio: Float): CardData {
