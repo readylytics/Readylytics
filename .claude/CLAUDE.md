@@ -122,6 +122,7 @@ The UI follows a strict "Material You" (Material 3) aesthetic: dynamic dark mode
 ## 🔧 Pre-Commit Checks
 
 **MANDATORY before any commit:**
+
 - Format all Kotlin code: `./gradlew ktlintFormat`
 - This ensures consistent code style across the codebase
 - Agents must run this step as part of commit preparation
