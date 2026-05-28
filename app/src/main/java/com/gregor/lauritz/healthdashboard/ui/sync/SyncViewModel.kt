@@ -53,9 +53,8 @@ class SyncViewModel
         private val settingsRepo: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
     ) : BaseViewModel() {
-        fun validateSyncNecessary(): Result<Unit> {
-            return Result.success(Unit)
-        }
+        fun validateSyncNecessary(): Result<Unit> = Result.success(Unit)
+
         private val _uiState = MutableStateFlow<SyncUiState>(SyncUiState.CheckingPermissions)
         val uiState: StateFlow<SyncUiState> = _uiState.asStateFlow()
 

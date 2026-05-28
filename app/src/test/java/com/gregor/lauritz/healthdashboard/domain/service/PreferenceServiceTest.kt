@@ -284,8 +284,7 @@ class PreferenceServiceTest {
 
     // ─── Result helpers ──────────────────────────────────────────────────────
     @Test
-    fun result_getOrNull_success_returnsValue() =
-        assertEquals("v", (Result.Success("v") as Result<String>).getOrNull())
+    fun result_getOrNull_success_returnsValue() = assertEquals("v", (Result.Success("v") as Result<String>).getOrNull())
 
     @Test
     fun result_getOrNull_missing_returnsNull() =

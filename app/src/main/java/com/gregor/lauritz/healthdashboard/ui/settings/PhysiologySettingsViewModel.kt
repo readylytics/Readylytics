@@ -26,8 +26,8 @@ class PhysiologySettingsViewModel
         private val userUseCase: UserUseCase,
         private val healthSyncUseCase: HealthSyncUseCase,
     ) : BaseViewModel() {
-        fun validateBirthdayDayForUpdate(day: String): Result<Int> {
-            return try {
+        fun validateBirthdayDayForUpdate(day: String): Result<Int> =
+            try {
                 val d = day.toInt()
                 if (d in 1..31) {
                     Result.success(d)
@@ -37,10 +37,9 @@ class PhysiologySettingsViewModel
             } catch (e: NumberFormatException) {
                 Result.failure("Day must be a number", "INVALID_FORMAT")
             }
-        }
 
-        fun validateHeightForUpdate(height: String): Result<Float> {
-            return try {
+        fun validateHeightForUpdate(height: String): Result<Float> =
+            try {
                 val h = height.toFloat()
                 if (h in 120f..250f) {
                     Result.success(h)
@@ -50,7 +49,6 @@ class PhysiologySettingsViewModel
             } catch (e: NumberFormatException) {
                 Result.failure("Height must be a number", "INVALID_FORMAT")
             }
-        }
 
         val uiState: StateFlow<PhysiologySettingsState> =
             settingsRepo.userPreferences

@@ -6,7 +6,6 @@ import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.cache.DailyMetricCache
 import com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase
-import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import io.mockk.mockk
@@ -35,16 +34,17 @@ class DashboardViewModelTest {
         cardConfigRepository = mockk(relaxed = true)
         circadianRepo = mockk(relaxed = true)
         dailyMetricCache = mockk(relaxed = true)
-        viewModel = DashboardViewModel(
-            dailySummaryRepository = dailySummaryRepository,
-            getDashboardDataUseCase = getDashboardDataUseCase,
-            foregroundSyncController = foregroundSyncController,
-            selectedDateRepository = selectedDateRepository,
-            settingsRepo = settingsRepo,
-            cardConfigRepository = cardConfigRepository,
-            circadianRepo = circadianRepo,
-            dailyMetricCache = dailyMetricCache,
-        )
+        viewModel =
+            DashboardViewModel(
+                dailySummaryRepository = dailySummaryRepository,
+                getDashboardDataUseCase = getDashboardDataUseCase,
+                foregroundSyncController = foregroundSyncController,
+                selectedDateRepository = selectedDateRepository,
+                settingsRepo = settingsRepo,
+                cardConfigRepository = cardConfigRepository,
+                circadianRepo = circadianRepo,
+                dailyMetricCache = dailyMetricCache,
+            )
     }
 
     @Test

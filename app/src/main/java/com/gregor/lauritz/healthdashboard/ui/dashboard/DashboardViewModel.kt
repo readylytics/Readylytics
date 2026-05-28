@@ -46,13 +46,13 @@ class DashboardViewModel
         private val circadianRepo: CircadianConsistencyRepository,
         private val dailyMetricCache: DailyMetricCache,
     ) : BaseViewModel() {
-        fun validateSelectedDate(date: LocalDate): Result<LocalDate> {
-            return if (date <= LocalDate.now()) {
+        fun validateSelectedDate(date: LocalDate): Result<LocalDate> =
+            if (date <= LocalDate.now()) {
                 Result.success(date)
             } else {
                 Result.failure("Cannot select future dates", "INVALID_DATE")
             }
-        }
+
         private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
 
         val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards

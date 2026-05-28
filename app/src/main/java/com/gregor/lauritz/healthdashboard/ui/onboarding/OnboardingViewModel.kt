@@ -5,10 +5,8 @@ import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.domain.model.Result
-import com.gregor.lauritz.healthdashboard.domain.service.BmiService
 import com.gregor.lauritz.healthdashboard.domain.service.BmiData
-import com.gregor.lauritz.healthdashboard.domain.service.PreferenceService
-import com.gregor.lauritz.healthdashboard.domain.service.ValidationService
+import com.gregor.lauritz.healthdashboard.domain.service.BmiService
 import com.gregor.lauritz.healthdashboard.ui.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -22,8 +20,8 @@ class OnboardingViewModel
         private val settingsRepo: SettingsRepository,
         private val bmiService: BmiService,
     ) : BaseViewModel() {
-        fun validateBirthdayDay(day: String): Result<Int> {
-            return try {
+        fun validateBirthdayDay(day: String): Result<Int> =
+            try {
                 val d = day.toInt()
                 if (d in 1..31) {
                     Result.success(d)
@@ -33,10 +31,9 @@ class OnboardingViewModel
             } catch (e: NumberFormatException) {
                 Result.failure("Day must be a number", "INVALID_FORMAT")
             }
-        }
 
-        fun validateBirthdayMonth(month: String): Result<Int> {
-            return try {
+        fun validateBirthdayMonth(month: String): Result<Int> =
+            try {
                 val m = month.toInt()
                 if (m in 1..12) {
                     Result.success(m)
@@ -46,10 +43,9 @@ class OnboardingViewModel
             } catch (e: NumberFormatException) {
                 Result.failure("Month must be a number", "INVALID_FORMAT")
             }
-        }
 
-        fun validateBirthdayYear(year: String): Result<Int> {
-            return try {
+        fun validateBirthdayYear(year: String): Result<Int> =
+            try {
                 val y = year.toInt()
                 val now = LocalDate.now().year
                 if (y in 1900..now) {
@@ -60,10 +56,9 @@ class OnboardingViewModel
             } catch (e: NumberFormatException) {
                 Result.failure("Year must be a number", "INVALID_FORMAT")
             }
-        }
 
-        fun validateHeight(height: String): Result<Float> {
-            return try {
+        fun validateHeight(height: String): Result<Float> =
+            try {
                 val h = height.toFloat()
                 if (h in 120f..250f) {
                     Result.success(h)
@@ -73,11 +68,11 @@ class OnboardingViewModel
             } catch (e: NumberFormatException) {
                 Result.failure("Height must be a number", "INVALID_FORMAT")
             }
-        }
 
-        fun calculateBmi(weight: Float, height: Float): Result<BmiData> {
-            return bmiService.calculateBmi(weight, height, UnitSystem.METRIC)
-        }
+        fun calculateBmi(
+            weight: Float,
+            height: Float,
+        ): Result<BmiData> = bmiService.calculateBmi(weight, height, UnitSystem.METRIC)
 
         fun saveProfile(
             day: Int,

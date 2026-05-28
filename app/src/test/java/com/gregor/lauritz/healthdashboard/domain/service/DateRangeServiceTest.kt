@@ -24,8 +24,7 @@ class DateRangeServiceTest {
         service = DateRangeService(clock)
     }
 
-    private fun rangeEndingTodayOf(days: Int): DateRange =
-        (service.rangeEndingToday(days) as Result.Success).data
+    private fun rangeEndingTodayOf(days: Int): DateRange = (service.rangeEndingToday(days) as Result.Success).data
 
     private fun rangeEndingOf(
         end: LocalDate,
@@ -109,8 +108,7 @@ class DateRangeServiceTest {
     fun acuteWindow_endsToday() = assertEquals(service.today(), (service.acuteWindow() as Result.Success).data.end)
 
     @Test
-    fun chronicWindow_endsToday() =
-        assertEquals(service.today(), (service.chronicWindow() as Result.Success).data.end)
+    fun chronicWindow_endsToday() = assertEquals(service.today(), (service.chronicWindow() as Result.Success).data.end)
 
     @Test
     fun acuteWindow_startIsSixDaysBack() {
@@ -224,14 +222,24 @@ class DateRangeServiceTest {
     @Test
     fun endOfDayMillis_isJustBeforeNextMidnight() {
         val date = LocalDate.of(2024, 6, 15)
-        val nextDay = date.plusDays(1).atStartOfDay(utc).toInstant().toEpochMilli()
+        val nextDay =
+            date
+                .plusDays(1)
+                .atStartOfDay(utc)
+                .toInstant()
+                .toEpochMilli()
         assertEquals(nextDay - 1, service.endOfDayMillis(date))
     }
 
     @Test
     fun truncateToDay_returnsStartOfDay() {
         val midDay = Instant.parse("2024-06-15T15:30:00Z").toEpochMilli()
-        val expected = LocalDate.of(2024, 6, 15).atStartOfDay(utc).toInstant().toEpochMilli()
+        val expected =
+            LocalDate
+                .of(2024, 6, 15)
+                .atStartOfDay(utc)
+                .toInstant()
+                .toEpochMilli()
         assertEquals(expected, service.truncateToDay(midDay))
     }
 
@@ -240,7 +248,12 @@ class DateRangeServiceTest {
         val r =
             (DateRange.create(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 1)) as Result.Success).data
         val (start, end) = r.toEpochMillisRange(utc)
-        val expectedStart = LocalDate.of(2024, 1, 1).atStartOfDay(utc).toInstant().toEpochMilli()
+        val expectedStart =
+            LocalDate
+                .of(2024, 1, 1)
+                .atStartOfDay(utc)
+                .toInstant()
+                .toEpochMilli()
         assertEquals(expectedStart, start)
         assertEquals(expectedStart + 24L * 60 * 60 * 1000 - 1, end)
     }

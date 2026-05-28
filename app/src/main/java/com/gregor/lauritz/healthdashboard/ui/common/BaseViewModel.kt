@@ -18,10 +18,9 @@ abstract class BaseViewModel : ViewModel() {
     protected fun <T> resultOr(
         result: Result<T>,
         default: (Result.Failure) -> T,
-    ): T {
-        return when (result) {
+    ): T =
+        when (result) {
             is Result.Success -> result.data
             is Result.Failure -> default(result)
         }
-    }
 }

@@ -19,11 +19,12 @@ class PhysiologySettingsViewModelTest {
         settingsRepo = mockk(relaxed = true)
         userUseCase = mockk(relaxed = true)
         healthSyncUseCase = mockk(relaxed = true)
-        viewModel = PhysiologySettingsViewModel(
-            settingsRepo = settingsRepo,
-            userUseCase = userUseCase,
-            healthSyncUseCase = healthSyncUseCase,
-        )
+        viewModel =
+            PhysiologySettingsViewModel(
+                settingsRepo = settingsRepo,
+                userUseCase = userUseCase,
+                healthSyncUseCase = healthSyncUseCase,
+            )
     }
 
     @Test

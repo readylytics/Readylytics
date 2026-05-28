@@ -2,7 +2,6 @@ package com.gregor.lauritz.healthdashboard.ui.sync
 
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
-import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import io.mockk.mockk
@@ -22,12 +21,13 @@ class SyncViewModelTest {
         foregroundSyncController = mockk(relaxed = true)
         settingsRepo = mockk(relaxed = true)
         selectedDateRepository = mockk(relaxed = true)
-        viewModel = SyncViewModel(
-            hcRepo = hcRepo,
-            foregroundSyncController = foregroundSyncController,
-            settingsRepo = settingsRepo,
-            selectedDateRepository = selectedDateRepository,
-        )
+        viewModel =
+            SyncViewModel(
+                hcRepo = hcRepo,
+                foregroundSyncController = foregroundSyncController,
+                settingsRepo = settingsRepo,
+                selectedDateRepository = selectedDateRepository,
+            )
     }
 
     @Test

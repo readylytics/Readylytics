@@ -68,8 +68,7 @@ class ValidationServiceTest {
     fun validate_floatRule_decimal_valid() = assertTrue(service.validate(height, "175.5") is Result.Success)
 
     @Test
-    fun validate_floatRule_nonNumeric_invalid() =
-        assertTrue(service.validate(height, "tall") is Result.Failure)
+    fun validate_floatRule_nonNumeric_invalid() = assertTrue(service.validate(height, "tall") is Result.Failure)
 
     @Test
     fun validate_success_checkedCount_isOne() {
