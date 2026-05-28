@@ -9,6 +9,7 @@ import com.gregor.lauritz.healthdashboard.domain.model.BmiStatus
 import com.gregor.lauritz.healthdashboard.domain.model.BodyFatStatus
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.model.SleepSessionSummary
 import com.gregor.lauritz.healthdashboard.domain.model.efficiencyStatus
 import com.gregor.lauritz.healthdashboard.domain.model.hrvStatus
@@ -47,14 +48,20 @@ class GetDashboardDataUseCase
             date: LocalDate,
             lastSleepSession: SleepSessionSummary?,
             paiSummaries: List<DailySummary>,
-        ): DashboardCards {
-            val cardDataMap = calculateCardData(summary, prefs, date, lastSleepSession)
-            val paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries)
+        ): Result<DashboardCards> {
+            return try {
+                val cardDataMap = calculateCardData(summary, prefs, date, lastSleepSession)
+                val paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries)
 
-            return DashboardCards(
-                cardDataMap = cardDataMap,
-                paiDailyBreakdown = paiDailyBreakdown,
-            )
+                Result.success(
+                    DashboardCards(
+                        cardDataMap = cardDataMap,
+                        paiDailyBreakdown = paiDailyBreakdown,
+                    )
+                )
+            } catch (e: Exception) {
+                Result.failure("Failed to build dashboard data", "CARD_GENERATION_ERROR")
+            }
         }
 
         private fun calculateCardData(

@@ -16,6 +16,7 @@ import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.model.SleepSessionSummary
+import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
@@ -103,7 +104,7 @@ class DashboardViewModel
                     )
                 }
 
-            val cards =
+            val cardsResult =
                 getDashboardDataUseCase.invoke(
                     summary = basicInputs.summary,
                     prefs = basicInputs.userPreferences,
@@ -112,13 +113,14 @@ class DashboardViewModel
                     paiSummaries = basicInputs.paiSummaries,
                 )
 
+            val cards = cardsResult.getOrNull()
             return DashboardUiState(
                 summary = basicInputs.summary,
                 selectedDate = selectedDate,
-                cardDataMap = cards.cardDataMap,
+                cardDataMap = cards?.cardDataMap ?: emptyMap(),
                 circadianConsistency = basicInputs.circadianResult,
-                restingHrCard = cards.cardDataMap[CardId.RESTING_HR],
-                paiDailyBreakdown = cards.paiDailyBreakdown,
+                restingHrCard = cards?.cardDataMap?.get(CardId.RESTING_HR),
+                paiDailyBreakdown = cards?.paiDailyBreakdown ?: emptyList(),
                 stepCount = basicInputs.summary?.stepCount,
                 stepGoal = basicInputs.userPreferences.stepGoal,
                 lastSleepSession = sessionSummary,
@@ -127,6 +129,7 @@ class DashboardViewModel
                 isRefreshing = realtimeState.isSyncing,
                 isComputingMetrics = realtimeState.isSyncing && basicInputs.summary == null,
                 isCalibrating = basicInputs.summary?.isCalibrating ?: false,
+                errorMessage = if (cardsResult.isFailure) "Failed to load dashboard data" else null,
             )
         }
 
