@@ -7,6 +7,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import com.gregor.lauritz.healthdashboard.domain.model.ReadinessResult
+import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.CurrentNightHrvResolver
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.HrCoverageValidator
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.SleepNadirAnalyzer
@@ -43,7 +44,7 @@ class ComputeSleepMetricsUseCase
             summary: DailySummaryEntity,
             loadScore: Float,
             zoneId: ZoneId,
-        ): DailySummaryEntity {
+        ): Result<DailySummaryEntity> = try {
             val installDate =
                 if (prefs.installDate > 0) {
                     LocalDate.ofEpochDay(
@@ -284,7 +285,7 @@ class ComputeSleepMetricsUseCase
                     )
             }
 
-            return summary.copy(
+            Result.success(summary.copy(
                 sleepScore = sleepScore,
                 readinessScore = readinessScore,
                 nocturnalRhr = currentNocturnalRhr,
@@ -317,6 +318,8 @@ class ComputeSleepMetricsUseCase
                 diagnostics = readinessResult.diagnostics,
                 contributors = readinessResult.contributors,
                 sRest = readinessResult.sRest,
-            )
+            ))
+        } catch (e: Exception) {
+            Result.failure("Failed to compute sleep metrics", "SLEEP_METRICS_ERROR")
         }
     }
