@@ -100,6 +100,13 @@ inline fun <T> Result<T>.recoverWith(transform: (Result.Failure) -> Result<T>): 
         is Result.Failure -> transform(this)
     }
 
+/** Throws an exception if this is a [Failure], otherwise returns the success data. */
+fun <T> Result<T>.getOrThrow(): T =
+    when (this) {
+        is Result.Success -> data
+        is Result.Failure -> throw Exception(reason)
+    }
+
 /** Side-effecting callback for successful results; returns the original [Result] unchanged. */
 inline fun <T> Result<T>.onSuccess(action: (T) -> Unit): Result<T> {
     if (this is Result.Success) action(data)

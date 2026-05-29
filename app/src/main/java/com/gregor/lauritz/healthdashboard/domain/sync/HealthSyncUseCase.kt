@@ -18,6 +18,7 @@ import com.gregor.lauritz.healthdashboard.data.mapper.BodyFatDataMapper
 import com.gregor.lauritz.healthdashboard.data.mapper.WeightDataMapper
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
@@ -56,7 +57,7 @@ class HealthSyncUseCase
         suspend fun sync(windowDays: Int = 8): Result<Unit> =
             syncMutex.withLock {
                 withContext(Dispatchers.IO) {
-                    runCatching {
+                    try {
                         logD("HealthSyncUseCase") { "Starting sync (window=$windowDays days)..." }
                         val today = LocalDate.now(ZoneId.systemDefault())
                         val zoneId = ZoneId.systemDefault()
@@ -208,20 +209,25 @@ class HealthSyncUseCase
                             val steps = stepsMap[day] ?: 0L
                             val result = syncDayScoring(day, steps)
 
-                            result
-                                .onSuccess {
+                            when (result) {
+                                is Result.Success -> {
                                     successCount++
                                     logD("HealthSyncUseCase") { "Day $day: SUCCESS" }
-                                }.onFailure { e ->
-                                    failureCount++
-                                    logD("HealthSyncUseCase") { "Day $day: FAILED - ${e.message}" }
                                 }
+                                is Result.Failure -> {
+                                    failureCount++
+                                    logD("HealthSyncUseCase") { "Day $day: FAILED - ${result.reason}" }
+                                }
+                            }
                         }
 
                         logD("HealthSyncUseCase") {
                             "Sync complete: $successCount succeeded, $failureCount failed"
                         }
                         settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
+                        Result.success(Unit)
+                    } catch (e: Exception) {
+                        Result.failure("Sync failed", "SYNC_ERROR")
                     }
                 }
             }
@@ -233,13 +239,16 @@ class HealthSyncUseCase
             steps: Long,
         ): Result<Unit> =
             withContext(Dispatchers.IO) {
-                runCatching {
+                try {
                     val afterScoring = scoringRepository.computeDailySummary(day)
                     val stepCountInt = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                     val finalSummary = afterScoring.copy(stepCount = stepCountInt)
                     dailySummaryDao.upsert(finalSummary)
 
                     logD("HealthSyncUseCase") { "Day $day: scored (steps=$steps) and summary persisted" }
+                    Result.success(Unit)
+                } catch (e: Exception) {
+                    Result.failure("Day $day sync failed", "DAY_SYNC_ERROR")
                 }
             }
 

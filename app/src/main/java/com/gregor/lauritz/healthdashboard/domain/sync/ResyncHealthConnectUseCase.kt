@@ -6,6 +6,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.domain.model.Result
+import com.gregor.lauritz.healthdashboard.domain.model.getOrThrow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -24,7 +25,7 @@ class ResyncHealthConnectUseCase
     ) {
         suspend fun execute(): Result<Unit> =
             withContext(Dispatchers.Default) {
-                runCatching {
+                try {
                     // Clear all HC-sourced data.
                     sleepSessionDao.deleteAll()
                     heartRateDao.deleteAll()
@@ -34,9 +35,9 @@ class ResyncHealthConnectUseCase
 
                     // Re-sync last 60 days from Health Connect.
                     healthSyncUseCase.sync(windowDays = 60).getOrThrow()
-                }.fold(
-                    { Result.success(it) },
-                    { Result.failure("Resync failed", "RESYNC_ERROR") },
-                )
+                    Result.success(Unit)
+                } catch (e: Exception) {
+                    Result.failure("Resync failed", "RESYNC_ERROR")
+                }
             }
     }
