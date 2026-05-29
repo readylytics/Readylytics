@@ -7,15 +7,17 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,13 +30,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.SleepStageType
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
@@ -43,17 +45,24 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
+private val LANE_HEIGHT = 56.dp
+private val SHAPE_INSET = 4.dp
+private val SHAPE_CORNER = 6.dp
+private val LABEL_WIDTH = 64.dp
+private val CHART_TOTAL_HEIGHT = LANE_HEIGHT * 4
+
+private val NINE_HOURS_MS = 9L * 3_600_000L
+
 private fun getStageColor(
     stageType: String,
     colorScheme: androidx.compose.material3.ColorScheme,
-): Color =
-    when (stageType) {
-        SleepStageType.DEEP.value -> colorScheme.primary
-        SleepStageType.LIGHT.value -> colorScheme.secondary
-        SleepStageType.REM.value -> colorScheme.tertiary
-        SleepStageType.AWAKE.value -> colorScheme.error
-        else -> colorScheme.secondary
-    }
+) = when (stageType) {
+    SleepStageType.AWAKE.value -> colorScheme.error.copy(alpha = 0.80f)
+    SleepStageType.REM.value -> colorScheme.secondary.copy(alpha = 0.80f)
+    SleepStageType.LIGHT.value -> colorScheme.primary.copy(alpha = 0.60f)
+    SleepStageType.DEEP.value -> colorScheme.primary
+    else -> colorScheme.primary.copy(alpha = 0.60f)
+}
 
 private const val AWAKE_LANE_INDEX = 0
 private const val REM_LANE_INDEX = 1
@@ -66,7 +75,7 @@ private fun getStageLaneIndex(stageType: String): Int =
         SleepStageType.REM.value -> REM_LANE_INDEX
         SleepStageType.LIGHT.value -> LIGHT_LANE_INDEX
         SleepStageType.DEEP.value -> DEEP_LANE_INDEX
-        else -> LIGHT_LANE_INDEX // Default to Light sleep lane if unknown
+        else -> LIGHT_LANE_INDEX
     }
 
 private fun mergeConsecutiveStages(stages: List<SleepStageData>): List<SleepStageData> {
@@ -98,7 +107,6 @@ private fun getLabelTimestamps(
     if (sessionDurationMinutes <= 0L) return emptyList()
 
     val durationHours = sessionDurationMinutes / 60f
-
     val intervalMinutes =
         when {
             durationHours <= 4 -> 60
@@ -111,7 +119,6 @@ private fun getLabelTimestamps(
 
     val zoneId = ZoneId.systemDefault()
     val startZDT = Instant.ofEpochMilli(startMs).atZone(zoneId)
-    // Find first "nice" time after start (top of the hour)
     var currentZDT =
         startZDT
             .plusHours(1)
@@ -130,7 +137,6 @@ private fun getLabelTimestamps(
     if (timestamps.last() < endMs - (15 * 60_000L)) {
         timestamps.add(endMs)
     } else if (timestamps.size > 1) {
-        // Replace last if too close to endMs
         timestamps[timestamps.size - 1] = endMs
     } else {
         timestamps.add(endMs)
@@ -140,22 +146,62 @@ private fun getLabelTimestamps(
 }
 
 @Composable
+private fun formatStageDuration(minutes: Int): String {
+    val h = minutes / 60
+    val m = minutes % 60
+    return if (h > 0) {
+        stringResource(R.string.sleep_duration_hours_minutes, h, m)
+    } else {
+        stringResource(R.string.sleep_duration_minutes_only, m)
+    }
+}
+
+private data class LaneInfo(
+    val stageType: String,
+    val labelResId: Int,
+)
+
+private val LANES =
+    listOf(
+        LaneInfo(SleepStageType.AWAKE.value, R.string.sleep_stage_awake),
+        LaneInfo(SleepStageType.REM.value, R.string.sleep_stage_rem),
+        LaneInfo(SleepStageType.LIGHT.value, R.string.sleep_stage_light),
+        LaneInfo(SleepStageType.DEEP.value, R.string.sleep_stage_deep),
+    )
+
+@Composable
 fun SleepStagesChart(
     session: SleepSessionData?,
     modifier: Modifier = Modifier,
     stageTimeline: List<SleepStageData> = emptyList(),
-    labelWidth: Dp = 52.dp,
-    horizontalPadding: Dp = 24.dp,
-    spacing: Dp = 8.dp,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var activeTapOffset by remember { mutableStateOf<Offset?>(null) }
     var activeSegmentIndex by remember { mutableStateOf<Int?>(null) }
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val canvasLeftOffsetPx =
-        remember(density, horizontalPadding, labelWidth, spacing) {
-            with(density) { (horizontalPadding + labelWidth + spacing).roundToPx() }
-        }
+
+    // Breathing halo animation on selection
+    val infiniteTransition = rememberInfiniteTransition(label = "sleepHaloTransition")
+    val haloRadiusCoeff by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 1.6f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(1200, easing = EaseInOutSine),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "sleepHaloRadiusCoeff",
+    )
+    val haloAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.15f,
+        targetValue = 0.4f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(1200, easing = EaseInOutSine),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "sleepHaloAlpha",
+    )
+    val density = LocalDensity.current
 
     if (session == null) {
         CalibrationBar(
@@ -167,324 +213,252 @@ fun SleepStagesChart(
     }
 
     val colorScheme = MaterialTheme.colorScheme
-
-    // Selected segment breathing animation
-    val infiniteTransition = rememberInfiniteTransition(label = "halo")
-    val haloAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.15f,
-        targetValue = 0.4f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(1200, easing = EaseInOutSine),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "haloAlpha",
-    )
-
     val timeFormatter =
         remember {
-            DateTimeFormatter
-                .ofLocalizedTime(FormatStyle.SHORT)
-                .withZone(ZoneId.systemDefault())
+            DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault())
         }
+
+    val sessionDurationMs = (session.endTime - session.startTime).coerceAtLeast(1L)
+    val needsScroll = sessionDurationMs > NINE_HOURS_MS
+    val scaleFactor = if (needsScroll) sessionDurationMs.toFloat() / NINE_HOURS_MS.toFloat() else 1f
 
     val labelTimestamps =
         remember(session.startTime, session.endTime) {
-            getLabelTimestamps(
-                session.startTime,
-                session.endTime,
-            )
+            getLabelTimestamps(session.startTime, session.endTime)
         }
     val sortedTimeline = remember(stageTimeline) { stageTimeline.sortedBy { it.startTime } }
     val mergedTimeline = remember(sortedTimeline) { mergeConsecutiveStages(sortedTimeline) }
-    val sessionDurationMs = (session.endTime - session.startTime).coerceAtLeast(1L)
-
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(horizontal = horizontalPadding),
-    ) {
-        // Left Column: Lane Labels
-        Column(
-            modifier =
-                Modifier
-                    .width(labelWidth)
-                    .height(200.dp)
-                    .padding(vertical = 24.dp),
-            // Matched with vertical paddings on Canvas
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.Start,
-        ) {
-            Text(
-                text = "Awake",
-                style = MaterialTheme.typography.labelSmall,
-                color = colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium,
-            )
-            Text(
-                text = "REM",
-                style = MaterialTheme.typography.labelSmall,
-                color = colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium,
-            )
-            Text(
-                text = "Light",
-                style = MaterialTheme.typography.labelSmall,
-                color = colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium,
-            )
-            Text(
-                text = "Deep",
-                style = MaterialTheme.typography.labelSmall,
-                color = colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium,
-            )
+    val stageDurations =
+        remember(stageTimeline) {
+            stageTimeline
+                .groupBy { it.stageType }
+                .mapValues { (_, stages) -> stages.sumOf { it.durationMinutes } }
         }
 
-        Spacer(modifier = Modifier.width(spacing))
-
-        // Right Column: Canvas & Time Labels
-        Column(
-            modifier = Modifier.weight(1f),
-        ) {
-            Canvas(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .testTag("SleepStagesChartCanvas")
-                        .detectCanvasTap(
-                            segments =
-                                remember(mergedTimeline, session.startTime, sessionDurationMs) {
-                                    mergedTimeline.mapIndexed { index, stageData ->
-                                        val startFraction =
-                                            (stageData.startTime - session.startTime).toFloat() / sessionDurationMs
-                                        val endFraction =
-                                            (stageData.endTime - session.startTime).toFloat() / sessionDurationMs
-                                        SegmentHitBox(
-                                            index = index,
-                                            xStart = startFraction,
-                                            xEnd = endFraction,
-                                            label = stageData.stageType,
-                                        )
-                                    }
-                                },
-                            onSegmentTapped = { index, _, tapOffset ->
-                                activeSegmentIndex = index
-                                activeTapOffset = tapOffset
-                                val tappedStage = mergedTimeline[index]
-                                val valueText = "${tappedStage.durationMinutes} min"
-                                val dateText = timeFormatter.format(Instant.ofEpochMilli(tappedStage.startTime))
-                                tooltipState =
-                                    DataPointTooltipData(
-                                        valueText = valueText,
-                                        dateText = dateText,
-                                        offset =
-                                            androidx.compose.ui.unit.IntOffset(
-                                                x = tapOffset.x.toInt() + canvasLeftOffsetPx,
-                                                y = tapOffset.y.toInt(),
-                                            ),
-                                    )
-                            },
-                        ),
-            ) {
-                val chartWidth = size.width
-                val chartHeight = size.height
-
-                if (session.endTime - session.startTime == 0L) return@Canvas
-
-                // 1. Draw vertical time grid lines
-                val gridColor = colorScheme.outlineVariant.copy(alpha = 0.3f)
-                labelTimestamps.forEach { ts ->
-                    val fraction = (ts - session.startTime).toFloat() / sessionDurationMs
-                    val x = fraction * chartWidth
-                    drawLine(
-                        color = gridColor,
-                        start = Offset(x, 0f),
-                        end = Offset(x, chartHeight),
-                        strokeWidth = 1.dp.toPx(),
+    Row(modifier = modifier.fillMaxWidth()) {
+        // Left column: fixed-width lane labels with stage name + duration
+        Column(modifier = Modifier.width(LABEL_WIDTH)) {
+            LANES.forEach { lane ->
+                Column(
+                    modifier =
+                        Modifier
+                            .height(LANE_HEIGHT)
+                            .fillMaxWidth(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.Start,
+                ) {
+                    Text(
+                        text = stringResource(lane.labelResId),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colorScheme.onSurfaceVariant,
                     )
-                }
-
-                // 2. Draw subtle horizontal guidelines/lanes
-                val paddingY = 24.dp.toPx()
-                val usableHeight = chartHeight - 2 * paddingY
-                val laneSpacing = usableHeight / 3f
-                val laneGuidelineColor = colorScheme.onSurface.copy(alpha = 0.05f)
-
-                for (i in 0..3) {
-                    val y = paddingY + i * laneSpacing
-                    drawLine(
-                        color = laneGuidelineColor,
-                        start = Offset(0f, y),
-                        end = Offset(chartWidth, y),
-                        strokeWidth = 1.dp.toPx(),
-                    )
-                }
-
-                // 3. Draw horizontal capsules of consistent thickness for stages
-                val capsuleHeight = 12.dp.toPx()
-                val radius = capsuleHeight / 2f
-
-                mergedTimeline.forEach { stageData ->
-                    val stageIndex = getStageLaneIndex(stageData.stageType)
-                    val yOffset = paddingY + stageIndex * laneSpacing
-
-                    val startFraction = (stageData.startTime - session.startTime).toFloat() / sessionDurationMs
-                    val endFraction = (stageData.endTime - session.startTime).toFloat() / sessionDurationMs
-                    val startX = startFraction * chartWidth
-                    val endX = endFraction * chartWidth
-
-                    val rawWidth = endX - startX
-                    val width = rawWidth.coerceAtLeast(capsuleHeight)
-                    val drawX =
-                        if (rawWidth < capsuleHeight) {
-                            startX - (capsuleHeight - rawWidth) / 2f
-                        } else {
-                            startX
-                        }
-
-                    val baseColor = getStageColor(stageData.stageType, colorScheme)
-
-                    drawRoundRect(
-                        color = baseColor,
-                        topLeft = Offset(drawX, yOffset - radius),
-                        size = Size(width, capsuleHeight),
-                        cornerRadius = CornerRadius(radius, radius),
-                    )
-                }
-
-                // 4. Draw thin semi-transparent transition connectors between stages on top of capsules (prevents gaps)
-                mergedTimeline.zipWithNext().forEach { (currentStage, nextStage) ->
-                    val currentIndex = getStageLaneIndex(currentStage.stageType)
-                    val nextIndex = getStageLaneIndex(nextStage.stageType)
-
-                    val currentY = paddingY + currentIndex * laneSpacing
-                    val nextY = paddingY + nextIndex * laneSpacing
-
-                    val currentEndX =
-                        ((currentStage.endTime - session.startTime).toFloat() / sessionDurationMs) * chartWidth
-                    val nextStartX =
-                        ((nextStage.startTime - session.startTime).toFloat() / sessionDurationMs) * chartWidth
-
-                    val midX = (currentEndX + nextStartX) / 2f
-
-                    val nextColor = getStageColor(nextStage.stageType, colorScheme)
-                    val connectorColor = nextColor.copy(alpha = 0.3f)
-                    val connectorStroke = 2.dp.toPx()
-
-                    val startY = currentY
-                    val endY = nextY
-
-                    if (nextStartX > currentEndX) {
-                        // Draw horizontal connector on current lane
-                        drawLine(
-                            color = connectorColor,
-                            start = Offset(currentEndX, currentY),
-                            end = Offset(midX, currentY),
-                            strokeWidth = connectorStroke,
-                        )
-                        // Draw vertical stem at midX
-                        drawLine(
-                            color = connectorColor,
-                            start = Offset(midX, startY),
-                            end = Offset(midX, endY),
-                            strokeWidth = connectorStroke,
-                        )
-                        // Draw horizontal connector on next lane
-                        drawLine(
-                            color = connectorColor,
-                            start = Offset(midX, nextY),
-                            end = Offset(nextStartX, nextY),
-                            strokeWidth = connectorStroke,
-                        )
-                    } else {
-                        // Standard vertical transition at midX
-                        drawLine(
-                            color = connectorColor,
-                            start = Offset(midX, startY),
-                            end = Offset(midX, endY),
-                            strokeWidth = connectorStroke,
+                    val durationMinutes = stageDurations[lane.stageType] ?: 0
+                    if (durationMinutes > 0) {
+                        Text(
+                            text = formatStageDuration(durationMinutes),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colorScheme.onSurfaceVariant,
                         )
                     }
                 }
+            }
+        }
 
-                // 5. Draw glowing selected breathing halo for tapped segment
-                activeSegmentIndex?.let { index ->
-                    if (index in mergedTimeline.indices) {
-                        val stageData = mergedTimeline[index]
-                        val stageIndex = getStageLaneIndex(stageData.stageType)
-                        val yOffset = paddingY + stageIndex * laneSpacing
+        // Right column: chart canvas + x-axis, optionally scrollable for long sessions
+        val scrollState = rememberScrollState()
+        BoxWithConstraints(modifier = Modifier.weight(1f)) {
+            val naturalWidth = maxWidth
+            val chartWidth = if (needsScroll) naturalWidth * scaleFactor else naturalWidth
 
-                        val startFraction = (stageData.startTime - session.startTime).toFloat() / sessionDurationMs
-                        val endFraction = (stageData.endTime - session.startTime).toFloat() / sessionDurationMs
-                        val startX = startFraction * chartWidth
-                        val endX = endFraction * chartWidth
+            Column(
+                modifier =
+                    if (needsScroll) {
+                        Modifier.horizontalScroll(scrollState)
+                    } else {
+                        Modifier
+                    },
+            ) {
+                Canvas(
+                    modifier =
+                        Modifier
+                            .width(chartWidth)
+                            .height(CHART_TOTAL_HEIGHT)
+                            .testTag("SleepStagesChartCanvas")
+                            .detectCanvasTap(
+                                segments =
+                                    remember(mergedTimeline, session.startTime, sessionDurationMs) {
+                                        mergedTimeline.mapIndexed { index, stageData ->
+                                            val startFraction =
+                                                (stageData.startTime - session.startTime).toFloat() / sessionDurationMs
+                                            val endFraction =
+                                                (stageData.endTime - session.startTime).toFloat() / sessionDurationMs
+                                            SegmentHitBox(
+                                                index = index,
+                                                xStart = startFraction,
+                                                xEnd = endFraction,
+                                                label = stageData.stageType,
+                                            )
+                                        }
+                                    },
+                                onSegmentTapped = { index, _, tapOffset ->
+                                    activeTapOffset = tapOffset
+                                    activeSegmentIndex = index
+                                    val tappedStage = mergedTimeline[index]
+                                    val valueText = "${tappedStage.durationMinutes} min"
+                                    val dateText =
+                                        timeFormatter.format(Instant.ofEpochMilli(tappedStage.startTime))
+                                    val labelWidthPx = with(density) { LABEL_WIDTH.roundToPx() }
+                                    val laneIndex = getStageLaneIndex(tappedStage.stageType)
+                                    val laneHeightPx = with(density) { LANE_HEIGHT.roundToPx() }
+                                    val centerY = ((laneIndex + 0.5f) * laneHeightPx).toInt()
+                                    tooltipState =
+                                        DataPointTooltipData(
+                                            valueText = valueText,
+                                            dateText = dateText,
+                                            offset =
+                                                androidx.compose.ui.unit.IntOffset(
+                                                    x = tapOffset.x.toInt() - scrollState.value + labelWidthPx,
+                                                    y = centerY,
+                                                ),
+                                        )
+                                },
+                            ),
+                ) {
+                    val canvasWidth = size.width
+                    val laneHeightPx = LANE_HEIGHT.toPx()
+                    val insetPx = SHAPE_INSET.toPx()
+                    val cornerPx = SHAPE_CORNER.toPx()
+                    val strokePx = 1.dp.toPx()
 
-                        val rawWidth = endX - startX
-                        val width = rawWidth.coerceAtLeast(capsuleHeight)
-                        val drawX =
-                            if (rawWidth < capsuleHeight) {
-                                startX - (capsuleHeight - rawWidth) / 2f
-                            } else {
-                                startX
-                            }
+                    if (session.endTime <= session.startTime) return@Canvas
+
+                    // 1. Vertical grid lines for X-axis time labels
+                    val gridLineColor = colorScheme.onSurface.copy(alpha = 0.05f)
+                    labelTimestamps.forEach { ts ->
+                        val fraction = (ts - session.startTime).toFloat() / sessionDurationMs
+                        val x = fraction * canvasWidth
+                        drawLine(
+                            color = gridLineColor,
+                            start = Offset(x, 0f),
+                            end = Offset(x, size.height),
+                            strokeWidth = strokePx,
+                        )
+                    }
+
+                    // 2. Dividers between lanes (not at top/bottom chart edges)
+                    val dividerColor = colorScheme.onSurface.copy(alpha = 0.08f)
+                    for (i in 1 until 4) {
+                        val y = i * laneHeightPx
+                        drawLine(
+                            color = dividerColor,
+                            start = Offset(0f, y),
+                            end = Offset(canvasWidth, y),
+                            strokeWidth = strokePx,
+                        )
+                    }
+
+                    // 3. Stage shapes — full-height fills with 4dp vertical inset and 6dp corners
+                    val minShapeWidthPx = 4.dp.toPx()
+                    mergedTimeline.forEachIndexed { index, stageData ->
+                        val laneIndex = getStageLaneIndex(stageData.stageType)
+                        val shapeTop = laneIndex * laneHeightPx + insetPx
+                        val shapeHeight = laneHeightPx - 2 * insetPx
+                        val startFraction =
+                            (stageData.startTime - session.startTime).toFloat() / sessionDurationMs
+                        val endFraction =
+                            (stageData.endTime - session.startTime).toFloat() / sessionDurationMs
+                        val startX = startFraction * canvasWidth
+                        val shapeWidth = ((endFraction - startFraction) * canvasWidth).coerceAtLeast(minShapeWidthPx)
 
                         val baseColor = getStageColor(stageData.stageType, colorScheme)
 
-                        val haloPadding = 6.dp.toPx()
-                        val haloHeight = capsuleHeight + 2 * haloPadding
-                        val haloWidth = width + 2 * haloPadding
-                        val haloRadius = haloHeight / 2f
+                        // If this stage segment is selected, draw a pulsing breathing outer glow/halo around its bar
+                        if (activeSegmentIndex == index) {
+                            val currentHaloPadding = 4.dp.toPx() * haloRadiusCoeff
+                            drawRoundRect(
+                                color = baseColor.copy(alpha = haloAlpha),
+                                topLeft = Offset(startX - currentHaloPadding, shapeTop - currentHaloPadding),
+                                size = Size(shapeWidth + 2 * currentHaloPadding, shapeHeight + 2 * currentHaloPadding),
+                                cornerRadius =
+                                    CornerRadius(
+                                        cornerPx + currentHaloPadding,
+                                        cornerPx + currentHaloPadding,
+                                    ),
+                            )
+                        }
 
                         drawRoundRect(
-                            color = baseColor.copy(alpha = haloAlpha),
-                            topLeft = Offset(drawX - haloPadding, yOffset - haloRadius),
-                            size = Size(haloWidth, haloHeight),
-                            cornerRadius = CornerRadius(haloRadius, haloRadius),
+                            color = baseColor,
+                            topLeft = Offset(startX, shapeTop),
+                            size = Size(shapeWidth, shapeHeight),
+                            cornerRadius = CornerRadius(cornerPx, cornerPx),
+                        )
+                    }
+
+                    // 4. Vertical connector lines at stage transitions between different lanes
+                    val connectorColor = colorScheme.onSurface.copy(alpha = 0.20f)
+                    for (i in 0 until mergedTimeline.size - 1) {
+                        val current = mergedTimeline[i]
+                        val next = mergedTimeline[i + 1]
+                        val currentLaneIndex = getStageLaneIndex(current.stageType)
+                        val nextLaneIndex = getStageLaneIndex(next.stageType)
+                        if (currentLaneIndex != nextLaneIndex) {
+                            val transitionX =
+                                (current.endTime - session.startTime).toFloat() / sessionDurationMs * canvasWidth
+                            val currentCenter = (currentLaneIndex + 0.5f) * laneHeightPx
+                            val nextCenter = (nextLaneIndex + 0.5f) * laneHeightPx
+                            drawLine(
+                                color = connectorColor,
+                                start = Offset(transitionX, currentCenter),
+                                end = Offset(transitionX, nextCenter),
+                                strokeWidth = strokePx,
+                            )
+                        }
+                    }
+
+                    // 5. Draw vertical pointer/highlight indicator line on tap
+                    if (activeTapOffset != null &&
+                        activeSegmentIndex != null &&
+                        activeSegmentIndex!! in mergedTimeline.indices
+                    ) {
+                        val tapX = activeTapOffset!!.x.coerceIn(0f, canvasWidth)
+                        val primaryColor = colorScheme.primary
+
+                        // Draw vertical indicator line through the entire chart canvas height
+                        drawLine(
+                            color = primaryColor.copy(alpha = 0.4f),
+                            start = Offset(tapX, 0f),
+                            end = Offset(tapX, size.height),
+                            strokeWidth = 1.5.dp.toPx(),
                         )
                     }
                 }
 
-                // 6. Draw vertical pointer/highlight indicator line on tap
-                if (activeTapOffset != null) {
-                    val tapX = activeTapOffset!!.x.coerceIn(0f, chartWidth)
+                Spacer(modifier = Modifier.height(8.dp))
 
-                    drawLine(
-                        color = colorScheme.secondary, // Theme-aware color
-                        start = Offset(tapX, 0f),
-                        end = Offset(tapX, chartHeight),
-                        strokeWidth = 1.5.dp.toPx(),
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Time X Axis labels aligned with the Canvas bounds
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(24.dp),
-            ) {
-                val sessionDurationMs = session.endTime - session.startTime
-                labelTimestamps.forEach { ts ->
-                    val fraction = (ts - session.startTime).toFloat() / sessionDurationMs
-                    Text(
-                        text = timeFormatter.format(Instant.ofEpochMilli(ts)),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier =
-                            Modifier.layout { measurable, constraints ->
-                                val placeable = measurable.measure(constraints)
-                                layout(constraints.maxWidth, placeable.height) {
-                                    val x = (fraction * constraints.maxWidth).toInt()
-                                    placeable.placeRelative(x - placeable.width / 2, 0)
-                                }
-                            },
-                    )
+                // X-axis time labels
+                Box(modifier = Modifier.width(chartWidth).height(24.dp)) {
+                    labelTimestamps.forEach { ts ->
+                        val fraction = (ts - session.startTime).toFloat() / sessionDurationMs
+                        Text(
+                            text = timeFormatter.format(Instant.ofEpochMilli(ts)),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colorScheme.onSurfaceVariant,
+                            modifier =
+                                Modifier.layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints)
+                                    layout(constraints.maxWidth, placeable.height) {
+                                        val x = (fraction * constraints.maxWidth).toInt()
+                                        val left =
+                                            (x - placeable.width / 2).coerceIn(
+                                                0,
+                                                constraints.maxWidth - placeable.width,
+                                            )
+                                        placeable.placeRelative(left, 0)
+                                    }
+                                },
+                        )
+                    }
                 }
             }
         }
@@ -544,7 +518,7 @@ fun SleepStagesChartPreview() {
         SleepStagesChart(
             session = session,
             stageTimeline = stageTimeline,
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier,
         )
     }
 }
