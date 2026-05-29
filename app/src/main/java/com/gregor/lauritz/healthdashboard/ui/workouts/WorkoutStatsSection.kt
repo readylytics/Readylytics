@@ -19,14 +19,23 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
+import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltip
+import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltipData
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
@@ -227,20 +236,10 @@ private fun AcwrChartCard(
         shape = RoundedCornerShape(16.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = "Daily TRIMP",
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                Text(
-                    text = "Strain Ratio →",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Text(
+                text = stringResource(R.string.acwr_training_load),
+                style = MaterialTheme.typography.titleSmall,
+            )
             Spacer(Modifier.height(16.dp))
             if (trimpPoints.isEmpty() && ratioPoints.isEmpty()) {
                 EmptyChartPlaceholder()
@@ -268,6 +267,54 @@ private fun AcwrChart(
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
 ) {
+    // Selection state is keyed on the data inputs so it clears automatically when the
+    // chart range or underlying data changes, preventing stale coordinates and values.
+    var selectedState by remember(trimpPoints, ratioPoints, rangeStartMs) { mutableStateOf<AcwrSelectedState?>(null) }
+
+    var layerBounds by remember { mutableStateOf<Any?>(null) }
+    val invisibleMarker =
+        remember {
+            object : com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker {
+                override fun drawUnderLayers(
+                    context: com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext,
+                    targets: List<com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker.Target>,
+                ) {
+                    layerBounds = context.layerBounds
+                }
+
+                override fun drawOverLayers(
+                    context: com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext,
+                    targets: List<com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker.Target>,
+                ) {
+                    layerBounds = context.layerBounds
+                }
+            }
+        }
+
+    // Read string resources outside remember so they can be used as keys and accessed
+    // inside the lambda (where Composable calls are not permitted).
+    val trimpFormat = stringResource(R.string.acwr_tooltip_trimp_format)
+    val strainFormat = stringResource(R.string.acwr_tooltip_strain_format)
+
+    // Derive tooltipState directly from selectedState to avoid separate side-effects.
+    // This eliminates extra LaunchedEffect recomposition passes and keeps the state flow simple.
+    val tooltipState =
+        remember(selectedState, rangeStartMs, trimpFormat, strainFormat) {
+            selectedState?.let { s ->
+                val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
+                val anchorY = s.lineCanvasY ?: s.barCanvasYTop ?: 0f
+                val trimpText = s.trimpValue?.toInt()?.toString() ?: "—"
+                val strainText = s.strainRatioValue?.let { "%.2f".format(it) } ?: "—"
+                DataPointTooltipData(
+                    valueText = trimpFormat.format(trimpText),
+                    dateText = strainFormat.format(strainText),
+                    extraLine = ChartUtils.formatTooltipDate(date),
+                    offset = IntOffset(s.canvasX.toInt(), anchorY.toInt()),
+                )
+            }
+        }
+
+    // ── Colours & Vico style helpers ─────────────────────────────────────────
     val ratioColor = MaterialTheme.colorScheme.primary
     val trimpColor = MaterialTheme.colorScheme.outline
     val labelComponent = ChartDefaults.labelTextComponent()
@@ -388,48 +435,88 @@ private fun AcwrChart(
     val trimpAxisItemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) }
     val ratioAxisItemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) }
 
-    CartesianChartHost(
-        chart =
-            com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart(
-                trimpColumn,
-                rememberLineCartesianLayer(
-                    lineProvider = LineCartesianLayer.LineProvider.series(ratioLine),
-                    rangeProvider = ratioRangeProvider,
-                    verticalAxisPosition = Axis.Position.Vertical.End,
+    // ── Marker listener bridges Vico touch → Compose state ───────────────────
+    val markerVisibilityListener =
+        rememberAcwrMarkerVisibilityListener(
+            trimpPoints = trimpPoints,
+            ratioPoints = ratioPoints,
+            onStateChanged = { selectedState = it },
+        )
+
+    // ── Chart host + animated overlay ────────────────────────────────────────
+    val chartHeight = 220.dp
+    Box(modifier = modifier.fillMaxWidth()) {
+        CartesianChartHost(
+            chart =
+                com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart(
+                    trimpColumn,
+                    rememberLineCartesianLayer(
+                        lineProvider = LineCartesianLayer.LineProvider.series(ratioLine),
+                        rangeProvider = ratioRangeProvider,
+                        verticalAxisPosition = Axis.Position.Vertical.End,
+                    ),
+                    startAxis =
+                        VerticalAxis.rememberStart(
+                            label = labelComponent,
+                            valueFormatter = trimpAxisFormatter,
+                            titleComponent = axisLabelComponent,
+                            title = { "TRIMP" },
+                            itemPlacer = trimpAxisItemPlacer,
+                            guideline = guidelineComponent,
+                        ),
+                    endAxis =
+                        VerticalAxis.rememberEnd(
+                            label = labelComponent,
+                            valueFormatter = ratioAxisFormatter,
+                            titleComponent = axisLabelComponent,
+                            title = { "Strain" },
+                            itemPlacer = ratioAxisItemPlacer,
+                            guideline = null,
+                        ),
+                    bottomAxis =
+                        HorizontalAxis.rememberBottom(
+                            label = labelComponent,
+                            valueFormatter = xAxisFormatter,
+                            itemPlacer =
+                                remember(
+                                    rangeDays,
+                                ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                            guideline = guidelineComponent,
+                        ),
+                    marker = invisibleMarker,
+                    markerVisibilityListener = markerVisibilityListener,
                 ),
-                startAxis =
-                    VerticalAxis.rememberStart(
-                        label = labelComponent,
-                        valueFormatter = trimpAxisFormatter,
-                        titleComponent = axisLabelComponent,
-                        title = { "TRIMP" },
-                        itemPlacer = trimpAxisItemPlacer,
-                        guideline = guidelineComponent,
-                    ),
-                endAxis =
-                    VerticalAxis.rememberEnd(
-                        label = labelComponent,
-                        valueFormatter = ratioAxisFormatter,
-                        titleComponent = axisLabelComponent,
-                        title = { "Strain" },
-                        itemPlacer = ratioAxisItemPlacer,
-                        guideline = null,
-                    ),
-                bottomAxis =
-                    HorizontalAxis.rememberBottom(
-                        label = labelComponent,
-                        valueFormatter = xAxisFormatter,
-                        itemPlacer =
-                            remember(
-                                rangeDays,
-                            ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
-                        guideline = guidelineComponent,
-                    ),
-            ),
-        modelProducer = modelProducer,
-        scrollState = scrollState,
-        zoomState = zoomState,
-        modifier = modifier.fillMaxWidth().height(220.dp),
+            modelProducer = modelProducer,
+            scrollState = scrollState,
+            zoomState = zoomState,
+            modifier = Modifier.fillMaxWidth().height(chartHeight),
+        )
+
+        AcwrChartOverlay(
+            selectedState = selectedState,
+            trimpColor = trimpColor,
+            ratioColor = ratioColor,
+            layerBounds = layerBounds,
+            chartHeight = chartHeight,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+
+    // ── Tooltip popup ─────────────────────────────────────────────────────────
+    tooltipState?.let { data ->
+        DataPointTooltip(
+            isVisible = true,
+            data = data,
+            yOffsetDp = (-28).dp,
+            onDismissRequest = { selectedState = null },
+        )
+    }
+
+    // ── Legends (below chart) ─────────────────────────────────────────────────
+    Spacer(Modifier.height(8.dp))
+    AcwrChartLegends(
+        trimpColor = trimpColor,
+        ratioColor = ratioColor,
     )
 }
 
