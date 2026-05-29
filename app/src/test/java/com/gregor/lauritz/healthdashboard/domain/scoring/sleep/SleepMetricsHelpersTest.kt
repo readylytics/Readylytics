@@ -113,14 +113,14 @@ class WakeWindowHrCollectorTest {
                     mockSession(id = "1", endTime = 10000L),
                     mockSession(id = "2", endTime = 9000L),
                 )
-            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns
+            coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns
                 listOf(
-                    mockHeartRateRecord(timestampMs = 9900L, bpm = 55),
-                    mockHeartRateRecord(timestampMs = 10100L, bpm = 60),
-                    mockHeartRateRecord(timestampMs = 8900L, bpm = 50),
+                    mockHeartRateRecord(timestampMs = 9900L, bpm = 55, sessionId = "1"),
+                    mockHeartRateRecord(timestampMs = 10100L, bpm = 60, sessionId = "1"),
+                    mockHeartRateRecord(timestampMs = 8900L, bpm = 50, sessionId = "2"),
                 )
 
-            val result = collector.collect(session, dayMidnight, 200L, 200L)
+            val result = collector.collect(session, dayMidnight)
 
             assertEquals(55, result.currentRestingHr)
             assertEquals(50, result.restingHrBaseline)
@@ -134,9 +134,9 @@ class WakeWindowHrCollectorTest {
             val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
 
             coEvery { sleepSessionDao.getSince(any()) } returns listOf(session)
-            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns emptyList()
 
-            val result = collector.collect(session, dayMidnight, 200L, 200L)
+            val result = collector.collect(session, dayMidnight)
 
             assertNull(result.currentRestingHr)
             assertNull(result.restingHrBaseline)
@@ -154,12 +154,12 @@ class WakeWindowHrCollectorTest {
                     mockSession(id = "1", endTime = 10000L),
                     mockSession(id = "2", endTime = 9000L),
                 )
-            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns
+            coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns
                 listOf(
-                    mockHeartRateRecord(timestampMs = 8800L, bpm = 50),
+                    mockHeartRateRecord(timestampMs = 8800L, bpm = 50, sessionId = "2"),
                 )
 
-            val result = collector.collect(session, dayMidnight, 200L, 200L)
+            val result = collector.collect(session, dayMidnight)
 
             assertNull(result.currentRestingHr)
             assertEquals(50, result.restingHrBaseline)
@@ -176,26 +176,26 @@ class WakeWindowHrCollectorTest {
             // Provide 10 heart rate records for the current window: bpm values from 50 to 59
             val records =
                 (0..9).map { i ->
-                    mockHeartRateRecord(timestampMs = 10000L + i * 10, bpm = 50 + i)
+                    mockHeartRateRecord(timestampMs = 10000L + i * 10, bpm = 50 + i, sessionId = "1")
                 }
-            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns records
+            coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns records
 
             // Test default percentile = 5.
             // S = 10. index = ((5 / 100.0) * (10 - 1)).toInt() = (0.05 * 9).toInt() = 0.
             // Expected: 50.
-            val resultDefault = collector.collect(session, dayMidnight, 0L, 200L, percentile = 5)
+            val resultDefault = collector.collect(session, dayMidnight, percentile = 5)
             assertEquals(50, resultDefault.currentRestingHr)
 
             // Test percentile = 12.
             // index = ((12 / 100.0) * 9).toInt() = (1.08).toInt() = 1.
             // Expected: 51.
-            val resultTwelve = collector.collect(session, dayMidnight, 0L, 200L, percentile = 12)
+            val resultTwelve = collector.collect(session, dayMidnight, percentile = 12)
             assertEquals(51, resultTwelve.currentRestingHr)
 
             // Test percentile = 15.
             // index = ((15 / 100.0) * 9).toInt() = (1.35).toInt() = 1.
             // Expected: 51.
-            val resultFifteen = collector.collect(session, dayMidnight, 0L, 200L, percentile = 15)
+            val resultFifteen = collector.collect(session, dayMidnight, percentile = 15)
             assertEquals(51, resultFifteen.currentRestingHr)
         }
 }

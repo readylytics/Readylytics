@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.domain.dashboard
 
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import io.mockk.mockk
 import org.junit.Before
 import org.junit.Test

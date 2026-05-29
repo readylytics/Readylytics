@@ -63,12 +63,7 @@ fun AdvancedSettingsSection(
     var rhrText by remember(sleepState.rhrBaselineOverride) {
         mutableStateOf(sleepState.rhrBaselineOverride?.toInt()?.toString() ?: "")
     }
-    var beforeMinutesText by remember(sleepState.restingHrBeforeMinutes) {
-        mutableStateOf(sleepState.restingHrBeforeMinutes.toString())
-    }
-    var afterMinutesText by remember(sleepState.restingHrAfterMinutes) {
-        mutableStateOf(sleepState.restingHrAfterMinutes.toString())
-    }
+
     var percentileValue by remember(sleepState.restingHrPercentile) {
         mutableIntStateOf(sleepState.restingHrPercentile)
     }
@@ -158,61 +153,12 @@ fun AdvancedSettingsSection(
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
 
-        OutlinedTextField(
-            value = beforeMinutesText,
-            onValueChange = { value ->
-                beforeMinutesText = value
-                value.toIntOrNull()?.let { onEvent(SettingsEvent.RestingHrBeforeMinutesChanged(it)) }
-            },
-            label = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Resting HR: Minutes Before")
-                    MetricTooltip(
-                        description =
-                            "Minutes before sleep end to include in wakeup resting HR calculation " +
-                                "(default: 5).",
-                    )
-                }
-            },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
-        )
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
-        OutlinedTextField(
-            value = afterMinutesText,
-            onValueChange = { value ->
-                afterMinutesText = value
-                value.toIntOrNull()?.let { onEvent(SettingsEvent.RestingHrAfterMinutesChanged(it)) }
-            },
-            label = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Resting HR: Minutes After")
-                    MetricTooltip(
-                        description =
-                            "Minutes after sleep end to include in wakeup resting HR calculation " +
-                                "(default: 15).",
-                    )
-                }
-            },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
-        )
-        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
-
         Column(modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Resting HR: Percentile")
                 MetricTooltip(
                     description =
-                        "Use the Nth percentile lowest heart rate reading in the time window " +
+                        "Use the Nth percentile lowest heart rate reading of the entire sleep period " +
                             "(e.g., 5% = lowest 5% threshold). Lower values = lower RHR estimate. Default: 5%.",
                 )
             }

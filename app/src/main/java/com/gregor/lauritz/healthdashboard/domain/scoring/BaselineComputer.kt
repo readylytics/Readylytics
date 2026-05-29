@@ -40,16 +40,27 @@ class BaselineComputer
             private const val TAG = "BaselineComputer"
         }
 
-        /**
-         * Per-session average sleep HR values within the [ScoringConstants.BASELINE_DAYS]
-         * window ending at [dayMidnight]. Used as the personal RHR history for z-scores.
-         */
-        suspend fun rhrHistory(dayMidnight: Instant): List<Int> {
+        suspend fun rhrHistory(
+            dayMidnight: Instant,
+            percentile: Int,
+        ): List<Int> {
             val baselineFromMs =
                 dayMidnight
                     .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
-            return heartRateDao.getAvgSleepHrPerSession(baselineFromMs)
+            val sessions = sleepSessionDao.getSince(baselineFromMs)
+            val sessionIds = sessions.map { it.id }
+            if (sessionIds.isEmpty()) return emptyList()
+
+            val allHrRecords = heartRateDao.getSleepHrSamplesForSessions(sessionIds)
+            val samplesBySession = allHrRecords.groupBy { it.sessionId }
+
+            return sessions.mapNotNull { session ->
+                val samples = samplesBySession[session.id] ?: return@mapNotNull null
+                if (samples.isEmpty()) return@mapNotNull null
+                val index = Math.round((percentile / 100.0) * (samples.size - 1)).toInt().coerceIn(0, samples.size - 1)
+                samples[index].beatsPerMinute
+            }
         }
 
         /**
@@ -91,6 +102,7 @@ class BaselineComputer
         suspend fun computeAdaptiveBaselineRhrBpm(
             dayMidnight: Instant,
             rhrBaselineOverride: Float?,
+            percentile: Int,
         ): Float? {
             if (rhrBaselineOverride != null) return rhrBaselineOverride
 
@@ -128,13 +140,7 @@ class BaselineComputer
 
                     if (count < 10) return@mapNotNull null
 
-                    val idx =
-                        when {
-                            count >= 300 -> (count * 0.05).toInt()
-                            count >= 150 -> (count * 0.08).toInt()
-                            count >= 75 -> (count * 0.10).toInt()
-                            else -> (count * 0.15).toInt()
-                        }.coerceIn(0, count - 1)
+                    val idx = Math.round((percentile / 100.0) * (count - 1)).toInt().coerceIn(0, count - 1)
 
                     // Index into in-memory list (no DB query)
                     samples[idx].beatsPerMinute.toFloat()

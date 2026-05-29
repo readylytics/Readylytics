@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.domain.scoring
 
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import java.time.Instant
 import java.time.LocalDate
@@ -29,7 +30,12 @@ class ComputeHistoricalBaselinesUseCase(
             val hrvWindows =
                 baselineComputer.computeHrvWindows(dayMidnightInstant, excludeSessionId = null)
                     ?: return@mapNotNull null
-            val rhrBpm = baselineComputer.computeAdaptiveBaselineRhrBpm(dayMidnightInstant, rhrBaselineOverride = null)
+            val rhrBpm =
+                baselineComputer.computeAdaptiveBaselineRhrBpm(
+                    dayMidnightInstant,
+                    rhrBaselineOverride = null,
+                    percentile = SettingsDefaults.RESTING_HR_PERCENTILE,
+                )
 
             if (hrvWindows.muHistory.isEmpty()) {
                 return@mapNotNull null

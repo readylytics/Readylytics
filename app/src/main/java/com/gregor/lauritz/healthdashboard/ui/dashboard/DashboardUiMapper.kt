@@ -202,7 +202,7 @@ class DashboardUiMapper
         ): CardData {
             val restingHrStatus = summary.restingHrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold)
             return CardData(
-                title = "Resting HR",
+                title = "Resting Heart Rate",
                 value = summary.restingHeartRate?.toString() ?: "—",
                 unit = "bpm",
                 status = restingHrStatus,
@@ -219,12 +219,10 @@ class DashboardUiMapper
                                     rCurrent < rBaseline -> "↓"
                                     else -> "="
                                 }
-                            append("Minimum heart rate captured within ")
-                            append("${prefs.restingHrBeforeMinutes}m before and ")
-                            append("${prefs.restingHrAfterMinutes}m after wake up.")
+                            append("Resting heart rate calculated as the low-percentile of the entire sleep period.")
                             append("\n\nBaseline: $rBaseline bpm $arrow ($diff bpm)")
                         } else {
-                            append("Minimum heart rate captured around wake up time.")
+                            append("Resting heart rate calculated as the low-percentile of the entire sleep period.")
                             append("\n\nNot enough data to calculate baseline.")
                         }
                     },

@@ -6,6 +6,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -54,7 +55,12 @@ class BaselineComputerN1FixTest {
         runTest {
             val dayMidnight = Instant.now()
             val override = 65f
-            val result = baselineComputer.computeAdaptiveBaselineRhrBpm(dayMidnight, override)
+            val result =
+                baselineComputer.computeAdaptiveBaselineRhrBpm(
+                    dayMidnight,
+                    override,
+                    SettingsDefaults.RESTING_HR_PERCENTILE,
+                )
             // Override path returns before DAO freeze check, so result is non-null
             assertEquals(override, result)
             // Verify no database queries made when override provided
@@ -120,7 +126,12 @@ class BaselineComputerN1FixTest {
 
             coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns allHrSamples
 
-            val result = baselineComputer.computeAdaptiveBaselineRhrBpm(dayMidnight, null)
+            val result =
+                baselineComputer.computeAdaptiveBaselineRhrBpm(
+                    dayMidnight,
+                    null,
+                    SettingsDefaults.RESTING_HR_PERCENTILE,
+                )
 
             // Verify result is within expected range (non-frozen DAO returns null → live recompute)
             assertNotNull(result)
@@ -207,7 +218,12 @@ class BaselineComputerN1FixTest {
 
             coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns hrSamples
 
-            val result = baselineComputer.computeAdaptiveBaselineRhrBpm(dayMidnight, null)
+            val result =
+                baselineComputer.computeAdaptiveBaselineRhrBpm(
+                    dayMidnight,
+                    null,
+                    SettingsDefaults.RESTING_HR_PERCENTILE,
+                )
 
             // Result should be around session_1's nadir (non-frozen path → non-null)
             assertNotNull(result)
@@ -221,7 +237,12 @@ class BaselineComputerN1FixTest {
 
             coEvery { sleepSessionDao.getSince(any()) } returns emptyList()
 
-            val result = baselineComputer.computeAdaptiveBaselineRhrBpm(dayMidnight, null)
+            val result =
+                baselineComputer.computeAdaptiveBaselineRhrBpm(
+                    dayMidnight,
+                    null,
+                    SettingsDefaults.RESTING_HR_PERCENTILE,
+                )
             // No sessions → returns DEFAULT_RHR_BPM (non-null, live recompute path)
             assertNotNull(result)
             assertEquals(ScoringConstants.DEFAULT_RHR_BPM, result)
@@ -312,7 +333,12 @@ class BaselineComputerN1FixTest {
 
             coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns hrSamples
 
-            val result = baselineComputer.computeAdaptiveBaselineRhrBpm(dayMidnight, null)
+            val result =
+                baselineComputer.computeAdaptiveBaselineRhrBpm(
+                    dayMidnight,
+                    null,
+                    SettingsDefaults.RESTING_HR_PERCENTILE,
+                )
 
             assertNotNull(result)
             assertTrue(result >= 40f && result <= 150f)
@@ -372,7 +398,7 @@ class BaselineComputerN1FixTest {
             coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns allHrSamples
 
             val startTime = System.currentTimeMillis()
-            baselineComputer.computeAdaptiveBaselineRhrBpm(dayMidnight, null)
+            baselineComputer.computeAdaptiveBaselineRhrBpm(dayMidnight, null, SettingsDefaults.RESTING_HR_PERCENTILE)
             val endTime = System.currentTimeMillis()
 
             // Verify database query count is constant (not N*2)

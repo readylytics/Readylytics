@@ -69,13 +69,17 @@ class ScoringRepositoryImpl
                 val prefs = settingsRepo.userPreferences.first()
                 val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
 
-                // Returns null when baseline is frozen (US-B6); fall back to default for workout TRIMP.
-                // Sleep-specific frozen baselines are handled separately in ComputeSleepMetricsUseCase.
+                // Retrieve the nightly frozen HR_rest (nocturnal floor) from the daily summary if available
+                val dailySummary = dailySummaryDao.getByDate(dayMidnightMs)
                 val rhrBaselineValue =
-                    baselineComputer.computeAdaptiveBaselineRhrBpm(
-                        dayMidnight = dayMidnight,
-                        rhrBaselineOverride = prefs.rhrBaselineOverride,
-                    ) ?: ScoringConstants.DEFAULT_RHR_BPM
+                    dailySummary?.restingHeartRate?.toFloat()
+                        ?: prefs.rhrBaselineOverride
+                        ?: baselineComputer.computeAdaptiveBaselineRhrBpm(
+                            dayMidnight = dayMidnight,
+                            rhrBaselineOverride = prefs.rhrBaselineOverride,
+                            percentile = prefs.restingHrPercentile,
+                        )
+                        ?: ScoringConstants.DEFAULT_RHR_BPM
 
                 if (hrMax <= 0f) throw IllegalStateException("HR Max is missing or invalid")
                 if (rhrBaselineValue <= 0f) throw IllegalStateException("RHR Baseline is missing or invalid")
@@ -172,11 +176,23 @@ class ScoringRepositoryImpl
                             } else {
                                 null
                             }
-                        val avgRhr = heartRateDao.getAvgSleepHr(session.id)
+                        val sleepHrSamples = heartRateDao.getSleepHrSamplesForSession(session.id)
+                        val avgRhr =
+                            if (sleepHrSamples.isNotEmpty()) {
+                                val idx =
+                                    Math
+                                        .round((prefs.restingHrPercentile / 100.0) * (sleepHrSamples.size - 1))
+                                        .toInt()
+                                        .coerceIn(0, sleepHrSamples.size - 1)
+                                sleepHrSamples[idx]
+                            } else {
+                                null
+                            }
                         summary =
                             summary.copy(
                                 nocturnalHrv = avgHrv,
                                 nocturnalRhr = avgRhr,
+                                restingHeartRate = avgRhr,
                                 sleepDurationMinutes = session.durationMinutes,
                                 deepSleepPercent =
                                     if (session.durationMinutes > 0) {

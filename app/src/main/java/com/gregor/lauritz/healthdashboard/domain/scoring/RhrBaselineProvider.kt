@@ -41,7 +41,7 @@ class AdaptiveRhrBaselineProvider
             }
 
             // Compute RHR history within baseline window
-            val rhrValues = baselineComputer.rhrHistory(dayMidnight)
+            val rhrValues = baselineComputer.rhrHistory(dayMidnight, preferences.restingHrPercentile)
 
             // Need at least 7 days of data for calibration; otherwise use default
             val minimumDaysMs = ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION * 24 * 60 * 60 * 1000L

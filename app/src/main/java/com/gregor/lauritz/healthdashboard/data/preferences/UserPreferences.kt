@@ -34,8 +34,6 @@ data class UserPreferences(
     val hrvWarningThreshold: Float = SettingsDefaults.HRV_WARNING_THRESHOLD,
     val rhrOptimalThreshold: Float = SettingsDefaults.RHR_OPTIMAL_THRESHOLD,
     val rhrWarningThreshold: Float = SettingsDefaults.RHR_WARNING_THRESHOLD,
-    val restingHrBeforeMinutes: Int = SettingsDefaults.RESTING_HR_BEFORE_MINUTES,
-    val restingHrAfterMinutes: Int = SettingsDefaults.RESTING_HR_AFTER_MINUTES,
     val restingHrPercentile: Int = SettingsDefaults.RESTING_HR_PERCENTILE,
     val appTheme: AppTheme = SettingsDefaults.APP_THEME,
     val driveAccountEmail: String? = SettingsDefaults.DRIVE_ACCOUNT_EMAIL,
@@ -102,8 +100,6 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         hrvWarningThreshold = hrvWarningThreshold,
         rhrOptimalThreshold = rhrOptimalThreshold,
         rhrWarningThreshold = rhrWarningThreshold,
-        restingHrBeforeMinutes = restingHrBeforeMinutes,
-        restingHrAfterMinutes = restingHrAfterMinutes,
         restingHrPercentile =
             if (restingHrPercentile ==
                 0

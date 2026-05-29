@@ -96,7 +96,7 @@ class ComputeSleepMetricsUseCase
                     // computeHrvWindows returns null only when the baseline is frozen (US-B6);
                     // the outer frozenBaseline check already routes frozen days to the other branch,
                     // so null here is an unexpected race — fall back to empty windows.
-                    rhrValues = baselineComputer.rhrHistory(dayMidnight)
+                    rhrValues = baselineComputer.rhrHistory(dayMidnight, prefs.restingHrPercentile)
                     val hrvWindows =
                         baselineComputer.computeHrvWindows(
                             dayMidnight = dayMidnight,
@@ -129,7 +129,17 @@ class ComputeSleepMetricsUseCase
                 val currentHrvMean = hrvResult.mean
                 logD("ComputeSleepMetrics") { "HRV resolved: samples=${sessionHrvSamples.size}, mean=$currentHrvMean" }
 
-                val currentNocturnalRhr = heartRateDao.getAvgSleepHr(session.id)
+                val wakeHrResult =
+                    wakeHrCollector.collect(
+                        session = session,
+                        dayMidnight = dayMidnight,
+                        percentile = prefs.restingHrPercentile,
+                    )
+                val currentRestingHr = wakeHrResult.currentRestingHr
+                val restingHrBaseline = wakeHrResult.restingHrBaseline
+                val restingHrRatio = wakeHrResult.restingHrRatio
+
+                val currentNocturnalRhr = currentRestingHr
                 val baselineRhrValue =
                     if (frozenBaseline && frozenRhr != null) {
                         frozenRhr.toInt()
@@ -137,24 +147,10 @@ class ComputeSleepMetricsUseCase
                         baselineComputer.resolveBaselineRhrRounded(rhrValues, prefs.rhrBaselineOverride)
                     }
 
-                val beforeMs = prefs.restingHrBeforeMinutes * 60 * 1000L
-                val afterMs = prefs.restingHrAfterMinutes * 60 * 1000L
-                val wakeHrResult =
-                    wakeHrCollector.collect(
-                        session,
-                        dayMidnight,
-                        beforeMs,
-                        afterMs,
-                        prefs.restingHrPercentile,
-                    )
-                val currentRestingHr = wakeHrResult.currentRestingHr
-                val restingHrBaseline = wakeHrResult.restingHrBaseline
-                val restingHrRatio = wakeHrResult.restingHrRatio
-
                 val allWakeHrRecords =
                     heartRateDao.getByTimeRange(
-                        (historicalSessions.minOfOrNull { it.endTime } ?: session.endTime) - beforeMs,
-                        (historicalSessions.maxOfOrNull { it.endTime } ?: session.endTime) + afterMs,
+                        session.startTime,
+                        session.endTime,
                     )
                 val currentHrCoverage =
                     coverageValidator.isValid(
@@ -362,6 +358,23 @@ class ComputeSleepMetricsUseCase
                         restingHeartRate = currentRestingHr,
                         restingHrRatio = restingHrRatio,
                         restingHrBaseline = restingHrBaseline,
+                        hrvMuMssd =
+                            if (frozenBaseline) {
+                                summary.hrvMuMssd
+                            } else {
+                                (
+                                    if (muHrvHistory.isNotEmpty()) {
+                                        muHrvHistory
+                                            .average()
+                                            .toFloat()
+                                    } else {
+                                        null
+                                    }
+                                )
+                            },
+                        hrvSigmaMssd = if (frozenBaseline) summary.hrvSigmaMssd else hrvSigma,
+                        rhrBpm = if (frozenBaseline) summary.rhrBpm else restingHrBaseline?.toFloat(),
+                        baselineCalculatedAtDate = if (frozenBaseline) summary.baselineCalculatedAtDate else targetDate,
                         zLnHrv = persistedZLnHrv,
                         zRhr = persistedZRhr,
                         recoveryFlags = persistedFlags,
