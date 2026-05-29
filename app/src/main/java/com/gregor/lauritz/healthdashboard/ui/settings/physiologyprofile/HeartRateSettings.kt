@@ -39,6 +39,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
 import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
 import com.gregor.lauritz.healthdashboard.ui.settings.HeartRateZonesState
+import com.gregor.lauritz.healthdashboard.ui.settings.HeightInputField
 import com.gregor.lauritz.healthdashboard.ui.settings.PhysiologySettingsState
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsExpandState
@@ -120,6 +121,12 @@ fun HeartRateZoneSection(
                     expanded = genderExpanded,
                     onExpandedChange = { genderExpanded = it },
                     onGenderSelected = { onPhysiologyEvent(SettingsEvent.GenderChanged(it)) },
+                )
+                Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
+                HeightInputField(
+                    heightCm = physiologyState.heightCm,
+                    onHeightChange = { onPhysiologyEvent(SettingsEvent.HeightChanged(it)) },
+                    unitSystem = physiologyState.unitSystem,
                 )
             }
         }

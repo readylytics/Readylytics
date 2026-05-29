@@ -1,15 +1,19 @@
 package com.gregor.lauritz.healthdashboard.data.repository
 
+import com.gregor.lauritz.healthdashboard.data.local.dao.BloodPressureRecordDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.WeightRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.model.ReadinessResult
 import com.gregor.lauritz.healthdashboard.domain.model.RecordType
 import com.gregor.lauritz.healthdashboard.domain.model.RecoveryFlag
+import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.BaselineComputer
 import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeSleepMetricsUseCase
@@ -45,6 +49,9 @@ class ScoringRepositoryImpl
         private val computeWorkoutTrimpUseCase: ComputeWorkoutTrimpUseCase,
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
+        private val weightRecordDao: WeightRecordDao,
+        private val bodyFatRecordDao: BodyFatRecordDao,
+        private val bloodPressureRecordDao: BloodPressureRecordDao,
     ) : ScoringRepository {
         override suspend fun computeAndPersistDailySummary(targetDate: LocalDate) {
             val summary = computeDailySummary(targetDate)
@@ -105,7 +112,7 @@ class ScoringRepositoryImpl
                                 sample.beatsPerMinute,
                             )
                         }
-                    val workoutTrimp =
+                    val workoutTrimpResult =
                         computeWorkoutTrimpUseCase.execute(
                             workoutStartTime = workout.startTime,
                             workoutEndTime = workout.endTime,
@@ -115,6 +122,7 @@ class ScoringRepositoryImpl
                             restingHrBaseline = rhrBaselineValue,
                             storedTrimp = workout.trimp,
                         )
+                    val workoutTrimp = workoutTrimpResult.getOrNull() ?: 0f
                     dailyTrimpRaw += workoutTrimp
                 }
 
@@ -131,11 +139,22 @@ class ScoringRepositoryImpl
                     "Result - DailyTrimp: $dailyTrimpRaw, DailyPai: $dailyPai, Last6d: $last6DaysPai, Total7d: $totalPai7d"
                 }
 
+                val latestWeight = weightRecordDao.getLatestUpTo(nextDayMidnightMs)
+                val latestBodyFat = bodyFatRecordDao.getLatestUpTo(nextDayMidnightMs)
+                val latestBP = bloodPressureRecordDao.getLatestUpTo(nextDayMidnightMs)
+
                 var summary =
                     (
                         dailySummaryDao.getByDate(dayMidnightMs)
                             ?: DailySummaryEntity(dateMidnightMs = dayMidnightMs)
-                    ).copy(paiScore = dailyPai, totalPai = totalPai7d)
+                    ).copy(
+                        paiScore = dailyPai,
+                        totalPai = totalPai7d,
+                        weightKg = latestWeight?.weightKg,
+                        bodyFatPercent = latestBodyFat?.bodyFatPercent,
+                        bloodPressureSystolic = latestBP?.systolicMmHg,
+                        bloodPressureDiastolic = latestBP?.diastolicMmHg,
+                    )
 
                 val calibrationFrom = dayMidnight.minus(ScoringConstants.CHRONIC_DAYS, ChronoUnit.DAYS).toEpochMilli()
                 val isCalibrated =
@@ -209,8 +228,9 @@ class ScoringRepositoryImpl
 
                 val session = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
                 if (session != null) {
-                    summary =
+                    val sleepMetricsResult =
                         computeSleepMetricsUseCase(session, dayMidnight, targetDate, prefs, summary, loadScore, zoneId)
+                    summary = sleepMetricsResult.getOrNull() ?: summary
                 }
 
                 // Final summary remains consistent with the pre-calculated dailyPai and totalPai7d.

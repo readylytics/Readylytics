@@ -1,5 +1,8 @@
 # Health Recovery Dashboard
 
+[![CI](https://github.com/gregorlauritz/MyHealthStatus/actions/workflows/ci.yml/badge.svg)](https://github.com/gregorlauritz/MyHealthStatus/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-25%25%2B-brightgreen)](https://github.com/gregorlauritz/MyHealthStatus/actions/workflows/ci.yml)
+
 An offline-first Android health and recovery dashboard that turns biometric data into actionable insights. Integrates with Android Health Connect to read sleep, heart rate, and workout data, then calculates three daily scores to answer: "How is your body doing today, and what should you do with that information?"
 
 ## Three Core Scores

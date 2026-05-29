@@ -18,6 +18,9 @@ enum class CardId {
     RECOVERY_INDEX,
     ACUTE_CHRONIC_RATIO,
     SLEEP_EFFICIENCY,
+    WEIGHT,
+    BODY_FAT,
+    BLOOD_PRESSURE,
 }
 
 @Serializable

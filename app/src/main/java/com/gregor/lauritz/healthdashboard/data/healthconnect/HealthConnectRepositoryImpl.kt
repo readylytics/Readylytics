@@ -3,12 +3,15 @@ package com.gregor.lauritz.healthdashboard.data.healthconnect
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.BloodPressureRecord
+import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -41,6 +44,16 @@ class HealthConnectRepositoryImpl
         override val requiredPermissions: Set<String> =
             criticalPermissions +
                 setOf("android.permission.health.READ_HEALTH_DATA_HISTORY")
+
+        override val optionalPermissions: Set<String> =
+            setOf(
+                HealthPermission.getReadPermission(WeightRecord::class),
+                HealthPermission.getReadPermission(BodyFatRecord::class),
+                HealthPermission.getReadPermission(BloodPressureRecord::class),
+            )
+
+        override val allPermissions: Set<String> =
+            requiredPermissions + optionalPermissions
 
         private val client: HealthConnectClient by lazy {
             HealthConnectClient.getOrCreate(context)
@@ -199,6 +212,81 @@ class HealthConnectRepositoryImpl
                         "Error batch fetching steps"
                     }
                     emptyMap()
+                }
+            }
+
+        override suspend fun readWeightRecords(
+            from: Instant,
+            to: Instant,
+        ): List<WeightRecord> =
+            withContext(Dispatchers.IO) {
+                try {
+                    readAllPages(from, to)
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                        "Weight record permission not granted: ${e.message}"
+                    }
+                    emptyList()
+                } catch (e: SecurityException) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                        "Weight record permission not granted: ${e.message}"
+                    }
+                    emptyList()
+                } catch (e: Exception) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logE("HealthConnectRepository", e) {
+                        "Error reading weight records"
+                    }
+                    emptyList()
+                }
+            }
+
+        override suspend fun readBodyFatRecords(
+            from: Instant,
+            to: Instant,
+        ): List<BodyFatRecord> =
+            withContext(Dispatchers.IO) {
+                try {
+                    readAllPages(from, to)
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                        "Body fat record permission not granted: ${e.message}"
+                    }
+                    emptyList()
+                } catch (e: SecurityException) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                        "Body fat record permission not granted: ${e.message}"
+                    }
+                    emptyList()
+                } catch (e: Exception) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logE("HealthConnectRepository", e) {
+                        "Error reading body fat records"
+                    }
+                    emptyList()
+                }
+            }
+
+        override suspend fun readBloodPressureRecords(
+            from: Instant,
+            to: Instant,
+        ): List<BloodPressureRecord> =
+            withContext(Dispatchers.IO) {
+                try {
+                    readAllPages(from, to)
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                        "Blood pressure record permission not granted: ${e.message}"
+                    }
+                    emptyList()
+                } catch (e: SecurityException) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                        "Blood pressure record permission not granted: ${e.message}"
+                    }
+                    emptyList()
+                } catch (e: Exception) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logE("HealthConnectRepository", e) {
+                        "Error reading blood pressure records"
+                    }
+                    emptyList()
                 }
             }
 

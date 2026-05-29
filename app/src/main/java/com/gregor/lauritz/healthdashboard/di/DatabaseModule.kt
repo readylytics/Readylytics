@@ -6,11 +6,14 @@ import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations
 import com.gregor.lauritz.healthdashboard.data.local.HealthDatabase
+import com.gregor.lauritz.healthdashboard.data.local.dao.BloodPressureRecordDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepStageDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.WeightRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.security.SqlCipherKeyManager
 import dagger.Module
@@ -78,4 +81,13 @@ object DatabaseModule {
 
     @Provides
     fun provideDailySummaryDao(db: HealthDatabase): DailySummaryDao = db.dailySummaryDao()
+
+    @Provides
+    fun provideWeightRecordDao(db: HealthDatabase): WeightRecordDao = db.weightRecordDao()
+
+    @Provides
+    fun provideBodyFatRecordDao(db: HealthDatabase): BodyFatRecordDao = db.bodyFatRecordDao()
+
+    @Provides
+    fun provideBloodPressureRecordDao(db: HealthDatabase): BloodPressureRecordDao = db.bloodPressureRecordDao()
 }

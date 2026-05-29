@@ -21,6 +21,9 @@ fun buildCardDataMap(
     onNavigateToWorkouts: () -> Unit,
     onNavigateToRhr: () -> Unit,
     onNavigateToSteps: () -> Unit = {},
+    onNavigateToWeight: () -> Unit = {},
+    onNavigateToBodyFat: () -> Unit = {},
+    onNavigateToBloodPressure: () -> Unit = {},
     isEditing: Boolean = false,
     isLoading: Boolean = false,
 ): Map<CardId, @Composable () -> Unit> {
@@ -224,6 +227,66 @@ fun buildCardDataMap(
                     CircadianConsistencyCard(
                         result = uiState.circadianConsistency,
                         onClick = if (isEditing) ({}) else onNavigateToSleep,
+                    )
+                }
+            },
+        )
+    }
+
+    cardMap[CardId.WEIGHT] = {
+        CardLoader(
+            isLoading = isLoading,
+            skeleton = { MetricCardSkeleton() },
+            content = {
+                val weightCard = uiState.cardDataMap[CardId.WEIGHT]
+                if (weightCard != null) {
+                    MetricCard(
+                        title = weightCard.title,
+                        value = weightCard.value,
+                        secondaryText = weightCard.secondaryText ?: weightCard.unit,
+                        status = weightCard.status,
+                        onClick = if (isEditing) null else onNavigateToWeight,
+                        tooltip = weightCard.tooltip,
+                    )
+                }
+            },
+        )
+    }
+
+    cardMap[CardId.BODY_FAT] = {
+        CardLoader(
+            isLoading = isLoading,
+            skeleton = { MetricCardSkeleton() },
+            content = {
+                val bodyFatCard = uiState.cardDataMap[CardId.BODY_FAT]
+                if (bodyFatCard != null) {
+                    MetricCard(
+                        title = bodyFatCard.title,
+                        value = bodyFatCard.value,
+                        secondaryText = bodyFatCard.unit,
+                        status = bodyFatCard.status,
+                        onClick = if (isEditing) null else onNavigateToBodyFat,
+                        tooltip = bodyFatCard.tooltip,
+                    )
+                }
+            },
+        )
+    }
+
+    cardMap[CardId.BLOOD_PRESSURE] = {
+        CardLoader(
+            isLoading = isLoading,
+            skeleton = { MetricCardSkeleton() },
+            content = {
+                val bpCard = uiState.cardDataMap[CardId.BLOOD_PRESSURE]
+                if (bpCard != null) {
+                    MetricCard(
+                        title = bpCard.title,
+                        value = bpCard.value,
+                        secondaryText = bpCard.unit,
+                        status = bpCard.status,
+                        onClick = if (isEditing) null else onNavigateToBloodPressure,
+                        tooltip = bpCard.tooltip,
                     )
                 }
             },

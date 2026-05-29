@@ -531,6 +531,71 @@ object DatabaseMigrations {
             }
         }
 
+    val MIGRATION_20_21 =
+        object : Migration(20, 21) {
+            private val sql =
+                listOf(
+                    """
+                    CREATE TABLE weight_records (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        timestampMs INTEGER NOT NULL,
+                        weightKg REAL NOT NULL,
+                        deviceName TEXT
+                    )
+                    """.trimIndent(),
+                    "CREATE INDEX `index_weight_records_timestampMs` ON `weight_records` (`timestampMs`)",
+                    "CREATE INDEX `index_weight_records_timestampMs_deviceName` ON `weight_records` (`timestampMs`, `deviceName`)",
+                    """
+                    CREATE TABLE body_fat_records (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        timestampMs INTEGER NOT NULL,
+                        bodyFatPercent REAL NOT NULL,
+                        deviceName TEXT
+                    )
+                    """.trimIndent(),
+                    "CREATE INDEX `index_body_fat_records_timestampMs` ON `body_fat_records` (`timestampMs`)",
+                    "CREATE INDEX `index_body_fat_records_timestampMs_deviceName` ON `body_fat_records` (`timestampMs`, `deviceName`)",
+                    """
+                    CREATE TABLE blood_pressure_records (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        timestampMs INTEGER NOT NULL,
+                        systolicMmHg INTEGER NOT NULL,
+                        diastolicMmHg INTEGER NOT NULL,
+                        deviceName TEXT
+                    )
+                    """.trimIndent(),
+                    "CREATE INDEX `index_blood_pressure_records_timestampMs` ON `blood_pressure_records` (`timestampMs`)",
+                    "CREATE INDEX `index_blood_pressure_records_timestampMs_deviceName` ON `blood_pressure_records` (`timestampMs`, `deviceName`)",
+                )
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                sql.forEach { db.execSQL(it) }
+            }
+
+            override fun migrate(connection: SQLiteConnection) {
+                sql.forEach { connection.execSQL(it) }
+            }
+        }
+
+    val MIGRATION_21_22 =
+        object : Migration(21, 22) {
+            private val sql =
+                listOf(
+                    "ALTER TABLE daily_summaries ADD COLUMN weightKg REAL",
+                    "ALTER TABLE daily_summaries ADD COLUMN bodyFatPercent REAL",
+                    "ALTER TABLE daily_summaries ADD COLUMN bloodPressureSystolic INTEGER",
+                    "ALTER TABLE daily_summaries ADD COLUMN bloodPressureDiastolic INTEGER",
+                )
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                sql.forEach { db.execSQL(it) }
+            }
+
+            override fun migrate(connection: SQLiteConnection) {
+                sql.forEach { connection.execSQL(it) }
+            }
+        }
+
     val all =
         arrayOf(
             MIGRATION_1_2,
@@ -552,5 +617,7 @@ object DatabaseMigrations {
             MIGRATION_17_18,
             MIGRATION_18_19,
             MIGRATION_19_20,
+            MIGRATION_20_21,
+            MIGRATION_21_22,
         )
 }

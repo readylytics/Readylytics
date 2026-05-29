@@ -40,6 +40,7 @@ class UISettingsViewModel
                         banisterMultiplier = prefs.banisterMultiplier,
                         chengBeta = prefs.chengBeta,
                         itrimB = prefs.itrimB,
+                        unitSystem = prefs.unitSystem,
                     )
                 }.stateIn(
                     scope = viewModelScope,
@@ -121,6 +122,8 @@ class UISettingsViewModel
                         settingsRepo.updateItrimB(profile.defaultItrimB)
                         healthSyncUseCase.sync()
                     }
+                is SettingsEvent.UnitSystemChanged ->
+                    viewModelScope.launch { settingsRepo.updateUnitSystem(unitSystem = event.unitSystem) }
                 else -> {}
             }
         }

@@ -1,9 +1,12 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.data.local.dao.BloodPressureRecordDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.WeightRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
@@ -39,6 +42,9 @@ class ScoringRepositoryN1Test {
     private lateinit var dailySummaryDao: DailySummaryDao
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var scoringCalculator: ScoringCalculator
+    private lateinit var weightRecordDao: WeightRecordDao
+    private lateinit var bodyFatRecordDao: BodyFatRecordDao
+    private lateinit var bloodPressureRecordDao: BloodPressureRecordDao
     private lateinit var repo: ScoringRepository
 
     private val todayMidnight =
@@ -72,6 +78,13 @@ class ScoringRepositoryN1Test {
         workoutDao = mockk()
         dailySummaryDao = mockk()
         settingsRepo = mockk()
+        weightRecordDao = mockk()
+        bodyFatRecordDao = mockk()
+        bloodPressureRecordDao = mockk()
+
+        coEvery { weightRecordDao.getLatestUpTo(any()) } returns null
+        coEvery { bodyFatRecordDao.getLatestUpTo(any()) } returns null
+        coEvery { bloodPressureRecordDao.getLatestUpTo(any()) } returns null
 
         every { settingsRepo.userPreferences } returns
             MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.GENERAL))
@@ -152,6 +165,9 @@ class ScoringRepositoryN1Test {
                 computeWorkoutTrimpUseCase = computeWorkoutTrimpUseCase,
                 heartRateDao = heartRateDao,
                 hrvDao = hrvDao,
+                weightRecordDao = weightRecordDao,
+                bodyFatRecordDao = bodyFatRecordDao,
+                bloodPressureRecordDao = bloodPressureRecordDao,
             )
     }
 

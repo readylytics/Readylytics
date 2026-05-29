@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
 import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
@@ -64,7 +65,7 @@ class HeartRateZonesViewModel
                     viewModelScope.launch {
                         settingsRepo.updateAutoCalculateMaxHr(enabled = event.enabled)
                         if (event.enabled) {
-                            userUseCase.calculateAndSetMaxHr()
+                            userUseCase.calculateAndSetMaxHr().getOrNull()
                         }
                     }
                 }

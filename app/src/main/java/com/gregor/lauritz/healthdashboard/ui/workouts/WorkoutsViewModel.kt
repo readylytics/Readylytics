@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
@@ -259,7 +260,7 @@ class WorkoutsViewModel
                                         val rhrBaseline = summaryByDate[workoutDate]?.restingHrBaseline?.toFloat()
                                         val samples = samplesByWorkoutId[workout.id] ?: emptyList()
 
-                                        val computedTrimp =
+                                        val computedTrimpResult =
                                             computeWorkoutTrimpUseCase.execute(
                                                 workoutStartTime = workout.startTime,
                                                 workoutEndTime = workout.endTime,
@@ -269,6 +270,7 @@ class WorkoutsViewModel
                                                 restingHrBaseline = rhrBaseline,
                                                 storedTrimp = workout.trimp,
                                             )
+                                        val computedTrimp = computedTrimpResult.getOrNull() ?: 0f
                                         WorkoutDisplayItem(workout, computedTrimp)
                                     }
 

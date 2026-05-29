@@ -28,4 +28,13 @@ sealed interface AppDestination {
 
     @Serializable
     data object SleepDetail : AppDestination
+
+    @Serializable
+    data object WeightDetail : AppDestination
+
+    @Serializable
+    data object BodyFatDetail : AppDestination
+
+    @Serializable
+    data object BloodPressureDetail : AppDestination
 }

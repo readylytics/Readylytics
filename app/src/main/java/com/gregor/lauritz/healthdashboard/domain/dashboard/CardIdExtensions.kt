@@ -16,4 +16,7 @@ fun CardId.displayName(): String =
         CardId.RECOVERY_INDEX -> "Recovery Index"
         CardId.ACUTE_CHRONIC_RATIO -> "Acute/Chronic Ratio"
         CardId.SLEEP_EFFICIENCY -> "Sleep Efficiency"
+        CardId.WEIGHT -> "Weight"
+        CardId.BODY_FAT -> "Body Fat"
+        CardId.BLOOD_PRESSURE -> "Blood Pressure"
     }
