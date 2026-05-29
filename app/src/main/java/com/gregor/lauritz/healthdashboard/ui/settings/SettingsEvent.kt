@@ -71,6 +71,10 @@ sealed interface SettingsEvent {
         val gender: Gender?,
     ) : SettingsEvent
 
+    data class HeightChanged(
+        val heightCm: Float?,
+    ) : SettingsEvent
+
     data class HrvOptimalThresholdChanged(
         val value: Float,
     ) : SettingsEvent
@@ -207,4 +211,8 @@ sealed interface SettingsEvent {
     ) : SettingsEvent
 
     data object ResetTrimpToProfileDefaults : SettingsEvent
+
+    data class UnitSystemChanged(
+        val unitSystem: com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem,
+    ) : SettingsEvent
 }

@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.workouts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
@@ -110,7 +111,7 @@ class WorkoutDetailViewModel
                 val prefs = settingsRepo.userPreferences.first()
                 val workoutSamples = allSamples.filter { it.timestamp <= workoutEndInstant }
 
-                val computedTrimp =
+                val computedTrimpResult =
                     computeWorkoutTrimpUseCase.execute(
                         workoutStartTime = workout.startTime,
                         workoutEndTime = workout.endTime,
@@ -126,6 +127,7 @@ class WorkoutDetailViewModel
                         prefs = prefs,
                         restingHrBaseline = summary?.restingHrBaseline?.toFloat(),
                     )
+                val computedTrimp = computedTrimpResult.getOrNull() ?: 0f
 
                 _uiState.update {
                     it.copy(

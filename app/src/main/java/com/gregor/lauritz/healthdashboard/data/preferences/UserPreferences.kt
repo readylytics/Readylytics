@@ -29,6 +29,7 @@ data class UserPreferences(
     val birthMonth: Int = SettingsDefaults.BIRTH_MONTH,
     val birthYear: Int = SettingsDefaults.BIRTH_YEAR,
     val gender: Gender? = null,
+    val heightCm: Float? = SettingsDefaults.HEIGHT_CM,
     val hrvOptimalThreshold: Float = SettingsDefaults.HRV_OPTIMAL_THRESHOLD,
     val hrvWarningThreshold: Float = SettingsDefaults.HRV_WARNING_THRESHOLD,
     val rhrOptimalThreshold: Float = SettingsDefaults.RHR_OPTIMAL_THRESHOLD,
@@ -66,6 +67,7 @@ data class UserPreferences(
     val backupDirectoryUri: String? = null,
     val backupPasswordHash: String? = null,
     val isBirthdayConfigured: Boolean = SettingsDefaults.IS_BIRTHDAY_CONFIGURED,
+    val unitSystem: UnitSystem = SettingsDefaults.UNIT_SYSTEM,
 )
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
@@ -95,6 +97,7 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         birthMonth = birthMonth,
         birthYear = birthYear,
         gender = if (hasGender()) Gender.fromString(gender) else null,
+        heightCm = if (hasHeightCm()) heightCm else null,
         hrvOptimalThreshold = hrvOptimalThreshold,
         hrvWarningThreshold = hrvWarningThreshold,
         rhrOptimalThreshold = rhrOptimalThreshold,
@@ -143,5 +146,11 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         backupDirectoryUri = if (hasBackupDirectoryUri()) backupDirectoryUri else null,
         backupPasswordHash = if (hasBackupPasswordHash()) backupPasswordHash else null,
         isBirthdayConfigured = isBirthdayConfigured,
+        unitSystem =
+            when (unitSystem) {
+                UnitSystemProto.UNIT_METRIC -> UnitSystem.METRIC
+                UnitSystemProto.UNIT_IMPERIAL -> UnitSystem.IMPERIAL
+                else -> SettingsDefaults.UNIT_SYSTEM
+            },
     )
 }

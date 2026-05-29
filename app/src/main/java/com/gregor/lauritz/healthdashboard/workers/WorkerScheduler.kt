@@ -38,6 +38,7 @@ class WorkerScheduler
                     Constraints
                         .Builder()
                         .setRequiresBatteryNotLow(true)
+                        .setRequiresCharging(true)
                         .setRequiredNetworkType(NetworkType.CONNECTED)
                         .build()
 
@@ -81,6 +82,7 @@ class WorkerScheduler
                     Constraints
                         .Builder()
                         .setRequiresBatteryNotLow(true)
+                        .setRequiresDeviceIdle(true)
                         .build()
 
                 val request =

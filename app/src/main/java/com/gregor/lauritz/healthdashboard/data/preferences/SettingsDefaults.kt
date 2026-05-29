@@ -30,6 +30,7 @@ object SettingsDefaults {
     const val BIRTH_YEAR = 1994
     const val IS_BIRTHDAY_CONFIGURED = false
     val GENDER: String? = null
+    val HEIGHT_CM: Float? = 175f
     const val HRV_OPTIMAL_THRESHOLD = 1.10f
     const val HRV_WARNING_THRESHOLD = 0.90f
     const val RHR_OPTIMAL_THRESHOLD = 0.90f
@@ -64,6 +65,7 @@ object SettingsDefaults {
     const val INSTALL_DATE = 0L // Set to System.currentTimeMillis() on first app run
     val CIRCADIAN_THRESHOLD_OVERRIDE: String? = null // null = use profile default
     val TRIMP_MODEL = TrimpModel.BANISTER
+    val UNIT_SYSTEM = UnitSystem.METRIC
 
     val DEFAULT_DASHBOARD_CARDS =
         listOf(
@@ -78,5 +80,8 @@ object SettingsDefaults {
             CardConfiguration(CardId.CIRCADIAN_CONSISTENCY, isVisible = true, position = 8),
             CardConfiguration(CardId.STRAIN_RATIO, isVisible = true, position = 9),
             CardConfiguration(CardId.SLEEP_EFFICIENCY, isVisible = true, position = 10),
+            CardConfiguration(CardId.WEIGHT, isVisible = true, position = 11),
+            CardConfiguration(CardId.BODY_FAT, isVisible = true, position = 12),
+            CardConfiguration(CardId.BLOOD_PRESSURE, isVisible = true, position = 13),
         )
 }

@@ -2,7 +2,6 @@ package com.gregor.lauritz.healthdashboard.ui.dashboard
 
 import android.util.Log
 import androidx.compose.runtime.Immutable
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
@@ -15,10 +14,13 @@ import com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepositor
 import com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.model.SleepSessionSummary
+import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
+import com.gregor.lauritz.healthdashboard.ui.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,7 +46,14 @@ class DashboardViewModel
         private val cardConfigRepository: CardConfigurationRepository,
         private val circadianRepo: CircadianConsistencyRepository,
         private val dailyMetricCache: DailyMetricCache,
-    ) : ViewModel() {
+    ) : BaseViewModel() {
+        fun validateSelectedDate(date: LocalDate): Result<LocalDate> =
+            if (date <= LocalDate.now()) {
+                Result.success(date)
+            } else {
+                Result.failure("Cannot select future dates", "INVALID_DATE")
+            }
+
         private val cardManagementDelegate = CardManagementDelegate(cardConfigRepository, viewModelScope)
 
         val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
@@ -95,7 +104,7 @@ class DashboardViewModel
                     )
                 }
 
-            val cards =
+            val cardsResult =
                 getDashboardDataUseCase.invoke(
                     summary = basicInputs.summary,
                     prefs = basicInputs.userPreferences,
@@ -104,13 +113,14 @@ class DashboardViewModel
                     paiSummaries = basicInputs.paiSummaries,
                 )
 
+            val cards = cardsResult.getOrNull()
             return DashboardUiState(
                 summary = basicInputs.summary,
                 selectedDate = selectedDate,
-                cardDataMap = cards.cardDataMap,
+                cardDataMap = cards?.cardDataMap ?: emptyMap(),
                 circadianConsistency = basicInputs.circadianResult,
-                restingHrCard = cards.cardDataMap[CardId.RESTING_HR],
-                paiDailyBreakdown = cards.paiDailyBreakdown,
+                restingHrCard = cards?.cardDataMap?.get(CardId.RESTING_HR),
+                paiDailyBreakdown = cards?.paiDailyBreakdown ?: emptyList(),
                 stepCount = basicInputs.summary?.stepCount,
                 stepGoal = basicInputs.userPreferences.stepGoal,
                 lastSleepSession = sessionSummary,
@@ -119,6 +129,7 @@ class DashboardViewModel
                 isRefreshing = realtimeState.isSyncing,
                 isComputingMetrics = realtimeState.isSyncing && basicInputs.summary == null,
                 isCalibrating = basicInputs.summary?.isCalibrating ?: false,
+                errorMessage = if (cardsResult.isFailure) "Failed to load dashboard data" else null,
             )
         }
 
@@ -238,4 +249,7 @@ enum class DashboardAction {
     NAVIGATE_WORKOUTS,
     NAVIGATE_RHR,
     NAVIGATE_STEPS,
+    NAVIGATE_WEIGHT,
+    NAVIGATE_BODY_FAT,
+    NAVIGATE_BLOOD_PRESSURE,
 }
