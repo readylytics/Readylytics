@@ -19,7 +19,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.ui.components.HrSparkline
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 
 @Composable
@@ -70,24 +69,21 @@ fun HeartRateCard(
             if (summary == null) {
                 Text(
                     text = "-- bpm",
-                    style = MaterialTheme.typography.displaySmall,
+                    style = MaterialTheme.typography.headlineLarge,
                     color = contentColor,
                 )
             } else {
                 Text(
-                    text = "${summary.minBpm} – ${summary.maxBpm}",
-                    style = MaterialTheme.typography.displaySmall,
+                    text = "${summary.minBpm}–${summary.maxBpm}",
+                    style = MaterialTheme.typography.headlineLarge,
+                    maxLines = 1,
                     color = contentColor,
                 )
+                Spacer(modifier = Modifier.weight(1f))
                 Text(
                     text = "bpm  ·  avg ${summary.avgBpm}",
                     style = MaterialTheme.typography.bodySmall,
                     color = contentColor.copy(alpha = 0.7f),
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                HrSparkline(
-                    hourlySamples = summary.hourlySamples,
-                    modifier = Modifier.fillMaxWidth().height(30.dp),
                 )
             }
         }

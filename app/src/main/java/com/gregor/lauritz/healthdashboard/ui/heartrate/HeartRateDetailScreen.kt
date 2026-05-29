@@ -39,7 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.ui.components.HrTimelineChart
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
-import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
+import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.roundToInt
@@ -97,21 +97,6 @@ fun HeartRateDetailScreen(
                     .fillMaxSize(),
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
-            item(key = "date_switcher") {
-                DateSwitcher(
-                    selectedDate = uiState.selectedDate,
-                    onPreviousDay = onPreviousDay,
-                    onNextDay = onNextDay,
-                    today = today,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                )
-            }
-
-            item(key = "spacer_1") { Spacer(Modifier.height(8.dp)) }
-
             item(key = "stats_row") {
                 if (uiState.minBpm != null && uiState.maxBpm != null) {
                     Row(
@@ -295,12 +280,14 @@ private fun ZoneRow(
 }
 
 @Composable
-private fun zoneColor(zone: Int): Color =
-    when (zone) {
-        0 -> MaterialTheme.colorScheme.surfaceVariant
+private fun zoneColor(zone: Int): Color {
+    val extendedColors = LocalExtendedColors.current
+    return when (zone) {
+        0 -> MaterialTheme.colorScheme.secondaryContainer
         1 -> MaterialTheme.colorScheme.tertiaryContainer
-        2 -> MaterialTheme.colorScheme.secondaryContainer
+        2 -> MaterialTheme.colorScheme.error.copy(alpha = 0.4f)
         3 -> MaterialTheme.colorScheme.primaryContainer
-        4 -> MaterialTheme.colorScheme.error.copy(alpha = 0.4f)
+        4 -> extendedColors.warning
         else -> MaterialTheme.colorScheme.error
     }
+}
