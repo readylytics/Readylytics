@@ -82,7 +82,12 @@ class PhysiologySettingsViewModel
                         yearValidation is ValidationResult.Valid
                     ) {
                         viewModelScope.launch {
-                            userUseCase.updateBirthday(day = event.day, month = event.month, year = event.year).getOrNull()
+                            userUseCase
+                                .updateBirthday(
+                                    day = event.day,
+                                    month = event.month,
+                                    year = event.year,
+                                ).getOrNull()
                             healthSyncUseCase.sync()
                         }
                     }

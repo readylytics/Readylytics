@@ -23,34 +23,36 @@ class UserUseCase
             day: Int,
             month: Int,
             year: Int,
-        ): Result<Unit> = try {
-            val age = calculateAge(day, month, year)
-            settingsRepo.updateBirthday(day, month, year)
+        ): Result<Unit> =
+            try {
+                val age = calculateAge(day, month, year)
+                settingsRepo.updateBirthday(day, month, year)
 
-            scoringRepository.computeAndPersistDailySummary()
+                scoringRepository.computeAndPersistDailySummary()
 
-            val prefs = settingsRepo.userPreferences.first()
-            if (prefs.autoCalculateMaxHr) {
-                val maxHr = calculateMaxHeartRate(age)
-                settingsRepo.updateMaxHeartRate(maxHr)
-                healthSyncUseCase.sync()
+                val prefs = settingsRepo.userPreferences.first()
+                if (prefs.autoCalculateMaxHr) {
+                    val maxHr = calculateMaxHeartRate(age)
+                    settingsRepo.updateMaxHeartRate(maxHr)
+                    healthSyncUseCase.sync()
+                }
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure("Failed to update birthday", "BIRTHDAY_UPDATE_ERROR")
             }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure("Failed to update birthday", "BIRTHDAY_UPDATE_ERROR")
-        }
 
-        suspend fun calculateAndSetMaxHr(): Result<Unit> = try {
-            val prefs = settingsRepo.userPreferences.first()
-            if (prefs.autoCalculateMaxHr) {
-                val maxHr = calculateMaxHeartRate(prefs.age)
-                settingsRepo.updateMaxHeartRate(maxHr)
-                healthSyncUseCase.sync()
+        suspend fun calculateAndSetMaxHr(): Result<Unit> =
+            try {
+                val prefs = settingsRepo.userPreferences.first()
+                if (prefs.autoCalculateMaxHr) {
+                    val maxHr = calculateMaxHeartRate(prefs.age)
+                    settingsRepo.updateMaxHeartRate(maxHr)
+                    healthSyncUseCase.sync()
+                }
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure("Failed to calculate max HR", "MAX_HR_CALC_ERROR")
             }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure("Failed to calculate max HR", "MAX_HR_CALC_ERROR")
-        }
 
         fun calculateAge(
             day: Int,

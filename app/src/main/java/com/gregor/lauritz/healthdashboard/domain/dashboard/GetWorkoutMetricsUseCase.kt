@@ -20,26 +20,27 @@ class GetWorkoutMetricsUseCase
             val strainRatioCard: CardData?,
         )
 
-        operator fun invoke(summary: DailySummary?): Result<WorkoutMetrics> = try {
-            if (summary == null) {
-                return@invoke Result.success(WorkoutMetrics(null))
+        operator fun invoke(summary: DailySummary?): Result<WorkoutMetrics> =
+            try {
+                if (summary == null) {
+                    return@invoke Result.success(WorkoutMetrics(null))
+                }
+
+                val strainRatioCard =
+                    summary.strainRatio?.let { createStrainRatioCard(it) }
+                        ?: CardData(
+                            title = "Strain Ratio",
+                            value = "—",
+                            unit = "",
+                            status = MetricStatus.CALIBRATING,
+                            action = DashboardAction.NAVIGATE_WORKOUTS,
+                            tooltip = resourceProvider.getString(R.string.tooltip_strain_ratio),
+                        )
+
+                Result.success(WorkoutMetrics(strainRatioCard))
+            } catch (e: Exception) {
+                Result.failure("Failed to compute workout metrics", "WORKOUT_METRICS_ERROR")
             }
-
-            val strainRatioCard =
-                summary.strainRatio?.let { createStrainRatioCard(it) }
-                    ?: CardData(
-                        title = "Strain Ratio",
-                        value = "—",
-                        unit = "",
-                        status = MetricStatus.CALIBRATING,
-                        action = DashboardAction.NAVIGATE_WORKOUTS,
-                        tooltip = resourceProvider.getString(R.string.tooltip_strain_ratio),
-                    )
-
-            Result.success(WorkoutMetrics(strainRatioCard))
-        } catch (e: Exception) {
-            Result.failure("Failed to compute workout metrics", "WORKOUT_METRICS_ERROR")
-        }
 
         private fun createStrainRatioCard(strainRatio: Float): CardData {
             val status = strainRatio.strainRatioStatus()

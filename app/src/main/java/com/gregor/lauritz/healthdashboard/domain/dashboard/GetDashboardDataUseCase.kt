@@ -11,8 +11,8 @@ import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.model.SleepSessionSummary
-import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.model.efficiencyStatus
+import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.model.hrvStatus
 import com.gregor.lauritz.healthdashboard.domain.model.paiStatus
 import com.gregor.lauritz.healthdashboard.domain.model.restingHrStatus
