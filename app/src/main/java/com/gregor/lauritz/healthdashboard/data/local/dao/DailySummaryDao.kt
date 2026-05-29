@@ -49,6 +49,9 @@ interface DailySummaryDao {
     @Query("SELECT * FROM daily_summaries WHERE dateMidnightMs >= :fromMs ORDER BY dateMidnightMs ASC")
     suspend fun getSince(fromMs: Long): List<DailySummaryEntity>
 
+    @Query("SELECT * FROM daily_summaries ORDER BY dateMidnightMs ASC")
+    suspend fun getAllSummaries(): List<DailySummaryEntity>
+
     @Query("DELETE FROM daily_summaries WHERE dateMidnightMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
@@ -57,4 +60,20 @@ interface DailySummaryDao {
 
     @Query("DELETE FROM daily_summaries")
     suspend fun deleteAll(): Int
+
+    @Query(
+        "UPDATE daily_summaries SET hrv_mu_mssd = :hrvMuMssd, " +
+            "hrv_sigma_mssd = :hrvSigmaMssd, rhr_bpm = :rhrBpm, " +
+            "baseline_calculated_at_date = :baselineCalculatedAtDate, " +
+            "baseline_version = :baselineVersion " +
+            "WHERE dateMidnightMs = :dateMidnightMs",
+    )
+    suspend fun updateBaselines(
+        dateMidnightMs: Long,
+        hrvMuMssd: Float?,
+        hrvSigmaMssd: Float?,
+        rhrBpm: Float?,
+        baselineCalculatedAtDate: java.time.LocalDate?,
+        baselineVersion: Int?,
+    )
 }

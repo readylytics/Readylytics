@@ -130,7 +130,8 @@ class ScoringRepositoryN1Test {
                 LoadScoringStrategy(),
             )
 
-        val baselineComputer = BaselineComputer(heartRateDao, hrvDao, sleepSessionDao, scoringCalculator)
+        val baselineComputer =
+            BaselineComputer(heartRateDao, hrvDao, sleepSessionDao, scoringCalculator, dailySummaryDao)
         val scoringConfigFactory = ScoringConfigFactory()
         val encryptionManager = mockk<EncryptionManager>(relaxed = true)
         val hrvResolver = CurrentNightHrvResolver(hrvDao, dailySummaryDao)

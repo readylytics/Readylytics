@@ -1,9 +1,11 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
+import com.gregor.lauritz.healthdashboard.domain.util.logD
 import com.gregor.lauritz.healthdashboard.domain.util.mean
 import com.gregor.lauritz.healthdashboard.domain.util.median
 import java.time.Instant
@@ -18,6 +20,11 @@ import kotlin.math.roundToInt
  * Extracted from [ScoringRepository] to isolate baseline-window construction
  * (RHR median, HRV mu/sigma windows) from orchestration concerns.
  * REF: plan_scoring.md §15 — Extract BaselineComputer.
+ *
+ * Freeze enforcement (US-B6): [computeHrvWindows] and [computeAdaptiveBaselineRhrBpm]
+ * return null when the DailySummary for [dayMidnight] already has a frozen baseline
+ * (i.e. baselineCalculatedAtDate is set). Callers must interpret null as "use stored
+ * baseline, do not recompute."
  */
 @Singleton
 class BaselineComputer
@@ -27,7 +34,12 @@ class BaselineComputer
         private val hrvDao: HrvDao,
         private val sleepSessionDao: SleepSessionDao,
         private val scoringCalculator: ScoringCalculator,
+        private val dailySummaryDao: DailySummaryDao,
     ) {
+        companion object {
+            private const val TAG = "BaselineComputer"
+        }
+
         /**
          * Per-session average sleep HR values within the [ScoringConstants.BASELINE_DAYS]
          * window ending at [dayMidnight]. Used as the personal RHR history for z-scores.
@@ -72,12 +84,24 @@ class BaselineComputer
          * Before: 1 + N*2 queries (1 for session IDs + 2 per session)
          * After:  2 queries (1 for sessions + 1 for all HR samples batched)
          * Performance: 5-10x faster for 30-day window (30 sessions)
+         *
+         * Freeze enforcement (US-B6): Returns null if the DailySummary for [dayMidnight]
+         * already has a frozen baseline. Callers must use the stored baseline value instead.
          */
         suspend fun computeAdaptiveBaselineRhrBpm(
             dayMidnight: Instant,
             rhrBaselineOverride: Float?,
-        ): Float {
+        ): Float? {
             if (rhrBaselineOverride != null) return rhrBaselineOverride
+
+            val frozenSummary = dailySummaryDao.getByDate(dayMidnight.toEpochMilli())
+            if (frozenSummary?.baselineCalculatedAtDate != null) {
+                logD(TAG) {
+                    "Baseline frozen for date=${frozenSummary.baselineCalculatedAtDate}; " +
+                        "rhrBpm=${frozenSummary.rhrBpm} — skipping RHR recompute"
+                }
+                return null
+            }
 
             val baselineFromMs =
                 dayMidnight
@@ -153,11 +177,22 @@ class BaselineComputer
          *
          * Excludes [excludeSessionId] (typically the current night) and pollution
          * from invalid nights (gating via [ScoringCalculator.validateNight]).
+         *
+         * Freeze enforcement (US-B6): Returns null if the DailySummary for [dayMidnight]
+         * already has a frozen baseline. Callers must use the stored baseline values instead.
          */
         suspend fun computeHrvWindows(
             dayMidnight: Instant,
             excludeSessionId: String?,
-        ): HrvWindows {
+        ): HrvWindows? {
+            val frozenSummary = dailySummaryDao.getByDate(dayMidnight.toEpochMilli())
+            if (frozenSummary?.baselineCalculatedAtDate != null) {
+                logD(TAG) {
+                    "Baseline frozen for date=${frozenSummary.baselineCalculatedAtDate}; " +
+                        "hrvMu=${frozenSummary.hrvMuMssd}, hrvSigma=${frozenSummary.hrvSigmaMssd} — skipping HRV window recompute"
+                }
+                return null
+            }
             val sigmaWindowFromMs =
                 dayMidnight
                     .minus(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong(), ChronoUnit.DAYS)

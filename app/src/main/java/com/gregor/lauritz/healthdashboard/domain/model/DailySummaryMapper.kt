@@ -60,6 +60,11 @@ object DailySummaryMapper {
             bodyFatPercent = entity.bodyFatPercent,
             bloodPressureSystolic = entity.bloodPressureSystolic,
             bloodPressureDiastolic = entity.bloodPressureDiastolic,
+            hrvMuMssd = entity.hrvMuMssd,
+            hrvSigmaMssd = entity.hrvSigmaMssd,
+            rhrBpm = entity.rhrBpm,
+            baselineCalculatedAtDate = entity.baselineCalculatedAtDate,
+            baselineVersion = entity.baselineVersion,
         )
     }
 
@@ -106,6 +111,11 @@ object DailySummaryMapper {
             bodyFatPercent = domain.bodyFatPercent,
             bloodPressureSystolic = domain.bloodPressureSystolic,
             bloodPressureDiastolic = domain.bloodPressureDiastolic,
+            hrvMuMssd = domain.hrvMuMssd,
+            hrvSigmaMssd = domain.hrvSigmaMssd,
+            rhrBpm = domain.rhrBpm,
+            baselineCalculatedAtDate = domain.baselineCalculatedAtDate,
+            baselineVersion = domain.baselineVersion,
         )
     }
 }

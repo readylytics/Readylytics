@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
@@ -15,6 +16,7 @@ import org.junit.Test
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -31,6 +33,7 @@ class BaselineComputerN1FixTest {
     private lateinit var hrvDao: HrvDao
     private lateinit var sleepSessionDao: SleepSessionDao
     private lateinit var scoringCalculator: ScoringCalculator
+    private lateinit var dailySummaryDao: DailySummaryDao
     private lateinit var baselineComputer: BaselineComputer
 
     @Before
@@ -39,8 +42,11 @@ class BaselineComputerN1FixTest {
         hrvDao = mockk()
         sleepSessionDao = mockk()
         scoringCalculator = mockk()
+        dailySummaryDao = mockk()
+        // Default: no frozen baseline — all dates are live recompute
+        coEvery { dailySummaryDao.getByDate(any()) } returns null
         baselineComputer =
-            BaselineComputer(heartRateDao, hrvDao, sleepSessionDao, scoringCalculator)
+            BaselineComputer(heartRateDao, hrvDao, sleepSessionDao, scoringCalculator, dailySummaryDao)
     }
 
     @Test
@@ -49,6 +55,7 @@ class BaselineComputerN1FixTest {
             val dayMidnight = Instant.now()
             val override = 65f
             val result = baselineComputer.computeAdaptiveBaselineRhrBpm(dayMidnight, override)
+            // Override path returns before DAO freeze check, so result is non-null
             assertEquals(override, result)
             // Verify no database queries made when override provided
             coVerify(exactly = 0) { sleepSessionDao.getSince(any()) }
@@ -115,7 +122,8 @@ class BaselineComputerN1FixTest {
 
             val result = baselineComputer.computeAdaptiveBaselineRhrBpm(dayMidnight, null)
 
-            // Verify result is within expected range
+            // Verify result is within expected range (non-frozen DAO returns null → live recompute)
+            assertNotNull(result)
             assertTrue(result >= 40f && result <= 190f)
 
             // Verify ONLY the necessary database queries were made
@@ -201,7 +209,8 @@ class BaselineComputerN1FixTest {
 
             val result = baselineComputer.computeAdaptiveBaselineRhrBpm(dayMidnight, null)
 
-            // Result should be around session_1's nadir
+            // Result should be around session_1's nadir (non-frozen path → non-null)
+            assertNotNull(result)
             assertTrue(result >= 50f && result <= 200f)
         }
 
@@ -213,6 +222,8 @@ class BaselineComputerN1FixTest {
             coEvery { sleepSessionDao.getSince(any()) } returns emptyList()
 
             val result = baselineComputer.computeAdaptiveBaselineRhrBpm(dayMidnight, null)
+            // No sessions → returns DEFAULT_RHR_BPM (non-null, live recompute path)
+            assertNotNull(result)
             assertEquals(ScoringConstants.DEFAULT_RHR_BPM, result)
         }
 
@@ -303,6 +314,7 @@ class BaselineComputerN1FixTest {
 
             val result = baselineComputer.computeAdaptiveBaselineRhrBpm(dayMidnight, null)
 
+            assertNotNull(result)
             assertTrue(result >= 40f && result <= 150f)
         }
 

@@ -596,6 +596,26 @@ object DatabaseMigrations {
             }
         }
 
+    val MIGRATION_22_23 =
+        object : Migration(22, 23) {
+            private val sql =
+                listOf(
+                    "ALTER TABLE daily_summaries ADD COLUMN hrv_mu_mssd REAL",
+                    "ALTER TABLE daily_summaries ADD COLUMN hrv_sigma_mssd REAL",
+                    "ALTER TABLE daily_summaries ADD COLUMN rhr_bpm REAL",
+                    "ALTER TABLE daily_summaries ADD COLUMN baseline_calculated_at_date TEXT",
+                    "ALTER TABLE daily_summaries ADD COLUMN baseline_version INTEGER DEFAULT 1",
+                )
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                sql.forEach { db.execSQL(it) }
+            }
+
+            override fun migrate(connection: SQLiteConnection) {
+                sql.forEach { connection.execSQL(it) }
+            }
+        }
+
     val all =
         arrayOf(
             MIGRATION_1_2,
@@ -619,5 +639,6 @@ object DatabaseMigrations {
             MIGRATION_19_20,
             MIGRATION_20_21,
             MIGRATION_21_22,
+            MIGRATION_22_23,
         )
 }

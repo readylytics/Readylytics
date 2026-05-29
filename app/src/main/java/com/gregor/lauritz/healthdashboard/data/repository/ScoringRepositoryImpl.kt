@@ -69,11 +69,13 @@ class ScoringRepositoryImpl
                 val prefs = settingsRepo.userPreferences.first()
                 val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
 
+                // Returns null when baseline is frozen (US-B6); fall back to default for workout TRIMP.
+                // Sleep-specific frozen baselines are handled separately in ComputeSleepMetricsUseCase.
                 val rhrBaselineValue =
                     baselineComputer.computeAdaptiveBaselineRhrBpm(
                         dayMidnight = dayMidnight,
                         rhrBaselineOverride = prefs.rhrBaselineOverride,
-                    )
+                    ) ?: ScoringConstants.DEFAULT_RHR_BPM
 
                 if (hrMax <= 0f) throw IllegalStateException("HR Max is missing or invalid")
                 if (rhrBaselineValue <= 0f) throw IllegalStateException("RHR Baseline is missing or invalid")
