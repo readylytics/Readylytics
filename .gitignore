@@ -46,5 +46,6 @@ SPEC.md
 docs/superpowers/
 .claude/settings.local.json
 
-# Downloaded tools
+# Downloaded tooling binaries
 ktlint
+.kotlin
