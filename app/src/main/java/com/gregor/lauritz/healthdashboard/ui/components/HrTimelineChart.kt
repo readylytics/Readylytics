@@ -9,13 +9,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +29,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -130,33 +129,35 @@ fun HrTimelineChart(
         val plotW = chartWidthPx - leftLabelWidthPx
 
         fun minuteToX(minute: Int): Float = leftLabelWidthPx + minute / 1440f * plotW
+
         fun zoomedX(minute: Int): Float = leftLabelWidthPx + (minuteToX(minute) - leftLabelWidthPx) * scaleX + offsetX
 
-        val tooltipState = remember(selectedSample, scaleX, offsetX, plotW) {
-            val sample = selectedSample ?: return@remember null
-            val nearestMinute = ((sample.timeMs - dayStartMs) / 60_000L).toInt()
-            val bottomLabelHeightPx = with(density) { 20.dp.toPx() }
-            val canvasHeightPx = with(density) { 220.dp.toPx() }
-            val plotLeft = leftLabelWidthPx
-            val plotTop = 0f
-            val plotBottom = canvasHeightPx - bottomLabelHeightPx
-            val plotH = plotBottom - plotTop
+        val tooltipState =
+            remember(selectedSample, scaleX, offsetX, plotW) {
+                val sample = selectedSample ?: return@remember null
+                val nearestMinute = ((sample.timeMs - dayStartMs) / 60_000L).toInt()
+                val bottomLabelHeightPx = with(density) { 20.dp.toPx() }
+                val canvasHeightPx = with(density) { 220.dp.toPx() }
+                val plotLeft = leftLabelWidthPx
+                val plotTop = 0f
+                val plotBottom = canvasHeightPx - bottomLabelHeightPx
+                val plotH = plotBottom - plotTop
 
-            val sampleX = zoomedX(nearestMinute)
-            val sampleY = plotTop + (1f - (sample.bpm - yMin).toFloat() / (yMax - yMin).toFloat()) * plotH
+                val sampleX = zoomedX(nearestMinute)
+                val sampleY = plotTop + (1f - (sample.bpm - yMin).toFloat() / (yMax - yMin).toFloat()) * plotH
 
-            val timeStr =
-                Instant
-                    .ofEpochMilli(sample.timeMs)
-                    .atZone(ZoneId.systemDefault())
-                    .format(hourFormatter)
+                val timeStr =
+                    Instant
+                        .ofEpochMilli(sample.timeMs)
+                        .atZone(ZoneId.systemDefault())
+                        .format(hourFormatter)
 
-            DataPointTooltipData(
-                valueText = "${sample.bpm} bpm",
-                dateText = timeStr,
-                offset = IntOffset(sampleX.roundToInt(), sampleY.roundToInt()),
-            )
-        }
+                DataPointTooltipData(
+                    valueText = "${sample.bpm} bpm",
+                    dateText = timeStr,
+                    offset = IntOffset(sampleX.roundToInt(), sampleY.roundToInt()),
+                )
+            }
         Canvas(
             modifier =
                 Modifier
@@ -168,12 +169,12 @@ fun HrTimelineChart(
                             val maxOffset = (scaleX - 1f) * plotW
                             offsetX = (offsetX + pan.x).coerceIn(-maxOffset, 0f)
                         }
-                    }
-                    .pointerInput(samples, dayStartMs, scaleX, offsetX) {
+                    }.pointerInput(samples, dayStartMs, scaleX, offsetX) {
                         detectTapGestures { tapOffset ->
                             val tappedZoomedX = tapOffset.x
-                            val tappedUnscaledX = leftLabelWidthPx + (tappedZoomedX - leftLabelWidthPx - offsetX) / scaleX
-                            
+                            val tappedUnscaledX =
+                                leftLabelWidthPx + (tappedZoomedX - leftLabelWidthPx - offsetX) / scaleX
+
                             val bottomLabelHeightPx = 20.dp.toPx()
                             val plotLeft = leftLabelWidthPx
                             val plotTop = 0f
@@ -279,7 +280,7 @@ fun HrTimelineChart(
                             Offset(
                                 x = (x - measured.size.width / 2f).coerceIn(plotLeft, plotRight - measured.size.width),
                                 y = plotBottom + 2.dp.toPx(),
-                             ),
+                            ),
                     )
                 }
             }
