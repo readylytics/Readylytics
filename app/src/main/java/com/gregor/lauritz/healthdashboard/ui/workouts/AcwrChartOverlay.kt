@@ -18,7 +18,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -46,6 +45,7 @@ fun AcwrChartOverlay(
     selectedState: AcwrSelectedState?,
     trimpColor: Color,
     ratioColor: Color,
+    layerBounds: Any?,
     barThicknessDp: Dp = 8.dp,
     chartHeight: Dp = 220.dp,
     modifier: Modifier = Modifier,
@@ -61,6 +61,7 @@ fun AcwrChartOverlay(
                 selectedState = selectedState,
                 trimpColor = trimpColor,
                 ratioColor = ratioColor,
+                layerBounds = layerBounds,
                 barThicknessDp = barThicknessDp,
             )
         }
@@ -78,6 +79,7 @@ private fun AcwrChartOverlayContent(
     selectedState: AcwrSelectedState,
     trimpColor: Color,
     ratioColor: Color,
+    layerBounds: Any?,
     barThicknessDp: Dp,
 ) {
     // Animations only run while a point is selected; they start from their
@@ -103,17 +105,6 @@ private fun AcwrChartOverlayContent(
             ),
         label = "acwrHaloAlpha",
     )
-    // Bar stroke pulses at its own rate for a visually distinct feel from the dot.
-    val barStrokeCoeff by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 1.8f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(1200, easing = EaseInOutSine),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "acwrBarStrokeCoeff",
-    )
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         // size.width is used directly — no external measurement state needed.
@@ -127,26 +118,26 @@ private fun AcwrChartOverlayContent(
             strokeWidth = 1.5.dp.toPx(),
         )
 
-        // 2. Pulsing bar outline (only when bar canvas position is known)
+        // 2. Pulsing outer glow (matches the hypnogram selection pulse)
         selectedState.barCanvasYTop?.let { barTop ->
             val halfBar = (barThicknessDp / 2).toPx()
             val barLeft = canvasX - halfBar
-            val barHeight = size.height - barTop
+            val barBottom =
+                try {
+                    val method = layerBounds?.javaClass?.methods?.find { it.name == "getBottom" || it.name == "bottom" }
+                    (method?.invoke(layerBounds) as? Number)?.toFloat() ?: (size.height - 28.dp.toPx())
+                } catch (e: Exception) {
+                    size.height - 28.dp.toPx()
+                }
+            val barHeight = barBottom - barTop
             if (barHeight > 0f) {
-                // Translucent halo fill behind the stroke outline
+                val currentHaloPadding = 4.dp.toPx() * haloRadiusCoeff
+                // Pulsing filled outer glow/halo that matches the hypnogram selection pulse!
                 drawRoundRect(
-                    color = trimpColor.copy(alpha = haloAlpha * 0.5f),
-                    topLeft = Offset(barLeft, barTop),
-                    size = Size(barThicknessDp.toPx(), barHeight),
-                    cornerRadius = CornerRadius(2.dp.toPx()),
-                )
-                // Animated stroke outline
-                drawRoundRect(
-                    color = trimpColor.copy(alpha = 0.6f + haloAlpha * 0.4f),
-                    topLeft = Offset(barLeft, barTop),
-                    size = Size(barThicknessDp.toPx(), barHeight),
-                    cornerRadius = CornerRadius(2.dp.toPx()),
-                    style = Stroke(width = 1.5.dp.toPx() * barStrokeCoeff),
+                    color = trimpColor.copy(alpha = haloAlpha),
+                    topLeft = Offset(barLeft - currentHaloPadding, barTop - currentHaloPadding),
+                    size = Size(barThicknessDp.toPx() + 2 * currentHaloPadding, barHeight + 2 * currentHaloPadding),
+                    cornerRadius = CornerRadius(2.dp.toPx() + currentHaloPadding),
                 )
             }
         }

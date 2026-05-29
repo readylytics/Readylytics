@@ -36,7 +36,6 @@ import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltipData
-import com.gregor.lauritz.healthdashboard.ui.components.InvisibleMarker
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.PaiWeeklyBar
@@ -272,6 +271,26 @@ private fun AcwrChart(
     // chart range or underlying data changes, preventing stale coordinates and values.
     var selectedState by remember(trimpPoints, ratioPoints, rangeStartMs) { mutableStateOf<AcwrSelectedState?>(null) }
 
+    var layerBounds by remember { mutableStateOf<Any?>(null) }
+    val invisibleMarker =
+        remember {
+            object : com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker {
+                override fun drawUnderLayers(
+                    context: com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext,
+                    targets: List<com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker.Target>,
+                ) {
+                    layerBounds = context.layerBounds
+                }
+
+                override fun drawOverLayers(
+                    context: com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext,
+                    targets: List<com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker.Target>,
+                ) {
+                    layerBounds = context.layerBounds
+                }
+            }
+        }
+
     // Read string resources outside remember so they can be used as keys and accessed
     // inside the lambda (where Composable calls are not permitted).
     val trimpFormat = stringResource(R.string.acwr_tooltip_trimp_format)
@@ -288,8 +307,8 @@ private fun AcwrChart(
                 val strainText = s.strainRatioValue?.let { "%.2f".format(it) } ?: "—"
                 DataPointTooltipData(
                     valueText = trimpFormat.format(trimpText),
-                    dateText = ChartUtils.formatTooltipDate(date),
-                    extraLine = strainFormat.format(strainText),
+                    dateText = strainFormat.format(strainText),
+                    extraLine = ChartUtils.formatTooltipDate(date),
                     offset = IntOffset(s.canvasX.toInt(), anchorY.toInt()),
                 )
             }
@@ -464,7 +483,7 @@ private fun AcwrChart(
                                 ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
                             guideline = guidelineComponent,
                         ),
-                    marker = InvisibleMarker,
+                    marker = invisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
                 ),
             modelProducer = modelProducer,
@@ -477,6 +496,7 @@ private fun AcwrChart(
             selectedState = selectedState,
             trimpColor = trimpColor,
             ratioColor = ratioColor,
+            layerBounds = layerBounds,
             chartHeight = chartHeight,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -487,6 +507,7 @@ private fun AcwrChart(
         DataPointTooltip(
             isVisible = true,
             data = data,
+            yOffsetDp = (-28).dp,
             onDismissRequest = { selectedState = null },
         )
     }
