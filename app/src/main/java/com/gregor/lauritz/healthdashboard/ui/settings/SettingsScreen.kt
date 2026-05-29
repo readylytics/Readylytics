@@ -54,6 +54,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
 import com.gregor.lauritz.healthdashboard.ui.settings.LocalBackupViewModel.SideEffect
 import com.gregor.lauritz.healthdashboard.ui.settings.backup.LocalBackupSection
+import com.gregor.lauritz.healthdashboard.ui.settings.common.UnitSystemSelector
 import com.gregor.lauritz.healthdashboard.ui.settings.data.DataManagementSection
 import com.gregor.lauritz.healthdashboard.ui.settings.data.DeviceSelectionSection
 import com.gregor.lauritz.healthdashboard.ui.settings.data.SyncSettingsSection
@@ -417,6 +418,12 @@ fun SettingsScreen(
                                 description = "Use colors derived from your wallpaper (Android 12+)",
                                 checked = uiState.dynamicColorEnabled,
                                 onCheckedChange = { onUIEvent(SettingsEvent.DynamicColorEnabledChanged(it)) },
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            UnitSystemSelector(
+                                selectedUnit = uiState.unitSystem,
+                                onUnitSelected = { onUIEvent(SettingsEvent.UnitSystemChanged(it)) },
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                             )
                         }
                     }

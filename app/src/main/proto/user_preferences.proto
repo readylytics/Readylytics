@@ -32,6 +32,11 @@ enum PhysiologyProfileProto {
     PROFILE_SHIFT_WORKER = 4;
 }
 
+enum UnitSystemProto {
+    UNIT_METRIC = 0;
+    UNIT_IMPERIAL = 1;
+}
+
 message UserPreferencesProto {
     float goal_sleep_hours = 1;
     
@@ -70,7 +75,11 @@ message UserPreferencesProto {
     oneof gender_oneof {
         string gender = 24;
     }
-    
+
+    oneof height_cm_oneof {
+        float height_cm = 61;
+    }
+
     float hrv_optimal_threshold = 25;
     float hrv_warning_threshold = 26;
     float rhr_optimal_threshold = 27;
@@ -134,6 +143,8 @@ message UserPreferencesProto {
     }
 
     bool is_birthday_configured = 59;
+
+    UnitSystemProto unit_system = 62;
 }
 
 enum TrimpMethodProto {

@@ -1,13 +1,15 @@
 package com.gregor.lauritz.healthdashboard.ui.settings
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.domain.model.Result
+import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.user.UserUseCase
 import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
 import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
+import com.gregor.lauritz.healthdashboard.ui.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,7 +26,31 @@ class PhysiologySettingsViewModel
         private val settingsRepo: SettingsRepository,
         private val userUseCase: UserUseCase,
         private val healthSyncUseCase: HealthSyncUseCase,
-    ) : ViewModel() {
+    ) : BaseViewModel() {
+        fun validateBirthdayDayForUpdate(day: String): Result<Int> =
+            try {
+                val d = day.toInt()
+                if (d in 1..31) {
+                    Result.success(d)
+                } else {
+                    Result.failure("Day must be 1-31", "INVALID_DAY")
+                }
+            } catch (e: NumberFormatException) {
+                Result.failure("Day must be a number", "INVALID_FORMAT")
+            }
+
+        fun validateHeightForUpdate(height: String): Result<Float> =
+            try {
+                val h = height.toFloat()
+                if (h in 120f..250f) {
+                    Result.success(h)
+                } else {
+                    Result.failure("Height must be 120–250 cm", "INVALID_HEIGHT")
+                }
+            } catch (e: NumberFormatException) {
+                Result.failure("Height must be a number", "INVALID_FORMAT")
+            }
+
         val uiState: StateFlow<PhysiologySettingsState> =
             settingsRepo.userPreferences
                 .map { prefs ->
@@ -35,6 +61,8 @@ class PhysiologySettingsViewModel
                         birthMonth = prefs.birthMonth,
                         birthYear = prefs.birthYear,
                         gender = prefs.gender,
+                        heightCm = prefs.heightCm,
+                        unitSystem = prefs.unitSystem,
                     )
                 }.stateIn(
                     scope = viewModelScope,
@@ -54,7 +82,12 @@ class PhysiologySettingsViewModel
                         yearValidation is ValidationResult.Valid
                     ) {
                         viewModelScope.launch {
-                            userUseCase.updateBirthday(day = event.day, month = event.month, year = event.year)
+                            userUseCase
+                                .updateBirthday(
+                                    day = event.day,
+                                    month = event.month,
+                                    year = event.year,
+                                ).getOrNull()
                             healthSyncUseCase.sync()
                         }
                     }
@@ -63,6 +96,11 @@ class PhysiologySettingsViewModel
                     viewModelScope.launch {
                         settingsRepo.updateGender(gender = event.gender?.displayName)
                         healthSyncUseCase.sync()
+                    }
+                }
+                is SettingsEvent.HeightChanged -> {
+                    viewModelScope.launch {
+                        settingsRepo.updateHeight(heightCm = event.heightCm)
                     }
                 }
                 is SettingsEvent.PhysiologyProfileChanged ->

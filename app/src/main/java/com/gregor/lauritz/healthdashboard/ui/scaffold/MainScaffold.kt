@@ -52,6 +52,9 @@ fun MainScaffold(
                 !dest.hasRoute(AppDestination.RestingHrDetail::class) &&
                 !dest.hasRoute(AppDestination.StepDetail::class) &&
                 !dest.hasRoute(AppDestination.SleepDetail::class) &&
+                !dest.hasRoute(AppDestination.WeightDetail::class) &&
+                !dest.hasRoute(AppDestination.BodyFatDetail::class) &&
+                !dest.hasRoute(AppDestination.BloodPressureDetail::class) &&
                 !dest.hasRoute(AppDestination.About::class)
         } ?: true
 

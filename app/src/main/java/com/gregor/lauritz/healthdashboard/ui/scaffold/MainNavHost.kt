@@ -14,6 +14,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.gregor.lauritz.healthdashboard.ui.about.AboutScreen
+import com.gregor.lauritz.healthdashboard.ui.bloodpressure.BloodPressureDetailRoute
+import com.gregor.lauritz.healthdashboard.ui.bodyfat.BodyFatDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardRoute
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppDestination
 import com.gregor.lauritz.healthdashboard.ui.navigation.TabDestination
@@ -22,6 +24,7 @@ import com.gregor.lauritz.healthdashboard.ui.settings.SettingsRoute
 import com.gregor.lauritz.healthdashboard.ui.sleep.SleepDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.sleep.SleepRoute
 import com.gregor.lauritz.healthdashboard.ui.steps.StepDetailRoute
+import com.gregor.lauritz.healthdashboard.ui.weight.WeightDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.workouts.WorkoutDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.workouts.WorkoutsRoute
 
@@ -43,6 +46,9 @@ fun MainNavHost(
                     targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.SleepDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.WeightDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.About::class)
 
             val direction =
@@ -64,12 +70,18 @@ fun MainNavHost(
                     initialState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.StepDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.SleepDetail::class) ||
+                    initialState.destination.hasRoute(AppDestination.WeightDetail::class) ||
+                    initialState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
+                    initialState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.About::class)
             val isEnteringDetail =
                 targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.SleepDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.WeightDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.About::class)
 
             val direction =
@@ -124,6 +136,15 @@ fun MainNavHost(
                 onNavigateToSteps = {
                     navController.navigate(AppDestination.StepDetail)
                 },
+                onNavigateToWeight = {
+                    navController.navigate(AppDestination.WeightDetail)
+                },
+                onNavigateToBodyFat = {
+                    navController.navigate(AppDestination.BodyFatDetail)
+                },
+                onNavigateToBloodPressure = {
+                    navController.navigate(AppDestination.BloodPressureDetail)
+                },
             )
         }
         composable<TabDestination.Sleep> {
@@ -160,6 +181,21 @@ fun MainNavHost(
                 onBack = { navController.popBackStack() },
             )
         }
+        composable<AppDestination.WeightDetail> {
+            WeightDetailRoute(
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable<AppDestination.BodyFatDetail> {
+            BodyFatDetailRoute(
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable<AppDestination.BloodPressureDetail> {
+            BloodPressureDetailRoute(
+                onBack = { navController.popBackStack() },
+            )
+        }
         composable<AppDestination.About> {
             AboutScreen(
                 onDismiss = { navController.popBackStack() },
@@ -185,9 +221,12 @@ private fun getTabIndex(destination: NavDestination?): Int {
 
     // WorkoutDetail is logically under Workouts
     if (destination.hasRoute(AppDestination.WorkoutDetail::class)) return 2
-    // RestingHrDetail and StepDetail are logically under Dashboard
+    // RestingHrDetail, StepDetail, WeightDetail, BodyFatDetail, and BloodPressureDetail are logically under Dashboard
     if (destination.hasRoute(AppDestination.RestingHrDetail::class)) return 0
     if (destination.hasRoute(AppDestination.StepDetail::class)) return 0
+    if (destination.hasRoute(AppDestination.WeightDetail::class)) return 0
+    if (destination.hasRoute(AppDestination.BodyFatDetail::class)) return 0
+    if (destination.hasRoute(AppDestination.BloodPressureDetail::class)) return 0
     // SleepDetail is logically under Sleep
     if (destination.hasRoute(AppDestination.SleepDetail::class)) return 1
     // About is logically under Settings

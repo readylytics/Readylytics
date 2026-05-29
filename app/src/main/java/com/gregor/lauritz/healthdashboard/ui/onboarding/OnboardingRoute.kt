@@ -19,7 +19,7 @@ fun OnboardingRoute(
 ) {
     val context = LocalContext.current
     val userPrefs by syncViewModel.userPreferences.collectAsStateWithLifecycle(initialValue = null)
-    val permissions = remember { syncViewModel.requiredPermissions }
+    val permissions = remember { syncViewModel.allPermissions }
 
     val permissionLauncher =
         rememberLauncherForActivityResult(
@@ -28,22 +28,31 @@ fun OnboardingRoute(
             com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") {
                 "Permission result received. Granted: $granted"
             }
-            if (granted.containsAll(permissions)) {
+            if (granted.containsAll(syncViewModel.requiredPermissions)) {
                 com.gregor.lauritz.healthdashboard.domain.util.logD(
                     "OnboardingRoute",
-                ) { "All requested permissions granted by user" }
+                ) { "All required permissions granted by user" }
                 syncViewModel.onPermissionsGranted()
             } else {
-                val missing = permissions - granted
+                val missing = syncViewModel.requiredPermissions - granted
                 com.gregor.lauritz.healthdashboard.domain.util.logD(
                     "OnboardingRoute",
-                ) { "User denied some permissions: $missing" }
+                ) { "User denied some required permissions: $missing" }
                 syncViewModel.onPermissionsDenied()
             }
         }
 
     OnboardingScreen(
-        onGrantPermissionsClick = { day, month, year, gender, physiologyProfile, dynamicColorEnabled ->
+        onGrantPermissionsClick = {
+            day,
+            month,
+            year,
+            gender,
+            physiologyProfile,
+            dynamicColorEnabled,
+            unitSystem,
+            heightCm,
+            ->
             com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") {
                 "Grant Access clicked. Saving profile first..."
             }
@@ -54,6 +63,8 @@ fun OnboardingRoute(
                 gender = gender,
                 physiologyProfile = physiologyProfile,
                 dynamicColorEnabled = dynamicColorEnabled,
+                unitSystem = unitSystem,
+                heightCm = heightCm,
                 onComplete = {
                     com.gregor.lauritz.healthdashboard.domain.util.logD("OnboardingRoute") {
                         "Profile saved. Launching HC permissions: $permissions"

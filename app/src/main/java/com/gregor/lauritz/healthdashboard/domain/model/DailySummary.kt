@@ -29,4 +29,8 @@ data class DailySummary(
     val readinessResult: ReadinessResult = ReadinessResult.EMPTY,
     val sRest: Float? = null,
     val isCalibrating: Boolean = false,
+    val weightKg: Float? = null,
+    val bodyFatPercent: Float? = null,
+    val bloodPressureSystolic: Int? = null,
+    val bloodPressureDiastolic: Int? = null,
 )

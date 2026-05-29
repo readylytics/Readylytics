@@ -20,7 +20,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -98,8 +97,8 @@ fun SleepDetailScreen(
 
                     Text(
                         "$startTimeStr – $endTimeStr",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -117,7 +116,7 @@ fun SleepDetailScreen(
 
                     Text(
                         durationText,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -125,6 +124,22 @@ fun SleepDetailScreen(
 
             item {
                 Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            item {
+                TrendCard(
+                    title = stringResource(R.string.sleep_breakdown_title),
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                ) {
+                    SleepArchitectureBar(
+                        session = uiState.session,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
             item {
@@ -138,20 +153,6 @@ fun SleepDetailScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            item {
-                SleepArchitectureBar(
-                    session = uiState.session,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp),
-                )
             }
 
             item {

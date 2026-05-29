@@ -21,6 +21,9 @@ object SettingsValidators {
     // Heart rate zone validation
     val HEART_RATE_ZONE_RULE = IntRangeRule(1, 220, "HR: 1–220 bpm")
 
+    // Height in centimeters (120–250)
+    val HEIGHT_CM_RULE = FloatRangeRule(120f, 250f, "Height: 120–250 cm")
+
     // Resting HR minutes (before/after sleep)
     val RESTING_HR_MINUTES_RULE = RestingHrMinutesRule()
 

@@ -52,4 +52,8 @@ data class DailySummaryEntity(
     val architectureScoreContribution: Float? = null,
     val loadContribution: Float? = null,
     val sRest: Float? = null,
+    val weightKg: Float? = null,
+    val bodyFatPercent: Float? = null,
+    val bloodPressureSystolic: Int? = null,
+    val bloodPressureDiastolic: Int? = null,
 )

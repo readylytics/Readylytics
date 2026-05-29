@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Health data is sensitive — exclude everything from backup on Android 11 and below.
+   On Android 12+, android:dataExtractionRules takes precedence.
+-->
+<full-backup-content>
+    <exclude domain="root" path="." />
+</full-backup-content>
