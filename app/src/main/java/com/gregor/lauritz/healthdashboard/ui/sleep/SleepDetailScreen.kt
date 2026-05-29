@@ -6,11 +6,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.ui.components.SleepArchitectureBar
 import com.gregor.lauritz.healthdashboard.ui.components.SleepStagesChart
+import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -129,46 +127,32 @@ fun SleepDetailScreen(
             }
 
             item {
-                ElevatedCard(
-                    modifier =
-                        Modifier
-                            .padding(horizontal = 16.dp)
-                            .fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors =
-                        CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        ),
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
+                TrendCard(
+                    title = stringResource(R.string.sleep_breakdown_title),
+                    modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = stringResource(R.string.sleep_hypnogram_title),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        SleepStagesChart(
-                            session = uiState.session,
-                            stageTimeline = uiState.stageTimeline,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
+                    SleepArchitectureBar(
+                        session = uiState.session,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
 
             item {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
             item {
-                SleepArchitectureBar(
-                    session = uiState.session,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp),
-                )
+                TrendCard(
+                    title = stringResource(R.string.sleep_hypnogram_title),
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                ) {
+                    SleepStagesChart(
+                        session = uiState.session,
+                        stageTimeline = uiState.stageTimeline,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
 
             item {
