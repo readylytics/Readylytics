@@ -48,3 +48,4 @@ docs/superpowers/
 
 # Downloaded tooling binaries
 ktlint
+.kotlin
