@@ -67,4 +67,17 @@ internal class UIPreferences
         suspend fun clearDeviceCache() {
             healthDeviceRepository.invalidateCache()
         }
+
+        suspend fun updateUnitSystem(unitSystem: UnitSystem) {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setUnitSystem(
+                        when (unitSystem) {
+                            UnitSystem.METRIC -> UnitSystemProto.UNIT_METRIC
+                            UnitSystem.IMPERIAL -> UnitSystemProto.UNIT_IMPERIAL
+                        },
+                    ).build()
+            }
+        }
     }

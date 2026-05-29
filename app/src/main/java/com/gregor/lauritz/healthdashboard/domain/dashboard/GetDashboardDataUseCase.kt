@@ -1,17 +1,25 @@
 package com.gregor.lauritz.healthdashboard.domain.dashboard
 
 import com.gregor.lauritz.healthdashboard.R
+import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.domain.calculation.HealthMetricsCalculator
+import com.gregor.lauritz.healthdashboard.domain.model.BloodPressureStatus
+import com.gregor.lauritz.healthdashboard.domain.model.BmiStatus
+import com.gregor.lauritz.healthdashboard.domain.model.BodyFatStatus
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.model.SleepSessionSummary
 import com.gregor.lauritz.healthdashboard.domain.model.efficiencyStatus
+import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.model.hrvStatus
 import com.gregor.lauritz.healthdashboard.domain.model.paiStatus
 import com.gregor.lauritz.healthdashboard.domain.model.restingHrStatus
 import com.gregor.lauritz.healthdashboard.domain.model.rhrStatus
 import com.gregor.lauritz.healthdashboard.domain.model.sleepDurationStatus
 import com.gregor.lauritz.healthdashboard.domain.util.ResourceProvider
+import com.gregor.lauritz.healthdashboard.domain.util.UnitConverter
 import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
 import com.gregor.lauritz.healthdashboard.ui.dashboard.CardData
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardAction
@@ -41,15 +49,20 @@ class GetDashboardDataUseCase
             date: LocalDate,
             lastSleepSession: SleepSessionSummary?,
             paiSummaries: List<DailySummary>,
-        ): DashboardCards {
-            val cardDataMap = calculateCardData(summary, prefs, date, lastSleepSession)
-            val paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries)
+        ): Result<DashboardCards> =
+            try {
+                val cardDataMap = calculateCardData(summary, prefs, date, lastSleepSession)
+                val paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries)
 
-            return DashboardCards(
-                cardDataMap = cardDataMap,
-                paiDailyBreakdown = paiDailyBreakdown,
-            )
-        }
+                Result.success(
+                    DashboardCards(
+                        cardDataMap = cardDataMap,
+                        paiDailyBreakdown = paiDailyBreakdown,
+                    ),
+                )
+            } catch (e: Exception) {
+                Result.failure("Failed to build dashboard data", "CARD_GENERATION_ERROR")
+            }
 
         private fun calculateCardData(
             summary: DailySummary?,
@@ -69,8 +82,14 @@ class GetDashboardDataUseCase
                     CardId.SLEEP_EFFICIENCY to sleepEfficiencyCard(lastSleepSession),
                 )
 
-            val metrics = getWorkoutMetricsUseCase(summary)
-            metrics.strainRatioCard?.let { mapBuilder[CardId.STRAIN_RATIO] = it }
+            val metricsResult = getWorkoutMetricsUseCase(summary)
+            val metrics = metricsResult.getOrNull()
+            metrics?.strainRatioCard?.let { mapBuilder[CardId.STRAIN_RATIO] = it }
+
+            // Add new health metrics
+            mapBuilder[CardId.WEIGHT] = weightCard(summary, prefs)
+            mapBuilder[CardId.BODY_FAT] = bodyFatCard(summary, prefs)
+            mapBuilder[CardId.BLOOD_PRESSURE] = bloodPressureCard(summary)
 
             return mapBuilder.toMap()
         }
@@ -316,5 +335,137 @@ class GetDashboardDataUseCase
             val hours = minutes / 60
             val mins = minutes % 60
             return if (mins == 0) "${hours}h" else "${hours}h ${mins}m"
+        }
+
+        private fun weightCard(
+            summary: DailySummary,
+            prefs: UserPreferences,
+        ): CardData {
+            val unitStr = if (prefs.unitSystem == UnitSystem.METRIC) "kg" else "lbs"
+            val weightKg =
+                summary.weightKg ?: return CardData(
+                    title = "Weight",
+                    value = "—",
+                    unit = unitStr,
+                    status = MetricStatus.NEUTRAL,
+                    tooltip = "Weight from Health Connect",
+                )
+
+            val heightCm = prefs.heightCm
+            val bmiStatus =
+                if (heightCm != null) {
+                    val bmi = HealthMetricsCalculator.calculateBmi(weightKg, heightCm)
+                    val bmiStatusObj = HealthMetricsCalculator.assessBmi(bmi)
+                    when (bmiStatusObj) {
+                        BmiStatus.Optimal -> MetricStatus.OPTIMAL
+                        BmiStatus.Neutral -> MetricStatus.NEUTRAL
+                        BmiStatus.Warning -> MetricStatus.WARNING
+                        BmiStatus.Poor -> MetricStatus.POOR
+                    }
+                } else {
+                    MetricStatus.NEUTRAL
+                }
+
+            val displayWeight =
+                if (prefs.unitSystem ==
+                    UnitSystem.METRIC
+                ) {
+                    weightKg
+                } else {
+                    weightKg * UnitConverter.KG_TO_LBS
+                }
+
+            return CardData(
+                title = "Weight",
+                value = String.format(Locale.getDefault(), "%.1f", displayWeight),
+                unit = unitStr,
+                status = bmiStatus,
+                action = DashboardAction.NAVIGATE_WEIGHT,
+                tooltip = "Latest weight measurement.",
+                secondaryText = null,
+            )
+        }
+
+        private fun bodyFatCard(
+            summary: DailySummary,
+            prefs: UserPreferences,
+        ): CardData {
+            val bodyFatPercent =
+                summary.bodyFatPercent ?: return CardData(
+                    title = "Body Fat",
+                    value = "—",
+                    unit = "%",
+                    status = MetricStatus.NEUTRAL,
+                    tooltip = "Body fat percentage from Health Connect",
+                )
+
+            val bodyFatStatus =
+                HealthMetricsCalculator.assessBodyFatPercent(
+                    bodyFatPercent,
+                    prefs.age,
+                    prefs.gender,
+                )
+            val status =
+                when (bodyFatStatus) {
+                    BodyFatStatus.Optimal -> MetricStatus.OPTIMAL
+                    BodyFatStatus.Neutral -> MetricStatus.NEUTRAL
+                    BodyFatStatus.Poor -> MetricStatus.POOR
+                    BodyFatStatus.Calibrating -> MetricStatus.CALIBRATING
+                }
+
+            return CardData(
+                title = "Body Fat",
+                value = String.format(Locale.getDefault(), "%.1f%%", bodyFatPercent),
+                unit = "",
+                status = status,
+                action = DashboardAction.NAVIGATE_BODY_FAT,
+                tooltip = "Body fat percentage.",
+            )
+        }
+
+        private fun bloodPressureCard(summary: DailySummary): CardData {
+            val systolic = summary.bloodPressureSystolic ?: 0
+            val diastolic = summary.bloodPressureDiastolic ?: 0
+
+            if (systolic == 0 || diastolic == 0) {
+                return CardData(
+                    title = "Blood Pressure",
+                    value = "—",
+                    unit = "mmHg",
+                    status = MetricStatus.NEUTRAL,
+                    tooltip = "Blood pressure from Health Connect",
+                )
+            }
+
+            val bpStatus = HealthMetricsCalculator.assessBloodPressure(systolic, diastolic)
+            val status =
+                when (bpStatus) {
+                    BloodPressureStatus.Optimal -> MetricStatus.OPTIMAL
+                    BloodPressureStatus.Neutral -> MetricStatus.NEUTRAL
+                    BloodPressureStatus.HypertensionStage1 -> MetricStatus.WARNING
+                    BloodPressureStatus.HypertensionStage2 -> MetricStatus.POOR
+                }
+
+            val tooltip =
+                buildString {
+                    append("Latest blood pressure reading.\n\n")
+                    when (bpStatus) {
+                        BloodPressureStatus.Optimal -> append("Optimal: <120/80 mmHg")
+                        BloodPressureStatus.Neutral -> append("Elevated: 120-129/<80 mmHg")
+                        BloodPressureStatus.HypertensionStage1 ->
+                            append("Hypertension Stage 1: 130-139/80-89 mmHg")
+                        BloodPressureStatus.HypertensionStage2 ->
+                            append("Hypertension Stage 2+: ≥140/90 mmHg")
+                    }
+                }
+
+            return CardData(
+                title = "Blood Pressure",
+                value = "$systolic/$diastolic",
+                unit = "mmHg",
+                status = status,
+                action = DashboardAction.NAVIGATE_BLOOD_PRESSURE,
+                tooltip = tooltip,
+            )
         }
     }

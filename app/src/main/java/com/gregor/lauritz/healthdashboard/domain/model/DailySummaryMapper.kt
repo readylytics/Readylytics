@@ -56,6 +56,10 @@ object DailySummaryMapper {
                 ),
             sRest = entity.sRest,
             isCalibrating = entity.isCalibrating ?: false,
+            weightKg = entity.weightKg,
+            bodyFatPercent = entity.bodyFatPercent,
+            bloodPressureSystolic = entity.bloodPressureSystolic,
+            bloodPressureDiastolic = entity.bloodPressureDiastolic,
         )
     }
 
@@ -98,6 +102,10 @@ object DailySummaryMapper {
             diagnostics = domain.readinessResult.diagnostics,
             contributors = domain.readinessResult.contributors,
             sRest = domain.sRest,
+            weightKg = domain.weightKg,
+            bodyFatPercent = domain.bodyFatPercent,
+            bloodPressureSystolic = domain.bloodPressureSystolic,
+            bloodPressureDiastolic = domain.bloodPressureDiastolic,
         )
     }
 }

@@ -39,8 +39,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
+import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
 import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
+import com.gregor.lauritz.healthdashboard.ui.settings.HeightInputField
+import com.gregor.lauritz.healthdashboard.ui.settings.common.UnitSystemSelector
 import java.time.LocalDate
 
 @Composable
@@ -52,6 +55,8 @@ fun OnboardingScreen(
         gender: String,
         physiologyProfile: PhysiologyProfile,
         dynamicColorEnabled: Boolean,
+        unitSystem: UnitSystem,
+        heightCm: Float?,
     ) -> Unit,
     onOpenSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -179,6 +184,8 @@ private fun ProfileSetupScreen(
         gender: String,
         physiologyProfile: PhysiologyProfile,
         dynamicColorEnabled: Boolean,
+        unitSystem: UnitSystem,
+        heightCm: Float?,
     ) -> Unit,
     onOpenSettingsClick: () -> Unit,
 ) {
@@ -188,6 +195,9 @@ private fun ProfileSetupScreen(
     var gender by remember { mutableStateOf("Other") }
     var physiologyProfile by remember { mutableStateOf(PhysiologyProfile.GENERAL) }
     var dynamicColorEnabled by remember { mutableStateOf(true) }
+    var unitSystem by remember { mutableStateOf(UnitSystem.METRIC) }
+    var heightCm: Float? by remember { mutableStateOf(null) }
+    var heightHasError by remember { mutableStateOf(false) }
 
     Column(
         modifier =
@@ -289,6 +299,16 @@ private fun ProfileSetupScreen(
 
         Spacer(Modifier.height(16.dp))
 
+        HeightInputField(
+            heightCm = heightCm,
+            onHeightChange = { heightCm = it },
+            unitSystem = unitSystem,
+            onHasErrorChange = { heightHasError = it },
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(16.dp))
+
         Text(
             text = "Appearance",
             style = MaterialTheme.typography.titleSmall,
@@ -301,6 +321,21 @@ private fun ProfileSetupScreen(
             description = "Use colors derived from your wallpaper (Android 12+)",
             checked = dynamicColorEnabled,
             onCheckedChange = { dynamicColorEnabled = it },
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        Text(
+            text = "Measurement Units",
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+
+        UnitSystemSelector(
+            selectedUnit = unitSystem,
+            onUnitSelected = { unitSystem = it },
             modifier = Modifier.fillMaxWidth(),
         )
 
@@ -329,7 +364,8 @@ private fun ProfileSetupScreen(
             dayInt in 1..31 &&
                 monthInt in 1..12 &&
                 yearInt != null &&
-                yearInt in 1900..LocalDate.now().year
+                yearInt in 1900..LocalDate.now().year &&
+                !heightHasError
 
         Button(
             onClick = {
@@ -340,6 +376,8 @@ private fun ProfileSetupScreen(
                     gender,
                     physiologyProfile,
                     dynamicColorEnabled,
+                    unitSystem,
+                    heightCm,
                 )
             },
             modifier = Modifier.fillMaxWidth(),

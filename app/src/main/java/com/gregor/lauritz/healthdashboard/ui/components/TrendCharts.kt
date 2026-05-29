@@ -75,6 +75,31 @@ fun TrendCard(
 }
 
 @Composable
+fun TrendCard(
+    title: String,
+    value: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+) {
+    TrendCard(title = title, modifier = modifier) {
+        Column {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            if (subtitle.isNotEmpty()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun TrendChart(
     points: List<DailyDataPoint>,
     rangeStartMs: Long,
@@ -82,6 +107,9 @@ fun TrendChart(
     metricName: String,
     baselineUnit: String,
     baseline: Float? = null,
+    baselineLabel: String = "Baseline",
+    baselineDecimalPlaces: Int = 0,
+    axisDecimalPlaces: Int = 0,
     showBaseline: Boolean = true,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
     zoomState: VicoZoomState =
@@ -132,7 +160,9 @@ fun TrendChart(
             if (values.isEmpty()) return@remember 0.0 to 0.0
             val lo = values.minOrNull() ?: 0f
             val hi = values.maxOrNull() ?: 0f
-            (lo * 0.9f).toDouble() to (hi * 1.1f).toDouble()
+            val scaledMin = lo * 0.9f
+            val scaledMax = hi * 1.1f
+            kotlin.math.floor(scaledMin).toDouble() to kotlin.math.ceil(scaledMax).toDouble()
         }
 
     val labelComponent = ChartDefaults.labelTextComponent()
@@ -218,7 +248,14 @@ fun TrendChart(
                     startAxis =
                         VerticalAxis.rememberStart(
                             label = labelComponent,
-                            valueFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() },
+                            valueFormatter =
+                                CartesianValueFormatter { _, value, _ ->
+                                    if (axisDecimalPlaces == 0) {
+                                        value.roundToInt().toString()
+                                    } else {
+                                        String.format("%.${axisDecimalPlaces}f", value)
+                                    }
+                                },
                             guideline = guidelineComponent,
                             title = { baselineUnit },
                             titleComponent = axisLabelComponent,
@@ -272,7 +309,9 @@ fun TrendChart(
         BaselineLegend(
             value = baselineValue,
             unit = baselineUnit,
+            label = baselineLabel,
             color = baselineColor,
+            decimalPlaces = baselineDecimalPlaces,
         )
     }
 }
@@ -281,7 +320,9 @@ fun TrendChart(
 fun BaselineLegend(
     value: Float,
     unit: String,
+    label: String = "Baseline",
     color: Color,
+    decimalPlaces: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -295,10 +336,262 @@ fun BaselineLegend(
                     .background(color),
         )
         Spacer(Modifier.width(8.dp))
+        val formattedValue =
+            if (decimalPlaces == 0) {
+                value.roundToInt().toString()
+            } else {
+                String.format("%.${decimalPlaces}f", value)
+            }
         Text(
-            text = "Baseline: ${value.roundToInt()} $unit",
+            text = "$label: $formattedValue $unit",
             style = MaterialTheme.typography.labelSmall,
             color = color,
+        )
+    }
+}
+
+@Composable
+fun BloodPressureTrendChart(
+    systolicPoints: List<DailyDataPoint>,
+    diastolicPoints: List<DailyDataPoint>,
+    rangeStartMs: Long,
+    rangeDays: Int,
+    scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
+    zoomState: VicoZoomState =
+        rememberVicoZoomState(
+            zoomEnabled = rangeDays > 7,
+            initialZoom = Zoom.Content,
+            minZoom = Zoom.Content,
+            maxZoom =
+                remember(rangeDays) {
+                    when (rangeDays) {
+                        30 -> Zoom.fixed(6f)
+                        180 -> Zoom.fixed(25f)
+                        else -> Zoom.Content
+                    }
+                },
+        ),
+    modifier: Modifier = Modifier,
+) {
+    var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
+    var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
+
+    LaunchedEffect(tooltipState) {
+        if (tooltipState == null) {
+            selectedPointOffset = null
+        }
+    }
+
+    if (systolicPoints.none { it.value != null } || diastolicPoints.none { it.value != null }) {
+        EmptyChartPlaceholder(modifier = modifier)
+        return
+    }
+
+    val (minY, maxY) =
+        remember(systolicPoints, diastolicPoints) {
+            val sysVals = systolicPoints.mapNotNull { it.value }
+            val diaVals = diastolicPoints.mapNotNull { it.value }
+            val allVals = sysVals + diaVals
+            if (allVals.isEmpty()) return@remember 40.0 to 180.0
+            val lo = allVals.minOrNull() ?: 40f
+            val hi = allVals.maxOrNull() ?: 180f
+            val scaledMin = (lo - 10f).coerceAtLeast(30f)
+            val scaledMax = (hi + 10f).coerceAtMost(220f)
+            scaledMin.toDouble() to scaledMax.toDouble()
+        }
+
+    val labelComponent = ChartDefaults.labelTextComponent()
+    val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
+    val baselineColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    val guidelineComponent = ChartDefaults.guidelineComponent()
+    val systolicColor = MaterialTheme.colorScheme.primary
+    val diastolicColor = MaterialTheme.colorScheme.tertiary
+
+    val modelProducer = remember { CartesianChartModelProducer() }
+
+    val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
+
+    LaunchedEffect(systolicPoints, diastolicPoints) {
+        modelProducer.runTransaction {
+            val validSystolic = systolicPoints.filter { it.value != null }
+            val validDiastolic = diastolicPoints.filter { it.value != null }
+            lineSeries {
+                series(
+                    x = validSystolic.map { it.dayOffset },
+                    y = validSystolic.mapNotNull { it.value?.toDouble() },
+                )
+                series(
+                    x = validDiastolic.map { it.dayOffset },
+                    y = validDiastolic.mapNotNull { it.value?.toDouble() },
+                )
+            }
+        }
+    }
+
+    val rangeProvider =
+        remember(minY, maxY, rangeDays) {
+            CartesianLayerRangeProvider.fixed(
+                minX = 0.0,
+                maxX = (rangeDays - 1).toDouble(),
+                minY = minY,
+                maxY = maxY,
+            )
+        }
+
+    val systolicDotComponent = rememberShapeComponent(fill = Fill(systolicColor), shape = CircleShape)
+    val systolicLine =
+        LineCartesianLayer.rememberLine(
+            fill = LineCartesianLayer.LineFill.single(Fill(systolicColor)),
+            pointProvider =
+                LineCartesianLayer.PointProvider.single(
+                    LineCartesianLayer.Point(systolicDotComponent, 6.dp),
+                ),
+        )
+
+    val diastolicDotComponent = rememberShapeComponent(fill = Fill(diastolicColor), shape = CircleShape)
+    val diastolicLine =
+        LineCartesianLayer.rememberLine(
+            fill = LineCartesianLayer.LineFill.single(Fill(diastolicColor)),
+            pointProvider =
+                LineCartesianLayer.PointProvider.single(
+                    LineCartesianLayer.Point(diastolicDotComponent, 6.dp),
+                ),
+        )
+
+    val lineProvider =
+        remember(systolicLine, diastolicLine) {
+            LineCartesianLayer.LineProvider.series(systolicLine, diastolicLine)
+        }
+
+    val markerVisibilityListener =
+        rememberChartMarkerVisibilityListener(
+            onPointSelected = { x, y, canvasX, canvasY ->
+                val dayOffset = x.toInt()
+                val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
+                val dateString = ChartUtils.formatTooltipDate(date)
+
+                val sysPoint = systolicPoints.firstOrNull { it.dayOffset == dayOffset }?.value
+                val diaPoint = diastolicPoints.firstOrNull { it.dayOffset == dayOffset }?.value
+
+                val valueText =
+                    if (sysPoint != null && diaPoint != null) {
+                        "${sysPoint.roundToInt()}/${diaPoint.roundToInt()} mmHg"
+                    } else if (sysPoint != null) {
+                        "Sys: ${sysPoint.roundToInt()} mmHg"
+                    } else if (diaPoint != null) {
+                        "Dia: ${diaPoint.roundToInt()} mmHg"
+                    } else {
+                        "—"
+                    }
+
+                selectedPointOffset = Offset(canvasX, canvasY)
+                tooltipState =
+                    DataPointTooltipData(
+                        valueText = valueText,
+                        dateText = dateString,
+                        offset =
+                            androidx.compose.ui.unit.IntOffset(
+                                canvasX.toInt(),
+                                canvasY.toInt(),
+                            ),
+                    )
+            },
+        )
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        CartesianChartHost(
+            chart =
+                rememberCartesianChart(
+                    rememberLineCartesianLayer(
+                        lineProvider = lineProvider,
+                        rangeProvider = rangeProvider,
+                    ),
+                    startAxis =
+                        VerticalAxis.rememberStart(
+                            label = labelComponent,
+                            valueFormatter =
+                                CartesianValueFormatter { _, value, _ ->
+                                    value.roundToInt().toString()
+                                },
+                            guideline = guidelineComponent,
+                            title = { "mmHg" },
+                            titleComponent = axisLabelComponent,
+                        ),
+                    bottomAxis =
+                        HorizontalAxis.rememberBottom(
+                            label = labelComponent,
+                            valueFormatter = xAxisFormatter,
+                            itemPlacer =
+                                remember(
+                                    rangeDays,
+                                ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                            guideline = guidelineComponent,
+                        ),
+                    decorations =
+                        listOf(
+                            HorizontalLine(
+                                y = { 120.0 },
+                                line = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp),
+                            ),
+                            HorizontalLine(
+                                y = { 80.0 },
+                                line = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp),
+                            ),
+                        ),
+                    marker = InvisibleMarker,
+                    markerVisibilityListener = markerVisibilityListener,
+                ),
+            modelProducer = modelProducer,
+            scrollState = scrollState,
+            zoomState = zoomState,
+            modifier = Modifier.fillMaxWidth().height(180.dp),
+        )
+
+        VicoChartTooltipOverlay(
+            selectedPointOffset = selectedPointOffset,
+            modifier = Modifier.fillMaxWidth().height(180.dp),
+        )
+    }
+
+    if (tooltipState != null) {
+        DataPointTooltip(
+            isVisible = true,
+            data = tooltipState!!,
+            onDismissRequest = { tooltipState = null },
+        )
+    }
+
+    Spacer(Modifier.height(12.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(width = 12.dp, height = 2.dp)
+                    .background(systolicColor),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = "Systolic (Ref: <120)",
+            style = MaterialTheme.typography.labelSmall,
+            color = systolicColor,
+        )
+
+        Spacer(Modifier.width(24.dp))
+
+        Box(
+            modifier =
+                Modifier
+                    .size(width = 12.dp, height = 2.dp)
+                    .background(diastolicColor),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = "Diastolic (Ref: <80)",
+            style = MaterialTheme.typography.labelSmall,
+            color = diastolicColor,
         )
     }
 }

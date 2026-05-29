@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.ktlint)
     alias(libs.plugins.protobuf)
     id("kotlin-parcelize")
+    id("jacoco")
 }
 
 kotlin {
@@ -45,6 +46,9 @@ android {
                 "proguard-rules.pro",
             )
         }
+        debug {
+            enableUnitTestCoverage = true
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -67,6 +71,87 @@ room {
 
 ktlint {
     version.set("1.5.0")
+}
+
+jacoco {
+    toolVersion = "0.8.11"
+}
+
+tasks.register<JacocoReport>("jacocoTestReport") {
+    dependsOn("testDebugUnitTest")
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        xml.outputLocation.set(layout.buildDirectory.file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml"))
+        html.outputLocation.set(layout.buildDirectory.dir("reports/jacoco/jacocoTestReport/html"))
+    }
+
+    val fileFilter =
+        listOf(
+            "**/R.class",
+            "**/R$*.class",
+            "**/BuildConfig.*",
+            "**/Manifest*.*",
+            "**/*Test*.*",
+            "android/**/*.*",
+            "**/hilt_aggregated_deps/**",
+            "**/*_HiltModules*",
+            "**/*_MembersInjector*",
+            "**/*Hilt_*",
+            "**/*_Factory*",
+            "**/Dagger*Component*.*",
+            "**/*ComposableSingletons*",
+            "**/*_Impl*",
+            "**/databinding/**",
+            "**/di/**",
+        )
+
+    val debugTree =
+        fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
+            exclude(fileFilter)
+        }
+
+    val mainSrc = "${project.projectDir}/src/main/java"
+
+    sourceDirectories.setFrom(files(mainSrc))
+    classDirectories.setFrom(files(debugTree))
+    executionData.setFrom(
+        fileTree(layout.buildDirectory.get()) {
+            include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
+        },
+    )
+}
+
+tasks.register("jacocoCoverageVerification") {
+    dependsOn("jacocoTestReport")
+    doLast {
+        val reportFile =
+            layout.buildDirectory
+                .file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
+                .get()
+                .asFile
+        if (!reportFile.exists()) {
+            throw GradleException("Coverage report not found: ${reportFile.absolutePath}")
+        }
+        val xml = reportFile.readText()
+        // Parse missed/covered instruction counts from the BUNDLE counter
+        val regex = Regex("""<counter type="INSTRUCTION" missed="(\d+)" covered="(\d+)"/>""")
+        val match =
+            regex.findAll(xml).lastOrNull()
+                ?: throw GradleException("Could not parse coverage report")
+        val missed = match.groupValues[1].toLong()
+        val covered = match.groupValues[2].toLong()
+        val total = missed + covered
+        val pct = if (total > 0) covered.toDouble() / total.toDouble() * 100.0 else 0.0
+        println("Coverage: ${"%.2f".format(pct)}% ($covered/$total instructions)")
+        if (pct < 25.0) {
+            throw GradleException(
+                "Coverage gate FAILED: ${"%.2f".format(pct)}% < 25% minimum required.",
+            )
+        }
+        println("Coverage gate PASSED: ${"%.2f".format(pct)}% >= 25%")
+    }
 }
 
 protobuf {
@@ -176,6 +261,10 @@ dependencies {
     kspTest(libs.hilt.compiler)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.mockk.android)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.room.testing)
+    androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation("androidx.compose.ui:ui-test")

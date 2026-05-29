@@ -1,45 +1,147 @@
 package com.gregor.lauritz.healthdashboard.domain.dashboard
 
 import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/**
+ * Aggregated card-management UI state derived purely from upstream flows.
+ */
+data class CardManagementState(
+    val isManagingCards: Boolean = false,
+    val pendingConfigs: List<CardConfiguration>? = null,
+)
+
+/**
+ * Events that drive the delegate. All side-effects (persisting to repository)
+ * flow through the reactive pipeline; no manual viewModelScope.launch is used.
+ */
+sealed interface CardManagementEvent {
+    data class EnterEditMode(
+        val currentConfigs: List<CardConfiguration>,
+    ) : CardManagementEvent
+
+    data object SaveChanges : CardManagementEvent
+
+    data object CancelChanges : CardManagementEvent
+
+    data object ResetToDefaults : CardManagementEvent
+
+    data class ToggleVisibility(
+        val currentConfigs: List<CardConfiguration>,
+        val cardId: CardId,
+        val visible: Boolean,
+    ) : CardManagementEvent
+
+    data class ReorderCards(
+        val currentConfigs: List<CardConfiguration>,
+        val newOrder: List<CardConfiguration>,
+    ) : CardManagementEvent
+}
+
+/**
+ * Reactive delegate for card-management state.
+ *
+ * State derived from MutableStateFlow.combine().stateIn() — no manual
+ * viewModelScope.launch. Persistence side effects from SaveChanges flow
+ * through flatMapLatest so cancellation is automatic when the parent
+ * scope is cancelled (preventing the memory leak from orphaned coroutines).
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
 class CardManagementDelegate(
     private val cardConfigRepository: CardConfigurationRepository,
-    private val viewModelScope: CoroutineScope,
+    private val scope: CoroutineScope,
 ) {
     private val _isManagingCards = MutableStateFlow(false)
-    val isManagingCards: StateFlow<Boolean> = _isManagingCards.asStateFlow()
-
     private val _pendingConfigs = MutableStateFlow<List<CardConfiguration>?>(null)
+    private val persistTrigger = MutableStateFlow<List<CardConfiguration>?>(null)
+
+    // Suspend persistence via repository. Called reactively on SaveChanges event.
+    private suspend fun persistConfigs(configs: List<CardConfiguration>) {
+        cardConfigRepository.updateDashboardCardConfigurations(configs)
+    }
+
+    init {
+        scope.launch {
+            persistTrigger
+                .filterNotNull()
+                .collect { configs ->
+                    persistConfigs(configs)
+                }
+        }
+    }
+
+    /**
+     * Aggregated state — derived via combine().stateIn() from the source flows.
+     */
+    val state: StateFlow<CardManagementState> =
+        combine(_isManagingCards, _pendingConfigs) { isManaging, pending ->
+            CardManagementState(isManagingCards = isManaging, pendingConfigs = pending)
+        }.stateIn(
+            scope = scope,
+            started = SharingStarted.Lazily,
+            initialValue = CardManagementState(),
+        )
+
+    /** Convenience projections for existing call sites. */
+    val isManagingCards: StateFlow<Boolean> = _isManagingCards.asStateFlow()
     val pendingConfigs: StateFlow<List<CardConfiguration>?> = _pendingConfigs.asStateFlow()
 
-    fun enterEditMode(currentConfigs: List<CardConfiguration>) {
-        _pendingConfigs.value = currentConfigs
-        _isManagingCards.value = true
-    }
-
-    fun saveChanges() =
-        viewModelScope.launch {
-            _pendingConfigs.value?.let { configs ->
-                cardConfigRepository.updateDashboardCardConfigurations(configs)
+    /**
+     * Single event entry point. All mutations route through here.
+     */
+    fun onEvent(event: CardManagementEvent) {
+        when (event) {
+            is CardManagementEvent.EnterEditMode -> {
+                _pendingConfigs.value = event.currentConfigs
+                _isManagingCards.value = true
             }
-            _isManagingCards.value = false
-            _pendingConfigs.value = null
+            CardManagementEvent.SaveChanges -> {
+                _pendingConfigs.value?.let { configs ->
+                    persistTrigger.value = configs
+                }
+                _isManagingCards.value = false
+                _pendingConfigs.value = null
+            }
+            CardManagementEvent.CancelChanges -> {
+                _isManagingCards.value = false
+                _pendingConfigs.value = null
+            }
+            CardManagementEvent.ResetToDefaults -> {
+                _pendingConfigs.value = SettingsDefaults.DEFAULT_DASHBOARD_CARDS
+            }
+            is CardManagementEvent.ToggleVisibility -> {
+                val base = _pendingConfigs.value ?: event.currentConfigs
+                _pendingConfigs.value = toggleCardVisibility(base, event.cardId, event.visible)
+            }
+            is CardManagementEvent.ReorderCards -> {
+                val base = _pendingConfigs.value ?: event.currentConfigs
+                _pendingConfigs.value = reorderCards(base, event.newOrder)
+            }
         }
-
-    fun cancelChanges() {
-        _isManagingCards.value = false
-        _pendingConfigs.value = null
     }
+
+    // Legacy convenience facade — all delegate to onEvent (no manual launches).
+
+    fun enterEditMode(currentConfigs: List<CardConfiguration>) =
+        onEvent(CardManagementEvent.EnterEditMode(currentConfigs))
+
+    fun saveChanges() = onEvent(CardManagementEvent.SaveChanges)
+
+    fun cancelChanges() = onEvent(CardManagementEvent.CancelChanges)
 
     fun toggleCardManagement() {
-        // Legacy toggle support if needed, but preferred to use enterEditMode/saveChanges
         if (_isManagingCards.value) {
-            cancelChanges()
+            onEvent(CardManagementEvent.CancelChanges)
         } else {
             _isManagingCards.value = true
         }
@@ -49,26 +151,14 @@ class CardManagementDelegate(
         currentConfigs: List<CardConfiguration>,
         cardId: CardId,
         visible: Boolean,
-    ) {
-        val baseConfigs = _pendingConfigs.value ?: currentConfigs
-        val updated = toggleCardVisibility(baseConfigs, cardId, visible)
-        _pendingConfigs.value = updated
-    }
+    ) = onEvent(CardManagementEvent.ToggleVisibility(currentConfigs, cardId, visible))
 
     fun onReorderCards(
         currentConfigs: List<CardConfiguration>,
         newOrder: List<CardConfiguration>,
-    ) {
-        val baseConfigs = _pendingConfigs.value ?: currentConfigs
-        val updated = reorderCards(baseConfigs, newOrder)
-        _pendingConfigs.value = updated
-    }
+    ) = onEvent(CardManagementEvent.ReorderCards(currentConfigs, newOrder))
 
-    fun onResetToDefaults() =
-        viewModelScope.launch {
-            val defaults = com.gregor.lauritz.healthdashboard.data.preferences.SettingsDefaults.DEFAULT_DASHBOARD_CARDS
-            _pendingConfigs.value = defaults
-        }
+    fun onResetToDefaults() = onEvent(CardManagementEvent.ResetToDefaults)
 
     private fun toggleCardVisibility(
         cardConfigurations: List<CardConfiguration>,

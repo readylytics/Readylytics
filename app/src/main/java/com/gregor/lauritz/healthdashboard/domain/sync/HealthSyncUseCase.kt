@@ -4,14 +4,21 @@ import com.gregor.lauritz.healthdashboard.data.healthconnect.HeartRateMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HrvMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.SleepDataMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.WorkoutMapper
+import com.gregor.lauritz.healthdashboard.data.local.dao.BloodPressureRecordDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepStageDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.WeightRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
+import com.gregor.lauritz.healthdashboard.data.mapper.BloodPressureDataMapper
+import com.gregor.lauritz.healthdashboard.data.mapper.BodyFatDataMapper
+import com.gregor.lauritz.healthdashboard.data.mapper.WeightDataMapper
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
@@ -37,6 +44,9 @@ class HealthSyncUseCase
         private val heartRateDao: HeartRateDao,
         private val hrvDao: HrvDao,
         private val workoutDao: WorkoutDao,
+        private val weightRecordDao: WeightRecordDao,
+        private val bodyFatRecordDao: BodyFatRecordDao,
+        private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val dailySummaryDao: DailySummaryDao,
         private val settingsRepo: SettingsRepository,
         private val scoringRepository: ScoringRepository,
@@ -47,7 +57,7 @@ class HealthSyncUseCase
         suspend fun sync(windowDays: Int = 8): Result<Unit> =
             syncMutex.withLock {
                 withContext(Dispatchers.IO) {
-                    runCatching {
+                    try {
                         logD("HealthSyncUseCase") { "Starting sync (window=$windowDays days)..." }
                         val today = LocalDate.now(ZoneId.systemDefault())
                         val zoneId = ZoneId.systemDefault()
@@ -67,10 +77,14 @@ class HealthSyncUseCase
                         val exerciseRecords = hcRepo.readExerciseSessions(windowStart, windowEnd)
                         val hrRecords = hcRepo.readHeartRateSamples(windowStart, windowEnd)
                         val hrvRecords = hcRepo.readHrvSamples(windowStart, windowEnd)
+                        val weightRecords = hcRepo.readWeightRecords(windowStart, windowEnd)
+                        val bodyFatRecords = hcRepo.readBodyFatRecords(windowStart, windowEnd)
+                        val bloodPressureRecords = hcRepo.readBloodPressureRecords(windowStart, windowEnd)
 
                         logD("HealthSyncUseCase") {
                             "Bulk HC fetch complete: sleep=${sleepEntities.size} " +
-                                "hrv_rmssd=${hrvRecords.size} hr_records=${hrRecords.size}"
+                                "hrv_rmssd=${hrvRecords.size} hr_records=${hrRecords.size} " +
+                                "weight=${weightRecords.size} bodyfat=${bodyFatRecords.size} bp=${bloodPressureRecords.size}"
                         }
 
                         val thresholds =
@@ -119,9 +133,37 @@ class HealthSyncUseCase
                         val filteredHrv =
                             filterByDevicePreference(hrvEntities, primaryDevice, { it.deviceName }, { it.timestampMs })
 
+                        val weightEntities = WeightDataMapper.toEntities(weightRecords)
+                        val filteredWeight =
+                            filterByDevicePreference(
+                                weightEntities,
+                                primaryDevice,
+                                { it.deviceName },
+                                { it.timestampMs },
+                            )
+
+                        val bodyFatEntities = BodyFatDataMapper.toEntities(bodyFatRecords)
+                        val filteredBodyFat =
+                            filterByDevicePreference(
+                                bodyFatEntities,
+                                primaryDevice,
+                                { it.deviceName },
+                                { it.timestampMs },
+                            )
+
+                        val bloodPressureEntities = BloodPressureDataMapper.toEntities(bloodPressureRecords)
+                        val filteredBloodPressure =
+                            filterByDevicePreference(
+                                bloodPressureEntities,
+                                primaryDevice,
+                                { it.deviceName },
+                                { it.timestampMs },
+                            )
+
                         logD("HealthSyncUseCase") {
                             "Device filtering: sleep=${filteredSleep.size} workouts=${filteredWorkouts.size} " +
-                                "hr=${filteredHr.size} hrv=${filteredHrv.size}"
+                                "hr=${filteredHr.size} hrv=${filteredHrv.size} " +
+                                "weight=${filteredWeight.size} bodyfat=${filteredBodyFat.size} bp=${filteredBloodPressure.size}"
                         }
 
                         transactionRunner.runInTransaction {
@@ -143,6 +185,9 @@ class HealthSyncUseCase
                             workoutDao.upsertAll(filteredWorkouts)
                             heartRateDao.upsertAll(filteredHr)
                             hrvDao.upsertAll(filteredHrv)
+                            weightRecordDao.upsertAll(filteredWeight)
+                            bodyFatRecordDao.upsertAll(filteredBodyFat)
+                            bloodPressureRecordDao.upsertAll(filteredBloodPressure)
                         }
 
                         // Bulk-fetch steps per day using aggregate API to prevent overlap/duplication
@@ -164,20 +209,25 @@ class HealthSyncUseCase
                             val steps = stepsMap[day] ?: 0L
                             val result = syncDayScoring(day, steps)
 
-                            result
-                                .onSuccess {
+                            when (result) {
+                                is Result.Success -> {
                                     successCount++
                                     logD("HealthSyncUseCase") { "Day $day: SUCCESS" }
-                                }.onFailure { e ->
-                                    failureCount++
-                                    logD("HealthSyncUseCase") { "Day $day: FAILED - ${e.message}" }
                                 }
+                                is Result.Failure -> {
+                                    failureCount++
+                                    logD("HealthSyncUseCase") { "Day $day: FAILED - ${result.reason}" }
+                                }
+                            }
                         }
 
                         logD("HealthSyncUseCase") {
                             "Sync complete: $successCount succeeded, $failureCount failed"
                         }
                         settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
+                        Result.success(Unit)
+                    } catch (e: Exception) {
+                        Result.failure("Sync failed", "SYNC_ERROR")
                     }
                 }
             }
@@ -189,13 +239,16 @@ class HealthSyncUseCase
             steps: Long,
         ): Result<Unit> =
             withContext(Dispatchers.IO) {
-                runCatching {
+                try {
                     val afterScoring = scoringRepository.computeDailySummary(day)
                     val stepCountInt = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                     val finalSummary = afterScoring.copy(stepCount = stepCountInt)
                     dailySummaryDao.upsert(finalSummary)
 
                     logD("HealthSyncUseCase") { "Day $day: scored (steps=$steps) and summary persisted" }
+                    Result.success(Unit)
+                } catch (e: Exception) {
+                    Result.failure("Day $day sync failed", "DAY_SYNC_ERROR")
                 }
             }
 

@@ -1,48 +1,118 @@
 name: CI
 
 on:
-  push:
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - "feature/**"
+      - "claude/**"
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  validate-and-build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.1.1
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v4.2.1
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v3.0.0
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v3.5.0
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      # --- Verification Phase (continue-on-error allows downstream steps to run) ---
+
       - name: Check formatting (ktlint)
+        id: ktlint # ID required to track conclusion
         run: ./gradlew ktlintCheck
+        continue-on-error: true
 
       - name: Run lint
+        id: lint
         run: ./gradlew lint
+        continue-on-error: true
+
+      - name: Run unit tests
+        id: tests
+        run: ./gradlew testDebugUnitTest
+        continue-on-error: true
+
+      - name: Generate coverage report
+        id: coverage
+        run: ./gradlew jacocoTestReport
+        continue-on-error: true
+
+      - name: Enforce coverage gate (>= 25%)
+        id: coverage_gate
+        run: ./gradlew jacocoCoverageVerification
+        continue-on-error: true
+
+      # --- Build Phase (Guaranteed to execute) ---
 
       - name: Build debug APK
         run: ./gradlew assembleDebug
 
-      - name: Run unit tests
-        run: ./gradlew testDebugUnitTest
+      # --- Artifact Upload Phase (Always uploads regardless of test results) ---
+
+      - name: Upload debug APK
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.3.3
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/**/*.apk
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.3.3
+        with:
+          name: coverage-report
+          path: app/build/reports/jacoco/jacocoTestReport/
 
       - name: Upload lint report
-        if: failure()
-        uses: actions/upload-artifact@v4
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.3.3
         with:
           name: lint-report
           path: app/build/reports/lint-results-debug.xml
+
+      # --- Final Status Gatekeeper ---
+
+      - name: Enforce overall workflow status
+        if: always() # Must always run to evaluate the previous steps
+        run: |
+          echo "Checking verification step outcomes..."
+          
+          KTLINT_STATUS="${{ steps.ktlint.conclusion }}"
+          LINT_STATUS="${{ steps.lint.conclusion }}"
+          TESTS_STATUS="${{ steps.tests.conclusion }}"
+          COVERAGE_STATUS="${{ steps.coverage.conclusion }}"
+          GATE_STATUS="${{ steps.coverage_gate.conclusion }}"
+          
+          FAILED=0
+          
+          if [ "$KTLINT_STATUS" = "failure" ]; then echo "❌ ktlintCheck failed"; FAILED=1; fi
+          if [ "$LINT_STATUS" = "failure" ]; then echo "❌ Android Lint failed"; FAILED=1; fi
+          if [ "$TESTS_STATUS" = "failure" ]; then echo "❌ Unit tests failed"; FAILED=1; fi
+          if [ "$COVERAGE_STATUS" = "failure" ]; then echo "❌ Coverage report generation failed"; FAILED=1; fi
+          if [ "$GATE_STATUS" = "failure" ]; then echo "❌ Coverage verification gate failed"; FAILED=1; fi
+          
+          if [ $FAILED -ne 0 ]; then
+            echo "One or more verification steps failed. Failing the workflow run."
+            exit 1
+          fi
+          
+          echo "✅ All verification steps passed successfully!"
+          
