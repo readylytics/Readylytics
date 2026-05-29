@@ -17,6 +17,7 @@ import com.gregor.lauritz.healthdashboard.ui.about.AboutScreen
 import com.gregor.lauritz.healthdashboard.ui.bloodpressure.BloodPressureDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.bodyfat.BodyFatDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardRoute
+import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppDestination
 import com.gregor.lauritz.healthdashboard.ui.navigation.TabDestination
 import com.gregor.lauritz.healthdashboard.ui.rhr.RestingHrDetailRoute
@@ -46,6 +47,7 @@ fun MainNavHost(
                     targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.SleepDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.HeartRateDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.WeightDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
@@ -70,6 +72,7 @@ fun MainNavHost(
                     initialState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.StepDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.SleepDetail::class) ||
+                    initialState.destination.hasRoute(AppDestination.HeartRateDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.WeightDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
@@ -79,6 +82,7 @@ fun MainNavHost(
                     targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.SleepDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.HeartRateDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.WeightDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
@@ -136,6 +140,9 @@ fun MainNavHost(
                 onNavigateToSteps = {
                     navController.navigate(AppDestination.StepDetail)
                 },
+                onNavigateToHeartRate = {
+                    navController.navigate(AppDestination.HeartRateDetail)
+                },
                 onNavigateToWeight = {
                     navController.navigate(AppDestination.WeightDetail)
                 },
@@ -181,6 +188,11 @@ fun MainNavHost(
                 onBack = { navController.popBackStack() },
             )
         }
+        composable<AppDestination.HeartRateDetail> {
+            HeartRateDetailRoute(
+                onBack = { navController.popBackStack() },
+            )
+        }
         composable<AppDestination.WeightDetail> {
             WeightDetailRoute(
                 onBack = { navController.popBackStack() },
@@ -221,9 +233,10 @@ private fun getTabIndex(destination: NavDestination?): Int {
 
     // WorkoutDetail is logically under Workouts
     if (destination.hasRoute(AppDestination.WorkoutDetail::class)) return 2
-    // RestingHrDetail, StepDetail, WeightDetail, BodyFatDetail, and BloodPressureDetail are logically under Dashboard
+    // RestingHrDetail, StepDetail, HeartRateDetail, WeightDetail, BodyFatDetail, and BloodPressureDetail are logically under Dashboard
     if (destination.hasRoute(AppDestination.RestingHrDetail::class)) return 0
     if (destination.hasRoute(AppDestination.StepDetail::class)) return 0
+    if (destination.hasRoute(AppDestination.HeartRateDetail::class)) return 0
     if (destination.hasRoute(AppDestination.WeightDetail::class)) return 0
     if (destination.hasRoute(AppDestination.BodyFatDetail::class)) return 0
     if (destination.hasRoute(AppDestination.BloodPressureDetail::class)) return 0

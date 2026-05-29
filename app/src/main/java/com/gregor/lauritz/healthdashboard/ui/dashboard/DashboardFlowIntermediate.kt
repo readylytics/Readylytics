@@ -7,10 +7,12 @@ import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardManagementDelegate
 import com.gregor.lauritz.healthdashboard.domain.dashboard.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
+import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateDaySummary
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -204,3 +206,48 @@ data class DashboardCombinedInputs(
     val cardState: DashboardCardState,
     val realtimeState: DashboardRealtimeState,
 )
+
+@OptIn(ExperimentalCoroutinesApi::class)
+fun createDashboardHrFlow(
+    selectedDate: Flow<LocalDate>,
+    heartRateRepository: HeartRateRepository,
+): Flow<HeartRateDaySummary?> =
+    selectedDate.flatMapLatest { date ->
+        val zoneId = ZoneId.systemDefault()
+        val startMs = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val endMs =
+            date
+                .plusDays(1)
+                .atStartOfDay(zoneId)
+                .toInstant()
+                .toEpochMilli()
+        heartRateRepository.observeByTimeRange(startMs, endMs).map { entities ->
+            if (entities.isEmpty()) return@map null
+            // entities already sorted ASC by the DAO query; single pass for stats
+            var minBpm = Int.MAX_VALUE
+            var maxBpm = Int.MIN_VALUE
+            var sumBpm = 0
+            for (entity in entities) {
+                val bpm = entity.beatsPerMinute
+                if (bpm < minBpm) minBpm = bpm
+                if (bpm > maxBpm) maxBpm = bpm
+                sumBpm += bpm
+            }
+            val hourlyMap =
+                entities.groupBy { entity ->
+                    ((entity.timestampMs - startMs) / 60_000L).toInt() / 60
+                }
+            val hourly =
+                (0..23).mapNotNull { hour ->
+                    hourlyMap[hour]?.let { group ->
+                        hour to group.sumOf { it.beatsPerMinute } / group.size
+                    }
+                }
+            HeartRateDaySummary(
+                minBpm = minBpm,
+                maxBpm = maxBpm,
+                avgBpm = sumBpm / entities.size,
+                hourlySamples = hourly,
+            )
+        }
+    }

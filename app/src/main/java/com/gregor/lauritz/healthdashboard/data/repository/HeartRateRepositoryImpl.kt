@@ -39,6 +39,14 @@ class HeartRateRepositoryImpl
                 list.map { mapToDomain(it) }
             }
 
+        override fun observeByTimeRange(
+            startMs: Long,
+            endMs: Long,
+        ): Flow<List<HeartRateRecordData>> =
+            heartRateDao.observeByTimeRange(startMs, endMs).map { list ->
+                list.map { mapToDomain(it) }
+            }
+
         private fun mapToDomain(entity: HeartRateRecordEntity): HeartRateRecordData =
             HeartRateRecordData(
                 id = entity.id,

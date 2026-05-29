@@ -11,6 +11,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
 import com.gregor.lauritz.healthdashboard.ui.components.StepsCard
+import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateCard
 
 // Build a map of CardId to composable card content for the Dashboard screen
 // This factory method creates all available dashboard cards and maps them by ID
@@ -21,6 +22,7 @@ fun buildCardDataMap(
     onNavigateToWorkouts: () -> Unit,
     onNavigateToRhr: () -> Unit,
     onNavigateToSteps: () -> Unit = {},
+    onNavigateToHeartRate: () -> Unit = {},
     onNavigateToWeight: () -> Unit = {},
     onNavigateToBodyFat: () -> Unit = {},
     onNavigateToBloodPressure: () -> Unit = {},
@@ -229,6 +231,19 @@ fun buildCardDataMap(
                         onClick = if (isEditing) ({}) else onNavigateToSleep,
                     )
                 }
+            },
+        )
+    }
+
+    cardMap[CardId.HEART_RATE] = {
+        CardLoader(
+            isLoading = isLoading,
+            skeleton = { MetricCardSkeleton() },
+            content = {
+                HeartRateCard(
+                    summary = uiState.heartRateDaySummary,
+                    onClick = if (isEditing) ({}) else onNavigateToHeartRate,
+                )
             },
         )
     }

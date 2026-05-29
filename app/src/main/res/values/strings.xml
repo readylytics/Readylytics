@@ -174,4 +174,8 @@
     <string name="unit_imperial_ft">\'</string>
     <string name="unit_imperial_in">\"</string>
     <string name="unit_imperial_lbs">lbs</string>
+
+    <!-- Heart Rate Detail Screen -->
+    <string name="heart_rate_title">Heart Rate</string>
+    <string name="back">Back</string>
 </resources>

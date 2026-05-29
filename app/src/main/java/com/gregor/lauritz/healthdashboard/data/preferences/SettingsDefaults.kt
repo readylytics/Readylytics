@@ -80,8 +80,9 @@ object SettingsDefaults {
             CardConfiguration(CardId.CIRCADIAN_CONSISTENCY, isVisible = true, position = 8),
             CardConfiguration(CardId.STRAIN_RATIO, isVisible = true, position = 9),
             CardConfiguration(CardId.SLEEP_EFFICIENCY, isVisible = true, position = 10),
-            CardConfiguration(CardId.WEIGHT, isVisible = true, position = 11),
-            CardConfiguration(CardId.BODY_FAT, isVisible = true, position = 12),
-            CardConfiguration(CardId.BLOOD_PRESSURE, isVisible = true, position = 13),
+            CardConfiguration(CardId.HEART_RATE, isVisible = true, position = 11),
+            CardConfiguration(CardId.WEIGHT, isVisible = true, position = 12),
+            CardConfiguration(CardId.BODY_FAT, isVisible = true, position = 13),
+            CardConfiguration(CardId.BLOOD_PRESSURE, isVisible = true, position = 14),
         )
 }

@@ -30,6 +30,9 @@ sealed interface AppDestination {
     data object SleepDetail : AppDestination
 
     @Serializable
+    data object HeartRateDetail : AppDestination
+
+    @Serializable
     data object WeightDetail : AppDestination
 
     @Serializable
