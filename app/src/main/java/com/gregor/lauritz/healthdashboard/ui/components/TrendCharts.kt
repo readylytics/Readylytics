@@ -387,7 +387,7 @@ fun BloodPressureTrendChart(
                     }
                 },
         ),
-    showZoneBands: Boolean = true,
+    showZoneBands: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
