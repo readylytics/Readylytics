@@ -1,6 +1,5 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
 import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
@@ -31,10 +30,7 @@ class ZoneBandDecoration(
             val topY = bounds.top + bounds.height * (1f - ((clampedUpper - minY) / range).toFloat())
             val bottomY = bounds.top + bounds.height * (1f - ((clampedLower - minY) / range).toFloat())
             paint.color = bandColors[index]
-            context.canvas.drawRect(
-                Rect(bounds.left, topY, bounds.right, bottomY),
-                paint,
-            )
+            context.canvas.drawRect(bounds.left, topY, bounds.right, bottomY, paint)
         }
     }
 }
