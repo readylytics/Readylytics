@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -123,13 +124,13 @@ fun WorkoutStatsSection(
                 status = strainStatus,
                 displayText = strainRatio?.let { "%.2f".format(it) } ?: "—",
                 tooltipDescription = strainTooltip,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
             )
             M3ScoreDial(
                 score = uiState.latestSummary?.readinessScore,
                 label = "Readiness",
                 tooltipDescription = "Physical preparedness for strain today.",
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
             )
         }
 
