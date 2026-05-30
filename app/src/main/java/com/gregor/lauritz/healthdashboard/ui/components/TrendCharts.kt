@@ -26,9 +26,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.domain.model.HealthZone
 import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
 import com.gregor.lauritz.healthdashboard.domain.model.systolicZoneBands
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
+import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -217,6 +219,24 @@ fun TrendChart(
                 ),
         )
 
+    val extendedColors = LocalExtendedColors.current
+    val errorContainer = MaterialTheme.colorScheme.errorContainer
+    val zoneBandDecoration =
+        remember(zoneBands, extendedColors, errorContainer, minY, maxY) {
+            zoneBands?.let { bands ->
+                val colors =
+                    bands.map { band ->
+                        when (band.zone) {
+                            HealthZone.OPTIMAL -> extendedColors.successContainer.copy(alpha = 0.30f)
+                            HealthZone.NEUTRAL -> extendedColors.neutralContainer.copy(alpha = 0.20f)
+                            HealthZone.WARNING -> extendedColors.warningContainer.copy(alpha = 0.30f)
+                            HealthZone.CRITICAL -> errorContainer.copy(alpha = 0.30f)
+                        }
+                    }
+                ZoneBandDecoration(bands, colors, minY, maxY)
+            }
+        }
+
     val markerVisibilityListener =
         rememberChartMarkerVisibilityListener(
             onPointSelected = { x, y, canvasX, canvasY ->
@@ -246,14 +266,6 @@ fun TrendChart(
         )
 
     Box(modifier = modifier.fillMaxWidth()) {
-        if (zoneBands != null) {
-            ZoneBandOverlay(
-                zoneBands = zoneBands,
-                minY = minY,
-                maxY = maxY,
-                modifier = Modifier.fillMaxWidth().height(180.dp),
-            )
-        }
         CartesianChartHost(
             chart =
                 rememberCartesianChart(
@@ -287,16 +299,17 @@ fun TrendChart(
                             guideline = guidelineComponent,
                         ),
                     decorations =
-                        if (shouldShowBaseline) {
-                            listOf(
+                        listOfNotNull(
+                            zoneBandDecoration,
+                            if (shouldShowBaseline) {
                                 HorizontalLine(
                                     y = { baselineValue.toDouble() },
                                     line = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp),
-                                ),
-                            )
-                        } else {
-                            emptyList()
-                        },
+                                )
+                            } else {
+                                null
+                            },
+                        ),
                     marker = InvisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
                 ),
@@ -424,6 +437,24 @@ fun BloodPressureTrendChart(
     val systolicColor = MaterialTheme.colorScheme.primary
     val diastolicColor = MaterialTheme.colorScheme.tertiary
 
+    val bpExtendedColors = LocalExtendedColors.current
+    val bpErrorContainer = MaterialTheme.colorScheme.errorContainer
+    val bpZoneBandDecoration =
+        remember(showZoneBands, bpExtendedColors, bpErrorContainer, minY, maxY) {
+            if (!showZoneBands) return@remember null
+            val bands = systolicZoneBands()
+            val colors =
+                bands.map { band ->
+                    when (band.zone) {
+                        HealthZone.OPTIMAL -> bpExtendedColors.successContainer.copy(alpha = 0.30f)
+                        HealthZone.NEUTRAL -> bpExtendedColors.neutralContainer.copy(alpha = 0.20f)
+                        HealthZone.WARNING -> bpExtendedColors.warningContainer.copy(alpha = 0.30f)
+                        HealthZone.CRITICAL -> bpErrorContainer.copy(alpha = 0.30f)
+                    }
+                }
+            ZoneBandDecoration(bands, colors, minY, maxY)
+        }
+
     val modelProducer = remember { CartesianChartModelProducer() }
 
     val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
@@ -516,14 +547,6 @@ fun BloodPressureTrendChart(
         )
 
     Box(modifier = modifier.fillMaxWidth()) {
-        if (showZoneBands) {
-            ZoneBandOverlay(
-                zoneBands = systolicZoneBands(),
-                minY = minY,
-                maxY = maxY,
-                modifier = Modifier.fillMaxWidth().height(180.dp),
-            )
-        }
         CartesianChartHost(
             chart =
                 rememberCartesianChart(
@@ -553,7 +576,8 @@ fun BloodPressureTrendChart(
                             guideline = guidelineComponent,
                         ),
                     decorations =
-                        listOf(
+                        listOfNotNull(
+                            bpZoneBandDecoration,
                             HorizontalLine(
                                 y = { 120.0 },
                                 line = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp),

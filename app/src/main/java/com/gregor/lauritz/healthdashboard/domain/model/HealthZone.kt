@@ -75,22 +75,40 @@ fun bodyFatZoneBands(
     val warnMax: Double
     when {
         gender == Gender.MALE && age < 40 -> {
-            optMin = 8.0; optMax = 19.0; neutMax = 24.0; warnMax = 29.0
+            optMin = 8.0
+            optMax = 19.0
+            neutMax = 24.0
+            warnMax = 29.0
         }
         gender == Gender.MALE && age < 60 -> {
-            optMin = 11.0; optMax = 21.0; neutMax = 27.0; warnMax = 32.0
+            optMin = 11.0
+            optMax = 21.0
+            neutMax = 27.0
+            warnMax = 32.0
         }
         gender == Gender.MALE -> {
-            optMin = 13.0; optMax = 24.0; neutMax = 29.0; warnMax = 34.0
+            optMin = 13.0
+            optMax = 24.0
+            neutMax = 29.0
+            warnMax = 34.0
         }
         gender == Gender.FEMALE && age < 40 -> {
-            optMin = 20.0; optMax = 32.0; neutMax = 36.0; warnMax = 41.0
+            optMin = 20.0
+            optMax = 32.0
+            neutMax = 36.0
+            warnMax = 41.0
         }
         gender == Gender.FEMALE && age < 60 -> {
-            optMin = 23.0; optMax = 33.0; neutMax = 39.0; warnMax = 44.0
+            optMin = 23.0
+            optMax = 33.0
+            neutMax = 39.0
+            warnMax = 44.0
         }
         gender == Gender.FEMALE -> {
-            optMin = 24.0; optMax = 35.0; neutMax = 41.0; warnMax = 46.0
+            optMin = 24.0
+            optMax = 35.0
+            neutMax = 41.0
+            warnMax = 46.0
         }
         else -> return emptyList()
     }

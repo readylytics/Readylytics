@@ -73,8 +73,20 @@ fun WeightDetailScreen(
     val unitLabel = if (uiState.unitSystem == UnitSystem.METRIC) "kg" else "lbs"
 
     val weightBands =
-        remember(uiState.heightCm) {
-            uiState.heightCm?.let { weightZoneBands(it) }
+        remember(uiState.heightCm, uiState.unitSystem) {
+            uiState.heightCm?.let { height ->
+                val bands = weightZoneBands(height)
+                if (uiState.unitSystem == UnitSystem.IMPERIAL) {
+                    bands.map { band ->
+                        band.copy(
+                            lowerBound = if (band.lowerBound == Double.NEGATIVE_INFINITY) Double.NEGATIVE_INFINITY else band.lowerBound * 2.20462,
+                            upperBound = if (band.upperBound == Double.POSITIVE_INFINITY) Double.POSITIVE_INFINITY else band.upperBound * 2.20462,
+                        )
+                    }
+                } else {
+                    bands
+                }
+            }
         }
 
     Scaffold(
