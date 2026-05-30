@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.HealthZone
 import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
-import com.gregor.lauritz.healthdashboard.domain.model.systolicZoneBands
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
@@ -400,7 +399,6 @@ fun BloodPressureTrendChart(
                     }
                 },
         ),
-    showZoneBands: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
@@ -436,24 +434,6 @@ fun BloodPressureTrendChart(
     val guidelineComponent = ChartDefaults.guidelineComponent()
     val systolicColor = MaterialTheme.colorScheme.primary
     val diastolicColor = MaterialTheme.colorScheme.tertiary
-
-    val bpExtendedColors = LocalExtendedColors.current
-    val bpErrorContainer = MaterialTheme.colorScheme.errorContainer
-    val bpZoneBandDecoration =
-        remember(showZoneBands, bpExtendedColors, bpErrorContainer, minY, maxY) {
-            if (!showZoneBands) return@remember null
-            val bands = systolicZoneBands()
-            val colors =
-                bands.map { band ->
-                    when (band.zone) {
-                        HealthZone.OPTIMAL -> bpExtendedColors.successContainer.copy(alpha = 0.30f)
-                        HealthZone.NEUTRAL -> bpExtendedColors.neutralContainer.copy(alpha = 0.20f)
-                        HealthZone.WARNING -> bpExtendedColors.warningContainer.copy(alpha = 0.30f)
-                        HealthZone.CRITICAL -> bpErrorContainer.copy(alpha = 0.30f)
-                    }
-                }
-            ZoneBandDecoration(bands, colors, minY, maxY)
-        }
 
     val modelProducer = remember { CartesianChartModelProducer() }
 
@@ -576,8 +556,7 @@ fun BloodPressureTrendChart(
                             guideline = guidelineComponent,
                         ),
                     decorations =
-                        listOfNotNull(
-                            bpZoneBandDecoration,
+                        listOf(
                             HorizontalLine(
                                 y = { 120.0 },
                                 line = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp),

@@ -1,5 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.rhr
 
+private const val RHR_CRITICAL_MULTIPLIER = 1.3f
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
@@ -101,7 +103,7 @@ class RestingHrDetailViewModel
                             rhrZoneBands = rhrZoneBands(
                                 optimalMax = prefs.rhrOptimalThreshold,
                                 neutralMax = prefs.rhrWarningThreshold,
-                                warningMax = prefs.rhrWarningThreshold * 1.3f,
+                                warningMax = prefs.rhrWarningThreshold * RHR_CRITICAL_MULTIPLIER,
                             ),
                         )
                     }.flowOn(Dispatchers.Default)

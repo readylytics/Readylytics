@@ -43,11 +43,11 @@ fun diastolicZoneBands(): List<ZoneBand> =
 // WHO BMI thresholds (static)
 fun bmiZoneBands(): List<ZoneBand> =
     listOf(
+        ZoneBand(Double.NEGATIVE_INFINITY, 18.5, HealthZone.CRITICAL),
         ZoneBand(18.5, 25.0, HealthZone.OPTIMAL),
         ZoneBand(25.0, 30.0, HealthZone.NEUTRAL),
         ZoneBand(30.0, 35.0, HealthZone.WARNING),
         ZoneBand(35.0, Double.POSITIVE_INFINITY, HealthZone.CRITICAL),
-        ZoneBand(Double.NEGATIVE_INFINITY, 18.5, HealthZone.CRITICAL),
     )
 
 // Convert BMI zone bands to weight (kg) zone bands using height
