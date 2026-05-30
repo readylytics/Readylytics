@@ -123,11 +123,13 @@ fun WorkoutStatsSection(
                 status = strainStatus,
                 displayText = strainRatio?.let { "%.2f".format(it) } ?: "—",
                 tooltipDescription = strainTooltip,
+                modifier = Modifier.weight(1f),
             )
             M3ScoreDial(
                 score = uiState.latestSummary?.readinessScore,
                 label = "Readiness",
                 tooltipDescription = "Physical preparedness for strain today.",
+                modifier = Modifier.weight(1f),
             )
         }
 
