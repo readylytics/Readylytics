@@ -94,7 +94,7 @@ fun WorkoutStatsSection(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val strainRatio = uiState.latestSummary?.strainRatio
