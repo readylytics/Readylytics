@@ -26,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
+import com.gregor.lauritz.healthdashboard.domain.model.systolicZoneBands
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -126,6 +128,7 @@ fun TrendChart(
                     }
                 },
         ),
+    zoneBands: List<ZoneBand>? = null,
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
@@ -243,6 +246,14 @@ fun TrendChart(
         )
 
     Box(modifier = modifier.fillMaxWidth()) {
+        if (zoneBands != null) {
+            ZoneBandOverlay(
+                zoneBands = zoneBands,
+                minY = minY,
+                maxY = maxY,
+                modifier = Modifier.fillMaxWidth().height(180.dp),
+            )
+        }
         CartesianChartHost(
             chart =
                 rememberCartesianChart(
@@ -376,6 +387,7 @@ fun BloodPressureTrendChart(
                     }
                 },
         ),
+    showZoneBands: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
@@ -504,6 +516,14 @@ fun BloodPressureTrendChart(
         )
 
     Box(modifier = modifier.fillMaxWidth()) {
+        if (showZoneBands) {
+            ZoneBandOverlay(
+                zoneBands = systolicZoneBands(),
+                minY = minY,
+                maxY = maxY,
+                modifier = Modifier.fillMaxWidth().height(180.dp),
+            )
+        }
         CartesianChartHost(
             chart =
                 rememberCartesianChart(

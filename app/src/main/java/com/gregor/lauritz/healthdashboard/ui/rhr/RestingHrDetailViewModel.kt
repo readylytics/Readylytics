@@ -6,7 +6,9 @@ import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
 import com.gregor.lauritz.healthdashboard.domain.model.restingHrStatus
+import com.gregor.lauritz.healthdashboard.domain.model.rhrZoneBands
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.util.toMidnightEpochMilli
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
@@ -37,6 +39,7 @@ data class RestingHrDetailUiState(
     val rhrStatus: MetricStatus? = null,
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val rangeStartMs: Long = 0,
+    val rhrZoneBands: List<ZoneBand>? = null,
 )
 
 @HiltViewModel
@@ -95,6 +98,11 @@ class RestingHrDetailViewModel
                             rhrStatus = latest?.restingHrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold),
                             selectedRange = range,
                             rangeStartMs = startDayMs,
+                            rhrZoneBands = rhrZoneBands(
+                                optimalMax = prefs.rhrOptimalThreshold,
+                                neutralMax = prefs.rhrWarningThreshold,
+                                warningMax = prefs.rhrWarningThreshold * 1.3f,
+                            ),
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(
