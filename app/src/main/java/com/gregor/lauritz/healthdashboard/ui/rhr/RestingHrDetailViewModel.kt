@@ -1,7 +1,5 @@
 package com.gregor.lauritz.healthdashboard.ui.rhr
 
-private const val RHR_CRITICAL_MULTIPLIER = 1.3f
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
@@ -33,6 +31,8 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+
+private const val RHR_CRITICAL_MULTIPLIER = 1.3f
 
 data class RestingHrDetailUiState(
     val latestSummary: DailySummary? = null,
