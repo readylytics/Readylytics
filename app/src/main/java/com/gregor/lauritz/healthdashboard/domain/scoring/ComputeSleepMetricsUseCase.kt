@@ -218,6 +218,7 @@ class ComputeSleepMetricsUseCase
                                 sigmaPrior,
                                 baselineOverride = prefs.hrvBaselineOverride,
                                 frozenLnMu = frozenHrvMu,
+                                frozenLnSigma = frozenHrvSigma,
                             )
                         } else {
                             null
@@ -242,6 +243,7 @@ class ComputeSleepMetricsUseCase
                             prefs.hrvBaselineOverride,
                             scoringConfig.restoration,
                             frozenLnMu = frozenHrvMu,
+                            frozenLnSigma = frozenHrvSigma,
                         )
                     if (nadirCtx.isLateNadir) sRest *= ScoringConstants.Restoration.LATE_NADIR_PENALTY
 

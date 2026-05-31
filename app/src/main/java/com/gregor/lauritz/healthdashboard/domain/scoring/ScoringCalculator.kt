@@ -54,6 +54,7 @@ interface ScoringCalculator {
         sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior,
         baselineOverride: Float? = null,
         frozenLnMu: Float? = null,
+        frozenLnSigma: Float? = null,
     ): Float?
 
     fun computeHrvScore(z: Float): Float
@@ -75,6 +76,7 @@ interface ScoringCalculator {
         hrvBaselineOverride: Float?,
         restorationWeights: com.gregor.lauritz.healthdashboard.domain.scoring.components.RestorationWeights? = null,
         frozenLnMu: Float? = null,
+        frozenLnSigma: Float? = null,
     ): Float
 
     fun computeSleepScore(

@@ -90,6 +90,7 @@ class SleepScoringStrategyTest {
                 hrvBaselineOverride = null,
                 restorationWeights = null,
                 frozenLnMu = null,
+                frozenLnSigma = null,
             )
         val hrvScore = 50f
         val rhrScore = 50f

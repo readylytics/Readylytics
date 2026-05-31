@@ -47,6 +47,7 @@ class LoadScoringStrategy
             sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior,
             baselineOverride: Float? = null,
             frozenLnMu: Float? = null,
+            frozenLnSigma: Float? = null,
         ): Float? {
             if (currentRmssdMs <= 0f ||
                 (frozenLnMu == null && baselineOverride == null && muHistory.isEmpty())
@@ -62,7 +63,7 @@ class LoadScoringStrategy
                     baselineOverride != null -> ln(baselineOverride.coerceAtLeast(0.001f))
                     else -> lnMuHistory.mean()
                 }
-            val sigma = hrvSigma(lnSigmaHistory, sigmaPrior)
+            val sigma = frozenLnSigma ?: hrvSigma(lnSigmaHistory, sigmaPrior)
             return (lnToday - mu) / sigma
         }
 
