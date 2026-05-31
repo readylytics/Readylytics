@@ -119,8 +119,10 @@ class ScoringRepositoryN1Test {
         coEvery { heartRateDao.getSleepHrSampleAtOffset(any(), any()) } returns 50
         coEvery { heartRateDao.getSleepHrSamplesForSession(any()) } returns listOf(48, 50, 52, 54, 56, 58, 60)
         coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns emptyList()
+        coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns emptyList()
 
         coEvery { dailySummaryDao.getByDate(any()) } returns null
+        coEvery { dailySummaryDao.getByDates(any()) } returns emptyList()
         coEvery { dailySummaryDao.upsert(any()) } returns Unit
 
         scoringCalculator =

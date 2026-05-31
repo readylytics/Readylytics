@@ -31,7 +31,7 @@ class RhrBaselineProviderTest {
     fun getRhrBaseline_with_sufficient_data_returns_calculated() =
         runTest {
             val calculatedRhr = 62f
-            val rhrValues = listOf(60, 62, 64, 61, 63)
+            val rhrValues = listOf(60, 62, 64, 61, 63, 62, 61)
             val dayMidnight = Instant.now()
             val prefs = UserPreferences(rhrBaselineOverride = null)
             coEvery { settingsRepository.userPreferences } returns flowOf(prefs)

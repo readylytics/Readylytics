@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.domain.scoring.sleep
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepHrSample
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
@@ -113,11 +114,11 @@ class WakeWindowHrCollectorTest {
                     mockSession(id = "1", endTime = 10000L),
                     mockSession(id = "2", endTime = 9000L),
                 )
-            coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns
+            coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns
                 listOf(
-                    mockHeartRateRecord(timestampMs = 9900L, bpm = 55, sessionId = "1"),
-                    mockHeartRateRecord(timestampMs = 10100L, bpm = 60, sessionId = "1"),
-                    mockHeartRateRecord(timestampMs = 8900L, bpm = 50, sessionId = "2"),
+                    SleepHrSample(sessionId = "1", beatsPerMinute = 55),
+                    SleepHrSample(sessionId = "1", beatsPerMinute = 60),
+                    SleepHrSample(sessionId = "2", beatsPerMinute = 50),
                 )
 
             val result = collector.collect(session, dayMidnight)
@@ -134,7 +135,7 @@ class WakeWindowHrCollectorTest {
             val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
 
             coEvery { sleepSessionDao.getSince(any()) } returns listOf(session)
-            coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns emptyList()
+            coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns emptyList()
 
             val result = collector.collect(session, dayMidnight)
 
@@ -154,9 +155,9 @@ class WakeWindowHrCollectorTest {
                     mockSession(id = "1", endTime = 10000L),
                     mockSession(id = "2", endTime = 9000L),
                 )
-            coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns
+            coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns
                 listOf(
-                    mockHeartRateRecord(timestampMs = 8800L, bpm = 50, sessionId = "2"),
+                    SleepHrSample(sessionId = "2", beatsPerMinute = 50),
                 )
 
             val result = collector.collect(session, dayMidnight)
@@ -176,9 +177,9 @@ class WakeWindowHrCollectorTest {
             // Provide 10 heart rate records for the current window: bpm values from 50 to 59
             val records =
                 (0..9).map { i ->
-                    mockHeartRateRecord(timestampMs = 10000L + i * 10, bpm = 50 + i, sessionId = "1")
+                    SleepHrSample(sessionId = "1", beatsPerMinute = 50 + i)
                 }
-            coEvery { heartRateDao.getSleepHrSamplesForSessions(any()) } returns records
+            coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns records
 
             // Test default percentile = 5.
             // S = 10. index = ((5 / 100.0) * (10 - 1)).toInt() = (0.05 * 9).toInt() = 0.
