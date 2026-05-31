@@ -65,6 +65,63 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug
 
+      # --- Artifact Upload Phase ---
+
+      # This step will now only run if all previous steps succeeded or were safely bypassed via continue-on-error.
+      # If 'Build debug APK' fails, this upload step will be skipped.
+      - name: Upload debug APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.3.3
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/**/*.apk
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.3.3
+        with:
+          name: coverage-report
+          path: app/build/reports/jacoco/jacocoTestReport/
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.3.3
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results-debug.xml
+
+      # --- Final Status Gatekeeper ---
+
+      - name: Enforce overall workflow status
+        if: always() # Must always run to evaluate the previous steps
+        run: |
+          echo "Checking verification step outcomes..."
+          
+          KTLINT_STATUS="${{ steps.ktlint.conclusion }}"
+          LINT_STATUS="${{steps.lint.conclusion }}"
+          TESTS_STATUS="${{ steps.tests.conclusion }}"
+          COVERAGE_STATUS="${{ steps.coverage.conclusion }}"
+          GATE_STATUS="${{ steps.coverage_gate.conclusion }}"
+          
+          FAILED=0
+          
+          if [ "$KTLINT_STATUS" = "failure" ]; then echo "❌ ktlintCheck failed"; FAILED=1; fi
+          if [ "$LINT_STATUS" = "failure" ]; then echo "❌ Android Lint failed"; FAILED=1; fi
+          if [ "$TESTS_STATUS" = "failure" ]; then echo "❌ Unit tests failed"; FAILED=1; fi
+          if [ "$COVERAGE_STATUS" = "failure" ]; then echo "❌ Coverage report generation failed"; FAILED=1; fi
+          if [ "$GATE_STATUS" = "failure" ]; then echo "❌ Coverage verification gate failed"; FAILED=1; fi
+          
+          if [ $FAILED -ne 0 ]; then
+            echo "One or more verification steps failed. Failing the workflow run."
+            exit 1
+          fi
+          
+          echo "✅ All verification steps passed successfully!"
+          
+      # --- Build Phase (Guaranteed to execute) ---
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
+
       # --- Artifact Upload Phase (Always uploads regardless of test results) ---
 
       - name: Upload debug APK
