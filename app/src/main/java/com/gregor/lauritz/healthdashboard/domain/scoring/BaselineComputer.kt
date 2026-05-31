@@ -52,7 +52,7 @@ class BaselineComputer
             val sessionIds = sessions.map { it.id }
             if (sessionIds.isEmpty()) return emptyList()
 
-            val allHrRecords = heartRateDao.getSleepHrSamplesForSessions(sessionIds)
+            val allHrRecords = heartRateDao.getSleepHrProjectionForSessions(sessionIds)
             val samplesBySession = allHrRecords.groupBy { it.sessionId }
 
             return sessions.mapNotNull { session ->
@@ -109,7 +109,7 @@ class BaselineComputer
             if (validIds.isEmpty()) {
                 return ScoringConstants.DEFAULT_RHR_BPM
             }
-            val allHrSamples = heartRateDao.getSleepHrSamplesForSessions(validIds)
+            val allHrSamples = heartRateDao.getSleepHrProjectionForSessions(validIds)
             val samplesBySession = allHrSamples.groupBy { it.sessionId }
             val nadirs =
                 validIds.mapNotNull { sessionId ->
@@ -171,8 +171,8 @@ class BaselineComputer
                 return ScoringConstants.DEFAULT_RHR_BPM
             }
 
-            // OPTIMIZATION: Fetch all HR samples in single batch query
-            val allHrSamples = heartRateDao.getSleepHrSamplesForSessions(validIds)
+            // OPTIMIZATION: Fetch all HR samples in single batch query using lightweight projection
+            val allHrSamples = heartRateDao.getSleepHrProjectionForSessions(validIds)
 
             // Group samples by session in memory (fast)
             val samplesBySession = allHrSamples.groupBy { it.sessionId }

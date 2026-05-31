@@ -61,6 +61,9 @@ interface DailySummaryDao {
     @Query("DELETE FROM daily_summaries")
     suspend fun deleteAll(): Int
 
+    @Query("SELECT * FROM daily_summaries WHERE dateMidnightMs IN (:dates)")
+    suspend fun getByDates(dates: List<Long>): List<DailySummaryEntity>
+
     @Query(
         "UPDATE daily_summaries SET hrv_mu_mssd = :hrvMuMssd, " +
             "hrv_sigma_mssd = :hrvSigmaMssd, rhr_bpm = :rhrBpm, " +

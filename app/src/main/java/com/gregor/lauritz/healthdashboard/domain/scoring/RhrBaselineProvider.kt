@@ -4,7 +4,6 @@ import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.model.PhysiologyConstants
 import kotlinx.coroutines.flow.first
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -44,9 +43,7 @@ class AdaptiveRhrBaselineProvider
             val rhrValues = baselineComputer.rhrHistory(dayMidnight, preferences.restingHrPercentile)
 
             // Need at least 7 days of data for calibration; otherwise use default
-            val minimumDaysMs = ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION * 24 * 60 * 60 * 1000L
-            val windowStartMs = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
-            val hasEnoughData = (dayMidnight.toEpochMilli() - windowStartMs) >= minimumDaysMs && rhrValues.isNotEmpty()
+            val hasEnoughData = rhrValues.size >= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
 
             return if (hasEnoughData) {
                 baselineComputer.resolveBaselineRhrBpm(rhrValues, rhrOverride)

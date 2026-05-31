@@ -19,7 +19,6 @@ import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -106,10 +105,5 @@ class HealthDashboardApplication :
                 .penaltyLog()
                 .build(),
         )
-    }
-
-    override fun onTerminate() {
-        super.onTerminate()
-        appScope.cancel()
     }
 }

@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring.sleep
 
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepHrSample
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
@@ -41,16 +42,14 @@ class WakeWindowHrCollector
             val sessions = sleepSessionDao.getSince(baselineFrom)
             val sessionIds = (sessions.map { it.id } + session.id).distinct()
 
-            // Fetch all sleep HR samples for all these sessions batched
-            val allHrRecords = heartRateDao.getSleepHrSamplesForSessions(sessionIds)
+            // Fetch all sleep HR samples for all these sessions batched using a lightweight projection
+            val allHrRecords = heartRateDao.getSleepHrProjectionForSessions(sessionIds)
             val samplesBySession = allHrRecords.groupBy { it.sessionId }
 
-            fun List<com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity>?.getPercentileValue(
-                percentile: Int,
-            ): Int? {
+            fun List<SleepHrSample>?.getPercentileValue(percentile: Int): Int? {
                 if (this == null || isEmpty()) return null
                 if (size == 1) return first().beatsPerMinute
-                // The records are already ordered by beatsPerMinute ASC because of getSleepHrSamplesForSessions
+                // The records are already ordered by beatsPerMinute ASC because of getSleepHrProjectionForSessions
                 val index = Math.round((percentile / 100.0) * (size - 1)).toInt().coerceIn(0, size - 1)
                 return this[index].beatsPerMinute
             }

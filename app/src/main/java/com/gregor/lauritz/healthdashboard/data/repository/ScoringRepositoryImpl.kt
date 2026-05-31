@@ -26,6 +26,8 @@ import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
@@ -53,9 +55,13 @@ class ScoringRepositoryImpl
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
     ) : ScoringRepository {
+        private val calculationMutex = Mutex()
+
         override suspend fun computeAndPersistDailySummary(targetDate: LocalDate) {
-            val summary = computeDailySummary(targetDate)
-            dailySummaryDao.upsert(summary)
+            calculationMutex.withLock {
+                val summary = computeDailySummary(targetDate)
+                dailySummaryDao.upsert(summary)
+            }
         }
 
         override suspend fun computeDailySummary(targetDate: LocalDate): DailySummaryEntity =
@@ -287,15 +293,15 @@ class ScoringRepositoryImpl
 
         private suspend fun sumPaiScoreLastSixDays(targetDate: LocalDate): Float {
             val zoneIdSystem = ZoneId.systemDefault()
-            val previousDays =
+            val previousDaysMs =
                 (1..6).map { i ->
                     targetDate
                         .minusDays(i.toLong())
                         .atStartOfDay(zoneIdSystem)
                         .toInstant()
                         .toEpochMilli()
-                        .let { dailySummaryDao.getByDate(it)?.paiScore ?: 0f }
                 }
-            return previousDays.sum()
+            val summaries = dailySummaryDao.getByDates(previousDaysMs)
+            return summaries.mapNotNull { it.paiScore }.sum()
         }
     }

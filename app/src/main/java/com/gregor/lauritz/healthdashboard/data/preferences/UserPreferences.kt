@@ -63,6 +63,11 @@ data class UserPreferences(
     val itrimB: Float = PhysiologyProfile.GENERAL.defaultItrimB,
     val primaryDeviceName: String? = null,
     val backupDirectoryUri: String? = null,
+    /**
+     * Stored Base64-encoded AES-256-GCM ciphertext of the backup password (encrypted via Google Tink).
+     * NOTE: Named "backupPasswordHash" for database/Proto schema backwards compatibility,
+     * but stores decryptable ciphertext required by background backup workers.
+     */
     val backupPasswordHash: String? = null,
     val isBirthdayConfigured: Boolean = SettingsDefaults.IS_BIRTHDAY_CONFIGURED,
     val unitSystem: UnitSystem = SettingsDefaults.UNIT_SYSTEM,
