@@ -4,6 +4,7 @@ import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.Result
+import com.gregor.lauritz.healthdashboard.domain.model.strainRatioStatus
 import com.gregor.lauritz.healthdashboard.domain.util.ResourceProvider
 import com.gregor.lauritz.healthdashboard.ui.dashboard.CardData
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardAction
@@ -55,15 +56,4 @@ class GetWorkoutMetricsUseCase
                 tooltip = resourceProvider.getString(R.string.tooltip_strain_ratio),
             )
         }
-
-        private fun Float.strainRatioStatus(): MetricStatus =
-            when {
-                this in 0.8f..1.3f -> MetricStatus.OPTIMAL
-                this in 1.3f..1.5f -> MetricStatus.NEUTRAL
-                this in 1.5f..2.0f -> MetricStatus.WARNING
-                this > 2.0f -> MetricStatus.POOR
-                this in 0.5f..0.8f -> MetricStatus.WARNING
-                this < 0.5f -> MetricStatus.POOR
-                else -> MetricStatus.CALIBRATING
-            }
     }

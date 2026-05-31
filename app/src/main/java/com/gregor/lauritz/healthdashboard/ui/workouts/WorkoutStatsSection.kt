@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.strainRatioStatus
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -98,18 +99,7 @@ fun WorkoutStatsSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val strainRatio = uiState.latestSummary?.strainRatio
-            val strainStatus =
-                when {
-                    strainRatio == null -> MetricStatus.CALIBRATING
-                    strainRatio in 0.8f..1.3f -> MetricStatus.OPTIMAL
-                    strainRatio in 1.3f..1.5f -> MetricStatus.NEUTRAL
-                    strainRatio in 1.5f..2.0f -> MetricStatus.WARNING
-                    strainRatio > 2.0f -> MetricStatus.POOR
-                    strainRatio in 0.5f..0.8f -> MetricStatus.WARNING
-                    strainRatio < 0.5f -> MetricStatus.POOR
-                    else -> MetricStatus.CALIBRATING
-                }
-
+            val strainStatus = strainRatio?.strainRatioStatus() ?: MetricStatus.CALIBRATING
             val strainTooltip = stringResource(R.string.tooltip_strain_ratio)
             M3ScoreDial(
                 score = strainRatio,
