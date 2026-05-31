@@ -86,6 +86,51 @@ class BaselineComputer
         ): Int = (rhrBaselineOverride ?: rhrValues.median()).roundToInt()
 
         /**
+         * Computes RHR baseline bounded to [fromMs, toMs] (for backfill: no look-ahead).
+         */
+        suspend fun computeAdaptiveBaselineRhrBpmBetween(
+            fromMs: Long,
+            toMs: Long,
+            percentile: Int,
+        ): Float? {
+            val frozenSummary = dailySummaryDao.getByDate(fromMs)
+            if (frozenSummary?.baselineCalculatedAtDate != null) {
+                logD(TAG) { "Baseline frozen; skipping RHR recompute" }
+                return null
+            }
+            val baselineFromMs =
+                Instant
+                    .ofEpochMilli(
+                        fromMs,
+                    ).minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
+                    .toEpochMilli()
+            val sessions = sleepSessionDao.getBetween(baselineFromMs.coerceAtLeast(0), toMs)
+            val validIds = filterValidBaselineSessions(sessions)
+            if (validIds.isEmpty()) {
+                return ScoringConstants.DEFAULT_RHR_BPM
+            }
+            val allHrSamples = heartRateDao.getSleepHrSamplesForSessions(validIds)
+            val samplesBySession = allHrSamples.groupBy { it.sessionId }
+            val nadirs =
+                validIds.mapNotNull { sessionId ->
+                    val samples = samplesBySession[sessionId] ?: return@mapNotNull null
+                    if (samples.size < 10) return@mapNotNull null
+                    val idx =
+                        Math
+                            .round(
+                                (percentile / 100.0) * (samples.size - 1),
+                            ).toInt()
+                            .coerceIn(0, samples.size - 1)
+                    samples[idx].beatsPerMinute.toFloat()
+                }
+            return if (nadirs.isEmpty()) {
+                ScoringConstants.DEFAULT_RHR_BPM
+            } else {
+                nadirs.map { it.roundToInt() }.median()
+            }
+        }
+
+        /**
          * Computes the RHR baseline using intra-session adaptive percentiles.
          * Finds the true physiological nadir rather than the session-average median.
          * Percentile adapts to sensor data density to avoid noise artifacts.
@@ -173,6 +218,47 @@ class BaselineComputer
                 hrvBaselineOverride
                     ?: hrvBaselineValues.median().takeIf { it > 0f }
             )?.roundToInt()
+        }
+
+        /**
+         * Computes HRV windows bounded to [fromMs, toMs] (for backfill: no look-ahead).
+         * Used by historical baseline backfill to enforce point-in-time correctness.
+         */
+        suspend fun computeHrvWindowsBetween(
+            fromMs: Long,
+            toMs: Long,
+            excludeSessionId: String?,
+        ): HrvWindows? {
+            val frozenSummary = dailySummaryDao.getByDate(fromMs)
+            if (frozenSummary?.baselineCalculatedAtDate != null) {
+                logD(
+                    TAG,
+                ) {
+                    "Baseline frozen for date=${frozenSummary.baselineCalculatedAtDate}; skipping HRV window recompute"
+                }
+                return null
+            }
+            val sigmaWindowFromMs =
+                Instant
+                    .ofEpochMilli(
+                        fromMs,
+                    ).minus(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong(), ChronoUnit.DAYS)
+                    .toEpochMilli()
+            val historicalSessions =
+                sleepSessionDao
+                    .getBetween(
+                        sigmaWindowFromMs.coerceAtLeast(0),
+                        toMs,
+                    ).filter { it.id != excludeSessionId }
+            val validIds = filterValidBaselineSessions(historicalSessions, assumeCoverageValid = true)
+            val sigmaHistory = hrvDao.getSleepRmssdValuesForSessions(validIds)
+            val muHistory = sigmaHistory.takeLast(ScoringConstants.HRV_MU_WINDOW_DAYS)
+            return HrvWindows(
+                muHistory = muHistory,
+                sigmaHistory = sigmaHistory,
+                historicalSessions = historicalSessions,
+                validHistoricalSessionIds = validIds,
+            )
         }
 
         /**

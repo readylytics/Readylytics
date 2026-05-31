@@ -7,6 +7,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringS
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import kotlin.math.ln
 
 class ComputeHistoricalBaselinesUseCase(
@@ -21,19 +22,17 @@ class ComputeHistoricalBaselinesUseCase(
                 return@mapNotNull null
             }
             val dayMidnightInstant = summary.dateMidnightMs.toInstant()
+            val dayMidnightMs = dayMidnightInstant.toEpochMilli()
+            val dayEndMs = dayMidnightInstant.plus(1, ChronoUnit.DAYS).toEpochMilli() - 1
 
-            // TODO: Pass current day's session ID to excludeSessionId parameter to match live pipeline
-            // For now, pass null (known limitation — session is included in baseline window)
-            // computeHrvWindows / computeAdaptiveBaselineRhrBpm return null when baseline is frozen (US-B6).
-            // The outer guard (summary.baselineCalculatedAtDate != null) already skips frozen rows,
-            // so null here is unexpected but handled defensively.
+            // Use bounded window queries for point-in-time correctness (no look-ahead)
             val hrvWindows =
-                baselineComputer.computeHrvWindows(dayMidnightInstant, excludeSessionId = null)
+                baselineComputer.computeHrvWindowsBetween(dayMidnightMs, dayEndMs, excludeSessionId = null)
                     ?: return@mapNotNull null
             val rhrBpm =
-                baselineComputer.computeAdaptiveBaselineRhrBpm(
-                    dayMidnightInstant,
-                    rhrBaselineOverride = null,
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                    dayMidnightMs,
+                    dayEndMs,
                     percentile = SettingsDefaults.RESTING_HR_PERCENTILE,
                 )
 

@@ -12,7 +12,9 @@ import com.gregor.lauritz.healthdashboard.BuildConfig
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.di.ApplicationScope
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
+import com.gregor.lauritz.healthdashboard.domain.scoring.BackfillHistoricalBaselinesUseCase
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
+import com.gregor.lauritz.healthdashboard.domain.util.logD
 import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -43,6 +45,9 @@ class HealthDashboardApplication :
     lateinit var workerFactory: HiltWorkerFactory
 
     @Inject
+    lateinit var backfillHistoricalBaselines: BackfillHistoricalBaselinesUseCase
+
+    @Inject
     @ApplicationScope
     lateinit var appScope: CoroutineScope
 
@@ -61,6 +66,16 @@ class HealthDashboardApplication :
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
 
         appScope.launch(Dispatchers.IO) {
+            // Run historical baseline backfill once per app start
+            runCatching {
+                val backfilled = backfillHistoricalBaselines.execute()
+                if (backfilled > 0) {
+                    logD("HealthDashboardApplication") { "Backfilled $backfilled historical baselines" }
+                }
+            }.onFailure { e ->
+                logD("HealthDashboardApplication") { "Backfill failed: ${e.message}" }
+            }
+
             val schedule = settingsRepo.backupSchedule.first()
             workerScheduler.scheduleBackupWorker(schedule)
             workerScheduler.scheduleBirthdayWorker()

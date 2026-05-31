@@ -197,6 +197,11 @@ class ComputeSleepMetricsUseCase
                     }
                 val stagesSuspicious = !validation.stagesValid || validation.stagesSuspicious
 
+                // Compute calibration status early for freeze gate (HIGH-1)
+                val totalValidHrvNights =
+                    validHistoricalSessionIds.size + (if (validation.canContributeToBaseline) 1 else 0)
+                val isCalibrating = totalValidHrvNights < ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
+
                 if (currentNocturnalRhr != null) {
                     rhrRatio = currentNocturnalRhr.toFloat() / (baselineRhrValue + 0.001f)
                     val nadirCtx = nadirAnalyzer.analyze(session, historicalSessions)
@@ -208,7 +213,8 @@ class ComputeSleepMetricsUseCase
                                 muHrvHistory,
                                 effectiveSigmaHistory,
                                 sigmaPrior,
-                                frozenHrvMu ?: prefs.hrvBaselineOverride,
+                                baselineOverride = prefs.hrvBaselineOverride,
+                                frozenLnMu = frozenHrvMu,
                             )
                         } else {
                             null
@@ -230,8 +236,9 @@ class ComputeSleepMetricsUseCase
                             currentNocturnalRhr.toFloat(),
                             rhrValues,
                             frozenRhr ?: prefs.rhrBaselineOverride,
-                            frozenHrvMu ?: prefs.hrvBaselineOverride,
+                            prefs.hrvBaselineOverride,
                             scoringConfig.restoration,
+                            frozenLnMu = frozenHrvMu,
                         )
                     if (nadirCtx.isLateNadir) sRest *= ScoringConstants.Restoration.LATE_NADIR_PENALTY
 
@@ -247,10 +254,6 @@ class ComputeSleepMetricsUseCase
                             stagesSuspicious,
                             scoringConfig.sleepTargets,
                         )
-
-                    val totalValidHrvNights =
-                        validHistoricalSessionIds.size + (if (validation.canContributeToBaseline) 1 else 0)
-                    val isCalibrating = totalValidHrvNights < ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
 
                     val recoveryFlags =
                         scoringCalculator.computeRecoveryFlags(
@@ -365,6 +368,7 @@ class ComputeSleepMetricsUseCase
                                 (
                                     if (muHrvHistory.isNotEmpty()) {
                                         muHrvHistory
+                                            .map { ln(it.coerceAtLeast(0.001f)) }
                                             .average()
                                             .toFloat()
                                     } else {
@@ -374,7 +378,14 @@ class ComputeSleepMetricsUseCase
                             },
                         hrvSigmaMssd = if (frozenBaseline) summary.hrvSigmaMssd else hrvSigma,
                         rhrBpm = if (frozenBaseline) summary.rhrBpm else restingHrBaseline?.toFloat(),
-                        baselineCalculatedAtDate = if (frozenBaseline) summary.baselineCalculatedAtDate else targetDate,
+                        baselineCalculatedAtDate =
+                            if (frozenBaseline) {
+                                summary.baselineCalculatedAtDate
+                            } else if (!isCalibrating) {
+                                targetDate
+                            } else {
+                                null
+                            },
                         zLnHrv = persistedZLnHrv,
                         zRhr = persistedZRhr,
                         recoveryFlags = persistedFlags,
