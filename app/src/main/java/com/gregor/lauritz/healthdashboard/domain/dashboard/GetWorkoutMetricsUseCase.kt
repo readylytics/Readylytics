@@ -59,7 +59,11 @@ class GetWorkoutMetricsUseCase
         private fun Float.strainRatioStatus(): MetricStatus =
             when {
                 this in 0.8f..1.3f -> MetricStatus.OPTIMAL
-                this < 0.8f || this > 1.5f -> MetricStatus.WARNING
-                else -> MetricStatus.POOR
+                this in 1.3f..1.5f -> MetricStatus.NEUTRAL
+                this in 1.5f..2.0f -> MetricStatus.WARNING
+                this > 2.0f -> MetricStatus.POOR
+                this in 0.5f..0.8f -> MetricStatus.WARNING
+                this < 0.5f -> MetricStatus.POOR
+                else -> MetricStatus.CALIBRATING
             }
     }

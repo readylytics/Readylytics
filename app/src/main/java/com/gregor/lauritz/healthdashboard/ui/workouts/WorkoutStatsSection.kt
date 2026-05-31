@@ -103,19 +103,14 @@ fun WorkoutStatsSection(
                     strainRatio == null -> MetricStatus.CALIBRATING
                     strainRatio in 0.8f..1.3f -> MetricStatus.OPTIMAL
                     strainRatio in 1.3f..1.5f -> MetricStatus.NEUTRAL
-                    strainRatio > 1.5f -> MetricStatus.POOR
-                    else -> MetricStatus.WARNING
+                    strainRatio in 1.5f..2.0f -> MetricStatus.WARNING
+                    strainRatio > 2.0f -> MetricStatus.POOR
+                    strainRatio in 0.5f..0.8f -> MetricStatus.WARNING
+                    strainRatio < 0.5f -> MetricStatus.POOR
+                    else -> MetricStatus.CALIBRATING
                 }
 
-            val strainTooltip =
-                remember {
-                    buildString {
-                        append("The ACWR (Acute:Chronic Workload Ratio).\n\n")
-                        append("• 0.8–1.3: Optimal range\n")
-                        append("• > 1.5: High injury risk\n")
-                        append("• < 0.8: Detraining risk")
-                    }
-                }
+            val strainTooltip = stringResource(R.string.tooltip_strain_ratio)
             M3ScoreDial(
                 score = strainRatio,
                 label = "Strain Ratio",
