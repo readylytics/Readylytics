@@ -107,10 +107,10 @@ class BackfillBaselinesUseCaseTest {
             val tooOld = makeSummary(daysAgo = 31)
             val withinWindow = makeSummary(daysAgo = 20)
 
-            coEvery { baselineComputer.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(listOf(40f, 42f), listOf(40f, 42f))
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns 60f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
@@ -126,10 +126,10 @@ class BackfillBaselinesUseCaseTest {
             // Guard is: date < (now - 30 days). Exactly 30 days ago is on the inclusive boundary.
             val exactly30 = makeSummary(daysAgo = 30)
 
-            coEvery { baselineComputer.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(listOf(50f), listOf(50f))
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns 62f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
@@ -146,10 +146,10 @@ class BackfillBaselinesUseCaseTest {
             val rmssdValues = listOf(40f, 60f, 80f)
             val expectedLnMu = rmssdValues.map { ln(it.coerceAtLeast(0.001f)) }.average().toFloat()
 
-            coEvery { baselineComputer.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(rmssdValues, rmssdValues)
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns 58f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
@@ -169,10 +169,10 @@ class BackfillBaselinesUseCaseTest {
             val expectedLnSigmas = rmssdValues.map { ln(it.coerceAtLeast(0.001f)) }
             val capturedLnSigmas = slot<List<Float>>()
 
-            coEvery { baselineComputer.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(rmssdValues, rmssdValues)
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns 60f
             coEvery {
                 loadScoringStrategy.hrvSigma(capture(capturedLnSigmas), PhysiologyProfile.GENERAL.lnSigmaPrior)
@@ -191,10 +191,10 @@ class BackfillBaselinesUseCaseTest {
     fun `computeHistoricalBaselines stores rhrBpm from computeAdaptiveBaselineRhrBpm`() =
         runTest {
             val expectedRhr = 57f
-            coEvery { baselineComputer.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(listOf(50f), listOf(50f))
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns
                 expectedRhr
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
@@ -210,10 +210,10 @@ class BackfillBaselinesUseCaseTest {
             val daysAgo = 7L
             val expectedDate = LocalDate.now().minusDays(daysAgo)
 
-            coEvery { baselineComputer.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(listOf(50f), listOf(50f))
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns 60f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
@@ -225,10 +225,10 @@ class BackfillBaselinesUseCaseTest {
     @Test
     fun `computeHistoricalBaselines sets baselineVersion to 1`() =
         runTest {
-            coEvery { baselineComputer.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(listOf(50f), listOf(50f))
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns 60f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
@@ -254,7 +254,7 @@ class BackfillBaselinesUseCaseTest {
             val result = computeUseCase.computeHistoricalBaselines(listOf(frozen))
 
             assertTrue(result.isEmpty(), "Frozen rows must not appear in backfill output")
-            coVerify(exactly = 0) { baselineComputer.computeHrvWindows(any(), any()) }
+            coVerify(exactly = 0) { baselineComputer.computeHrvWindowsBetween(any(), any(), any()) }
         }
 
     // --- idempotency ---
@@ -263,10 +263,10 @@ class BackfillBaselinesUseCaseTest {
     fun `computeHistoricalBaselines is idempotent — second run on frozen rows produces empty list`() =
         runTest {
             val summary = makeSummary(daysAgo = 12)
-            coEvery { baselineComputer.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(listOf(45f, 50f), listOf(45f, 50f))
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns 61f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.19f
 
@@ -289,9 +289,9 @@ class BackfillBaselinesUseCaseTest {
             val summary = makeSummary(daysAgo = 8)
             val windows = hrvWindows(listOf(44f, 48f, 52f), listOf(44f, 48f, 52f))
 
-            coEvery { baselineComputer.computeHrvWindows(any(), excludeSessionId = null) } returns windows
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns windows
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns 63f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.17f
 
@@ -322,9 +322,9 @@ class BackfillBaselinesUseCaseTest {
     fun `computeHistoricalBaselines skips row when computeHrvWindows returns null`() =
         runTest {
             // null signals the baseline is already frozen at the BaselineComputer level.
-            coEvery { baselineComputer.computeHrvWindows(any(), excludeSessionId = null) } returns null
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns null
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns 60f
 
             val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 8)))
@@ -335,10 +335,10 @@ class BackfillBaselinesUseCaseTest {
     @Test
     fun `computeHistoricalBaselines skips row when muHistory is empty`() =
         runTest {
-            coEvery { baselineComputer.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(emptyList(), emptyList())
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns 60f
 
             val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 5)))
@@ -349,10 +349,10 @@ class BackfillBaselinesUseCaseTest {
     @Test
     fun `computeHistoricalBaselines processes single-day dataset`() =
         runTest {
-            coEvery { baselineComputer.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(listOf(55f), listOf(55f))
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns 63f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
@@ -367,10 +367,10 @@ class BackfillBaselinesUseCaseTest {
         runTest {
             val summaries = (1..30).map { makeSummary(daysAgo = it.toLong()) }
 
-            coEvery { baselineComputer.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(listOf(50f, 52f), listOf(50f, 52f))
             coEvery {
-                baselineComputer.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any())
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns 60f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
@@ -615,8 +615,8 @@ class BackfillBaselinesUseCaseTest {
 
             val (bc, ls, compute) = buildComputeUseCase()
             val windows = hrvWindows(listOf(50f), listOf(50f))
-            coEvery { bc.computeHrvWindows(any(), excludeSessionId = null) } returns windows
-            coEvery { bc.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any()) } returns
+            coEvery { bc.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns windows
+            coEvery { bc.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any()) } returns
                 60f
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
@@ -653,9 +653,9 @@ class BackfillBaselinesUseCaseTest {
             coEvery { dao.getAllSummaries() } returns listOf(summary)
 
             val (bc, ls, compute) = buildComputeUseCase()
-            coEvery { bc.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { bc.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(listOf(48f), listOf(48f))
-            coEvery { bc.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any()) } returns
+            coEvery { bc.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any()) } returns
                 60f
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
@@ -681,9 +681,9 @@ class BackfillBaselinesUseCaseTest {
             coEvery { dao.getAllSummaries() } returns listOf(oldRow, newRow)
 
             val (bc, ls, compute) = buildComputeUseCase()
-            coEvery { bc.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { bc.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(listOf(52f), listOf(52f))
-            coEvery { bc.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any()) } returns
+            coEvery { bc.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any()) } returns
                 61f
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
@@ -701,9 +701,9 @@ class BackfillBaselinesUseCaseTest {
             coEvery { dao.getAllSummaries() } returns listOf(summary)
 
             val (bc, ls, compute) = buildComputeUseCase()
-            coEvery { bc.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { bc.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(listOf(50f), listOf(50f))
-            coEvery { bc.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any()) } returns
+            coEvery { bc.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any()) } returns
                 60f
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
@@ -743,9 +743,9 @@ class BackfillBaselinesUseCaseTest {
             val ls = mockk<LoadScoringStrategy>()
             val compute = ComputeHistoricalBaselinesUseCase(bc, ls)
 
-            coEvery { bc.computeHrvWindows(any(), excludeSessionId = null) } returns
+            coEvery { bc.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(listOf(50f), listOf(50f))
-            coEvery { bc.computeAdaptiveBaselineRhrBpm(any(), rhrBaselineOverride = null, percentile = any()) } returns
+            coEvery { bc.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any()) } returns
                 60f
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
