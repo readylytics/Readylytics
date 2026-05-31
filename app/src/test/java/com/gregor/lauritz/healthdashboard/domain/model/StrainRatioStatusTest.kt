@@ -106,10 +106,15 @@ class StrainRatioStatusTest {
         assertEquals(MetricStatus.POOR, 0.0f.strainRatioStatus())
     }
 
-    // ── Edge Cases ──────────────────────────────────────────────────────
+    // ── Edge Cases (Invalid/Negative Values) ────────────────────────────
     @Test
     fun `negative strain ratio returns CALIBRATING`() {
         assertEquals(MetricStatus.CALIBRATING, (-0.5f).strainRatioStatus())
+    }
+
+    @Test
+    fun `negative one returns CALIBRATING`() {
+        assertEquals(MetricStatus.CALIBRATING, (-1.0f).strainRatioStatus())
     }
 
     @Test

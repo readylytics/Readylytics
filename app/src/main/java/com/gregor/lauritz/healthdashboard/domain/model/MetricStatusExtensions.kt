@@ -143,6 +143,7 @@ fun bodyFatStatus(
 
 fun Float.strainRatioStatus(): MetricStatus =
     when {
+        this < 0.0f -> MetricStatus.CALIBRATING
         this in 0.8f..1.3f -> MetricStatus.OPTIMAL
         this in 1.3f..1.5f -> MetricStatus.NEUTRAL
         this in 1.5f..2.0f -> MetricStatus.WARNING
