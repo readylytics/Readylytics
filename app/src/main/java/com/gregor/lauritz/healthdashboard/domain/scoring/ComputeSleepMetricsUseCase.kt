@@ -143,6 +143,9 @@ class ComputeSleepMetricsUseCase
                 val baselineRhrValue =
                     if (frozenBaseline && frozenRhr != null) {
                         frozenRhr.toInt()
+                    } else if (frozenBaseline && frozenRhr == null) {
+                        // Frozen baseline but stored RHR is null — use override or default
+                        (prefs.rhrBaselineOverride ?: ScoringConstants.DEFAULT_RHR_BPM).toInt()
                     } else {
                         baselineComputer.resolveBaselineRhrRounded(rhrValues, prefs.rhrBaselineOverride)
                     }
