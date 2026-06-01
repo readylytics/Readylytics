@@ -80,8 +80,12 @@ fun WeightDetailScreen(
                     val kgToLbs = 2.20462
                     bands.map { band ->
                         band.copy(
-                            lowerBound = if (band.lowerBound == Double.NEGATIVE_INFINITY) Double.NEGATIVE_INFINITY else band.lowerBound * kgToLbs,
-                            upperBound = if (band.upperBound == Double.POSITIVE_INFINITY) Double.POSITIVE_INFINITY else band.upperBound * kgToLbs,
+                            lowerBound =
+                                if (band.lowerBound == Double.NEGATIVE_INFINITY) Double.NEGATIVE_INFINITY
+                                else band.lowerBound * kgToLbs,
+                            upperBound =
+                                if (band.upperBound == Double.POSITIVE_INFINITY) Double.POSITIVE_INFINITY
+                                else band.upperBound * kgToLbs,
                         )
                     }
                 } else {

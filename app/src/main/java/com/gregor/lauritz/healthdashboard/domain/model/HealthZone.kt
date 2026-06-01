@@ -57,8 +57,12 @@ fun weightZoneBands(heightCm: Float): List<ZoneBand> {
     val hSq = h * h
     return bmiZoneBands().map { band ->
         ZoneBand(
-            lowerBound = if (band.lowerBound == Double.NEGATIVE_INFINITY) Double.NEGATIVE_INFINITY else band.lowerBound * hSq,
-            upperBound = if (band.upperBound == Double.POSITIVE_INFINITY) Double.POSITIVE_INFINITY else band.upperBound * hSq,
+            lowerBound =
+                if (band.lowerBound == Double.NEGATIVE_INFINITY) Double.NEGATIVE_INFINITY
+                else band.lowerBound * hSq,
+            upperBound =
+                if (band.upperBound == Double.POSITIVE_INFINITY) Double.POSITIVE_INFINITY
+                else band.upperBound * hSq,
             zone = band.zone,
         )
     }
