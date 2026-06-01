@@ -151,18 +151,6 @@ internal class PhysiologyPreferences
             }
         }
 
-        suspend fun updateRestingHrBeforeMinutes(minutes: Int) {
-            dataStore.updateData {
-                it.toBuilder().setRestingHrBeforeMinutes(minutes.toValidRestMinutes()).build()
-            }
-        }
-
-        suspend fun updateRestingHrAfterMinutes(minutes: Int) {
-            dataStore.updateData {
-                it.toBuilder().setRestingHrAfterMinutes(minutes.toValidRestMinutes()).build()
-            }
-        }
-
         suspend fun updateRestingHrPercentile(percentile: Int) {
             dataStore.updateData {
                 it.toBuilder().setRestingHrPercentile(percentile.toValidRestingHrPercentile()).build()

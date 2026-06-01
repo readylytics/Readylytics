@@ -380,8 +380,6 @@ class LocalBackupManager
                     hrvWarningThreshold = prefs.hrvWarningThreshold,
                     rhrOptimalThreshold = prefs.rhrOptimalThreshold,
                     rhrWarningThreshold = prefs.rhrWarningThreshold,
-                    restingHrBeforeMinutes = prefs.restingHrBeforeMinutes,
-                    restingHrAfterMinutes = prefs.restingHrAfterMinutes,
                     appTheme = prefs.appTheme.name,
                     driveAccountEmail = prefs.driveAccountEmail,
                     backupSchedule = prefs.backupSchedule.name,

@@ -1,11 +1,14 @@
 package com.gregor.lauritz.healthdashboard.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.gregor.lauritz.healthdashboard.domain.model.ReadinessResult
+import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
+import java.time.LocalDate
 
 @Serializable
 @Entity(
@@ -56,4 +59,16 @@ data class DailySummaryEntity(
     val bodyFatPercent: Float? = null,
     val bloodPressureSystolic: Int? = null,
     val bloodPressureDiastolic: Int? = null,
+    // Point-in-time baseline snapshots (Task B)
+    @ColumnInfo(name = "hrv_mu_mssd")
+    val hrvMuMssd: Float? = null,
+    @ColumnInfo(name = "hrv_sigma_mssd")
+    val hrvSigmaMssd: Float? = null,
+    @ColumnInfo(name = "rhr_bpm")
+    val rhrBpm: Float? = null,
+    @ColumnInfo(name = "baseline_calculated_at_date")
+    @Contextual
+    val baselineCalculatedAtDate: LocalDate? = null,
+    @ColumnInfo(name = "baseline_version")
+    val baselineVersion: Int? = 1,
 )

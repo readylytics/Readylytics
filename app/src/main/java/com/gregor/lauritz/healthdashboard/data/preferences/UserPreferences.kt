@@ -34,8 +34,6 @@ data class UserPreferences(
     val hrvWarningThreshold: Float = SettingsDefaults.HRV_WARNING_THRESHOLD,
     val rhrOptimalThreshold: Float = SettingsDefaults.RHR_OPTIMAL_THRESHOLD,
     val rhrWarningThreshold: Float = SettingsDefaults.RHR_WARNING_THRESHOLD,
-    val restingHrBeforeMinutes: Int = SettingsDefaults.RESTING_HR_BEFORE_MINUTES,
-    val restingHrAfterMinutes: Int = SettingsDefaults.RESTING_HR_AFTER_MINUTES,
     val restingHrPercentile: Int = SettingsDefaults.RESTING_HR_PERCENTILE,
     val appTheme: AppTheme = SettingsDefaults.APP_THEME,
     val driveAccountEmail: String? = SettingsDefaults.DRIVE_ACCOUNT_EMAIL,
@@ -65,6 +63,11 @@ data class UserPreferences(
     val itrimB: Float = PhysiologyProfile.GENERAL.defaultItrimB,
     val primaryDeviceName: String? = null,
     val backupDirectoryUri: String? = null,
+    /**
+     * Stored Base64-encoded AES-256-GCM ciphertext of the backup password (encrypted via Google Tink).
+     * NOTE: Named "backupPasswordHash" for database/Proto schema backwards compatibility,
+     * but stores decryptable ciphertext required by background backup workers.
+     */
     val backupPasswordHash: String? = null,
     val isBirthdayConfigured: Boolean = SettingsDefaults.IS_BIRTHDAY_CONFIGURED,
     val unitSystem: UnitSystem = SettingsDefaults.UNIT_SYSTEM,
@@ -102,8 +105,6 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         hrvWarningThreshold = hrvWarningThreshold,
         rhrOptimalThreshold = rhrOptimalThreshold,
         rhrWarningThreshold = rhrWarningThreshold,
-        restingHrBeforeMinutes = restingHrBeforeMinutes,
-        restingHrAfterMinutes = restingHrAfterMinutes,
         restingHrPercentile =
             if (restingHrPercentile ==
                 0

@@ -24,9 +24,6 @@ object SettingsValidators {
     // Height in centimeters (120–250)
     val HEIGHT_CM_RULE = FloatRangeRule(120f, 250f, "Height: 120–250 cm")
 
-    // Resting HR minutes (before/after sleep)
-    val RESTING_HR_MINUTES_RULE = RestingHrMinutesRule()
-
     // Resting HR percentile (1–15)
     val RESTING_HR_PERCENTILE_RULE = IntRangeRule(1, 15, "Percentile: 1–15")
 

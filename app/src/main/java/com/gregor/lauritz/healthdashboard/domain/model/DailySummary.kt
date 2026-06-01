@@ -33,4 +33,9 @@ data class DailySummary(
     val bodyFatPercent: Float? = null,
     val bloodPressureSystolic: Int? = null,
     val bloodPressureDiastolic: Int? = null,
+    val hrvMuMssd: Float? = null,
+    val hrvSigmaMssd: Float? = null,
+    val rhrBpm: Float? = null,
+    val baselineCalculatedAtDate: LocalDate? = null,
+    val baselineVersion: Int? = null,
 )

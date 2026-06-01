@@ -31,11 +31,11 @@ class RhrBaselineProviderTest {
     fun getRhrBaseline_with_sufficient_data_returns_calculated() =
         runTest {
             val calculatedRhr = 62f
-            val rhrValues = listOf(60, 62, 64, 61, 63)
+            val rhrValues = listOf(60, 62, 64, 61, 63, 62, 61)
             val dayMidnight = Instant.now()
             val prefs = UserPreferences(rhrBaselineOverride = null)
             coEvery { settingsRepository.userPreferences } returns flowOf(prefs)
-            coEvery { baselineComputer.rhrHistory(dayMidnight) } returns rhrValues
+            coEvery { baselineComputer.rhrHistory(dayMidnight, any()) } returns rhrValues
             coEvery { baselineComputer.resolveBaselineRhrBpm(rhrValues, null) } returns calculatedRhr
             val baseline = provider.getRhrBaseline(dayMidnight)
             assertEquals(calculatedRhr, baseline)
@@ -48,7 +48,7 @@ class RhrBaselineProviderTest {
             val dayMidnight = Instant.now()
             val prefs = UserPreferences(rhrBaselineOverride = null)
             coEvery { settingsRepository.userPreferences } returns flowOf(prefs)
-            coEvery { baselineComputer.rhrHistory(dayMidnight) } returns emptyRhrValues
+            coEvery { baselineComputer.rhrHistory(dayMidnight, any()) } returns emptyRhrValues
             val baseline = provider.getRhrBaseline(dayMidnight)
             assertEquals(PhysiologyConstants.DEFAULT_RHR_BPM.toFloat(), baseline)
         }
@@ -59,7 +59,7 @@ class RhrBaselineProviderTest {
             val dayMidnight = Instant.now()
             val prefs = UserPreferences(rhrBaselineOverride = null)
             coEvery { settingsRepository.userPreferences } returns flowOf(prefs)
-            coEvery { baselineComputer.rhrHistory(dayMidnight) } returns emptyList()
+            coEvery { baselineComputer.rhrHistory(dayMidnight, any()) } returns emptyList()
             val baseline = provider.getRhrBaseline(dayMidnight)
             assertEquals(PhysiologyConstants.DEFAULT_RHR_BPM.toFloat(), baseline)
         }

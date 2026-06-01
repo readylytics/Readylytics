@@ -64,7 +64,18 @@ class CompositeScoringCalculator
             sigmaHistory: List<Float>,
             sigmaPrior: Float,
             baselineOverride: Float?,
-        ): Float? = loadStrategy.computeHrvZScore(currentRmssdMs, muHistory, sigmaHistory, sigmaPrior, baselineOverride)
+            frozenLnMu: Float?,
+            frozenLnSigma: Float?,
+        ): Float? =
+            loadStrategy.computeHrvZScore(
+                currentRmssdMs,
+                muHistory,
+                sigmaHistory,
+                sigmaPrior,
+                baselineOverride,
+                frozenLnMu,
+                frozenLnSigma,
+            )
 
         override fun computeHrvScore(z: Float): Float = loadStrategy.computeHrvScore(z)
 
@@ -84,6 +95,8 @@ class CompositeScoringCalculator
             rhrBaselineOverride: Float?,
             hrvBaselineOverride: Float?,
             restorationWeights: RestorationWeights?,
+            frozenLnMu: Float?,
+            frozenLnSigma: Float?,
         ): Float =
             sleepStrategy.computeRestorationSubScore(
                 currentHrvMean,
@@ -95,6 +108,8 @@ class CompositeScoringCalculator
                 rhrBaselineOverride,
                 hrvBaselineOverride,
                 restorationWeights,
+                frozenLnMu,
+                frozenLnSigma,
             )
 
         override fun computeSleepScore(

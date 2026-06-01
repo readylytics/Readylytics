@@ -281,7 +281,20 @@ class LocalRestoreManager
                     sb.append("]")
                 }
                 JsonToken.STRING -> {
-                    sb.append(json.encodeToString(reader.nextString()))
+                    val s = reader.nextString()
+                    sb.append("\"")
+                    for (i in 0 until s.length) {
+                        val c = s[i]
+                        when (c) {
+                            '\\' -> sb.append("\\\\")
+                            '"' -> sb.append("\\\"")
+                            '\n' -> sb.append("\\n")
+                            '\r' -> sb.append("\\r")
+                            '\t' -> sb.append("\\t")
+                            else -> sb.append(c)
+                        }
+                    }
+                    sb.append("\"")
                 }
                 JsonToken.NUMBER -> {
                     sb.append(reader.nextString())

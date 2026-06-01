@@ -91,14 +91,6 @@ sealed interface SettingsEvent {
         val value: Float,
     ) : SettingsEvent
 
-    data class RestingHrBeforeMinutesChanged(
-        val minutes: Int,
-    ) : SettingsEvent
-
-    data class RestingHrAfterMinutesChanged(
-        val minutes: Int,
-    ) : SettingsEvent
-
     data class RestingHrPercentileChanged(
         val percentile: Int,
     ) : SettingsEvent
