@@ -71,21 +71,14 @@ class HrvDetailViewModel
                         dailySummaryRepository.observeSince(fromMs),
                         settingsRepo.userPreferences,
                     ) { latest, history, prefs ->
+                        val systemZone = ZoneId.systemDefault()
+                        val startLocalDate = Instant.ofEpochMilli(startDayMs).atZone(systemZone).toLocalDate()
                         val points =
                             history
-                                .filter { it.nocturnalHrv != null }
-                                .map { summary ->
-                                    val d = summary.date
-                                    val dayOffset =
-                                        ChronoUnit.DAYS
-                                            .between(
-                                                Instant
-                                                    .ofEpochMilli(startDayMs)
-                                                    .atZone(ZoneId.systemDefault())
-                                                    .toLocalDate(),
-                                                d,
-                                            ).toInt()
-                                    DailyDataPoint(dayOffset, summary.nocturnalHrv!!.toFloat())
+                                .mapNotNull { summary ->
+                                    val hrv = summary.nocturnalHrv ?: return@mapNotNull null
+                                    val dayOffset = ChronoUnit.DAYS.between(startLocalDate, summary.date).toInt()
+                                    DailyDataPoint(dayOffset, hrv.toFloat())
                                 }.sortedBy { it.dayOffset }
                                 .padToRange(range.days)
 
