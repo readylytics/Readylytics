@@ -318,7 +318,7 @@ fun buildCardDataMap(
                 val spo2Card = uiState.cardDataMap[CardId.OXYGEN_SATURATION]
                 if (spo2Card != null) {
                     val spo2Value =
-                        if (spo2Card.value == "—") spo2Card.value else "${spo2Card.value} %"
+                        if (spo2Card.value == "—") spo2Card.value else "${spo2Card.value}%"
                     MetricCard(
                         title = spo2Card.title,
                         value = spo2Value,

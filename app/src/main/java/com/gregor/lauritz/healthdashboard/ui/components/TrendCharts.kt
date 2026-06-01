@@ -132,7 +132,15 @@ fun TrendChart(
         rememberVicoZoomState(
             zoomEnabled = rangeDays > 7,
             initialZoom = Zoom.Content,
-            minZoom = Zoom.fixed(0.01f),
+            minZoom =
+                remember(rangeDays) {
+                    when (rangeDays) {
+                        30 -> Zoom.fixed(0.85f)
+                        180 -> Zoom.fixed(0.13f)
+                        90 -> Zoom.fixed(0.4f)
+                        else -> Zoom.fixed(1f)
+                    }
+                },
             maxZoom =
                 remember(rangeDays) {
                     when (rangeDays) {
@@ -292,15 +300,18 @@ fun TrendChart(
                         val leftAxisPx = 50.dp.toPx()
                         val rightPadPx = 8.dp.toPx()
                         val drawableWidth = (containerWidthPx - leftAxisPx - rightPadPx).coerceAtLeast(1f)
-                        val approxDay =
-                            ((offset.x - leftAxisPx) / drawableWidth * (rangeDays - 1))
-                                .roundToInt()
-                                .coerceIn(0, rangeDays - 1)
+                        val chartHeightPx = 180.dp.toPx()
+                        val validPoints = points.filter { it.value != null }
                         val nearest =
-                            points
-                                .filter { it.value != null }
-                                .minByOrNull { kotlin.math.abs(it.dayOffset - approxDay) }
-                                ?: return@detectTapGestures
+                            validPoints.minByOrNull { point ->
+                                val pointXpx =
+                                    leftAxisPx + (point.dayOffset.toFloat() / (rangeDays - 1)) * drawableWidth
+                                val yNorm = ((maxY - point.value!!) / (maxY - minY)).toFloat()
+                                val pointYpx = yNorm * chartHeightPx
+                                val dx = offset.x - pointXpx
+                                val dy = offset.y - pointYpx
+                                kotlin.math.sqrt(dx * dx + dy * dy)
+                            } ?: return@detectTapGestures
                         val date = ChartUtils.dayOffsetToLocalDate(nearest.dayOffset, rangeStartMs)
                         val dateText = ChartUtils.formatTooltipDate(date)
                         val valueText =
@@ -452,7 +463,15 @@ fun BloodPressureTrendChart(
         rememberVicoZoomState(
             zoomEnabled = rangeDays > 7,
             initialZoom = Zoom.Content,
-            minZoom = Zoom.fixed(0.01f),
+            minZoom =
+                remember(rangeDays) {
+                    when (rangeDays) {
+                        30 -> Zoom.fixed(0.85f)
+                        180 -> Zoom.fixed(0.13f)
+                        90 -> Zoom.fixed(0.4f)
+                        else -> Zoom.fixed(1f)
+                    }
+                },
             maxZoom =
                 remember(rangeDays) {
                     when (rangeDays) {
@@ -619,19 +638,31 @@ fun BloodPressureTrendChart(
                         val leftAxisPx = 50.dp.toPx()
                         val rightPadPx = 8.dp.toPx()
                         val drawableWidth = (containerWidthPx - leftAxisPx - rightPadPx).coerceAtLeast(1f)
-                        val approxDay =
-                            ((offset.x - leftAxisPx) / drawableWidth * (rangeDays - 1))
-                                .roundToInt()
-                                .coerceIn(0, rangeDays - 1)
+                        val chartHeightPx = 180.dp.toPx()
+                        val validSystolic = systolicPoints.filter { it.value != null }
+                        val validDiastolic = diastolicPoints.filter { it.value != null }
                         val sysNearest =
-                            systolicPoints
-                                .filter { it.value != null }
-                                .minByOrNull { kotlin.math.abs(it.dayOffset - approxDay) }
-                                ?: return@detectTapGestures
+                            validSystolic.minByOrNull { point ->
+                                val pointXpx =
+                                    leftAxisPx +
+                                        (point.dayOffset.toFloat() / (rangeDays - 1)) * drawableWidth
+                                val yNorm = ((maxY - point.value!!) / (maxY - minY)).toFloat()
+                                val pointYpx = yNorm * chartHeightPx
+                                val dx = offset.x - pointXpx
+                                val dy = offset.y - pointYpx
+                                kotlin.math.sqrt(dx * dx + dy * dy)
+                            } ?: return@detectTapGestures
                         val diaNearest =
-                            diastolicPoints
-                                .filter { it.value != null }
-                                .minByOrNull { kotlin.math.abs(it.dayOffset - approxDay) }
+                            validDiastolic.minByOrNull { point ->
+                                val pointXpx =
+                                    leftAxisPx +
+                                        (point.dayOffset.toFloat() / (rangeDays - 1)) * drawableWidth
+                                val yNorm = ((maxY - point.value!!) / (maxY - minY)).toFloat()
+                                val pointYpx = yNorm * chartHeightPx
+                                val dx = offset.x - pointXpx
+                                val dy = offset.y - pointYpx
+                                kotlin.math.sqrt(dx * dx + dy * dy)
+                            }
                         val date = ChartUtils.dayOffsetToLocalDate(sysNearest.dayOffset, rangeStartMs)
                         val dateText = ChartUtils.formatTooltipDate(date)
                         val valueText =
