@@ -133,14 +133,7 @@ class VitalsViewModel
                                 .observeSince(todayMs)
                                 .map { it.firstOrNull() }
                         } else {
-                            flow {
-                                emit(
-                                    dailySummaryRepository
-                                        .getByDate(
-                                            selectedMidnightMs,
-                                        ),
-                                )
-                            }
+                            dailySummaryRepository.observeByDate(selectedMidnightMs)
                         }
 
                     combine(
