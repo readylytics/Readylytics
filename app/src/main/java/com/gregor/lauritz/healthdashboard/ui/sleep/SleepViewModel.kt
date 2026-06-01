@@ -12,7 +12,9 @@ import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
+import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
+import com.gregor.lauritz.healthdashboard.domain.util.toMidnightEpochMilli
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -90,54 +92,23 @@ class SleepViewModel
         val baselinesFlow =
             selectedDateRepository.selectedDate
                 .flatMapLatest { date ->
+                    val selectedMidnightMs = date.toMidnightEpochMilli()
                     combine(
-                        heartRateRepository
-                            .observeSleepHrvSince(TimeRange.THIRTY_DAYS.fromMs(date))
-                            .map { records ->
-                                if (records.isEmpty()) {
-                                    null
-                                } else {
-                                    val values =
-                                        records
-                                            .map { it.rmssdMs }
-                                            .sorted()
-                                    val mid = values.size / 2
-                                    if (values.size % 2 == 0) {
-                                        (values[mid - 1] + values[mid]) / 2f
-                                    } else {
-                                        values[mid]
-                                    }
-                                }
-                            },
-                        heartRateRepository
-                            .observeSleepHrSince(TimeRange.THIRTY_DAYS.fromMs(date))
-                            .map { records ->
-                                if (records.isEmpty()) {
-                                    null
-                                } else {
-                                    val sessionAvgs =
-                                        records
-                                            .groupBy { it.sessionId }
-                                            .values
-                                            .map { sess ->
-                                                sess
-                                                    .map { it.beatsPerMinute }
-                                                    .average()
-                                                    .toFloat()
-                                            }
-                                    val sorted = sessionAvgs.sorted()
-                                    val mid = sorted.size / 2
-                                    val median =
-                                        if (sorted.size % 2 == 0) {
-                                            (sorted[mid - 1] + sorted[mid]) / 2f
-                                        } else {
-                                            sorted[mid]
-                                        }
-                                    median.toInt()
-                                }
-                            },
-                    ) { hrv, rhr ->
-                        Baselines(hrv, rhr)
+                        dailySummaryRepository.observeByDate(selectedMidnightMs),
+                        settingsRepo.userPreferences,
+                    ) { latestSummary, prefs ->
+                        val hrvBaseline = latestSummary?.hrvBaseline?.toFloat()
+                            ?: prefs.hrvBaselineOverride
+
+                        val ratio = latestSummary?.rhrRatio
+                        val rhr = latestSummary?.nocturnalRhr
+                        val rhrBaseline = if (ratio != null && ratio > 0f && rhr != null) {
+                            (rhr / ratio).toInt()
+                        } else {
+                            latestSummary?.restingHrBaseline ?: prefs.rhrBaselineOverride?.toInt() ?: ScoringConstants.DEFAULT_RHR_BPM.toInt()
+                        }
+
+                        Baselines(hrvBaseline, rhrBaseline)
                     }
                 }.stateIn(
                     scope = viewModelScope,
