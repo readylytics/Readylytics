@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.strainRatioStatus
 import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
 
 @Composable
@@ -47,3 +48,9 @@ fun MetricStatus.contentColor(): Color =
         MetricStatus.WARNING -> LocalExtendedColors.current.warning
         MetricStatus.POOR -> MaterialTheme.colorScheme.errorContainer
     }
+
+@Composable
+fun Float?.strainRatioGaugeColor(): Color {
+    val status = this?.strainRatioStatus() ?: MetricStatus.CALIBRATING
+    return status.gaugeColor()
+}
