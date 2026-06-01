@@ -93,18 +93,24 @@ class RestingHrDetailViewModel
                                 }.sortedBy { it.dayOffset }
                                 .padToRange(range.days)
 
+                        val baselineVal = latest?.restingHrBaseline?.toFloat() ?: prefs.rhrBaselineOverride
+                        val bands =
+                            baselineVal?.let { baseline ->
+                                rhrZoneBands(
+                                    optimalMax = prefs.rhrOptimalThreshold * baseline,
+                                    neutralMax = prefs.rhrWarningThreshold * baseline,
+                                    warningMax = prefs.rhrWarningThreshold * RHR_CRITICAL_MULTIPLIER * baseline,
+                                )
+                            }
+
                         RestingHrDetailUiState(
                             latestSummary = latest,
                             dailyRhr = points,
-                            rhrBaseline = latest?.restingHrBaseline?.toFloat(),
+                            rhrBaseline = baselineVal,
                             rhrStatus = latest?.restingHrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold),
                             selectedRange = range,
                             rangeStartMs = startDayMs,
-                            rhrZoneBands = rhrZoneBands(
-                                optimalMax = prefs.rhrOptimalThreshold,
-                                neutralMax = prefs.rhrWarningThreshold,
-                                warningMax = prefs.rhrWarningThreshold * RHR_CRITICAL_MULTIPLIER,
-                            ),
+                            rhrZoneBands = bands,
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(

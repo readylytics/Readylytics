@@ -29,8 +29,8 @@ import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.HealthZone
 import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
-import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
+import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -219,14 +219,15 @@ fun TrendChart(
         )
 
     val extendedColors = LocalExtendedColors.current
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val errorContainer = MaterialTheme.colorScheme.errorContainer
     val zoneBandDecoration =
-        remember(zoneBands, extendedColors, errorContainer, minY, maxY) {
+        remember(zoneBands, extendedColors, primaryContainer, errorContainer, minY, maxY) {
             zoneBands?.let { bands ->
                 val colors =
                     bands.map { band ->
                         when (band.zone) {
-                            HealthZone.OPTIMAL -> extendedColors.successContainer.copy(alpha = 0.30f)
+                            HealthZone.OPTIMAL -> primaryContainer.copy(alpha = 0.30f)
                             HealthZone.NEUTRAL -> extendedColors.neutralContainer.copy(alpha = 0.20f)
                             HealthZone.WARNING -> extendedColors.warningContainer.copy(alpha = 0.30f)
                             HealthZone.CRITICAL -> errorContainer.copy(alpha = 0.30f)

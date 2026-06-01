@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
+import com.gregor.lauritz.healthdashboard.domain.model.hrvZoneBands
+import com.gregor.lauritz.healthdashboard.domain.model.rhrZoneBands
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
@@ -56,6 +59,8 @@ data class SleepUiState(
     val goalSleepMinutes: Int = 480,
     val rangeStartMs: Long = System.currentTimeMillis(),
     val isLoading: Boolean = false,
+    val hrvZoneBands: List<ZoneBand>? = null,
+    val rhrZoneBands: List<ZoneBand>? = null,
 )
 
 private data class SleepData(
@@ -222,18 +227,41 @@ class SleepViewModel
                                 }.sortedBy { it.dayOffset }
                                 .padToRange(range.days)
 
+                        val baselineHrv = bHrv ?: calculateMedian(hrvPoints)
+                        val baselineRhr = bRhr?.toFloat() ?: calculateMedian(rhrPoints)
+
+                        val hrvBands =
+                            baselineHrv?.let { baseline ->
+                                hrvZoneBands(
+                                    optimalMin = prefs.hrvOptimalThreshold * baseline,
+                                    neutralMin = prefs.hrvWarningThreshold * baseline,
+                                    warningMin = (2f * prefs.hrvWarningThreshold - 1f) * baseline,
+                                )
+                            }
+
+                        val rhrBands =
+                            baselineRhr?.let { baseline ->
+                                rhrZoneBands(
+                                    optimalMax = prefs.rhrOptimalThreshold * baseline,
+                                    neutralMax = prefs.rhrWarningThreshold * baseline,
+                                    warningMax = prefs.rhrWarningThreshold * 1.3f * baseline,
+                                )
+                            }
+
                         SleepUiState(
                             latestSummary = latestSummary,
                             latestSession = latestSession,
                             dailyHrv = hrvPoints,
                             dailyRhr = rhrPoints,
-                            hrvBaseline = bHrv ?: calculateMedian(hrvPoints),
-                            rhrBaseline = bRhr?.toFloat() ?: calculateMedian(rhrPoints),
+                            hrvBaseline = baselineHrv,
+                            rhrBaseline = baselineRhr,
                             goalSleepMinutes = (prefs.goalSleepHours * 60).toInt(),
                             selectedRange = range,
                             selectedDate = date,
                             rangeStartMs = startDayMs,
                             isLoading = isSyncing,
+                            hrvZoneBands = hrvBands,
+                            rhrZoneBands = rhrBands,
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(

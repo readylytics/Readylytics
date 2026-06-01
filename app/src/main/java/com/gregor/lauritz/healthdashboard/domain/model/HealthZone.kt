@@ -57,8 +57,22 @@ fun weightZoneBands(heightCm: Float): List<ZoneBand> {
     val hSq = h * h
     return bmiZoneBands().map { band ->
         ZoneBand(
-            lowerBound = if (band.lowerBound == Double.NEGATIVE_INFINITY) Double.NEGATIVE_INFINITY else band.lowerBound * hSq,
-            upperBound = if (band.upperBound == Double.POSITIVE_INFINITY) Double.POSITIVE_INFINITY else band.upperBound * hSq,
+            lowerBound =
+                if (band.lowerBound ==
+                    Double.NEGATIVE_INFINITY
+                ) {
+                    Double.NEGATIVE_INFINITY
+                } else {
+                    band.lowerBound * hSq
+                },
+            upperBound =
+                if (band.upperBound ==
+                    Double.POSITIVE_INFINITY
+                ) {
+                    Double.POSITIVE_INFINITY
+                } else {
+                    band.upperBound * hSq
+                },
             zone = band.zone,
         )
     }
@@ -120,3 +134,16 @@ fun bodyFatZoneBands(
         ZoneBand(warnMax, Double.POSITIVE_INFINITY, HealthZone.CRITICAL),
     )
 }
+
+// HRV — higher is better: above optimalMin=OPTIMAL, down to neutralMin=NEUTRAL, down to warningMin=WARNING, below=CRITICAL
+fun hrvZoneBands(
+    optimalMin: Float,
+    neutralMin: Float,
+    warningMin: Float,
+): List<ZoneBand> =
+    listOf(
+        ZoneBand(Double.NEGATIVE_INFINITY, warningMin.toDouble(), HealthZone.CRITICAL),
+        ZoneBand(warningMin.toDouble(), neutralMin.toDouble(), HealthZone.WARNING),
+        ZoneBand(neutralMin.toDouble(), optimalMin.toDouble(), HealthZone.NEUTRAL),
+        ZoneBand(optimalMin.toDouble(), Double.POSITIVE_INFINITY, HealthZone.OPTIMAL),
+    )
