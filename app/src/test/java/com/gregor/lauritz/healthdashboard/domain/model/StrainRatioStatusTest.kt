@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 
 class StrainRatioStatusTest {
 
-    // ── Optimal Range: 0.8–1.3 ─────────────────────────────────────────
+    // Optimal Range: 0.8–1.3
     @Test
     fun `strain ratio 0.8 returns OPTIMAL`() {
         assertEquals(MetricStatus.OPTIMAL, 0.8f.strainRatioStatus())
@@ -26,7 +26,7 @@ class StrainRatioStatusTest {
         assertEquals(MetricStatus.OPTIMAL, 1.3f.strainRatioStatus())
     }
 
-    // ── Neutral Range: 1.3–1.5 ─────────────────────────────────────────
+    // Neutral Range: 1.3–1.5
     @Test
     fun `strain ratio 1.31 returns NEUTRAL`() {
         assertEquals(MetricStatus.NEUTRAL, 1.31f.strainRatioStatus())
@@ -42,7 +42,7 @@ class StrainRatioStatusTest {
         assertEquals(MetricStatus.NEUTRAL, 1.5f.strainRatioStatus())
     }
 
-    // ── Warning Range (Overtraining): 1.5–2.0 ──────────────────────────
+    // Warning Range (Overtraining): 1.5–2.0
     @Test
     fun `strain ratio 1.51 returns WARNING`() {
         assertEquals(MetricStatus.WARNING, 1.51f.strainRatioStatus())
@@ -58,7 +58,7 @@ class StrainRatioStatusTest {
         assertEquals(MetricStatus.WARNING, 2.0f.strainRatioStatus())
     }
 
-    // ── Poor Range (Severe Overtraining): >2.0 ──────────────────────────
+    // Poor Range (Severe Overtraining): >2.0
     @Test
     fun `strain ratio 2.01 returns POOR`() {
         assertEquals(MetricStatus.POOR, 2.01f.strainRatioStatus())
@@ -74,7 +74,7 @@ class StrainRatioStatusTest {
         assertEquals(MetricStatus.POOR, 5.0f.strainRatioStatus())
     }
 
-    // ── Warning Range (Under-training): 0.5–0.8 ────────────────────────
+    // Warning Range (Under-training): 0.5–0.8
     @Test
     fun `strain ratio 0.5 returns WARNING`() {
         assertEquals(MetricStatus.WARNING, 0.5f.strainRatioStatus())
@@ -90,7 +90,7 @@ class StrainRatioStatusTest {
         assertEquals(MetricStatus.WARNING, 0.79f.strainRatioStatus())
     }
 
-    // ── Poor Range (Severe Under-training): <0.5 ───────────────────────
+    // Poor Range (Severe Under-training): <0.5
     @Test
     fun `strain ratio 0.49 returns POOR`() {
         assertEquals(MetricStatus.POOR, 0.49f.strainRatioStatus())
@@ -106,7 +106,7 @@ class StrainRatioStatusTest {
         assertEquals(MetricStatus.POOR, 0.0f.strainRatioStatus())
     }
 
-    // ── Edge Cases (Invalid/Negative Values) ────────────────────────────
+    // Edge Cases (Invalid/Negative Values)
     @Test
     fun `negative strain ratio returns CALIBRATING`() {
         assertEquals(MetricStatus.CALIBRATING, (-0.5f).strainRatioStatus())
