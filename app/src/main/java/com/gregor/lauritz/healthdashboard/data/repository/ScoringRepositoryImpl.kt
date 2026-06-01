@@ -179,7 +179,11 @@ class ScoringRepositoryImpl
                     if (session != null) {
                         val spo2Samples = oxygenSaturationRecordDao.getByTimeRange(session.startTime, session.endTime)
                         if (spo2Samples.isNotEmpty()) {
-                            spo2Samples.asSequence().map { it.percentage }.average().toFloat()
+                            spo2Samples
+                                .asSequence()
+                                .map { it.percentage }
+                                .average()
+                                .toFloat()
                         } else {
                             null
                         }

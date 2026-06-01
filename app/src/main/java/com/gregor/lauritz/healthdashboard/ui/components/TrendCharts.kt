@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -27,9 +26,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
@@ -287,36 +286,40 @@ fun TrendChart(
                             }
                         }
                     }
-                }
-                .pointerInput(containerWidthPx, points, rangeDays, minY, maxY) {
+                }.pointerInput(containerWidthPx, points, rangeDays, minY, maxY) {
                     detectTapGestures { offset ->
                         if (containerWidthPx <= 0f) return@detectTapGestures
                         val leftAxisPx = 50.dp.toPx()
                         val rightPadPx = 8.dp.toPx()
                         val drawableWidth = (containerWidthPx - leftAxisPx - rightPadPx).coerceAtLeast(1f)
-                        val approxDay = ((offset.x - leftAxisPx) / drawableWidth * (rangeDays - 1))
-                            .roundToInt().coerceIn(0, rangeDays - 1)
-                        val nearest = points
-                            .filter { it.value != null }
-                            .minByOrNull { kotlin.math.abs(it.dayOffset - approxDay) }
-                            ?: return@detectTapGestures
+                        val approxDay =
+                            ((offset.x - leftAxisPx) / drawableWidth * (rangeDays - 1))
+                                .roundToInt()
+                                .coerceIn(0, rangeDays - 1)
+                        val nearest =
+                            points
+                                .filter { it.value != null }
+                                .minByOrNull { kotlin.math.abs(it.dayOffset - approxDay) }
+                                ?: return@detectTapGestures
                         val date = ChartUtils.dayOffsetToLocalDate(nearest.dayOffset, rangeStartMs)
                         val dateText = ChartUtils.formatTooltipDate(date)
-                        val valueText = if (baselineUnit.equals("steps", ignoreCase = true)) {
-                            "${nearest.value!!.toInt()}"
-                        } else {
-                            "${nearest.value!!.toInt()} $baselineUnit"
-                        }
+                        val valueText =
+                            if (baselineUnit.equals("steps", ignoreCase = true)) {
+                                "${nearest.value!!.toInt()}"
+                            } else {
+                                "${nearest.value!!.toInt()} $baselineUnit"
+                            }
                         tapCanvasX = offset.x
                         tapDataY = nearest.value!!.toDouble()
                         tooltipState =
                             DataPointTooltipData(
                                 valueText = valueText,
                                 dateText = dateText,
-                                offset = androidx.compose.ui.unit.IntOffset(
-                                    offset.x.toInt(),
-                                    offset.y.toInt(),
-                                ),
+                                offset =
+                                    androidx.compose.ui.unit.IntOffset(
+                                        offset.x.toInt(),
+                                        offset.y.toInt(),
+                                    ),
                             )
                     }
                 },
@@ -610,39 +613,44 @@ fun BloodPressureTrendChart(
                             }
                         }
                     }
-                }
-                .pointerInput(containerWidthPx, systolicPoints, diastolicPoints, rangeDays, minY, maxY) {
+                }.pointerInput(containerWidthPx, systolicPoints, diastolicPoints, rangeDays, minY, maxY) {
                     detectTapGestures { offset ->
                         if (containerWidthPx <= 0f) return@detectTapGestures
                         val leftAxisPx = 50.dp.toPx()
                         val rightPadPx = 8.dp.toPx()
                         val drawableWidth = (containerWidthPx - leftAxisPx - rightPadPx).coerceAtLeast(1f)
-                        val approxDay = ((offset.x - leftAxisPx) / drawableWidth * (rangeDays - 1))
-                            .roundToInt().coerceIn(0, rangeDays - 1)
-                        val sysNearest = systolicPoints
-                            .filter { it.value != null }
-                            .minByOrNull { kotlin.math.abs(it.dayOffset - approxDay) }
-                            ?: return@detectTapGestures
-                        val diaNearest = diastolicPoints
-                            .filter { it.value != null }
-                            .minByOrNull { kotlin.math.abs(it.dayOffset - approxDay) }
+                        val approxDay =
+                            ((offset.x - leftAxisPx) / drawableWidth * (rangeDays - 1))
+                                .roundToInt()
+                                .coerceIn(0, rangeDays - 1)
+                        val sysNearest =
+                            systolicPoints
+                                .filter { it.value != null }
+                                .minByOrNull { kotlin.math.abs(it.dayOffset - approxDay) }
+                                ?: return@detectTapGestures
+                        val diaNearest =
+                            diastolicPoints
+                                .filter { it.value != null }
+                                .minByOrNull { kotlin.math.abs(it.dayOffset - approxDay) }
                         val date = ChartUtils.dayOffsetToLocalDate(sysNearest.dayOffset, rangeStartMs)
                         val dateText = ChartUtils.formatTooltipDate(date)
-                        val valueText = if (diaNearest != null) {
-                            "${sysNearest.value!!.toInt()}/${diaNearest.value!!.toInt()} mmHg"
-                        } else {
-                            "Sys: ${sysNearest.value!!.toInt()} mmHg"
-                        }
+                        val valueText =
+                            if (diaNearest != null) {
+                                "${sysNearest.value!!.toInt()}/${diaNearest.value!!.toInt()} mmHg"
+                            } else {
+                                "Sys: ${sysNearest.value!!.toInt()} mmHg"
+                            }
                         tapCanvasX = offset.x
                         tapDataY = sysNearest.value!!.toDouble()
                         tooltipState =
                             DataPointTooltipData(
                                 valueText = valueText,
                                 dateText = dateText,
-                                offset = androidx.compose.ui.unit.IntOffset(
-                                    offset.x.toInt(),
-                                    offset.y.toInt(),
-                                ),
+                                offset =
+                                    androidx.compose.ui.unit.IntOffset(
+                                        offset.x.toInt(),
+                                        offset.y.toInt(),
+                                    ),
                             )
                     }
                 },

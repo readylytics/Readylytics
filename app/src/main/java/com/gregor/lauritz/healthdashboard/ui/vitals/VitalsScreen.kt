@@ -131,9 +131,10 @@ fun VitalsScreen(
                     // physiological RHR minimum. Below baseline fills < 50%, above fills > 50%.
                     val rhrFill =
                         if (baselineRhr != null && baselineRhr > RHR_DIAL_FLOOR && currentRhr != null) {
-                            ((currentRhr - RHR_DIAL_FLOOR).toFloat() /
-                                (baselineRhr - RHR_DIAL_FLOOR) * RHR_BASELINE_FILL)
-                                .coerceIn(0f, 1f)
+                            (
+                                (currentRhr - RHR_DIAL_FLOOR).toFloat() /
+                                    (baselineRhr - RHR_DIAL_FLOOR) * RHR_BASELINE_FILL
+                            ).coerceIn(0f, 1f)
                         } else {
                             null
                         }
