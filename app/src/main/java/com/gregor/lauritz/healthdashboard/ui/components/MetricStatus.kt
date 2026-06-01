@@ -50,5 +50,7 @@ fun MetricStatus.contentColor(): Color =
     }
 
 @Composable
-fun Float?.strainRatioGaugeColor(): Color =
-    this?.strainRatioStatus()?.gaugeColor() ?: MetricStatus.CALIBRATING.gaugeColor()
+fun Float?.strainRatioGaugeColor(): Color {
+    val status = this?.strainRatioStatus() ?: MetricStatus.CALIBRATING
+    return status.gaugeColor()
+}

@@ -47,4 +47,3 @@ class StrainRatioStatusTest {
         assertEquals(MetricStatus.CALIBRATING, (-1.0f).strainRatioStatus())
     }
 }
-
