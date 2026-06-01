@@ -1,7 +1,7 @@
 package com.gregor.lauritz.healthdashboard.domain.model
 
-import org.junit.Test
 import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class StrainRatioStatusTest {
 
