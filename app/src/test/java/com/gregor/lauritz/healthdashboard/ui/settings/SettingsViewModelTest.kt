@@ -10,11 +10,11 @@ import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.domain.sync.ResyncHealthConnectUseCase
 import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
-import io.mockk.coEvery
-import io.mockk.mockk
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import io.mockk.coEvery
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -156,7 +156,9 @@ class SettingsViewModelTest {
     fun `SyncSettingsViewModel resync event sets loading state`() =
         runTest {
             val mockResyncUseCase = mockk<ResyncHealthConnectUseCase>()
-            coEvery { mockResyncUseCase.execute() } returns com.gregor.lauritz.healthdashboard.domain.model.Result.success(Unit)
+            coEvery { mockResyncUseCase.execute() } returns
+                com.gregor.lauritz.healthdashboard.domain.model.Result
+                    .success(Unit)
 
             val viewModel =
                 SyncSettingsViewModel(

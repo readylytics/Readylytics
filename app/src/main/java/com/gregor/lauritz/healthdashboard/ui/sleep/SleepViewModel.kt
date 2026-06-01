@@ -97,16 +97,19 @@ class SleepViewModel
                         dailySummaryRepository.observeByDate(selectedMidnightMs),
                         settingsRepo.userPreferences,
                     ) { latestSummary, prefs ->
-                        val hrvBaseline = latestSummary?.hrvBaseline?.toFloat()
-                            ?: prefs.hrvBaselineOverride
+                        val hrvBaseline =
+                            latestSummary?.hrvBaseline?.toFloat()
+                                ?: prefs.hrvBaselineOverride
 
                         val ratio = latestSummary?.rhrRatio
                         val rhr = latestSummary?.nocturnalRhr
-                        val rhrBaseline = if (ratio != null && ratio > 0f && rhr != null) {
-                            (rhr / ratio).toInt()
-                        } else {
-                            latestSummary?.restingHrBaseline ?: prefs.rhrBaselineOverride?.toInt() ?: ScoringConstants.DEFAULT_RHR_BPM.toInt()
-                        }
+                        val rhrBaseline =
+                            if (ratio != null && ratio > 0f && rhr != null) {
+                                (rhr / ratio).toInt()
+                            } else {
+                                latestSummary?.restingHrBaseline ?: prefs.rhrBaselineOverride?.toInt()
+                                    ?: ScoringConstants.DEFAULT_RHR_BPM.toInt()
+                            }
 
                         Baselines(hrvBaseline, rhrBaseline)
                     }
