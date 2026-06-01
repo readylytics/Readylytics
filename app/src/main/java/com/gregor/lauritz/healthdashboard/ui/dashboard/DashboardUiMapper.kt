@@ -135,7 +135,7 @@ class DashboardUiMapper
                 }
 
             return CardData(
-                title = "Sleep HRV",
+                title = "HRV",
                 value = summary.nocturnalHrv?.toString() ?: "—",
                 unit = "ms",
                 status = hrvStatus,

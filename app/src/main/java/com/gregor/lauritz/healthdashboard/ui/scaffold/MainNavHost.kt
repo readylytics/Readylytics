@@ -18,11 +18,11 @@ import com.gregor.lauritz.healthdashboard.ui.bloodpressure.BloodPressureDetailRo
 import com.gregor.lauritz.healthdashboard.ui.bodyfat.BodyFatDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardRoute
 import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateDetailRoute
+import com.gregor.lauritz.healthdashboard.ui.hrv.HrvDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppDestination
 import com.gregor.lauritz.healthdashboard.ui.navigation.TabDestination
 import com.gregor.lauritz.healthdashboard.ui.rhr.RestingHrDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsRoute
-import com.gregor.lauritz.healthdashboard.ui.sleep.SleepDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.sleep.SleepRoute
 import com.gregor.lauritz.healthdashboard.ui.steps.StepDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.weight.WeightDetailRoute
@@ -46,11 +46,11 @@ fun MainNavHost(
                 targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
-                    targetState.destination.hasRoute(AppDestination.SleepDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.HeartRateDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.WeightDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.HrvDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.About::class)
 
             val direction =
@@ -71,21 +71,21 @@ fun MainNavHost(
                 initialState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.StepDetail::class) ||
-                    initialState.destination.hasRoute(AppDestination.SleepDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.HeartRateDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.WeightDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
+                    initialState.destination.hasRoute(AppDestination.HrvDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.About::class)
             val isEnteringDetail =
                 targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
-                    targetState.destination.hasRoute(AppDestination.SleepDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.HeartRateDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.WeightDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
+                    targetState.destination.hasRoute(AppDestination.HrvDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.About::class)
 
             val direction =
@@ -143,6 +143,9 @@ fun MainNavHost(
                 onNavigateToHeartRate = {
                     navController.navigate(AppDestination.HeartRateDetail)
                 },
+                onNavigateToHrv = {
+                    navController.navigate(AppDestination.HrvDetail)
+                },
                 onNavigateToWeight = {
                     navController.navigate(AppDestination.WeightDetail)
                 },
@@ -155,11 +158,7 @@ fun MainNavHost(
             )
         }
         composable<TabDestination.Sleep> {
-            SleepRoute(
-                onNavigateToDetail = {
-                    navController.navigate(AppDestination.SleepDetail)
-                },
-            )
+            SleepRoute()
         }
         composable<TabDestination.Workouts> {
             WorkoutsRoute { id ->
@@ -183,11 +182,6 @@ fun MainNavHost(
                 onBack = { navController.popBackStack() },
             )
         }
-        composable<AppDestination.SleepDetail> {
-            SleepDetailRoute(
-                onBack = { navController.popBackStack() },
-            )
-        }
         composable<AppDestination.HeartRateDetail> {
             HeartRateDetailRoute(
                 onBack = { navController.popBackStack() },
@@ -205,6 +199,11 @@ fun MainNavHost(
         }
         composable<AppDestination.BloodPressureDetail> {
             BloodPressureDetailRoute(
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable<AppDestination.HrvDetail> {
+            HrvDetailRoute(
                 onBack = { navController.popBackStack() },
             )
         }
@@ -240,8 +239,7 @@ private fun getTabIndex(destination: NavDestination?): Int {
     if (destination.hasRoute(AppDestination.WeightDetail::class)) return 0
     if (destination.hasRoute(AppDestination.BodyFatDetail::class)) return 0
     if (destination.hasRoute(AppDestination.BloodPressureDetail::class)) return 0
-    // SleepDetail is logically under Sleep
-    if (destination.hasRoute(AppDestination.SleepDetail::class)) return 1
+    if (destination.hasRoute(AppDestination.HrvDetail::class)) return 0
     // About is logically under Settings
     if (destination.hasRoute(AppDestination.About::class)) return 3
 

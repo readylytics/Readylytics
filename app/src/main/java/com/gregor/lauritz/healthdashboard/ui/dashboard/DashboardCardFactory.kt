@@ -23,6 +23,7 @@ fun buildCardDataMap(
     onNavigateToRhr: () -> Unit,
     onNavigateToSteps: () -> Unit = {},
     onNavigateToHeartRate: () -> Unit = {},
+    onNavigateToHrv: () -> Unit = {},
     onNavigateToWeight: () -> Unit = {},
     onNavigateToBodyFat: () -> Unit = {},
     onNavigateToBloodPressure: () -> Unit = {},
@@ -92,7 +93,7 @@ fun buildCardDataMap(
                         value = hrvCard.value,
                         secondaryText = hrvCard.unit,
                         status = hrvCard.status,
-                        onClick = if (isEditing) null else onNavigateToSleep,
+                        onClick = if (isEditing) null else onNavigateToHrv,
                         tooltip = hrvCard.tooltip,
                     )
                 }

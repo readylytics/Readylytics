@@ -1,6 +1,5 @@
 package com.gregor.lauritz.healthdashboard.ui.sleep
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,18 +13,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -47,20 +42,14 @@ import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.SleepArchitectureBar
+import com.gregor.lauritz.healthdashboard.ui.components.SleepStagesChart
 import com.gregor.lauritz.healthdashboard.ui.components.StatusLegend
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
-fun SleepRoute(
-    onNavigateToDetail: (() -> Unit)? = null,
-    viewModel: SleepViewModel = hiltViewModel(),
-) {
+fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val baselines by viewModel.baselinesFlow.collectAsStateWithLifecycle()
     val circadian by viewModel.circadianConsistencyFlow.collectAsStateWithLifecycle()
@@ -73,7 +62,6 @@ fun SleepRoute(
         onRangeSelected = viewModel::onRangeSelected,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
-        onNavigateToDetail = onNavigateToDetail,
     )
 }
 
@@ -87,7 +75,6 @@ fun SleepScreen(
     onRangeSelected: (TimeRange) -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
-    onNavigateToDetail: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val (chartScrollState, chartZoomState) =
@@ -152,60 +139,36 @@ fun SleepScreen(
                     height = 120.dp,
                 )
             } else {
-                val sectionLabel =
-                    remember(uiState.selectedDate) {
-                        val today = java.time.LocalDate.now()
-                        when (uiState.selectedDate) {
-                            today -> "Last Night"
-                            today.minusDays(1) -> "Night of Yesterday"
-                            else -> {
-                                val pattern = DateTimeFormatter.ofPattern("EEE MMM d", Locale.getDefault())
-                                "Night of ${uiState.selectedDate.format(pattern)}"
-                            }
-                        }
-                    }
-                val bedTime =
-                    uiState.latestSession?.let {
-                        Instant
-                            .ofEpochMilli(it.startTime)
-                            .atZone(ZoneId.systemDefault())
-                            .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
-                    } ?: "—"
-                val wakeTime =
-                    uiState.latestSession?.let {
-                        Instant
-                            .ofEpochMilli(it.endTime)
-                            .atZone(ZoneId.systemDefault())
-                            .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
-                    } ?: "—"
-                Card(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .clickable(enabled = onNavigateToDetail != null) {
-                                onNavigateToDetail?.invoke()
-                            },
+                TrendCard(
+                    title = "Sleep Breakdown",
+                    modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(sectionLabel, style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                text = "$bedTime – $wakeTime",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        SleepArchitectureBar(
-                            session = uiState.latestSession,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
+                    SleepArchitectureBar(
+                        session = uiState.latestSession,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+        }
+
+        item(key = "spacer_arch2") { Spacer(Modifier.height(8.dp)) }
+
+        item(key = "hypnogram") {
+            if (uiState.isLoading) {
+                SkeletonCard(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    height = 260.dp,
+                )
+            } else {
+                TrendCard(
+                    title = "Sleep Timeline",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                ) {
+                    SleepStagesChart(
+                        session = uiState.latestSession,
+                        stageTimeline = uiState.stageTimeline,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
         }
