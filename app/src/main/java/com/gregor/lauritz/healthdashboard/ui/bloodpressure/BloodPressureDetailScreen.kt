@@ -30,7 +30,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
-import com.gregor.lauritz.healthdashboard.ui.components.BloodPressureTrendChart
+import com.gregor.lauritz.healthdashboard.ui.components.BloodPressureSplitChart
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
@@ -166,7 +166,7 @@ fun BloodPressureDetailScreen(
                     title = "Blood Pressure Trend",
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
-                    BloodPressureTrendChart(
+                    BloodPressureSplitChart(
                         systolicPoints = uiState.dailySystolic,
                         diastolicPoints = uiState.dailyDiastolic,
                         rangeStartMs = uiState.rangeStartMs,

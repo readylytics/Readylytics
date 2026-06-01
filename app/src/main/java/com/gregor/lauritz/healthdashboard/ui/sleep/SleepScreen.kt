@@ -259,6 +259,7 @@ fun SleepScreen(
                         showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
+                        zoneBands = uiState.hrvZoneBands,
                     )
                 }
             }
@@ -287,6 +288,7 @@ fun SleepScreen(
                         showBaseline = !(uiState.latestSummary?.isCalibrating ?: false),
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
+                        zoneBands = uiState.rhrZoneBands,
                     )
                 }
             }

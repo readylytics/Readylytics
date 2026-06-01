@@ -6,7 +6,9 @@ import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
 import com.gregor.lauritz.healthdashboard.domain.model.restingHrStatus
+import com.gregor.lauritz.healthdashboard.domain.model.rhrZoneBands
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.util.toMidnightEpochMilli
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
@@ -30,6 +32,8 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
+private const val RHR_CRITICAL_MULTIPLIER = 1.3f
+
 data class RestingHrDetailUiState(
     val latestSummary: DailySummary? = null,
     val dailyRhr: List<DailyDataPoint> = emptyList(),
@@ -37,6 +41,7 @@ data class RestingHrDetailUiState(
     val rhrStatus: MetricStatus? = null,
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val rangeStartMs: Long = 0,
+    val rhrZoneBands: List<ZoneBand>? = null,
 )
 
 @HiltViewModel
@@ -88,13 +93,24 @@ class RestingHrDetailViewModel
                                 }.sortedBy { it.dayOffset }
                                 .padToRange(range.days)
 
+                        val baselineVal = latest?.restingHrBaseline?.toFloat() ?: prefs.rhrBaselineOverride
+                        val bands =
+                            baselineVal?.let { baseline ->
+                                rhrZoneBands(
+                                    optimalMax = prefs.rhrOptimalThreshold * baseline,
+                                    neutralMax = prefs.rhrWarningThreshold * baseline,
+                                    warningMax = prefs.rhrWarningThreshold * RHR_CRITICAL_MULTIPLIER * baseline,
+                                )
+                            }
+
                         RestingHrDetailUiState(
                             latestSummary = latest,
                             dailyRhr = points,
-                            rhrBaseline = latest?.restingHrBaseline?.toFloat(),
+                            rhrBaseline = baselineVal,
                             rhrStatus = latest?.restingHrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold),
                             selectedRange = range,
                             rangeStartMs = startDayMs,
+                            rhrZoneBands = bands,
                         )
                     }.flowOn(Dispatchers.Default)
                 }.stateIn(

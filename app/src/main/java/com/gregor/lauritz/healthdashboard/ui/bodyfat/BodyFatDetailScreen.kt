@@ -22,11 +22,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.data.preferences.Gender
+import com.gregor.lauritz.healthdashboard.domain.model.bodyFatZoneBands
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
@@ -62,6 +65,16 @@ fun BodyFatDetailScreen(
             rangeDays = uiState.selectedRange.days,
             key = uiState.selectedRange,
         )
+
+    val bodyFatBands =
+        remember(uiState.age, uiState.gender) {
+            val genderEnum = Gender.entries.firstOrNull { it.name == uiState.gender }
+            if (genderEnum != null && genderEnum != Gender.OTHER && genderEnum != Gender.PREFER_NOT_TO_SAY) {
+                bodyFatZoneBands(uiState.age, genderEnum)
+            } else {
+                null
+            }
+        }
 
     Scaffold(
         modifier = modifier,
@@ -158,6 +171,7 @@ fun BodyFatDetailScreen(
                         axisDecimalPlaces = 1,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
+                        zoneBands = bodyFatBands,
                     )
                 }
             }

@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 
@@ -76,16 +77,16 @@ class SyncViewModelTest {
 
     @Test
     fun syncEvents_flowExists() {
-        assert(viewModel.syncEvents != null) { "Sync events flow should exist" }
+        assertNotNull(viewModel.syncEvents)
     }
 
     @Test
     fun requiredPermissions_flowExists() {
-        assert(viewModel.requiredPermissions != null) { "Required permissions should exist" }
+        assertNotNull(viewModel.requiredPermissions)
     }
 
     @Test
     fun isSyncing_flowExists() {
-        assert(viewModel.isSyncing != null) { "isSyncing flow should exist" }
+        assertNotNull(viewModel.isSyncing)
     }
 }

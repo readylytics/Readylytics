@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -30,6 +31,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
+import com.gregor.lauritz.healthdashboard.domain.model.weightZoneBands
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
@@ -69,6 +71,38 @@ fun WeightDetailScreen(
         )
 
     val unitLabel = if (uiState.unitSystem == UnitSystem.METRIC) "kg" else "lbs"
+
+    val weightBands =
+        remember(uiState.heightCm, uiState.unitSystem) {
+            uiState.heightCm?.let { height ->
+                val bands = weightZoneBands(height)
+                if (uiState.unitSystem == UnitSystem.IMPERIAL) {
+                    val kgToLbs = 2.20462
+                    bands.map { band ->
+                        band.copy(
+                            lowerBound =
+                                if (band.lowerBound ==
+                                    Double.NEGATIVE_INFINITY
+                                ) {
+                                    Double.NEGATIVE_INFINITY
+                                } else {
+                                    band.lowerBound * kgToLbs
+                                },
+                            upperBound =
+                                if (band.upperBound ==
+                                    Double.POSITIVE_INFINITY
+                                ) {
+                                    Double.POSITIVE_INFINITY
+                                } else {
+                                    band.upperBound * kgToLbs
+                                },
+                        )
+                    }
+                } else {
+                    bands
+                }
+            }
+        }
 
     Scaffold(
         modifier = modifier,
@@ -199,6 +233,7 @@ fun WeightDetailScreen(
                         axisDecimalPlaces = 1,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
+                        zoneBands = weightBands,
                     )
                 }
             }
