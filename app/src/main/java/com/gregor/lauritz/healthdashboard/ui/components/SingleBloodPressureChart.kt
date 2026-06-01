@@ -68,13 +68,13 @@ fun SingleBloodPressureChart(
         rememberVicoZoomState(
             zoomEnabled = rangeDays > 7,
             initialZoom = Zoom.Content,
-            minZoom = Zoom.Content,
+            minZoom = Zoom.fixed(0.01f),
             maxZoom =
                 remember(rangeDays) {
                     when (rangeDays) {
                         30 -> Zoom.fixed(6f)
                         180 -> Zoom.fixed(25f)
-                        else -> Zoom.Content
+                        else -> Zoom.fixed(2f)
                     }
                 },
         ),
@@ -104,12 +104,12 @@ fun SingleBloodPressureChart(
         selectedPointOffset = null
     }
 
-    // Clear tooltip when the parent list scrolls vertically
+    // Clear tooltip when the parent list scrolls vertically.
+    // Fires on both true (scroll started) and false (scroll ended) to
+    // eliminate stale tooltip state that slips through mid-scroll recompositions.
     LaunchedEffect(parentScrollInProgress) {
-        if (parentScrollInProgress) {
-            tooltipState = null
-            selectedPointOffset = null
-        }
+        tooltipState = null
+        selectedPointOffset = null
     }
 
     if (points.none { it.value != null }) {

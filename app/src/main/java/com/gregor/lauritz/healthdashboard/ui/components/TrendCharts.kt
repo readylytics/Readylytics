@@ -117,17 +117,27 @@ fun TrendChart(
     axisDecimalPlaces: Int = 0,
     showBaseline: Boolean = true,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
+    // Zoom is only meaningful for ranges > 7 days.
+    // initialZoom = Zoom.Content → chart starts fully zoomed out (fit-to-range).
+    // minZoom = Zoom.fixed(0.01f) → a tiny floor well below Zoom.Content for any range.
+    //   • Do NOT use Zoom.Content as minZoom — it dynamically equals the full-range zoom,
+    //     creating a circular constraint that silently rejects every pinch-in gesture.
+    //   • Do NOT use Zoom.fixed(1f) — Vico's 1× default density is larger than Zoom.Content
+    //     for 30d (~0.86×) and 180d (~0.14×), so the initial zoom gets clamped and the
+    //     chart starts partially zoomed in instead of showing all data.
+    //   • Zoom.fixed(0.01f) is always below Zoom.Content for any realistic screen/range,
+    //     so initialZoom is never clamped and the full range is visible on launch.
     zoomState: VicoZoomState =
         rememberVicoZoomState(
             zoomEnabled = rangeDays > 7,
             initialZoom = Zoom.Content,
-            minZoom = Zoom.Content,
+            minZoom = Zoom.fixed(0.01f),
             maxZoom =
                 remember(rangeDays) {
                     when (rangeDays) {
                         30 -> Zoom.fixed(6f)
                         180 -> Zoom.fixed(25f)
-                        else -> Zoom.Content
+                        else -> Zoom.fixed(2f)
                     }
                 },
         ),
@@ -153,12 +163,14 @@ fun TrendChart(
         selectedPointOffset = null
     }
 
-    // Clear tooltip when the parent list scrolls vertically
+    // Clear tooltip when the parent list scrolls vertically.
+    // We fire on BOTH true and false transitions:
+    //   true  → scroll started, clear immediately
+    //   false → scroll ended; clear again to invalidate any stale state that
+    //           slipped through while the frame was mid-scroll
     LaunchedEffect(parentScrollInProgress) {
-        if (parentScrollInProgress) {
-            tooltipState = null
-            selectedPointOffset = null
-        }
+        tooltipState = null
+        selectedPointOffset = null
     }
 
     if (points.none { it.value != null }) {
@@ -416,17 +428,19 @@ fun BloodPressureTrendChart(
     rangeStartMs: Long,
     rangeDays: Int,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
+    // Same fix as TrendChart: minZoom = Zoom.fixed(0.01f).
+    // See TrendChart's zoomState comment for the full rationale.
     zoomState: VicoZoomState =
         rememberVicoZoomState(
             zoomEnabled = rangeDays > 7,
             initialZoom = Zoom.Content,
-            minZoom = Zoom.Content,
+            minZoom = Zoom.fixed(0.01f),
             maxZoom =
                 remember(rangeDays) {
                     when (rangeDays) {
                         30 -> Zoom.fixed(6f)
                         180 -> Zoom.fixed(25f)
-                        else -> Zoom.Content
+                        else -> Zoom.fixed(2f)
                     }
                 },
         ),
@@ -448,12 +462,11 @@ fun BloodPressureTrendChart(
         selectedPointOffset = null
     }
 
-    // Clear tooltip when the parent list scrolls vertically
+    // Clear tooltip when the parent list scrolls vertically.
+    // Fire on both transitions to eliminate stale tooltip state at scroll-end.
     LaunchedEffect(parentScrollInProgress) {
-        if (parentScrollInProgress) {
-            tooltipState = null
-            selectedPointOffset = null
-        }
+        tooltipState = null
+        selectedPointOffset = null
     }
 
     if (systolicPoints.none { it.value != null } || diastolicPoints.none { it.value != null }) {

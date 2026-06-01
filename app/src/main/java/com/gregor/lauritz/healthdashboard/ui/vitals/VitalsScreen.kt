@@ -76,20 +76,12 @@ fun VitalsScreen(
     onNavigateToRhr: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val (hrvScrollState, hrvZoomState) =
+    // Single shared scroll + zoom state so all three trend charts stay in sync.
+    // Keyed on selectedRange so state resets when the user switches time ranges.
+    val (chartScrollState, chartZoomState) =
         ChartDefaults.rememberChartState(
             rangeDays = uiState.selectedRange.days,
-            key = "hrv-${uiState.selectedRange}",
-        )
-    val (rhrScrollState, rhrZoomState) =
-        ChartDefaults.rememberChartState(
-            rangeDays = uiState.selectedRange.days,
-            key = "rhr-${uiState.selectedRange}",
-        )
-    val (spO2ScrollState, spO2ZoomState) =
-        ChartDefaults.rememberChartState(
-            rangeDays = uiState.selectedRange.days,
-            key = "spo2-${uiState.selectedRange}",
+            key = "vitals-${uiState.selectedRange}",
         )
     val listState = rememberLazyListState()
 
@@ -233,8 +225,8 @@ fun VitalsScreen(
                         baselineUnit = "ms",
                         baseline = baselineHrv,
                         showBaseline = !isCalibrating,
-                        scrollState = hrvScrollState,
-                        zoomState = hrvZoomState,
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
                         zoneBands = uiState.hrvZoneBands,
                         parentScrollInProgress = listState.isScrollInProgress,
                     )
@@ -265,8 +257,8 @@ fun VitalsScreen(
                         baselineUnit = "bpm",
                         baseline = baselineRhr?.toFloat(),
                         showBaseline = !isCalibrating,
-                        scrollState = rhrScrollState,
-                        zoomState = rhrZoomState,
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
                         zoneBands = uiState.rhrZoneBands,
                         parentScrollInProgress = listState.isScrollInProgress,
                     )
@@ -297,8 +289,8 @@ fun VitalsScreen(
                         baseline = 95f,
                         baselineLabel = "Normal Limit",
                         showBaseline = true,
-                        scrollState = spO2ScrollState,
-                        zoomState = spO2ZoomState,
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
                         zoneBands = uiState.spo2ZoneBands,
                         axisDecimalPlaces = 0,
                         baselineDecimalPlaces = 0,

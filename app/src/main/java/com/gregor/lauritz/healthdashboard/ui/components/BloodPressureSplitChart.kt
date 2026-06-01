@@ -47,13 +47,13 @@ fun BloodPressureSplitChart(
         rememberVicoZoomState(
             zoomEnabled = rangeDays > 7,
             initialZoom = Zoom.Content,
-            minZoom = Zoom.Content,
+            minZoom = Zoom.fixed(0.01f),
             maxZoom =
                 remember(rangeDays) {
                     when (rangeDays) {
                         30 -> Zoom.fixed(6f)
                         180 -> Zoom.fixed(25f)
-                        else -> Zoom.Content
+                        else -> Zoom.fixed(2f)
                     }
                 },
         ),
@@ -73,6 +73,21 @@ fun BloodPressureSplitChart(
 
     LaunchedEffect(rangeDays) {
         tooltipState = null
+    }
+
+    // Clear tooltip when the chart is scrolled/panned (Vico horizontal scroll)
+    LaunchedEffect(scrollState.value) {
+        tooltipState = null
+        selectedDayOffset = null
+        selectedCanvasX = null
+    }
+
+    // Clear tooltip on vertical scroll — fires on both start (true) and end (false)
+    // to eliminate any stale state that slips through mid-scroll recompositions.
+    LaunchedEffect(parentScrollInProgress) {
+        tooltipState = null
+        selectedDayOffset = null
+        selectedCanvasX = null
     }
 
     // Early‑exit placeholder when no data
