@@ -148,7 +148,7 @@ fun Float.strainRatioStatus(): MetricStatus =
         this in 1.3f..1.5f -> MetricStatus.NEUTRAL
         this in 1.5f..2.0f -> MetricStatus.WARNING
         this > 2.0f -> MetricStatus.POOR
-        this in 0.5f..0.8f -> MetricStatus.WARNING
-        this < 0.5f -> MetricStatus.POOR
+        this in 0.5f..0.8f -> MetricStatus.NEUTRAL
+        this < 0.5f -> MetricStatus.WARNING
         else -> MetricStatus.CALIBRATING
     }
