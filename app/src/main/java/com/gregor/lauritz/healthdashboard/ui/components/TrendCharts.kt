@@ -1,6 +1,8 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
@@ -131,6 +134,7 @@ fun TrendChart(
     zoneBands: List<ZoneBand>? = null,
     minYOverride: Double? = null,
     maxYOverride: Double? = null,
+    parentScrollInProgress: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
@@ -139,6 +143,20 @@ fun TrendChart(
     // Clear highlight when tooltip is hidden
     LaunchedEffect(tooltipState) {
         if (tooltipState == null) {
+            selectedPointOffset = null
+        }
+    }
+
+    // Clear tooltip when the chart is scrolled/panned (Vico horizontal scroll)
+    LaunchedEffect(scrollState.value) {
+        tooltipState = null
+        selectedPointOffset = null
+    }
+
+    // Clear tooltip when the parent list scrolls vertically
+    LaunchedEffect(parentScrollInProgress) {
+        if (parentScrollInProgress) {
+            tooltipState = null
             selectedPointOffset = null
         }
     }
@@ -256,7 +274,28 @@ fun TrendChart(
             },
         )
 
-    Box(modifier = modifier.fillMaxWidth()) {
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        var isMultiTouch = false
+                        while (!isMultiTouch) {
+                            val event = awaitPointerEvent()
+                            // Stop polling once all fingers are lifted
+                            if (event.changes.none { it.pressed }) break
+                            if (event.changes.size > 1) {
+                                // Multi-touch: pan/zoom detected — clear tooltip
+                                isMultiTouch = true
+                                tooltipState = null
+                                selectedPointOffset = null
+                            }
+                        }
+                    }
+                },
+    ) {
         CartesianChartHost(
             chart =
                 rememberCartesianChart(
@@ -391,6 +430,7 @@ fun BloodPressureTrendChart(
                     }
                 },
         ),
+    parentScrollInProgress: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
@@ -398,6 +438,20 @@ fun BloodPressureTrendChart(
 
     LaunchedEffect(tooltipState) {
         if (tooltipState == null) {
+            selectedPointOffset = null
+        }
+    }
+
+    // Clear tooltip when the chart is scrolled/panned (Vico horizontal scroll)
+    LaunchedEffect(scrollState.value) {
+        tooltipState = null
+        selectedPointOffset = null
+    }
+
+    // Clear tooltip when the parent list scrolls vertically
+    LaunchedEffect(parentScrollInProgress) {
+        if (parentScrollInProgress) {
+            tooltipState = null
             selectedPointOffset = null
         }
     }
@@ -536,7 +590,28 @@ fun BloodPressureTrendChart(
             },
         )
 
-    Box(modifier = modifier.fillMaxWidth()) {
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        var isMultiTouch = false
+                        while (!isMultiTouch) {
+                            val event = awaitPointerEvent()
+                            // Stop polling once all fingers are lifted
+                            if (event.changes.none { it.pressed }) break
+                            if (event.changes.size > 1) {
+                                // Multi-touch: pan/zoom detected — clear tooltip
+                                isMultiTouch = true
+                                tooltipState = null
+                                selectedPointOffset = null
+                            }
+                        }
+                    }
+                },
+    ) {
         CartesianChartHost(
             chart =
                 rememberCartesianChart(

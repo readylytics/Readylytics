@@ -57,6 +57,7 @@ fun BloodPressureSplitChart(
                     }
                 },
         ),
+    parentScrollInProgress: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
@@ -124,6 +125,7 @@ fun BloodPressureSplitChart(
                 externalSelectedDayOffset = selectedDayOffset,
                 externalSelectedCanvasX = selectedCanvasX,
                 showTooltip = false,
+                parentScrollInProgress = parentScrollInProgress,
             )
             // Lower chart – diastolic
             SingleBloodPressureChart(
@@ -138,6 +140,7 @@ fun BloodPressureSplitChart(
                 externalSelectedDayOffset = selectedDayOffset,
                 externalSelectedCanvasX = selectedCanvasX,
                 showTooltip = false,
+                parentScrollInProgress = parentScrollInProgress,
             )
             // Combined legend – mirrors the one from the original BloodPressureTrendChart
             Spacer(Modifier.height(12.dp))

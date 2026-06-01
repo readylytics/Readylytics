@@ -1,5 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.workouts
 
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltip
@@ -48,6 +51,7 @@ private const val TARGET_X_AXIS_LABELS = 6
 fun TrimpBreakdownChart(
     chartData: List<Pair<Double, Double>>,
     durationMinutes: Int,
+    parentScrollInProgress: Boolean = false,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -59,7 +63,7 @@ fun TrimpBreakdownChart(
             if (chartData.isEmpty()) {
                 Text("No HR data available")
             } else {
-                HrChart(chartData, durationMinutes)
+                HrChart(chartData, durationMinutes, parentScrollInProgress)
             }
         }
     }
@@ -69,12 +73,21 @@ fun TrimpBreakdownChart(
 private fun HrChart(
     chartData: List<Pair<Double, Double>>,
     durationMinutes: Int,
+    parentScrollInProgress: Boolean = false,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
 
     LaunchedEffect(tooltipState) {
         if (tooltipState == null) {
+            selectedPointOffset = null
+        }
+    }
+
+    // Clear tooltip when the parent list scrolls vertically
+    LaunchedEffect(parentScrollInProgress) {
+        if (parentScrollInProgress) {
+            tooltipState = null
             selectedPointOffset = null
         }
     }
@@ -150,7 +163,28 @@ private fun HrChart(
             },
         )
 
-    Box(modifier = Modifier.fillMaxWidth()) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        var isMultiTouch = false
+                        while (!isMultiTouch) {
+                            val event = awaitPointerEvent()
+                            // Stop polling once all fingers are lifted
+                            if (event.changes.none { it.pressed }) break
+                            if (event.changes.size > 1) {
+                                // Multi-touch: pan/zoom detected — clear tooltip
+                                isMultiTouch = true
+                                tooltipState = null
+                                selectedPointOffset = null
+                            }
+                        }
+                    }
+                },
+    ) {
         CartesianChartHost(
             chart =
                 rememberCartesianChart(

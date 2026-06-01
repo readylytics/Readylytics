@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -75,13 +76,25 @@ fun VitalsScreen(
     onNavigateToRhr: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val (chartScrollState, chartZoomState) =
+    val (hrvScrollState, hrvZoomState) =
         ChartDefaults.rememberChartState(
             rangeDays = uiState.selectedRange.days,
-            key = uiState.selectedRange,
+            key = "hrv-${uiState.selectedRange}",
         )
+    val (rhrScrollState, rhrZoomState) =
+        ChartDefaults.rememberChartState(
+            rangeDays = uiState.selectedRange.days,
+            key = "rhr-${uiState.selectedRange}",
+        )
+    val (spO2ScrollState, spO2ZoomState) =
+        ChartDefaults.rememberChartState(
+            rangeDays = uiState.selectedRange.days,
+            key = "spo2-${uiState.selectedRange}",
+        )
+    val listState = rememberLazyListState()
 
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 16.dp),
     ) {
@@ -220,9 +233,10 @@ fun VitalsScreen(
                         baselineUnit = "ms",
                         baseline = baselineHrv,
                         showBaseline = !isCalibrating,
-                        scrollState = chartScrollState,
-                        zoomState = chartZoomState,
+                        scrollState = hrvScrollState,
+                        zoomState = hrvZoomState,
                         zoneBands = uiState.hrvZoneBands,
+                        parentScrollInProgress = listState.isScrollInProgress,
                     )
                 }
             }
@@ -251,9 +265,10 @@ fun VitalsScreen(
                         baselineUnit = "bpm",
                         baseline = baselineRhr?.toFloat(),
                         showBaseline = !isCalibrating,
-                        scrollState = chartScrollState,
-                        zoomState = chartZoomState,
+                        scrollState = rhrScrollState,
+                        zoomState = rhrZoomState,
                         zoneBands = uiState.rhrZoneBands,
+                        parentScrollInProgress = listState.isScrollInProgress,
                     )
                 }
             }
@@ -282,13 +297,14 @@ fun VitalsScreen(
                         baseline = 95f,
                         baselineLabel = "Normal Limit",
                         showBaseline = true,
-                        scrollState = chartScrollState,
-                        zoomState = chartZoomState,
+                        scrollState = spO2ScrollState,
+                        zoomState = spO2ZoomState,
                         zoneBands = uiState.spo2ZoneBands,
                         axisDecimalPlaces = 0,
                         baselineDecimalPlaces = 0,
                         minYOverride = 90.0,
                         maxYOverride = 100.0,
+                        parentScrollInProgress = listState.isScrollInProgress,
                     )
                 }
             }

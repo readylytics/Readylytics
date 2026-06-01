@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
@@ -71,8 +72,10 @@ fun WorkoutDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     val workout = uiState.workout ?: return
+    val listState = rememberLazyListState()
 
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -82,7 +85,11 @@ fun WorkoutDetailScreen(
         }
 
         item {
-            TrimpBreakdownChart(uiState.hrChartData, uiState.durationMinutes)
+            TrimpBreakdownChart(
+                uiState.hrChartData,
+                uiState.durationMinutes,
+                parentScrollInProgress = listState.isScrollInProgress,
+            )
         }
 
         item {
