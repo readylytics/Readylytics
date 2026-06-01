@@ -11,6 +11,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.OxygenSaturationRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepStageDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WeightRecordDao
@@ -90,4 +91,7 @@ object DatabaseModule {
 
     @Provides
     fun provideBloodPressureRecordDao(db: HealthDatabase): BloodPressureRecordDao = db.bloodPressureRecordDao()
+
+    @Provides
+    fun provideOxygenSaturationRecordDao(db: HealthDatabase): OxygenSaturationRecordDao = db.oxygenSaturationRecordDao()
 }

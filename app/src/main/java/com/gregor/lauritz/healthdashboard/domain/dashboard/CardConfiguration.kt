@@ -22,6 +22,7 @@ enum class CardId {
     WEIGHT,
     BODY_FAT,
     BLOOD_PRESSURE,
+    OXYGEN_SATURATION,
 }
 
 @Serializable

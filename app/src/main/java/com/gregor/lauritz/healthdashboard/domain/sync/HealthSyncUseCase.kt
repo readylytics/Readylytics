@@ -9,12 +9,14 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.OxygenSaturationRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepStageDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WeightRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.mapper.BloodPressureDataMapper
 import com.gregor.lauritz.healthdashboard.data.mapper.BodyFatDataMapper
+import com.gregor.lauritz.healthdashboard.data.mapper.OxygenSaturationDataMapper
 import com.gregor.lauritz.healthdashboard.data.mapper.WeightDataMapper
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
@@ -47,6 +49,7 @@ class HealthSyncUseCase
         private val weightRecordDao: WeightRecordDao,
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
+        private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
         private val dailySummaryDao: DailySummaryDao,
         private val settingsRepo: SettingsRepository,
         private val scoringRepository: ScoringRepository,
@@ -80,11 +83,12 @@ class HealthSyncUseCase
                         val weightRecords = hcRepo.readWeightRecords(windowStart, windowEnd)
                         val bodyFatRecords = hcRepo.readBodyFatRecords(windowStart, windowEnd)
                         val bloodPressureRecords = hcRepo.readBloodPressureRecords(windowStart, windowEnd)
+                        val spo2Records = hcRepo.readOxygenSaturationRecords(windowStart, windowEnd)
 
                         logD("HealthSyncUseCase") {
                             "Bulk HC fetch complete: sleep=${sleepEntities.size} " +
                                 "hrv_rmssd=${hrvRecords.size} hr_records=${hrRecords.size} " +
-                                "weight=${weightRecords.size} bodyfat=${bodyFatRecords.size} bp=${bloodPressureRecords.size}"
+                                "weight=${weightRecords.size} bodyfat=${bodyFatRecords.size} bp=${bloodPressureRecords.size} spo2=${spo2Records.size}"
                         }
 
                         val thresholds =
@@ -160,10 +164,20 @@ class HealthSyncUseCase
                                 { it.timestampMs },
                             )
 
+                        val spo2Entities = OxygenSaturationDataMapper.toEntities(spo2Records)
+                        val filteredSpo2 =
+                            filterByDevicePreference(
+                                spo2Entities,
+                                primaryDevice,
+                                { it.deviceName },
+                                { it.timestampMs },
+                            )
+
                         logD("HealthSyncUseCase") {
                             "Device filtering: sleep=${filteredSleep.size} workouts=${filteredWorkouts.size} " +
                                 "hr=${filteredHr.size} hrv=${filteredHrv.size} " +
-                                "weight=${filteredWeight.size} bodyfat=${filteredBodyFat.size} bp=${filteredBloodPressure.size}"
+                                "weight=${filteredWeight.size} bodyfat=${filteredBodyFat.size} " +
+                                "bp=${filteredBloodPressure.size} spo2=${filteredSpo2.size}"
                         }
 
                         transactionRunner.runInTransaction {
@@ -188,6 +202,7 @@ class HealthSyncUseCase
                             weightRecordDao.upsertAll(filteredWeight)
                             bodyFatRecordDao.upsertAll(filteredBodyFat)
                             bloodPressureRecordDao.upsertAll(filteredBloodPressure)
+                            oxygenSaturationRecordDao.upsertAll(filteredSpo2)
                         }
 
                         // Bulk-fetch steps per day using aggregate API to prevent overlap/duplication

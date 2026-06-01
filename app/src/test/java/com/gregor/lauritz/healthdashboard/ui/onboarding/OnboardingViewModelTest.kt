@@ -7,21 +7,34 @@ import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.service.BmiService
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingViewModelTest {
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var viewModel: OnboardingViewModel
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
         settingsRepo = mockk(relaxed = true)
         viewModel =
             OnboardingViewModel(
                 settingsRepo = settingsRepo,
                 bmiService = BmiService(),
             )
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     // ─── validateBirthdayDay ───────────────────────────────────────────────

@@ -30,6 +30,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToInt
 
 @Singleton
 class GetDashboardDataUseCase
@@ -90,6 +91,7 @@ class GetDashboardDataUseCase
             mapBuilder[CardId.WEIGHT] = weightCard(summary, prefs)
             mapBuilder[CardId.BODY_FAT] = bodyFatCard(summary, prefs)
             mapBuilder[CardId.BLOOD_PRESSURE] = bloodPressureCard(summary)
+            mapBuilder[CardId.OXYGEN_SATURATION] = oxygenSaturationCard(summary)
 
             return mapBuilder.toMap()
         }
@@ -464,6 +466,43 @@ class GetDashboardDataUseCase
                 status = status,
                 action = DashboardAction.NAVIGATE_BLOOD_PRESSURE,
                 tooltip = tooltip,
+            )
+        }
+
+        private fun oxygenSaturationCard(summary: DailySummary): CardData {
+            val spo2 = summary.avgSleepingSpo2
+            if (spo2 == null || spo2 <= 0f) {
+                return CardData(
+                    title = "Oxygen Saturation",
+                    value = "—",
+                    unit = "%",
+                    status = MetricStatus.CALIBRATING,
+                    tooltip = resourceProvider.getString(R.string.tooltip_vitals_spo2),
+                    secondaryText = resourceProvider.getString(R.string.spo2_calibrating),
+                )
+            }
+
+            // Single source of truth: this is the same DailySummary.avgSleepingSpo2 the Vitals
+            // chart plots, rounded with roundToInt() identically to the chart axis/tooltip.
+            // The card value and Vitals readout must always agree; the chart's auto-generated
+            // y-axis gridline ticks are scale markers, not the metric value.
+            val roundedSpo2 = spo2.roundToInt()
+            val (status, statusLabelRes) =
+                when {
+                    roundedSpo2 >= 98 -> Pair(MetricStatus.OPTIMAL, R.string.spo2_optimal)
+                    roundedSpo2 >= 95 -> Pair(MetricStatus.NEUTRAL, R.string.spo2_normal)
+                    roundedSpo2 >= 90 -> Pair(MetricStatus.WARNING, R.string.spo2_warning)
+                    else -> Pair(MetricStatus.POOR, R.string.spo2_poor)
+                }
+
+            return CardData(
+                title = "Oxygen Saturation",
+                value = "$roundedSpo2",
+                unit = "%",
+                status = status,
+                action = DashboardAction.NAVIGATE_VITALS,
+                tooltip = resourceProvider.getString(R.string.tooltip_vitals_spo2),
+                secondaryText = resourceProvider.getString(statusLabelRes),
             )
         }
     }

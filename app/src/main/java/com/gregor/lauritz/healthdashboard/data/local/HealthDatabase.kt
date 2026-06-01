@@ -10,6 +10,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.OxygenSaturationRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepStageDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WeightRecordDao
@@ -19,6 +20,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.BodyFatRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.HrvRecordEntity
+import com.gregor.lauritz.healthdashboard.data.local.entity.OxygenSaturationRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepStageEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.WeightRecordEntity
@@ -35,6 +37,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
         WeightRecordEntity::class,
         BodyFatRecordEntity::class,
         BloodPressureRecordEntity::class,
+        OxygenSaturationRecordEntity::class,
     ],
     version = HealthDatabase.DATABASE_VERSION,
 )
@@ -58,8 +61,10 @@ abstract class HealthDatabase : RoomDatabase() {
 
     abstract fun bloodPressureRecordDao(): BloodPressureRecordDao
 
+    abstract fun oxygenSaturationRecordDao(): OxygenSaturationRecordDao
+
     companion object {
-        const val DATABASE_VERSION = 23
+        const val DATABASE_VERSION = 24
 
         fun create(context: Context): HealthDatabase =
             Room

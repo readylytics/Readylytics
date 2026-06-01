@@ -8,6 +8,7 @@ import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
@@ -50,6 +51,7 @@ class HealthConnectRepositoryImpl
                 HealthPermission.getReadPermission(WeightRecord::class),
                 HealthPermission.getReadPermission(BodyFatRecord::class),
                 HealthPermission.getReadPermission(BloodPressureRecord::class),
+                HealthPermission.getReadPermission(OxygenSaturationRecord::class),
             )
 
         override val allPermissions: Set<String> =
@@ -290,6 +292,31 @@ class HealthConnectRepositoryImpl
                 }
             }
 
+        override suspend fun readOxygenSaturationRecords(
+            from: Instant,
+            to: Instant,
+        ): List<OxygenSaturationRecord> =
+            withContext(Dispatchers.IO) {
+                try {
+                    readAllPages(from, to)
+                } catch (e: HealthConnectPermissionRevokedException) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                        "Oxygen saturation record permission not granted: ${e.message}"
+                    }
+                    emptyList()
+                } catch (e: SecurityException) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logD("HealthConnectRepository") {
+                        "Oxygen saturation record permission not granted: ${e.message}"
+                    }
+                    emptyList()
+                } catch (e: Exception) {
+                    com.gregor.lauritz.healthdashboard.domain.util.logE("HealthConnectRepository", e) {
+                        "Error reading oxygen saturation records"
+                    }
+                    emptyList()
+                }
+            }
+
         override suspend fun discoverDevices(windowDays: Int): List<String> =
             withContext(Dispatchers.IO) {
                 try {
@@ -318,6 +345,11 @@ class HealthConnectRepositoryImpl
 
                     val workoutRecords = readExerciseSessions(from, to)
                     workoutRecords.forEach { record ->
+                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                    }
+
+                    val spo2Records = readOxygenSaturationRecords(from, to)
+                    spo2Records.forEach { record ->
                         devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
                     }
 

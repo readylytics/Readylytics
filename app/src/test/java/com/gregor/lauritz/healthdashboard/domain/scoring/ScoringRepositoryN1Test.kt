@@ -5,6 +5,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.OxygenSaturationRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WeightRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
@@ -154,6 +155,7 @@ class ScoringRepositoryN1Test {
                 coverageValidator,
             )
         val computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase()
+        val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
 
         repo =
             ScoringRepositoryImpl(
@@ -171,6 +173,7 @@ class ScoringRepositoryN1Test {
                 weightRecordDao = weightRecordDao,
                 bodyFatRecordDao = bodyFatRecordDao,
                 bloodPressureRecordDao = bloodPressureRecordDao,
+                oxygenSaturationRecordDao = oxygenSaturationRecordDao,
             )
     }
 

@@ -129,6 +129,8 @@ fun TrendChart(
                 },
         ),
     zoneBands: List<ZoneBand>? = null,
+    minYOverride: Double? = null,
+    maxYOverride: Double? = null,
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
@@ -158,14 +160,16 @@ fun TrendChart(
     val baselineValue = baseline ?: calculatedBaseline
 
     val (minY, maxY) =
-        remember(points) {
+        remember(points, minYOverride, maxYOverride) {
             val values = points.mapNotNull { it.value }
-            if (values.isEmpty()) return@remember 0.0 to 0.0
+            if (values.isEmpty()) return@remember (minYOverride ?: 0.0) to (maxYOverride ?: 0.0)
             val lo = values.minOrNull() ?: 0f
             val hi = values.maxOrNull() ?: 0f
             val scaledMin = lo * 0.9f
             val scaledMax = hi * 1.1f
-            kotlin.math.floor(scaledMin).toDouble() to kotlin.math.ceil(scaledMax).toDouble()
+            val computedMin = kotlin.math.floor(scaledMin).toDouble()
+            val computedMax = kotlin.math.ceil(scaledMax).toDouble()
+            (minYOverride ?: computedMin) to (maxYOverride ?: computedMax)
         }
 
     val shouldShowBaseline =
