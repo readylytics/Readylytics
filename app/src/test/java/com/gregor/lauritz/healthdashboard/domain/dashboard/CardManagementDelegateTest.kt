@@ -7,6 +7,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.just
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
@@ -29,6 +30,7 @@ import org.junit.Test
 class CardManagementDelegateTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var testScope: TestScope
+    private lateinit var delegateScope: CoroutineScope
     private lateinit var repository: CardConfigurationRepository
     private lateinit var delegate: CardManagementDelegate
 
@@ -44,12 +46,14 @@ class CardManagementDelegateTest {
         testScope = TestScope(testDispatcher)
         repository = mockk(relaxed = true)
         coEvery { repository.updateDashboardCardConfigurations(any()) } just Runs
-        delegate = CardManagementDelegate(repository, testScope)
+        delegateScope = CoroutineScope(testDispatcher)
+        delegate = CardManagementDelegate(repository, delegateScope)
     }
 
     @After
     fun tearDown() {
         testScope.cancel()
+        delegateScope.cancel()
     }
 
     // --- 1. Initial state ---
