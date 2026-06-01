@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -148,19 +150,23 @@ fun TrendChart(
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
-    var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
+    var tapCanvasX by remember { mutableStateOf<Float?>(null) }
+    var tapDataY by remember { mutableStateOf<Double?>(null) }
+    var containerWidthPx by remember { mutableStateOf(0f) }
 
     // Clear highlight when tooltip is hidden
     LaunchedEffect(tooltipState) {
         if (tooltipState == null) {
-            selectedPointOffset = null
+            tapCanvasX = null
+            tapDataY = null
         }
     }
 
     // Clear tooltip when the chart is scrolled/panned (Vico horizontal scroll)
     LaunchedEffect(scrollState.value) {
         tooltipState = null
-        selectedPointOffset = null
+        tapCanvasX = null
+        tapDataY = null
     }
 
     // Clear tooltip when the parent list scrolls vertically.
@@ -170,7 +176,8 @@ fun TrendChart(
     //           slipped through while the frame was mid-scroll
     LaunchedEffect(parentScrollInProgress) {
         tooltipState = null
-        selectedPointOffset = null
+        tapCanvasX = null
+        tapDataY = null
     }
 
     if (points.none { it.value != null }) {
@@ -258,38 +265,11 @@ fun TrendChart(
     val colors = zoneBandColors(bands, extendedColors, primaryContainer, errorContainer)
     val zoneBandDecoration = remember(bands, colors, minY, maxY) { ZoneBandDecoration(bands, colors, minY, maxY) }
 
-    val markerVisibilityListener =
-        rememberChartMarkerVisibilityListener(
-            onPointSelected = { x, y, canvasX, canvasY ->
-                val dayOffset = x.toInt()
-                val value = y.toFloat()
-                val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
-                val dateString = ChartUtils.formatTooltipDate(date)
-                val valueText =
-                    if (baselineUnit.equals("steps", ignoreCase = true)) {
-                        "${value.toInt()}"
-                    } else {
-                        "${value.toInt()} $baselineUnit"
-                    }
-                val dateText = dateString
-                selectedPointOffset = Offset(canvasX, canvasY)
-                tooltipState =
-                    DataPointTooltipData(
-                        valueText = valueText,
-                        dateText = dateText,
-                        offset =
-                            androidx.compose.ui.unit.IntOffset(
-                                canvasX.toInt(),
-                                canvasY.toInt(),
-                            ),
-                    )
-            },
-        )
-
     Box(
         modifier =
             modifier
                 .fillMaxWidth()
+                .onSizeChanged { containerWidthPx = it.width.toFloat() }
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
@@ -302,9 +282,42 @@ fun TrendChart(
                                 // Multi-touch: pan/zoom detected — clear tooltip
                                 isMultiTouch = true
                                 tooltipState = null
-                                selectedPointOffset = null
+                                tapCanvasX = null
+                                tapDataY = null
                             }
                         }
+                    }
+                }
+                .pointerInput(containerWidthPx, points, rangeDays, minY, maxY) {
+                    detectTapGestures { offset ->
+                        if (containerWidthPx <= 0f) return@detectTapGestures
+                        val leftAxisPx = 50.dp.toPx()
+                        val rightPadPx = 8.dp.toPx()
+                        val drawableWidth = (containerWidthPx - leftAxisPx - rightPadPx).coerceAtLeast(1f)
+                        val approxDay = ((offset.x - leftAxisPx) / drawableWidth * (rangeDays - 1))
+                            .roundToInt().coerceIn(0, rangeDays - 1)
+                        val nearest = points
+                            .filter { it.value != null }
+                            .minByOrNull { kotlin.math.abs(it.dayOffset - approxDay) }
+                            ?: return@detectTapGestures
+                        val date = ChartUtils.dayOffsetToLocalDate(nearest.dayOffset, rangeStartMs)
+                        val dateText = ChartUtils.formatTooltipDate(date)
+                        val valueText = if (baselineUnit.equals("steps", ignoreCase = true)) {
+                            "${nearest.value!!.toInt()}"
+                        } else {
+                            "${nearest.value!!.toInt()} $baselineUnit"
+                        }
+                        tapCanvasX = offset.x
+                        tapDataY = nearest.value!!.toDouble()
+                        tooltipState =
+                            DataPointTooltipData(
+                                valueText = valueText,
+                                dateText = dateText,
+                                offset = androidx.compose.ui.unit.IntOffset(
+                                    offset.x.toInt(),
+                                    offset.y.toInt(),
+                                ),
+                            )
                     }
                 },
     ) {
@@ -352,8 +365,6 @@ fun TrendChart(
                                 null
                             },
                         ),
-                    marker = InvisibleMarker,
-                    markerVisibilityListener = markerVisibilityListener,
                 ),
             modelProducer = modelProducer,
             scrollState = scrollState,
@@ -362,7 +373,11 @@ fun TrendChart(
         )
 
         VicoChartTooltipOverlay(
-            selectedPointOffset = selectedPointOffset,
+            selectedPointOffset = null,
+            externalCanvasX = tapCanvasX,
+            externalDataY = tapDataY,
+            minY = minY,
+            maxY = maxY,
             modifier = Modifier.fillMaxWidth().height(180.dp),
         )
     }
@@ -448,25 +463,30 @@ fun BloodPressureTrendChart(
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
-    var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
+    var tapCanvasX by remember { mutableStateOf<Float?>(null) }
+    var tapDataY by remember { mutableStateOf<Double?>(null) }
+    var containerWidthPx by remember { mutableStateOf(0f) }
 
     LaunchedEffect(tooltipState) {
         if (tooltipState == null) {
-            selectedPointOffset = null
+            tapCanvasX = null
+            tapDataY = null
         }
     }
 
     // Clear tooltip when the chart is scrolled/panned (Vico horizontal scroll)
     LaunchedEffect(scrollState.value) {
         tooltipState = null
-        selectedPointOffset = null
+        tapCanvasX = null
+        tapDataY = null
     }
 
     // Clear tooltip when the parent list scrolls vertically.
     // Fire on both transitions to eliminate stale tooltip state at scroll-end.
     LaunchedEffect(parentScrollInProgress) {
         tooltipState = null
-        selectedPointOffset = null
+        tapCanvasX = null
+        tapDataY = null
     }
 
     if (systolicPoints.none { it.value != null } || diastolicPoints.none { it.value != null }) {
@@ -568,45 +588,11 @@ fun BloodPressureTrendChart(
             LineCartesianLayer.LineProvider.series(systolicLine, diastolicLine)
         }
 
-    val markerVisibilityListener =
-        rememberChartMarkerVisibilityListener(
-            onPointSelected = { x, y, canvasX, canvasY ->
-                val dayOffset = x.toInt()
-                val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
-                val dateString = ChartUtils.formatTooltipDate(date)
-
-                val sysPoint = systolicPoints.firstOrNull { it.dayOffset == dayOffset }?.value
-                val diaPoint = diastolicPoints.firstOrNull { it.dayOffset == dayOffset }?.value
-
-                val valueText =
-                    if (sysPoint != null && diaPoint != null) {
-                        "${sysPoint.roundToInt()}/${diaPoint.roundToInt()} mmHg"
-                    } else if (sysPoint != null) {
-                        "Sys: ${sysPoint.roundToInt()} mmHg"
-                    } else if (diaPoint != null) {
-                        "Dia: ${diaPoint.roundToInt()} mmHg"
-                    } else {
-                        "—"
-                    }
-
-                selectedPointOffset = Offset(canvasX, canvasY)
-                tooltipState =
-                    DataPointTooltipData(
-                        valueText = valueText,
-                        dateText = dateString,
-                        offset =
-                            androidx.compose.ui.unit.IntOffset(
-                                canvasX.toInt(),
-                                canvasY.toInt(),
-                            ),
-                    )
-            },
-        )
-
     Box(
         modifier =
             modifier
                 .fillMaxWidth()
+                .onSizeChanged { containerWidthPx = it.width.toFloat() }
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
@@ -619,9 +605,45 @@ fun BloodPressureTrendChart(
                                 // Multi-touch: pan/zoom detected — clear tooltip
                                 isMultiTouch = true
                                 tooltipState = null
-                                selectedPointOffset = null
+                                tapCanvasX = null
+                                tapDataY = null
                             }
                         }
+                    }
+                }
+                .pointerInput(containerWidthPx, systolicPoints, diastolicPoints, rangeDays, minY, maxY) {
+                    detectTapGestures { offset ->
+                        if (containerWidthPx <= 0f) return@detectTapGestures
+                        val leftAxisPx = 50.dp.toPx()
+                        val rightPadPx = 8.dp.toPx()
+                        val drawableWidth = (containerWidthPx - leftAxisPx - rightPadPx).coerceAtLeast(1f)
+                        val approxDay = ((offset.x - leftAxisPx) / drawableWidth * (rangeDays - 1))
+                            .roundToInt().coerceIn(0, rangeDays - 1)
+                        val sysNearest = systolicPoints
+                            .filter { it.value != null }
+                            .minByOrNull { kotlin.math.abs(it.dayOffset - approxDay) }
+                            ?: return@detectTapGestures
+                        val diaNearest = diastolicPoints
+                            .filter { it.value != null }
+                            .minByOrNull { kotlin.math.abs(it.dayOffset - approxDay) }
+                        val date = ChartUtils.dayOffsetToLocalDate(sysNearest.dayOffset, rangeStartMs)
+                        val dateText = ChartUtils.formatTooltipDate(date)
+                        val valueText = if (diaNearest != null) {
+                            "${sysNearest.value!!.toInt()}/${diaNearest.value!!.toInt()} mmHg"
+                        } else {
+                            "Sys: ${sysNearest.value!!.toInt()} mmHg"
+                        }
+                        tapCanvasX = offset.x
+                        tapDataY = sysNearest.value!!.toDouble()
+                        tooltipState =
+                            DataPointTooltipData(
+                                valueText = valueText,
+                                dateText = dateText,
+                                offset = androidx.compose.ui.unit.IntOffset(
+                                    offset.x.toInt(),
+                                    offset.y.toInt(),
+                                ),
+                            )
                     }
                 },
     ) {
@@ -665,8 +687,6 @@ fun BloodPressureTrendChart(
                                 line = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp),
                             ),
                         ),
-                    marker = InvisibleMarker,
-                    markerVisibilityListener = markerVisibilityListener,
                 ),
             modelProducer = modelProducer,
             scrollState = scrollState,
@@ -675,7 +695,11 @@ fun BloodPressureTrendChart(
         )
 
         VicoChartTooltipOverlay(
-            selectedPointOffset = selectedPointOffset,
+            selectedPointOffset = null,
+            externalCanvasX = tapCanvasX,
+            externalDataY = tapDataY,
+            minY = minY,
+            maxY = maxY,
             modifier = Modifier.fillMaxWidth().height(180.dp),
         )
     }
