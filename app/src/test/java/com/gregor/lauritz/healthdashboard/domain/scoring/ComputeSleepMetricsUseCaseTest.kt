@@ -8,6 +8,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
+// ─── Test Data Builders ──────────────────────────────────────────────────────
+
 /**
  * Unit tests for ComputeSleepMetricsUseCase.
  *
@@ -20,7 +22,6 @@ import kotlin.test.assertNull
  * 3. Edge cases: graceful handling of null/empty data
  */
 
-// ─── Test Data Builders ──────────────────────────────────────────────────────
 fun testDailySummary(
     dateMidnightMs: Long = LocalDate.of(2026, 5, 31).toEpochDay() * 86400000,
     baselineCalculatedAtDate: LocalDate? = null,

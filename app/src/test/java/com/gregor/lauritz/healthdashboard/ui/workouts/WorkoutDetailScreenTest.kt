@@ -50,7 +50,7 @@ class WorkoutDetailScreenTest {
     @Test
     fun hrr_recoveryCalculation_nullEndHrReturnsNull() {
         val endHr: Int? = null
-        val recoveryDrop = if (endHr != null && 50 != null) endHr - 50 else null
+        val recoveryDrop = if (endHr != null) endHr - 50 else null
         assertEquals(null, recoveryDrop)
     }
 
