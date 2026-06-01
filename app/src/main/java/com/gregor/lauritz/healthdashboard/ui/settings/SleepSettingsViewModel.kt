@@ -31,8 +31,6 @@ class SleepSettingsViewModel
                         goalSleepHours = prefs.goalSleepHours,
                         hrvBaselineOverride = prefs.hrvBaselineOverride,
                         rhrBaselineOverride = prefs.rhrBaselineOverride,
-                        restingHrBeforeMinutes = prefs.restingHrBeforeMinutes,
-                        restingHrAfterMinutes = prefs.restingHrAfterMinutes,
                         restingHrPercentile = prefs.restingHrPercentile,
                     )
                 }.stateIn(
@@ -84,28 +82,6 @@ class SleepSettingsViewModel
                         settingsRepo.updateRhrBaselineOverride(bpm = null)
                         scoringRepository.computeAndPersistDailySummary()
                     }
-
-                is SettingsEvent.RestingHrBeforeMinutesChanged -> {
-                    val validation =
-                        SettingsValidators.RESTING_HR_MINUTES_RULE.validate(event.minutes.toString())
-                    if (validation is ValidationResult.Valid) {
-                        appScope.launch {
-                            settingsRepo.updateRestingHrBeforeMinutes(minutes = event.minutes)
-                            scoringRepository.computeAndPersistDailySummary()
-                        }
-                    }
-                }
-
-                is SettingsEvent.RestingHrAfterMinutesChanged -> {
-                    val validation =
-                        SettingsValidators.RESTING_HR_MINUTES_RULE.validate(event.minutes.toString())
-                    if (validation is ValidationResult.Valid) {
-                        appScope.launch {
-                            settingsRepo.updateRestingHrAfterMinutes(minutes = event.minutes)
-                            scoringRepository.computeAndPersistDailySummary()
-                        }
-                    }
-                }
 
                 is SettingsEvent.RestingHrPercentileChanged -> {
                     val validation =

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.gregor.lauritz.healthdashboard.data.local.dao.BloodPressureRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
@@ -37,6 +38,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
     ],
     version = HealthDatabase.DATABASE_VERSION,
 )
+@TypeConverters(Converters::class)
 abstract class HealthDatabase : RoomDatabase() {
     abstract fun sleepSessionDao(): SleepSessionDao
 
@@ -57,7 +59,7 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun bloodPressureRecordDao(): BloodPressureRecordDao
 
     companion object {
-        const val DATABASE_VERSION = 22
+        const val DATABASE_VERSION = 23
 
         fun create(context: Context): HealthDatabase =
             Room

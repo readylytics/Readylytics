@@ -8,6 +8,11 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
+data class SleepHrSample(
+    val sessionId: String,
+    val beatsPerMinute: Int,
+)
+
 @Dao
 interface HeartRateDao {
     @Query(
@@ -149,4 +154,12 @@ interface HeartRateDao {
             "ORDER BY sessionId, beatsPerMinute ASC",
     )
     suspend fun getSleepHrSamplesForSessions(sessionIds: List<String>): List<HeartRateRecordEntity>
+
+    @Query(
+        "SELECT sessionId, beatsPerMinute " +
+            "FROM heart_rate_records " +
+            "WHERE sessionId IN (:sessionIds) AND recordType = 'SLEEP' " +
+            "ORDER BY sessionId, beatsPerMinute ASC",
+    )
+    suspend fun getSleepHrProjectionForSessions(sessionIds: List<String>): List<SleepHrSample>
 }

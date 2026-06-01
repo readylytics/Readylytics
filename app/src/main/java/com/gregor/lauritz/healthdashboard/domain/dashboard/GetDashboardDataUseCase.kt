@@ -308,8 +308,6 @@ class GetDashboardDataUseCase
                         append(
                             resourceProvider.getString(
                                 R.string.tooltip_resting_hr_baseline,
-                                prefs.restingHrBeforeMinutes,
-                                prefs.restingHrAfterMinutes,
                                 rBaseline,
                                 arrow,
                                 diff,
@@ -321,7 +319,7 @@ class GetDashboardDataUseCase
                 }
 
             return CardData(
-                title = "Resting HR",
+                title = "Resting Heart Rate",
                 value = (summary.restingHeartRate ?: summary.nocturnalRhr)?.toString() ?: "—",
                 unit = "bpm",
                 status = restingHrStatus,
