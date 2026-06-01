@@ -13,6 +13,7 @@ import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryReposito
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -50,13 +52,11 @@ data class Baselines(
 data class SleepUiState(
     val latestSummary: DailySummary? = null,
     val latestSession: SleepSessionData? = null,
+    val stageTimeline: List<SleepStageData> = emptyList(),
     val dailyHrv: List<DailyDataPoint> = emptyList(),
     val dailyRhr: List<DailyDataPoint> = emptyList(),
-    val hrvBaseline: Float? = null,
-    val rhrBaseline: Float? = null,
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val selectedDate: LocalDate = LocalDate.now(),
-    val goalSleepMinutes: Int = 480,
     val rangeStartMs: Long = System.currentTimeMillis(),
     val isLoading: Boolean = false,
     val hrvZoneBands: List<ZoneBand>? = null,
@@ -179,13 +179,25 @@ class SleepViewModel
                             }
                         }
 
+                    val sessionFlow =
+                        sleepSessionRepository.observeFirstSessionEndingInRange(
+                            selectedMidnightMs,
+                            nextDayMidnightMs,
+                        )
+
+                    val stagesFlow =
+                        sessionFlow.flatMapLatest { session ->
+                            if (session == null) {
+                                flowOf(emptyList())
+                            } else {
+                                sleepSessionRepository.observeSessionStages(session.id)
+                            }
+                        }
+
                     val dataFlow =
                         combine(
                             summaryFlow,
-                            sleepSessionRepository.observeFirstSessionEndingInRange(
-                                selectedMidnightMs,
-                                nextDayMidnightMs,
-                            ),
+                            sessionFlow,
                             dailySummaryRepository.observeSince(fromMs),
                             settingsRepo.userPreferences,
                         ) { latestSummary, latestSession, summaries, prefs ->
@@ -194,9 +206,10 @@ class SleepViewModel
 
                     combine(
                         dataFlow,
+                        stagesFlow,
                         baselinesFlow,
                         foregroundSyncController.isSyncing,
-                    ) { data, baselines, isSyncing ->
+                    ) { data, stages, baselines, isSyncing ->
                         val (latestSummary, latestSession, summaries, prefs) = data
                         val (bHrv, bRhr) = baselines
 
@@ -251,11 +264,9 @@ class SleepViewModel
                         SleepUiState(
                             latestSummary = latestSummary,
                             latestSession = latestSession,
+                            stageTimeline = stages,
                             dailyHrv = hrvPoints,
                             dailyRhr = rhrPoints,
-                            hrvBaseline = baselineHrv,
-                            rhrBaseline = baselineRhr,
-                            goalSleepMinutes = (prefs.goalSleepHours * 60).toInt(),
                             selectedRange = range,
                             selectedDate = date,
                             rangeStartMs = startDayMs,

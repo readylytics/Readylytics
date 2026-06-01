@@ -27,9 +27,6 @@ sealed interface AppDestination {
     data object StepDetail : AppDestination
 
     @Serializable
-    data object SleepDetail : AppDestination
-
-    @Serializable
     data object HeartRateDetail : AppDestination
 
     @Serializable
@@ -40,4 +37,7 @@ sealed interface AppDestination {
 
     @Serializable
     data object BloodPressureDetail : AppDestination
+
+    @Serializable
+    data object HrvDetail : AppDestination
 }
