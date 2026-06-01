@@ -165,6 +165,11 @@ fun TrendChart(
             kotlin.math.floor(scaledMin).toDouble() to kotlin.math.ceil(scaledMax).toDouble()
         }
 
+    val shouldShowBaseline =
+        remember(baselineValue, minY, maxY, showBaseline) {
+            showBaseline && baselineValue.toDouble() >= minY && baselineValue.toDouble() <= maxY
+        }
+
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val baselineColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -271,7 +276,7 @@ fun TrendChart(
                             guideline = guidelineComponent,
                         ),
                     decorations =
-                        if (showBaseline) {
+                        if (shouldShowBaseline) {
                             listOf(
                                 HorizontalLine(
                                     y = { baselineValue.toDouble() },
@@ -304,7 +309,7 @@ fun TrendChart(
         )
     }
 
-    if (showBaseline) {
+    if (shouldShowBaseline) {
         Spacer(Modifier.height(6.dp))
         BaselineLegend(
             value = baselineValue,
