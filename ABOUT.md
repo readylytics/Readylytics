@@ -11,7 +11,7 @@ When you first open the app, you select a **Physiological Profile** — Athlete,
 - **Athlete** — you train regularly (3+ days/week structured exercise). Your metrics will be interpreted with tighter circadian consistency targets (±20 min) and more nuanced HRV sensitivity.
 - **Active** — you exercise 1–3 times per week or have an active job. Moderate thresholds (±30 min circadian, balanced HRV sensitivity).
 - **Sedentary** — you don't exercise regularly but may have daily movement. More relaxed thresholds (±45 min circadian) so normal life variation doesn't penalise you.
-- **Shift Worker** — you have a rotating or irregular schedule. We measure circadian _consistency within a week_ rather than across weeks, and ignore absolute bedtimes.
+- **Shift Worker** — you have a rotating or irregular schedule. We judge each night against your own typical time for that day of the week, so a predictable rotation isn't penalised for failing to match a single fixed bedtime.
 
 **Why profiles exist.** A 2:00 AM bedtime is a red flag for an athlete aiming to peak; it's normal for a shift worker. Similarly, an athlete's HRV is more stable than a sedentary person's, so we don't compare them to the same bar. Profiles let us keep scores fair across different lifestyles.
 
@@ -59,19 +59,19 @@ As you age, the amount of deep sleep naturally declines. We adjust your targets 
 | 18–29     | 18–20%            | 22%              |
 | 30–49     | 16–18%            | 21%              |
 | 50–59     | 14–16%            | 20%              |
-| 60+       | 10–13%            | 18%              |
+| 60+       | 10–13%            | 19%              |
 
-These ranges come from polysomnography studies in healthy populations. They represent the healthy mid-range; your personal healthy normal may sit anywhere within your age band. We do not penalise you if your wearable reports unusual numbers — wearable stage detection is imperfect.
+These ranges come from polysomnography studies in healthy populations. They represent the healthy mid-range; your personal healthy normal may sit anywhere within your age band. Note that the age-related decline in deep (slow-wave) sleep is much steeper than the decline in REM, which falls only modestly across adulthood (Ohayon 2004). We do not penalise you if your wearable reports unusual numbers — wearable stage detection is imperfect.
 
 **HRV sensitivity by profile**
 
-Heart rate variability (HRV) is noisy on any single night. To avoid false positives, we only consider HRV "high" or "low" relative to a Z-score threshold. This threshold shifts based on your profile.
+Heart rate variability (HRV) is noisy on any single night. To avoid false positives, we only flag HRV as notably "high" or "low" once it crosses a Z-score threshold. While your personal baseline is still being learned (the Provisional phase), we estimate your day-to-day variability from a population value tiered by profile, so the threshold shifts with it.
 
-- **Athlete** — we expect stable HRV. High variability stands out more, so we flag it sooner (Z > +2.0 is "very high").
-- **Active** — moderate sensitivity (Z > +1.5 is "very high").
-- **Sedentary** — more natural variability, so we use a tighter threshold (Z > +1.2 is "very high").
+- **Athlete** — HRV is normally stable, so a genuine departure is more likely to mean something (a high reading can even signal parasympathetic hyperactivity during functional overreaching; Le Meur 2013). We flag sooner: Z beyond ±1.2 is notable.
+- **Active** — moderate sensitivity: Z beyond ±1.5 is notable.
+- **Sedentary** — more natural night-to-night noise, so we require a larger departure before flagging to avoid false alarms: Z beyond ±2.0 is notable.
 
-This tuning means a Sedentary person's high-variability night doesn't get the same weight as an Athlete's, because natural day-to-day noise is higher for less-regular lifestyles.
+This tuning means a single noisy night isn't treated as a signal as readily for a Sedentary person as the same Z-score would be for an Athlete, because higher baseline noise produces more large deviations by chance. Once your personal baseline matures (Day 60+), the Z-score is computed against _your own_ standard deviation, which already accounts for your individual variability.
 
 ---
 
@@ -85,12 +85,12 @@ We compare each night's bedtime and wake time to your _typical_ (median) bedtime
 
 How strict we are about "consistent" depends on your profile:
 
-| Profile          | Deviation threshold | Interpretation                    |
-| ---------------- | ------------------- | --------------------------------- |
-| **Athlete**      | ±20 minutes         | Tight control for performance     |
-| **Active**       | ±30 minutes         | Standard regularity               |
-| **Sedentary**    | ±45 minutes         | Relaxed; normal life variation OK |
-| **Shift Worker** | Within-week only    | See below                         |
+| Profile          | Deviation threshold     | Interpretation                    |
+| ---------------- | ----------------------- | --------------------------------- |
+| **Athlete**      | ±20 minutes             | Tight control for performance     |
+| **Active**       | ±30 minutes             | Standard regularity               |
+| **Sedentary**    | ±45 minutes             | Relaxed; normal life variation OK |
+| **Shift Worker** | ±30 minutes, by weekday | See below                         |
 
 Within each threshold band:
 
@@ -100,7 +100,7 @@ Within each threshold band:
 
 **Special handling for shift workers**
 
-If you work rotating shifts or have an irregular schedule, the score measures **within-week consistency** rather than absolute times. We compare each night to the median bedtime/wake time for that same day-of-week over the past 4 weeks. This way, a Monday night is compared to other Mondays, not to your overall average. The threshold is tighter (±30 min from your Monday typical time) because the focus is on predictability within each shift cycle, not absolute timing.
+If you work rotating shifts or have an irregular schedule, comparing every night to one overall average would unfairly punish a normal rotation. Instead, we measure **day-of-week regularity**: each night is compared to the median bedtime/wake time for that same weekday over the past 4 weeks. A Monday is judged against your other Mondays, not against your whole-week average. The threshold is ±30 min from that weekday's typical time, because the goal is a predictable, repeating pattern rather than a fixed clock time held across the week.
 
 **A caveat for biphasic sleepers.** This metric is calibrated for people with one main sleep period per day. If you sleep in two segments by choice (e.g., 2:00–4:00 AM and then again at 6:00–7:00 AM), the score may misclassify your schedule. We exclude any single sleep period under 3 hours from the median calculation so naps don't pull your "typical" times around — but this rule has imperfect coverage of every sleep pattern.
 
@@ -121,7 +121,7 @@ The ratio (ATL ÷ CTL) tells us whether you've recently spiked above your recent
 
 - 0.8–1.3 → 100 (in your normal range — "sweet spot")
 - 1.3–1.5 → linearly decays
-- Above 1.5 → smooth quadratic decay (Gabbett 2016)
+- Above 1.5 → smooth quadratic decay (approximating Gabbett 2016's elevated-risk zone)
 
 **Tooltips**
 
@@ -173,7 +173,7 @@ If you wear your tracker only 3–5 nights a week, the timeline lengthens propor
 
 - **HRV (Heart Rate Variability)** — the millisecond-level variation in time between heartbeats. Higher generally indicates better autonomic recovery, _up to a point_.
 - **RMSSD** — the specific HRV measure most apps use. We work with the natural log of RMSSD (**lnRMSSD**) internally because it linearizes the naturally skewed distribution of heart rate variability, making statistical comparison (Z-scores) valid (Plews 2013, Buchheit 2014).
-- **RHR (Resting Heart Rate)** — your nocturnal heart rate, averaged across deep portions of sleep.
+- **RHR (Resting Heart Rate)** — your true resting heart rate, estimated from the low end of your heart rate while you sleep (by default the 5th percentile of your sleeping heart rate, adjustable in settings). This sits below your _average_ overnight heart rate, which is pushed up by REM and brief awakenings — using the low percentile gives a more stable night-to-night baseline. *Note: This nightly-frozen nocturnal floor is the foundational baseline used directly in all downstream recovery, Heart Rate Reserve (HRR), and TRIMP calculations to ensure training load metrics are highly stable and unaffected by wake-time noise or systemic average inflation.*
 - **Deep sleep / Slow-Wave Sleep / N3** — the deepest stage of NREM sleep; growth-hormone release is concentrated here.
 - **REM** — the dreaming stage, important for memory and emotional processing.
 - **TRIMP (Training Impulse)** — a single number summarising the intensity-weighted duration of an exercise session.
@@ -190,7 +190,7 @@ If you wear your tracker only 3–5 nights a week, the timeline lengthens propor
 
 3. **Profiles are engineering heuristics, not physics.** The cutoffs (Athlete ±20 min, Active ±30 min, Sedentary ±45 min circadian threshold) are chosen for practical usability, not derived from prospective studies. We monitor whether these cutoffs are working well and will adjust if needed.
 
-4. **The ACWR (Readiness load ratio) is descriptive, not predictive.** The methodological literature (Lolli et al. 2019; Impellizzeri et al. 2020, 2021) has demonstrated that the acute-to-chronic ratio is often a mathematical artifact and is not a validated *causal* injury predictor. We follow the Gabbett (2016) quadratic penalty model but present it strictly as a **load change indicator** to help you visualize spikes in training intensity, not as a diagnostic injury risk score.
+4. **The ACWR (Readiness load ratio) is descriptive, not predictive.** The methodological literature (Lolli et al. 2019; Impellizzeri et al. 2020, 2021) has demonstrated that the acute-to-chronic ratio is often a mathematical artifact and is not a validated _causal_ injury predictor. We approximate Gabbett's (2016) elevated-risk zone above ~1.5 with a quadratic penalty — the curve shape is our own modelling choice — and present it strictly as a **load-change indicator** to help you visualise spikes in training intensity, not as a diagnostic injury-risk score.
 
 5. **One night is noise; trends are signal.** Treat any single day's score as a data point, not a verdict. Look at the 7-day trend.
 

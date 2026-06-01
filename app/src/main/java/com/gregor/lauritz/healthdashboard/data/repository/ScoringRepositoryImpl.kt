@@ -26,6 +26,8 @@ import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
@@ -53,9 +55,13 @@ class ScoringRepositoryImpl
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
     ) : ScoringRepository {
+        private val calculationMutex = Mutex()
+
         override suspend fun computeAndPersistDailySummary(targetDate: LocalDate) {
-            val summary = computeDailySummary(targetDate)
-            dailySummaryDao.upsert(summary)
+            calculationMutex.withLock {
+                val summary = computeDailySummary(targetDate)
+                dailySummaryDao.upsert(summary)
+            }
         }
 
         override suspend fun computeDailySummary(targetDate: LocalDate): DailySummaryEntity =
@@ -69,11 +75,17 @@ class ScoringRepositoryImpl
                 val prefs = settingsRepo.userPreferences.first()
                 val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
 
+                // Retrieve the nightly frozen HR_rest (nocturnal floor) from the daily summary if available
+                val dailySummary = dailySummaryDao.getByDate(dayMidnightMs)
                 val rhrBaselineValue =
-                    baselineComputer.computeAdaptiveBaselineRhrBpm(
-                        dayMidnight = dayMidnight,
-                        rhrBaselineOverride = prefs.rhrBaselineOverride,
-                    )
+                    dailySummary?.restingHeartRate?.toFloat()
+                        ?: prefs.rhrBaselineOverride
+                        ?: baselineComputer.computeAdaptiveBaselineRhrBpm(
+                            dayMidnight = dayMidnight,
+                            rhrBaselineOverride = prefs.rhrBaselineOverride,
+                            percentile = prefs.restingHrPercentile,
+                        )
+                        ?: ScoringConstants.DEFAULT_RHR_BPM
 
                 if (hrMax <= 0f) throw IllegalStateException("HR Max is missing or invalid")
                 if (rhrBaselineValue <= 0f) throw IllegalStateException("RHR Baseline is missing or invalid")
@@ -170,11 +182,23 @@ class ScoringRepositoryImpl
                             } else {
                                 null
                             }
-                        val avgRhr = heartRateDao.getAvgSleepHr(session.id)
+                        val sleepHrSamples = heartRateDao.getSleepHrSamplesForSession(session.id)
+                        val avgRhr =
+                            if (sleepHrSamples.isNotEmpty()) {
+                                val idx =
+                                    Math
+                                        .round((prefs.restingHrPercentile / 100.0) * (sleepHrSamples.size - 1))
+                                        .toInt()
+                                        .coerceIn(0, sleepHrSamples.size - 1)
+                                sleepHrSamples[idx]
+                            } else {
+                                null
+                            }
                         summary =
                             summary.copy(
                                 nocturnalHrv = avgHrv,
                                 nocturnalRhr = avgRhr,
+                                restingHeartRate = avgRhr,
                                 sleepDurationMinutes = session.durationMinutes,
                                 deepSleepPercent =
                                     if (session.durationMinutes > 0) {
@@ -269,15 +293,15 @@ class ScoringRepositoryImpl
 
         private suspend fun sumPaiScoreLastSixDays(targetDate: LocalDate): Float {
             val zoneIdSystem = ZoneId.systemDefault()
-            val previousDays =
+            val previousDaysMs =
                 (1..6).map { i ->
                     targetDate
                         .minusDays(i.toLong())
                         .atStartOfDay(zoneIdSystem)
                         .toInstant()
                         .toEpochMilli()
-                        .let { dailySummaryDao.getByDate(it)?.paiScore ?: 0f }
                 }
-            return previousDays.sum()
+            val summaries = dailySummaryDao.getByDates(previousDaysMs)
+            return summaries.mapNotNull { it.paiScore }.sum()
         }
     }

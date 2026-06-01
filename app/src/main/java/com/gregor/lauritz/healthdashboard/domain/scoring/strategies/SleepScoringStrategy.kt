@@ -70,6 +70,8 @@ class SleepScoringStrategy
             rhrBaselineOverride: Float?,
             hrvBaselineOverride: Float?,
             restorationWeights: RestorationWeights?,
+            frozenLnMu: Float?,
+            frozenLnSigma: Float?,
         ): Float {
             val zHrv =
                 loadStrategy.computeHrvZScore(
@@ -77,7 +79,9 @@ class SleepScoringStrategy
                     muHrvHistory,
                     sigmaHrvHistory,
                     sigmaPrior,
-                    hrvBaselineOverride,
+                    baselineOverride = hrvBaselineOverride,
+                    frozenLnMu = frozenLnMu,
+                    frozenLnSigma = frozenLnSigma,
                 )
                     ?: 0f
             val hrvScore = loadStrategy.computeHrvScore(zHrv)

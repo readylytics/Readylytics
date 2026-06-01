@@ -22,8 +22,8 @@
 
     <string name="tooltip_sleep_duration">Total time asleep last night.\n\nGoal: %1$s</string>
 
-    <string name="tooltip_resting_hr_baseline">Minimum heart rate captured within %1$dm before and %2$dm after wake up.\n\nBaseline: %3$d bpm %4$s (%5$d bpm)</string>
-    <string name="tooltip_resting_hr_no_baseline">Minimum heart rate captured around wake up time.\n\nNot enough data to calculate baseline.</string>
+    <string name="tooltip_resting_hr_baseline">Resting heart rate calculated as the low-percentile of the entire sleep period.\n\nBaseline: %1$d bpm %2$s (%3$d bpm)</string>
+    <string name="tooltip_resting_hr_no_baseline">Resting heart rate calculated as the low-percentile of the entire sleep period.\n\nNot enough data to calculate baseline.</string>
 
     <string name="tooltip_strain_ratio">The ACWR (Acute:Chronic Workload Ratio). Compares recent training load to your baseline.\n\n• 0.8–1.3: In your normal range — sweet spot\n• 1.3–1.5: Load increasing; linear decay begins\n• 1.5–2.0: Overtraining; high injury risk\n• &gt;2.0: Severe overtraining; recovery needed\n• 0.5–0.8: Under-training\n• &lt;0.5: Severe under-training</string>
 

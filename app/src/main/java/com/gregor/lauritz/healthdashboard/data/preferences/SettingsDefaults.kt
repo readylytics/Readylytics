@@ -35,8 +35,6 @@ object SettingsDefaults {
     const val HRV_WARNING_THRESHOLD = 0.90f
     const val RHR_OPTIMAL_THRESHOLD = 0.90f
     const val RHR_WARNING_THRESHOLD = 1.1f
-    const val RESTING_HR_BEFORE_MINUTES = 5
-    const val RESTING_HR_AFTER_MINUTES = 15
     const val RESTING_HR_PERCENTILE = 5
     val APP_THEME = AppTheme.SYSTEM
     const val DYNAMIC_COLOR_ENABLED = true
@@ -73,7 +71,6 @@ object SettingsDefaults {
             CardConfiguration(CardId.READINESS, isVisible = true, position = 1),
             CardConfiguration(CardId.STEPS, isVisible = true, position = 2),
             CardConfiguration(CardId.HRV, isVisible = true, position = 3),
-            CardConfiguration(CardId.SLEEP_RHR, isVisible = true, position = 4),
             CardConfiguration(CardId.SLEEP_DURATION, isVisible = true, position = 5),
             CardConfiguration(CardId.PAI_DAILY, isVisible = true, position = 6),
             CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 7),

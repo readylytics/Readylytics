@@ -30,7 +30,8 @@ class ForegroundSyncControllerTest {
             coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
             coEvery { syncUseCase.sync() } coAnswers {
                 delay(100) // Simulate long running sync
-                Result.success(Unit)
+                com.gregor.lauritz.healthdashboard.domain.model.Result
+                    .Success(Unit)
             }
 
             // Launch two syncs

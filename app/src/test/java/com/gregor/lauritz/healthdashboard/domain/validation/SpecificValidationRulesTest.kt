@@ -36,22 +36,6 @@ class SpecificValidationRulesTest {
         assertEquals(ValidationResult.Invalid("PAI: 0.1–0.3"), result)
     }
 
-    // RestingHrMinutesRule tests (0–60)
-
-    @Test
-    fun restingHrMinutesRule_validValue_30_returnsValid() {
-        val rule = RestingHrMinutesRule()
-        val result = rule.validate("30")
-        assertEquals(ValidationResult.Valid, result)
-    }
-
-    @Test
-    fun restingHrMinutesRule_invalidValue_61_returnsInvalid() {
-        val rule = RestingHrMinutesRule()
-        val result = rule.validate("61")
-        assertEquals(ValidationResult.Invalid("Minutes: 0–60"), result)
-    }
-
     // RetentionDaysRule tests (1–3650)
 
     @Test
