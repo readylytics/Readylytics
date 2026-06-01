@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -104,8 +105,14 @@ fun VicoChartTooltipOverlay(
     selectedPointOffset: Offset?,
     modifier: Modifier = Modifier,
     chartHeight: Dp = 180.dp,
+    pulseColor: Color = MaterialTheme.colorScheme.primary,
+    externalCanvasX: Float? = null,
+    externalDataY: Double? = null,
+    minY: Double? = null,
+    maxY: Double? = null,
 ) {
     var containerWidthPx by remember { mutableStateOf(0f) }
+    var containerHeightPx by remember { mutableStateOf(0f) }
 
     // Breathing halo animation on selection
     val infiniteTransition = rememberInfiniteTransition(label = "vicoHaloTransition")
@@ -137,11 +144,26 @@ fun VicoChartTooltipOverlay(
                 .height(chartHeight)
                 .onSizeChanged { size ->
                     containerWidthPx = size.width.toFloat()
+                    containerHeightPx = size.height.toFloat()
                 },
     ) {
-        if (selectedPointOffset != null && containerWidthPx > 0) {
-            val tapX = selectedPointOffset.x.coerceIn(0f, containerWidthPx)
-            val tapY = selectedPointOffset.y
+        val tapX = selectedPointOffset?.x ?: externalCanvasX
+        if (tapX != null && containerWidthPx > 0 && containerHeightPx > 0) {
+            val clampedTapX = tapX.coerceIn(0f, containerWidthPx)
+
+            val tapY =
+                if (selectedPointOffset != null) {
+                    selectedPointOffset.y
+                } else if (externalDataY != null && minY != null && maxY != null) {
+                    val yRatio = ((maxY - externalDataY) / (maxY - minY)).coerceIn(0.0, 1.0).toFloat()
+                    // Approximate Vico layer bounds (top padding ~8dp, bottom axis ~24dp)
+                    val density = androidx.compose.ui.platform.LocalDensity.current
+                    val topPad = with(density) { 8.dp.toPx() }
+                    val bottomPad = with(density) { 24.dp.toPx() }
+                    topPad + yRatio * (containerHeightPx - topPad - bottomPad)
+                } else {
+                    null
+                }
 
             val primaryColor = MaterialTheme.colorScheme.primary
 
@@ -149,22 +171,24 @@ fun VicoChartTooltipOverlay(
                 // Vertical indicator line through the chart
                 drawLine(
                     color = primaryColor.copy(alpha = 0.4f),
-                    start = Offset(tapX, 0f),
-                    end = Offset(tapX, size.height),
+                    start = Offset(clampedTapX, 0f),
+                    end = Offset(clampedTapX, size.height),
                     strokeWidth = 1.5.dp.toPx(),
                 )
 
-                // Concentric highlight circles with breathing pulsing animation
-                drawCircle(
-                    color = primaryColor.copy(alpha = haloAlpha),
-                    center = Offset(tapX, tapY),
-                    radius = (8.dp.toPx() * haloRadiusCoeff),
-                )
-                drawCircle(
-                    color = primaryColor,
-                    center = Offset(tapX, tapY),
-                    radius = 4.dp.toPx(),
-                )
+                if (tapY != null) {
+                    // Concentric highlight circles with breathing pulsing animation
+                    drawCircle(
+                        color = pulseColor.copy(alpha = haloAlpha),
+                        center = Offset(clampedTapX, tapY),
+                        radius = (8.dp.toPx() * haloRadiusCoeff),
+                    )
+                    drawCircle(
+                        color = pulseColor,
+                        center = Offset(clampedTapX, tapY),
+                        radius = 4.dp.toPx(),
+                    )
+                }
             }
         }
     }

@@ -36,8 +36,9 @@ fun systolicZoneBands(): List<ZoneBand> =
 fun diastolicZoneBands(): List<ZoneBand> =
     listOf(
         ZoneBand(Double.NEGATIVE_INFINITY, 80.0, HealthZone.OPTIMAL),
-        ZoneBand(80.0, 90.0, HealthZone.WARNING),
-        ZoneBand(90.0, Double.POSITIVE_INFINITY, HealthZone.CRITICAL),
+        ZoneBand(80.0, 90.0, HealthZone.NEUTRAL),
+        ZoneBand(90.0, 100.0, HealthZone.WARNING),
+        ZoneBand(100.0, Double.POSITIVE_INFINITY, HealthZone.CRITICAL),
     )
 
 // WHO BMI thresholds (static)

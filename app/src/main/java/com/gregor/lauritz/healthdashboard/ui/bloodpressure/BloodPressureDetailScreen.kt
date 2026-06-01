@@ -167,13 +167,13 @@ fun BloodPressureDetailScreen(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
                     BloodPressureSplitChart(
-    systolicPoints = uiState.dailySystolic,
-    diastolicPoints = uiState.dailyDiastolic,
-    rangeStartMs = uiState.rangeStartMs,
-    rangeDays = uiState.selectedRange.days,
-    scrollState = chartScrollState,
-    zoomState = chartZoomState,
-)
+                        systolicPoints = uiState.dailySystolic,
+                        diastolicPoints = uiState.dailyDiastolic,
+                        rangeStartMs = uiState.rangeStartMs,
+                        rangeDays = uiState.selectedRange.days,
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
+                    )
                 }
             }
 

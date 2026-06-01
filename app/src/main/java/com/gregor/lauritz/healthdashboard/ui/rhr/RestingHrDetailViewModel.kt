@@ -26,11 +26,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
-import kotlinx.coroutines.flow.stateIn
 
 private const val RHR_CRITICAL_MULTIPLIER = 1.3f
 
