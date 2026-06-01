@@ -26,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.domain.model.HealthZone
 import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
@@ -221,21 +220,9 @@ fun TrendChart(
     val extendedColors = LocalExtendedColors.current
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val errorContainer = MaterialTheme.colorScheme.errorContainer
-    val zoneBandDecoration =
-        remember(zoneBands, extendedColors, primaryContainer, errorContainer, minY, maxY) {
-            zoneBands?.let { bands ->
-                val colors =
-                    bands.map { band ->
-                        when (band.zone) {
-                            HealthZone.OPTIMAL -> primaryContainer.copy(alpha = 0.30f)
-                            HealthZone.NEUTRAL -> extendedColors.neutralContainer.copy(alpha = 0.20f)
-                            HealthZone.WARNING -> extendedColors.warningContainer.copy(alpha = 0.30f)
-                            HealthZone.CRITICAL -> errorContainer.copy(alpha = 0.30f)
-                        }
-                    }
-                ZoneBandDecoration(bands, colors, minY, maxY)
-            }
-        }
+    val bands = zoneBands ?: emptyList()
+    val colors = zoneBandColors(bands, extendedColors, primaryContainer, errorContainer)
+    val zoneBandDecoration = remember(bands, colors, minY, maxY) { ZoneBandDecoration(bands, colors, minY, maxY) }
 
     val markerVisibilityListener =
         rememberChartMarkerVisibilityListener(
@@ -431,10 +418,28 @@ fun BloodPressureTrendChart(
 
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
-    val baselineColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    val baselineColor = MaterialTheme.colorScheme.onSurfaceVariant
     val guidelineComponent = ChartDefaults.guidelineComponent()
+    val extendedColors = LocalExtendedColors.current
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val errorContainer = MaterialTheme.colorScheme.errorContainer
     val systolicColor = MaterialTheme.colorScheme.primary
-    val diastolicColor = MaterialTheme.colorScheme.tertiary
+    val diastolicColor = MaterialTheme.colorScheme.tertiaryContainer
+    val bands =
+        com.gregor.lauritz.healthdashboard.domain.model
+            .systolicZoneBands()
+    // Define colors and containers for blood pressure chart
+
+    // Use generic utility for colors; increase optimal opacity for better distinction
+    val colors =
+        zoneBandColors(
+            bands = bands,
+            extendedColors = extendedColors,
+            primaryContainer = primaryContainer,
+            errorContainer = errorContainer,
+            optimalAlpha = 0.45f,
+        )
+    val zoneBandDecoration = remember(bands, colors, minY, maxY) { ZoneBandDecoration(bands, colors, minY, maxY) }
 
     val modelProducer = remember { CartesianChartModelProducer() }
 
@@ -557,7 +562,8 @@ fun BloodPressureTrendChart(
                             guideline = guidelineComponent,
                         ),
                     decorations =
-                        listOf(
+                        listOfNotNull(
+                            zoneBandDecoration,
                             HorizontalLine(
                                 y = { 120.0 },
                                 line = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp),
