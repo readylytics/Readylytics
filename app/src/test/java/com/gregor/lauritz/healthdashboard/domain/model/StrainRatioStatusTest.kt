@@ -76,34 +76,34 @@ class StrainRatioStatusTest {
 
     // Warning Range (Under-training): 0.5–0.8
     @Test
-    fun `strain ratio 0.5 returns NEUTRAL`() {
-        assertEquals(MetricStatus.NEUTRAL, 0.5f.strainRatioStatus())
+    fun `strain ratio 0.5 returns WARNING`() {
+        assertEquals(MetricStatus.WARNING, 0.5f.strainRatioStatus())
     }
 
     @Test
-    fun `strain ratio 0.65 returns NEUTRAL`() {
-        assertEquals(MetricStatus.NEUTRAL, 0.65f.strainRatioStatus())
+    fun `strain ratio 0.65 returns WARNING`() {
+        assertEquals(MetricStatus.WARNING, 0.65f.strainRatioStatus())
     }
 
     @Test
-    fun `strain ratio 0.79 returns NEUTRAL`() {
-        assertEquals(MetricStatus.NEUTRAL, 0.79f.strainRatioStatus())
+    fun `strain ratio 0.79 returns WARNING`() {
+        assertEquals(MetricStatus.WARNING, 0.79f.strainRatioStatus())
     }
 
     // Poor Range (Severe Under-training): <0.5
     @Test
-    fun `strain ratio 0.49 returns WARNING`() {
-        assertEquals(MetricStatus.WARNING, 0.49f.strainRatioStatus())
+    fun `strain ratio 0.49 returns POOR`() {
+        assertEquals(MetricStatus.POOR, 0.49f.strainRatioStatus())
     }
 
     @Test
-    fun `strain ratio 0.3 returns WARNING`() {
-        assertEquals(MetricStatus.WARNING, 0.3f.strainRatioStatus())
+    fun `strain ratio 0.3 returns POOR`() {
+        assertEquals(MetricStatus.POOR, 0.3f.strainRatioStatus())
     }
 
     @Test
-    fun `strain ratio 0.0 returns WARNING`() {
-        assertEquals(MetricStatus.WARNING, 0.0f.strainRatioStatus())
+    fun `strain ratio 0.0 returns POOR`() {
+        assertEquals(MetricStatus.POOR, 0.0f.strainRatioStatus())
     }
 
     // Edge Cases (Invalid/Negative Values)
@@ -123,7 +123,7 @@ class StrainRatioStatusTest {
     }
 
     @Test
-    fun `zero strain ratio returns WARNING`() {
-        assertEquals(MetricStatus.WARNING, 0.0f.strainRatioStatus())
+    fun `zero strain ratio returns POOR`() {
+        assertEquals(MetricStatus.POOR, 0.0f.strainRatioStatus())
     }
 }
