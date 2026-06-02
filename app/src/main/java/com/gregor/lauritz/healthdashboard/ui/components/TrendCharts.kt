@@ -305,10 +305,17 @@ fun TrendChart(
                 .fillMaxWidth()
                 .pointerInput(Unit) {
                     awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false)
-                        // Dismiss any active marker before Vico processes the tap so only the
-                        // newly tapped point becomes selected (prevents multi-point accumulation).
-                        markerController.dismiss()
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val selectedOffset = selectedPointOffset
+                        val isTapOnSelected = selectedOffset != null &&
+                            (down.position - selectedOffset).getDistance() < 40.dp.toPx()
+                        if (!isTapOnSelected) {
+                            // Dismiss any active marker before Vico processes the tap so only the
+                            // newly tapped point becomes selected (prevents multi-point accumulation).
+                            // Skip dismissal if tapping on an already-selected point to allow
+                            // Vico's toggle-off behavior to work correctly.
+                            markerController.dismiss()
+                        }
                         var isMultiTouch = false
                         while (!isMultiTouch) {
                             val event = awaitPointerEvent()
@@ -628,10 +635,17 @@ fun BloodPressureTrendChart(
                 .fillMaxWidth()
                 .pointerInput(Unit) {
                     awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false)
-                        // Dismiss any active marker before Vico processes the tap so only the
-                        // newly tapped point becomes selected (prevents multi-point accumulation).
-                        markerController.dismiss()
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val selectedOffset = selectedPointOffset
+                        val isTapOnSelected = selectedOffset != null &&
+                            (down.position - selectedOffset).getDistance() < 40.dp.toPx()
+                        if (!isTapOnSelected) {
+                            // Dismiss any active marker before Vico processes the tap so only the
+                            // newly tapped point becomes selected (prevents multi-point accumulation).
+                            // Skip dismissal if tapping on an already-selected point to allow
+                            // Vico's toggle-off behavior to work correctly.
+                            markerController.dismiss()
+                        }
                         var isMultiTouch = false
                         while (!isMultiTouch) {
                             val event = awaitPointerEvent()
