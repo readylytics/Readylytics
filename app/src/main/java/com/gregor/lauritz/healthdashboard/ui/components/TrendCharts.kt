@@ -150,14 +150,6 @@ fun TrendChart(
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
     val markerController = CartesianMarkerController.rememberToggleOnTap()
 
-    // Dismiss any Vico-persisted marker selection each time this composable enters composition.
-    // rememberToggleOnTap() uses rememberSaveable internally, so the active-marker set survives
-    // tab navigation (restoreState = true). Calling dismiss() here resets that saved state on
-    // every composition entry, preventing stale selections from carrying over across tab switches.
-    LaunchedEffect(Unit) {
-        markerController.dismiss()
-    }
-
     // Clear highlight when tooltip is hidden
     LaunchedEffect(tooltipState) {
         if (tooltipState == null) {
@@ -310,11 +302,10 @@ fun TrendChart(
                         val isTapOnSelected = selectedOffset != null &&
                             (down.position - selectedOffset).getDistance() < 40.dp.toPx()
                         if (!isTapOnSelected) {
-                            // Dismiss any active marker before Vico processes the tap so only the
-                            // newly tapped point becomes selected (prevents multi-point accumulation).
-                            // Skip dismissal if tapping on an already-selected point to allow
-                            // Vico's toggle-off behavior to work correctly.
-                            markerController.dismiss()
+                            // Clear local state when tapping a different point to prevent
+                            // multi-point accumulation (Vico's toggle controller will select the new point).
+                            tooltipState = null
+                            selectedPointOffset = null
                         }
                         var isMultiTouch = false
                         while (!isMultiTouch) {
@@ -640,11 +631,10 @@ fun BloodPressureTrendChart(
                         val isTapOnSelected = selectedOffset != null &&
                             (down.position - selectedOffset).getDistance() < 40.dp.toPx()
                         if (!isTapOnSelected) {
-                            // Dismiss any active marker before Vico processes the tap so only the
-                            // newly tapped point becomes selected (prevents multi-point accumulation).
-                            // Skip dismissal if tapping on an already-selected point to allow
-                            // Vico's toggle-off behavior to work correctly.
-                            markerController.dismiss()
+                            // Clear local state when tapping a different point to prevent
+                            // multi-point accumulation (Vico's toggle controller will select the new point).
+                            tooltipState = null
+                            selectedPointOffset = null
                         }
                         var isMultiTouch = false
                         while (!isMultiTouch) {
