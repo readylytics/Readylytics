@@ -136,33 +136,32 @@ fun BloodPressureDetailScreen(
                 }
             }
 
-            if (!uiState.isLoading) {
-                item(key = "trends_header") {
-                    SectionHeader(title = "Trends")
-                    Spacer(Modifier.height(8.dp))
-                    SingleChoiceSegmentedButtonRow(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                    ) {
-                        TimeRange.entries.forEachIndexed { index, range ->
-                            SegmentedButton(
-                                selected = uiState.selectedRange == range,
-                                onClick = { onRangeSelected(range) },
-                                shape =
-                                    SegmentedButtonDefaults.itemShape(
-                                        index = index,
-                                        count = TimeRange.entries.size,
-                                    ),
-                                label = { Text(range.label) },
-                            )
-                        }
+            item(key = "trends_header") {
+                SectionHeader(title = "Trends")
+                Spacer(Modifier.height(8.dp))
+                SingleChoiceSegmentedButtonRow(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                ) {
+                    TimeRange.entries.forEachIndexed { index, range ->
+                        SegmentedButton(
+                            selected = uiState.selectedRange == range,
+                            onClick = { onRangeSelected(range) },
+                            shape =
+                                SegmentedButtonDefaults.itemShape(
+                                    index = index,
+                                    count = TimeRange.entries.size,
+                                ),
+                            enabled = !uiState.isLoading,
+                            label = { Text(range.label) },
+                        )
                     }
                 }
-
-                item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
             }
+
+            item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
 
             item(key = "bp_chart") {
                 if (uiState.isLoading) {
