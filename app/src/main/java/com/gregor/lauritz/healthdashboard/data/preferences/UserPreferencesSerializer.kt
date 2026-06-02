@@ -154,8 +154,8 @@ fun UserPreferences.toProto(): UserPreferencesProto {
     builder.setRestingHrPercentile(domain.restingHrPercentile)
     builder.setUnitSystem(
         when (domain.unitSystem) {
-            com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem.METRIC -> UnitSystemProto.UNIT_METRIC
-            com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem.IMPERIAL -> UnitSystemProto.UNIT_IMPERIAL
+            UnitSystem.METRIC -> UnitSystemProto.UNIT_METRIC
+            UnitSystem.IMPERIAL -> UnitSystemProto.UNIT_IMPERIAL
         }
     )
 

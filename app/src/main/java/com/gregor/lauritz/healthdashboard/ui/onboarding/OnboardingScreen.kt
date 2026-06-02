@@ -19,20 +19,13 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -46,14 +39,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
+import com.gregor.lauritz.healthdashboard.ui.components.BirthdayDatePickerField
 import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
 import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
 import com.gregor.lauritz.healthdashboard.ui.settings.HeightInputField
 import com.gregor.lauritz.healthdashboard.ui.settings.common.UnitSystemSelector
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 @Composable
 fun OnboardingScreen(
@@ -341,7 +332,7 @@ private fun ProfileSetupScreen(
         Spacer(Modifier.height(24.dp))
 
         val isInputValid =
-            birthDate.isBefore(LocalDate.now()) &&
+            !birthDate.isAfter(LocalDate.now()) &&
                 birthDate.year in 1900..LocalDate.now().year &&
                 !heightHasError
 
@@ -370,67 +361,3 @@ private fun ProfileSetupScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun BirthdayDatePickerField(
-    birthDate: LocalDate,
-    onDateSelected: (LocalDate) -> Unit,
-    showDialog: Boolean,
-    onDialogDismiss: () -> Unit,
-    onFieldClick: () -> Unit,
-) {
-    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-    val displayText = birthDate.format(dateFormatter)
-
-    OutlinedTextField(
-        value = displayText,
-        onValueChange = {},
-        readOnly = true,
-        label = { Text("Date of Birth") },
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(enabled = true, onClick = onFieldClick),
-    )
-
-    if (showDialog) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = birthDate.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli(),
-            yearRange = 1900..LocalDate.now().year,
-            selectableDates = object : SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                    return utcTimeMillis <= System.currentTimeMillis()
-                }
-
-                override fun isSelectableYear(year: Int): Boolean {
-                    return year in 1900..LocalDate.now().year
-                }
-            },
-        )
-
-        DatePickerDialog(
-            onDismissRequest = onDialogDismiss,
-            confirmButton = {
-                Button(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            val instant = Instant.ofEpochMilli(millis)
-                            val date = instant.atZone(ZoneId.of("UTC")).toLocalDate()
-                            onDateSelected(date)
-                            onDialogDismiss()
-                        }
-                    }
-                ) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onDialogDismiss) {
-                    Text("Cancel")
-                }
-            },
-        ) {
-            DatePicker(state = datePickerState)
-        }
-    }
-}

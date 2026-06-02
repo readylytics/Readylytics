@@ -395,22 +395,18 @@ class LocalRestoreManager
 
                 backup.age?.let { age = it }
                 // Restore birthDate if available, otherwise fall back to separate fields for backward compatibility
-                if (backup.birthDate != null) {
+                val parsedDate = backup.birthDate?.let {
                     try {
-                        val date = java.time.LocalDate.parse(backup.birthDate)
-                        birthDay = date.dayOfMonth
-                        birthMonth = date.monthValue
-                        birthYear = date.year
-                        isBirthdayConfigured = true
+                        java.time.LocalDate.parse(it)
                     } catch (e: Exception) {
-                        // If birthDate parsing fails, try the old fields
-                        if (backup.birthDay != null && backup.birthMonth != null && backup.birthYear != null) {
-                            birthDay = backup.birthDay
-                            birthMonth = backup.birthMonth
-                            birthYear = backup.birthYear
-                            isBirthdayConfigured = true
-                        }
+                        null
                     }
+                }
+                if (parsedDate != null) {
+                    birthDay = parsedDate.dayOfMonth
+                    birthMonth = parsedDate.monthValue
+                    birthYear = parsedDate.year
+                    isBirthdayConfigured = true
                 } else if (backup.birthDay != null && backup.birthMonth != null && backup.birthYear != null) {
                     birthDay = backup.birthDay
                     birthMonth = backup.birthMonth

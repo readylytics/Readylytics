@@ -16,8 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -25,11 +23,9 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,16 +40,14 @@ import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
 import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
+import com.gregor.lauritz.healthdashboard.ui.components.BirthdayDatePickerField
 import com.gregor.lauritz.healthdashboard.ui.settings.HeartRateZonesState
 import com.gregor.lauritz.healthdashboard.ui.settings.HeightInputField
 import com.gregor.lauritz.healthdashboard.ui.settings.PhysiologySettingsState
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsExpandState
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
 @Composable
@@ -100,12 +94,11 @@ fun HeartRateZoneSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
-                BirthdayInputField(
+                BirthdayDatePickerField(
                     birthDate = physiologyState.birthDate,
-                    onBirthdateClick = { showBirthdatePicker = true },
+                    onFieldClick = { showBirthdatePicker = true },
                     onDateSelected = { date ->
                         onPhysiologyEvent(SettingsEvent.BirthdayChanged(date))
-                        showBirthdatePicker = false
                     },
                     showDialog = showBirthdatePicker,
                     onDialogDismiss = { showBirthdatePicker = false },
@@ -411,69 +404,6 @@ fun CompactOutlinedTextField(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun BirthdayInputField(
-    birthDate: LocalDate?,
-    onBirthdateClick: () -> Unit,
-    onDateSelected: (LocalDate) -> Unit,
-    showDialog: Boolean,
-    onDialogDismiss: () -> Unit,
-) {
-    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-    val displayText = birthDate?.format(dateFormatter) ?: "Not set"
-
-    OutlinedTextField(
-        value = displayText,
-        onValueChange = {},
-        readOnly = true,
-        label = { Text("Date of Birth") },
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(enabled = true, onClick = onBirthdateClick),
-    )
-
-    if (showDialog) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = birthDate?.atStartOfDay(ZoneId.of("UTC"))?.toInstant()?.toEpochMilli(),
-            yearRange = 1900..LocalDate.now().year,
-            selectableDates = object : SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                    return utcTimeMillis <= System.currentTimeMillis()
-                }
-
-                override fun isSelectableYear(year: Int): Boolean {
-                    return year in 1900..LocalDate.now().year
-                }
-            },
-        )
-
-        DatePickerDialog(
-            onDismissRequest = onDialogDismiss,
-            confirmButton = {
-                Button(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            val instant = Instant.ofEpochMilli(millis)
-                            val date = instant.atZone(ZoneId.of("UTC")).toLocalDate()
-                            onDateSelected(date)
-                        }
-                    }
-                ) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onDialogDismiss) {
-                    Text("Cancel")
-                }
-            },
-        ) {
-            DatePicker(state = datePickerState)
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
