@@ -186,6 +186,7 @@ private fun MetricsGrid(
 ) {
     val session = uiState.latestSession
     val summary = uiState.latestSummary
+    val metrics = uiState.latestMetrics
 
     val efficiencyStatus = session?.efficiencyStatus() ?: MetricStatus.NO_DATA
     val deepStatus = summary?.deepSleepStatus() ?: MetricStatus.NO_DATA
@@ -223,7 +224,7 @@ private fun MetricsGrid(
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCard(
                     title = "Deep Sleep",
-                    value = summary?.deepSleepPercent?.let { "${it.roundToPercentInt()}%" } ?: "—",
+                    value = metrics?.deepSleepPercentDisplay ?: "—",
                     secondaryText = "Target: 15–25%",
                     status = deepStatus,
                     tooltip = "Time in Stage 3 (Physical repair). Target: 15–25% of total sleep.",
@@ -233,7 +234,7 @@ private fun MetricsGrid(
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCard(
                     title = "REM Sleep",
-                    value = summary?.remSleepPercent?.let { "${it.roundToPercentInt()}%" } ?: "—",
+                    value = metrics?.remSleepPercentDisplay ?: "—",
                     secondaryText = "Target: 20–25%",
                     status = remStatus,
                     tooltip = "Time in Rapid Eye Movement. Target: 20–25% of total sleep.",

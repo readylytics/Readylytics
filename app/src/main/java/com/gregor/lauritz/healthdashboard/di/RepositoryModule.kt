@@ -2,12 +2,14 @@ package com.gregor.lauritz.healthdashboard.di
 
 import com.gregor.lauritz.healthdashboard.data.repository.BloodPressureRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.repository.BodyFatRepositoryImpl
+import com.gregor.lauritz.healthdashboard.data.repository.DailyMetricsRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.repository.DailySummaryRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.repository.HeartRateRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.repository.WeightRepositoryImpl
 import com.gregor.lauritz.healthdashboard.data.repository.WorkoutRepositoryImpl
 import com.gregor.lauritz.healthdashboard.domain.repository.BloodPressureRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.BodyFatRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.DailyMetricsRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.WeightRepository
@@ -24,6 +26,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindDailySummaryRepository(impl: DailySummaryRepositoryImpl): DailySummaryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDailyMetricsRepository(impl: DailyMetricsRepositoryImpl): DailyMetricsRepository
 
     @Binds
     @Singleton

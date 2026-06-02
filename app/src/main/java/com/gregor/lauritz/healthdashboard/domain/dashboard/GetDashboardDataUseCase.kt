@@ -7,6 +7,8 @@ import com.gregor.lauritz.healthdashboard.domain.calculation.HealthMetricsCalcul
 import com.gregor.lauritz.healthdashboard.domain.model.BloodPressureStatus
 import com.gregor.lauritz.healthdashboard.domain.model.BmiStatus
 import com.gregor.lauritz.healthdashboard.domain.model.BodyFatStatus
+import com.gregor.lauritz.healthdashboard.domain.model.DailyMetrics
+import com.gregor.lauritz.healthdashboard.domain.model.DailyMetricsMapper
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.Result
@@ -19,7 +21,6 @@ import com.gregor.lauritz.healthdashboard.domain.model.restingHrStatus
 import com.gregor.lauritz.healthdashboard.domain.model.rhrStatus
 import com.gregor.lauritz.healthdashboard.domain.model.sleepDurationStatus
 import com.gregor.lauritz.healthdashboard.domain.util.ResourceProvider
-import com.gregor.lauritz.healthdashboard.domain.util.UnitConverter
 import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
 import com.gregor.lauritz.healthdashboard.ui.dashboard.CardData
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardAction
@@ -30,7 +31,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.roundToInt
 
 @Singleton
 class GetDashboardDataUseCase
@@ -73,25 +73,29 @@ class GetDashboardDataUseCase
         ): Map<CardId, CardData> {
             if (summary == null) return emptyMap()
 
+            // Canonical rounding-safe projection: ALL display rounding + baseline derivation
+            // happens here, once, in DailyMetricsMapper. Card builders read its fields.
+            val m = DailyMetricsMapper.toMetrics(summary, prefs)
+
             val mapBuilder =
                 mutableMapOf<CardId, CardData>(
-                    CardId.SLEEP_RHR to sleepCard(summary, prefs),
-                    CardId.HRV to hrvCard(summary, prefs),
-                    CardId.PAI_DAILY to paiCard(summary),
-                    CardId.SLEEP_DURATION to sleepDurationCard(summary, prefs, lastSleepSession),
-                    CardId.RESTING_HR to restingHrCard(summary, prefs),
+                    CardId.SLEEP_RHR to sleepCard(summary, prefs, m),
+                    CardId.HRV to hrvCard(summary, prefs, m),
+                    CardId.PAI_DAILY to paiCard(summary, m),
+                    CardId.SLEEP_DURATION to sleepDurationCard(summary, prefs, lastSleepSession, m),
+                    CardId.RESTING_HR to restingHrCard(summary, prefs, m),
                     CardId.SLEEP_EFFICIENCY to sleepEfficiencyCard(lastSleepSession),
                 )
 
-            val metricsResult = getWorkoutMetricsUseCase(summary)
-            val metrics = metricsResult.getOrNull()
-            metrics?.strainRatioCard?.let { mapBuilder[CardId.STRAIN_RATIO] = it }
+            val workoutMetricsResult = getWorkoutMetricsUseCase(summary)
+            val workoutMetrics = workoutMetricsResult.getOrNull()
+            workoutMetrics?.strainRatioCard?.let { mapBuilder[CardId.STRAIN_RATIO] = it }
 
             // Add new health metrics
-            mapBuilder[CardId.WEIGHT] = weightCard(summary, prefs)
-            mapBuilder[CardId.BODY_FAT] = bodyFatCard(summary, prefs)
-            mapBuilder[CardId.BLOOD_PRESSURE] = bloodPressureCard(summary)
-            mapBuilder[CardId.OXYGEN_SATURATION] = oxygenSaturationCard(summary)
+            mapBuilder[CardId.WEIGHT] = weightCard(summary, prefs, m)
+            mapBuilder[CardId.BODY_FAT] = bodyFatCard(summary, prefs, m)
+            mapBuilder[CardId.BLOOD_PRESSURE] = bloodPressureCard(summary, m)
+            mapBuilder[CardId.OXYGEN_SATURATION] = oxygenSaturationCard(summary, m)
 
             return mapBuilder.toMap()
         }
@@ -111,9 +115,12 @@ class GetDashboardDataUseCase
             )
         }
 
-        private fun paiCard(summary: DailySummary): CardData {
+        private fun paiCard(
+            summary: DailySummary,
+            m: DailyMetrics,
+        ): CardData {
             val status = summary.paiStatus()
-            val value = summary.totalPai?.roundToPercentInt()?.toString() ?: "—"
+            val value = m.paiRounded?.toString() ?: "—"
 
             return CardData(
                 title = "PAI",
@@ -140,35 +147,12 @@ class GetDashboardDataUseCase
         private fun sleepCard(
             summary: DailySummary,
             prefs: UserPreferences,
+            m: DailyMetrics,
         ): CardData {
             val rhrStatus = summary.rhrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold)
-            val rhrBaseline =
-                summary.let { s ->
-                    val ratio = s.rhrRatio
-                    val rhr = s.nocturnalRhr
-                    if (ratio != null && ratio > 0f && rhr != null) (rhr / ratio).toInt() else null
-                }
-            val rhrDiff =
-                summary.let { s ->
-                    val ratio = s.rhrRatio
-                    val rhr = s.nocturnalRhr
-                    if (ratio != null && ratio > 0f && rhr != null) {
-                        val baseline = (rhr / ratio).toInt()
-                        kotlin.math.abs(rhr - baseline)
-                    } else {
-                        null
-                    }
-                }
-            val rhrArrow =
-                if (rhrBaseline != null && summary.nocturnalRhr != null) {
-                    when {
-                        summary.nocturnalRhr > rhrBaseline -> "↑"
-                        summary.nocturnalRhr < rhrBaseline -> "↓"
-                        else -> "="
-                    }
-                } else {
-                    null
-                }
+            val rhrBaseline = m.rhrBaselineRounded
+            val rhrDiff = m.rhrBaselineDiff
+            val rhrArrow = m.rhrBaselineArrow?.symbol
 
             val tooltip =
                 buildString {
@@ -200,25 +184,12 @@ class GetDashboardDataUseCase
         private fun hrvCard(
             summary: DailySummary,
             prefs: UserPreferences,
+            m: DailyMetrics,
         ): CardData {
             val hrvStatus = summary.hrvStatus(prefs.hrvOptimalThreshold, prefs.hrvWarningThreshold)
-            val hrvBaseline = summary.hrvBaseline
-            val hrvDiff =
-                summary.let { s ->
-                    val baseline = s.hrvBaseline
-                    val hrv = s.nocturnalHrv
-                    if (baseline != null && hrv != null) kotlin.math.abs(hrv - baseline) else null
-                }
-            val hrvArrow =
-                if (hrvBaseline != null && summary.nocturnalHrv != null) {
-                    when {
-                        summary.nocturnalHrv > hrvBaseline -> "↑"
-                        summary.nocturnalHrv < hrvBaseline -> "↓"
-                        else -> "="
-                    }
-                } else {
-                    null
-                }
+            val hrvBaseline = m.hrvBaselineRounded
+            val hrvDiff = m.hrvBaselineDiff
+            val hrvArrow = m.hrvBaselineArrow?.symbol
 
             val tooltip =
                 buildString {
@@ -241,11 +212,9 @@ class GetDashboardDataUseCase
                     } else {
                         append(resourceProvider.getString(R.string.tooltip_sleep_hrv_no_baseline))
                     }
-                    val z = summary.zLnHrv
-                    val sigma = summary.hrvSigma
-                    if (z != null && sigma != null) {
-                        val zStr = String.format(Locale.getDefault(), "%.2f", z)
-                        val sigmaStr = String.format(Locale.getDefault(), "%.3f", sigma)
+                    val zStr = m.zLnHrvDisplay
+                    val sigmaStr = m.hrvSigmaDisplay
+                    if (zStr != null && sigmaStr != null) {
                         append(resourceProvider.getString(R.string.tooltip_sleep_hrv_diagnostics, zStr, sigmaStr))
                     }
                 }
@@ -264,6 +233,7 @@ class GetDashboardDataUseCase
             summary: DailySummary,
             prefs: UserPreferences,
             lastSleepSession: SleepSessionSummary?,
+            m: DailyMetrics,
         ): CardData {
             val durationStatus = summary.sleepDurationStatus((prefs.goalSleepHours * 60).toInt())
             val lastNightText =
@@ -279,7 +249,7 @@ class GetDashboardDataUseCase
 
             return CardData(
                 title = "Sleep Duration",
-                value = formatSleepDuration(summary.sleepDurationMinutes),
+                value = m.sleepDurationDisplay ?: "—",
                 unit = "",
                 status = durationStatus,
                 action = DashboardAction.NAVIGATE_SLEEP,
@@ -292,21 +262,16 @@ class GetDashboardDataUseCase
         private fun restingHrCard(
             summary: DailySummary,
             prefs: UserPreferences,
+            m: DailyMetrics,
         ): CardData {
             val restingHrStatus = summary.restingHrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold)
 
             val tooltip =
                 buildString {
                     val rBaseline = summary.restingHrBaseline
-                    val rCurrent = summary.restingHeartRate
-                    if (rBaseline != null && rCurrent != null) {
-                        val diff = kotlin.math.abs(rCurrent - rBaseline)
-                        val arrow =
-                            when {
-                                rCurrent > rBaseline -> "↑"
-                                rCurrent < rBaseline -> "↓"
-                                else -> "="
-                            }
+                    val diff = m.restingHrBaselineDiff
+                    val arrow = m.restingHrBaselineArrow?.symbol
+                    if (rBaseline != null && diff != null && arrow != null) {
                         append(
                             resourceProvider.getString(
                                 R.string.tooltip_resting_hr_baseline,
@@ -322,7 +287,7 @@ class GetDashboardDataUseCase
 
             return CardData(
                 title = "Resting Heart Rate",
-                value = (summary.restingHeartRate ?: summary.nocturnalRhr)?.toString() ?: "—",
+                value = m.restingHeartRateRounded?.toString() ?: "—",
                 unit = "bpm",
                 status = restingHrStatus,
                 action = DashboardAction.NAVIGATE_RHR,
@@ -340,6 +305,7 @@ class GetDashboardDataUseCase
         private fun weightCard(
             summary: DailySummary,
             prefs: UserPreferences,
+            m: DailyMetrics,
         ): CardData {
             val unitStr = if (prefs.unitSystem == UnitSystem.METRIC) "kg" else "lbs"
             val weightKg =
@@ -366,18 +332,12 @@ class GetDashboardDataUseCase
                     MetricStatus.NEUTRAL
                 }
 
-            val displayWeight =
-                if (prefs.unitSystem ==
-                    UnitSystem.METRIC
-                ) {
-                    weightKg
-                } else {
-                    weightKg * UnitConverter.KG_TO_LBS
-                }
+            val weightValue =
+                if (prefs.unitSystem == UnitSystem.METRIC) m.weightKgDisplay else m.weightLbsDisplay
 
             return CardData(
                 title = "Weight",
-                value = String.format(Locale.getDefault(), "%.1f", displayWeight),
+                value = weightValue ?: "—",
                 unit = unitStr,
                 status = bmiStatus,
                 action = DashboardAction.NAVIGATE_WEIGHT,
@@ -389,6 +349,7 @@ class GetDashboardDataUseCase
         private fun bodyFatCard(
             summary: DailySummary,
             prefs: UserPreferences,
+            m: DailyMetrics,
         ): CardData {
             val bodyFatPercent =
                 summary.bodyFatPercent ?: return CardData(
@@ -415,7 +376,7 @@ class GetDashboardDataUseCase
 
             return CardData(
                 title = "Body Fat",
-                value = String.format(Locale.getDefault(), "%.1f%%", bodyFatPercent),
+                value = m.bodyFatDisplay ?: "—",
                 unit = "",
                 status = status,
                 action = DashboardAction.NAVIGATE_BODY_FAT,
@@ -423,7 +384,10 @@ class GetDashboardDataUseCase
             )
         }
 
-        private fun bloodPressureCard(summary: DailySummary): CardData {
+        private fun bloodPressureCard(
+            summary: DailySummary,
+            m: DailyMetrics,
+        ): CardData {
             val systolic = summary.bloodPressureSystolic ?: 0
             val diastolic = summary.bloodPressureDiastolic ?: 0
 
@@ -461,7 +425,7 @@ class GetDashboardDataUseCase
 
             return CardData(
                 title = "Blood Pressure",
-                value = "$systolic/$diastolic",
+                value = m.bloodPressureDisplay ?: "$systolic/$diastolic",
                 unit = "mmHg",
                 status = status,
                 action = DashboardAction.NAVIGATE_BLOOD_PRESSURE,
@@ -469,9 +433,16 @@ class GetDashboardDataUseCase
             )
         }
 
-        private fun oxygenSaturationCard(summary: DailySummary): CardData {
+        private fun oxygenSaturationCard(
+            summary: DailySummary,
+            m: DailyMetrics,
+        ): CardData {
             val spo2 = summary.avgSleepingSpo2
-            if (spo2 == null || spo2 <= 0f) {
+            // Single source of truth: spo2Rounded comes from DailyMetricsMapper (the same
+            // canonical rounding the Vitals readout uses). The card value and Vitals readout
+            // therefore always agree; chart y-axis gridline ticks are scale markers, not values.
+            val roundedSpo2 = m.spo2Rounded
+            if (spo2 == null || spo2 <= 0f || roundedSpo2 == null) {
                 return CardData(
                     title = "Oxygen Saturation",
                     value = "—",
@@ -481,12 +452,6 @@ class GetDashboardDataUseCase
                     secondaryText = resourceProvider.getString(R.string.spo2_calibrating),
                 )
             }
-
-            // Single source of truth: this is the same DailySummary.avgSleepingSpo2 the Vitals
-            // chart plots, rounded with roundToInt() identically to the chart axis/tooltip.
-            // The card value and Vitals readout must always agree; the chart's auto-generated
-            // y-axis gridline ticks are scale markers, not the metric value.
-            val roundedSpo2 = spo2.roundToInt()
             val (status, statusLabelRes) =
                 when {
                     roundedSpo2 >= 98 -> Pair(MetricStatus.OPTIMAL, R.string.spo2_optimal)
