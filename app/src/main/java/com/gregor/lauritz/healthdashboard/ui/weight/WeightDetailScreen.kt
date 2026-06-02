@@ -172,7 +172,7 @@ fun WeightDetailScreen(
                                     it,
                                 )
                             },
-                        tooltipDescription = "Latest weight: ${String.format(Locale.US, "%.1f", uiState.latestWeight)} $unitLabel\nHeight: $heightTooltip",
+                        tooltipDescription = "Latest weight: ${uiState.latestWeight?.let { String.format(Locale.US, "%.1f", it) + " $unitLabel" } ?: "—"}\nHeight: $heightTooltip",
                     )
                     M3ScoreDial(
                         score = uiState.bmi,

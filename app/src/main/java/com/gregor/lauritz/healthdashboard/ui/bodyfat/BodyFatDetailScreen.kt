@@ -117,7 +117,7 @@ fun BodyFatDetailScreen(
                                     String.format(Locale.US, "%.1f", it)
                                 },
                             tooltipDescription =
-                                "Current: ${String.format(Locale.US, "%.1f", uiState.latestBodyFat)}%\n" +
+                                "Current: ${uiState.latestBodyFat?.let { String.format(Locale.US, "%.1f", it) } ?: "—"}%\n" +
                                     "Optimal: 0-${String.format(
                                     Locale.US,
                                     "%.0f",
