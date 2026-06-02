@@ -148,6 +148,15 @@ fun TrendChart(
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
+    val markerController = CartesianMarkerController.rememberToggleOnTap()
+
+    // Dismiss any Vico-persisted marker selection each time this composable enters composition.
+    // rememberToggleOnTap() uses rememberSaveable internally, so the active-marker set survives
+    // tab navigation (restoreState = true). Calling dismiss() here resets that saved state on
+    // every composition entry, preventing stale selections from carrying over across tab switches.
+    LaunchedEffect(Unit) {
+        markerController.dismiss()
+    }
 
     // Clear highlight when tooltip is hidden
     LaunchedEffect(tooltipState) {
@@ -297,6 +306,9 @@ fun TrendChart(
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
+                        // Dismiss any active marker before Vico processes the tap so only the
+                        // newly tapped point becomes selected (prevents multi-point accumulation).
+                        markerController.dismiss()
                         var isMultiTouch = false
                         while (!isMultiTouch) {
                             val event = awaitPointerEvent()
@@ -361,7 +373,7 @@ fun TrendChart(
                     // Show the marker only on a discrete tap. The default (showOnPress) reacts to
                     // Press + Move, which competes with the multi-touch pinch detector and throttles
                     // zoom on 30d/180d. ToggleOnTap leaves drag/pinch entirely to scroll + zoom.
-                    markerController = CartesianMarkerController.rememberToggleOnTap(),
+                    markerController = markerController,
                 ),
             modelProducer = modelProducer,
             scrollState = scrollState,
@@ -458,6 +470,13 @@ fun BloodPressureTrendChart(
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
+    val markerController = CartesianMarkerController.rememberToggleOnTap()
+
+    // Dismiss any Vico-persisted marker selection each time this composable enters composition.
+    // See TrendChart for the full rationale.
+    LaunchedEffect(Unit) {
+        markerController.dismiss()
+    }
 
     LaunchedEffect(tooltipState) {
         if (tooltipState == null) {
@@ -610,6 +629,9 @@ fun BloodPressureTrendChart(
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
+                        // Dismiss any active marker before Vico processes the tap so only the
+                        // newly tapped point becomes selected (prevents multi-point accumulation).
+                        markerController.dismiss()
                         var isMultiTouch = false
                         while (!isMultiTouch) {
                             val event = awaitPointerEvent()
@@ -669,7 +691,7 @@ fun BloodPressureTrendChart(
                     markerVisibilityListener = markerVisibilityListener,
                     // Tap-only marker so the pinch detector keeps full zoom responsiveness.
                     // See TrendChart's markerController note for the rationale.
-                    markerController = CartesianMarkerController.rememberToggleOnTap(),
+                    markerController = markerController,
                 ),
             modelProducer = modelProducer,
             scrollState = scrollState,
