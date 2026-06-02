@@ -5,6 +5,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.OxygenSaturationRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepStageDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WeightRecordDao
@@ -41,6 +42,7 @@ class HealthSyncUseCaseTest {
     private val weightRecordDao = mockk<WeightRecordDao>(relaxed = true)
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
+    private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
 
     private lateinit var useCase: HealthSyncUseCase
 
@@ -66,6 +68,7 @@ class HealthSyncUseCaseTest {
                 settingsRepo = settingsRepo,
                 scoringRepository = scoringRepository,
                 transactionRunner = transactionRunner,
+                oxygenSaturationRecordDao = oxygenSaturationRecordDao,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
     }

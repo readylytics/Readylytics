@@ -148,3 +148,11 @@ fun hrvZoneBands(
         ZoneBand(neutralMin.toDouble(), optimalMin.toDouble(), HealthZone.NEUTRAL),
         ZoneBand(optimalMin.toDouble(), Double.POSITIVE_INFINITY, HealthZone.OPTIMAL),
     )
+
+fun spo2ZoneBands(): List<ZoneBand> =
+    listOf(
+        ZoneBand(Double.NEGATIVE_INFINITY, 90.0, HealthZone.CRITICAL),
+        ZoneBand(90.0, 95.0, HealthZone.WARNING),
+        ZoneBand(95.0, 98.0, HealthZone.NEUTRAL),
+        ZoneBand(98.0, Double.POSITIVE_INFINITY, HealthZone.OPTIMAL),
+    )

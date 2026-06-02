@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -79,7 +80,9 @@ fun BloodPressureDetailScreen(
             )
         },
     ) { innerPadding ->
+        val listState = rememberLazyListState()
         LazyColumn(
+            state = listState,
             modifier =
                 Modifier
                     .padding(innerPadding)
@@ -173,6 +176,7 @@ fun BloodPressureDetailScreen(
                         rangeDays = uiState.selectedRange.days,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
+                        parentScrollInProgress = listState.isScrollInProgress,
                     )
                 }
             }

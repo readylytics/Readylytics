@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -45,7 +46,7 @@ fun AcwrChartOverlay(
     selectedState: AcwrSelectedState?,
     trimpColor: Color,
     ratioColor: Color,
-    layerBounds: Any?,
+    layerBounds: Rect?,
     barThicknessDp: Dp = 8.dp,
     chartHeight: Dp = 220.dp,
     modifier: Modifier = Modifier,
@@ -79,7 +80,7 @@ private fun AcwrChartOverlayContent(
     selectedState: AcwrSelectedState,
     trimpColor: Color,
     ratioColor: Color,
-    layerBounds: Any?,
+    layerBounds: Rect?,
     barThicknessDp: Dp,
 ) {
     // Animations only run while a point is selected; they start from their
@@ -122,13 +123,9 @@ private fun AcwrChartOverlayContent(
         selectedState.barCanvasYTop?.let { barTop ->
             val halfBar = (barThicknessDp / 2).toPx()
             val barLeft = canvasX - halfBar
-            val barBottom =
-                try {
-                    val method = layerBounds?.javaClass?.methods?.find { it.name == "getBottom" || it.name == "bottom" }
-                    (method?.invoke(layerBounds) as? Number)?.toFloat() ?: (size.height - 28.dp.toPx())
-                } catch (e: Exception) {
-                    size.height - 28.dp.toPx()
-                }
+            // Bottom of the plotting area; fall back to an approximate axis inset if the
+            // layer bounds have not been captured yet.
+            val barBottom = layerBounds?.bottom ?: (size.height - 28.dp.toPx())
             val barHeight = barBottom - barTop
             if (barHeight > 0f) {
                 val currentHaloPadding = 4.dp.toPx() * haloRadiusCoeff

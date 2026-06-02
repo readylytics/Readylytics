@@ -259,4 +259,5 @@ enum class DashboardAction {
     NAVIGATE_WEIGHT,
     NAVIGATE_BODY_FAT,
     NAVIGATE_BLOOD_PRESSURE,
+    NAVIGATE_VITALS,
 }

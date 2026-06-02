@@ -616,6 +616,32 @@ object DatabaseMigrations {
             }
         }
 
+    val MIGRATION_23_24 =
+        object : Migration(23, 24) {
+            private val sql =
+                listOf(
+                    """
+                    CREATE TABLE oxygen_saturation_records (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        timestampMs INTEGER NOT NULL,
+                        percentage REAL NOT NULL,
+                        deviceName TEXT
+                    )
+                    """.trimIndent(),
+                    "CREATE INDEX `index_oxygen_saturation_records_timestampMs` ON `oxygen_saturation_records` (`timestampMs`)",
+                    "CREATE INDEX `index_oxygen_saturation_records_timestampMs_deviceName` ON `oxygen_saturation_records` (`timestampMs`, `deviceName`)",
+                    "ALTER TABLE daily_summaries ADD COLUMN avgSleepingSpo2 REAL",
+                )
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                sql.forEach { db.execSQL(it) }
+            }
+
+            override fun migrate(connection: SQLiteConnection) {
+                sql.forEach { connection.execSQL(it) }
+            }
+        }
+
     val all =
         arrayOf(
             MIGRATION_1_2,
@@ -640,5 +666,6 @@ object DatabaseMigrations {
             MIGRATION_20_21,
             MIGRATION_21_22,
             MIGRATION_22_23,
+            MIGRATION_23_24,
         )
 }

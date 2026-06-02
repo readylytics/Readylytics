@@ -5,6 +5,7 @@ import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
@@ -91,4 +92,9 @@ interface HealthConnectRepository {
         from: Instant,
         to: Instant,
     ): List<BloodPressureRecord>
+
+    suspend fun readOxygenSaturationRecords(
+        from: Instant,
+        to: Instant,
+    ): List<OxygenSaturationRecord>
 }

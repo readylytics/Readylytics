@@ -18,13 +18,12 @@ import com.gregor.lauritz.healthdashboard.ui.bloodpressure.BloodPressureDetailRo
 import com.gregor.lauritz.healthdashboard.ui.bodyfat.BodyFatDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.dashboard.DashboardRoute
 import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateDetailRoute
-import com.gregor.lauritz.healthdashboard.ui.hrv.HrvDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.navigation.AppDestination
 import com.gregor.lauritz.healthdashboard.ui.navigation.TabDestination
-import com.gregor.lauritz.healthdashboard.ui.rhr.RestingHrDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsRoute
 import com.gregor.lauritz.healthdashboard.ui.sleep.SleepRoute
 import com.gregor.lauritz.healthdashboard.ui.steps.StepDetailRoute
+import com.gregor.lauritz.healthdashboard.ui.vitals.VitalsRoute
 import com.gregor.lauritz.healthdashboard.ui.weight.WeightDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.workouts.WorkoutDetailRoute
 import com.gregor.lauritz.healthdashboard.ui.workouts.WorkoutsRoute
@@ -44,13 +43,11 @@ fun MainNavHost(
 
             val isEnteringDetail =
                 targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
-                    targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.HeartRateDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.WeightDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
-                    targetState.destination.hasRoute(AppDestination.HrvDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.About::class)
 
             val direction =
@@ -69,23 +66,19 @@ fun MainNavHost(
 
             val isLeavingDetail =
                 initialState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
-                    initialState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.StepDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.HeartRateDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.WeightDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
-                    initialState.destination.hasRoute(AppDestination.HrvDetail::class) ||
                     initialState.destination.hasRoute(AppDestination.About::class)
             val isEnteringDetail =
                 targetState.destination.hasRoute(AppDestination.WorkoutDetail::class) ||
-                    targetState.destination.hasRoute(AppDestination.RestingHrDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.StepDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.HeartRateDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.WeightDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BodyFatDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.BloodPressureDetail::class) ||
-                    targetState.destination.hasRoute(AppDestination.HrvDetail::class) ||
                     targetState.destination.hasRoute(AppDestination.About::class)
 
             val direction =
@@ -135,7 +128,13 @@ fun MainNavHost(
                     }
                 },
                 onNavigateToRhr = {
-                    navController.navigate(AppDestination.RestingHrDetail)
+                    navController.navigate(TabDestination.Vitals) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 },
                 onNavigateToSteps = {
                     navController.navigate(AppDestination.StepDetail)
@@ -144,7 +143,13 @@ fun MainNavHost(
                     navController.navigate(AppDestination.HeartRateDetail)
                 },
                 onNavigateToHrv = {
-                    navController.navigate(AppDestination.HrvDetail)
+                    navController.navigate(TabDestination.Vitals) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 },
                 onNavigateToWeight = {
                     navController.navigate(AppDestination.WeightDetail)
@@ -155,10 +160,25 @@ fun MainNavHost(
                 onNavigateToBloodPressure = {
                     navController.navigate(AppDestination.BloodPressureDetail)
                 },
+                onNavigateToVitals = {
+                    navController.navigate(TabDestination.Vitals) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
             )
         }
         composable<TabDestination.Sleep> {
             SleepRoute()
+        }
+        composable<TabDestination.Vitals> {
+            VitalsRoute(
+                onNavigateToHrv = {},
+                onNavigateToRhr = {},
+            )
         }
         composable<TabDestination.Workouts> {
             WorkoutsRoute { id ->
@@ -172,11 +192,7 @@ fun MainNavHost(
                 onBack = { navController.popBackStack() },
             )
         }
-        composable<AppDestination.RestingHrDetail> {
-            RestingHrDetailRoute(
-                onBack = { navController.popBackStack() },
-            )
-        }
+
         composable<AppDestination.StepDetail> {
             StepDetailRoute(
                 onBack = { navController.popBackStack() },
@@ -202,11 +218,7 @@ fun MainNavHost(
                 onBack = { navController.popBackStack() },
             )
         }
-        composable<AppDestination.HrvDetail> {
-            HrvDetailRoute(
-                onBack = { navController.popBackStack() },
-            )
-        }
+
         composable<AppDestination.About> {
             AboutScreen(
                 onDismiss = { navController.popBackStack() },
@@ -231,17 +243,15 @@ private fun getTabIndex(destination: NavDestination?): Int {
     if (index != -1) return index
 
     // WorkoutDetail is logically under Workouts
-    if (destination.hasRoute(AppDestination.WorkoutDetail::class)) return 2
-    // RestingHrDetail, StepDetail, HeartRateDetail, WeightDetail, BodyFatDetail, and BloodPressureDetail are logically under Dashboard
-    if (destination.hasRoute(AppDestination.RestingHrDetail::class)) return 0
+    if (destination.hasRoute(AppDestination.WorkoutDetail::class)) return 3
+    // StepDetail, HeartRateDetail, WeightDetail, BodyFatDetail, and BloodPressureDetail are logically under Dashboard
     if (destination.hasRoute(AppDestination.StepDetail::class)) return 0
     if (destination.hasRoute(AppDestination.HeartRateDetail::class)) return 0
     if (destination.hasRoute(AppDestination.WeightDetail::class)) return 0
     if (destination.hasRoute(AppDestination.BodyFatDetail::class)) return 0
     if (destination.hasRoute(AppDestination.BloodPressureDetail::class)) return 0
-    if (destination.hasRoute(AppDestination.HrvDetail::class)) return 0
     // About is logically under Settings
-    if (destination.hasRoute(AppDestination.About::class)) return 3
+    if (destination.hasRoute(AppDestination.About::class)) return 4
 
     return -1
 }

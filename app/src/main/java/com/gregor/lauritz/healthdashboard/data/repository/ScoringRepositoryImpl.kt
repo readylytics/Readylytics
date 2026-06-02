@@ -5,6 +5,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.OxygenSaturationRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WeightRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
@@ -54,6 +55,7 @@ class ScoringRepositoryImpl
         private val weightRecordDao: WeightRecordDao,
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
+        private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
     ) : ScoringRepository {
         private val calculationMutex = Mutex()
 
@@ -172,8 +174,24 @@ class ScoringRepositoryImpl
                 val isCalibrated =
                     sleepSessionDao.countSince(calibrationFrom) >= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
 
+                val session = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
+                val avgSpo2 =
+                    if (session != null) {
+                        val spo2Samples = oxygenSaturationRecordDao.getByTimeRange(session.startTime, session.endTime)
+                        if (spo2Samples.isNotEmpty()) {
+                            spo2Samples
+                                .asSequence()
+                                .map { it.percentage }
+                                .average()
+                                .toFloat()
+                        } else {
+                            null
+                        }
+                    } else {
+                        null
+                    }
+
                 if (!isCalibrated) {
-                    val session = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
                     if (session != null) {
                         val hrvValues = hrvDao.getSleepRmssdForSession(session.id)
                         val avgHrv =
@@ -213,9 +231,10 @@ class ScoringRepositoryImpl
                                         null
                                     },
                                 isCalibrating = true,
+                                avgSleepingSpo2 = avgSpo2,
                             )
                     } else {
-                        summary = summary.copy(isCalibrating = true)
+                        summary = summary.copy(isCalibrating = true, avgSleepingSpo2 = avgSpo2)
                     }
 
                     val updatedAudit =
@@ -250,12 +269,12 @@ class ScoringRepositoryImpl
                     )
                 summary = summary.copy(hrvBaseline = computedHrvBaseline)
 
-                val session = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
                 if (session != null) {
                     val sleepMetricsResult =
                         computeSleepMetricsUseCase(session, dayMidnight, targetDate, prefs, summary, loadScore, zoneId)
                     summary = sleepMetricsResult.getOrNull() ?: summary
                 }
+                summary = summary.copy(avgSleepingSpo2 = avgSpo2)
 
                 // Final summary remains consistent with the pre-calculated dailyPai and totalPai7d.
                 // Readiness adjustment is excluded from PAI storage to match standard PAI models and manual sums.

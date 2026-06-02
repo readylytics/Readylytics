@@ -27,6 +27,7 @@ fun buildCardDataMap(
     onNavigateToWeight: () -> Unit = {},
     onNavigateToBodyFat: () -> Unit = {},
     onNavigateToBloodPressure: () -> Unit = {},
+    onNavigateToVitals: () -> Unit = {},
     isEditing: Boolean = false,
     isLoading: Boolean = false,
 ): Map<CardId, @Composable () -> Unit> {
@@ -303,6 +304,28 @@ fun buildCardDataMap(
                         status = bpCard.status,
                         onClick = if (isEditing) null else onNavigateToBloodPressure,
                         tooltip = bpCard.tooltip,
+                    )
+                }
+            },
+        )
+    }
+
+    cardMap[CardId.OXYGEN_SATURATION] = {
+        CardLoader(
+            isLoading = isLoading,
+            skeleton = { MetricCardSkeleton() },
+            content = {
+                val spo2Card = uiState.cardDataMap[CardId.OXYGEN_SATURATION]
+                if (spo2Card != null) {
+                    val spo2Value =
+                        if (spo2Card.value == "—") spo2Card.value else "${spo2Card.value}%"
+                    MetricCard(
+                        title = spo2Card.title,
+                        value = spo2Value,
+                        secondaryText = spo2Card.secondaryText ?: spo2Card.unit,
+                        status = spo2Card.status,
+                        onClick = if (isEditing) null else onNavigateToVitals,
+                        tooltip = spo2Card.tooltip,
                     )
                 }
             },

@@ -55,6 +55,7 @@ fun DashboardRoute(
     onNavigateToWeight: () -> Unit = {},
     onNavigateToBodyFat: () -> Unit = {},
     onNavigateToBloodPressure: () -> Unit = {},
+    onNavigateToVitals: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -82,6 +83,7 @@ fun DashboardRoute(
         onNavigateToWeight = onNavigateToWeight,
         onNavigateToBodyFat = onNavigateToBodyFat,
         onNavigateToBloodPressure = onNavigateToBloodPressure,
+        onNavigateToVitals = onNavigateToVitals,
         onToggleCardManagement = viewModel::toggleCardManagement,
         onCancelCardManagement = viewModel::onCancelCardManagement,
         onCardVisibilityChanged = viewModel::onToggleCardVisibility,
@@ -107,6 +109,7 @@ fun DashboardScreen(
     onNavigateToWeight: () -> Unit = {},
     onNavigateToBodyFat: () -> Unit = {},
     onNavigateToBloodPressure: () -> Unit = {},
+    onNavigateToVitals: () -> Unit = {},
     onToggleCardManagement: () -> Unit = {},
     onCancelCardManagement: () -> Unit = {},
     onCardVisibilityChanged: (CardId, Boolean) -> Unit = { _, _ -> },
@@ -199,6 +202,7 @@ fun DashboardScreen(
                                     onNavigateToWeight = onNavigateToWeight,
                                     onNavigateToBodyFat = onNavigateToBodyFat,
                                     onNavigateToBloodPressure = onNavigateToBloodPressure,
+                                    onNavigateToVitals = onNavigateToVitals,
                                     isEditing = uiState.isManagingCards,
                                     isLoading = uiState.isComputingMetrics,
                                 ),

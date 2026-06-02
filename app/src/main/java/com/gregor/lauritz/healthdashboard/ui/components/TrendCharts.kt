@@ -1,6 +1,8 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
@@ -44,6 +47,7 @@ import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
@@ -114,21 +118,31 @@ fun TrendChart(
     axisDecimalPlaces: Int = 0,
     showBaseline: Boolean = true,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
+    // Zoom is only meaningful for ranges > 7 days.
+    // initialZoom = Zoom.Content → chart starts fully zoomed out (fit-to-range).
+    // minZoom = Zoom.min(Zoom.Content, Zoom.fixed(1f)) → floor is whichever is smaller:
+    //   the content zoom (fits all data) or 1×. For 30d (~0.86×) and 180d (~0.14×), content
+    //   zoom < 1×, so the floor becomes the content zoom — preventing zoom-out past full view.
+    //   Unlike bare Zoom.Content as minZoom, mixing via Zoom.min avoids the circular
+    //   constraint that silently rejects pinch-in gestures.
     zoomState: VicoZoomState =
         rememberVicoZoomState(
             zoomEnabled = rangeDays > 7,
             initialZoom = Zoom.Content,
-            minZoom = Zoom.Content,
+            minZoom = Zoom.min(Zoom.Content, Zoom.fixed(1f)),
             maxZoom =
                 remember(rangeDays) {
                     when (rangeDays) {
                         30 -> Zoom.fixed(6f)
                         180 -> Zoom.fixed(25f)
-                        else -> Zoom.Content
+                        else -> Zoom.fixed(2f)
                     }
                 },
         ),
     zoneBands: List<ZoneBand>? = null,
+    minYOverride: Double? = null,
+    maxYOverride: Double? = null,
+    parentScrollInProgress: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
@@ -139,6 +153,22 @@ fun TrendChart(
         if (tooltipState == null) {
             selectedPointOffset = null
         }
+    }
+
+    // Clear tooltip when the chart is scrolled/panned (Vico horizontal scroll)
+    LaunchedEffect(scrollState.value) {
+        tooltipState = null
+        selectedPointOffset = null
+    }
+
+    // Clear tooltip when the parent list scrolls vertically.
+    // We fire on BOTH true and false transitions:
+    //   true  → scroll started, clear immediately
+    //   false → scroll ended; clear again to invalidate any stale state that
+    //           slipped through while the frame was mid-scroll
+    LaunchedEffect(parentScrollInProgress) {
+        tooltipState = null
+        selectedPointOffset = null
     }
 
     if (points.none { it.value != null }) {
@@ -158,21 +188,22 @@ fun TrendChart(
     val baselineValue = baseline ?: calculatedBaseline
 
     val (minY, maxY) =
-        remember(points) {
+        remember(points, minYOverride, maxYOverride) {
             val values = points.mapNotNull { it.value }
-            if (values.isEmpty()) return@remember 0.0 to 0.0
+            if (values.isEmpty()) return@remember (minYOverride ?: 0.0) to (maxYOverride ?: 0.0)
             val lo = values.minOrNull() ?: 0f
             val hi = values.maxOrNull() ?: 0f
             val scaledMin = lo * 0.9f
             val scaledMax = hi * 1.1f
-            kotlin.math.floor(scaledMin).toDouble() to kotlin.math.ceil(scaledMax).toDouble()
+            val computedMin = kotlin.math.floor(scaledMin).toDouble()
+            val computedMax = kotlin.math.ceil(scaledMax).toDouble()
+            (minYOverride ?: computedMin) to (maxYOverride ?: computedMax)
         }
 
     val shouldShowBaseline =
         remember(baselineValue, minY, maxY, showBaseline) {
             showBaseline && baselineValue.toDouble() >= minY && baselineValue.toDouble() <= maxY
         }
-
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val baselineColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -225,34 +256,55 @@ fun TrendChart(
     val zoneBandDecoration = remember(bands, colors, minY, maxY) { ZoneBandDecoration(bands, colors, minY, maxY) }
 
     val markerVisibilityListener =
-        rememberChartMarkerVisibilityListener(
-            onPointSelected = { x, y, canvasX, canvasY ->
-                val dayOffset = x.toInt()
-                val value = y.toFloat()
-                val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
-                val dateString = ChartUtils.formatTooltipDate(date)
-                val valueText =
+        rememberChartMarkerVisibilityListener { x, _, canvasX, canvasY ->
+            val dayOffset = x.toInt()
+            val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
+            val dateText = ChartUtils.formatTooltipDate(date)
+            val nearest = points.firstOrNull { it.dayOffset == dayOffset }
+            val value = nearest?.value
+            val valueText =
+                if (value != null) {
                     if (baselineUnit.equals("steps", ignoreCase = true)) {
                         "${value.toInt()}"
                     } else {
                         "${value.toInt()} $baselineUnit"
                     }
-                val dateText = dateString
-                selectedPointOffset = Offset(canvasX, canvasY)
-                tooltipState =
-                    DataPointTooltipData(
-                        valueText = valueText,
-                        dateText = dateText,
-                        offset =
-                            androidx.compose.ui.unit.IntOffset(
-                                canvasX.toInt(),
-                                canvasY.toInt(),
-                            ),
-                    )
-            },
-        )
+                } else {
+                    "—"
+                }
+            selectedPointOffset = Offset(canvasX, canvasY)
+            tooltipState =
+                DataPointTooltipData(
+                    valueText = valueText,
+                    dateText = dateText,
+                    offset =
+                        androidx.compose.ui.unit
+                            .IntOffset(canvasX.toInt(), canvasY.toInt()),
+                )
+        }
 
-    Box(modifier = modifier.fillMaxWidth()) {
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        var isMultiTouch = false
+                        while (!isMultiTouch) {
+                            val event = awaitPointerEvent()
+                            // Stop polling once all fingers are lifted
+                            if (event.changes.none { it.pressed }) break
+                            if (event.changes.size > 1) {
+                                // Multi-touch: pan/zoom detected — clear tooltip
+                                isMultiTouch = true
+                                tooltipState = null
+                                selectedPointOffset = null
+                            }
+                        }
+                    }
+                },
+    ) {
         CartesianChartHost(
             chart =
                 rememberCartesianChart(
@@ -299,6 +351,10 @@ fun TrendChart(
                         ),
                     marker = InvisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
+                    // Show the marker only on a discrete tap. The default (showOnPress) reacts to
+                    // Press + Move, which competes with the multi-touch pinch detector and throttles
+                    // zoom on 30d/180d. ToggleOnTap leaves drag/pinch entirely to scroll + zoom.
+                    markerController = CartesianMarkerController.rememberToggleOnTap(),
                 ),
             modelProducer = modelProducer,
             scrollState = scrollState,
@@ -308,6 +364,7 @@ fun TrendChart(
 
         VicoChartTooltipOverlay(
             selectedPointOffset = selectedPointOffset,
+            pulseColor = dotColor,
             modifier = Modifier.fillMaxWidth().height(180.dp),
         )
     }
@@ -373,20 +430,23 @@ fun BloodPressureTrendChart(
     rangeStartMs: Long,
     rangeDays: Int,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
+    // Same fix as TrendChart: Zoom.min(Zoom.Content, Zoom.fixed(1f)) as minZoom floor.
+    // See TrendChart's zoomState comment for the full rationale.
     zoomState: VicoZoomState =
         rememberVicoZoomState(
             zoomEnabled = rangeDays > 7,
             initialZoom = Zoom.Content,
-            minZoom = Zoom.Content,
+            minZoom = Zoom.min(Zoom.Content, Zoom.fixed(1f)),
             maxZoom =
                 remember(rangeDays) {
                     when (rangeDays) {
                         30 -> Zoom.fixed(6f)
                         180 -> Zoom.fixed(25f)
-                        else -> Zoom.Content
+                        else -> Zoom.fixed(2f)
                     }
                 },
         ),
+    parentScrollInProgress: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
@@ -396,6 +456,19 @@ fun BloodPressureTrendChart(
         if (tooltipState == null) {
             selectedPointOffset = null
         }
+    }
+
+    // Clear tooltip when the chart is scrolled/panned (Vico horizontal scroll)
+    LaunchedEffect(scrollState.value) {
+        tooltipState = null
+        selectedPointOffset = null
+    }
+
+    // Clear tooltip when the parent list scrolls vertically.
+    // Fire on both transitions to eliminate stale tooltip state at scroll-end.
+    LaunchedEffect(parentScrollInProgress) {
+        tooltipState = null
+        selectedPointOffset = null
     }
 
     if (systolicPoints.none { it.value != null } || diastolicPoints.none { it.value != null }) {
@@ -498,41 +571,53 @@ fun BloodPressureTrendChart(
         }
 
     val markerVisibilityListener =
-        rememberChartMarkerVisibilityListener(
-            onPointSelected = { x, y, canvasX, canvasY ->
-                val dayOffset = x.toInt()
-                val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
-                val dateString = ChartUtils.formatTooltipDate(date)
+        rememberChartMarkerVisibilityListener { x, _, canvasX, canvasY ->
+            val dayOffset = x.toInt()
+            val date = ChartUtils.dayOffsetToLocalDate(dayOffset, rangeStartMs)
+            val dateText = ChartUtils.formatTooltipDate(date)
+            val sysNearest = systolicPoints.firstOrNull { it.dayOffset == dayOffset }
+            val diaNearest = diastolicPoints.firstOrNull { it.dayOffset == dayOffset }
+            val valueText =
+                if (sysNearest?.value != null && diaNearest?.value != null) {
+                    "${sysNearest.value.toInt()}/${diaNearest.value.toInt()} mmHg"
+                } else if (sysNearest?.value != null) {
+                    "Sys: ${sysNearest.value.toInt()} mmHg"
+                } else {
+                    "—"
+                }
+            selectedPointOffset = Offset(canvasX, canvasY)
+            tooltipState =
+                DataPointTooltipData(
+                    valueText = valueText,
+                    dateText = dateText,
+                    offset =
+                        androidx.compose.ui.unit
+                            .IntOffset(canvasX.toInt(), canvasY.toInt()),
+                )
+        }
 
-                val sysPoint = systolicPoints.firstOrNull { it.dayOffset == dayOffset }?.value
-                val diaPoint = diastolicPoints.firstOrNull { it.dayOffset == dayOffset }?.value
-
-                val valueText =
-                    if (sysPoint != null && diaPoint != null) {
-                        "${sysPoint.roundToInt()}/${diaPoint.roundToInt()} mmHg"
-                    } else if (sysPoint != null) {
-                        "Sys: ${sysPoint.roundToInt()} mmHg"
-                    } else if (diaPoint != null) {
-                        "Dia: ${diaPoint.roundToInt()} mmHg"
-                    } else {
-                        "—"
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        var isMultiTouch = false
+                        while (!isMultiTouch) {
+                            val event = awaitPointerEvent()
+                            // Stop polling once all fingers are lifted
+                            if (event.changes.none { it.pressed }) break
+                            if (event.changes.size > 1) {
+                                // Multi-touch: pan/zoom detected — clear tooltip
+                                isMultiTouch = true
+                                tooltipState = null
+                                selectedPointOffset = null
+                            }
+                        }
                     }
-
-                selectedPointOffset = Offset(canvasX, canvasY)
-                tooltipState =
-                    DataPointTooltipData(
-                        valueText = valueText,
-                        dateText = dateString,
-                        offset =
-                            androidx.compose.ui.unit.IntOffset(
-                                canvasX.toInt(),
-                                canvasY.toInt(),
-                            ),
-                    )
-            },
-        )
-
-    Box(modifier = modifier.fillMaxWidth()) {
+                },
+    ) {
         CartesianChartHost(
             chart =
                 rememberCartesianChart(
@@ -575,6 +660,9 @@ fun BloodPressureTrendChart(
                         ),
                     marker = InvisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
+                    // Tap-only marker so the pinch detector keeps full zoom responsiveness.
+                    // See TrendChart's markerController note for the rationale.
+                    markerController = CartesianMarkerController.rememberToggleOnTap(),
                 ),
             modelProducer = modelProducer,
             scrollState = scrollState,
@@ -584,6 +672,7 @@ fun BloodPressureTrendChart(
 
         VicoChartTooltipOverlay(
             selectedPointOffset = selectedPointOffset,
+            pulseColor = systolicColor,
             modifier = Modifier.fillMaxWidth().height(180.dp),
         )
     }

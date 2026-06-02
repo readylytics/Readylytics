@@ -4,10 +4,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.gregor.lauritz.healthdashboard.R
@@ -33,6 +35,13 @@ sealed interface TabDestination {
     }
 
     @Serializable
+    data object Vitals : TabDestination {
+        override val labelRes = R.string.tab_vitals
+        override val icon = Icons.Outlined.MonitorHeart
+        override val selectedIcon = Icons.Filled.MonitorHeart
+    }
+
+    @Serializable
     data object Workouts : TabDestination {
         override val labelRes = R.string.tab_workouts
         override val icon = Icons.Outlined.FitnessCenter
@@ -47,6 +56,6 @@ sealed interface TabDestination {
     }
 
     companion object {
-        val all = listOf(Dashboard, Sleep, Workouts, Settings)
+        val all = listOf(Dashboard, Sleep, Vitals, Workouts, Settings)
     }
 }

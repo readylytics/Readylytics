@@ -21,9 +21,6 @@ sealed interface AppDestination {
     ) : AppDestination
 
     @Serializable
-    data object RestingHrDetail : AppDestination
-
-    @Serializable
     data object StepDetail : AppDestination
 
     @Serializable
@@ -37,7 +34,4 @@ sealed interface AppDestination {
 
     @Serializable
     data object BloodPressureDetail : AppDestination
-
-    @Serializable
-    data object HrvDetail : AppDestination
 }

@@ -178,4 +178,13 @@
     <!-- Heart Rate Detail Screen -->
     <string name="heart_rate_title">Heart Rate</string>
     <string name="back">Back</string>
+
+    <!-- Vitals Tab & Oxygen Saturation -->
+    <string name="tab_vitals">Vitals</string>
+    <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last night. Goal: >95%.\n\n• Optimal: 98–100%\n• Normal: 95–97%\n• Warning: 90–94%\n• Poor: &lt;90%</string>
+    <string name="spo2_optimal">Optimal</string>
+    <string name="spo2_normal">Normal</string>
+    <string name="spo2_warning">Warning</string>
+    <string name="spo2_poor">Poor</string>
+    <string name="spo2_calibrating">Calibrating</string>
 </resources>

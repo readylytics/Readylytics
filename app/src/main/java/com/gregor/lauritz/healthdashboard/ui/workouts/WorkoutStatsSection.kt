@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -78,7 +79,9 @@ fun WorkoutStatsSection(
         rememberVicoZoomState(
             zoomEnabled = rangeDays > 7,
             initialZoom = Zoom.Content,
-            minZoom = Zoom.Content,
+            // Floor zoom-out at the fit-to-range view (see ChartDefaults.rememberChartState):
+            // prevents zooming out past the initial range / revealing future dates.
+            minZoom = Zoom.min(Zoom.Content, Zoom.fixed(1f)),
             maxZoom =
                 remember(rangeDays) {
                     when (rangeDays) {
@@ -88,6 +91,7 @@ fun WorkoutStatsSection(
                     }
                 },
         ),
+    parentScrollInProgress: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -202,6 +206,7 @@ fun WorkoutStatsSection(
             rangeDays = rangeDays,
             scrollState = scrollState,
             zoomState = zoomState,
+            parentScrollInProgress = parentScrollInProgress,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
 
@@ -217,6 +222,7 @@ private fun AcwrChartCard(
     rangeDays: Int,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
+    parentScrollInProgress: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -239,6 +245,7 @@ private fun AcwrChartCard(
                     rangeDays = rangeDays,
                     scrollState = scrollState,
                     zoomState = zoomState,
+                    parentScrollInProgress = parentScrollInProgress,
                 )
             }
         }
@@ -253,13 +260,21 @@ private fun AcwrChart(
     rangeDays: Int,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
+    parentScrollInProgress: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     // Selection state is keyed on the data inputs so it clears automatically when the
     // chart range or underlying data changes, preventing stale coordinates and values.
     var selectedState by remember(trimpPoints, ratioPoints, rangeStartMs) { mutableStateOf<AcwrSelectedState?>(null) }
 
-    var layerBounds by remember { mutableStateOf<Any?>(null) }
+    // Dismiss the tooltip/selection when the chart is panned or the parent list scrolls
+    // vertically, so the popup never detaches from its anchor point.
+    LaunchedEffect(scrollState.value) { selectedState = null }
+    LaunchedEffect(parentScrollInProgress) {
+        if (parentScrollInProgress) selectedState = null
+    }
+
+    var layerBounds by remember { mutableStateOf<Rect?>(null) }
     val invisibleMarker =
         remember {
             object : com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker {
@@ -371,6 +386,14 @@ private fun AcwrChart(
             }
         }
 
+    // Upper bound of the Strain Ratio (end) axis — must match ratioRangeProvider.getMaxY so we
+    // can map a strain value back to a canvas-y when Vico's touch only reported the TRIMP column.
+    val ratioAxisMax =
+        remember(ratioPoints) {
+            val dataMax = ratioPoints.mapNotNull { it.value?.toDouble() }.maxOrNull() ?: 0.0
+            (ceil(dataMax / 0.5) * 0.5).coerceAtLeast(2.0)
+        }
+
     val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
 
     LaunchedEffect(trimpPoints, ratioPoints) {
@@ -480,8 +503,22 @@ private fun AcwrChart(
             modifier = Modifier.fillMaxWidth().height(chartHeight),
         )
 
+        // Vico's touch resolution can report only the TRIMP column target when the tap lands on a
+        // bar, leaving lineCanvasY null so the Strain Ratio pulse would not render. Recompute the
+        // dot's canvas-y from the strain value + layer bounds so the ACWR point is always anchored.
+        val overlayState =
+            selectedState?.let { s ->
+                val bounds = layerBounds
+                if (s.lineCanvasY == null && s.strainRatioValue != null && bounds != null && ratioAxisMax > 0.0) {
+                    val fraction = (1.0 - (s.strainRatioValue / ratioAxisMax)).coerceIn(0.0, 1.0)
+                    s.copy(lineCanvasY = (bounds.top + fraction * bounds.height).toFloat())
+                } else {
+                    s
+                }
+            }
+
         AcwrChartOverlay(
-            selectedState = selectedState,
+            selectedState = overlayState,
             trimpColor = trimpColor,
             ratioColor = ratioColor,
             layerBounds = layerBounds,
