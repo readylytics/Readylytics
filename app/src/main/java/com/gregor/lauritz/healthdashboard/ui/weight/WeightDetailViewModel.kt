@@ -37,6 +37,7 @@ data class WeightDetailUiState(
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val weightDisplay: String? = null,
     val bmiDisplay: String? = null,
+    val isLoading: Boolean = true,
 )
 
 @HiltViewModel
@@ -136,6 +137,7 @@ class WeightDetailViewModel
                                 )
                             },
                         bmiDisplay = bmi?.let { MetricFormatter.formatBmi(it) },
+                        isLoading = false,
                     )
                 }
             }.stateIn(

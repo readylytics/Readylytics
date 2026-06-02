@@ -32,6 +32,7 @@ data class StepDetailUiState(
     val stepGoal: Int = 10000,
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val rangeStartMs: Long = 0,
+    val isLoading: Boolean = true,
 )
 
 @HiltViewModel
@@ -87,6 +88,7 @@ class StepDetailViewModel
                             stepGoal = prefs.stepGoal,
                             selectedRange = range,
                             rangeStartMs = startDayMs,
+                            isLoading = false,
                         )
                     }
                 }.stateIn(

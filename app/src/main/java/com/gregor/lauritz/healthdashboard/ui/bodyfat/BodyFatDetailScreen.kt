@@ -30,6 +30,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.domain.model.bodyFatZoneBands
+import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
+import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
@@ -97,8 +99,18 @@ fun BodyFatDetailScreen(
                     .fillMaxSize(),
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
-            if (uiState.optimalRangeMax > 0f) {
-                item(key = "score_dial") {
+            item(key = "score_dial") {
+                if (uiState.isLoading) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        ScoreDialSkeleton()
+                    }
+                } else if (uiState.optimalRangeMax > 0f) {
                     Box(
                         modifier =
                             Modifier
@@ -121,51 +133,60 @@ fun BodyFatDetailScreen(
                 }
             }
 
-            item(key = "trends_header") {
-                SectionHeader(title = "Trends")
-                Spacer(Modifier.height(8.dp))
-                SingleChoiceSegmentedButtonRow(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                ) {
-                    TimeRange.entries.forEachIndexed { index, range ->
-                        SegmentedButton(
-                            selected = uiState.selectedRange == range,
-                            onClick = { onRangeSelected(range) },
-                            shape =
-                                SegmentedButtonDefaults.itemShape(
-                                    index = index,
-                                    count = TimeRange.entries.size,
-                                ),
-                            label = { Text(range.label) },
-                        )
+            if (!uiState.isLoading) {
+                item(key = "trends_header") {
+                    SectionHeader(title = "Trends")
+                    Spacer(Modifier.height(8.dp))
+                    SingleChoiceSegmentedButtonRow(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                    ) {
+                        TimeRange.entries.forEachIndexed { index, range ->
+                            SegmentedButton(
+                                selected = uiState.selectedRange == range,
+                                onClick = { onRangeSelected(range) },
+                                shape =
+                                    SegmentedButtonDefaults.itemShape(
+                                        index = index,
+                                        count = TimeRange.entries.size,
+                                    ),
+                                label = { Text(range.label) },
+                            )
+                        }
                     }
                 }
+
+                item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
             }
 
-            item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
-
             item(key = "body_fat_chart") {
-                TrendCard(
-                    title = "Body Fat Trend",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                ) {
-                    TrendChart(
-                        points = uiState.dailyBodyFat,
-                        rangeStartMs = uiState.rangeStartMs,
-                        rangeDays = uiState.selectedRange.days,
-                        metricName = "Body Fat",
-                        baselineUnit = "%",
-                        baseline = uiState.averageBodyFat,
-                        baselineLabel = "Average",
-                        baselineDecimalPlaces = 1,
-                        axisDecimalPlaces = 1,
-                        scrollState = chartScrollState,
-                        zoomState = chartZoomState,
-                        zoneBands = bodyFatBands,
+                if (uiState.isLoading) {
+                    SkeletonCard(
+                        height = 250.dp,
+                        modifier = Modifier.padding(horizontal = 16.dp),
                     )
+                } else {
+                    TrendCard(
+                        title = "Body Fat Trend",
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    ) {
+                        TrendChart(
+                            points = uiState.dailyBodyFat,
+                            rangeStartMs = uiState.rangeStartMs,
+                            rangeDays = uiState.selectedRange.days,
+                            metricName = "Body Fat",
+                            baselineUnit = "%",
+                            baseline = uiState.averageBodyFat,
+                            baselineLabel = "Average",
+                            baselineDecimalPlaces = 1,
+                            axisDecimalPlaces = 1,
+                            scrollState = chartScrollState,
+                            zoomState = chartZoomState,
+                            zoneBands = bodyFatBands,
+                        )
+                    }
                 }
             }
 

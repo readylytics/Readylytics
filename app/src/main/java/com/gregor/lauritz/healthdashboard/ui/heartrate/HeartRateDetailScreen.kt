@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.R
+import com.gregor.lauritz.healthdashboard.ui.common.MetricCardSkeleton
+import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.components.HrTimelineChart
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
@@ -97,7 +99,19 @@ fun HeartRateDetailScreen(
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
             item(key = "stats_row") {
-                if (uiState.minBpm != null && uiState.maxBpm != null) {
+                if (uiState.isLoading) {
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        MetricCardSkeleton(modifier = Modifier.weight(1f), height = 72.dp)
+                        MetricCardSkeleton(modifier = Modifier.weight(1f), height = 72.dp)
+                        MetricCardSkeleton(modifier = Modifier.weight(1f), height = 72.dp)
+                    }
+                } else if (uiState.minBpm != null && uiState.maxBpm != null) {
                     Row(
                         modifier =
                             Modifier
@@ -120,26 +134,33 @@ fun HeartRateDetailScreen(
             }
 
             item(key = "chart") {
-                Card(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(16.dp),
-                ) {
-                    HrTimelineChart(
-                        samples = uiState.samples,
-                        dayStartMs = dayStartMs,
-                        zone1MinBpm = uiState.zone1MinBpm,
-                        zone1MaxBpm = uiState.zone1MaxBpm,
-                        zone2MaxBpm = uiState.zone2MaxBpm,
-                        zone3MaxBpm = uiState.zone3MaxBpm,
-                        zone4MaxBpm = uiState.zone4MaxBpm,
+                if (uiState.isLoading) {
+                    SkeletonCard(
+                        height = 300.dp,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                } else {
+                    Card(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
-                    )
+                                .padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(16.dp),
+                    ) {
+                        HrTimelineChart(
+                            samples = uiState.samples,
+                            dayStartMs = dayStartMs,
+                            zone1MinBpm = uiState.zone1MinBpm,
+                            zone1MaxBpm = uiState.zone1MaxBpm,
+                            zone2MaxBpm = uiState.zone2MaxBpm,
+                            zone3MaxBpm = uiState.zone3MaxBpm,
+                            zone4MaxBpm = uiState.zone4MaxBpm,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                        )
+                    }
                 }
             }
 

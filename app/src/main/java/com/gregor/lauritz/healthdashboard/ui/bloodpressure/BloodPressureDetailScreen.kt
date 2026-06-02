@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
+import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.BloodPressureSplitChart
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
@@ -89,77 +91,100 @@ fun BloodPressureDetailScreen(
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
             item(key = "score_dials") {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    M3ScoreDial(
-                        score = uiState.latestSystolic?.toFloat(),
-                        label = "Systolic",
-                        maxScore = 200f,
-                        status = uiState.systolicStatus,
-                        displayText = uiState.latestSystolic?.toString(),
-                        tooltipDescription =
-                            "Latest systolic blood pressure measurement.\n\n" +
-                                "Optimal: <120\nElevated: 120–129\nStage 1: 130–139\nStage 2: ≥140",
-                    )
-                    M3ScoreDial(
-                        score = uiState.latestDiastolic?.toFloat(),
-                        label = "Diastolic",
-                        maxScore = 120f,
-                        status = uiState.diastolicStatus,
-                        displayText = uiState.latestDiastolic?.toString(),
-                        tooltipDescription =
-                            "Latest diastolic blood pressure measurement.\n\n" +
-                                "Optimal: <80\nStage 1: 80–89\nStage 2: ≥90",
-                    )
-                }
-            }
-
-            item(key = "trends_header") {
-                SectionHeader(title = "Trends")
-                Spacer(Modifier.height(8.dp))
-                SingleChoiceSegmentedButtonRow(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                ) {
-                    TimeRange.entries.forEachIndexed { index, range ->
-                        SegmentedButton(
-                            selected = uiState.selectedRange == range,
-                            onClick = { onRangeSelected(range) },
-                            shape =
-                                SegmentedButtonDefaults.itemShape(
-                                    index = index,
-                                    count = TimeRange.entries.size,
-                                ),
-                            label = { Text(range.label) },
+                if (uiState.isLoading) {
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ScoreDialSkeleton()
+                        ScoreDialSkeleton()
+                    }
+                } else {
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        M3ScoreDial(
+                            score = uiState.latestSystolic?.toFloat(),
+                            label = "Systolic",
+                            maxScore = 200f,
+                            status = uiState.systolicStatus,
+                            displayText = uiState.latestSystolic?.toString(),
+                            tooltipDescription =
+                                "Latest systolic blood pressure measurement.\n\n" +
+                                    "Optimal: <120\nElevated: 120–129\nStage 1: 130–139\nStage 2: ≥140",
+                        )
+                        M3ScoreDial(
+                            score = uiState.latestDiastolic?.toFloat(),
+                            label = "Diastolic",
+                            maxScore = 120f,
+                            status = uiState.diastolicStatus,
+                            displayText = uiState.latestDiastolic?.toString(),
+                            tooltipDescription =
+                                "Latest diastolic blood pressure measurement.\n\n" +
+                                    "Optimal: <80\nStage 1: 80–89\nStage 2: ≥90",
                         )
                     }
                 }
             }
 
-            item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
+            if (!uiState.isLoading) {
+                item(key = "trends_header") {
+                    SectionHeader(title = "Trends")
+                    Spacer(Modifier.height(8.dp))
+                    SingleChoiceSegmentedButtonRow(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                    ) {
+                        TimeRange.entries.forEachIndexed { index, range ->
+                            SegmentedButton(
+                                selected = uiState.selectedRange == range,
+                                onClick = { onRangeSelected(range) },
+                                shape =
+                                    SegmentedButtonDefaults.itemShape(
+                                        index = index,
+                                        count = TimeRange.entries.size,
+                                    ),
+                                label = { Text(range.label) },
+                            )
+                        }
+                    }
+                }
+
+                item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
+            }
 
             item(key = "bp_chart") {
-                TrendCard(
-                    title = "Blood Pressure Trend",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                ) {
-                    BloodPressureSplitChart(
-                        systolicPoints = uiState.dailySystolic,
-                        diastolicPoints = uiState.dailyDiastolic,
-                        rangeStartMs = uiState.rangeStartMs,
-                        rangeDays = uiState.selectedRange.days,
-                        scrollState = chartScrollState,
-                        zoomState = chartZoomState,
-                        parentScrollInProgress = listState.isScrollInProgress,
+                if (uiState.isLoading) {
+                    SkeletonCard(
+                        height = 250.dp,
+                        modifier = Modifier.padding(horizontal = 16.dp),
                     )
+                } else {
+                    TrendCard(
+                        title = "Blood Pressure Trend",
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    ) {
+                        BloodPressureSplitChart(
+                            systolicPoints = uiState.dailySystolic,
+                            diastolicPoints = uiState.dailyDiastolic,
+                            rangeStartMs = uiState.rangeStartMs,
+                            rangeDays = uiState.selectedRange.days,
+                            scrollState = chartScrollState,
+                            zoomState = chartZoomState,
+                            parentScrollInProgress = listState.isScrollInProgress,
+                        )
+                    }
                 }
             }
 
