@@ -1,12 +1,13 @@
 package com.gregor.lauritz.healthdashboard.domain.validation
 
+import java.time.Clock
 import java.time.LocalDate
 
-class BirthdayDateRule : ValidationRule<LocalDate> {
+class BirthdayDateRule(private val clock: Clock = Clock.systemDefaultZone()) : ValidationRule<LocalDate> {
     override val errorMessage: String = "Birthday must be in the past"
 
     override fun validate(value: LocalDate): ValidationResult {
-        val today = LocalDate.now()
+        val today = LocalDate.now(clock)
         val minYear = 1900
 
         return when {

@@ -401,18 +401,21 @@ class LocalRestoreManager
                         birthDay = date.dayOfMonth
                         birthMonth = date.monthValue
                         birthYear = date.year
+                        isBirthdayConfigured = true
                     } catch (e: Exception) {
                         // If birthDate parsing fails, try the old fields
                         if (backup.birthDay != null && backup.birthMonth != null && backup.birthYear != null) {
                             birthDay = backup.birthDay
                             birthMonth = backup.birthMonth
                             birthYear = backup.birthYear
+                            isBirthdayConfigured = true
                         }
                     }
                 } else if (backup.birthDay != null && backup.birthMonth != null && backup.birthYear != null) {
                     birthDay = backup.birthDay
                     birthMonth = backup.birthMonth
                     birthYear = backup.birthYear
+                    isBirthdayConfigured = true
                 }
 
                 backup.gender?.let { gender = it } ?: clearGender()

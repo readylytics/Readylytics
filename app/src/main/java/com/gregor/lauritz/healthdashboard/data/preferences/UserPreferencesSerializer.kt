@@ -144,10 +144,20 @@ fun UserPreferences.toProto(): UserPreferencesProto {
     domain.hrvBaselineOverride?.let { builder.setHrvBaselineOverride(it) }
     domain.rhrBaselineOverride?.let { builder.setRhrBaselineOverride(it) }
     domain.gender?.let { builder.setGender(it.name) }
+    domain.heightCm?.let { builder.setHeightCm(it) }
     domain.circadianThresholdOverride?.let { builder.setCircadianThresholdOverride(it) }
     domain.primaryDeviceName?.let { builder.setPrimaryDeviceName(it) }
     domain.backupDirectoryUri?.let { builder.setBackupDirectoryUri(it) }
     domain.backupPasswordHash?.let { builder.setBackupPasswordHash(it) }
+    domain.driveAccountEmail?.let { builder.setDriveAccountEmail(it) }
+    builder.setIsBirthdayConfigured(domain.isBirthdayConfigured)
+    builder.setRestingHrPercentile(domain.restingHrPercentile)
+    builder.setUnitSystem(
+        when (domain.unitSystem) {
+            com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem.METRIC -> UnitSystemProto.UNIT_METRIC
+            com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem.IMPERIAL -> UnitSystemProto.UNIT_IMPERIAL
+        }
+    )
 
     return builder.build()
 }

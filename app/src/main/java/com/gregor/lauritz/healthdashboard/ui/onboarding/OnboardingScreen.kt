@@ -395,7 +395,7 @@ private fun BirthdayDatePickerField(
 
     if (showDialog) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = birthDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+            initialSelectedDateMillis = birthDate.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli(),
             yearRange = 1900..LocalDate.now().year,
             selectableDates = object : SelectableDates {
                 override fun isSelectableDate(utcTimeMillis: Long): Boolean {
@@ -415,7 +415,7 @@ private fun BirthdayDatePickerField(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
                             val instant = Instant.ofEpochMilli(millis)
-                            val date = instant.atZone(ZoneId.systemDefault()).toLocalDate()
+                            val date = instant.atZone(ZoneId.of("UTC")).toLocalDate()
                             onDateSelected(date)
                             onDialogDismiss()
                         }
