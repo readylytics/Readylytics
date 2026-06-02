@@ -470,12 +470,6 @@ fun BloodPressureTrendChart(
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
     val markerController = CartesianMarkerController.rememberToggleOnTap()
 
-    // Dismiss any Vico-persisted marker selection each time this composable enters composition.
-    // See TrendChart for the full rationale.
-    LaunchedEffect(Unit) {
-        markerController.dismiss()
-    }
-
     LaunchedEffect(tooltipState) {
         if (tooltipState == null) {
             selectedPointOffset = null
