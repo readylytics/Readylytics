@@ -47,7 +47,7 @@ fun BloodPressureSplitChart(
         rememberVicoZoomState(
             zoomEnabled = rangeDays > 7,
             initialZoom = Zoom.Content,
-            minZoom = Zoom.fixed(0.01f),
+            minZoom = Zoom.min(Zoom.Content, Zoom.fixed(1f)),
             maxZoom =
                 remember(rangeDays) {
                     when (rangeDays) {

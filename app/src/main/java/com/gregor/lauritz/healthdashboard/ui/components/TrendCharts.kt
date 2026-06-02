@@ -47,7 +47,6 @@ import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
@@ -358,10 +357,6 @@ fun TrendChart(
                         ),
                     marker = InvisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
-                    // Show the marker only on a discrete tap. The default (showOnPress) reacts to
-                    // Press + Move, which competes with the multi-touch pinch detector and throttles
-                    // zoom on 30d/180d. ToggleOnTap leaves drag/pinch entirely to scroll + zoom.
-                    markerController = CartesianMarkerController.rememberToggleOnTap(),
                 ),
             modelProducer = modelProducer,
             scrollState = scrollState,
@@ -667,9 +662,6 @@ fun BloodPressureTrendChart(
                         ),
                     marker = InvisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
-                    // Tap-only marker so the pinch detector keeps full zoom responsiveness.
-                    // See TrendChart's markerController note for the rationale.
-                    markerController = CartesianMarkerController.rememberToggleOnTap(),
                 ),
             modelProducer = modelProducer,
             scrollState = scrollState,
