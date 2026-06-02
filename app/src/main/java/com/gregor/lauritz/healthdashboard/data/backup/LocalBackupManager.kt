@@ -373,9 +373,10 @@ class LocalBackupManager
                     zone4MaxBpm = prefs.zone4MaxBpm,
                     age = prefs.age,
                     birthDate = prefs.birthDate,
-                    birthDay = prefs.birthDay,
-                    birthMonth = prefs.birthMonth,
-                    birthYear = prefs.birthYear,
+                    // Extract day, month, year from birthDate for backward compatibility
+                    birthDay = prefs.birthDate?.let { try { java.time.LocalDate.parse(it).dayOfMonth } catch (e: Exception) { null } },
+                    birthMonth = prefs.birthDate?.let { try { java.time.LocalDate.parse(it).monthValue } catch (e: Exception) { null } },
+                    birthYear = prefs.birthDate?.let { try { java.time.LocalDate.parse(it).year } catch (e: Exception) { null } },
                     gender = prefs.gender?.name,
                     hrvOptimalThreshold = prefs.hrvOptimalThreshold,
                     hrvWarningThreshold = prefs.hrvWarningThreshold,
