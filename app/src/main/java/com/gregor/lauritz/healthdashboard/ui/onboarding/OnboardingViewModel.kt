@@ -75,9 +75,7 @@ class OnboardingViewModel
         ): Result<BmiData> = bmiService.calculateBmi(weight, height, UnitSystem.METRIC)
 
         fun saveProfile(
-            day: Int,
-            month: Int,
-            year: Int,
+            birthDate: LocalDate,
             gender: String?,
             physiologyProfile: PhysiologyProfile,
             dynamicColorEnabled: Boolean,
@@ -85,16 +83,12 @@ class OnboardingViewModel
             heightCm: Float?,
             onComplete: () -> Unit,
         ) {
-            val dayValidation = validateBirthdayDay(day.toString())
-            val monthValidation = validateBirthdayMonth(month.toString())
-            val yearValidation = validateBirthdayYear(year.toString())
-
-            if (dayValidation.isFailure || monthValidation.isFailure || yearValidation.isFailure) {
+            if (birthDate.isAfter(LocalDate.now())) {
                 return
             }
 
             viewModelScope.launch {
-                settingsRepo.updateBirthday(day, month, year)
+                settingsRepo.updateBirthday(birthDate)
                 settingsRepo.updateGender(gender)
                 settingsRepo.updatePhysiologyProfile(physiologyProfile)
                 settingsRepo.updateDynamicColorEnabled(dynamicColorEnabled)

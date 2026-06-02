@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings.physiologyprofile
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -22,8 +25,11 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +50,10 @@ import com.gregor.lauritz.healthdashboard.ui.settings.PhysiologySettingsState
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsExpandState
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
 @Composable
@@ -58,15 +68,7 @@ fun HeartRateZoneSection(
     var maxHrText by rememberSaveable(uiState.maxHeartRate) {
         mutableStateOf(uiState.maxHeartRate.toString())
     }
-    var birthDayText by rememberSaveable(physiologyState.birthDay) {
-        mutableStateOf(physiologyState.birthDay.toString())
-    }
-    var birthMonthText by rememberSaveable(physiologyState.birthMonth) {
-        mutableStateOf(physiologyState.birthMonth.toString())
-    }
-    var birthYearText by rememberSaveable(physiologyState.birthYear) {
-        mutableStateOf(physiologyState.birthYear.toString())
-    }
+    var showBirthdatePicker by rememberSaveable { mutableStateOf(false) }
     var genderExpanded by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING)) {
@@ -98,16 +100,15 @@ fun HeartRateZoneSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
-                BirthdayInputRow(
-                    dayText = birthDayText,
-                    onDayChange = { birthDayText = it },
-                    monthText = birthMonthText,
-                    onMonthChange = { birthMonthText = it },
-                    yearText = birthYearText,
-                    onYearChange = { birthYearText = it },
-                    onBirthdayValid = { d, m, y ->
-                        onPhysiologyEvent(SettingsEvent.BirthdayChanged(d, m, y))
+                BirthdayInputField(
+                    birthDate = physiologyState.birthDate,
+                    onBirthdateClick = { showBirthdatePicker = true },
+                    onDateSelected = { date ->
+                        onPhysiologyEvent(SettingsEvent.BirthdayChanged(date))
+                        showBirthdatePicker = false
                     },
+                    showDialog = showBirthdatePicker,
+                    onDialogDismiss = { showBirthdatePicker = false },
                 )
                 Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
                 Text(
@@ -410,80 +411,67 @@ fun CompactOutlinedTextField(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BirthdayInputRow(
-    dayText: String,
-    onDayChange: (String) -> Unit,
-    monthText: String,
-    onMonthChange: (String) -> Unit,
-    yearText: String,
-    onYearChange: (String) -> Unit,
-    onBirthdayValid: (Int, Int, Int) -> Unit,
+private fun BirthdayInputField(
+    birthDate: LocalDate?,
+    onBirthdateClick: () -> Unit,
+    onDateSelected: (LocalDate) -> Unit,
+    showDialog: Boolean,
+    onDialogDismiss: () -> Unit,
 ) {
-    val dayValidation = SettingsValidators.BIRTHDAY_DAY_RULE.validate(dayText)
-    val monthValidation = SettingsValidators.BIRTHDAY_MONTH_RULE.validate(monthText)
-    val yearValidation = SettingsValidators.BIRTHDAY_YEAR_RULE.validate(yearText)
+    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    val displayText = birthDate?.format(dateFormatter) ?: "Not set"
 
-    fun tryValidateAndEmit() {
-        val d = dayText.toIntOrNull() ?: return
-        val m = monthText.toIntOrNull() ?: return
-        val y = yearText.toIntOrNull() ?: return
-        val dayValid = dayValidation is ValidationResult.Valid
-        val monthValid = monthValidation is ValidationResult.Valid
-        val yearValid = yearValidation is ValidationResult.Valid
-        if (dayValid && monthValid && yearValid) {
-            onBirthdayValid(d, m, y)
+    OutlinedTextField(
+        value = displayText,
+        onValueChange = {},
+        readOnly = true,
+        label = { Text("Date of Birth") },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(enabled = true, onClick = onBirthdateClick),
+    )
+
+    if (showDialog) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = birthDate?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli(),
+            yearRange = 1900..LocalDate.now().year,
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                    return utcTimeMillis <= System.currentTimeMillis()
+                }
+
+                override fun isSelectableYear(year: Int): Boolean {
+                    return year in 1900..LocalDate.now().year
+                }
+            },
+        )
+
+        DatePickerDialog(
+            onDismissRequest = onDialogDismiss,
+            confirmButton = {
+                Button(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val instant = Instant.ofEpochMilli(millis)
+                            val date = instant.atZone(ZoneId.systemDefault()).toLocalDate()
+                            onDateSelected(date)
+                        }
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDialogDismiss) {
+                    Text("Cancel")
+                }
+            },
+        ) {
+            DatePicker(state = datePickerState)
         }
-    }
-
-    Row(modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = dayText,
-            onValueChange = { v ->
-                onDayChange(v.filter { it.isDigit() }.take(2))
-                tryValidateAndEmit()
-            },
-            label = { Text("Day") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            isError = dayText.isNotEmpty() && dayValidation is ValidationResult.Invalid,
-            supportingText = {
-                if (dayValidation is ValidationResult.Invalid) Text(dayValidation.message)
-            },
-            modifier = Modifier.weight(1f),
-        )
-        Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER))
-        OutlinedTextField(
-            value = monthText,
-            onValueChange = { v ->
-                onMonthChange(v.filter { it.isDigit() }.take(2))
-                tryValidateAndEmit()
-            },
-            label = { Text("Month") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            isError = monthText.isNotEmpty() && monthValidation is ValidationResult.Invalid,
-            supportingText = {
-                if (monthValidation is ValidationResult.Invalid) Text(monthValidation.message)
-            },
-            modifier = Modifier.weight(1f),
-        )
-        Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER))
-        OutlinedTextField(
-            value = yearText,
-            onValueChange = { v ->
-                onYearChange(v.filter { it.isDigit() }.take(4))
-                tryValidateAndEmit()
-            },
-            label = { Text("Year") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            isError = yearText.isNotEmpty() && yearValidation is ValidationResult.Invalid,
-            supportingText = {
-                if (yearValidation is ValidationResult.Invalid) Text(yearValidation.message)
-            },
-            modifier = Modifier.weight(1.4f),
-        )
     }
 }
 

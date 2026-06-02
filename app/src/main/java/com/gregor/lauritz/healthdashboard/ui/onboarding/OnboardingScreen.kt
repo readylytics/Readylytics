@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.onboarding
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,15 +19,20 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -44,14 +50,15 @@ import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
 import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
 import com.gregor.lauritz.healthdashboard.ui.settings.HeightInputField
 import com.gregor.lauritz.healthdashboard.ui.settings.common.UnitSystemSelector
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun OnboardingScreen(
     onGrantPermissionsClick: (
-        birthDay: Int,
-        birthMonth: Int,
-        birthYear: Int,
+        birthDate: LocalDate,
         gender: String,
         physiologyProfile: PhysiologyProfile,
         dynamicColorEnabled: Boolean,
@@ -178,9 +185,7 @@ private fun FeatureItem(
 @Composable
 private fun ProfileSetupScreen(
     onGrantPermissionsClick: (
-        birthDay: Int,
-        birthMonth: Int,
-        birthYear: Int,
+        birthDate: LocalDate,
         gender: String,
         physiologyProfile: PhysiologyProfile,
         dynamicColorEnabled: Boolean,
@@ -189,9 +194,8 @@ private fun ProfileSetupScreen(
     ) -> Unit,
     onOpenSettingsClick: () -> Unit,
 ) {
-    var birthDay by remember { mutableStateOf(LocalDate.now().dayOfMonth.toString()) }
-    var birthMonth by remember { mutableStateOf(LocalDate.now().monthValue.toString()) }
-    var birthYear by remember { mutableStateOf((LocalDate.now().year - 30).toString()) }
+    var birthDate by remember { mutableStateOf(LocalDate.now().minusYears(30)) }
+    var showBirthdatePicker by remember { mutableStateOf(false) }
     var gender by remember { mutableStateOf("Other") }
     var physiologyProfile by remember { mutableStateOf(PhysiologyProfile.GENERAL) }
     var dynamicColorEnabled by remember { mutableStateOf(true) }
@@ -247,34 +251,13 @@ private fun ProfileSetupScreen(
         )
         Spacer(Modifier.height(8.dp))
 
-        Row(modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = birthDay,
-                onValueChange = { birthDay = it.filter { c -> c.isDigit() }.take(2) },
-                label = { Text("Day") },
-                modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-            )
-            Spacer(Modifier.width(8.dp))
-            OutlinedTextField(
-                value = birthMonth,
-                onValueChange = { birthMonth = it.filter { c -> c.isDigit() }.take(2) },
-                label = { Text("Month") },
-                modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-            )
-            Spacer(Modifier.width(8.dp))
-            OutlinedTextField(
-                value = birthYear,
-                onValueChange = { birthYear = it.filter { c -> c.isDigit() }.take(4) },
-                label = { Text("Year") },
-                modifier = Modifier.weight(1.4f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-            )
-        }
+        BirthdayDatePickerField(
+            birthDate = birthDate,
+            onDateSelected = { birthDate = it },
+            showDialog = showBirthdatePicker,
+            onDialogDismiss = { showBirthdatePicker = false },
+            onFieldClick = { showBirthdatePicker = true },
+        )
 
         Spacer(Modifier.height(16.dp))
 
@@ -357,22 +340,15 @@ private fun ProfileSetupScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        val dayInt = birthDay.toIntOrNull()
-        val monthInt = birthMonth.toIntOrNull()
-        val yearInt = birthYear.toIntOrNull()
         val isInputValid =
-            dayInt in 1..31 &&
-                monthInt in 1..12 &&
-                yearInt != null &&
-                yearInt in 1900..LocalDate.now().year &&
+            birthDate.isBefore(LocalDate.now()) &&
+                birthDate.year in 1900..LocalDate.now().year &&
                 !heightHasError
 
         Button(
             onClick = {
                 onGrantPermissionsClick(
-                    dayInt ?: 1,
-                    monthInt ?: 1,
-                    yearInt ?: 1990,
+                    birthDate,
                     gender,
                     physiologyProfile,
                     dynamicColorEnabled,
@@ -390,6 +366,71 @@ private fun ProfileSetupScreen(
 
         TextButton(onClick = onOpenSettingsClick) {
             Text("Open Health Connect Settings")
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BirthdayDatePickerField(
+    birthDate: LocalDate,
+    onDateSelected: (LocalDate) -> Unit,
+    showDialog: Boolean,
+    onDialogDismiss: () -> Unit,
+    onFieldClick: () -> Unit,
+) {
+    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    val displayText = birthDate.format(dateFormatter)
+
+    OutlinedTextField(
+        value = displayText,
+        onValueChange = {},
+        readOnly = true,
+        label = { Text("Date of Birth") },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(enabled = true, onClick = onFieldClick),
+    )
+
+    if (showDialog) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = birthDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+            yearRange = 1900..LocalDate.now().year,
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                    return utcTimeMillis <= System.currentTimeMillis()
+                }
+
+                override fun isSelectableYear(year: Int): Boolean {
+                    return year in 1900..LocalDate.now().year
+                }
+            },
+        )
+
+        DatePickerDialog(
+            onDismissRequest = onDialogDismiss,
+            confirmButton = {
+                Button(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val instant = Instant.ofEpochMilli(millis)
+                            val date = instant.atZone(ZoneId.systemDefault()).toLocalDate()
+                            onDateSelected(date)
+                            onDialogDismiss()
+                        }
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDialogDismiss) {
+                    Text("Cancel")
+                }
+            },
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

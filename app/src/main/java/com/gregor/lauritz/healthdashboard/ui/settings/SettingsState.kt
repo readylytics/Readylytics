@@ -9,6 +9,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
+import java.time.LocalDate
 
 data class ThresholdSettingsState(
     val circadianThresholdOverride: Int? = null,
@@ -33,12 +34,11 @@ data class SleepSettingsState(
 data class PhysiologySettingsState(
     val physiologyProfile: PhysiologyProfile = SettingsDefaults.PHYSIOLOGY_PROFILE,
     val age: Int = SettingsDefaults.AGE,
-    val birthDay: Int = SettingsDefaults.BIRTH_DAY,
-    val birthMonth: Int = SettingsDefaults.BIRTH_MONTH,
-    val birthYear: Int = SettingsDefaults.BIRTH_YEAR,
+    val birthDate: LocalDate? = null,
     val gender: Gender? = null,
     val heightCm: Float? = SettingsDefaults.HEIGHT_CM,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
+    val showBirthdatePickerDialog: Boolean = false,
 )
 
 data class HeartRateZonesState(

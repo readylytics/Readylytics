@@ -11,6 +11,7 @@ import androidx.health.connect.client.PermissionController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.ui.sync.SyncViewModel
+import java.time.LocalDate
 
 @Composable
 fun OnboardingRoute(
@@ -44,9 +45,7 @@ fun OnboardingRoute(
 
     OnboardingScreen(
         onGrantPermissionsClick = {
-            day,
-            month,
-            year,
+            birthDate,
             gender,
             physiologyProfile,
             dynamicColorEnabled,
@@ -57,9 +56,7 @@ fun OnboardingRoute(
                 "Grant Access clicked. Saving profile first..."
             }
             onboardingViewModel.saveProfile(
-                day = day,
-                month = month,
-                year = year,
+                birthDate = birthDate,
                 gender = gender,
                 physiologyProfile = physiologyProfile,
                 dynamicColorEnabled = dynamicColorEnabled,

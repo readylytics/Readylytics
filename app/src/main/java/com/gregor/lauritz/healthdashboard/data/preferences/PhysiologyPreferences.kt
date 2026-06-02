@@ -85,22 +85,12 @@ internal class PhysiologyPreferences
             dataStore.updateData { it.toBuilder().setAge(age.toValidAge()).build() }
         }
 
-        suspend fun updateBirthday(
-            day: Int,
-            month: Int,
-            year: Int,
-        ) {
+        suspend fun updateBirthday(date: LocalDate) {
             val today = LocalDate.now(clock)
-            val safeMonth = month.coerceIn(1, 12)
-            val safeYear = year.coerceIn(1900, today.year)
-            val daysInMonth = YearMonth.of(safeYear, safeMonth).lengthOfMonth()
-            val safeDay = day.coerceIn(1, daysInMonth)
+            val validBirthDate = if (date > today) today else date
+            val age = Period.between(validBirthDate, today).years
 
             dataStore.updateData {
-                val birthDate = LocalDate.of(safeYear, safeMonth, safeDay)
-                // Reject future dates: ensure birthDate is not after today
-                val validBirthDate = if (birthDate > today) today else birthDate
-                val age = Period.between(validBirthDate, today).years
                 it
                     .toBuilder()
                     .setBirthDay(validBirthDate.dayOfMonth)

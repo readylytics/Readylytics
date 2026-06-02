@@ -1,6 +1,9 @@
 package com.gregor.lauritz.healthdashboard.data.preferences
 
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.Period
 
 enum class BackupSchedule { MANUAL, DAILY, WEEKLY }
 
@@ -25,9 +28,7 @@ data class UserPreferences(
     val zone3MaxBpm: Int = SettingsDefaults.ZONE_3_MAX_BPM,
     val zone4MaxBpm: Int = SettingsDefaults.ZONE_4_MAX_BPM,
     val age: Int = SettingsDefaults.AGE,
-    val birthDay: Int = SettingsDefaults.BIRTH_DAY,
-    val birthMonth: Int = SettingsDefaults.BIRTH_MONTH,
-    val birthYear: Int = SettingsDefaults.BIRTH_YEAR,
+    val birthDate: String? = null,
     val gender: Gender? = null,
     val heightCm: Float? = SettingsDefaults.HEIGHT_CM,
     val hrvOptimalThreshold: Float = SettingsDefaults.HRV_OPTIMAL_THRESHOLD,
@@ -96,9 +97,7 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         zone3MaxBpm = zone3MaxBpm,
         zone4MaxBpm = zone4MaxBpm,
         age = age,
-        birthDay = birthDay,
-        birthMonth = birthMonth,
-        birthYear = birthYear,
+        birthDate = migrateBirthdateFields(birthDay, birthMonth, birthYear),
         gender = if (hasGender()) Gender.fromString(gender) else null,
         heightCm = if (hasHeightCm()) heightCm else null,
         hrvOptimalThreshold = hrvOptimalThreshold,
@@ -154,4 +153,23 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
                 else -> SettingsDefaults.UNIT_SYSTEM
             },
     )
+}
+
+private fun migrateBirthdateFields(day: Int, month: Int, year: Int): String? {
+    if (day == 0 || month == 0 || year == 0) return null
+
+    return try {
+        val clampedMonth = month.coerceIn(1, 12)
+        val daysInMonth = YearMonth.of(year, clampedMonth).lengthOfMonth()
+        val clampedDay = day.coerceIn(1, daysInMonth)
+        val birthDate = LocalDate.of(year, clampedMonth, clampedDay)
+
+        if (birthDate > LocalDate.now()) {
+            null
+        } else {
+            birthDate.toString()
+        }
+    } catch (e: Exception) {
+        null
+    }
 }

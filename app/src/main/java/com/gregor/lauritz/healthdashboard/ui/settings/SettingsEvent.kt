@@ -7,6 +7,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
+import java.time.LocalDate
 
 sealed interface SettingsEvent {
     data class GoalSleepHoursChanged(
@@ -62,9 +63,7 @@ sealed interface SettingsEvent {
     ) : SettingsEvent
 
     data class BirthdayChanged(
-        val day: Int,
-        val month: Int,
-        val year: Int,
+        val date: LocalDate,
     ) : SettingsEvent
 
     data class GenderChanged(
