@@ -5,6 +5,7 @@ import androidx.datastore.core.Serializer
 import com.google.protobuf.InvalidProtocolBufferException
 import java.io.InputStream
 import java.io.OutputStream
+import java.time.LocalDate
 
 object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
     override val defaultValue: UserPreferencesProto =
@@ -94,9 +95,19 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         .setZone3MaxBpm(domain.zone3MaxBpm)
         .setZone4MaxBpm(domain.zone4MaxBpm)
         .setAge(domain.age)
-        .setBirthDay(domain.birthDay)
-        .setBirthMonth(domain.birthMonth)
-        .setBirthYear(domain.birthYear)
+        // Extract birth day, month, year from the ISO-8601 birthDate string for proto storage
+        .apply {
+            if (domain.birthDate != null) {
+                try {
+                    val date = LocalDate.parse(domain.birthDate)
+                    setBirthDay(date.dayOfMonth)
+                    setBirthMonth(date.monthValue)
+                    setBirthYear(date.year)
+                } catch (e: Exception) {
+                    // If parsing fails, keep default values
+                }
+            }
+        }
         .setHrvOptimalThreshold(domain.hrvOptimalThreshold)
         .setHrvWarningThreshold(domain.hrvWarningThreshold)
         .setRhrOptimalThreshold(domain.rhrOptimalThreshold)

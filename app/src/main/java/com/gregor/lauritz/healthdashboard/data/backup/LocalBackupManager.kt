@@ -372,6 +372,7 @@ class LocalBackupManager
                     zone3MaxBpm = prefs.zone3MaxBpm,
                     zone4MaxBpm = prefs.zone4MaxBpm,
                     age = prefs.age,
+                    birthDate = prefs.birthDate,
                     birthDay = prefs.birthDay,
                     birthMonth = prefs.birthMonth,
                     birthYear = prefs.birthYear,
