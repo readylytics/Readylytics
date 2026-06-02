@@ -93,6 +93,7 @@ fun WorkoutsScreen(
                     onRangeSelected = onRangeSelected,
                     scrollState = chartScrollState,
                     zoomState = chartZoomState,
+                    parentScrollInProgress = listState.isScrollInProgress,
                 )
             }
         }

@@ -75,12 +75,14 @@ object ChartDefaults {
                 rememberVicoZoomState(
                     zoomEnabled = rangeDays > 7,
                     initialZoom = Zoom.Content,
-                    // minZoom = Zoom.fixed(0.01f): a tiny floor always below Zoom.Content.
-                    // • Zoom.Content as minZoom blocks pinch-in (circular constraint).
-                    // • Zoom.fixed(1f) is Vico's 1× default density, which exceeds Zoom.Content
-                    //   for 30d (~0.86×) and 180d (~0.14×), clamping the initial view.
-                    // • 0.01f is safely below Content zoom for any realistic screen/range.
-                    minZoom = Zoom.fixed(0.01f),
+                    // minZoom = Zoom.min(Zoom.Content, Zoom.fixed(1f)): floor the zoom-out at
+                    // whichever is smaller — the content zoom (fits all data) or 1×. For 30d
+                    // (~0.86×) and 180d (~0.14×) the content zoom wins, so the floor equals the
+                    // initial fit-to-range view: the user can never zoom out past it and the
+                    // x-axis never reveals empty space / future dates beyond the latest point.
+                    // Mixing via Zoom.min (vs. a bare Zoom.Content floor) avoids the circular
+                    // constraint that silently rejects pinch-in gestures.
+                    minZoom = Zoom.min(Zoom.Content, Zoom.fixed(1f)),
                     maxZoom =
                         remember(rangeDays) {
                             when (rangeDays) {
