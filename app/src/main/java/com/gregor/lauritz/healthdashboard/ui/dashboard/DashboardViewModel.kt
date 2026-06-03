@@ -141,6 +141,14 @@ class DashboardViewModel
 
         fun formatSleepDuration(minutes: Int?): String = getDashboardDataUseCase.formatSleepDuration(minutes)
 
+        val earliestDate: StateFlow<LocalDate?> =
+            selectedDateRepository.earliestDate
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = null,
+                )
+
         fun onPreviousDay() {
             viewModelScope.launch {
                 selectedDateRepository.selectPreviousDay()

@@ -240,6 +240,20 @@ class VitalsViewModel
             savedStateHandle["selectedRange"] = range
         }
 
+        val earliestDate: StateFlow<LocalDate?> =
+            selectedDateRepository.earliestDate
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = null,
+                )
+
+        fun onDateSelected(date: LocalDate) {
+            viewModelScope.launch {
+                selectedDateRepository.updateSelectedDate(date)
+            }
+        }
+
         fun onPreviousDay() {
             viewModelScope.launch {
                 selectedDateRepository.selectPreviousDay()

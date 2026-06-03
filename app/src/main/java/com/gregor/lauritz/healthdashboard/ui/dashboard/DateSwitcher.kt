@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -7,19 +8,33 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DateSwitcher(
     selectedDate: LocalDate,
@@ -27,9 +42,12 @@ fun DateSwitcher(
     onNextDay: () -> Unit,
     modifier: Modifier = Modifier,
     today: LocalDate = LocalDate.now(),
+    onDateSelected: (LocalDate) -> Unit = {},
+    earliestDate: LocalDate? = null,
 ) {
     val label = remember(selectedDate) { formatDateLabel(selectedDate, today) }
     val canGoForward = selectedDate < today
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
     Row(
         modifier =
@@ -48,6 +66,7 @@ fun DateSwitcher(
         Text(
             text = label,
             style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.clickable { showDatePicker = true },
         )
         IconButton(
             onClick = onNextDay,
@@ -63,6 +82,50 @@ fun DateSwitcher(
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     },
             )
+        }
+    }
+
+    if (showDatePicker) {
+        val todayMs = today.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
+        val earliestMs = earliestDate?.atStartOfDay(ZoneId.of("UTC"))?.toInstant()?.toEpochMilli()
+
+        val datePickerState =
+            rememberDatePickerState(
+                initialSelectedDateMillis = selectedDate.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli(),
+                selectableDates =
+                    object : SelectableDates {
+                        override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                            utcTimeMillis <= todayMs && (earliestMs == null || utcTimeMillis >= earliestMs)
+
+                        override fun isSelectableYear(year: Int): Boolean {
+                            val earliestYear = earliestDate?.year ?: 1900
+                            return year in earliestYear..today.year
+                        }
+                    },
+            )
+
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val date = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
+                            onDateSelected(date)
+                        }
+                        showDatePicker = false
+                    },
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            },
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

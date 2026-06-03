@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -310,6 +311,20 @@ class WorkoutsViewModel
         fun onRangeSelected(range: TimeRange) {
             _selectedRange.value = range
             savedStateHandle["selectedRange"] = range
+        }
+
+        val earliestDate: StateFlow<LocalDate?> =
+            selectedDateRepository.earliestDate
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = null,
+                )
+
+        fun onDateSelected(date: LocalDate) {
+            viewModelScope.launch {
+                selectedDateRepository.updateSelectedDate(date)
+            }
         }
 
         fun onPreviousDay() {

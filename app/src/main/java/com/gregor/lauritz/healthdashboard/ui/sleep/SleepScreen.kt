@@ -44,12 +44,15 @@ import com.gregor.lauritz.healthdashboard.ui.dashboard.DateSwitcher
 fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val circadian by viewModel.circadianConsistencyFlow.collectAsStateWithLifecycle()
+    val earliestDate by viewModel.earliestDate.collectAsStateWithLifecycle()
 
     SleepScreen(
         uiState = uiState,
         circadianConsistency = circadian,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
+        onDateSelected = viewModel::onDateSelected,
+        earliestDate = earliestDate,
     )
 }
 
@@ -59,6 +62,8 @@ fun SleepScreen(
     circadianConsistency: CircadianConsistencyResult,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
+    onDateSelected: (java.time.LocalDate) -> Unit = {},
+    earliestDate: java.time.LocalDate? = null,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -76,6 +81,8 @@ fun SleepScreen(
                     selectedDate = uiState.selectedDate,
                     onPreviousDay = onPreviousDay,
                     onNextDay = onNextDay,
+                    onDateSelected = onDateSelected,
+                    earliestDate = earliestDate,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

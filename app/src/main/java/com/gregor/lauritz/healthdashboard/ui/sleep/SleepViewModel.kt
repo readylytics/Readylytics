@@ -20,6 +20,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -146,6 +147,20 @@ class SleepViewModel
                     started = SharingStarted.WhileSubscribed(5_000),
                     initialValue = SleepUiState(isLoading = true),
                 )
+
+        val earliestDate: StateFlow<LocalDate?> =
+            selectedDateRepository.earliestDate
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = null,
+                )
+
+        fun onDateSelected(date: LocalDate) {
+            viewModelScope.launch {
+                selectedDateRepository.updateSelectedDate(date)
+            }
+        }
 
         fun onPreviousDay() {
             viewModelScope.launch {
