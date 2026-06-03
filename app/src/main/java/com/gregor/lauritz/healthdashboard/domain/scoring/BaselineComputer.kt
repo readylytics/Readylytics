@@ -88,7 +88,6 @@ class BaselineComputer
             }
         }
 
-
         /**
          * Resolves the baseline RHR scalar used for TRIMP/PAI calculations.
          * Honors [rhrBaselineOverride] then falls back to median of [rhrValues],

@@ -98,7 +98,19 @@ class ScoringRepositoryImplTest {
             } returns BaselineComputer.HrvWindows(listOf(70f, 72f), emptyList(), emptyList(), emptyList())
 
             // Ensure use case returns something
-            coEvery { computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+            coEvery {
+                computeSleepMetricsUseCase(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns
                 com.gregor.lauritz.healthdashboard.domain.model.Result
                     .success(DailySummaryEntity(0L))
 
@@ -126,7 +138,19 @@ class ScoringRepositoryImplTest {
             coEvery { dailySummaryDao.getByDate(todayMs) } returns existingSummary
 
             // Ensure use case returns success
-            coEvery { computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+            coEvery {
+                computeSleepMetricsUseCase(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns
                 com.gregor.lauritz.healthdashboard.domain.model.Result
                     .success(existingSummary)
 
@@ -168,7 +192,19 @@ class ScoringRepositoryImplTest {
 
             // Mock other required DAOs
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
-            coEvery { computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+            coEvery {
+                computeSleepMetricsUseCase(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns
                 com.gregor.lauritz.healthdashboard.domain.model.Result
                     .success(DailySummaryEntity(0L, restingHrBaseline = 50, rhrRatio = 0.96f))
 
@@ -196,7 +232,19 @@ class ScoringRepositoryImplTest {
             coEvery { sleepSessionDao.countSince(any()) } returns 7
 
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
-            coEvery { computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+            coEvery {
+                computeSleepMetricsUseCase(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns
                 com.gregor.lauritz.healthdashboard.domain.model.Result
                     .success(DailySummaryEntity(0L))
 
@@ -243,7 +291,19 @@ class ScoringRepositoryImplTest {
             coEvery { wakeHrCollector.collect(any(), any(), any()) } returns nullWakeHrResult
 
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
-            coEvery { computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+            coEvery {
+                computeSleepMetricsUseCase(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns
                 com.gregor.lauritz.healthdashboard.domain.model.Result
                     .success(DailySummaryEntity(0L))
 
