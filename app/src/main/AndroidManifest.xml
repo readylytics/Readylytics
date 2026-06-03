@@ -71,7 +71,8 @@
             <meta-data
                 android:name="androidx.work.WorkManagerInitializer"
                 android:value="androidx.startup"
-                tools:node="remove" />
+                tools:node="remove"
+                tools:ignore="RemoveInManifest" />
         </provider>
 
         <activity-alias
