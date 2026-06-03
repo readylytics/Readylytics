@@ -51,3 +51,9 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 - **Tests:** Mirror source package structure. Must test boundary conditions and calculation logic. Zero Android dependencies in unit tests.
 - **Pre-Commit (Mandatory):** `./gradlew ktlintFormat && ./gradlew testDebugUnitTest`
 - **Build Utilities:** `./gradlew installDebug`, `./gradlew assembleDebug`, `./gradlew clean`
+
+## File Lifecycle & Indexing
+
+- **New/Deleted Files:** Upon creation of any new file, agent MUST execute `codegraph index` after finishing to ensure the codebase context remains current.
+- **Refactors:** Any structural change or directory movement requires a post-task `codegraph sync`.
+- **Validation:** Verification of the indexing status is required if subsequent searches or agent queries return stale path information.
