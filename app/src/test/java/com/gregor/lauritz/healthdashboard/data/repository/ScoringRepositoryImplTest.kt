@@ -133,4 +133,128 @@ class ScoringRepositoryImplTest {
 
             kotlin.test.assertEquals(52f, result.rhrBpm, "RHR baseline should be loaded from rhrBpm")
         }
+
+    @Test
+    fun `calibration path with session populates restingHrBaseline and rhrRatio`() =
+        runTest {
+            val today = LocalDate.now()
+            val zoneId = ZoneId.systemDefault()
+
+            // Create a mock session for calibration path
+            val mockSession =
+                com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity(
+                    id = "test_session",
+                    startTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() - 8 * 3600000,
+                    endTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() + 1800000,
+                    durationMinutes = 450,
+                    efficiency = 85f,
+                    deepSleepMinutes = 90,
+                    remSleepMinutes = 90,
+                    lightSleepMinutes = 210,
+                    awakeMinutes = 15,
+                )
+            coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns mockSession
+            coEvery { sleepSessionDao.countSince(any()) } returns 7 // >= 7, triggers calibration
+
+            // Mock wakeHrCollector to return populated WakeHrResult
+            val wakeHrResult =
+                WakeWindowHrCollector.WakeHrResult(
+                    currentRestingHr = 48,
+                    restingHrBaseline = 50,
+                    restingHrRatio = 0.96f,
+                )
+            coEvery { wakeHrCollector.collect(any(), any(), any()) } returns wakeHrResult
+
+            // Mock other required DAOs
+            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
+            coEvery { computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
+                com.gregor.lauritz.healthdashboard.domain.model.Result
+                    .success(DailySummaryEntity(0L))
+
+            val result = repo.computeDailySummary(today)
+
+            kotlin.test.assertEquals(
+                50,
+                result.restingHrBaseline,
+                "restingHrBaseline should be populated from wakeHrCollector",
+            )
+            kotlin.test.assertEquals(
+                0.96f,
+                result.rhrRatio,
+                "rhrRatio should be populated from wakeHrCollector",
+            )
+        }
+
+    @Test
+    fun `calibration path without session leaves restingHrBaseline and rhrRatio null`() =
+        runTest {
+            val today = LocalDate.now()
+
+            // No session → calibration branch has session == null
+            coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
+            coEvery { sleepSessionDao.countSince(any()) } returns 7
+
+            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
+            coEvery { computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
+                com.gregor.lauritz.healthdashboard.domain.model.Result
+                    .success(DailySummaryEntity(0L))
+
+            val result = repo.computeDailySummary(today)
+
+            kotlin.test.assertNull(
+                result.restingHrBaseline,
+                "restingHrBaseline should be null when session is null",
+            )
+            kotlin.test.assertNull(
+                result.rhrRatio,
+                "rhrRatio should be null when session is null",
+            )
+        }
+
+    @Test
+    fun `wakeHrCollector with null fields does not crash and leaves summary fields null`() =
+        runTest {
+            val today = LocalDate.now()
+            val zoneId = ZoneId.systemDefault()
+
+            val mockSession =
+                com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity(
+                    id = "test_session",
+                    startTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() - 8 * 3600000,
+                    endTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() + 1800000,
+                    durationMinutes = 450,
+                    efficiency = 85f,
+                    deepSleepMinutes = 90,
+                    remSleepMinutes = 90,
+                    lightSleepMinutes = 210,
+                    awakeMinutes = 15,
+                )
+            coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns mockSession
+            coEvery { sleepSessionDao.countSince(any()) } returns 7
+
+            // Mock wakeHrCollector to return WakeHrResult with all null fields
+            val nullWakeHrResult =
+                WakeWindowHrCollector.WakeHrResult(
+                    currentRestingHr = null,
+                    restingHrBaseline = null,
+                    restingHrRatio = null,
+                )
+            coEvery { wakeHrCollector.collect(any(), any(), any()) } returns nullWakeHrResult
+
+            coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
+            coEvery { computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
+                com.gregor.lauritz.healthdashboard.domain.model.Result
+                    .success(DailySummaryEntity(0L))
+
+            val result = repo.computeDailySummary(today)
+
+            kotlin.test.assertNull(
+                result.restingHrBaseline,
+                "restingHrBaseline should be null when wakeHrResult has null values",
+            )
+            kotlin.test.assertNull(
+                result.rhrRatio,
+                "rhrRatio should be null when wakeHrResult has null values",
+            )
+        }
 }

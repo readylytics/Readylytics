@@ -249,7 +249,7 @@ class ScoringRepositoryImpl
                             hrvBaselineOverride = prefs.hrvBaselineOverride,
                         )
 
-                    // Collect RHR baseline from wake window to match full calibrated path behavior
+                    // Calibration bypasses computeSleepMetricsUseCase; collect directly to populate restingHrBaseline + rhrRatio
                     val rhrWakeResult =
                         if (session != null) {
                             wakeHrCollector.collect(
@@ -266,6 +266,7 @@ class ScoringRepositoryImpl
                             hrvBaseline = calibHrvBaseline,
                             rhrBpm = rhrBaselineValue,
                             restingHrBaseline = rhrWakeResult?.restingHrBaseline,
+                            // currentRestingHr not persisted during calibration — baseline trend is sufficient
                             rhrRatio = rhrWakeResult?.restingHrRatio,
                             baselineVersion = 2,
                         )
