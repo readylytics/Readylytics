@@ -1,9 +1,15 @@
 package com.gregor.lauritz.healthdashboard.data.repository
 
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.OxygenSaturationRecordDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.BloodPressureRecordDao
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -11,6 +17,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.test.assertEquals
 
 class SelectedDateRepositoryTest {
@@ -18,6 +25,7 @@ class SelectedDateRepositoryTest {
     private val dao: DailySummaryDao =
         mockk {
             every { observeEarliestDateMs() } returns flowOf(null)
+            every { observeAllDateMidnightMs() } returns flowOf(emptyList())
         }
     private val testScope = CoroutineScope(UnconfinedTestDispatcher())
 
@@ -132,5 +140,123 @@ class SelectedDateRepositoryTest {
             ) {
                 "Final date should be either today or yesterday"
             }
+        }
+
+    // --- earliestDate boundary tests ---
+
+    private fun repositoryWithEarliestDate(earliest: LocalDate): SelectedDateRepository {
+        val epochMs = earliest.atStartOfDay(java.time.ZoneId.systemDefault())
+            .toInstant().toEpochMilli()
+        val daoWithEarliest: DailySummaryDao = mockk {
+            every { observeEarliestDateMs() } returns flowOf(epochMs)
+            every { observeAllDateMidnightMs() } returns flowOf(listOf(epochMs))
+        }
+        return SelectedDateRepository(dao = daoWithEarliest, appScope = testScope)
+    }
+
+    @Test
+    fun `selectPreviousDay does nothing when at earliest date`() =
+        runTest {
+            val earliest = LocalDate.now().minusDays(5)
+            val repo = repositoryWithEarliestDate(earliest)
+            repo.updateSelectedDate(earliest)
+
+            repo.selectPreviousDay()
+            assertEquals(earliest, repo.selectedDate.value)
+        }
+
+    @Test
+    fun `selectPreviousDay works when above earliest date`() =
+        runTest {
+            val earliest = LocalDate.now().minusDays(10)
+            val repo = repositoryWithEarliestDate(earliest)
+            val startDate = earliest.plusDays(2)
+            repo.updateSelectedDate(startDate)
+
+            repo.selectPreviousDay()
+            assertEquals(startDate.minusDays(1), repo.selectedDate.value)
+        }
+
+    @Test
+    fun `updateSelectedDate clamps to earliest date`() =
+        runTest {
+            val earliest = LocalDate.now().minusDays(5)
+            val repo = repositoryWithEarliestDate(earliest)
+
+            repo.updateSelectedDate(earliest.minusDays(3))
+            assertEquals(earliest, repo.selectedDate.value)
+        }
+
+    @Test
+    fun `earliestDate combines all DAOs minimum times`() =
+        runTest {
+            val date1 = LocalDate.now().minusDays(10)
+            val date2 = LocalDate.now().minusDays(15)
+            val date3 = LocalDate.now().minusDays(5)
+
+            val ms1 = date1.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val ms2 = date2.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val ms3 = date3.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+            val mockDailySummaryDao: DailySummaryDao = mockk {
+                every { observeEarliestDateMs() } returns flowOf(ms1)
+                every { observeAllDateMidnightMs() } returns flowOf(emptyList())
+            }
+            val mockSleepDao: SleepSessionDao = mockk {
+                every { observeEarliestSessionTime() } returns flowOf(ms2)
+            }
+            val mockHrDao: HeartRateDao = mockk {
+                every { observeEarliestHrTime() } returns flowOf(ms3)
+            }
+            val mockHrvDao: HrvDao = mockk {
+                every { observeEarliestHrvTime() } returns flowOf(null)
+            }
+            val mockSpo2Dao: OxygenSaturationRecordDao = mockk {
+                every { observeEarliestSpo2Time() } returns flowOf(null)
+            }
+            val mockBpDao: BloodPressureRecordDao = mockk {
+                every { observeEarliestBpTime() } returns flowOf(null)
+            }
+
+            val repo = SelectedDateRepository(
+                dao = mockDailySummaryDao,
+                sleepSessionDao = mockSleepDao,
+                heartRateDao = mockHrDao,
+                hrvDao = mockHrvDao,
+                oxygenSaturationRecordDao = mockSpo2Dao,
+                bloodPressureRecordDao = mockBpDao,
+                appScope = testScope
+            )
+
+            assertEquals(date2, repo.earliestDate.value)
+        }
+
+    @Test
+    fun `selectedDate is coerced to earliestDate when earliestDate shifts forward`() =
+        runTest {
+            val dateBefore = LocalDate.now().minusDays(15)
+            val dateAfter = LocalDate.now().minusDays(5)
+
+            val msBefore = dateBefore.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val msAfter = dateAfter.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+            val earliestFlow = MutableStateFlow<Long?>(msBefore)
+
+            val mockDailySummaryDao: DailySummaryDao = mockk {
+                every { observeEarliestDateMs() } returns earliestFlow
+                every { observeAllDateMidnightMs() } returns flowOf(emptyList())
+            }
+
+            val repo = SelectedDateRepository(
+                dao = mockDailySummaryDao,
+                appScope = testScope
+            )
+
+            repo.updateSelectedDate(dateBefore)
+            assertEquals(dateBefore, repo.selectedDate.value)
+
+            earliestFlow.value = msAfter
+
+            assertEquals(dateAfter, repo.selectedDate.value)
         }
 }

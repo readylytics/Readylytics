@@ -69,4 +69,7 @@ interface OxygenSaturationRecordDao {
 
     @Query("DELETE FROM oxygen_saturation_records")
     suspend fun deleteAll(): Int
+
+    @Query("SELECT MIN(timestampMs) FROM oxygen_saturation_records")
+    fun observeEarliestSpo2Time(): Flow<Long?>
 }

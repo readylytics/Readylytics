@@ -68,4 +68,7 @@ interface BloodPressureRecordDao {
 
     @Query("DELETE FROM blood_pressure_records")
     suspend fun deleteAll(): Int
+
+    @Query("SELECT MIN(timestampMs) FROM blood_pressure_records")
+    fun observeEarliestBpTime(): Flow<Long?>
 }

@@ -5,9 +5,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -29,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -45,9 +48,11 @@ fun DateSwitcher(
     today: LocalDate = LocalDate.now(),
     onDateSelected: (LocalDate) -> Unit = {},
     earliestDate: LocalDate? = null,
+    availableDates: Set<LocalDate>? = null,
 ) {
     val label = remember(selectedDate) { formatDateLabel(selectedDate, today) }
     val canGoForward = selectedDate < today
+    val canGoBack = earliestDate == null || selectedDate > earliestDate
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
     Row(
@@ -58,17 +63,38 @@ fun DateSwitcher(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onPreviousDay) {
+        IconButton(
+            onClick = onPreviousDay,
+            enabled = canGoBack,
+        ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Previous day",
+                tint =
+                    if (canGoBack) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    },
             )
         }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleMedium,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.clickable { showDatePicker = true },
-        )
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Icon(
+                imageVector = Icons.Default.DateRange,
+                contentDescription = "Open date picker",
+                modifier = Modifier
+                    .padding(start = 4.dp)
+                    .size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         IconButton(
             onClick = onNextDay,
             enabled = canGoForward,
@@ -95,8 +121,13 @@ fun DateSwitcher(
                 initialSelectedDateMillis = selectedDate.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli(),
                 selectableDates =
                     object : SelectableDates {
-                        override fun isSelectableDate(utcTimeMillis: Long): Boolean =
-                            utcTimeMillis <= todayMs && (earliestMs == null || utcTimeMillis >= earliestMs)
+                        override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                            val isWithinBounds = utcTimeMillis <= todayMs && (earliestMs == null || utcTimeMillis >= earliestMs)
+                            if (!isWithinBounds) return false
+                            if (availableDates.isNullOrEmpty()) return true
+                            val date = Instant.ofEpochMilli(utcTimeMillis).atZone(ZoneId.of("UTC")).toLocalDate()
+                            return date == today || availableDates.contains(date)
+                        }
 
                         override fun isSelectableYear(year: Int): Boolean {
                             val earliestYear = earliestDate?.year ?: 1900
