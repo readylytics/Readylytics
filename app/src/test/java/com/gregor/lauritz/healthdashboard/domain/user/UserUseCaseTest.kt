@@ -24,7 +24,7 @@ class UserUseCaseTest {
 
     @Test
     fun calculateAge_knownDOB_1990_returnsCorrectAge() {
-        val age = useCase.calculateAge(1, 1, 1990)
+        val age = useCase.calculateAge(java.time.LocalDate.of(1990, 1, 1))
         val expectedAge =
             java.time.LocalDate
                 .now()
@@ -34,7 +34,7 @@ class UserUseCaseTest {
 
     @Test
     fun calculateAge_knownDOB_2000_returnsCorrectAge() {
-        val age = useCase.calculateAge(1, 1, 2000)
+        val age = useCase.calculateAge(java.time.LocalDate.of(2000, 1, 1))
         val expectedAge =
             java.time.LocalDate
                 .now()
