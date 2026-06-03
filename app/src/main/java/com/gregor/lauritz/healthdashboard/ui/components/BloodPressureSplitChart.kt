@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
@@ -47,7 +48,7 @@ fun BloodPressureSplitChart(
         rememberVicoZoomState(
             zoomEnabled = rangeDays > 7,
             initialZoom = Zoom.Content,
-            minZoom = Zoom.fixed(0.01f),
+            minZoom = Zoom.min(Zoom.Content, Zoom.fixed(1f)),
             maxZoom =
                 remember(rangeDays) {
                     when (rangeDays) {
@@ -76,10 +77,12 @@ fun BloodPressureSplitChart(
     }
 
     // Clear tooltip when the chart is scrolled/panned (Vico horizontal scroll)
-    LaunchedEffect(scrollState.value) {
-        tooltipState = null
-        selectedDayOffset = null
-        selectedCanvasX = null
+    LaunchedEffect(scrollState) {
+        snapshotFlow { scrollState.value }.collect {
+            tooltipState = null
+            selectedDayOffset = null
+            selectedCanvasX = null
+        }
     }
 
     // Clear tooltip on vertical scroll — fires on both start (true) and end (false)

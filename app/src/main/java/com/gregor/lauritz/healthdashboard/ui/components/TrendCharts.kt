@@ -1,8 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,11 +21,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
@@ -47,7 +45,6 @@ import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
@@ -157,9 +154,11 @@ fun TrendChart(
     }
 
     // Clear tooltip when the chart is scrolled/panned (Vico horizontal scroll)
-    LaunchedEffect(scrollState.value) {
-        tooltipState = null
-        selectedPointOffset = null
+    LaunchedEffect(scrollState) {
+        snapshotFlow { scrollState.value }.collect {
+            tooltipState = null
+            selectedPointOffset = null
+        }
     }
 
     // Clear tooltip when the parent list scrolls vertically.
@@ -290,46 +289,49 @@ fun TrendChart(
                 )
         }
 
-    Box(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .pointerInput(Unit) {
-                    awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false)
-                        var isMultiTouch = false
-                        while (!isMultiTouch) {
-                            val event = awaitPointerEvent()
-                            // Stop polling once all fingers are lifted
-                            if (event.changes.none { it.pressed }) break
-                            if (event.changes.size > 1) {
-                                // Multi-touch: pan/zoom detected — clear tooltip
-                                isMultiTouch = true
-                                tooltipState = null
-                                selectedPointOffset = null
-                            }
-                        }
-                    }
+    val lineProvider = remember(line) { LineCartesianLayer.LineProvider.series(line) }
+
+    val startAxisValueFormatter =
+        remember(axisDecimalPlaces) {
+            CartesianValueFormatter { _, value, _ ->
+                if (axisDecimalPlaces == 0) {
+                    value.roundToInt().toString()
+                } else {
+                    String.format("%.${axisDecimalPlaces}f", value)
+                }
+            }
+        }
+
+    val baselineLineComponent = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp)
+    val decorations =
+        remember(zoneBandDecoration, shouldShowBaseline, baselineValue, baselineLineComponent) {
+            listOfNotNull(
+                zoneBandDecoration,
+                if (shouldShowBaseline) {
+                    HorizontalLine(
+                        y = { baselineValue.toDouble() },
+                        line = baselineLineComponent,
+                    )
+                } else {
+                    null
                 },
+            )
+        }
+
+    Box(
+        modifier = modifier.fillMaxWidth(),
     ) {
         CartesianChartHost(
             chart =
                 rememberCartesianChart(
                     rememberLineCartesianLayer(
-                        lineProvider = LineCartesianLayer.LineProvider.series(line),
+                        lineProvider = lineProvider,
                         rangeProvider = rangeProvider,
                     ),
                     startAxis =
                         VerticalAxis.rememberStart(
                             label = labelComponent,
-                            valueFormatter =
-                                CartesianValueFormatter { _, value, _ ->
-                                    if (axisDecimalPlaces == 0) {
-                                        value.roundToInt().toString()
-                                    } else {
-                                        String.format("%.${axisDecimalPlaces}f", value)
-                                    }
-                                },
+                            valueFormatter = startAxisValueFormatter,
                             guideline = guidelineComponent,
                             title = { baselineUnit },
                             titleComponent = axisLabelComponent,
@@ -344,24 +346,9 @@ fun TrendChart(
                                 ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
                             guideline = guidelineComponent,
                         ),
-                    decorations =
-                        listOfNotNull(
-                            zoneBandDecoration,
-                            if (shouldShowBaseline) {
-                                HorizontalLine(
-                                    y = { baselineValue.toDouble() },
-                                    line = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp),
-                                )
-                            } else {
-                                null
-                            },
-                        ),
+                    decorations = decorations,
                     marker = InvisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
-                    // Show the marker only on a discrete tap. The default (showOnPress) reacts to
-                    // Press + Move, which competes with the multi-touch pinch detector and throttles
-                    // zoom on 30d/180d. ToggleOnTap leaves drag/pinch entirely to scroll + zoom.
-                    markerController = CartesianMarkerController.rememberToggleOnTap(),
                 ),
             modelProducer = modelProducer,
             scrollState = scrollState,
@@ -466,9 +453,11 @@ fun BloodPressureTrendChart(
     }
 
     // Clear tooltip when the chart is scrolled/panned (Vico horizontal scroll)
-    LaunchedEffect(scrollState.value) {
-        tooltipState = null
-        selectedPointOffset = null
+    LaunchedEffect(scrollState) {
+        snapshotFlow { scrollState.value }.collect {
+            tooltipState = null
+            selectedPointOffset = null
+        }
     }
 
     // Clear tooltip when the parent list scrolls vertically.
@@ -603,27 +592,31 @@ fun BloodPressureTrendChart(
                 )
         }
 
+    val startAxisValueFormatter =
+        remember {
+            CartesianValueFormatter { _, value, _ ->
+                value.roundToInt().toString()
+            }
+        }
+
+    val baselineLineComponent = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp)
+    val decorations =
+        remember(zoneBandDecoration, baselineLineComponent) {
+            listOf(
+                zoneBandDecoration,
+                HorizontalLine(
+                    y = { 120.0 },
+                    line = baselineLineComponent,
+                ),
+                HorizontalLine(
+                    y = { 80.0 },
+                    line = baselineLineComponent,
+                ),
+            )
+        }
+
     Box(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .pointerInput(Unit) {
-                    awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false)
-                        var isMultiTouch = false
-                        while (!isMultiTouch) {
-                            val event = awaitPointerEvent()
-                            // Stop polling once all fingers are lifted
-                            if (event.changes.none { it.pressed }) break
-                            if (event.changes.size > 1) {
-                                // Multi-touch: pan/zoom detected — clear tooltip
-                                isMultiTouch = true
-                                tooltipState = null
-                                selectedPointOffset = null
-                            }
-                        }
-                    }
-                },
+        modifier = modifier.fillMaxWidth(),
     ) {
         CartesianChartHost(
             chart =
@@ -635,10 +628,7 @@ fun BloodPressureTrendChart(
                     startAxis =
                         VerticalAxis.rememberStart(
                             label = labelComponent,
-                            valueFormatter =
-                                CartesianValueFormatter { _, value, _ ->
-                                    value.roundToInt().toString()
-                                },
+                            valueFormatter = startAxisValueFormatter,
                             guideline = guidelineComponent,
                             title = { "mmHg" },
                             titleComponent = axisLabelComponent,
@@ -653,23 +643,9 @@ fun BloodPressureTrendChart(
                                 ) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
                             guideline = guidelineComponent,
                         ),
-                    decorations =
-                        listOfNotNull(
-                            zoneBandDecoration,
-                            HorizontalLine(
-                                y = { 120.0 },
-                                line = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp),
-                            ),
-                            HorizontalLine(
-                                y = { 80.0 },
-                                line = rememberLineComponent(fill = Fill(baselineColor), thickness = 1.dp),
-                            ),
-                        ),
+                    decorations = decorations,
                     marker = InvisibleMarker,
                     markerVisibilityListener = markerVisibilityListener,
-                    // Tap-only marker so the pinch detector keeps full zoom responsiveness.
-                    // See TrendChart's markerController note for the rationale.
-                    markerController = CartesianMarkerController.rememberToggleOnTap(),
                 ),
             modelProducer = modelProducer,
             scrollState = scrollState,

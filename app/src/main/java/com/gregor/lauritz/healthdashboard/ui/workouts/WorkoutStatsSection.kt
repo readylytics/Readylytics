@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
@@ -270,7 +271,11 @@ private fun AcwrChart(
 
     // Dismiss the tooltip/selection when the chart is panned or the parent list scrolls
     // vertically, so the popup never detaches from its anchor point.
-    LaunchedEffect(scrollState.value) { selectedState = null }
+    LaunchedEffect(scrollState) {
+        snapshotFlow { scrollState.value }.collect {
+            selectedState = null
+        }
+    }
     LaunchedEffect(parentScrollInProgress) {
         if (parentScrollInProgress) selectedState = null
     }

@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -57,8 +58,17 @@ object InvisibleMarker : CartesianMarker {
 @Composable
 fun rememberChartMarkerVisibilityListener(
     onPointSelected: (x: Double, y: Double, canvasX: Float, canvasY: Float) -> Unit,
-): CartesianMarkerVisibilityListener =
-    remember(onPointSelected) {
+): CartesianMarkerVisibilityListener {
+    // Capture the latest callback WITHOUT invalidating the remembered listener object.
+    // The previous `remember(onPointSelected)` keyed the listener on the inline lambda,
+    // which captures volatile state (points, tooltipState). During a pinch, Vico fires
+    // onUpdated → the callback writes state → recomposition → a new lambda instance →
+    // the listener object was recreated mid-gesture, resetting Vico's marker/gesture
+    // tracking and throttling pinch-zoom to a stutter. Mirroring the ACWR chart's stable
+    // listener (rememberUpdatedState + keyless remember) keeps the object identity fixed
+    // so the transform gesture is never interrupted. See Vico issue #1054.
+    val currentOnPointSelected = rememberUpdatedState(onPointSelected)
+    return remember {
         object : CartesianMarkerVisibilityListener {
             override fun onShown(
                 marker: CartesianMarker,
@@ -84,7 +94,7 @@ fun rememberChartMarkerVisibilityListener(
                 if (target != null) {
                     val point = target.points.firstOrNull()
                     if (point != null) {
-                        onPointSelected(
+                        currentOnPointSelected.value(
                             target.x,
                             point.entry.y,
                             target.canvasX,
@@ -95,6 +105,7 @@ fun rememberChartMarkerVisibilityListener(
             }
         }
     }
+}
 
 /**
  * A high-fidelity overlay that draws standard vertical guideline indicators and concentric circles.
