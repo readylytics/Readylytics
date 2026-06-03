@@ -38,7 +38,7 @@ interface SleepSessionDao {
         offset: Int,
     ): List<SleepSessionEntity>
 
-    @Query("SELECT * FROM sleep_sessions WHERE startTime >= :fromMs")
+    @Query("SELECT * FROM sleep_sessions WHERE startTime >= :fromMs ORDER BY startTime ASC")
     suspend fun getSince(fromMs: Long): List<SleepSessionEntity>
 
     @Query("SELECT * FROM sleep_sessions WHERE startTime >= :fromMs AND endTime <= :toMs ORDER BY startTime ASC")

@@ -76,6 +76,7 @@ class StepDetailViewModel
                                                     .toLocalDate(),
                                                 d,
                                             ).toInt()
+                                    // Allow-listed: chart-axis geometry for plotted step series, not a display metric
                                     DailyDataPoint(dayOffset, summary.stepCount!!.toFloat())
                                 }.sortedBy { it.dayOffset }
                                 .padToRange(range.days)

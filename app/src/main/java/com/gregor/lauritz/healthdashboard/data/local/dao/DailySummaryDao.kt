@@ -79,4 +79,28 @@ interface DailySummaryDao {
         baselineCalculatedAtDate: java.time.LocalDate?,
         baselineVersion: Int?,
     )
+
+    // Clears the freeze flag so BaselineComputer will recompute on next sync.
+    @Query(
+        "UPDATE daily_summaries SET " +
+            "baseline_calculated_at_date = NULL, " +
+            "baseline_version = NULL " +
+            "WHERE baseline_calculated_at_date IS NOT NULL",
+    )
+    suspend fun clearFrozenBaselines()
+
+    @Query(
+        "SELECT COUNT(*) FROM daily_summaries " +
+            "WHERE baseline_version IS NULL OR baseline_version < :version",
+    )
+    suspend fun countRowsWithBaselineVersionBelow(version: Int): Int
+
+    @Query("SELECT MIN(dateMidnightMs) FROM daily_summaries")
+    suspend fun getEarliestDateMs(): Long?
+
+    // Call only after re-computing baselines; stamps successfully recomputed rows.
+    @Query(
+        "UPDATE daily_summaries SET baseline_version = :version"
+    )
+    suspend fun setBaselineVersion(version: Int)
 }

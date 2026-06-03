@@ -164,15 +164,7 @@ fun WeightDetailScreen(
                         label = "Weight ($unitLabel)",
                         maxScore = weightMaxScore,
                         status = bmiStatus,
-                        displayText =
-                            uiState.latestWeight?.let {
-                                String.format(
-                                    Locale.US,
-                                    "%.1f %s",
-                                    it,
-                                    unitLabel,
-                                )
-                            },
+                        displayText = uiState.weightDisplay,
                         tooltipDescription = "Latest weight measurement.\nHeight: $heightTooltip",
                     )
                     M3ScoreDial(
@@ -180,7 +172,7 @@ fun WeightDetailScreen(
                         label = "BMI",
                         maxScore = 40f,
                         status = bmiStatus,
-                        displayText = uiState.bmi?.let { String.format(Locale.US, "%.1f", it) },
+                        displayText = uiState.bmiDisplay,
                         tooltipDescription =
                             "Body Mass Index (Normal: 18.5–24.9)\n\n" +
                                 "Under 25: Normal\n" +

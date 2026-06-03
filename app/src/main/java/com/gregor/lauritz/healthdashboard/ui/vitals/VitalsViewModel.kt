@@ -10,10 +10,10 @@ import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
 import com.gregor.lauritz.healthdashboard.domain.model.hrvZoneBands
 import com.gregor.lauritz.healthdashboard.domain.model.rhrZoneBands
 import com.gregor.lauritz.healthdashboard.domain.model.spo2ZoneBands
+import com.gregor.lauritz.healthdashboard.domain.repository.DailyMetricsRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
-import com.gregor.lauritz.healthdashboard.domain.util.toMidnightEpochMilli
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -62,6 +62,7 @@ class VitalsViewModel
     @Inject
     constructor(
         private val dailySummaryRepository: DailySummaryRepository,
+        private val dailyMetricsRepository: DailyMetricsRepository,
         private val settingsRepo: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
         private val foregroundSyncController: ForegroundSyncController,
@@ -77,26 +78,19 @@ class VitalsViewModel
         val baselinesFlow =
             selectedDateRepository.selectedDate
                 .flatMapLatest { date ->
-                    val selectedMidnightMs = date.toMidnightEpochMilli()
+                    // Baselines come from the canonical DailyMetrics projection — the single
+                    // site for the (nocturnalRhr / rhrRatio) derivation. No rounding done here.
                     combine(
-                        dailySummaryRepository.observeByDate(selectedMidnightMs),
+                        dailyMetricsRepository.observeByDate(date),
                         settingsRepo.userPreferences,
-                    ) { latestSummary, prefs ->
-                        val hrvBaseline =
-                            latestSummary?.hrvBaseline?.toFloat()
-                                ?: prefs.hrvBaselineOverride
-
-                        val ratio = latestSummary?.rhrRatio
-                        val rhr = latestSummary?.nocturnalRhr
-                        val rhrBaseline =
-                            if (ratio != null && ratio > 0f && rhr != null) {
-                                (rhr / ratio).toInt()
-                            } else {
-                                latestSummary?.restingHrBaseline ?: prefs.rhrBaselineOverride?.toInt()
-                                    ?: ScoringConstants.DEFAULT_RHR_BPM.toInt()
-                            }
-
-                        Baselines(hrvBaseline, rhrBaseline)
+                    ) { metrics, prefs ->
+                        Baselines(
+                            hrv = metrics?.hrvBaselineRounded?.toFloat() ?: prefs.hrvBaselineOverride,
+                            rhr =
+                                metrics?.rhrBaselineRounded
+                                    ?: prefs.rhrBaselineOverride?.toInt()
+                                    ?: ScoringConstants.DEFAULT_RHR_BPM.toInt(),
+                        )
                     }
                 }.stateIn(
                     scope = viewModelScope,
@@ -178,6 +172,8 @@ class VitalsViewModel
                                         val d = s.date
                                         DailyDataPoint(
                                             dayOffset = ChronoUnit.DAYS.between(startLocalDate, d).toInt(),
+                                            // Allow-listed: chart-axis geometry for the plotted SpO2 series,
+                                            // not a displayed metric value (which comes from DailyMetrics.spo2Rounded).
                                             value = spo2.roundToInt().toFloat(),
                                         )
                                     }

@@ -199,7 +199,7 @@ class BaselineComputer
         }
 
         /**
-         * Computed HRV baseline (median of valid-night RMSSD values within
+         * Computed HRV baseline (median of valid-night RMSSD daily averages within
          * [ScoringConstants.BASELINE_DAYS]) honoring user override.
          * Returns null when no valid samples and no override exist.
          */
@@ -207,17 +207,67 @@ class BaselineComputer
             dayMidnight: Instant,
             hrvBaselineOverride: Float?,
         ): Int? {
+            if (hrvBaselineOverride != null) return hrvBaselineOverride.roundToInt()
             val baselineFromMs =
                 dayMidnight
                     .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
             val historicalSessions = sleepSessionDao.getSince(baselineFromMs)
             val validIds = filterValidBaselineSessions(historicalSessions)
-            val hrvBaselineValues = hrvDao.getSleepRmssdValuesForSessions(validIds)
-            return (
-                hrvBaselineOverride
-                    ?: hrvBaselineValues.median().takeIf { it > 0f }
-            )?.roundToInt()
+            if (validIds.isEmpty()) return null
+            val hrvMap = hrvDao.getSleepRmssdForSessionsMap(validIds)
+            val nightlyAverages =
+                validIds.mapNotNull { sessionId ->
+                    val samples = hrvMap[sessionId] ?: return@mapNotNull null
+                    if (samples.isEmpty()) return@mapNotNull null
+                    samples.mean()
+                }
+            return if (nightlyAverages.isEmpty()) {
+                null
+            } else {
+                nightlyAverages.median().roundToInt()
+            }
+        }
+
+        /**
+         * Computes the 30-day HRV baseline (median of nightly RMSSD averages) point-in-time correctly.
+         */
+        suspend fun computeHrvBaselineBetween(
+            fromMs: Long,
+            toMs: Long,
+            hrvBaselineOverride: Float?,
+        ): Int? {
+            if (hrvBaselineOverride != null) return hrvBaselineOverride.roundToInt()
+            val frozenSummary = dailySummaryDao.getByDate(fromMs)
+            if (frozenSummary?.baselineCalculatedAtDate != null) {
+                return frozenSummary.hrvBaseline
+            }
+            val baselineFromMs =
+                Instant
+                    .ofEpochMilli(
+                        fromMs,
+                    ).minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
+                    .toEpochMilli()
+            val historicalSessions =
+                sleepSessionDao
+                    .getBetween(
+                        baselineFromMs.coerceAtLeast(0),
+                        toMs,
+                    )
+            val validIds = filterValidBaselineSessions(historicalSessions, assumeCoverageValid = true)
+            if (validIds.isEmpty()) return null
+            val hrvMap = hrvDao.getSleepRmssdForSessionsMap(validIds)
+            val nightlyAverages =
+                validIds.mapNotNull { sessionId ->
+                    val samples = hrvMap[sessionId] ?: return@mapNotNull null
+                    if (samples.isEmpty()) return@mapNotNull null
+                    samples.mean()
+                }
+            return if (nightlyAverages.isEmpty()) {
+                null
+            } else {
+                nightlyAverages.median().roundToInt()
+            }
         }
 
         /**
@@ -251,7 +301,13 @@ class BaselineComputer
                         toMs,
                     ).filter { it.id != excludeSessionId }
             val validIds = filterValidBaselineSessions(historicalSessions, assumeCoverageValid = true)
-            val sigmaHistory = hrvDao.getSleepRmssdValuesForSessions(validIds)
+            val hrvMap = hrvDao.getSleepRmssdForSessionsMap(validIds)
+            val sigmaHistory =
+                validIds.mapNotNull { sessionId ->
+                    val samples = hrvMap[sessionId] ?: return@mapNotNull null
+                    if (samples.isEmpty()) return@mapNotNull null
+                    samples.mean()
+                }
             val muHistory = sigmaHistory.takeLast(ScoringConstants.HRV_MU_WINDOW_DAYS)
             return HrvWindows(
                 muHistory = muHistory,
@@ -294,7 +350,13 @@ class BaselineComputer
                     .getSince(sigmaWindowFromMs)
                     .filter { it.id != excludeSessionId }
             val validIds = filterValidBaselineSessions(historicalSessions, assumeCoverageValid = true)
-            val sigmaHistory = hrvDao.getSleepRmssdValuesForSessions(validIds)
+            val hrvMap = hrvDao.getSleepRmssdForSessionsMap(validIds)
+            val sigmaHistory =
+                validIds.mapNotNull { sessionId ->
+                    val samples = hrvMap[sessionId] ?: return@mapNotNull null
+                    if (samples.isEmpty()) return@mapNotNull null
+                    samples.mean()
+                }
             val muHistory = sigmaHistory.takeLast(ScoringConstants.HRV_MU_WINDOW_DAYS)
             return HrvWindows(
                 muHistory = muHistory,

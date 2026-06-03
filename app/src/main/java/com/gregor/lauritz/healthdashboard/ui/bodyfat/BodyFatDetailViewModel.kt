@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.display.MetricFormatter
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.bodyFatStatus
 import com.gregor.lauritz.healthdashboard.domain.repository.BodyFatRepository
@@ -36,6 +37,8 @@ data class BodyFatDetailUiState(
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val dailyBodyFat: List<DailyDataPoint> = emptyList(),
     val rangeStartMs: Long = 0,
+    val bodyFatDisplay: String? = null,
+    val optimalRangeDisplay: String? = null,
 )
 
 @HiltViewModel
@@ -108,6 +111,15 @@ class BodyFatDetailViewModel
                         selectedRange = range,
                         dailyBodyFat = dailyBodyFat,
                         rangeStartMs = rangeStart.toEpochMilli(),
+                        bodyFatDisplay = latest?.bodyFatPercent?.let { MetricFormatter.formatBodyFat(it) },
+                        optimalRangeDisplay =
+                            if (optimalMax >
+                                0f
+                            ) {
+                                "0–${MetricFormatter.formatBodyFat(optimalMax)}"
+                            } else {
+                                null
+                            },
                     )
                 }
             }.stateIn(

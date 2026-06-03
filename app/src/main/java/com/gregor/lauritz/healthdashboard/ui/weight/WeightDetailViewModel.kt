@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.display.MetricFormatter
 import com.gregor.lauritz.healthdashboard.domain.repository.WeightRepository
 import com.gregor.lauritz.healthdashboard.domain.util.UnitConverter
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
@@ -34,6 +35,8 @@ data class WeightDetailUiState(
     val dailyWeights: List<DailyDataPoint> = emptyList(),
     val rangeStartMs: Long = 0,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
+    val weightDisplay: String? = null,
+    val bmiDisplay: String? = null,
 )
 
 @HiltViewModel
@@ -125,6 +128,8 @@ class WeightDetailViewModel
                         dailyWeights = dailyWeights,
                         rangeStartMs = rangeStart.toEpochMilli(),
                         unitSystem = userPrefs.unitSystem,
+                        weightDisplay = rawLatestWeight?.let { MetricFormatter.formatWeight(it, userPrefs.unitSystem) },
+                        bmiDisplay = bmi?.let { MetricFormatter.formatBmi(it) },
                     )
                 }
             }.stateIn(

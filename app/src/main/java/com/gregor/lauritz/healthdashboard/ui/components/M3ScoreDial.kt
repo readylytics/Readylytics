@@ -63,6 +63,9 @@ fun M3ScoreDial(
         label = "dial_progress_$label",
     )
 
+    // Allow-listed: reusable dial widget. The arc uses the raw `score` (above); this is the
+    // center-label fallback for a passed-in score. Callers showing a DailySummary metric should
+    // pass `displayText = metrics.<field>Rounded.toString()` for canonical rounding.
     val scoreText = displayText ?: (score?.roundToPercentInt()?.toString() ?: "—")
     val semanticDesc = "$label: $scoreText"
 

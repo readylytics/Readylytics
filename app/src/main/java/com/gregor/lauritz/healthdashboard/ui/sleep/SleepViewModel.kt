@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.model.DailyMetrics
+import com.gregor.lauritz.healthdashboard.domain.model.DailyMetricsMapper
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
@@ -37,6 +39,7 @@ data class Baselines(
 
 data class SleepUiState(
     val latestSummary: DailySummary? = null,
+    val latestMetrics: DailyMetrics? = null,
     val latestSession: SleepSessionData? = null,
     val stageTimeline: List<SleepStageData> = emptyList(),
     val selectedDate: LocalDate = LocalDate.now(),
@@ -126,9 +129,11 @@ class SleepViewModel
                         sessionFlow,
                         stagesFlow,
                         foregroundSyncController.isSyncing,
-                    ) { latestSummary, latestSession, stages, isSyncing ->
+                        settingsRepo.userPreferences,
+                    ) { latestSummary, latestSession, stages, isSyncing, prefs ->
                         SleepUiState(
                             latestSummary = latestSummary,
+                            latestMetrics = latestSummary?.let { DailyMetricsMapper.toMetrics(it, prefs) },
                             latestSession = latestSession,
                             stageTimeline = stages,
                             selectedDate = date,

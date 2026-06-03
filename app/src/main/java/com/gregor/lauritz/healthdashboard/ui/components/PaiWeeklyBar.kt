@@ -110,6 +110,8 @@ fun PaiWeeklyBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
+                // Allow-listed: chart-widget label for the passed-in PAI series (bar geometry
+                // uses the raw Float above); not a DailySummary metric read.
                 text = "${totalPai.roundToPercentInt()} PAI",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
@@ -158,6 +160,7 @@ private fun PaiDayLegendItem(
             color = onSurfaceVariant,
         )
         Text(
+            // Allow-listed: chart-widget per-day legend label for the passed-in PAI series.
             text = if (pai > 0f) pai.roundToPercentInt().toString() else "-",
             style = MaterialTheme.typography.labelSmall,
             color = onSurfaceVariant,

@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.BloodPressureSplitChart
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
@@ -89,23 +88,6 @@ fun BloodPressureDetailScreen(
                     .fillMaxSize(),
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
-            val systolicStatus =
-                when (uiState.latestSystolic) {
-                    null -> MetricStatus.CALIBRATING
-                    in 0..119 -> MetricStatus.OPTIMAL
-                    in 120..129 -> MetricStatus.NEUTRAL
-                    in 130..139 -> MetricStatus.WARNING
-                    else -> MetricStatus.POOR
-                }
-
-            val diastolicStatus =
-                when (uiState.latestDiastolic) {
-                    null -> MetricStatus.CALIBRATING
-                    in 0..79 -> MetricStatus.OPTIMAL
-                    in 80..89 -> MetricStatus.WARNING
-                    else -> MetricStatus.POOR
-                }
-
             item(key = "score_dials") {
                 Row(
                     modifier =
@@ -119,7 +101,7 @@ fun BloodPressureDetailScreen(
                         score = uiState.latestSystolic?.toFloat(),
                         label = "Systolic",
                         maxScore = 200f,
-                        status = systolicStatus,
+                        status = uiState.systolicStatus,
                         displayText = uiState.latestSystolic?.toString(),
                         tooltipDescription =
                             "Latest systolic blood pressure measurement.\n\n" +
@@ -129,7 +111,7 @@ fun BloodPressureDetailScreen(
                         score = uiState.latestDiastolic?.toFloat(),
                         label = "Diastolic",
                         maxScore = 120f,
-                        status = diastolicStatus,
+                        status = uiState.diastolicStatus,
                         displayText = uiState.latestDiastolic?.toString(),
                         tooltipDescription =
                             "Latest diastolic blood pressure measurement.\n\n" +

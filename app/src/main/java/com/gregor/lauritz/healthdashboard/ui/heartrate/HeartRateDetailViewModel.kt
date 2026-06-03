@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.display.MetricFormatter
 import com.gregor.lauritz.healthdashboard.domain.heartrate.HrZoneClassifier
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -112,6 +113,11 @@ private fun computeZoneTotals(samples: List<HrSample>): Map<Int, ZoneTotal> {
     val totalMs = durationByZone.values.sum().takeIf { it > 0 } ?: return emptyMap()
 
     return durationByZone.mapValues { (_, ms) ->
-        ZoneTotal(durationMs = ms, percent = ms.toFloat() / totalMs.toFloat())
+        val fraction = ms.toFloat() / totalMs.toFloat()
+        ZoneTotal(
+            durationMs = ms,
+            percent = fraction,
+            formattedPercent = MetricFormatter.formatZonePercent(fraction),
+        )
     }
 }

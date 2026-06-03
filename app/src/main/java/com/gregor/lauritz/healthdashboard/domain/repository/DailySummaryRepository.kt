@@ -13,4 +13,9 @@ interface DailySummaryRepository {
     suspend fun getByDate(dateMidnightMs: Long): DailySummary?
 
     suspend fun getSince(fromMs: Long): List<DailySummary>
+
+    fun observeFirstSessionEndingInRange(
+        fromMs: Long,
+        toMs: Long,
+    ): Flow<SleepSessionData?>
 }

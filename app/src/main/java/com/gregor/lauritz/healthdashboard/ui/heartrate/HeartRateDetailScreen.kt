@@ -42,7 +42,6 @@ import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
 import java.time.LocalDate
 import java.time.ZoneId
-import kotlin.math.roundToInt
 
 @Composable
 fun HeartRateDetailRoute(
@@ -235,8 +234,8 @@ private fun ZoneRow(
     total: ZoneTotal?,
 ) {
     val zoneColor = zoneColor(zoneNumber)
+    // Allow-listed: time calculation (duration to minutes), not metric rounding
     val minutes = total?.let { (it.durationMs / 60_000L).toInt() } ?: 0
-    val percent = total?.percent ?: 0f
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -264,7 +263,7 @@ private fun ZoneRow(
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
-                    "${(percent * 100).roundToInt()}%",
+                    total.formattedPercent,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
