@@ -236,13 +236,6 @@ private fun ProfileSetupScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        Text(
-            text = "Date of Birth",
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(8.dp))
-
         BirthdayDatePickerField(
             birthDate = birthDate,
             onDateSelected = { birthDate = it },

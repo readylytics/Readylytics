@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
@@ -30,16 +31,20 @@ fun BirthdayDatePickerField(
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     val displayText = birthDate?.format(dateFormatter) ?: "Not set"
 
-    OutlinedTextField(
-        value = displayText,
-        onValueChange = {},
-        readOnly = true,
-        label = { Text("Date of Birth") },
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(enabled = true, onClick = onFieldClick),
-    )
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = displayText,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Date of Birth") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clickable(onClick = onFieldClick),
+        )
+    }
 
     if (showDialog) {
         val datePickerState = rememberDatePickerState(

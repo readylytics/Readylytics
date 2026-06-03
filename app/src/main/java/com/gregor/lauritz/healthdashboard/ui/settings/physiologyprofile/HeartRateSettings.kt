@@ -88,12 +88,6 @@ fun HeartRateZoneSection(
 
         AnimatedVisibility(visible = uiState.autoCalculateMaxHr) {
             Column {
-                Text(
-                    "Date of Birth",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
                 BirthdayDatePickerField(
                     birthDate = physiologyState.birthDate,
                     onFieldClick = { showBirthdatePicker = true },
