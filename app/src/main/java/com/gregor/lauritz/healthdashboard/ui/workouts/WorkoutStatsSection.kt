@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.strainRatioStatus
+import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -143,7 +144,7 @@ fun WorkoutStatsSection(
                         uiState.todayPaiScore?.let { earned ->
                             if (earned > 0f) {
                                 Text(
-                                    text = "+${earned.toInt()} today",
+                                    text = "+${earned.roundToPercentInt()} today",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
