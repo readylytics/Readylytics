@@ -161,7 +161,14 @@ fun WeightDetailScreen(
                                 val totalInches = cm / 2.54f
                                 val feet = floor(totalInches / 12f).toInt()
                                 val inches = (totalInches % 12f).roundToInt()
-                                val (finalFeet, finalInches) = if (inches == 12) Pair(feet + 1, 0) else Pair(feet, inches)
+                                val (finalFeet, finalInches) =
+                                    if (inches ==
+                                        12
+                                    ) {
+                                        Pair(feet + 1, 0)
+                                    } else {
+                                        Pair(feet, inches)
+                                    }
                                 "$finalFeet'$finalInches\""
                             }
                         } ?: "—"
