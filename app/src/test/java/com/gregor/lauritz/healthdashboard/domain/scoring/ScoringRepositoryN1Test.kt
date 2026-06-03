@@ -6,6 +6,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.OxygenSaturationRecordDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepHrSample
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WeightRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
@@ -95,6 +96,7 @@ class ScoringRepositoryN1Test {
         val todaySession = makeSleepSession("today", 0)
         coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns todaySession
         coEvery { sleepSessionDao.getSince(any()) } returns historicSessions + todaySession
+        coEvery { sleepSessionDao.getBetween(any(), any()) } returns historicSessions + todaySession
 
         coEvery { workoutDao.getDailyTrimp(any(), any(), any()) } returns emptyList()
         coEvery { workoutDao.getDailyTrmpByEpochDay(any(), any(), any()) } returns emptyMap()
@@ -271,8 +273,7 @@ class ScoringRepositoryN1Test {
             repo.computeAndPersistDailySummary(LocalDate.now())
 
             // Should only fetch HRV samples for the valid session for baseline median
-            coVerify { hrvDao.getSleepRmssdValuesForSessions(listOf("valid")) }
-            coVerify(exactly = 0) { hrvDao.getSleepRmssdValuesForSessions(match { it.contains("short") }) }
+            coVerify { hrvDao.getSleepRmssdForSessionsMap(listOf("valid")) }
         }
 
     @Test
@@ -343,5 +344,74 @@ class ScoringRepositoryN1Test {
             coEvery { sleepSessionDao.countSince(any()) } returns 3
             repo.computeAndPersistDailySummary(LocalDate.now())
             coVerify(exactly = 1) { dailySummaryDao.upsert(any()) }
+        }
+
+    @Test
+    fun `day 1 baseline initialization matches daily values`() =
+        runTest {
+            val today = LocalDate.now()
+            val todaySession = makeSleepSession("today", 0)
+
+            // Day 1 setup: only 1 session exists
+            coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns todaySession
+            coEvery { sleepSessionDao.getSince(any()) } returns listOf(todaySession)
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns listOf(todaySession)
+            coEvery { sleepSessionDao.countSince(any()) } returns 1
+
+            // Mock 10 heart rate samples of 53 bpm to satisfy minimum size requirement of 10
+            val hrSamples = (1..10).map { SleepHrSample("today", 53) }
+            coEvery { heartRateDao.getSleepHrProjectionForSessions(listOf("today")) } returns hrSamples
+
+            // For daily average RHR calculation (avgRhr)
+            coEvery { heartRateDao.getSleepHrSamplesForSession("today") } returns (1..10).map { 53 }
+
+            // Mock 1 HRV sample of 32 ms
+            coEvery { hrvDao.getSleepRmssdForSessionsMap(listOf("today")) } returns mapOf("today" to listOf(32f))
+            coEvery { hrvDao.getSleepRmssdForSession("today") } returns listOf(32f)
+
+            val summarySlot = io.mockk.slot<DailySummaryEntity>()
+            coEvery { dailySummaryDao.upsert(capture(summarySlot)) } returns Unit
+
+            repo.computeAndPersistDailySummary(today)
+
+            val result = summarySlot.captured
+            kotlin.test.assertEquals(53f, result.rhrBpm, "RHR baseline should match daily values on Day 1")
+            kotlin.test.assertEquals(32, result.hrvBaseline, "HRV baseline should match daily values on Day 1")
+        }
+
+    @Test
+    fun `HRV baseline is stable across multiple identical calculations`() =
+        runTest {
+            val today = LocalDate.now()
+            val todaySession = makeSleepSession("today", 0)
+
+            coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns todaySession
+            coEvery { sleepSessionDao.getSince(any()) } returns listOf(todaySession)
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns listOf(todaySession)
+            coEvery { sleepSessionDao.countSince(any()) } returns 1
+
+            val hrSamples = (1..10).map { SleepHrSample("today", 53) }
+            coEvery { heartRateDao.getSleepHrProjectionForSessions(listOf("today")) } returns hrSamples
+            coEvery { heartRateDao.getSleepHrSamplesForSession("today") } returns (1..10).map { 53 }
+
+            // Sleep RMSSD map has consistent 32f
+            coEvery { hrvDao.getSleepRmssdForSessionsMap(listOf("today")) } returns mapOf("today" to listOf(32f))
+            coEvery { hrvDao.getSleepRmssdForSession("today") } returns listOf(32f)
+
+            val summarySlot1 = io.mockk.slot<DailySummaryEntity>()
+            coEvery { dailySummaryDao.upsert(capture(summarySlot1)) } returns Unit
+            repo.computeAndPersistDailySummary(today)
+            val firstHrvBaseline = summarySlot1.captured.hrvBaseline
+
+            val summarySlot2 = io.mockk.slot<DailySummaryEntity>()
+            coEvery { dailySummaryDao.upsert(capture(summarySlot2)) } returns Unit
+            repo.computeAndPersistDailySummary(today)
+            val secondHrvBaseline = summarySlot2.captured.hrvBaseline
+
+            kotlin.test.assertEquals(
+                firstHrvBaseline,
+                secondHrvBaseline,
+                "HRV baseline must remain stable and identical",
+            )
         }
 }

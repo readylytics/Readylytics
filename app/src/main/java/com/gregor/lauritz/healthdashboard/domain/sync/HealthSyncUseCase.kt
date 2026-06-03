@@ -216,6 +216,28 @@ class HealthSyncUseCase
                             stepsMap[day] = daySteps
                         }
 
+                        // One-time migration: all historical days get per-day bounded baselines + recomputed scores.
+                        // Stale detection: baseline_version < 2 or NULL means old global-window computation.
+                        val staleCount = dailySummaryDao.countRowsWithBaselineVersionBelow(2)
+                        if (staleCount > 0) {
+                            logD("HealthSyncUseCase") { "Migration triggered: $staleCount stale rows found." }
+                            // Clear freeze so ScoringRepositoryImpl (now using bounded variants) can recompute.
+                            dailySummaryDao.clearFrozenBaselines()
+                            val earliestMs = dailySummaryDao.getEarliestDateMs()
+                            if (earliestMs != null) {
+                                val nowMs = System.currentTimeMillis()
+                                var cursor = earliestMs
+                                while (cursor <= nowMs) {
+                                    val day = Instant.ofEpochMilli(cursor).atZone(zoneId).toLocalDate()
+                                    val steps = stepsMap[day] ?: 0L
+                                    syncDayScoring(day, steps)
+                                    cursor += 86_400_000L
+                                }
+                            }
+                            dailySummaryDao.setBaselineVersion(2)
+                            logD("HealthSyncUseCase") { "Migration complete." }
+                        }
+
                         var successCount = 0
                         var failureCount = 0
 

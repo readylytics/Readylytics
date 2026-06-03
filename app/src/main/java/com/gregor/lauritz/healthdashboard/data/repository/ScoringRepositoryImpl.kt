@@ -30,11 +30,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.ln
 import kotlin.math.round
 
 @Singleton
@@ -80,11 +82,11 @@ class ScoringRepositoryImpl
                 // Retrieve the nightly frozen HR_rest (nocturnal floor) from the daily summary if available
                 val dailySummary = dailySummaryDao.getByDate(dayMidnightMs)
                 val rhrBaselineValue =
-                    dailySummary?.restingHeartRate?.toFloat()
+                    (if (dailySummary?.baselineCalculatedAtDate != null) dailySummary.rhrBpm else null)
                         ?: prefs.rhrBaselineOverride
-                        ?: baselineComputer.computeAdaptiveBaselineRhrBpm(
-                            dayMidnight = dayMidnight,
-                            rhrBaselineOverride = prefs.rhrBaselineOverride,
+                        ?: baselineComputer.computeAdaptiveBaselineRhrBpmBetween(
+                            fromMs = dayMidnightMs,
+                            toMs = nextDayMidnightMs,
                             percentile = prefs.restingHrPercentile,
                         )
                         ?: ScoringConstants.DEFAULT_RHR_BPM
@@ -237,6 +239,20 @@ class ScoringRepositoryImpl
                         summary = summary.copy(isCalibrating = true, avgSleepingSpo2 = avgSpo2)
                     }
 
+                    // Bounded baselines during calibration prevent default-50bpm display on dashboard.
+                    val calibHrvBaseline =
+                        baselineComputer.computeHrvBaselineBetween(
+                            fromMs = dayMidnightMs,
+                            toMs = nextDayMidnightMs,
+                            hrvBaselineOverride = prefs.hrvBaselineOverride,
+                        )
+                    summary =
+                        summary.copy(
+                            hrvBaseline = calibHrvBaseline,
+                            rhrBpm = rhrBaselineValue,
+                            baselineVersion = 2,
+                        )
+
                     val updatedAudit =
                         scoringConfig.auditTrail.copy(
                             appliedSf = scoringConfig.paiScalingFactor,
@@ -262,9 +278,16 @@ class ScoringRepositoryImpl
 
                 summary = summary.copy(loadScore = loadScore, strainRatio = sr, totalTrimp = dailyTrimpRaw)
 
+                val hrvWindows =
+                    baselineComputer.computeHrvWindowsBetween(
+                        fromMs = dayMidnightMs,
+                        toMs = nextDayMidnightMs,
+                        excludeSessionId = null,
+                    )
                 val computedHrvBaseline =
-                    baselineComputer.computeHrvBaseline(
-                        dayMidnight = dayMidnight,
+                    baselineComputer.computeHrvBaselineBetween(
+                        fromMs = dayMidnightMs,
+                        toMs = nextDayMidnightMs,
                         hrvBaselineOverride = prefs.hrvBaselineOverride,
                     )
                 summary = summary.copy(hrvBaseline = computedHrvBaseline)
@@ -274,7 +297,24 @@ class ScoringRepositoryImpl
                         computeSleepMetricsUseCase(session, dayMidnight, targetDate, prefs, summary, loadScore, zoneId)
                     summary = sleepMetricsResult.getOrNull() ?: summary
                 }
-                summary = summary.copy(avgSleepingSpo2 = avgSpo2)
+
+                val muHistory = hrvWindows?.muHistory ?: emptyList()
+                val hrvMuMssd =
+                    if (muHistory.isNotEmpty()) {
+                        muHistory.map { ln(it.coerceAtLeast(0.001f)) }.average().toFloat()
+                    } else {
+                        null
+                    }
+
+                summary =
+                    summary.copy(
+                        hrvBaseline = computedHrvBaseline,
+                        rhrBpm = rhrBaselineValue,
+                        hrvMuMssd = hrvMuMssd,
+                        baselineCalculatedAtDate = targetDate,
+                        baselineVersion = 2,
+                        avgSleepingSpo2 = avgSpo2,
+                    )
 
                 // Final summary remains consistent with the pre-calculated dailyPai and totalPai7d.
                 // Readiness adjustment is excluded from PAI storage to match standard PAI models and manual sums.

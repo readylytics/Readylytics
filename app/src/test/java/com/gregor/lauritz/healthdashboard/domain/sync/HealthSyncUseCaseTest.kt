@@ -116,4 +116,49 @@ class HealthSyncUseCaseTest {
                 hrvDao.upsertAll(any())
             }
         }
+
+    @Test
+    fun `sync runs migration when baseline version is below 2`() =
+        runTest {
+            // Setup: stale rows exist
+            coEvery { dailySummaryDao.countRowsWithBaselineVersionBelow(2) } returns 5
+            coEvery { dailySummaryDao.getEarliestDateMs() } returns 1717192800000L // 2024-06-01
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+
+            useCase.sync()
+
+            coVerify {
+                dailySummaryDao.clearFrozenBaselines()
+                dailySummaryDao.setBaselineVersion(2)
+            }
+        }
+
+    @Test
+    fun `sync skips migration when all rows are at version 2`() =
+        runTest {
+            coEvery { dailySummaryDao.countRowsWithBaselineVersionBelow(2) } returns 0
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+
+            useCase.sync()
+
+            coVerify(exactly = 0) {
+                dailySummaryDao.clearFrozenBaselines()
+            }
+        }
+
+    @Test
+    fun `sync migration recomputes scores for historical days`() =
+        runTest {
+            val earliestMs = 1717192800000L // 2024-06-01
+            coEvery { dailySummaryDao.countRowsWithBaselineVersionBelow(2) } returns 1
+            coEvery { dailySummaryDao.getEarliestDateMs() } returns earliestMs
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+
+            useCase.sync()
+
+            // Verify it started from June 1st
+            coVerify {
+                scoringRepository.computeDailySummary(LocalDate.of(2024, 6, 1))
+            }
+        }
 }

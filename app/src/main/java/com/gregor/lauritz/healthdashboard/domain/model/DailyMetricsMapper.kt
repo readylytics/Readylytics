@@ -86,6 +86,7 @@ object DailyMetricsMapper {
             rhr / ratio
         } else {
             summary.restingHrBaseline?.toFloat()
+                ?: summary.rhrBpm
                 ?: prefs.rhrBaselineOverride
                 ?: ScoringConstants.DEFAULT_RHR_BPM
         }

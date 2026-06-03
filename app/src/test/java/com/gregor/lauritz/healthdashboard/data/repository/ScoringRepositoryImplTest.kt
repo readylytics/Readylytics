@@ -104,4 +104,30 @@ class ScoringRepositoryImplTest {
             assertNotEquals(resultToday.rhrBpm, resultYesterday.rhrBpm, "RHR baseline should differ")
             assertNotEquals(resultToday.hrvMuMssd, resultYesterday.hrvMuMssd, "HRV mu should differ")
         }
+
+    @Test
+    fun `computeDailySummary prioritizes rhrBpm over restingHeartRate from stored summary`() =
+        runTest {
+            val today = LocalDate.now()
+            val zoneId = ZoneId.systemDefault()
+            val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+            val existingSummary =
+                DailySummaryEntity(
+                    dateMidnightMs = todayMs,
+                    rhrBpm = 52f,
+                    restingHeartRate = 48,
+                    baselineCalculatedAtDate = today,
+                )
+            coEvery { dailySummaryDao.getByDate(todayMs) } returns existingSummary
+
+            // Ensure use case returns success
+            coEvery { computeSleepMetricsUseCase(any(), any(), any(), any(), any(), any(), any()) } returns
+                com.gregor.lauritz.healthdashboard.domain.model.Result
+                    .success(existingSummary)
+
+            val result = repo.computeDailySummary(today)
+
+            kotlin.test.assertEquals(52f, result.rhrBpm, "RHR baseline should be loaded from rhrBpm")
+        }
 }

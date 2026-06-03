@@ -268,9 +268,9 @@ class GetDashboardDataUseCase
 
             val tooltip =
                 buildString {
-                    val rBaseline = summary.restingHrBaseline
-                    val diff = m.restingHrBaselineDiff
-                    val arrow = m.restingHrBaselineArrow?.symbol
+                    val rBaseline = m.rhrBaselineRounded
+                    val diff = m.rhrBaselineDiff
+                    val arrow = m.rhrBaselineArrow?.symbol
                     if (rBaseline != null && diff != null && arrow != null) {
                         append(
                             resourceProvider.getString(
