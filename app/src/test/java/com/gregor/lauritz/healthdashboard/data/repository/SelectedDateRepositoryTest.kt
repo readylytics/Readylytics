@@ -1,11 +1,11 @@
 package com.gregor.lauritz.healthdashboard.data.repository
 
+import com.gregor.lauritz.healthdashboard.data.local.dao.BloodPressureRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.OxygenSaturationRecordDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.BloodPressureRecordDao
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
@@ -25,7 +25,6 @@ class SelectedDateRepositoryTest {
     private val dao: DailySummaryDao =
         mockk {
             every { observeEarliestDateMs() } returns flowOf(null)
-            every { observeAllDateMidnightMs() } returns flowOf(emptyList())
         }
     private val testScope = CoroutineScope(UnconfinedTestDispatcher())
 
@@ -145,12 +144,15 @@ class SelectedDateRepositoryTest {
     // --- earliestDate boundary tests ---
 
     private fun repositoryWithEarliestDate(earliest: LocalDate): SelectedDateRepository {
-        val epochMs = earliest.atStartOfDay(java.time.ZoneId.systemDefault())
-            .toInstant().toEpochMilli()
-        val daoWithEarliest: DailySummaryDao = mockk {
-            every { observeEarliestDateMs() } returns flowOf(epochMs)
-            every { observeAllDateMidnightMs() } returns flowOf(listOf(epochMs))
-        }
+        val epochMs =
+            earliest
+                .atStartOfDay(java.time.ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+        val daoWithEarliest: DailySummaryDao =
+            mockk {
+                every { observeEarliestDateMs() } returns flowOf(epochMs)
+            }
         return SelectedDateRepository(dao = daoWithEarliest, appScope = testScope)
     }
 
@@ -198,35 +200,41 @@ class SelectedDateRepositoryTest {
             val ms2 = date2.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
             val ms3 = date3.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-            val mockDailySummaryDao: DailySummaryDao = mockk {
-                every { observeEarliestDateMs() } returns flowOf(ms1)
-                every { observeAllDateMidnightMs() } returns flowOf(emptyList())
-            }
-            val mockSleepDao: SleepSessionDao = mockk {
-                every { observeEarliestSessionTime() } returns flowOf(ms2)
-            }
-            val mockHrDao: HeartRateDao = mockk {
-                every { observeEarliestHrTime() } returns flowOf(ms3)
-            }
-            val mockHrvDao: HrvDao = mockk {
-                every { observeEarliestHrvTime() } returns flowOf(null)
-            }
-            val mockSpo2Dao: OxygenSaturationRecordDao = mockk {
-                every { observeEarliestSpo2Time() } returns flowOf(null)
-            }
-            val mockBpDao: BloodPressureRecordDao = mockk {
-                every { observeEarliestBpTime() } returns flowOf(null)
-            }
+            val mockDailySummaryDao: DailySummaryDao =
+                mockk {
+                    every { observeEarliestDateMs() } returns flowOf(ms1)
+                }
+            val mockSleepDao: SleepSessionDao =
+                mockk {
+                    every { observeEarliestSessionTime() } returns flowOf(ms2)
+                }
+            val mockHrDao: HeartRateDao =
+                mockk {
+                    every { observeEarliestHrTime() } returns flowOf(ms3)
+                }
+            val mockHrvDao: HrvDao =
+                mockk {
+                    every { observeEarliestHrvTime() } returns flowOf(null)
+                }
+            val mockSpo2Dao: OxygenSaturationRecordDao =
+                mockk {
+                    every { observeEarliestSpo2Time() } returns flowOf(null)
+                }
+            val mockBpDao: BloodPressureRecordDao =
+                mockk {
+                    every { observeEarliestBpTime() } returns flowOf(null)
+                }
 
-            val repo = SelectedDateRepository(
-                dao = mockDailySummaryDao,
-                sleepSessionDao = mockSleepDao,
-                heartRateDao = mockHrDao,
-                hrvDao = mockHrvDao,
-                oxygenSaturationRecordDao = mockSpo2Dao,
-                bloodPressureRecordDao = mockBpDao,
-                appScope = testScope
-            )
+            val repo =
+                SelectedDateRepository(
+                    dao = mockDailySummaryDao,
+                    sleepSessionDao = mockSleepDao,
+                    heartRateDao = mockHrDao,
+                    hrvDao = mockHrvDao,
+                    oxygenSaturationRecordDao = mockSpo2Dao,
+                    bloodPressureRecordDao = mockBpDao,
+                    appScope = testScope,
+                )
 
             assertEquals(date2, repo.earliestDate.value)
         }
@@ -242,15 +250,16 @@ class SelectedDateRepositoryTest {
 
             val earliestFlow = MutableStateFlow<Long?>(msBefore)
 
-            val mockDailySummaryDao: DailySummaryDao = mockk {
-                every { observeEarliestDateMs() } returns earliestFlow
-                every { observeAllDateMidnightMs() } returns flowOf(emptyList())
-            }
+            val mockDailySummaryDao: DailySummaryDao =
+                mockk {
+                    every { observeEarliestDateMs() } returns earliestFlow
+                }
 
-            val repo = SelectedDateRepository(
-                dao = mockDailySummaryDao,
-                appScope = testScope
-            )
+            val repo =
+                SelectedDateRepository(
+                    dao = mockDailySummaryDao,
+                    appScope = testScope,
+                )
 
             repo.updateSelectedDate(dateBefore)
             assertEquals(dateBefore, repo.selectedDate.value)

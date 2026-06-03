@@ -103,11 +103,6 @@ interface DailySummaryDao {
 
     fun observeEarliestDateMs(): Flow<Long?> = _observeEarliestDateMs().distinctUntilChanged()
 
-    @Query("SELECT dateMidnightMs FROM daily_summaries")
-    fun _observeAllDateMidnightMs(): Flow<List<Long>>
-
-    fun observeAllDateMidnightMs(): Flow<List<Long>> = _observeAllDateMidnightMs().distinctUntilChanged()
-
     // Call only after re-computing baselines; stamps successfully recomputed rows.
     @Query(
         "UPDATE daily_summaries SET baseline_version = :version",

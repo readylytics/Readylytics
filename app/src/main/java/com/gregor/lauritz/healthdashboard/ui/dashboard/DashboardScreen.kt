@@ -61,7 +61,6 @@ fun DashboardRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     val earliestDate by viewModel.earliestDate.collectAsStateWithLifecycle()
-    val availableDates by viewModel.availableDates.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(errorMessage) {
@@ -78,7 +77,6 @@ fun DashboardRoute(
         onNextDay = viewModel::onNextDay,
         onDateSelected = { viewModel.onEvent(DashboardEvent.DateSelected(it)) },
         earliestDate = earliestDate,
-        availableDates = availableDates,
         onNavigateToSleep = onNavigateToSleep,
         onNavigateToWorkouts = onNavigateToWorkouts,
         onNavigateToRhr = onNavigateToRhr,
@@ -122,7 +120,6 @@ fun DashboardScreen(
     onResetToDefaults: () -> Unit = {},
     onDateSelected: (LocalDate) -> Unit = {},
     earliestDate: LocalDate? = null,
-    availableDates: Set<LocalDate> = emptySet(),
     modifier: Modifier = Modifier,
 ) {
     val summary = uiState.summary
@@ -163,7 +160,6 @@ fun DashboardScreen(
                         today = today,
                         onDateSelected = onDateSelected,
                         earliestDate = earliestDate,
-                        availableDates = availableDates,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }

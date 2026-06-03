@@ -248,14 +248,6 @@ class VitalsViewModel
                     initialValue = null,
                 )
 
-        val availableDates: StateFlow<Set<LocalDate>> =
-            selectedDateRepository.availableDates
-                .stateIn(
-                    scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(5_000),
-                    initialValue = emptySet(),
-                )
-
         fun onDateSelected(date: LocalDate) {
             viewModelScope.launch {
                 selectedDateRepository.updateSelectedDate(date)
