@@ -394,10 +394,25 @@ class LocalRestoreManager
                 }
 
                 backup.age?.let { age = it }
-                if (backup.birthDay != null && backup.birthMonth != null && backup.birthYear != null) {
+                // Restore birthDate if available, otherwise fall back to separate fields for backward compatibility
+                val parsedDate =
+                    backup.birthDate?.let {
+                        try {
+                            java.time.LocalDate.parse(it)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                if (parsedDate != null) {
+                    birthDay = parsedDate.dayOfMonth
+                    birthMonth = parsedDate.monthValue
+                    birthYear = parsedDate.year
+                    isBirthdayConfigured = true
+                } else if (backup.birthDay != null && backup.birthMonth != null && backup.birthYear != null) {
                     birthDay = backup.birthDay
                     birthMonth = backup.birthMonth
                     birthYear = backup.birthYear
+                    isBirthdayConfigured = true
                 }
 
                 backup.gender?.let { gender = it } ?: clearGender()

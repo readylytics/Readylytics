@@ -5,6 +5,7 @@ import androidx.datastore.core.Serializer
 import com.google.protobuf.InvalidProtocolBufferException
 import java.io.InputStream
 import java.io.OutputStream
+import java.time.LocalDate
 
 object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
     override val defaultValue: UserPreferencesProto =
@@ -94,10 +95,19 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         .setZone3MaxBpm(domain.zone3MaxBpm)
         .setZone4MaxBpm(domain.zone4MaxBpm)
         .setAge(domain.age)
-        .setBirthDay(domain.birthDay)
-        .setBirthMonth(domain.birthMonth)
-        .setBirthYear(domain.birthYear)
-        .setHrvOptimalThreshold(domain.hrvOptimalThreshold)
+        // Extract birth day, month, year from the ISO-8601 birthDate string for proto storage
+        .apply {
+            if (domain.birthDate != null) {
+                try {
+                    val date = LocalDate.parse(domain.birthDate)
+                    setBirthDay(date.dayOfMonth)
+                    setBirthMonth(date.monthValue)
+                    setBirthYear(date.year)
+                } catch (e: Exception) {
+                    // If parsing fails, keep default values
+                }
+            }
+        }.setHrvOptimalThreshold(domain.hrvOptimalThreshold)
         .setHrvWarningThreshold(domain.hrvWarningThreshold)
         .setRhrOptimalThreshold(domain.rhrOptimalThreshold)
         .setRhrWarningThreshold(domain.rhrWarningThreshold)
@@ -133,10 +143,20 @@ fun UserPreferences.toProto(): UserPreferencesProto {
     domain.hrvBaselineOverride?.let { builder.setHrvBaselineOverride(it) }
     domain.rhrBaselineOverride?.let { builder.setRhrBaselineOverride(it) }
     domain.gender?.let { builder.setGender(it.name) }
+    domain.heightCm?.let { builder.setHeightCm(it) }
     domain.circadianThresholdOverride?.let { builder.setCircadianThresholdOverride(it) }
     domain.primaryDeviceName?.let { builder.setPrimaryDeviceName(it) }
     domain.backupDirectoryUri?.let { builder.setBackupDirectoryUri(it) }
     domain.backupPasswordHash?.let { builder.setBackupPasswordHash(it) }
+    domain.driveAccountEmail?.let { builder.setDriveAccountEmail(it) }
+    builder.setIsBirthdayConfigured(domain.isBirthdayConfigured)
+    builder.setRestingHrPercentile(domain.restingHrPercentile)
+    builder.setUnitSystem(
+        when (domain.unitSystem) {
+            UnitSystem.METRIC -> UnitSystemProto.UNIT_METRIC
+            UnitSystem.IMPERIAL -> UnitSystemProto.UNIT_IMPERIAL
+        },
+    )
 
     return builder.build()
 }

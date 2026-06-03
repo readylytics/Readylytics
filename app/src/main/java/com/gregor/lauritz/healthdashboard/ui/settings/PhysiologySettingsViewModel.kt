@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
@@ -54,12 +55,18 @@ class PhysiologySettingsViewModel
         val uiState: StateFlow<PhysiologySettingsState> =
             settingsRepo.userPreferences
                 .map { prefs ->
+                    val birthDate =
+                        prefs.birthDate?.let {
+                            try {
+                                LocalDate.parse(it)
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
                     PhysiologySettingsState(
                         physiologyProfile = prefs.physiologyProfile,
                         age = prefs.age,
-                        birthDay = prefs.birthDay,
-                        birthMonth = prefs.birthMonth,
-                        birthYear = prefs.birthYear,
+                        birthDate = birthDate,
                         gender = prefs.gender,
                         heightCm = prefs.heightCm,
                         unitSystem = prefs.unitSystem,
@@ -73,21 +80,10 @@ class PhysiologySettingsViewModel
         fun onEvent(event: SettingsEvent) {
             when (event) {
                 is SettingsEvent.BirthdayChanged -> {
-                    val dayValidation = SettingsValidators.BIRTHDAY_DAY_RULE.validate(event.day.toString())
-                    val monthValidation = SettingsValidators.BIRTHDAY_MONTH_RULE.validate(event.month.toString())
-                    val yearValidation = SettingsValidators.BIRTHDAY_YEAR_RULE.validate(event.year.toString())
-
-                    if (dayValidation is ValidationResult.Valid &&
-                        monthValidation is ValidationResult.Valid &&
-                        yearValidation is ValidationResult.Valid
-                    ) {
+                    val validation = SettingsValidators.BIRTHDAY_DATE_RULE.validate(event.date)
+                    if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
-                            userUseCase
-                                .updateBirthday(
-                                    day = event.day,
-                                    month = event.month,
-                                    year = event.year,
-                                ).getOrNull()
+                            userUseCase.updateBirthday(event.date).getOrNull()
                             healthSyncUseCase.sync()
                         }
                     }

@@ -22,18 +22,19 @@ class BirthdayCheckWorker
         override suspend fun doWork(): Result {
             val prefs = settingsRepo.userPreferences.first()
             // Skip if birthday was never configured
-            if (!prefs.isBirthdayConfigured) {
+            if (!prefs.isBirthdayConfigured || prefs.birthDate == null) {
                 return Result.success()
             }
-            val newAge =
-                Period
-                    .between(
-                        LocalDate.of(prefs.birthYear, prefs.birthMonth, prefs.birthDay),
-                        LocalDate.now(),
-                    ).years
-            if (newAge != prefs.age) {
-                settingsRepo.updateAge(newAge)
+
+            return try {
+                val birthDate = LocalDate.parse(prefs.birthDate)
+                val newAge = Period.between(birthDate, LocalDate.now()).years
+                if (newAge != prefs.age) {
+                    settingsRepo.updateAge(newAge)
+                }
+                Result.success()
+            } catch (e: Exception) {
+                Result.failure()
             }
-            return Result.success()
         }
     }

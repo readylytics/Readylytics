@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingViewModelTest {
@@ -173,10 +174,9 @@ class OnboardingViewModelTest {
     @Test
     fun saveProfile_validInput_callsRepository() {
         var completed = false
+        val birthDate = LocalDate.of(1990, 6, 15)
         viewModel.saveProfile(
-            day = 15,
-            month = 6,
-            year = 1990,
+            birthDate = birthDate,
             gender = "Male",
             physiologyProfile = PhysiologyProfile.ATHLETE,
             dynamicColorEnabled = true,
@@ -184,17 +184,16 @@ class OnboardingViewModelTest {
             heightCm = 175f,
             onComplete = { completed = true },
         )
-        coVerify(timeout = 1000) { settingsRepo.updateBirthday(15, 6, 1990) }
+        coVerify(timeout = 1000) { settingsRepo.updateBirthday(birthDate) }
         assert(completed) { "onComplete should be called" }
     }
 
     @Test
-    fun saveProfile_invalidDay_doesNotCallRepository() {
+    fun saveProfile_futureDate_doesNotCallRepository() {
         var completed = false
+        val futureDate = LocalDate.now().plusDays(1)
         viewModel.saveProfile(
-            day = 32,
-            month = 6,
-            year = 1990,
+            birthDate = futureDate,
             gender = "Male",
             physiologyProfile = PhysiologyProfile.ATHLETE,
             dynamicColorEnabled = true,
@@ -202,7 +201,7 @@ class OnboardingViewModelTest {
             heightCm = 175f,
             onComplete = { completed = true },
         )
-        coVerify(timeout = 100, inverse = true) { settingsRepo.updateBirthday(any(), any(), any()) }
-        assert(!completed) { "onComplete should not be called with invalid input" }
+        coVerify(timeout = 100, inverse = true) { settingsRepo.updateBirthday(any()) }
+        assert(!completed) { "onComplete should not be called with future date" }
     }
 }

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -22,7 +21,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,11 +33,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
+import com.gregor.lauritz.healthdashboard.ui.components.BirthdayDatePickerField
 import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
 import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
 import com.gregor.lauritz.healthdashboard.ui.settings.HeightInputField
@@ -49,9 +47,7 @@ import java.time.LocalDate
 @Composable
 fun OnboardingScreen(
     onGrantPermissionsClick: (
-        birthDay: Int,
-        birthMonth: Int,
-        birthYear: Int,
+        birthDate: LocalDate,
         gender: String,
         physiologyProfile: PhysiologyProfile,
         dynamicColorEnabled: Boolean,
@@ -178,9 +174,7 @@ private fun FeatureItem(
 @Composable
 private fun ProfileSetupScreen(
     onGrantPermissionsClick: (
-        birthDay: Int,
-        birthMonth: Int,
-        birthYear: Int,
+        birthDate: LocalDate,
         gender: String,
         physiologyProfile: PhysiologyProfile,
         dynamicColorEnabled: Boolean,
@@ -189,9 +183,8 @@ private fun ProfileSetupScreen(
     ) -> Unit,
     onOpenSettingsClick: () -> Unit,
 ) {
-    var birthDay by remember { mutableStateOf(LocalDate.now().dayOfMonth.toString()) }
-    var birthMonth by remember { mutableStateOf(LocalDate.now().monthValue.toString()) }
-    var birthYear by remember { mutableStateOf((LocalDate.now().year - 30).toString()) }
+    var birthDate by remember { mutableStateOf(LocalDate.now().minusYears(30)) }
+    var showBirthdatePicker by remember { mutableStateOf(false) }
     var gender by remember { mutableStateOf("Other") }
     var physiologyProfile by remember { mutableStateOf(PhysiologyProfile.GENERAL) }
     var dynamicColorEnabled by remember { mutableStateOf(true) }
@@ -240,41 +233,13 @@ private fun ProfileSetupScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        Text(
-            text = "Date of Birth",
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.fillMaxWidth(),
+        BirthdayDatePickerField(
+            birthDate = birthDate,
+            onDateSelected = { birthDate = it },
+            showDialog = showBirthdatePicker,
+            onDialogDismiss = { showBirthdatePicker = false },
+            onFieldClick = { showBirthdatePicker = true },
         )
-        Spacer(Modifier.height(8.dp))
-
-        Row(modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = birthDay,
-                onValueChange = { birthDay = it.filter { c -> c.isDigit() }.take(2) },
-                label = { Text("Day") },
-                modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-            )
-            Spacer(Modifier.width(8.dp))
-            OutlinedTextField(
-                value = birthMonth,
-                onValueChange = { birthMonth = it.filter { c -> c.isDigit() }.take(2) },
-                label = { Text("Month") },
-                modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-            )
-            Spacer(Modifier.width(8.dp))
-            OutlinedTextField(
-                value = birthYear,
-                onValueChange = { birthYear = it.filter { c -> c.isDigit() }.take(4) },
-                label = { Text("Year") },
-                modifier = Modifier.weight(1.4f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-            )
-        }
 
         Spacer(Modifier.height(16.dp))
 
@@ -357,22 +322,15 @@ private fun ProfileSetupScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        val dayInt = birthDay.toIntOrNull()
-        val monthInt = birthMonth.toIntOrNull()
-        val yearInt = birthYear.toIntOrNull()
         val isInputValid =
-            dayInt in 1..31 &&
-                monthInt in 1..12 &&
-                yearInt != null &&
-                yearInt in 1900..LocalDate.now().year &&
+            !birthDate.isAfter(LocalDate.now()) &&
+                birthDate.year in 1900..LocalDate.now().year &&
                 !heightHasError
 
         Button(
             onClick = {
                 onGrantPermissionsClick(
-                    dayInt ?: 1,
-                    monthInt ?: 1,
-                    yearInt ?: 1990,
+                    birthDate,
                     gender,
                     physiologyProfile,
                     dynamicColorEnabled,

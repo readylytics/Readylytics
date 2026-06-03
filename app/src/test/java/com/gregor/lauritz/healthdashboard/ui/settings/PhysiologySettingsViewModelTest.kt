@@ -7,6 +7,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 
 class PhysiologySettingsViewModelTest {
     private lateinit var settingsRepo: SettingsRepository
@@ -53,13 +54,15 @@ class PhysiologySettingsViewModelTest {
 
     @Test
     fun onEvent_birthdayValid_updatesUserUseCase() {
-        viewModel.onEvent(SettingsEvent.BirthdayChanged(day = 15, month = 6, year = 1990))
-        coVerify(timeout = 1000) { userUseCase.updateBirthday(15, 6, 1990) }
+        val birthDate = LocalDate.of(1990, 6, 15)
+        viewModel.onEvent(SettingsEvent.BirthdayChanged(date = birthDate))
+        coVerify(timeout = 1000) { userUseCase.updateBirthday(birthDate) }
     }
 
     @Test
-    fun onEvent_birthdayInvalidDay_doesNotUpdateUserUseCase() {
-        viewModel.onEvent(SettingsEvent.BirthdayChanged(day = 32, month = 6, year = 1990))
-        coVerify(timeout = 100, inverse = true) { userUseCase.updateBirthday(any(), any(), any()) }
+    fun onEvent_birthdayInFuture_doesNotUpdateUserUseCase() {
+        val futureDate = LocalDate.now().plusDays(1)
+        viewModel.onEvent(SettingsEvent.BirthdayChanged(date = futureDate))
+        coVerify(timeout = 100, inverse = true) { userUseCase.updateBirthday(any()) }
     }
 }

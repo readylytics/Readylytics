@@ -83,11 +83,7 @@ class SettingsRepository
 
         suspend fun updateAge(age: Int) = physiology.updateAge(age)
 
-        suspend fun updateBirthday(
-            day: Int,
-            month: Int,
-            year: Int,
-        ) = physiology.updateBirthday(day, month, year)
+        suspend fun updateBirthday(date: LocalDate) = physiology.updateBirthday(date)
 
         suspend fun updateGender(gender: String?) = physiology.updateGender(gender)
 

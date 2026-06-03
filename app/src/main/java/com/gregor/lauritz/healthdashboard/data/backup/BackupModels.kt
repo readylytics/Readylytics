@@ -31,6 +31,7 @@ data class UserPreferencesBackup(
     val zone3MaxBpm: Int? = null,
     val zone4MaxBpm: Int? = null,
     val age: Int? = null,
+    val birthDate: String? = null,
     val birthDay: Int? = null,
     val birthMonth: Int? = null,
     val birthYear: Int? = null,

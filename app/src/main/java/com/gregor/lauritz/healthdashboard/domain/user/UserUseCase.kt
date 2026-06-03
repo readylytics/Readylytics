@@ -19,14 +19,10 @@ class UserUseCase
         private val healthSyncUseCase: HealthSyncUseCase,
         private val scoringRepository: ScoringRepository,
     ) {
-        suspend fun updateBirthday(
-            day: Int,
-            month: Int,
-            year: Int,
-        ): Result<Unit> =
+        suspend fun updateBirthday(date: LocalDate): Result<Unit> =
             try {
-                val age = calculateAge(day, month, year)
-                settingsRepo.updateBirthday(day, month, year)
+                val age = calculateAge(date)
+                settingsRepo.updateBirthday(date)
 
                 scoringRepository.computeAndPersistDailySummary()
 
@@ -54,14 +50,7 @@ class UserUseCase
                 Result.failure("Failed to calculate max HR", "MAX_HR_CALC_ERROR")
             }
 
-        fun calculateAge(
-            day: Int,
-            month: Int,
-            year: Int,
-        ): Int {
-            val birthDate = LocalDate.of(year, month, day)
-            return Period.between(birthDate, LocalDate.now()).years
-        }
+        fun calculateAge(date: LocalDate): Int = Period.between(date, LocalDate.now()).years
 
         fun calculateMaxHeartRate(age: Int): Int = HeartRateFormulas.estimateMaxHr(age)
     }
