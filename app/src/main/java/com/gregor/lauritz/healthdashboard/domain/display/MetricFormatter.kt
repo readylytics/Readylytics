@@ -15,9 +15,25 @@ object MetricFormatter {
         }
     }
 
+    fun formatWeightNumericOnly(
+        kg: Float,
+        unit: UnitSystem,
+    ): String {
+        if (kg <= 0f) return "—"
+        return when (unit) {
+            UnitSystem.METRIC -> "%.1f".format(kg)
+            UnitSystem.IMPERIAL -> "%.1f".format(kg * UnitConverter.KG_TO_LBS)
+        }
+    }
+
     fun formatBodyFat(percent: Float): String {
         if (percent <= 0f) return "—"
         return "%.1f%%".format(percent)
+    }
+
+    fun formatBodyFatNumericOnly(percent: Float): String {
+        if (percent <= 0f) return "—"
+        return "%.1f".format(percent)
     }
 
     fun formatBloodPressure(

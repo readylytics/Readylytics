@@ -111,7 +111,7 @@ class BodyFatDetailViewModel
                         selectedRange = range,
                         dailyBodyFat = dailyBodyFat,
                         rangeStartMs = rangeStart.toEpochMilli(),
-                        bodyFatDisplay = latest?.bodyFatPercent?.let { MetricFormatter.formatBodyFat(it) },
+                        bodyFatDisplay = latest?.bodyFatPercent?.let { MetricFormatter.formatBodyFatNumericOnly(it) },
                         optimalRangeDisplay =
                             if (optimalMax >
                                 0f

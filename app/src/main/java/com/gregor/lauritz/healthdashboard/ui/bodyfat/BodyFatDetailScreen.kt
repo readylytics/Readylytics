@@ -112,17 +112,10 @@ fun BodyFatDetailScreen(
                             label = "Body Fat",
                             maxScore = uiState.optimalRangeMax * 2f,
                             status = uiState.bodyFatStatus,
-                            displayText =
-                                uiState.latestBodyFat?.let {
-                                    String.format(Locale.US, "%.1f", it)
-                                },
+                            displayText = uiState.bodyFatDisplay,
                             tooltipDescription =
-                                "Current: ${uiState.latestBodyFat?.let { String.format(Locale.US, "%.1f", it) } ?: "—"}%\n" +
-                                    "Optimal: 0-${String.format(
-                                    Locale.US,
-                                    "%.0f",
-                                    uiState.optimalRangeMax,
-                                )}%\n\n" +
+                                "Current: ${uiState.bodyFatDisplay}%\n" +
+                                    "Optimal: ${uiState.optimalRangeDisplay ?: "—"}\n\n" +
                                     "${uiState.gender}, Age ${uiState.age}",
                         )
                     }
