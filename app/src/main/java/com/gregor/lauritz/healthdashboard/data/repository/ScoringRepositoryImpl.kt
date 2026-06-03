@@ -23,6 +23,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConfigFactory
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
+import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.WakeWindowHrCollector
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +59,7 @@ class ScoringRepositoryImpl
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
+        private val wakeHrCollector: WakeWindowHrCollector,
     ) : ScoringRepository {
         private val calculationMutex = Mutex()
 
@@ -246,10 +248,26 @@ class ScoringRepositoryImpl
                             toMs = nextDayMidnightMs,
                             hrvBaselineOverride = prefs.hrvBaselineOverride,
                         )
+
+                    // Calibration bypasses computeSleepMetricsUseCase; collect directly to populate restingHrBaseline + rhrRatio
+                    val rhrWakeResult =
+                        if (session != null) {
+                            wakeHrCollector.collect(
+                                session = session,
+                                dayMidnight = dayMidnight,
+                                percentile = prefs.restingHrPercentile,
+                            )
+                        } else {
+                            null
+                        }
+
                     summary =
                         summary.copy(
                             hrvBaseline = calibHrvBaseline,
                             rhrBpm = rhrBaselineValue,
+                            restingHrBaseline = rhrWakeResult?.restingHrBaseline,
+                            // currentRestingHr not persisted during calibration — baseline trend is sufficient
+                            rhrRatio = rhrWakeResult?.restingHrRatio,
                             baselineVersion = 2,
                         )
 
@@ -294,7 +312,17 @@ class ScoringRepositoryImpl
 
                 if (session != null) {
                     val sleepMetricsResult =
-                        computeSleepMetricsUseCase(session, dayMidnight, targetDate, prefs, summary, loadScore, zoneId)
+                        computeSleepMetricsUseCase(
+                            session = session,
+                            dayMidnight = dayMidnight,
+                            targetDate = targetDate,
+                            prefs = prefs,
+                            summary = summary,
+                            loadScore = loadScore,
+                            zoneId = zoneId,
+                            rhrBaselineValue = rhrBaselineValue,
+                            dayEndMs = nextDayMidnightMs,
+                        )
                     summary = sleepMetricsResult.getOrNull() ?: summary
                 }
 

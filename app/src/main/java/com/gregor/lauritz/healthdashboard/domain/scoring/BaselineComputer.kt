@@ -63,6 +63,31 @@ class BaselineComputer
             }
         }
 
+        suspend fun rhrHistoryBetween(
+            fromMs: Long,
+            toMs: Long,
+            percentile: Int,
+        ): List<Int> {
+            val baselineFromMs =
+                Instant
+                    .ofEpochMilli(fromMs)
+                    .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
+                    .toEpochMilli()
+            val sessions = sleepSessionDao.getBetween(baselineFromMs.coerceAtLeast(0), toMs)
+            val sessionIds = sessions.map { it.id }
+            if (sessionIds.isEmpty()) return emptyList()
+
+            val allHrRecords = heartRateDao.getSleepHrProjectionForSessions(sessionIds)
+            val samplesBySession = allHrRecords.groupBy { it.sessionId }
+
+            return sessions.mapNotNull { session ->
+                val samples = samplesBySession[session.id] ?: return@mapNotNull null
+                if (samples.isEmpty()) return@mapNotNull null
+                val index = Math.round((percentile / 100.0) * (samples.size - 1)).toInt().coerceIn(0, samples.size - 1)
+                samples[index].beatsPerMinute
+            }
+        }
+
         /**
          * Resolves the baseline RHR scalar used for TRIMP/PAI calculations.
          * Honors [rhrBaselineOverride] then falls back to median of [rhrValues],

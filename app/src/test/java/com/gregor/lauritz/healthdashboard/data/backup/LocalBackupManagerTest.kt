@@ -55,9 +55,7 @@ class LocalBackupManagerTest {
                             coEvery { syncPreference } returns SyncPreference.ALWAYS
                             coEvery { appTheme } returns AppTheme.DARK
                             coEvery { backupSchedule } returns BackupSchedule.DAILY
-                            coEvery { birthDay } returns 1
-                            coEvery { birthMonth } returns 1
-                            coEvery { birthYear } returns 2000
+                            coEvery { birthDate } returns "2000-01-01"
                             coEvery { backupDirectoryUri } returns null
                             coEvery { backupPasswordHash } returns null
                         },

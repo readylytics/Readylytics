@@ -176,6 +176,7 @@ class ScoringRepositoryN1Test {
                 bodyFatRecordDao = bodyFatRecordDao,
                 bloodPressureRecordDao = bloodPressureRecordDao,
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
+                wakeHrCollector = wakeHrCollector,
             )
     }
 

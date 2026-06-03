@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.time.LocalDate
 
 class HeartRateSettingsViewModelTest {
     @get:Rule
@@ -18,36 +19,23 @@ class HeartRateSettingsViewModelTest {
     private val testScope = TestScope(testDispatcher)
 
     @Test
-    fun birthdayValidation_allFieldsEmpty_doesNotFireEvent() =
+    fun birthdayValidation_validDate_returnsValid() =
         testScope.runTest {
-            val dayValid = SettingsValidators.BIRTHDAY_DAY_RULE.validate("") is ValidationResult.Valid
-            val monthValid = SettingsValidators.BIRTHDAY_MONTH_RULE.validate("") is ValidationResult.Valid
-            val yearValid = SettingsValidators.BIRTHDAY_YEAR_RULE.validate("") is ValidationResult.Valid
-
-            assertTrue(dayValid && monthValid && yearValid)
+            val result = SettingsValidators.BIRTHDAY_DATE_RULE.validate(LocalDate.of(1990, 6, 15))
+            assertTrue(result is ValidationResult.Valid)
         }
 
     @Test
-    fun birthdayValidation_invalidDay_preventsEventFiring() =
+    fun birthdayValidation_futureDate_returnsInvalid() =
         testScope.runTest {
-            val dayResult = SettingsValidators.BIRTHDAY_DAY_RULE.validate("32")
-            assertTrue(dayResult is ValidationResult.Invalid)
+            val result = SettingsValidators.BIRTHDAY_DATE_RULE.validate(LocalDate.now().plusDays(1))
+            assertTrue(result is ValidationResult.Invalid)
         }
 
     @Test
-    fun birthdayValidation_invalidMonth_preventsEventFiring() =
+    fun birthdayValidation_tooOldDate_returnsInvalid() =
         testScope.runTest {
-            val monthResult = SettingsValidators.BIRTHDAY_MONTH_RULE.validate("13")
-            assertTrue(monthResult is ValidationResult.Invalid)
-        }
-
-    @Test
-    fun birthdayValidation_allFieldsValid_firesEvent() =
-        testScope.runTest {
-            val dayValid = SettingsValidators.BIRTHDAY_DAY_RULE.validate("15") is ValidationResult.Valid
-            val monthValid = SettingsValidators.BIRTHDAY_MONTH_RULE.validate("6") is ValidationResult.Valid
-            val yearValid = SettingsValidators.BIRTHDAY_YEAR_RULE.validate("1990") is ValidationResult.Valid
-
-            assertTrue(dayValid && monthValid && yearValid)
+            val result = SettingsValidators.BIRTHDAY_DATE_RULE.validate(LocalDate.of(1899, 12, 31))
+            assertTrue(result is ValidationResult.Invalid)
         }
 }
