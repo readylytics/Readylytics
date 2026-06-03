@@ -3,6 +3,8 @@ package com.gregor.lauritz.healthdashboard.ui.bloodpressure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.display.MetricFormatter
+import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.repository.BloodPressureRepository
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -29,6 +31,10 @@ data class BloodPressureDetailUiState(
     val dailySystolic: List<DailyDataPoint> = emptyList(),
     val dailyDiastolic: List<DailyDataPoint> = emptyList(),
     val rangeStartMs: Long = 0,
+    val bloodPressureDisplay: String? = null,
+    val systolicStatus: MetricStatus = MetricStatus.CALIBRATING,
+    val diastolicStatus: MetricStatus = MetricStatus.CALIBRATING,
+    val statusLabel: String? = null,
 )
 
 @HiltViewModel
@@ -70,6 +76,7 @@ class BloodPressureDetailViewModel
                     val dailySystolic =
                         recordsByDay
                             .map { (dayOffset, dayRecords) ->
+                                // Allow-listed: chart-axis geometry for plotted BP series, not a display metric
                                 val avgSystolic = dayRecords.map { it.systolicMmHg }.average().toFloat()
                                 DailyDataPoint(dayOffset, avgSystolic)
                             }.sortedBy { it.dayOffset }
@@ -78,19 +85,60 @@ class BloodPressureDetailViewModel
                     val dailyDiastolic =
                         recordsByDay
                             .map { (dayOffset, dayRecords) ->
+                                // Allow-listed: chart-axis geometry for plotted BP series, not a display metric
                                 val avgDiastolic = dayRecords.map { it.diastolicMmHg }.average().toFloat()
                                 DailyDataPoint(dayOffset, avgDiastolic)
                             }.sortedBy { it.dayOffset }
                             .padToRange(range.days)
 
+                    val latestSystolic = latest?.systolicMmHg
+                    val latestDiastolic = latest?.diastolicMmHg
+
+                    val systolicStatus =
+                        when (latestSystolic) {
+                            null -> MetricStatus.CALIBRATING
+                            in 0..119 -> MetricStatus.OPTIMAL
+                            in 120..129 -> MetricStatus.NEUTRAL
+                            in 130..139 -> MetricStatus.WARNING
+                            else -> MetricStatus.POOR
+                        }
+
+                    val diastolicStatus =
+                        when (latestDiastolic) {
+                            null -> MetricStatus.CALIBRATING
+                            in 0..79 -> MetricStatus.OPTIMAL
+                            in 80..89 -> MetricStatus.WARNING
+                            else -> MetricStatus.POOR
+                        }
+
+                    val statusLabel =
+                        when {
+                            latestSystolic == null || latestDiastolic == null -> null
+                            latestSystolic in 0..119 && latestDiastolic in 0..79 -> "Normal"
+                            latestSystolic in 120..129 && latestDiastolic in 0..79 -> "Elevated"
+                            latestSystolic >= 130 || latestDiastolic >= 80 -> "High"
+                            else -> null
+                        }
+
+                    val bloodPressureDisplay =
+                        if (latestSystolic != null && latestDiastolic != null) {
+                            MetricFormatter.formatBloodPressure(latestSystolic, latestDiastolic)
+                        } else {
+                            null
+                        }
+
                     BloodPressureDetailUiState(
-                        latestSystolic = latest?.systolicMmHg,
-                        latestDiastolic = latest?.diastolicMmHg,
+                        latestSystolic = latestSystolic,
+                        latestDiastolic = latestDiastolic,
                         latestDate = latest?.timestampMs?.let { Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() },
                         selectedRange = range,
                         dailySystolic = dailySystolic,
                         dailyDiastolic = dailyDiastolic,
                         rangeStartMs = rangeStart.toEpochMilli(),
+                        bloodPressureDisplay = bloodPressureDisplay,
+                        systolicStatus = systolicStatus,
+                        diastolicStatus = diastolicStatus,
+                        statusLabel = statusLabel,
                     )
                 }
             }.stateIn(

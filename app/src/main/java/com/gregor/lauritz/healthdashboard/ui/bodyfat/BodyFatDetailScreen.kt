@@ -36,7 +36,6 @@ import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.TrendCard
 import com.gregor.lauritz.healthdashboard.ui.components.TrendChart
-import java.util.Locale
 
 @Composable
 fun BodyFatDetailRoute(
@@ -112,16 +111,9 @@ fun BodyFatDetailScreen(
                             label = "Body Fat",
                             maxScore = uiState.optimalRangeMax * 2f,
                             status = uiState.bodyFatStatus,
-                            displayText =
-                                uiState.latestBodyFat?.let {
-                                    String.format(Locale.US, "%.1f%%", it)
-                                },
+                            displayText = uiState.bodyFatDisplay,
                             tooltipDescription =
-                                "Optimal: 0-${String.format(
-                                    Locale.US,
-                                    "%.0f",
-                                    uiState.optimalRangeMax,
-                                )}%\n\n" +
+                                "Optimal: ${uiState.optimalRangeDisplay ?: "—"}\n\n" +
                                     "${uiState.gender}, Age ${uiState.age}",
                         )
                     }

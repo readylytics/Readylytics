@@ -11,6 +11,7 @@ data class HrSample(
 data class ZoneTotal(
     val durationMs: Long,
     val percent: Float,
+    val formattedPercent: String,
 )
 
 data class HeartRateDaySummary(
