@@ -100,7 +100,7 @@ interface DailySummaryDao {
 
     // Call only after re-computing baselines; stamps successfully recomputed rows.
     @Query(
-        "UPDATE daily_summaries SET baseline_version = :version"
+        "UPDATE daily_summaries SET baseline_version = :version",
     )
     suspend fun setBaselineVersion(version: Int)
 }

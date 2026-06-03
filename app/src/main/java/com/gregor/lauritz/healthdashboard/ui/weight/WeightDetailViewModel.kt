@@ -128,7 +128,13 @@ class WeightDetailViewModel
                         dailyWeights = dailyWeights,
                         rangeStartMs = rangeStart.toEpochMilli(),
                         unitSystem = userPrefs.unitSystem,
-                        weightDisplay = rawLatestWeight?.let { MetricFormatter.formatWeightNumericOnly(it, userPrefs.unitSystem) },
+                        weightDisplay =
+                            rawLatestWeight?.let {
+                                MetricFormatter.formatWeightNumericOnly(
+                                    it,
+                                    userPrefs.unitSystem,
+                                )
+                            },
                         bmiDisplay = bmi?.let { MetricFormatter.formatBmi(it) },
                     )
                 }

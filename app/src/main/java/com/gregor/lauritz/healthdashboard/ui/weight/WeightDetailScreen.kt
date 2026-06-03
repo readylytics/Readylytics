@@ -165,7 +165,9 @@ fun WeightDetailScreen(
                         maxScore = weightMaxScore,
                         status = bmiStatus,
                         displayText = uiState.weightDisplay,
-                        tooltipDescription = "Latest weight: ${uiState.weightDisplay?.let { "$it $unitLabel" } ?: "—"}\nHeight: $heightTooltip",
+                        tooltipDescription = "Latest weight: ${uiState.weightDisplay?.let {
+                            "$it $unitLabel"
+                        } ?: "—"}\nHeight: $heightTooltip",
                     )
                     M3ScoreDial(
                         score = uiState.bmi,
