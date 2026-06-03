@@ -144,7 +144,7 @@ class SleepViewModel
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
-                    initialValue = SleepUiState(),
+                    initialValue = SleepUiState(isLoading = true),
                 )
 
         fun onPreviousDay() {

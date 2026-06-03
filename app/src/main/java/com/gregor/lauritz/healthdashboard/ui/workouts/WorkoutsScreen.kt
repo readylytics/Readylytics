@@ -136,7 +136,7 @@ private fun WorkoutStatsSectionSkeleton() {
 @Composable
 private fun WorkoutListSectionSkeleton() {
     Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
     ) {
         repeat(3) {
             SkeletonCard(

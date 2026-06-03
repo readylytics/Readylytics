@@ -292,7 +292,7 @@ class WorkoutsViewModel
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
-                    initialValue = WorkoutsUiState(),
+                    initialValue = WorkoutsUiState(isLoading = true),
                 )
 
         private fun buildPaiBreakdown(

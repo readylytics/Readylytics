@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.domain.model.stepsStatus
+import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
+import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
@@ -90,20 +92,32 @@ fun StepDetailScreen(
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
             item(key = "score_dial") {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    M3ScoreDial(
-                        score = uiState.latestSummary?.stepCount?.toFloat(),
-                        label = "Steps Today",
-                        maxScore = (uiState.stepGoal * 1.5f),
-                        status = uiState.latestSummary?.stepCount?.let { stepsStatus(it, uiState.stepGoal) },
-                        tooltipDescription = "Total steps recorded today.\nGoal: ${uiState.stepGoal} steps.",
-                    )
+                if (uiState.isLoading) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        ScoreDialSkeleton()
+                    }
+                } else {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        M3ScoreDial(
+                            score = uiState.latestSummary?.stepCount?.toFloat(),
+                            label = "Steps Today",
+                            maxScore = (uiState.stepGoal * 1.5f),
+                            status = uiState.latestSummary?.stepCount?.let { stepsStatus(it, uiState.stepGoal) },
+                            tooltipDescription = "Total steps recorded today.\nGoal: ${uiState.stepGoal} steps.",
+                        )
+                    }
                 }
             }
 
@@ -125,6 +139,7 @@ fun StepDetailScreen(
                                     index = index,
                                     count = TimeRange.entries.size,
                                 ),
+                            enabled = !uiState.isLoading,
                             label = { Text(range.label) },
                         )
                     }
@@ -134,21 +149,28 @@ fun StepDetailScreen(
             item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
 
             item(key = "steps_chart") {
-                TrendCard(
-                    title = "Daily Steps",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                ) {
-                    TrendChart(
-                        points = uiState.dailySteps,
-                        rangeStartMs = uiState.rangeStartMs,
-                        rangeDays = uiState.selectedRange.days,
-                        metricName = "Steps",
-                        baselineUnit = "steps",
-                        baseline = uiState.stepGoal.toFloat(),
-                        scrollState = chartScrollState,
-                        zoomState = chartZoomState,
-                        parentScrollInProgress = listState.isScrollInProgress,
+                if (uiState.isLoading) {
+                    SkeletonCard(
+                        height = 250.dp,
+                        modifier = Modifier.padding(horizontal = 16.dp),
                     )
+                } else {
+                    TrendCard(
+                        title = "Daily Steps",
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    ) {
+                        TrendChart(
+                            points = uiState.dailySteps,
+                            rangeStartMs = uiState.rangeStartMs,
+                            rangeDays = uiState.selectedRange.days,
+                            metricName = "Steps",
+                            baselineUnit = "steps",
+                            baseline = uiState.stepGoal.toFloat(),
+                            scrollState = chartScrollState,
+                            zoomState = chartZoomState,
+                            parentScrollInProgress = listState.isScrollInProgress,
+                        )
+                    }
                 }
             }
 

@@ -32,6 +32,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.weightZoneBands
+import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
+import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
@@ -137,50 +139,71 @@ fun WeightDetailScreen(
                 } ?: MetricStatus.CALIBRATING
 
             item(key = "score_dials") {
-                val weightMaxScore = if (uiState.unitSystem == UnitSystem.METRIC) 150f else 330f
-                val heightTooltip =
-                    uiState.heightCm?.let { cm ->
-                        if (uiState.unitSystem == UnitSystem.METRIC) {
-                            String.format(Locale.US, "%.0f cm", cm)
-                        } else {
-                            val totalInches = cm / 2.54f
-                            val feet = floor(totalInches / 12f).toInt()
-                            val inches = (totalInches % 12f).roundToInt()
-                            val (finalFeet, finalInches) = if (inches == 12) Pair(feet + 1, 0) else Pair(feet, inches)
-                            "$finalFeet'$finalInches\""
-                        }
-                    } ?: "—"
+                if (uiState.isLoading) {
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ScoreDialSkeleton()
+                        ScoreDialSkeleton()
+                    }
+                } else {
+                    val weightMaxScore = if (uiState.unitSystem == UnitSystem.METRIC) 150f else 330f
+                    val heightTooltip =
+                        uiState.heightCm?.let { cm ->
+                            if (uiState.unitSystem == UnitSystem.METRIC) {
+                                String.format(Locale.US, "%.0f cm", cm)
+                            } else {
+                                val totalInches = cm / 2.54f
+                                val feet = floor(totalInches / 12f).toInt()
+                                val inches = (totalInches % 12f).roundToInt()
+                                val (finalFeet, finalInches) =
+                                    if (inches ==
+                                        12
+                                    ) {
+                                        Pair(feet + 1, 0)
+                                    } else {
+                                        Pair(feet, inches)
+                                    }
+                                "$finalFeet'$finalInches\""
+                            }
+                        } ?: "—"
 
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    M3ScoreDial(
-                        score = uiState.latestWeight,
-                        label = "Weight ($unitLabel)",
-                        maxScore = weightMaxScore,
-                        status = bmiStatus,
-                        displayText = uiState.weightDisplay,
-                        tooltipDescription = "Latest weight: ${uiState.weightDisplay?.let {
-                            "$it $unitLabel"
-                        } ?: "—"}\nHeight: $heightTooltip",
-                    )
-                    M3ScoreDial(
-                        score = uiState.bmi,
-                        label = "BMI",
-                        maxScore = 40f,
-                        status = bmiStatus,
-                        displayText = uiState.bmiDisplay,
-                        tooltipDescription =
-                            "Body Mass Index (Normal: 18.5–24.9)\n\n" +
-                                "Under 25: Normal\n" +
-                                "25-30: Overweight\n" +
-                                "30+: Obese",
-                    )
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        M3ScoreDial(
+                            score = uiState.latestWeight,
+                            label = "Weight ($unitLabel)",
+                            maxScore = weightMaxScore,
+                            status = bmiStatus,
+                            displayText = uiState.weightDisplay,
+                            tooltipDescription = "Latest weight: ${uiState.weightDisplay?.let {
+                                "$it $unitLabel"
+                            } ?: "—"}\nHeight: $heightTooltip",
+                        )
+                        M3ScoreDial(
+                            score = uiState.bmi,
+                            label = "BMI",
+                            maxScore = 40f,
+                            status = bmiStatus,
+                            displayText = uiState.bmiDisplay,
+                            tooltipDescription =
+                                "Body Mass Index (Normal: 18.5–24.9)\n\n" +
+                                    "Under 25: Normal\n" +
+                                    "25-30: Overweight\n" +
+                                    "30+: Obese",
+                        )
+                    }
                 }
             }
 
@@ -202,6 +225,7 @@ fun WeightDetailScreen(
                                     index = index,
                                     count = TimeRange.entries.size,
                                 ),
+                            enabled = !uiState.isLoading,
                             label = { Text(range.label) },
                         )
                     }
@@ -211,24 +235,31 @@ fun WeightDetailScreen(
             item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
 
             item(key = "weight_chart") {
-                TrendCard(
-                    title = "Weight Trend",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                ) {
-                    TrendChart(
-                        points = uiState.dailyWeights,
-                        rangeStartMs = uiState.rangeStartMs,
-                        rangeDays = uiState.selectedRange.days,
-                        metricName = "Weight",
-                        baselineUnit = unitLabel,
-                        baseline = uiState.averageWeight,
-                        baselineLabel = "Average",
-                        baselineDecimalPlaces = 1,
-                        axisDecimalPlaces = 1,
-                        scrollState = chartScrollState,
-                        zoomState = chartZoomState,
-                        zoneBands = weightBands,
+                if (uiState.isLoading) {
+                    SkeletonCard(
+                        height = 250.dp,
+                        modifier = Modifier.padding(horizontal = 16.dp),
                     )
+                } else {
+                    TrendCard(
+                        title = "Weight Trend",
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    ) {
+                        TrendChart(
+                            points = uiState.dailyWeights,
+                            rangeStartMs = uiState.rangeStartMs,
+                            rangeDays = uiState.selectedRange.days,
+                            metricName = "Weight",
+                            baselineUnit = unitLabel,
+                            baseline = uiState.averageWeight,
+                            baselineLabel = "Average",
+                            baselineDecimalPlaces = 1,
+                            axisDecimalPlaces = 1,
+                            scrollState = chartScrollState,
+                            zoomState = chartZoomState,
+                            zoneBands = weightBands,
+                        )
+                    }
                 }
             }
 

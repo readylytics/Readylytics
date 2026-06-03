@@ -39,6 +39,7 @@ data class BodyFatDetailUiState(
     val rangeStartMs: Long = 0,
     val bodyFatDisplay: String? = null,
     val optimalRangeDisplay: String? = null,
+    val isLoading: Boolean = true,
 )
 
 @HiltViewModel
@@ -113,13 +114,12 @@ class BodyFatDetailViewModel
                         rangeStartMs = rangeStart.toEpochMilli(),
                         bodyFatDisplay = latest?.bodyFatPercent?.let { MetricFormatter.formatBodyFatNumericOnly(it) },
                         optimalRangeDisplay =
-                            if (optimalMax >
-                                0f
-                            ) {
+                            if (optimalMax > 0f) {
                                 "0–${MetricFormatter.formatBodyFat(optimalMax)}"
                             } else {
                                 null
                             },
+                        isLoading = false,
                     )
                 }
             }.stateIn(

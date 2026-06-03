@@ -35,6 +35,7 @@ data class BloodPressureDetailUiState(
     val systolicStatus: MetricStatus = MetricStatus.CALIBRATING,
     val diastolicStatus: MetricStatus = MetricStatus.CALIBRATING,
     val statusLabel: String? = null,
+    val isLoading: Boolean = true,
 )
 
 @HiltViewModel
@@ -139,6 +140,7 @@ class BloodPressureDetailViewModel
                         systolicStatus = systolicStatus,
                         diastolicStatus = diastolicStatus,
                         statusLabel = statusLabel,
+                        isLoading = false,
                     )
                 }
             }.stateIn(

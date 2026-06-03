@@ -224,7 +224,7 @@ class VitalsViewModel
                 }.stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
-                    initialValue = VitalsUiState(),
+                    initialValue = VitalsUiState(isLoading = true),
                 )
 
         private fun calculateMedian(points: List<DailyDataPoint>): Float? {
