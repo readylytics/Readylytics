@@ -50,14 +50,15 @@ class BodyFatDetailViewModelTest {
             mockk {
                 every { userPreferences } returns MutableStateFlow(UserPreferences())
             }
-        val mockDao = mockk<com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao> {
-            every { observeEarliestDateMs() } returns flowOf(null)
-            every { observeAllDateMidnightMs() } returns flowOf(emptyList())
-        }
-        selectedDateRepo = SelectedDateRepository(
-            dao = mockDao,
-            appScope = CoroutineScope(testDispatcher)
-        )
+        val mockDao =
+            mockk<com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao> {
+                every { observeEarliestDateMs() } returns flowOf(null)
+            }
+        selectedDateRepo =
+            SelectedDateRepository(
+                dao = mockDao,
+                appScope = CoroutineScope(testDispatcher),
+            )
     }
 
     private fun createViewModel(): BodyFatDetailViewModel =

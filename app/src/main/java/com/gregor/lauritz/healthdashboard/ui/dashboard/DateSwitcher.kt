@@ -21,7 +21,6 @@ import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,8 +29,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -48,7 +47,6 @@ fun DateSwitcher(
     today: LocalDate = LocalDate.now(),
     onDateSelected: (LocalDate) -> Unit = {},
     earliestDate: LocalDate? = null,
-    availableDates: Set<LocalDate>? = null,
 ) {
     val label = remember(selectedDate) { formatDateLabel(selectedDate, today) }
     val canGoForward = selectedDate < today
@@ -89,9 +87,10 @@ fun DateSwitcher(
             Icon(
                 imageVector = Icons.Default.DateRange,
                 contentDescription = "Open date picker",
-                modifier = Modifier
-                    .padding(start = 4.dp)
-                    .size(18.dp),
+                modifier =
+                    Modifier
+                        .padding(start = 4.dp)
+                        .size(18.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -121,13 +120,8 @@ fun DateSwitcher(
                 initialSelectedDateMillis = selectedDate.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli(),
                 selectableDates =
                     object : SelectableDates {
-                        override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                            val isWithinBounds = utcTimeMillis <= todayMs && (earliestMs == null || utcTimeMillis >= earliestMs)
-                            if (!isWithinBounds) return false
-                            if (availableDates.isNullOrEmpty()) return true
-                            val date = Instant.ofEpochMilli(utcTimeMillis).atZone(ZoneId.of("UTC")).toLocalDate()
-                            return date == today || availableDates.contains(date)
-                        }
+                        override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                            utcTimeMillis <= todayMs && (earliestMs == null || utcTimeMillis >= earliestMs)
 
                         override fun isSelectableYear(year: Int): Boolean {
                             val earliestYear = earliestDate?.year ?: 1900

@@ -45,7 +45,6 @@ fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val circadian by viewModel.circadianConsistencyFlow.collectAsStateWithLifecycle()
     val earliestDate by viewModel.earliestDate.collectAsStateWithLifecycle()
-    val availableDates by viewModel.availableDates.collectAsStateWithLifecycle()
 
     SleepScreen(
         uiState = uiState,
@@ -54,7 +53,6 @@ fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
         onNextDay = viewModel::onNextDay,
         onDateSelected = viewModel::onDateSelected,
         earliestDate = earliestDate,
-        availableDates = availableDates,
     )
 }
 
@@ -66,7 +64,6 @@ fun SleepScreen(
     onNextDay: () -> Unit,
     onDateSelected: (java.time.LocalDate) -> Unit = {},
     earliestDate: java.time.LocalDate? = null,
-    availableDates: Set<java.time.LocalDate> = emptySet(),
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -86,7 +83,6 @@ fun SleepScreen(
                     onNextDay = onNextDay,
                     onDateSelected = onDateSelected,
                     earliestDate = earliestDate,
-                    availableDates = availableDates,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

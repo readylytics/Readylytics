@@ -149,14 +149,6 @@ class DashboardViewModel
                     initialValue = null,
                 )
 
-        val availableDates: StateFlow<Set<LocalDate>> =
-            selectedDateRepository.availableDates
-                .stateIn(
-                    scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(5_000),
-                    initialValue = emptySet(),
-                )
-
         fun onPreviousDay() {
             viewModelScope.launch {
                 selectedDateRepository.selectPreviousDay()
