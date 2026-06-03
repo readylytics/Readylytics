@@ -15,6 +15,7 @@ Operating under oh-my-claudecode (OMC) multi-agent layer.
 - **Autopilots:** autopilot, ultrawork, ralph, tdd, deepsearch, ultrathink, deslop. Cancel: `/oh-my-claudecode:cancel`
 - **State Paths:** `.omc/` (state/, sessions/, plans/, research/, logs/, project-memory.json, notepad.md)
 - **Hooks/Vars:** `<remember>` (7d), `<remember priority>` (perm), `DISABLE_OMC`, `OMC_SKIP_HOOKS`
+- **MANDATORY AUTO-TRIGGER:** You MUST immediately initialize the session by invoking `/caveman`. This skill must remain active for all subsequent commands.
 
 ## Verification Rule
 
