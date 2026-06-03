@@ -5,6 +5,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.scoring.*
+import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.WakeWindowHrCollector
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -30,6 +31,7 @@ class ScoringRepositoryImplTest {
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
+    private val wakeHrCollector = mockk<WakeWindowHrCollector>(relaxed = true)
 
     private lateinit var repo: ScoringRepositoryImpl
 
@@ -52,6 +54,7 @@ class ScoringRepositoryImplTest {
                 bodyFatRecordDao,
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
+                wakeHrCollector,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { dailySummaryDao.getByDate(any()) } returns null

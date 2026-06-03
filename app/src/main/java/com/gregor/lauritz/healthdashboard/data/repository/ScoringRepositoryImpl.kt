@@ -23,6 +23,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConfigFactory
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
+import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.WakeWindowHrCollector
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +59,7 @@ class ScoringRepositoryImpl
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
+        private val wakeHrCollector: WakeWindowHrCollector,
     ) : ScoringRepository {
         private val calculationMutex = Mutex()
 
@@ -246,10 +248,25 @@ class ScoringRepositoryImpl
                             toMs = nextDayMidnightMs,
                             hrvBaselineOverride = prefs.hrvBaselineOverride,
                         )
+
+                    // Collect RHR baseline from wake window to match full calibrated path behavior
+                    val rhrWakeResult =
+                        if (session != null) {
+                            wakeHrCollector.collect(
+                                session = session,
+                                dayMidnight = dayMidnight,
+                                percentile = prefs.restingHrPercentile,
+                            )
+                        } else {
+                            null
+                        }
+
                     summary =
                         summary.copy(
                             hrvBaseline = calibHrvBaseline,
                             rhrBpm = rhrBaselineValue,
+                            restingHrBaseline = rhrWakeResult?.restingHrBaseline,
+                            rhrRatio = rhrWakeResult?.restingHrRatio,
                             baselineVersion = 2,
                         )
 
