@@ -282,7 +282,7 @@ class ScoringRepositoryImpl
                     baselineComputer.computeHrvWindowsBetween(
                         fromMs = dayMidnightMs,
                         toMs = nextDayMidnightMs,
-                        excludeSessionId = null,
+                        excludeSessionId = session?.id,
                     )
                 val computedHrvBaseline =
                     baselineComputer.computeHrvBaselineBetween(

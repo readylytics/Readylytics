@@ -225,13 +225,13 @@ class HealthSyncUseCase
                             dailySummaryDao.clearFrozenBaselines()
                             val earliestMs = dailySummaryDao.getEarliestDateMs()
                             if (earliestMs != null) {
-                                val nowMs = System.currentTimeMillis()
-                                var cursor = earliestMs
-                                while (cursor <= nowMs) {
-                                    val day = Instant.ofEpochMilli(cursor).atZone(zoneId).toLocalDate()
-                                    val steps = stepsMap[day] ?: 0L
-                                    syncDayScoring(day, steps)
-                                    cursor += 86_400_000L
+                                val startDate = Instant.ofEpochMilli(earliestMs).atZone(zoneId).toLocalDate()
+                                val endDate = LocalDate.now(zoneId)
+                                var current = startDate
+                                while (!current.isAfter(endDate)) {
+                                    val steps = stepsMap[current] ?: 0L
+                                    syncDayScoring(current, steps)
+                                    current = current.plusDays(1)
                                 }
                             }
                             dailySummaryDao.setBaselineVersion(2)
