@@ -55,13 +55,14 @@ class PhysiologySettingsViewModel
         val uiState: StateFlow<PhysiologySettingsState> =
             settingsRepo.userPreferences
                 .map { prefs ->
-                    val birthDate = prefs.birthDate?.let {
-                        try {
-                            LocalDate.parse(it)
-                        } catch (e: Exception) {
-                            null
+                    val birthDate =
+                        prefs.birthDate?.let {
+                            try {
+                                LocalDate.parse(it)
+                            } catch (e: Exception) {
+                                null
+                            }
                         }
-                    }
                     PhysiologySettingsState(
                         physiologyProfile = prefs.physiologyProfile,
                         age = prefs.age,

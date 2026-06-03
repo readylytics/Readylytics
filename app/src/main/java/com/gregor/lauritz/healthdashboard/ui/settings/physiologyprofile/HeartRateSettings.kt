@@ -3,7 +3,6 @@ package com.gregor.lauritz.healthdashboard.ui.settings.physiologyprofile
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,7 +24,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,8 +36,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.preferences.Gender
-import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
-import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
 import com.gregor.lauritz.healthdashboard.ui.components.BirthdayDatePickerField
 import com.gregor.lauritz.healthdashboard.ui.settings.HeartRateZonesState
 import com.gregor.lauritz.healthdashboard.ui.settings.HeightInputField
@@ -47,7 +43,6 @@ import com.gregor.lauritz.healthdashboard.ui.settings.PhysiologySettingsState
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsExpandState
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
-import java.time.LocalDate
 import kotlin.math.roundToInt
 
 @Composable
@@ -397,7 +392,6 @@ fun CompactOutlinedTextField(
         keyboardOptions = keyboardOptions,
     )
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

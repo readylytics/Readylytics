@@ -1,7 +1,5 @@
 package com.gregor.lauritz.healthdashboard.domain.validation
 
-import java.time.LocalDate
-
 object SettingsValidators {
     val BIRTHDAY_DATE_RULE = BirthdayDateRule()
 

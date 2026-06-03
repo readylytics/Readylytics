@@ -3,7 +3,6 @@ package com.gregor.lauritz.healthdashboard.data.preferences
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.Period
 
 enum class BackupSchedule { MANUAL, DAILY, WEEKLY }
 
@@ -155,7 +154,11 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
     )
 }
 
-private fun migrateBirthdateFields(day: Int, month: Int, year: Int): String? {
+private fun migrateBirthdateFields(
+    day: Int,
+    month: Int,
+    year: Int,
+): String? {
     if (day == 0 || month == 0 || year == 0) return null
 
     return try {

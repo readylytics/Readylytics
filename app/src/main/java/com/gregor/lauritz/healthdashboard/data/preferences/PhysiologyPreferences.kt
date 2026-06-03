@@ -6,7 +6,6 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import java.time.Clock
 import java.time.LocalDate
 import java.time.Period
-import java.time.YearMonth
 import javax.inject.Inject
 
 internal class PhysiologyPreferences

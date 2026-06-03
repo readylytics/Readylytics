@@ -107,8 +107,7 @@ fun UserPreferences.toProto(): UserPreferencesProto {
                     // If parsing fails, keep default values
                 }
             }
-        }
-        .setHrvOptimalThreshold(domain.hrvOptimalThreshold)
+        }.setHrvOptimalThreshold(domain.hrvOptimalThreshold)
         .setHrvWarningThreshold(domain.hrvWarningThreshold)
         .setRhrOptimalThreshold(domain.rhrOptimalThreshold)
         .setRhrWarningThreshold(domain.rhrWarningThreshold)
@@ -156,7 +155,7 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         when (domain.unitSystem) {
             UnitSystem.METRIC -> UnitSystemProto.UNIT_METRIC
             UnitSystem.IMPERIAL -> UnitSystemProto.UNIT_IMPERIAL
-        }
+        },
     )
 
     return builder.build()

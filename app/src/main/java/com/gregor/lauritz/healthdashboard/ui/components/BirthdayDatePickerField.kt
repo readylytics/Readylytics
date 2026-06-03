@@ -40,26 +40,26 @@ fun BirthdayDatePickerField(
             modifier = Modifier.fillMaxWidth(),
         )
         Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clickable(onClick = onFieldClick),
+            modifier =
+                Modifier
+                    .matchParentSize()
+                    .clickable(onClick = onFieldClick),
         )
     }
 
     if (showDialog) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = birthDate?.atStartOfDay(ZoneId.of("UTC"))?.toInstant()?.toEpochMilli(),
-            yearRange = 1900..LocalDate.now().year,
-            selectableDates = object : SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                    return utcTimeMillis <= System.currentTimeMillis()
-                }
+        val datePickerState =
+            rememberDatePickerState(
+                initialSelectedDateMillis = birthDate?.atStartOfDay(ZoneId.of("UTC"))?.toInstant()?.toEpochMilli(),
+                yearRange = 1900..LocalDate.now().year,
+                selectableDates =
+                    object : SelectableDates {
+                        override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                            utcTimeMillis <= System.currentTimeMillis()
 
-                override fun isSelectableYear(year: Int): Boolean {
-                    return year in 1900..LocalDate.now().year
-                }
-            },
-        )
+                        override fun isSelectableYear(year: Int): Boolean = year in 1900..LocalDate.now().year
+                    },
+            )
 
         DatePickerDialog(
             onDismissRequest = onDialogDismiss,
@@ -72,7 +72,7 @@ fun BirthdayDatePickerField(
                             onDateSelected(date)
                             onDialogDismiss()
                         }
-                    }
+                    },
                 ) {
                     Text("OK")
                 }
