@@ -312,7 +312,17 @@ class ScoringRepositoryImpl
 
                 if (session != null) {
                     val sleepMetricsResult =
-                        computeSleepMetricsUseCase(session, dayMidnight, targetDate, prefs, summary, loadScore, zoneId)
+                        computeSleepMetricsUseCase(
+                            session = session,
+                            dayMidnight = dayMidnight,
+                            targetDate = targetDate,
+                            prefs = prefs,
+                            summary = summary,
+                            loadScore = loadScore,
+                            zoneId = zoneId,
+                            rhrBaselineValue = rhrBaselineValue,
+                            dayEndMs = nextDayMidnightMs,
+                        )
                     summary = sleepMetricsResult.getOrNull() ?: summary
                 }
 

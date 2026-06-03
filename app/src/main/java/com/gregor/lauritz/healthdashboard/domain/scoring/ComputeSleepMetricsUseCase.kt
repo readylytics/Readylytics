@@ -44,6 +44,8 @@ class ComputeSleepMetricsUseCase
             summary: DailySummaryEntity,
             loadScore: Float,
             zoneId: ZoneId,
+            rhrBaselineValue: Float,
+            dayEndMs: Long,
         ): Result<DailySummaryEntity> =
             try {
                 val installDate =
@@ -96,7 +98,7 @@ class ComputeSleepMetricsUseCase
                     // computeHrvWindows returns null only when the baseline is frozen (US-B6);
                     // the outer frozenBaseline check already routes frozen days to the other branch,
                     // so null here is an unexpected race — fall back to empty windows.
-                    rhrValues = baselineComputer.rhrHistory(dayMidnight, prefs.restingHrPercentile)
+                    rhrValues = baselineComputer.rhrHistoryBetween(dayMidnight.toEpochMilli(), dayEndMs, prefs.restingHrPercentile)
                     val hrvWindows =
                         baselineComputer.computeHrvWindows(
                             dayMidnight = dayMidnight,
@@ -147,7 +149,7 @@ class ComputeSleepMetricsUseCase
                         // Frozen baseline but stored RHR is null — use override or default
                         (prefs.rhrBaselineOverride ?: ScoringConstants.DEFAULT_RHR_BPM).toInt()
                     } else {
-                        baselineComputer.resolveBaselineRhrRounded(rhrValues, prefs.rhrBaselineOverride)
+                        rhrBaselineValue.roundToInt()
                     }
 
                 val allWakeHrRecords =
