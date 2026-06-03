@@ -98,6 +98,11 @@ interface DailySummaryDao {
     @Query("SELECT MIN(dateMidnightMs) FROM daily_summaries")
     suspend fun getEarliestDateMs(): Long?
 
+    @Query("SELECT MIN(dateMidnightMs) FROM daily_summaries")
+    fun _observeEarliestDateMs(): Flow<Long?>
+
+    fun observeEarliestDateMs(): Flow<Long?> = _observeEarliestDateMs().distinctUntilChanged()
+
     // Call only after re-computing baselines; stamps successfully recomputed rows.
     @Query(
         "UPDATE daily_summaries SET baseline_version = :version",

@@ -162,4 +162,7 @@ interface HeartRateDao {
             "ORDER BY sessionId, beatsPerMinute ASC",
     )
     suspend fun getSleepHrProjectionForSessions(sessionIds: List<String>): List<SleepHrSample>
+
+    @Query("SELECT MIN(timestampMs) FROM heart_rate_records")
+    fun observeEarliestHrTime(): Flow<Long?>
 }

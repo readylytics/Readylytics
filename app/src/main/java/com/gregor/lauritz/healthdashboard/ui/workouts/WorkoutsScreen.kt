@@ -32,11 +32,14 @@ fun WorkoutsRoute(
     onWorkoutClick: (String) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val earliestDate by viewModel.earliestDate.collectAsStateWithLifecycle()
     WorkoutsScreen(
         uiState = uiState,
         onRangeSelected = viewModel::onRangeSelected,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
+        onDateSelected = viewModel::onDateSelected,
+        earliestDate = earliestDate,
         onWorkoutClick = onWorkoutClick,
     )
 }
@@ -49,6 +52,8 @@ fun WorkoutsScreen(
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onWorkoutClick: (String) -> Unit,
+    onDateSelected: (java.time.LocalDate) -> Unit = {},
+    earliestDate: java.time.LocalDate? = null,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -79,6 +84,8 @@ fun WorkoutsScreen(
                     selectedDate = uiState.selectedDate,
                     onPreviousDay = onPreviousDay,
                     onNextDay = onNextDay,
+                    onDateSelected = onDateSelected,
+                    earliestDate = earliestDate,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

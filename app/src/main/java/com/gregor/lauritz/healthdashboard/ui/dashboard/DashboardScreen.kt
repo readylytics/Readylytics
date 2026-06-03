@@ -60,6 +60,7 @@ fun DashboardRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val earliestDate by viewModel.earliestDate.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(errorMessage) {
@@ -74,6 +75,8 @@ fun DashboardRoute(
         onRefresh = viewModel::onRefresh,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
+        onDateSelected = { viewModel.onEvent(DashboardEvent.DateSelected(it)) },
+        earliestDate = earliestDate,
         onNavigateToSleep = onNavigateToSleep,
         onNavigateToWorkouts = onNavigateToWorkouts,
         onNavigateToRhr = onNavigateToRhr,
@@ -115,6 +118,8 @@ fun DashboardScreen(
     onCardVisibilityChanged: (CardId, Boolean) -> Unit = { _, _ -> },
     onReorderCards: (List<com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration>) -> Unit = {},
     onResetToDefaults: () -> Unit = {},
+    onDateSelected: (LocalDate) -> Unit = {},
+    earliestDate: LocalDate? = null,
     modifier: Modifier = Modifier,
 ) {
     val summary = uiState.summary
@@ -153,6 +158,8 @@ fun DashboardScreen(
                         onPreviousDay = onPreviousDay,
                         onNextDay = onNextDay,
                         today = today,
+                        onDateSelected = onDateSelected,
+                        earliestDate = earliestDate,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }

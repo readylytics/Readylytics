@@ -50,6 +50,7 @@ fun VitalsRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val baselines by viewModel.baselinesFlow.collectAsStateWithLifecycle()
+    val earliestDate by viewModel.earliestDate.collectAsStateWithLifecycle()
 
     VitalsScreen(
         uiState = uiState,
@@ -58,6 +59,8 @@ fun VitalsRoute(
         onRangeSelected = viewModel::onRangeSelected,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
+        onDateSelected = viewModel::onDateSelected,
+        earliestDate = earliestDate,
         onNavigateToHrv = onNavigateToHrv,
         onNavigateToRhr = onNavigateToRhr,
     )
@@ -74,6 +77,8 @@ fun VitalsScreen(
     onNextDay: () -> Unit,
     onNavigateToHrv: () -> Unit,
     onNavigateToRhr: () -> Unit,
+    onDateSelected: (java.time.LocalDate) -> Unit = {},
+    earliestDate: java.time.LocalDate? = null,
     modifier: Modifier = Modifier,
 ) {
     // Single shared scroll + zoom state so all three trend charts stay in sync.
@@ -102,6 +107,8 @@ fun VitalsScreen(
                     selectedDate = uiState.selectedDate,
                     onPreviousDay = onPreviousDay,
                     onNextDay = onNextDay,
+                    onDateSelected = onDateSelected,
+                    earliestDate = earliestDate,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

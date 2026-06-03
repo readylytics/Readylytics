@@ -9,11 +9,13 @@ import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryReposito
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -46,7 +48,15 @@ class StepDetailViewModelTest {
             mockk {
                 every { userPreferences } returns MutableStateFlow(UserPreferences())
             }
-        selectedDateRepo = SelectedDateRepository()
+        val mockDao =
+            mockk<com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao> {
+                every { observeEarliestDateMs() } returns flowOf(null)
+            }
+        selectedDateRepo =
+            SelectedDateRepository(
+                dao = mockDao,
+                appScope = CoroutineScope(testDispatcher),
+            )
     }
 
     private fun createViewModel(): StepDetailViewModel =

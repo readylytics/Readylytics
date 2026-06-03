@@ -79,4 +79,7 @@ interface SleepSessionDao {
 
     @Query("SELECT DISTINCT deviceName FROM sleep_sessions WHERE deviceName IS NOT NULL AND deviceName != ''")
     suspend fun getDistinctDeviceNames(): List<String>
+
+    @Query("SELECT MIN(startTime) FROM sleep_sessions")
+    fun observeEarliestSessionTime(): Flow<Long?>
 }
