@@ -116,6 +116,7 @@ fun TrendChart(
     baselineLabel: String = "Baseline",
     baselineDecimalPlaces: Int = 0,
     axisDecimalPlaces: Int = 0,
+    tooltipDecimalPlaces: Int = axisDecimalPlaces,
     showBaseline: Boolean = true,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
     // Zoom is only meaningful for ranges > 7 days.
@@ -264,10 +265,16 @@ fun TrendChart(
             val value = nearest?.value
             val valueText =
                 if (value != null) {
+                    val formattedValue =
+                        if (tooltipDecimalPlaces == 0) {
+                            value.roundToInt().toString()
+                        } else {
+                            String.format("%.${tooltipDecimalPlaces}f", value)
+                        }
                     if (baselineUnit.equals("steps", ignoreCase = true)) {
-                        "${value.toInt()}"
+                        formattedValue
                     } else {
-                        "${value.toInt()} $baselineUnit"
+                        "$formattedValue $baselineUnit"
                     }
                 } else {
                     "—"

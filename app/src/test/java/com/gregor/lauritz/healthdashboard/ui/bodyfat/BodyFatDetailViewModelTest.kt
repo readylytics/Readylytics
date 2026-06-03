@@ -89,7 +89,7 @@ class BodyFatDetailViewModelTest {
 
             val state = viewModel.uiState.first { it.bodyFatDisplay != null }
 
-            assertEquals("18.5%", state.bodyFatDisplay)
+            assertEquals("18.5", state.bodyFatDisplay)
         }
 
     @Test

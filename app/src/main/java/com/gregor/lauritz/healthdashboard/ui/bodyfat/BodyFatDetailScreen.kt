@@ -113,7 +113,8 @@ fun BodyFatDetailScreen(
                             status = uiState.bodyFatStatus,
                             displayText = uiState.bodyFatDisplay,
                             tooltipDescription =
-                                "Optimal: ${uiState.optimalRangeDisplay ?: "—"}\n\n" +
+                                "Current: ${uiState.bodyFatDisplay}%\n" +
+                                    "Optimal: ${uiState.optimalRangeDisplay ?: "—"}\n\n" +
                                     "${uiState.gender}, Age ${uiState.age}",
                         )
                     }

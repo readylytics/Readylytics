@@ -87,7 +87,7 @@ class WeightDetailViewModelTest {
 
             val state = viewModel.uiState.first { it.weightDisplay != null }
 
-            assertEquals("75.0 kg", state.weightDisplay)
+            assertEquals("75.0", state.weightDisplay)
         }
 
     @Test
@@ -104,8 +104,8 @@ class WeightDetailViewModelTest {
 
             val state = viewModel.uiState.first { it.weightDisplay != null }
 
-            // 75 kg * 2.20462 = 165.3465 lbs -> "165.3 lbs"
-            assertEquals("165.3 lbs", state.weightDisplay)
+            // 75 kg * 2.20462 = 165.3465 lbs -> "165.3"
+            assertEquals("165.3", state.weightDisplay)
         }
 
     @Test
