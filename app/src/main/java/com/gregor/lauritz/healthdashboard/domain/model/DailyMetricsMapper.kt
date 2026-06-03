@@ -52,10 +52,10 @@ object DailyMetricsMapper {
             spo2Rounded = summary.avgSleepingSpo2?.roundToInt(),
             // Baseline diffs + arrows
             rhrBaselineDiff = diff(summary.nocturnalRhr, rhrBaselineRounded),
-            hrvBaselineDiff = diff(summary.nocturnalHrv, summary.hrvBaseline),
+            hrvBaselineDiff = diff(summary.nocturnalHrv, hrvBaselineRounded),
             restingHrBaselineDiff = diff(summary.restingHeartRate, summary.restingHrBaseline),
             rhrBaselineArrow = arrow(summary.nocturnalRhr, rhrBaselineRounded),
-            hrvBaselineArrow = arrow(summary.nocturnalHrv, summary.hrvBaseline),
+            hrvBaselineArrow = arrow(summary.nocturnalHrv, hrvBaselineRounded),
             restingHrBaselineArrow = arrow(summary.restingHeartRate, summary.restingHrBaseline),
             // Display strings
             sleepDurationDisplay = formatSleepDuration(summary.sleepDurationMinutes),
