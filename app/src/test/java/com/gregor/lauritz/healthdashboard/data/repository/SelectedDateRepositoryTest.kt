@@ -1,6 +1,12 @@
 package com.gregor.lauritz.healthdashboard.data.repository
 
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -9,10 +15,15 @@ import kotlin.test.assertEquals
 
 class SelectedDateRepositoryTest {
     private lateinit var repository: SelectedDateRepository
+    private val dao: DailySummaryDao =
+        mockk {
+            every { observeEarliestDateMs() } returns flowOf(null)
+        }
+    private val testScope = CoroutineScope(UnconfinedTestDispatcher())
 
     @Before
     fun setUp() {
-        repository = SelectedDateRepository()
+        repository = SelectedDateRepository(dao = dao, appScope = testScope)
     }
 
     @Test

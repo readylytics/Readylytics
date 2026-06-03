@@ -29,7 +29,7 @@ class SelectedDateRepository
 
         val earliestDate: StateFlow<LocalDate?> =
             dao.observeEarliestDateMs()
-                .map { ms -> ms?.let { Instant.ofEpochMilli(it).atZone(ZoneId.of("UTC")).toLocalDate() } }
+                .map { ms -> ms?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate() } }
                 .stateIn(scope = appScope, started = SharingStarted.Eagerly, initialValue = null)
 
         private val dateMutex = Mutex()

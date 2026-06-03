@@ -19,6 +19,7 @@ import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -116,12 +117,12 @@ fun DateSwitcher(
                         showDatePicker = false
                     },
                 ) {
-                    Text("OK")
+                    Text(stringResource(android.R.string.ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
+                    Text(stringResource(android.R.string.cancel))
                 }
             },
         ) {
