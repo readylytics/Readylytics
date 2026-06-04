@@ -219,7 +219,7 @@ private fun MetricsGrid(
                     value = session?.let { "${it.efficiency.roundToPercentInt()}%" } ?: "—",
                     secondaryText = "Goal: >85%",
                     status = efficiencyStatus,
-                    tooltip = "The percentage of time actually asleep while in bed. (Goal: >85%).",
+                    tooltip = "The percentage of time actually asleep while in bed.",
                     onClick = null,
                 )
             }
@@ -234,7 +234,7 @@ private fun MetricsGrid(
                     value = metrics?.deepSleepPercentDisplay ?: "—",
                     secondaryText = "Target: 15–25%",
                     status = deepStatus,
-                    tooltip = "Time in Stage 3 (Physical repair). Target: 15–25% of total sleep.",
+                    tooltip = "Time in Stage 3 (Physical repair).",
                     onClick = null,
                 )
             }
@@ -244,7 +244,7 @@ private fun MetricsGrid(
                     value = metrics?.remSleepPercentDisplay ?: "—",
                     secondaryText = "Target: 20–25%",
                     status = remStatus,
-                    tooltip = "Time in Rapid Eye Movement. Target: 20–25% of total sleep.",
+                    tooltip = "Time in Rapid Eye Movement.",
                     onClick = null,
                 )
             }

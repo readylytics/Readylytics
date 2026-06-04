@@ -181,7 +181,7 @@
 
     <!-- Vitals Tab & Oxygen Saturation -->
     <string name="tab_vitals">Vitals</string>
-    <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last night. Goal: >95%.\n\n• Optimal: 98–100%\n• Normal: 95–97%\n• Warning: 90–94%\n• Poor: &lt;90%</string>
+    <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last night.\n\n• Optimal: 98–100%\n• Normal: 95–97%\n• Warning: 90–94%\n• Poor: &lt;90%</string>
     <string name="spo2_optimal">Optimal</string>
     <string name="spo2_normal">Normal</string>
     <string name="spo2_warning">Warning</string>
