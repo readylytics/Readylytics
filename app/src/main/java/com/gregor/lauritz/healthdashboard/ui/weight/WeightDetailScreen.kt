@@ -26,7 +26,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
@@ -111,11 +113,11 @@ fun WeightDetailScreen(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             TopAppBar(
-                title = { Text("Weight") },
+                title = { Text(stringResource(R.string.label_weight)) },
                 windowInsets = WindowInsets(0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
             )
@@ -183,32 +185,30 @@ fun WeightDetailScreen(
                     ) {
                         M3ScoreDial(
                             score = uiState.latestWeight,
-                            label = "Weight ($unitLabel)",
+                            label = stringResource(R.string.label_weight_unit_format, unitLabel),
                             maxScore = weightMaxScore,
                             status = bmiStatus,
                             displayText = uiState.weightDisplay,
-                            tooltipDescription = "Latest weight: ${uiState.weightDisplay?.let {
-                                "$it $unitLabel"
-                            } ?: "—"}\nHeight: $heightTooltip",
+                            tooltipDescription = stringResource(
+                                R.string.tooltip_weight_current,
+                                uiState.weightDisplay?.let { "$it $unitLabel" } ?: "—",
+                                heightTooltip,
+                            ),
                         )
                         M3ScoreDial(
                             score = uiState.bmi,
-                            label = "BMI",
+                            label = stringResource(R.string.label_bmi),
                             maxScore = 40f,
                             status = bmiStatus,
                             displayText = uiState.bmiDisplay,
-                            tooltipDescription =
-                                "Body Mass Index (Normal: 18.5–24.9)\n\n" +
-                                    "Under 25: Normal\n" +
-                                    "25-30: Overweight\n" +
-                                    "30+: Obese",
+                            tooltipDescription = stringResource(R.string.tooltip_bmi),
                         )
                     }
                 }
             }
 
             item(key = "trends_header") {
-                SectionHeader(title = "Trends")
+                SectionHeader(title = stringResource(R.string.label_trends))
                 Spacer(Modifier.height(8.dp))
                 SingleChoiceSegmentedButtonRow(
                     modifier =
@@ -242,7 +242,7 @@ fun WeightDetailScreen(
                     )
                 } else {
                     TrendCard(
-                        title = "Weight Trend",
+                        title = stringResource(R.string.label_weight_trend),
                         modifier = Modifier.padding(horizontal = 16.dp),
                     ) {
                         TrendChart(
@@ -252,7 +252,7 @@ fun WeightDetailScreen(
                             metricName = "Weight",
                             baselineUnit = unitLabel,
                             baseline = uiState.averageWeight,
-                            baselineLabel = "Average",
+                            baselineLabel = stringResource(R.string.label_average),
                             baselineDecimalPlaces = 1,
                             axisDecimalPlaces = 1,
                             scrollState = chartScrollState,

@@ -7,7 +7,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 
 @Composable
 fun FeedbackSection(onDismiss: () -> Unit) {
@@ -22,7 +24,7 @@ fun FeedbackSection(onDismiss: () -> Unit) {
                     .padding(horizontal = 16.dp)
                     .padding(top = 16.dp),
         ) {
-            Text("Continue to App")
+            Text(stringResource(R.string.action_continue_to_app))
         }
     }
 }

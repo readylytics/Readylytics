@@ -17,7 +17,7 @@ fun CircadianConsistencyCard(
 ) {
     val scoreText =
         when (result) {
-            is CircadianConsistencyResult.Calibrating -> "Calibrating"
+            is CircadianConsistencyResult.Calibrating -> stringResource(R.string.spo2_calibrating)
             is CircadianConsistencyResult.MissingData -> "—"
             is CircadianConsistencyResult.Ready -> "${result.score.roundToPercentInt()}%"
         }
@@ -27,7 +27,11 @@ fun CircadianConsistencyCard(
             is CircadianConsistencyResult.MissingData,
             -> null
             is CircadianConsistencyResult.Ready ->
-                "Median: ${result.medianBedtimeMinutes.toTimeString()}→${result.medianWakeMinutes.toTimeString()}"
+                stringResource(
+                    R.string.label_circadian_median,
+                    result.medianBedtimeMinutes.toTimeString(),
+                    result.medianWakeMinutes.toTimeString(),
+                )
         }
 
     val thresholdMinutes =
@@ -40,7 +44,7 @@ fun CircadianConsistencyCard(
     val tooltipText = stringResource(R.string.tooltip_circadian_score, thresholdMinutes)
 
     MetricCard(
-        title = "Circadian Consistency",
+        title = stringResource(R.string.label_circadian_consistency),
         value = scoreText,
         secondaryText = windowText,
         status = result.toStatus(),

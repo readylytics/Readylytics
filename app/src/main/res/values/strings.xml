@@ -317,4 +317,74 @@
     <string name="hr_zone_range_display">%1$d - %2$d bpm</string>
     <string name="hr_zone_n">Zone %1$d</string>
     <string name="error_hr_zones_invalid">Invalid: All values must be 1–%1$d bpm and strictly increasing</string>
+
+    <!-- Dashboard & Calibration Messages -->
+    <string name="message_calibrating_banner">Calibrating — averages shown may improve as more nights are recorded.</string>
+    <string name="message_sleep_no_data_calibrating">No data — calibrating</string>
+    <string name="message_no_hr_data">No HR data available</string>
+    <string name="message_no_data_available">No data available</string>
+    <string name="action_continue_to_app">Continue to App</string>
+
+    <!-- Chart Labels & Section Headers -->
+    <string name="label_baseline">Baseline</string>
+    <string name="label_average">Average</string>
+    <string name="label_normal_limit">Normal Limit</string>
+    <string name="label_min">Min</string>
+    <string name="label_max">Max</string>
+    <string name="label_avg">Avg</string>
+    <string name="label_timeline">Timeline</string>
+    <string name="label_zone_breakdown">Zone Breakdown</string>
+    <string name="label_trends">Trends</string>
+    <string name="label_minutes">Minutes</string>
+    <string name="label_physiological_trends">Physiological Trends</string>
+    <string name="label_systolic_ref">Systolic (Ref: &lt;120)</string>
+    <string name="label_diastolic_ref">Diastolic (Ref: &lt;80)</string>
+
+    <!-- Steps -->
+    <string name="label_daily_steps">Daily Steps</string>
+    <string name="steps_goal_display">Goal: %1$s</string>
+    <string name="label_steps_today">Steps Today</string>
+    <string name="tooltip_steps_today">Total steps recorded today.\nGoal: %1$d steps.</string>
+
+    <!-- Heart Rate Card & Detail -->
+    <string name="tooltip_heart_rate_card">Today\'s heart rate range across all activities. Tap to see full timeline and zone breakdown.</string>
+    <string name="hr_no_data">-- bpm</string>
+    <string name="hr_avg_display">bpm  ·  avg %1$d</string>
+    <string name="hr_zone_0_range">&lt; %1$d bpm</string>
+    <string name="hr_zone_inner_range">%1$d–%2$d bpm</string>
+    <string name="hr_zone_above_range">&gt; %1$d bpm</string>
+
+    <!-- Weight Detail -->
+    <string name="label_weight">Weight</string>
+    <string name="label_weight_unit_format">Weight (%1$s)</string>
+    <string name="tooltip_weight_current">Latest weight: %1$s\nHeight: %2$s</string>
+    <string name="label_bmi">BMI</string>
+    <string name="tooltip_bmi">Body Mass Index (Normal: 18.5–24.9)\n\nUnder 25: Normal\n25-30: Overweight\n30+: Obese</string>
+    <string name="label_weight_trend">Weight Trend</string>
+
+    <!-- Body Fat Detail -->
+    <string name="label_body_fat_percentage">Body Fat Percentage</string>
+    <string name="label_body_fat">Body Fat</string>
+    <string name="tooltip_body_fat_current">Current: %1$s%%\nOptimal: %2$s\n\n%3$s, Age %4$d</string>
+    <string name="label_body_fat_trend">Body Fat Trend</string>
+
+    <!-- Blood Pressure Detail -->
+    <string name="label_blood_pressure">Blood Pressure</string>
+    <string name="label_systolic">Systolic</string>
+    <string name="tooltip_blood_pressure_systolic">Latest systolic blood pressure measurement.\n\nOptimal: &lt;120\nElevated: 120–129\nStage 1: 130–139\nStage 2: ≥140</string>
+    <string name="label_diastolic">Diastolic</string>
+    <string name="tooltip_blood_pressure_diastolic">Latest diastolic blood pressure measurement.\n\nOptimal: &lt;80\nStage 1: 80–89\nStage 2: ≥90</string>
+    <string name="label_blood_pressure_trend">Blood Pressure Trend</string>
+
+    <!-- Vitals Screen -->
+    <string name="label_hrv_rmssd">HRV (RMSSD)</string>
+    <string name="label_resting_heart_rate">Resting Heart Rate</string>
+    <string name="label_oxygen_saturation">Oxygen Saturation</string>
+
+    <!-- Workout Detail -->
+    <string name="label_workout_details">Workout Details</string>
+
+    <!-- Circadian Consistency -->
+    <string name="label_circadian_consistency">Circadian Consistency</string>
+    <string name="label_circadian_median">Median: %1$s→%2$s</string>
 </resources>

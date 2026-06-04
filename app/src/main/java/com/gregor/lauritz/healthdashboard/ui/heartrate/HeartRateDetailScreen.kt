@@ -119,9 +119,9 @@ fun HeartRateDetailScreen(
                                 .padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        HrStatCard("Min", "${uiState.minBpm} bpm", Modifier.weight(1f))
-                        HrStatCard("Max", "${uiState.maxBpm} bpm", Modifier.weight(1f))
-                        HrStatCard("Avg", "${uiState.avgBpm} bpm", Modifier.weight(1f))
+                        HrStatCard(stringResource(R.string.label_min), "${uiState.minBpm} bpm", Modifier.weight(1f))
+                        HrStatCard(stringResource(R.string.label_max), "${uiState.maxBpm} bpm", Modifier.weight(1f))
+                        HrStatCard(stringResource(R.string.label_avg), "${uiState.avgBpm} bpm", Modifier.weight(1f))
                     }
                 }
             }
@@ -129,7 +129,7 @@ fun HeartRateDetailScreen(
             item(key = "spacer_2") { Spacer(Modifier.height(12.dp)) }
 
             item(key = "chart_header") {
-                SectionHeader(title = "Timeline")
+                SectionHeader(title = stringResource(R.string.label_timeline))
                 Spacer(Modifier.height(4.dp))
             }
 
@@ -167,7 +167,7 @@ fun HeartRateDetailScreen(
             item(key = "spacer_3") { Spacer(Modifier.height(12.dp)) }
 
             item(key = "zone_header") {
-                SectionHeader(title = "Zone Breakdown")
+                SectionHeader(title = stringResource(R.string.label_zone_breakdown))
                 Spacer(Modifier.height(4.dp))
             }
 
@@ -182,17 +182,17 @@ fun HeartRateDetailScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         val zoneDefs =
                             listOf(
-                                Triple(0, "Zone 0", "< ${uiState.zone1MinBpm} bpm"),
-                                Triple(1, "Zone 1", "${uiState.zone1MinBpm}–${uiState.zone1MaxBpm} bpm"),
-                                Triple(2, "Zone 2", "${uiState.zone1MaxBpm + 1}–${uiState.zone2MaxBpm} bpm"),
-                                Triple(3, "Zone 3", "${uiState.zone2MaxBpm + 1}–${uiState.zone3MaxBpm} bpm"),
-                                Triple(4, "Zone 4", "${uiState.zone3MaxBpm + 1}–${uiState.zone4MaxBpm} bpm"),
-                                Triple(5, "Zone 5", "> ${uiState.zone4MaxBpm} bpm"),
+                                Triple(0, stringResource(R.string.hr_zone_n, 0), stringResource(R.string.hr_zone_0_range, uiState.zone1MinBpm)),
+                                Triple(1, stringResource(R.string.hr_zone_n, 1), stringResource(R.string.hr_zone_inner_range, uiState.zone1MinBpm, uiState.zone1MaxBpm)),
+                                Triple(2, stringResource(R.string.hr_zone_n, 2), stringResource(R.string.hr_zone_inner_range, uiState.zone1MaxBpm + 1, uiState.zone2MaxBpm)),
+                                Triple(3, stringResource(R.string.hr_zone_n, 3), stringResource(R.string.hr_zone_inner_range, uiState.zone2MaxBpm + 1, uiState.zone3MaxBpm)),
+                                Triple(4, stringResource(R.string.hr_zone_n, 4), stringResource(R.string.hr_zone_inner_range, uiState.zone3MaxBpm + 1, uiState.zone4MaxBpm)),
+                                Triple(5, stringResource(R.string.hr_zone_n, 5), stringResource(R.string.hr_zone_above_range, uiState.zone4MaxBpm)),
                             )
 
                         if (uiState.zoneTotals.isEmpty()) {
                             Text(
-                                text = "No data for this day",
+                                text = stringResource(R.string.dashboard_no_data),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

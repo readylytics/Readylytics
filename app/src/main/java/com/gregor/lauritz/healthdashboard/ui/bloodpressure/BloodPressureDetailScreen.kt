@@ -26,7 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
@@ -71,11 +73,11 @@ fun BloodPressureDetailScreen(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             TopAppBar(
-                title = { Text("Blood Pressure") },
+                title = { Text(stringResource(R.string.label_blood_pressure)) },
                 windowInsets = WindowInsets(0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
             )
@@ -114,30 +116,26 @@ fun BloodPressureDetailScreen(
                     ) {
                         M3ScoreDial(
                             score = uiState.latestSystolic?.toFloat(),
-                            label = "Systolic",
+                            label = stringResource(R.string.label_systolic),
                             maxScore = 200f,
                             status = uiState.systolicStatus,
                             displayText = uiState.latestSystolic?.toString(),
-                            tooltipDescription =
-                                "Latest systolic blood pressure measurement.\n\n" +
-                                    "Optimal: <120\nElevated: 120–129\nStage 1: 130–139\nStage 2: ≥140",
+                            tooltipDescription = stringResource(R.string.tooltip_blood_pressure_systolic),
                         )
                         M3ScoreDial(
                             score = uiState.latestDiastolic?.toFloat(),
-                            label = "Diastolic",
+                            label = stringResource(R.string.label_diastolic),
                             maxScore = 120f,
                             status = uiState.diastolicStatus,
                             displayText = uiState.latestDiastolic?.toString(),
-                            tooltipDescription =
-                                "Latest diastolic blood pressure measurement.\n\n" +
-                                    "Optimal: <80\nStage 1: 80–89\nStage 2: ≥90",
+                            tooltipDescription = stringResource(R.string.tooltip_blood_pressure_diastolic),
                         )
                     }
                 }
             }
 
             item(key = "trends_header") {
-                SectionHeader(title = "Trends")
+                SectionHeader(title = stringResource(R.string.label_trends))
                 Spacer(Modifier.height(8.dp))
                 SingleChoiceSegmentedButtonRow(
                     modifier =
@@ -171,7 +169,7 @@ fun BloodPressureDetailScreen(
                     )
                 } else {
                     TrendCard(
-                        title = "Blood Pressure Trend",
+                        title = stringResource(R.string.label_blood_pressure_trend),
                         modifier = Modifier.padding(horizontal = 16.dp),
                     ) {
                         BloodPressureSplitChart(
