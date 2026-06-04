@@ -21,6 +21,8 @@ import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectReposit
 import com.gregor.lauritz.healthdashboard.domain.repository.PermissionStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -328,51 +330,54 @@ class HealthConnectRepositoryImpl
 
                     val devices = mutableSetOf<String>()
 
-                    val sleepSessions = readSleepSessions(from, to)
-                    sleepSessions.forEach { record ->
-                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
-                    }
+                    coroutineScope {
+                        val sleepSessionsDeferred = async { readSleepSessions(from, to) }
+                        val hrRecordsDeferred = async { readHeartRateSamples(from, to) }
+                        val hrvRecordsDeferred = async { readHrvSamples(from, to) }
+                        val workoutRecordsDeferred = async { readExerciseSessions(from, to) }
+                        val stepsRecordsDeferred = async { readStepsRecords(from, to) }
+                        val weightRecordsDeferred = async { readWeightRecords(from, to) }
+                        val bodyFatRecordsDeferred = async { readBodyFatRecords(from, to) }
+                        val bloodPressureRecordsDeferred = async { readBloodPressureRecords(from, to) }
+                        val spo2RecordsDeferred = async { readOxygenSaturationRecords(from, to) }
 
-                    val hrRecords = readHeartRateSamples(from, to)
-                    hrRecords.forEach { record ->
-                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
-                    }
+                        sleepSessionsDeferred.await().forEach { record ->
+                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                        }
 
-                    val hrvRecords = readHrvSamples(from, to)
-                    hrvRecords.forEach { record ->
-                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
-                    }
+                        hrRecordsDeferred.await().forEach { record ->
+                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                        }
 
-                    val workoutRecords = readExerciseSessions(from, to)
-                    workoutRecords.forEach { record ->
-                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
-                    }
+                        hrvRecordsDeferred.await().forEach { record ->
+                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                        }
 
-                    // Steps are frequently the only data the phone records, so scanning
-                    // them here is what surfaces the phone as a selectable source device.
-                    val stepsRecords = readStepsRecords(from, to)
-                    stepsRecords.forEach { record ->
-                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
-                    }
+                        workoutRecordsDeferred.await().forEach { record ->
+                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                        }
 
-                    val weightRecords = readWeightRecords(from, to)
-                    weightRecords.forEach { record ->
-                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
-                    }
+                        // Steps are frequently the only data the phone records, so scanning
+                        // them here is what surfaces the phone as a selectable source device.
+                        stepsRecordsDeferred.await().forEach { record ->
+                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                        }
 
-                    val bodyFatRecords = readBodyFatRecords(from, to)
-                    bodyFatRecords.forEach { record ->
-                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
-                    }
+                        weightRecordsDeferred.await().forEach { record ->
+                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                        }
 
-                    val bloodPressureRecords = readBloodPressureRecords(from, to)
-                    bloodPressureRecords.forEach { record ->
-                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
-                    }
+                        bodyFatRecordsDeferred.await().forEach { record ->
+                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                        }
 
-                    val spo2Records = readOxygenSaturationRecords(from, to)
-                    spo2Records.forEach { record ->
-                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                        bloodPressureRecordsDeferred.await().forEach { record ->
+                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                        }
+
+                        spo2RecordsDeferred.await().forEach { record ->
+                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                        }
                     }
 
                     com.gregor.lauritz.healthdashboard.domain.util.logD(

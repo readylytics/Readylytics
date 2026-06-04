@@ -21,7 +21,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
@@ -191,8 +193,6 @@ private val SyncPreference.displayName: String
             SyncPreference.BY_TIME -> "By Time"
         }
 
-private const val ALL_DEVICES_LABEL = "All devices"
-
 /**
  * Lets the user pick the source device individually for each Health Connect data
  * type, grouped by category. "All devices" (the default) applies no source filter.
@@ -202,11 +202,13 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
     val availableDevices by viewModel.availableDevices.collectAsStateWithLifecycle()
     val deviceByDataType by viewModel.deviceByDataType.collectAsStateWithLifecycle()
     val hasDevices = availableDevices.isNotEmpty()
-    val options = remember(availableDevices) { listOf(ALL_DEVICES_LABEL) + availableDevices }
+    val allDevicesLabel = stringResource(R.string.data_sources_all_devices)
+    val calibratingLabel = stringResource(R.string.data_sources_calibrating)
+    val options = remember(availableDevices, allDevicesLabel) { listOf(allDevicesLabel) + availableDevices }
 
     Column {
         Text(
-            text = "Choose which device each data type is read from. Defaults to all devices.",
+            text = stringResource(R.string.data_sources_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier =
@@ -226,15 +228,15 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
                         label = type.displayName,
                         selectedDisplayValue =
                             when {
-                                !hasDevices && selected == null -> "Calibrating..."
+                                !hasDevices && selected == null -> calibratingLabel
                                 selected != null -> selected
-                                else -> ALL_DEVICES_LABEL
+                                else -> allDevicesLabel
                             },
                         options = options,
                         onOptionSelected = { choice ->
                             viewModel.updateDevice(
                                 type = type,
-                                deviceLabel = choice.takeIf { it != ALL_DEVICES_LABEL },
+                                deviceLabel = choice.takeIf { it != allDevicesLabel },
                             )
                         },
                         optionLabel = { it },
@@ -245,8 +247,6 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
                                     horizontal = SettingsConstants.HORIZONTAL_PADDING,
                                     vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
                                 ),
-                        // Always enabled so the user can re-select "All devices" even
-                        // before any device has been discovered.
                         enabled = hasDevices || selected != null,
                     )
                 }

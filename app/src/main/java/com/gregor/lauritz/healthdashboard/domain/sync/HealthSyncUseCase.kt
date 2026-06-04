@@ -220,11 +220,16 @@ class HealthSyncUseCase
                         val stepsDevice = deviceFor(HealthDataType.STEPS)
                         val stepsMap = mutableMapOf<LocalDate, Long>()
                         if (stepsDevice == null) {
-                            for (i in (windowDays - 1) downTo 0) {
-                                val day = today.minusDays(i.toLong())
-                                val dayStart = day.atStartOfDay(zoneId).toInstant()
-                                val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
-                                stepsMap[day] = hcRepo.readSteps(dayStart, dayEnd)
+                            kotlinx.coroutines.coroutineScope {
+                                val deferredSteps = (0 until windowDays).map { i ->
+                                    val day = today.minusDays(i.toLong())
+                                    val dayStart = day.atStartOfDay(zoneId).toInstant()
+                                    val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
+                                    kotlinx.coroutines.async {
+                                        day to hcRepo.readSteps(dayStart, dayEnd)
+                                    }
+                                }
+                                stepsMap.putAll(deferredSteps.map { it.await() })
                             }
                         } else {
                             val stepEntries =
@@ -246,9 +251,17 @@ class HealthSyncUseCase
                             if (earliestMs != null) {
                                 val startDate = Instant.ofEpochMilli(earliestMs).atZone(zoneId).toLocalDate()
                                 val endDate = LocalDate.now(zoneId)
+                                val windowStartDate = today.minusDays((windowDays - 1).toLong())
                                 var current = startDate
                                 while (!current.isAfter(endDate)) {
-                                    val steps = stepsMap[current] ?: 0L
+                                    // For days in the sync window, use fresh stepsMap data.
+                                    // For historical dates outside window, preserve existing steps from DB.
+                                    val steps = if (current >= windowStartDate) {
+                                        stepsMap[current] ?: 0L
+                                    } else {
+                                        val dateMidnightMs = current.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                                        (dailySummaryDao.getByDate(dateMidnightMs)?.stepCount ?: 0).toLong()
+                                    }
                                     syncDayScoring(current, steps)
                                     current = current.plusDays(1)
                                 }
