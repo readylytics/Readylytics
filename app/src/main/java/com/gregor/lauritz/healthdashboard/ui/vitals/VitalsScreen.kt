@@ -129,7 +129,7 @@ fun VitalsScreen(
                     ScoreDialSkeleton()
                 } else {
                     val summary = uiState.latestSummary
-                    val currentRhr = summary?.nocturnalRhr
+                    val currentRhr = summary?.restingHeartRate
                     val currentHrv = summary?.nocturnalHrv
 
                     // Gauge 1: Resting HR

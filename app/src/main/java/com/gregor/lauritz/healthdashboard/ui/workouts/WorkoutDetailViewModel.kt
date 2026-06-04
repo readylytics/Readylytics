@@ -132,7 +132,7 @@ class WorkoutDetailViewModel
                                     )
                             },
                         prefs = prefs,
-                        restingHrBaseline = summary?.restingHrBaseline?.toFloat(),
+                        restingHrBaseline = summary?.rhrBpm,
                     )
                 val computedTrimp = computedTrimpResult.getOrNull() ?: 0f
 

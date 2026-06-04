@@ -56,10 +56,10 @@ As you age, the amount of deep sleep naturally declines. We adjust your targets 
 
 | Age range | Deep sleep target | REM sleep target |
 | --------- | ----------------- | ---------------- |
-| 18–29     | 18–20%            | 22%              |
-| 30–49     | 16–18%            | 21%              |
-| 50–59     | 14–16%            | 20%              |
-| 60+       | 10–13%            | 19%              |
+| 18–29     | 20%               | 22%              |
+| 30–49     | 18%               | 21%              |
+| 50–59     | 15%               | 20%              |
+| 60+       | 12%               | 19%              |
 
 These ranges come from polysomnography studies in healthy populations. They represent the healthy mid-range; your personal healthy normal may sit anywhere within your age band. Note that the age-related decline in deep (slow-wave) sleep is much steeper than the decline in REM, which falls only modestly across adulthood (Ohayon 2004). We do not penalise you if your wearable reports unusual numbers — wearable stage detection is imperfect.
 
@@ -72,6 +72,10 @@ Heart rate variability (HRV) is noisy on any single night. To avoid false positi
 - **Sedentary** — more natural night-to-night noise, so we require a larger departure before flagging to avoid false alarms: Z beyond ±2.0 is notable.
 
 This tuning means a single noisy night isn't treated as a signal as readily for a Sedentary person as the same Z-score would be for an Athlete, because higher baseline noise produces more large deviations by chance. Once your personal baseline matures (Day 60+), the Z-score is computed against _your own_ standard deviation, which already accounts for your individual variability.
+
+_Implemented in: `SleepScoringStrategy.kt`, `SleepArchitectureTargets.kt`, `ScoringConstants.kt`_
+
+_Restoration/HRV Z-scores implemented in: `LoadScoringStrategy.kt`, `BaselineComputer.kt`, `HrvBaselineProvider.kt`, `RhrBaselineProvider.kt`_
 
 ---
 
@@ -104,11 +108,19 @@ If you work rotating shifts or have an irregular schedule, comparing every night
 
 **A caveat for biphasic sleepers.** This metric is calibrated for people with one main sleep period per day. If you sleep in two segments by choice (e.g., 2:00–4:00 AM and then again at 6:00–7:00 AM), the score may misclassify your schedule. We exclude any single sleep period under 3 hours from the median calculation so naps don't pull your "typical" times around — but this rule has imperfect coverage of every sleep pattern.
 
+_Implemented in: `RegularUserCircadianStrategy.kt`, `ShiftWorkerCircadianStrategy.kt`, `CircadianStrategyFactory.kt`_
+
 ---
 
 ## Readiness
 
-A daily 0–100 number reflecting whether your recent training load is in a healthy range.
+A daily 0–100 composite number summarising three signals:
+
+**Readiness = 0.4 × Restoration (sRest) + 0.3 × Sleep Score + 0.3 × Load Score**
+
+Each component is described in its own section above. The load component is the primary driver — if you're significantly overloading, Readiness drops even with good sleep — but sustained poor restoration or sleep will also pull the score down.
+
+The Load Score (one of the three components) itself is based on your training load ratio:
 
 We compute two rolling averages of your training load:
 
@@ -119,9 +131,8 @@ The ratio (ATL ÷ CTL) tells us whether you've recently spiked above your recent
 
 **How we score the ratio**
 
-- 0.8–1.3 → 100 (in your normal range — "sweet spot")
-- 1.3–1.5 → linearly decays
-- Above 1.5 → smooth quadratic decay (approximating Gabbett 2016's elevated-risk zone)
+- sr ≤ 1.3 → 100 (in your normal range — "sweet spot")
+- sr > 1.3 → 100 × exp(−2.5 × (sr − 1.3)²) — a smooth Gaussian decay that starts gently and accelerates as the spike grows (approximating Gabbett 2016's elevated-risk zone)
 
 **Tooltips**
 
@@ -135,6 +146,8 @@ The ratio (ATL ÷ CTL) tells us whether you've recently spiked above your recent
 If your HRV and RHR patterns suggest possible physiological stress (such as early illness or functional overreaching), we apply a soft cap to Readiness to give you a heads-up. To ensure accuracy and filter out acute noise (e.g., alcohol or minor stress), the algorithm requires the thresholds to be breached on **two consecutive nights** (Mishra 2020, Le Meur 2013). This is informational only, not medical advice.
 
 **What we don't do.** We don't penalise you for resting. A week of light activity will _not_ drop Readiness; the score is designed for load _spikes_, not undertraining.
+
+_Implemented in: `LoadScoringStrategy.kt`, `PaiScoringStrategy.kt`, `ComputeSleepMetricsUseCase.kt`, `LoadMetricsProvider.kt`, `PaiProvider.kt`_
 
 ---
 
@@ -173,10 +186,16 @@ If you wear your tracker only 3–5 nights a week, the timeline lengthens propor
 
 - **HRV (Heart Rate Variability)** — the millisecond-level variation in time between heartbeats. Higher generally indicates better autonomic recovery, _up to a point_.
 - **RMSSD** — the specific HRV measure most apps use. We work with the natural log of RMSSD (**lnRMSSD**) internally because it linearizes the naturally skewed distribution of heart rate variability, making statistical comparison (Z-scores) valid (Plews 2013, Buchheit 2014).
-- **RHR (Resting Heart Rate)** — your true resting heart rate, estimated from the low end of your heart rate while you sleep (by default the 5th percentile of your sleeping heart rate, adjustable in settings). This sits below your _average_ overnight heart rate, which is pushed up by REM and brief awakenings — using the low percentile gives a more stable night-to-night baseline. *Note: This nightly-frozen nocturnal floor is the foundational baseline used directly in all downstream recovery, Heart Rate Reserve (HRR), and TRIMP calculations to ensure training load metrics are highly stable and unaffected by wake-time noise or systemic average inflation.*
 - **Deep sleep / Slow-Wave Sleep / N3** — the deepest stage of NREM sleep; growth-hormone release is concentrated here.
 - **REM** — the dreaming stage, important for memory and emotional processing.
-- **TRIMP (Training Impulse)** — a single number summarising the intensity-weighted duration of an exercise session.
+- **RHR (Resting Heart Rate)** — your true resting heart rate, calculated as a user-defined low percentile (default 5%) of your heart rate samples across the detected sleep period. This sits below your _average_ overnight heart rate, which is pushed up by REM and brief awakenings — using the low percentile gives a more stable night-to-night baseline. _Note: This nightly-frozen nocturnal floor is the foundational baseline used directly in all downstream recovery, Heart Rate Reserve (HRR), and TRIMP calculations to ensure training load metrics are highly stable and unaffected by wake-time noise or systemic average inflation._
+
+  _Implemented in: `SleepPercentileRhrCalculator.kt`, `BaselineComputer.kt`, `RhrBaselineProvider.kt`_
+
+- **TRIMP (Training Impulse)** — a single number summarising the intensity-weighted duration of an exercise session. Advanced models (such as LT-TRIMP) rely on the specific Heart Rate Zones configured in your app settings. These zones are always active; it is your responsibility to ensure they accurately reflect your current fitness level.
+
+  _Implemented in: `PaiCalculator.kt`, `ComputeWorkoutTrimpUseCase.kt`, `PaiScoringStrategy.kt`, `HrMaxProvider.kt`_
+
 - **ATL / CTL** — short-term and long-term rolling averages of TRIMP. Borrowed from Banister's training-load model and used by most cycling and running apps.
 - **Z-score** — a standardized number telling you how many standard deviations above or below your average a metric is. Z=0 is your average; Z=+2 is very high; Z=−2 is very low.
 
@@ -184,7 +203,7 @@ If you wear your tracker only 3–5 nights a week, the timeline lengthens propor
 
 ## Honest limitations
 
-1. **Wearable stage detection is imperfect.** Even premium devices misclassify deep and REM sleep on individual nights. We use age-adjusted targets and don't penalise you for differences within ~5% of the target. Architecture differences within that margin are not meaningful.
+1. **Wearable stage detection is imperfect.** Even premium devices misclassify deep and REM sleep on individual nights. We use age-adjusted targets and treat architecture scores as approximate wellness indicators. Architecture differences on individual nights should not be over-interpreted.
 
 2. **Population norms are not destiny.** The age-banded deep sleep ranges come from polysomnography studies of healthy adults. Your healthy normal may sit anywhere in your age band. Our scoring uses age-banded targets so the ceiling shifts with you.
 

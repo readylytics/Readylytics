@@ -21,17 +21,14 @@ data class DailySummaryEntity(
     val loadScore: Float? = null,
     val readinessScore: Float? = null,
     val strainRatio: Float? = null,
-    val nocturnalRhr: Int? = null,
     val nocturnalHrv: Int? = null,
     val sleepDurationMinutes: Int? = null,
     val deepSleepPercent: Float? = null,
     val remSleepPercent: Float? = null,
     val totalTrimp: Float? = null,
-    val rhrRatio: Float? = null,
     val hrvBaseline: Int? = null,
     val restingHeartRate: Int? = null,
     val restingHrRatio: Float? = null,
-    val restingHrBaseline: Int? = null,
     val paiScore: Float? = null,
     val totalPai: Float? = null,
     val stepCount: Int? = null,
@@ -43,7 +40,6 @@ data class DailySummaryEntity(
     val diagnostics: ReadinessResult.Diagnostics = ReadinessResult.Diagnostics(),
     @Embedded(prefix = "contrib_")
     val contributors: ReadinessResult.Contributors = ReadinessResult.Contributors(),
-    // Legacy/supporting fields not bundled into ReadinessResult
     val rollingMu: Float? = null,
     val rhrDeltaBpm: Float? = null,
     val lateNadir: Boolean? = null,
@@ -72,4 +68,16 @@ data class DailySummaryEntity(
     val baselineCalculatedAtDate: LocalDate? = null,
     @ColumnInfo(name = "baseline_version")
     val baselineVersion: Int? = 1,
+    @ColumnInfo(name = "hr_max")
+    val hrMax: Float? = null,
+    @ColumnInfo(name = "snapshot_profile")
+    val snapshotProfile: String? = null,
+    @ColumnInfo(name = "snapshot_calibration_phase")
+    val snapshotCalibrationPhase: String? = null,
+    @ColumnInfo(name = "hrv_sigma_prior")
+    val hrvSigmaPrior: Float? = null,
+    @ColumnInfo(name = "pai_scaling_factor")
+    val paiScalingFactor: Float? = null,
+    @ColumnInfo(name = "baseline_observation_count")
+    val baselineObservationCount: Int? = null,
 )
