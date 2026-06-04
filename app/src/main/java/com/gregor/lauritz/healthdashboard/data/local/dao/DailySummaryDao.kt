@@ -96,7 +96,7 @@ interface DailySummaryDao {
             "WHERE baseline_calculated_at_date IS NOT NULL",
     )
     suspend fun clearFrozenBaselines()
-    
+
     @Query(
         "UPDATE daily_summaries SET " +
             "hrv_mu_mssd = NULL, " +
@@ -109,7 +109,7 @@ interface DailySummaryDao {
             "snapshot_calibration_phase = NULL, " +
             "hrv_sigma_prior = NULL, " +
             "pai_scaling_factor = NULL, " +
-            "baseline_observation_count = NULL"
+            "baseline_observation_count = NULL",
     )
     suspend fun wipeDerivedBaselines()
 

@@ -2,21 +2,21 @@ package com.gregor.lauritz.healthdashboard.di
 
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPreferences
-import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.DataStoreCircadianThresholdPreferences
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.ScoringRepositoryImpl
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
+import com.gregor.lauritz.healthdashboard.domain.scoring.AdaptiveRhrBaselineProvider
 import com.gregor.lauritz.healthdashboard.domain.scoring.BackfillHistoricalBaselinesUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.BaselineComputer
 import com.gregor.lauritz.healthdashboard.domain.scoring.CompositeScoringCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeHistoricalBaselinesUseCase
-import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
-import com.gregor.lauritz.healthdashboard.domain.scoring.RhrBaselineProvider
-import com.gregor.lauritz.healthdashboard.domain.scoring.AdaptiveRhrBaselineProvider
-import com.gregor.lauritz.healthdashboard.domain.scoring.HrvBaselineProvider
 import com.gregor.lauritz.healthdashboard.domain.scoring.HrMaxProvider
-import com.gregor.lauritz.healthdashboard.domain.scoring.PaiProvider
+import com.gregor.lauritz.healthdashboard.domain.scoring.HrvBaselineProvider
 import com.gregor.lauritz.healthdashboard.domain.scoring.LoadMetricsProvider
+import com.gregor.lauritz.healthdashboard.domain.scoring.PaiProvider
+import com.gregor.lauritz.healthdashboard.domain.scoring.RhrBaselineProvider
+import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import dagger.Module
 import dagger.Provides
@@ -72,16 +72,12 @@ class ScoringModule {
 
     @Provides
     @Singleton
-    fun providePaiProvider(
-        dailySummaryDao: DailySummaryDao,
-    ): PaiProvider = PaiProvider(dailySummaryDao)
+    fun providePaiProvider(dailySummaryDao: DailySummaryDao): PaiProvider = PaiProvider(dailySummaryDao)
 
     @Provides
     @Singleton
-    fun provideLoadMetricsProvider(
-        dailySummaryDao: DailySummaryDao,
-    ): LoadMetricsProvider = LoadMetricsProvider(dailySummaryDao)
-
+    fun provideLoadMetricsProvider(dailySummaryDao: DailySummaryDao): LoadMetricsProvider =
+        LoadMetricsProvider(dailySummaryDao)
 
     companion object {
         @Provides

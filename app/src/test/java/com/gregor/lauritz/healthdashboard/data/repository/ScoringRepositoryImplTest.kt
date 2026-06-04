@@ -183,7 +183,15 @@ class ScoringRepositoryImplTest {
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
             coEvery {
                 computeSleepMetricsUseCase(
-                    any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
                 )
             } returns
                 com.gregor.lauritz.healthdashboard.domain.model.Result
@@ -206,7 +214,15 @@ class ScoringRepositoryImplTest {
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
             coEvery {
                 computeSleepMetricsUseCase(
-                    any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
                 )
             } returns
                 com.gregor.lauritz.healthdashboard.domain.model.Result
@@ -250,7 +266,15 @@ class ScoringRepositoryImplTest {
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
             coEvery {
                 computeSleepMetricsUseCase(
-                    any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
                 )
             } returns
                 com.gregor.lauritz.healthdashboard.domain.model.Result

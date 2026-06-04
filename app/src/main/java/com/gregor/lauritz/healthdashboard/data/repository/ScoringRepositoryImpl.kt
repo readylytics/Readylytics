@@ -152,7 +152,11 @@ class ScoringRepositoryImpl
 
                 // Enforce 75-point daily cap. Standard PAI is pure load, no readiness penalty.
                 // Round daily PAI to 1 decimal place to ensure display consistency.
-                val dailyPaiRaw = PaiCalculator.calculateDailyPai(dailyTrimpRaw, frozenPaiScalingFactor ?: scoringConfig.paiScalingFactor)
+                val dailyPaiRaw =
+                    PaiCalculator.calculateDailyPai(
+                        dailyTrimpRaw,
+                        frozenPaiScalingFactor ?: scoringConfig.paiScalingFactor,
+                    )
                 val dailyPai = round(dailyPaiRaw * 10f) / 10f
 
                 val last6DaysPai = sumPaiScoreLastSixDays(targetDate)

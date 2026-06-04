@@ -16,7 +16,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class ComputeHistoricalBaselinesUseCaseTest {
-
     private val baselineComputer = mockk<BaselineComputer>()
     private val loadScoringStrategy = mockk<LoadScoringStrategy>()
     private val useCase = ComputeHistoricalBaselinesUseCase(baselineComputer, loadScoringStrategy)
@@ -35,78 +34,87 @@ class ComputeHistoricalBaselinesUseCaseTest {
         )
 
     @Test
-    fun `all 5 dates processed — no 30-day cutoff`() = runTest {
-        val day1 = LocalDate.of(2026, 1, 1)
-        val summaries = (0..4).map { fakeSummary(day1.plusDays(it.toLong())) }
+    fun `all 5 dates processed — no 30-day cutoff`() =
+        runTest {
+            val day1 = LocalDate.of(2026, 1, 1)
+            val summaries = (0..4).map { fakeSummary(day1.plusDays(it.toLong())) }
 
-        coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any()) } returns fakeWindows()
-        coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any()) } returns 60f
-        every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any()) } returns fakeWindows()
+            coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any()) } returns 60f
+            every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
-        val result = useCase.computeHistoricalBaselines(summaries, UserPreferences())
+            val result = useCase.computeHistoricalBaselines(summaries, UserPreferences())
 
-        assertEquals(5, result.size)
-    }
-
-    @Test
-    fun `day 5 window upper bound is end-of-day for date D — no look-ahead`() = runTest {
-        val zone = ZoneId.systemDefault()
-        val day1 = LocalDate.of(2026, 1, 1)
-        val summaries = (0..4).map { fakeSummary(day1.plusDays(it.toLong())) }
-
-        val capturedUpperBounds = mutableListOf<Long>()
-
-        coEvery {
-            baselineComputer.computeHrvWindowsBetween(any(), any(), any())
-        } answers {
-            capturedUpperBounds += secondArg<Long>()
-            fakeWindows()
+            assertEquals(5, result.size)
         }
-        coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any()) } returns 60f
-        every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
-
-        useCase.computeHistoricalBaselines(summaries, UserPreferences())
-
-        assertEquals(5, capturedUpperBounds.size)
-
-        // Day 5 (index 4) upper bound = midnight(day 6) - 1ms
-        val day5 = day1.plusDays(4)
-        val expectedEndMs = day5.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
-        assertEquals(expectedEndMs, capturedUpperBounds[4])
-    }
 
     @Test
-    fun `profile lnSigmaPrior flows to sigma computation and snapshot`() = runTest {
-        val summary = fakeSummary(LocalDate.of(2026, 1, 1))
+    fun `day 5 window upper bound is end-of-day for date D — no look-ahead`() =
+        runTest {
+            val zone = ZoneId.systemDefault()
+            val day1 = LocalDate.of(2026, 1, 1)
+            val summaries = (0..4).map { fakeSummary(day1.plusDays(it.toLong())) }
 
-        coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any()) } returns fakeWindows()
-        coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any()) } returns 60f
+            val capturedUpperBounds = mutableListOf<Long>()
 
-        val capturedSigmaPrior = slot<Float>()
-        every { loadScoringStrategy.hrvSigma(any(), capture(capturedSigmaPrior)) } returns 0.10f
+            coEvery {
+                baselineComputer.computeHrvWindowsBetween(any(), any(), any())
+            } answers {
+                capturedUpperBounds += secondArg<Long>()
+                fakeWindows()
+            }
+            coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any()) } returns 60f
+            every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
-        val athletePrefs = UserPreferences(physiologyProfile = PhysiologyProfile.ATHLETE)
-        val result = useCase.computeHistoricalBaselines(listOf(summary), athletePrefs)
+            useCase.computeHistoricalBaselines(summaries, UserPreferences())
 
-        assertNotNull(result.firstOrNull())
-        assertEquals(PhysiologyProfile.ATHLETE.lnSigmaPrior, capturedSigmaPrior.captured)
-        assertEquals(PhysiologyProfile.ATHLETE.name, result.first().snapshotProfile)
-        assertEquals(PhysiologyProfile.ATHLETE.lnSigmaPrior, result.first().hrvSigmaPrior)
-    }
+            assertEquals(5, capturedUpperBounds.size)
+
+            // Day 5 (index 4) upper bound = midnight(day 6) - 1ms
+            val day5 = day1.plusDays(4)
+            val expectedEndMs =
+                day5
+                    .plusDays(1)
+                    .atStartOfDay(zone)
+                    .toInstant()
+                    .toEpochMilli() - 1
+            assertEquals(expectedEndMs, capturedUpperBounds[4])
+        }
 
     @Test
-    fun `already-frozen summaries are not skipped during historical compute`() = runTest {
-        val date = LocalDate.of(2026, 1, 1)
-        val zone = ZoneId.systemDefault()
-        val ms = date.atStartOfDay(zone).toInstant().toEpochMilli()
-        val frozen = DailySummaryEntity(dateMidnightMs = ms, baselineCalculatedAtDate = date)
+    fun `profile lnSigmaPrior flows to sigma computation and snapshot`() =
+        runTest {
+            val summary = fakeSummary(LocalDate.of(2026, 1, 1))
 
-        coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any()) } returns fakeWindows()
-        coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any()) } returns 60f
-        every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any()) } returns fakeWindows()
+            coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any()) } returns 60f
 
-        val result = useCase.computeHistoricalBaselines(listOf(frozen), UserPreferences())
+            val capturedSigmaPrior = slot<Float>()
+            every { loadScoringStrategy.hrvSigma(any(), capture(capturedSigmaPrior)) } returns 0.10f
 
-        assertEquals(1, result.size)
-    }
+            val athletePrefs = UserPreferences(physiologyProfile = PhysiologyProfile.ATHLETE)
+            val result = useCase.computeHistoricalBaselines(listOf(summary), athletePrefs)
+
+            assertNotNull(result.firstOrNull())
+            assertEquals(PhysiologyProfile.ATHLETE.lnSigmaPrior, capturedSigmaPrior.captured)
+            assertEquals(PhysiologyProfile.ATHLETE.name, result.first().snapshotProfile)
+            assertEquals(PhysiologyProfile.ATHLETE.lnSigmaPrior, result.first().hrvSigmaPrior)
+        }
+
+    @Test
+    fun `already-frozen summaries are not skipped during historical compute`() =
+        runTest {
+            val date = LocalDate.of(2026, 1, 1)
+            val zone = ZoneId.systemDefault()
+            val ms = date.atStartOfDay(zone).toInstant().toEpochMilli()
+            val frozen = DailySummaryEntity(dateMidnightMs = ms, baselineCalculatedAtDate = date)
+
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any()) } returns fakeWindows()
+            coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any()) } returns 60f
+            every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+
+            val result = useCase.computeHistoricalBaselines(listOf(frozen), UserPreferences())
+
+            assertEquals(1, result.size)
+        }
 }

@@ -54,10 +54,13 @@ class ScoringComponentsTest {
 
     @Test
     fun scoringConfigFactory_athleteProfile_returnsZHrvThreshold1_2() {
-        val prefs = com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences(
-            physiologyProfile = com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile.ATHLETE
-        )
-        val factory = com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConfigFactory()
+        val prefs =
+            com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences(
+                physiologyProfile = com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile.ATHLETE,
+            )
+        val factory =
+            com.gregor.lauritz.healthdashboard.domain.scoring
+                .ScoringConfigFactory()
         val config = factory.build(prefs, java.time.LocalDate.now(), java.time.LocalDate.now())
         assertEquals(1.2f, config.emergencyFlags.overreachingZHrvThreshold)
         assertEquals(-1.2f, config.emergencyFlags.illnessZHrvThreshold)
@@ -65,10 +68,13 @@ class ScoringComponentsTest {
 
     @Test
     fun scoringConfigFactory_activeProfile_returnsZHrvThreshold1_5() {
-        val prefs = com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences(
-            physiologyProfile = com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile.ACTIVE
-        )
-        val factory = com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConfigFactory()
+        val prefs =
+            com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences(
+                physiologyProfile = com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile.ACTIVE,
+            )
+        val factory =
+            com.gregor.lauritz.healthdashboard.domain.scoring
+                .ScoringConfigFactory()
         val config = factory.build(prefs, java.time.LocalDate.now(), java.time.LocalDate.now())
         assertEquals(1.5f, config.emergencyFlags.overreachingZHrvThreshold)
         assertEquals(-1.5f, config.emergencyFlags.illnessZHrvThreshold)
@@ -76,10 +82,13 @@ class ScoringComponentsTest {
 
     @Test
     fun scoringConfigFactory_sedentaryProfile_returnsZHrvThreshold2_0() {
-        val prefs = com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences(
-            physiologyProfile = com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile.SEDENTARY
-        )
-        val factory = com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConfigFactory()
+        val prefs =
+            com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences(
+                physiologyProfile = com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile.SEDENTARY,
+            )
+        val factory =
+            com.gregor.lauritz.healthdashboard.domain.scoring
+                .ScoringConfigFactory()
         val config = factory.build(prefs, java.time.LocalDate.now(), java.time.LocalDate.now())
         assertEquals(2.0f, config.emergencyFlags.overreachingZHrvThreshold)
         assertEquals(-2.0f, config.emergencyFlags.illnessZHrvThreshold)

@@ -12,7 +12,6 @@ import com.gregor.lauritz.healthdashboard.domain.model.rhrZoneBands
 import com.gregor.lauritz.healthdashboard.domain.model.spo2ZoneBands
 import com.gregor.lauritz.healthdashboard.domain.repository.DailyMetricsRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
-import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
 import com.gregor.lauritz.healthdashboard.domain.scoring.HrvBaselineProvider
 import com.gregor.lauritz.healthdashboard.domain.scoring.RhrBaselineProvider
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController

@@ -58,7 +58,8 @@ class ScoringConfigFactory
 
             // Use SHA256 hash of configuration parameters for stable, deterministic identifier
             // This ensures consistency across JVM versions and app updates
-            val paramsHash = computeConfigHash(restoration, sleepTargets, emergencyFlags, circadianConsistency, hrvSaturationZ)
+            val paramsHash =
+                computeConfigHash(restoration, sleepTargets, emergencyFlags, circadianConsistency, hrvSaturationZ)
 
             val config =
                 ScoringConfig(
@@ -87,8 +88,8 @@ class ScoringConfigFactory
                 PhysiologyProfile.SHIFT_WORKER -> RestorationWeights(hrvWeight = 0.50f, rhrWeight = 0.50f)
             }
 
-        private fun createEmergencyFlagThresholds(profile: PhysiologyProfile): EmergencyFlagThresholds {
-            return when (profile) {
+        private fun createEmergencyFlagThresholds(profile: PhysiologyProfile): EmergencyFlagThresholds =
+            when (profile) {
                 PhysiologyProfile.ATHLETE ->
                     EmergencyFlagThresholds(
                         overreachingZHrvThreshold = 1.2f,
@@ -105,7 +106,6 @@ class ScoringConfigFactory
                         illnessZHrvThreshold = -2.0f,
                     )
             }
-        }
 
         private fun hrvSaturationZForProfile(profile: PhysiologyProfile): Float =
             when (profile) {

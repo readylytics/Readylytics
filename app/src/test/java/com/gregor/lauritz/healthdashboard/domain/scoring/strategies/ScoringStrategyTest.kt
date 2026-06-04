@@ -43,7 +43,7 @@ class SleepScoringStrategyTest {
     @Test
     fun `archSubScore ideal deep REM under 30 scores high`() {
         val durationMinutes = 480
-        val deepMinutes = (durationMinutes * 0.20f).toInt()   // AgeRange18To29 deep target
+        val deepMinutes = (durationMinutes * 0.20f).toInt() // AgeRange18To29 deep target
         val remMinutes = (durationMinutes * 0.22f).toInt() + 1 // AgeRange18To29 rem target
         val result =
             sleepStrategy.computeArchSubScore(

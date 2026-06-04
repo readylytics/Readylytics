@@ -117,5 +117,4 @@ class SleepScoringStrategy
 
             return durationWeight * sDur + archWeight * sArch + Sleep.WEIGHT_RESTORATION * sRest
         }
-
     }

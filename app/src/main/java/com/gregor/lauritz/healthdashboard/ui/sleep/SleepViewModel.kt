@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailyMetrics
-import com.gregor.lauritz.healthdashboard.domain.model.DailyMetricsMapper
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.repository.DailyMetricsRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository

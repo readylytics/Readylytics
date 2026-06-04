@@ -219,7 +219,11 @@ class BackfillBaselinesUseCaseTest {
             } returns 60f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
-            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = daysAgo)), UserPreferences())
+            val result =
+                computeUseCase.computeHistoricalBaselines(
+                    listOf(makeSummary(daysAgo = daysAgo)),
+                    UserPreferences(),
+                )
 
             assertEquals(expectedDate, result.first().baselineCalculatedAtDate)
         }
@@ -638,7 +642,9 @@ class BackfillBaselinesUseCaseTest {
             val count = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
 
             assertEquals(2, count)
-            coVerify(exactly = 2) { dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 2) {
+                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            }
         }
 
     @Test
@@ -663,7 +669,9 @@ class BackfillBaselinesUseCaseTest {
 
             assertEquals(2, count)
             coVerify(exactly = 1) { dao.wipeDerivedBaselines() }
-            coVerify(exactly = 2) { dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 2) {
+                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            }
         }
 
     @Test
@@ -729,7 +737,21 @@ class BackfillBaselinesUseCaseTest {
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
             val capturedMs = slot<Long>()
-            coEvery { dao.updateBaselines(capture(capturedMs), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Unit
+            coEvery {
+                dao.updateBaselines(
+                    capture(capturedMs),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns Unit
 
             buildBackfill(dao, defaultSettingsRepo(), compute).execute()
 
@@ -747,7 +769,9 @@ class BackfillBaselinesUseCaseTest {
             val count = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
 
             assertEquals(0, count)
-            coVerify(exactly = 0) { dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 0) {
+                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            }
         }
 
     @Test

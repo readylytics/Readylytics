@@ -12,8 +12,8 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.CurrentNightHrvRe
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.HrCoverageValidator
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.SleepNadirAnalyzer
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.SleepPercentileRhrCalculator
-import com.gregor.lauritz.healthdashboard.domain.util.logD
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
+import com.gregor.lauritz.healthdashboard.domain.util.logD
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -322,7 +322,13 @@ class ComputeSleepMetricsUseCase
                             recoveryFlags = recoveryFlags,
                             contributors =
                                 ReadinessResult.Contributors(
-                                    hrvScore = zHrv?.let { scoringCalculator.computeHrvScore(it, scoringConfig.hrvSaturationZ) },
+                                    hrvScore =
+                                        zHrv?.let {
+                                            scoringCalculator.computeHrvScore(
+                                                it,
+                                                scoringConfig.hrvSaturationZ,
+                                            )
+                                        },
                                     rhrScore = zRhr?.let { (50f - 25f * it).coerceIn(0f, 100f) },
                                     durationScore = durationSubScore,
                                     architectureScore = archSubScore,
@@ -395,41 +401,46 @@ class ComputeSleepMetricsUseCase
                             } else {
                                 null
                             },
-                        hrMax = if (frozenBaseline) {
-                            summary.hrMax
-                        } else if (!isCalibrating) {
-                            HeartRateFormulas.resolveMaxHeartRate(prefs)
-                        } else {
-                            null
-                        },
-                        paiScalingFactor = if (frozenBaseline) {
-                            summary.paiScalingFactor
-                        } else if (!isCalibrating) {
-                            scoringConfig.paiScalingFactor
-                        } else {
-                            null
-                        },
-                        snapshotProfile = if (frozenBaseline) {
-                            summary.snapshotProfile
-                        } else if (!isCalibrating) {
-                            prefs.physiologyProfile.name
-                        } else {
-                            null
-                        },
-                        hrvSigmaPrior = if (frozenBaseline) {
-                            summary.hrvSigmaPrior
-                        } else if (!isCalibrating) {
-                            prefs.physiologyProfile.lnSigmaPrior
-                        } else {
-                            null
-                        },
-                        baselineObservationCount = if (frozenBaseline) {
-                            summary.baselineObservationCount
-                        } else if (!isCalibrating) {
-                            validHistoricalSessionIds.size
-                        } else {
-                            null
-                        },
+                        hrMax =
+                            if (frozenBaseline) {
+                                summary.hrMax
+                            } else if (!isCalibrating) {
+                                HeartRateFormulas.resolveMaxHeartRate(prefs)
+                            } else {
+                                null
+                            },
+                        paiScalingFactor =
+                            if (frozenBaseline) {
+                                summary.paiScalingFactor
+                            } else if (!isCalibrating) {
+                                scoringConfig.paiScalingFactor
+                            } else {
+                                null
+                            },
+                        snapshotProfile =
+                            if (frozenBaseline) {
+                                summary.snapshotProfile
+                            } else if (!isCalibrating) {
+                                prefs.physiologyProfile.name
+                            } else {
+                                null
+                            },
+                        hrvSigmaPrior =
+                            if (frozenBaseline) {
+                                summary.hrvSigmaPrior
+                            } else if (!isCalibrating) {
+                                prefs.physiologyProfile.lnSigmaPrior
+                            } else {
+                                null
+                            },
+                        baselineObservationCount =
+                            if (frozenBaseline) {
+                                summary.baselineObservationCount
+                            } else if (!isCalibrating) {
+                                validHistoricalSessionIds.size
+                            } else {
+                                null
+                            },
                         zLnHrv = persistedZLnHrv,
                         zRhr = persistedZRhr,
                         recoveryFlags = persistedFlags,

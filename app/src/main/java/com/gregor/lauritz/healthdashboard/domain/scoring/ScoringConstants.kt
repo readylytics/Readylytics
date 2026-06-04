@@ -88,7 +88,7 @@ object ScoringConstants {
         const val EFF_POOR_SCORE = 40f
         const val EFF_VERY_POOR_SCORE = 15f
 
-const val DURATION_OPTIMAL_RATIO = 0.9f
+        const val DURATION_OPTIMAL_RATIO = 0.9f
         const val DURATION_NEUTRAL_RATIO = 0.8f
         const val DURATION_WARNING_RATIO = 0.7f
     }

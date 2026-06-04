@@ -19,7 +19,7 @@ class RhrBaselineProviderTest {
     private val baselineComputer = mockk<BaselineComputer>()
     private val settingsRepository = mockk<SettingsRepository>()
     private val provider = AdaptiveRhrBaselineProvider(dailySummaryDao, settingsRepository, baselineComputer)
-    
+
     @Before
     fun setUp() {
         coEvery { dailySummaryDao.getPreciseRhrBaseline(any()) } returns null

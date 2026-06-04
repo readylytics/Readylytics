@@ -7,16 +7,18 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class PaiProvider @Inject constructor(
-    private val dao: DailySummaryDao,
-) {
-    suspend fun getPrecisePai(date: LocalDate): Double? {
-        val dateMs = date.toMidnightEpochMilli()
-        return dao.getPrecisePai(dateMs)
-    }
+class PaiProvider
+    @Inject
+    constructor(
+        private val dao: DailySummaryDao,
+    ) {
+        suspend fun getPrecisePai(date: LocalDate): Double? {
+            val dateMs = date.toMidnightEpochMilli()
+            return dao.getPrecisePai(dateMs)
+        }
 
-    suspend fun getRoundedPai(date: LocalDate): Int? {
-        val dateMs = date.toMidnightEpochMilli()
-        return dao.getRoundedPai(dateMs)
+        suspend fun getRoundedPai(date: LocalDate): Int? {
+            val dateMs = date.toMidnightEpochMilli()
+            return dao.getRoundedPai(dateMs)
+        }
     }
-}
