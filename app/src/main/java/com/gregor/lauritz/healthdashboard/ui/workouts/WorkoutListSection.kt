@@ -78,7 +78,7 @@ private fun WorkoutHistoryItem(
                 )
                 Text(
                     text =
-                        "${workout.durationMinutes} min  ·  Strain ${item.gainedStrain.roundToInt()}  ·  " +
+                        "${workout.durationMinutes} min  ·  Strain ${String.format(java.util.Locale.US, "%.2f", item.gainedStrain)}  ·  " +
                             if (workout.avgHr > 0) "${workout.avgHr.roundToInt()} bpm" else "-- bpm",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -10,6 +10,7 @@ import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
+import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import com.gregor.lauritz.healthdashboard.ui.workouts.mappers.ChartDataMapper
 import com.gregor.lauritz.healthdashboard.ui.workouts.mappers.DailyPaiBreakdownMapper
 import com.gregor.lauritz.healthdashboard.ui.workouts.mappers.RecoveryMetricsMapper
@@ -57,6 +58,7 @@ class WorkoutDetailViewModel
         private val settingsRepo: SettingsRepository,
         private val computeWorkoutTrimpUseCase:
             com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase,
+        private val scoringCalculator: ScoringCalculator,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(WorkoutDetailUiState())
         val uiState = _uiState.asStateFlow()
@@ -100,14 +102,16 @@ class WorkoutDetailViewModel
                 val midnight = workoutDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 val summary = dailySummaryRepository.getByDate(midnight)
 
-                val sevenDaysAgo =
+                val thirtyDaysAgo =
                     workoutDate
-                        .minusDays(6)
+                        .minusDays(30)
                         .atStartOfDay(ZoneId.systemDefault())
                         .toInstant()
                         .toEpochMilli()
-                val summaries = dailySummaryRepository.getSince(sevenDaysAgo)
-                val paiBreakdown = DailyPaiBreakdownMapper.mapDailyBreakdown(workoutDate, summaries)
+                val thirtyDaySummaries = dailySummaryRepository.getSince(thirtyDaysAgo)
+                val trimpByDate = thirtyDaySummaries.associate { it.date to (it.totalTrimp ?: 0f) }
+                
+                val paiBreakdown = DailyPaiBreakdownMapper.mapDailyBreakdown(workoutDate, thirtyDaySummaries)
 
                 val recoveryMetrics = RecoveryMetricsMapper.mapRecoveryMetrics(allSamples, workout.endTime, endHr)
 
@@ -132,6 +136,21 @@ class WorkoutDetailViewModel
                     )
                 val computedTrimp = computedTrimpResult.getOrNull() ?: 0f
 
+                val originalDayTrimp = trimpByDate[workoutDate] ?: 0f
+                val trimpWithoutWorkout = (originalDayTrimp - computedTrimp).coerceAtLeast(0f)
+                val trimpMapWith = trimpByDate.toMutableMap()
+                val trimpMapWithout = trimpByDate.toMutableMap().apply { put(workoutDate, trimpWithoutWorkout) }
+
+                val atlWith = scoringCalculator.computeAtlEmaWithDecay(trimpMapWith, workoutDate)
+                val ctlWith = scoringCalculator.computeCtlEmaWithDecay(trimpMapWith, workoutDate)
+                val srWith = scoringCalculator.computeStrainRatio(atlWith, ctlWith)
+
+                val atlWithout = scoringCalculator.computeAtlEmaWithDecay(trimpMapWithout, workoutDate)
+                val ctlWithout = scoringCalculator.computeCtlEmaWithDecay(trimpMapWithout, workoutDate)
+                val srWithout = scoringCalculator.computeStrainRatio(atlWithout, ctlWithout)
+
+                val gainedStrainRatio = srWith - srWithout
+
                 _uiState.update {
                     it.copy(
                         workout = workout,
@@ -144,7 +163,7 @@ class WorkoutDetailViewModel
                         totalPai = summary?.totalPai,
                         paiDailyBreakdown = paiBreakdown,
                         computedTrimp = computedTrimp.roundToInt().takeIf { it > 0 },
-                        gainedStrain = computedTrimp,
+                        gainedStrain = gainedStrainRatio.takeIf { it > 0f } ?: 0f,
                         pai = PaiCalculator.calculateDailyPai(computedTrimp, prefs.paiScalingFactor),
                         isLoading = false,
                     )

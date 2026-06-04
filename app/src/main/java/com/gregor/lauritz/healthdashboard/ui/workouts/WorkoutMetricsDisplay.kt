@@ -72,7 +72,7 @@ fun WorkoutMetricsDisplay(
             ) {
                 MetricCard(
                     title = "Gained Strain",
-                    value = (gainedStrain ?: workout.trimp).roundToInt().toString(),
+                    value = gainedStrain?.let { String.format(java.util.Locale.US, "%.2f", it) } ?: "--",
                     secondaryText = "Strain",
                     status = MetricStatus.NEUTRAL,
                     tooltip = "Total strain gained from this workout.",
@@ -80,7 +80,7 @@ fun WorkoutMetricsDisplay(
                 )
                 MetricCard(
                     title = "PAI",
-                    value = pai?.let { String.format(java.util.Locale.US, "%.1f", it) } ?: "--",
+                    value = pai?.roundToInt()?.toString() ?: "--",
                     secondaryText = "points",
                     status = MetricStatus.NEUTRAL,
                     tooltip = "Personal Activity Intelligence points gained from this workout.",
