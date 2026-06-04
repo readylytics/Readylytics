@@ -204,7 +204,12 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
     val hasDevices = availableDevices.isNotEmpty()
     val allDevicesLabel = stringResource(R.string.data_sources_all_devices)
     val calibratingLabel = stringResource(R.string.data_sources_calibrating)
-    val options = remember(availableDevices, allDevicesLabel) { listOf(allDevicesLabel) + availableDevices }
+    // Include currently selected devices so a previously chosen but no-longer-detected
+    // device (e.g. inactive within the discovery window) stays visible and re-selectable.
+    val options =
+        remember(availableDevices, deviceByDataType, allDevicesLabel) {
+            (listOf(allDevicesLabel) + availableDevices + deviceByDataType.values).distinct()
+        }
 
     Column {
         Text(

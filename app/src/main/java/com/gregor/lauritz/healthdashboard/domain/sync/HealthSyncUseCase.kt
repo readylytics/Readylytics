@@ -33,7 +33,9 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
@@ -61,6 +63,11 @@ class HealthSyncUseCase
         private val transactionRunner: com.gregor.lauritz.healthdashboard.domain.repository.TransactionRunner,
     ) {
         private val syncMutex = Mutex()
+
+        private companion object {
+            // Max concurrent Health Connect step reads during a catch-up sync.
+            const val STEPS_FETCH_CONCURRENCY = 4
+        }
 
         suspend fun sync(windowDays: Int = 8): Result<Unit> =
             syncMutex.withLock {
@@ -223,13 +230,20 @@ class HealthSyncUseCase
                         val stepsDevice = deviceFor(HealthDataType.STEPS)
                         val stepsMap = mutableMapOf<LocalDate, Long>()
                         if (stepsDevice == null) {
+                            // Cap concurrent Health Connect IPC calls to avoid rate limiting
+                            // (RateLimitExceededException) and memory pressure on large windows.
+                            val stepsSemaphore = Semaphore(STEPS_FETCH_CONCURRENCY)
                             coroutineScope {
                                 val deferredSteps =
                                     (0 until windowDays).map { i ->
                                         val day = today.minusDays(i.toLong())
                                         val dayStart = day.atStartOfDay(zoneId).toInstant()
                                         val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
-                                        async { day to hcRepo.readSteps(dayStart, dayEnd) }
+                                        async {
+                                            stepsSemaphore.withPermit {
+                                                day to hcRepo.readSteps(dayStart, dayEnd)
+                                            }
+                                        }
                                     }
                                 stepsMap.putAll(deferredSteps.awaitAll())
                             }
@@ -254,6 +268,11 @@ class HealthSyncUseCase
                                 val startDate = Instant.ofEpochMilli(earliestMs).atZone(zoneId).toLocalDate()
                                 val endDate = LocalDate.now(zoneId)
                                 val windowStartDate = today.minusDays((windowDays - 1).toLong())
+                                // Preload historical step counts in one query to avoid an N+1
+                                // lookup per day across potentially months/years of data.
+                                val historicalSteps =
+                                    dailySummaryDao.getAllSummaries()
+                                        .associate { it.dateMidnightMs to (it.stepCount ?: 0).toLong() }
                                 var current = startDate
                                 while (!current.isAfter(endDate)) {
                                     // For days in the sync window, use fresh stepsMap data.
@@ -262,7 +281,7 @@ class HealthSyncUseCase
                                         stepsMap[current] ?: 0L
                                     } else {
                                         val dateMidnightMs = current.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                                        (dailySummaryDao.getByDate(dateMidnightMs)?.stepCount ?: 0).toLong()
+                                        historicalSteps[dateMidnightMs] ?: 0L
                                     }
                                     syncDayScoring(current, steps)
                                     current = current.plusDays(1)
