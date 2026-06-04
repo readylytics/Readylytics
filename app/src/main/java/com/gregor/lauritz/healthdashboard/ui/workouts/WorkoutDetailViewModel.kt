@@ -110,7 +110,7 @@ class WorkoutDetailViewModel
                         .toEpochMilli()
                 val thirtyDaySummaries = dailySummaryRepository.getSince(thirtyDaysAgo)
                 val trimpByDate = thirtyDaySummaries.associate { it.date to (it.totalTrimp ?: 0f) }
-                
+
                 val paiBreakdown = DailyPaiBreakdownMapper.mapDailyBreakdown(workoutDate, thirtyDaySummaries)
 
                 val recoveryMetrics = RecoveryMetricsMapper.mapRecoveryMetrics(allSamples, workout.endTime, endHr)

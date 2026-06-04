@@ -277,14 +277,36 @@ class WorkoutsViewModel
                                         val originalDayTrimp = trimpByDate[workoutDate] ?: 0f
                                         val trimpWithoutWorkout = (originalDayTrimp - computedTrimp).coerceAtLeast(0f)
                                         val trimpMapWith = trimpByDate.toMutableMap()
-                                        val trimpMapWithout = trimpByDate.toMutableMap().apply { put(workoutDate, trimpWithoutWorkout) }
+                                        val trimpMapWithout =
+                                            trimpByDate.toMutableMap().apply {
+                                                put(
+                                                    workoutDate,
+                                                    trimpWithoutWorkout,
+                                                )
+                                            }
 
-                                        val atlWith = scoringCalculator.computeAtlEmaWithDecay(trimpMapWith, workoutDate)
-                                        val ctlWith = scoringCalculator.computeCtlEmaWithDecay(trimpMapWith, workoutDate)
+                                        val atlWith =
+                                            scoringCalculator.computeAtlEmaWithDecay(
+                                                trimpMapWith,
+                                                workoutDate,
+                                            )
+                                        val ctlWith =
+                                            scoringCalculator.computeCtlEmaWithDecay(
+                                                trimpMapWith,
+                                                workoutDate,
+                                            )
                                         val srWith = scoringCalculator.computeStrainRatio(atlWith, ctlWith)
 
-                                        val atlWithout = scoringCalculator.computeAtlEmaWithDecay(trimpMapWithout, workoutDate)
-                                        val ctlWithout = scoringCalculator.computeCtlEmaWithDecay(trimpMapWithout, workoutDate)
+                                        val atlWithout =
+                                            scoringCalculator.computeAtlEmaWithDecay(
+                                                trimpMapWithout,
+                                                workoutDate,
+                                            )
+                                        val ctlWithout =
+                                            scoringCalculator.computeCtlEmaWithDecay(
+                                                trimpMapWithout,
+                                                workoutDate,
+                                            )
                                         val srWithout = scoringCalculator.computeStrainRatio(atlWithout, ctlWithout)
 
                                         val gainedStrainRatio = srWith - srWithout
