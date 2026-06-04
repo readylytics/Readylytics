@@ -130,7 +130,15 @@ fun BodyFatDetailScreen(
                                 R.string.tooltip_body_fat_current,
                                 uiState.bodyFatDisplay ?: "—",
                                 uiState.optimalRangeDisplay ?: "—",
-                                uiState.gender,
+                                stringResource(
+                                    when (uiState.gender) {
+                                        "MALE" -> R.string.gender_male
+                                        "FEMALE" -> R.string.gender_female
+                                        "OTHER" -> R.string.gender_other
+                                        "PREFER_NOT_TO_SAY" -> R.string.gender_prefer_not_to_say
+                                        else -> R.string.gender_prefer_not_to_say
+                                    }
+                                ),
                                 uiState.age,
                             ),
                         )
