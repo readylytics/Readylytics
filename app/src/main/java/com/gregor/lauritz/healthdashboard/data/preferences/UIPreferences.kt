@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.data.preferences
 
 import androidx.datastore.core.DataStore
 import com.gregor.lauritz.healthdashboard.data.device.HealthDeviceRepository
+import com.gregor.lauritz.healthdashboard.domain.model.HealthDataType
 import javax.inject.Inject
 
 internal class UIPreferences
@@ -58,6 +59,40 @@ internal class UIPreferences
                     builder.toBuilder().setPrimaryDeviceName(deviceName).build()
                 } else {
                     builder.toBuilder().clearPrimaryDeviceName().build()
+                }
+            }
+        }
+
+        suspend fun updateDeviceForDataType(
+            dataTypeKey: String,
+            deviceLabel: String?,
+        ) {
+            dataStore.updateData { proto ->
+                val builder = proto.toBuilder()
+                if (deviceLabel.isNullOrBlank()) {
+                    builder.removeDeviceByDataType(dataTypeKey)
+                } else {
+                    builder.putDeviceByDataType(dataTypeKey, deviceLabel)
+                }
+                builder.build()
+            }
+        }
+
+        /**
+         * One-time migration from the legacy single global "primary device" to the
+         * per–data-type selection. Seeds every data type with the previously chosen
+         * device so existing users keep their behavior, then clears the legacy field.
+         */
+        suspend fun migrateDeviceSelectionIfNeeded() {
+            dataStore.updateData { proto ->
+                if (proto.deviceByDataTypeMap.isEmpty() && proto.hasPrimaryDeviceName()) {
+                    val builder = proto.toBuilder()
+                    HealthDataType.entries.forEach { type ->
+                        builder.putDeviceByDataType(type.name, proto.primaryDeviceName)
+                    }
+                    builder.clearPrimaryDeviceName().build()
+                } else {
+                    proto
                 }
             }
         }

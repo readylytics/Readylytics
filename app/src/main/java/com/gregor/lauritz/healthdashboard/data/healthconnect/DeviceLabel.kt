@@ -30,6 +30,12 @@ internal object DeviceLabel {
             return manufacturer
         }
 
+        // The phone often records data (e.g. Steps) with no manufacturer/model set.
+        // Surface it explicitly so it can be picked as a source device.
+        if (device?.type == Device.TYPE_PHONE) {
+            return "This Phone"
+        }
+
         // Fallback to package name if device info is not useful
         return mapPackageName(dataOrigin.packageName)
     }

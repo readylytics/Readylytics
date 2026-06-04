@@ -62,6 +62,11 @@ data class UserPreferences(
     val chengBeta: Float = PhysiologyProfile.GENERAL.defaultChengBeta,
     val itrimB: Float = PhysiologyProfile.GENERAL.defaultItrimB,
     val primaryDeviceName: String? = null,
+    /**
+     * Per–data-type source device selection. Key = [com.gregor.lauritz.healthdashboard.domain.model.HealthDataType]
+     * name, value = device label. A missing key means "All devices" for that data type.
+     */
+    val deviceByDataType: Map<String, String> = emptyMap(),
     val backupDirectoryUri: String? = null,
     /**
      * Stored Base64-encoded AES-256-GCM ciphertext of the backup password (encrypted via Google Tink).
@@ -142,6 +147,7 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         chengBeta = if (this.chengBeta > 0f) this.chengBeta else profile.defaultChengBeta,
         itrimB = if (itrimpB > 0f) itrimpB else profile.defaultItrimB,
         primaryDeviceName = if (hasPrimaryDeviceName()) primaryDeviceName else null,
+        deviceByDataType = deviceByDataTypeMap.toMap(),
         backupDirectoryUri = if (hasBackupDirectoryUri()) backupDirectoryUri else null,
         backupPasswordHash = if (hasBackupPasswordHash()) backupPasswordHash else null,
         isBirthdayConfigured = isBirthdayConfigured,

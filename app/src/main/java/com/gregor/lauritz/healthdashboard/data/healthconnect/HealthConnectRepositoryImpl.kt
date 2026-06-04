@@ -348,6 +348,28 @@ class HealthConnectRepositoryImpl
                         devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
                     }
 
+                    // Steps are frequently the only data the phone records, so scanning
+                    // them here is what surfaces the phone as a selectable source device.
+                    val stepsRecords = readStepsRecords(from, to)
+                    stepsRecords.forEach { record ->
+                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                    }
+
+                    val weightRecords = readWeightRecords(from, to)
+                    weightRecords.forEach { record ->
+                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                    }
+
+                    val bodyFatRecords = readBodyFatRecords(from, to)
+                    bodyFatRecords.forEach { record ->
+                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                    }
+
+                    val bloodPressureRecords = readBloodPressureRecords(from, to)
+                    bloodPressureRecords.forEach { record ->
+                        devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                    }
+
                     val spo2Records = readOxygenSaturationRecords(from, to)
                     spo2Records.forEach { record ->
                         devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))

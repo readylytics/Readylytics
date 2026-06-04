@@ -441,6 +441,7 @@ class LocalBackupManager
                     chengBeta = prefs.chengBeta,
                     itrimB = prefs.itrimB,
                     primaryDeviceName = prefs.primaryDeviceName,
+                    deviceByDataType = prefs.deviceByDataType.takeIf { it.isNotEmpty() },
                     backupDirectoryUri = prefs.backupDirectoryUri,
                 )
             writer.write(json.encodeToString(backup))

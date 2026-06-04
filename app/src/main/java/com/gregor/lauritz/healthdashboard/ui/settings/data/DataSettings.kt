@@ -18,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,12 +25,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.domain.model.HealthDataType
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
+import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
 import com.gregor.lauritz.healthdashboard.ui.settings.SyncSettingsState
 import com.gregor.lauritz.healthdashboard.ui.settings.UIState
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
-import kotlinx.coroutines.launch
 
 @Composable
 fun SyncSettingsSection(
@@ -191,41 +191,65 @@ private val SyncPreference.displayName: String
             SyncPreference.BY_TIME -> "By Time"
         }
 
-@Composable
-fun DeviceSelectionSection(viewModel: DeviceSettingsViewModel = hiltViewModel()) {
-    val availableDevices by viewModel.availableDevices.collectAsStateWithLifecycle()
-    val primaryDevice by viewModel.primaryDevice.collectAsStateWithLifecycle()
-    val coroutineScope = rememberCoroutineScope()
-    val hasDevices = availableDevices.isNotEmpty()
+private const val ALL_DEVICES_LABEL = "All devices"
 
-    Column(
-        modifier =
-            Modifier.padding(
-                horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
-            ),
-    ) {
-        DropdownPreferenceItem(
-            label = "Primary Device",
-            selectedDisplayValue =
-                when {
-                    !hasDevices -> "Calibrating..."
-                    primaryDevice != null -> primaryDevice!!
-                    else -> "Select a device"
-                },
-            options = availableDevices,
-            onOptionSelected = { deviceName ->
-                coroutineScope.launch { viewModel.updatePrimaryDevice(deviceName) }
-            },
-            optionLabel = { it },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = hasDevices,
-        )
+/**
+ * Lets the user pick the source device individually for each Health Connect data
+ * type, grouped by category. "All devices" (the default) applies no source filter.
+ */
+@Composable
+fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewModel()) {
+    val availableDevices by viewModel.availableDevices.collectAsStateWithLifecycle()
+    val deviceByDataType by viewModel.deviceByDataType.collectAsStateWithLifecycle()
+    val hasDevices = availableDevices.isNotEmpty()
+    val options = remember(availableDevices) { listOf(ALL_DEVICES_LABEL) + availableDevices }
+
+    Column {
         Text(
-            text = "Device used for metrics calculation",
+            text = "Choose which device each data type is read from. Defaults to all devices.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 16.dp, top = 4.dp),
+            modifier =
+                Modifier.padding(
+                    horizontal = SettingsConstants.HORIZONTAL_PADDING,
+                    vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
+                ),
         )
+
+        HealthDataType.entries
+            .groupBy { it.category }
+            .forEach { (category, types) ->
+                SectionHeader(category.displayName)
+                types.forEach { type ->
+                    val selected = deviceByDataType[type.name]
+                    DropdownPreferenceItem(
+                        label = type.displayName,
+                        selectedDisplayValue =
+                            when {
+                                !hasDevices && selected == null -> "Calibrating..."
+                                selected != null -> selected
+                                else -> ALL_DEVICES_LABEL
+                            },
+                        options = options,
+                        onOptionSelected = { choice ->
+                            viewModel.updateDevice(
+                                type = type,
+                                deviceLabel = choice.takeIf { it != ALL_DEVICES_LABEL },
+                            )
+                        },
+                        optionLabel = { it },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    horizontal = SettingsConstants.HORIZONTAL_PADDING,
+                                    vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
+                                ),
+                        // Always enabled so the user can re-select "All devices" even
+                        // before any device has been discovered.
+                        enabled = hasDevices || selected != null,
+                    )
+                }
+            }
     }
 }

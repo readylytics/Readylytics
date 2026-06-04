@@ -56,7 +56,7 @@ import com.gregor.lauritz.healthdashboard.ui.settings.LocalBackupViewModel.SideE
 import com.gregor.lauritz.healthdashboard.ui.settings.backup.LocalBackupSection
 import com.gregor.lauritz.healthdashboard.ui.settings.common.UnitSystemSelector
 import com.gregor.lauritz.healthdashboard.ui.settings.data.DataManagementSection
-import com.gregor.lauritz.healthdashboard.ui.settings.data.DeviceSelectionSection
+import com.gregor.lauritz.healthdashboard.ui.settings.data.DataSourceSettingsSection
 import com.gregor.lauritz.healthdashboard.ui.settings.data.SyncSettingsSection
 import com.gregor.lauritz.healthdashboard.ui.settings.physiologyprofile.HeartRateZoneSection
 import kotlinx.coroutines.flow.collectLatest
@@ -66,6 +66,7 @@ import kotlinx.parcelize.Parcelize
 data class SettingsExpandState(
     val genderExpanded: Boolean = false,
     val collapseDataBackup: Boolean = false,
+    val collapseDataSources: Boolean = false,
     val collapseBaselinesThresholds: Boolean = false,
     val collapseDisplay: Boolean = false,
     val collapseAdvanced: Boolean = false,
@@ -93,6 +94,24 @@ val settingsSections =
                     "health connect",
                     "sync",
                     "foreground",
+                ),
+        ),
+        SettingsSectionMetadata(
+            id = "data_sources",
+            name = "Data Sources",
+            keywords =
+                listOf(
+                    "device",
+                    "source",
+                    "data source",
+                    "steps",
+                    "activity",
+                    "vitals",
+                    "sleep",
+                    "body",
+                    "heart rate",
+                    "phone",
+                    "watch",
                 ),
         ),
         SettingsSectionMetadata(
@@ -326,9 +345,6 @@ fun SettingsScreen(
                                 onEvent = onLocalBackupEvent,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            SectionHeader("Device")
-                            DeviceSelectionSection()
-                            Spacer(modifier = Modifier.height(12.dp))
                             SectionHeader("Data Management")
                             DataManagementSection(
                                 uiState = uiState,
@@ -340,6 +356,22 @@ fun SettingsScreen(
                             SectionHeader("Health Connect")
                             SyncSettingsSection(uiState = syncState, onEvent = onSyncEvent)
                         }
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
+                }
+
+                // Data Sources (per–data-type source device selection)
+                if (matchingSections.any { it.id == "data_sources" }) {
+                    M3CollapsibleSection(
+                        header = "Data Sources",
+                        expanded =
+                            !expandState.collapseDataSources ||
+                                shouldExpandSection("data_sources"),
+                        onExpandedChange = {
+                            expandState = expandState.copy(collapseDataSources = !it)
+                        },
+                    ) {
+                        DataSourceSettingsSection()
                     }
                     HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
                 }

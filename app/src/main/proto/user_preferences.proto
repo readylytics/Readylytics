@@ -145,6 +145,11 @@ message UserPreferencesProto {
     bool is_birthday_configured = 59;
 
     UnitSystemProto unit_system = 62;
+
+    // Per–data-type source device selection. Key = HealthDataType.name,
+    // value = device label (as produced by DeviceLabel). An absent key means
+    // "All devices" (no source filtering) for that data type.
+    map<string, string> device_by_data_type = 63;
 }
 
 enum TrimpMethodProto {
