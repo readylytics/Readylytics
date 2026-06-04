@@ -144,8 +144,8 @@ class WorkoutDetailViewModel
                         totalPai = summary?.totalPai,
                         paiDailyBreakdown = paiBreakdown,
                         computedTrimp = computedTrimp.roundToInt().takeIf { it > 0 },
-                        gainedStrain = workout.trimp,
-                        pai = PaiCalculator.calculateDailyPai(workout.trimp, prefs.paiScalingFactor),
+                        gainedStrain = computedTrimp,
+                        pai = PaiCalculator.calculateDailyPai(computedTrimp, prefs.paiScalingFactor),
                         isLoading = false,
                     )
                 }

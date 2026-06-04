@@ -275,7 +275,7 @@ class WorkoutsViewModel
                                         val computedTrimp = computedTrimpResult.getOrNull() ?: 0f
                                         WorkoutDisplayItem(
                                             workout = workout,
-                                            gainedStrain = workout.trimp,
+                                            gainedStrain = computedTrimp,
                                             computedTrimp = computedTrimp,
                                         )
                                     }
