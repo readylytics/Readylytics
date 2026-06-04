@@ -33,7 +33,7 @@ fun hrZoneColors(): HrZoneColors {
     val ext = LocalExtendedColors.current
     return remember(cs, ext) {
         HrZoneColors(
-            zone0 = ext.neutralContainer.copy(alpha = ChartZoneAlphas.RESTING),
+            zone0 = cs.surfaceVariant.copy(alpha = ChartZoneAlphas.RESTING),
             zone1 = cs.secondaryContainer.copy(alpha = ChartZoneAlphas.LOW),
             zone2 = cs.primaryContainer.copy(alpha = ChartZoneAlphas.MODERATE),
             zone3 = cs.tertiaryContainer.copy(alpha = ChartZoneAlphas.MODERATE),

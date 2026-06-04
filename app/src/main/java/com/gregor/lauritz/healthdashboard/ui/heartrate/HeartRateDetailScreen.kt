@@ -304,7 +304,7 @@ private fun zoneColor(zone: Int): Color {
     val cs = MaterialTheme.colorScheme
     val ext = LocalExtendedColors.current
     return when (zone) {
-        0 -> ext.neutralContainer
+        0 -> cs.surfaceVariant
         1 -> cs.secondaryContainer
         2 -> cs.primaryContainer
         3 -> cs.tertiaryContainer
