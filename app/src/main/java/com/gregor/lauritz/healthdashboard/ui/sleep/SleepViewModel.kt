@@ -6,8 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailyMetrics
-import com.gregor.lauritz.healthdashboard.domain.model.DailyMetricsMapper
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.repository.DailyMetricsRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
@@ -52,6 +52,7 @@ class SleepViewModel
     @Inject
     constructor(
         private val dailySummaryRepository: DailySummaryRepository,
+        private val dailyMetricsRepository: DailyMetricsRepository,
         private val sleepSessionRepository: SleepSessionRepository,
         private val heartRateRepository: HeartRateRepository,
         private val settingsRepo: SettingsRepository,
@@ -125,16 +126,18 @@ class SleepViewModel
                             }
                         }
 
+                    val metricsFlow = dailyMetricsRepository.observeByDate(date)
+
                     combine(
                         summaryFlow,
                         sessionFlow,
                         stagesFlow,
                         foregroundSyncController.isSyncing,
-                        settingsRepo.userPreferences,
-                    ) { latestSummary, latestSession, stages, isSyncing, prefs ->
+                        metricsFlow,
+                    ) { latestSummary, latestSession, stages, isSyncing, latestMetrics ->
                         SleepUiState(
                             latestSummary = latestSummary,
-                            latestMetrics = latestSummary?.let { DailyMetricsMapper.toMetrics(it, prefs) },
+                            latestMetrics = latestMetrics,
                             latestSession = latestSession,
                             stageTimeline = stages,
                             selectedDate = date,

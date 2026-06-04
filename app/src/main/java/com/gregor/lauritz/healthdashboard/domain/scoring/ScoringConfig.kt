@@ -17,4 +17,5 @@ data class ScoringConfig(
     val banisterMultiplier: Float,
     val chengBeta: Float,
     val itrimB: Float,
+    val hrvSaturationZ: Float = ScoringConstants.HRV_SCORE_SATURATION_Z,
 )

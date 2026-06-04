@@ -43,7 +43,7 @@ class ScoringConfigFactory
                     .coerceAtLeast(0)
 
             val restoration = createRestorationWeights(userPreferences.physiologyProfile)
-            val sleepTargets = SleepArchitectureTargetFactory.create(userPreferences.age, userPreferences.gender)
+            val sleepTargets = SleepArchitectureTargetFactory.create(userPreferences.age)
             val emergencyFlags = createEmergencyFlagThresholds(userPreferences.physiologyProfile)
             val circadianConsistency =
                 createCircadianConsistencyConfig(
@@ -54,10 +54,12 @@ class ScoringConfigFactory
                 )
 
             val auditTrail = createAuditTrail(daysSinceInstall, currentDate)
+            val hrvSaturationZ = hrvSaturationZForProfile(userPreferences.physiologyProfile)
 
             // Use SHA256 hash of configuration parameters for stable, deterministic identifier
             // This ensures consistency across JVM versions and app updates
-            val paramsHash = computeConfigHash(restoration, sleepTargets, emergencyFlags, circadianConsistency)
+            val paramsHash =
+                computeConfigHash(restoration, sleepTargets, emergencyFlags, circadianConsistency, hrvSaturationZ)
 
             val config =
                 ScoringConfig(
@@ -71,6 +73,7 @@ class ScoringConfigFactory
                     banisterMultiplier = userPreferences.banisterMultiplier,
                     chengBeta = userPreferences.chengBeta,
                     itrimB = userPreferences.itrimB,
+                    hrvSaturationZ = hrvSaturationZ,
                 )
 
             return config
@@ -85,10 +88,33 @@ class ScoringConfigFactory
                 PhysiologyProfile.SHIFT_WORKER -> RestorationWeights(hrvWeight = 0.50f, rhrWeight = 0.50f)
             }
 
-        private fun createEmergencyFlagThresholds(profile: PhysiologyProfile): EmergencyFlagThresholds {
-            // Profile-agnostic for now; can be extended per profile if needed
-            return EmergencyFlagThresholds()
-        }
+        private fun createEmergencyFlagThresholds(profile: PhysiologyProfile): EmergencyFlagThresholds =
+            when (profile) {
+                PhysiologyProfile.ATHLETE ->
+                    EmergencyFlagThresholds(
+                        overreachingZHrvThreshold = 1.2f,
+                        illnessZHrvThreshold = -1.2f,
+                    )
+                PhysiologyProfile.ACTIVE, PhysiologyProfile.GENERAL ->
+                    EmergencyFlagThresholds(
+                        overreachingZHrvThreshold = 1.5f,
+                        illnessZHrvThreshold = -1.5f,
+                    )
+                PhysiologyProfile.SEDENTARY, PhysiologyProfile.SHIFT_WORKER ->
+                    EmergencyFlagThresholds(
+                        overreachingZHrvThreshold = 2.0f,
+                        illnessZHrvThreshold = -2.0f,
+                    )
+            }
+
+        private fun hrvSaturationZForProfile(profile: PhysiologyProfile): Float =
+            when (profile) {
+                PhysiologyProfile.ATHLETE -> 1.2f
+                PhysiologyProfile.ACTIVE -> 1.5f
+                PhysiologyProfile.GENERAL -> 1.5f
+                PhysiologyProfile.SEDENTARY -> 2.0f
+                PhysiologyProfile.SHIFT_WORKER -> 2.0f
+            }
 
         private fun createCircadianConsistencyConfig(
             profile: PhysiologyProfile,
@@ -117,6 +143,7 @@ class ScoringConfigFactory
             sleepTargets: SleepArchitectureTargets,
             emergencyFlags: EmergencyFlagThresholds,
             circadianConsistency: CircadianConsistencyConfig,
+            hrvSaturationZ: Float = ScoringConstants.HRV_SCORE_SATURATION_Z,
         ): Int {
             val digest = MessageDigest.getInstance("SHA-256")
             val buffer = ByteBuffer.allocate(4)
@@ -160,6 +187,9 @@ class ScoringConfigFactory
             update(circadianConsistency.useShiftWorkerMode)
             update(circadianConsistency.evaluationDays)
             update(circadianConsistency.baselineDays)
+
+            // HRV saturation threshold (profile-tiered)
+            update(hrvSaturationZ)
 
             // Log only hash for debugging
             SecureLogger.debugEvent("Computing config hash (version: $CONFIG_SCHEMA_VERSION)")

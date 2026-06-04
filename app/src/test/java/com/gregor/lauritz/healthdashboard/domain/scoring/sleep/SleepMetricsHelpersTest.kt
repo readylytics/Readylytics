@@ -98,10 +98,10 @@ class CurrentNightHrvResolverTest {
         }
 }
 
-class WakeWindowHrCollectorTest {
+class SleepPercentileRhrCalculatorTest {
     private val heartRateDao = mockk<HeartRateDao>()
     private val sleepSessionDao = mockk<SleepSessionDao>()
-    private val collector = WakeWindowHrCollector(heartRateDao, sleepSessionDao)
+    private val collector = SleepPercentileRhrCalculator(heartRateDao, sleepSessionDao)
 
     @Test
     fun `collect_historicRecordsPresent_computesBaselineAndRatio`() =

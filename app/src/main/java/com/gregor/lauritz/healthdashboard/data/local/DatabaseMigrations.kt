@@ -642,6 +642,127 @@ object DatabaseMigrations {
             }
         }
 
+    val MIGRATION_24_25 =
+        object : Migration(24, 25) {
+            private val createSql =
+                """
+                CREATE TABLE daily_summaries_new (
+                    dateMidnightMs INTEGER NOT NULL,
+                    sleepScore REAL,
+                    loadScore REAL,
+                    readinessScore REAL,
+                    strainRatio REAL,
+                    nocturnalHrv INTEGER,
+                    sleepDurationMinutes INTEGER,
+                    deepSleepPercent REAL,
+                    remSleepPercent REAL,
+                    totalTrimp REAL,
+                    hrvBaseline INTEGER,
+                    restingHeartRate INTEGER,
+                    restingHrRatio REAL,
+                    paiScore REAL,
+                    totalPai REAL,
+                    stepCount INTEGER,
+                    zLnHrv REAL,
+                    zRhr REAL,
+                    recoveryFlags TEXT,
+                    hrvSigma REAL,
+                    rollingMu REAL,
+                    rhrDeltaBpm REAL,
+                    lateNadir INTEGER,
+                    stagesSuspicious INTEGER,
+                    isCalibrating INTEGER,
+                    hrvScoreContribution REAL,
+                    rhrScoreContribution REAL,
+                    durationScoreContribution REAL,
+                    architectureScoreContribution REAL,
+                    loadContribution REAL,
+                    sRest REAL,
+                    weightKg REAL,
+                    bodyFatPercent REAL,
+                    bloodPressureSystolic INTEGER,
+                    bloodPressureDiastolic INTEGER,
+                    avgSleepingSpo2 REAL,
+                    hrv_mu_mssd REAL,
+                    hrv_sigma_mssd REAL,
+                    rhr_bpm REAL,
+                    baseline_calculated_at_date TEXT,
+                    baseline_version INTEGER,
+                    hr_max REAL,
+                    snapshot_profile TEXT,
+                    snapshot_calibration_phase TEXT,
+                    hrv_sigma_prior REAL,
+                    pai_scaling_factor REAL,
+                    baseline_observation_count INTEGER,
+                    diag_zLnHrv REAL,
+                    diag_zRhr REAL,
+                    diag_lnSigma REAL,
+                    diag_rollingMu REAL,
+                    diag_rhrDeltaBpm REAL,
+                    diag_isCalibrating INTEGER NOT NULL,
+                    diag_stagesSuspicious INTEGER NOT NULL,
+                    diag_lateNadir INTEGER NOT NULL,
+                    diag_hrvMissing INTEGER NOT NULL,
+                    diag_timezoneJump INTEGER NOT NULL,
+                    diag_configHashCode INTEGER,
+                    diag_phaseName TEXT,
+                    contrib_hrvScore REAL,
+                    contrib_rhrScore REAL,
+                    contrib_durationScore REAL,
+                    contrib_architectureScore REAL,
+                    contrib_loadContribution REAL,
+                    PRIMARY KEY(dateMidnightMs)
+                )
+                """.trimIndent()
+
+            private val insertSql =
+                """
+                INSERT INTO daily_summaries_new
+                    (dateMidnightMs, sleepScore, loadScore, readinessScore, strainRatio,
+                     nocturnalHrv, sleepDurationMinutes, deepSleepPercent, remSleepPercent, totalTrimp,
+                     hrvBaseline, restingHeartRate, restingHrRatio,
+                     paiScore, totalPai, stepCount, zLnHrv, zRhr, recoveryFlags, hrvSigma,
+                     diag_zLnHrv, diag_zRhr, diag_lnSigma, diag_rollingMu, diag_rhrDeltaBpm,
+                     diag_isCalibrating, diag_stagesSuspicious, diag_lateNadir, diag_hrvMissing, diag_timezoneJump,
+                     diag_configHashCode, diag_phaseName,
+                     contrib_hrvScore, contrib_rhrScore, contrib_durationScore, contrib_architectureScore, contrib_loadContribution,
+                     rollingMu, rhrDeltaBpm, lateNadir, stagesSuspicious, isCalibrating,
+                     hrvScoreContribution, rhrScoreContribution, durationScoreContribution, architectureScoreContribution, loadContribution,
+                     sRest, weightKg, bodyFatPercent, bloodPressureSystolic, bloodPressureDiastolic, avgSleepingSpo2,
+                     hrv_mu_mssd, hrv_sigma_mssd, rhr_bpm, baseline_calculated_at_date, baseline_version)
+                SELECT dateMidnightMs, sleepScore, loadScore, readinessScore, strainRatio,
+                       nocturnalHrv, sleepDurationMinutes, deepSleepPercent, remSleepPercent, totalTrimp,
+                       hrvBaseline, restingHeartRate, restingHrRatio,
+                       paiScore, totalPai, stepCount, zLnHrv, zRhr, recoveryFlags, hrvSigma,
+                       diag_zLnHrv, diag_zRhr, diag_lnSigma, diag_rollingMu, diag_rhrDeltaBpm,
+                       diag_isCalibrating, diag_stagesSuspicious, diag_lateNadir, diag_hrvMissing, diag_timezoneJump,
+                       diag_configHashCode, diag_phaseName,
+                       contrib_hrvScore, contrib_rhrScore, contrib_durationScore, contrib_architectureScore, contrib_loadContribution,
+                       rollingMu, rhrDeltaBpm, lateNadir, stagesSuspicious, isCalibrating,
+                       hrvScoreContribution, rhrScoreContribution, durationScoreContribution, architectureScoreContribution, loadContribution,
+                       sRest, weightKg, bodyFatPercent, bloodPressureSystolic, bloodPressureDiastolic, avgSleepingSpo2,
+                       hrv_mu_mssd, hrv_sigma_mssd, rhr_bpm, baseline_calculated_at_date, baseline_version
+                FROM daily_summaries
+                """.trimIndent()
+
+            private val sql =
+                listOf(
+                    createSql,
+                    insertSql,
+                    "DROP TABLE daily_summaries",
+                    "ALTER TABLE daily_summaries_new RENAME TO daily_summaries",
+                    "CREATE INDEX IF NOT EXISTS index_daily_summaries_dateMidnightMs ON daily_summaries (dateMidnightMs)",
+                )
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                sql.forEach { db.execSQL(it) }
+            }
+
+            override fun migrate(connection: SQLiteConnection) {
+                sql.forEach { connection.execSQL(it) }
+            }
+        }
+
     val all =
         arrayOf(
             MIGRATION_1_2,
@@ -667,5 +788,6 @@ object DatabaseMigrations {
             MIGRATION_21_22,
             MIGRATION_22_23,
             MIGRATION_23_24,
+            MIGRATION_24_25,
         )
 }

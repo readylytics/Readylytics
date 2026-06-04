@@ -22,7 +22,7 @@ import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.CurrentNightHrvResolver
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.HrCoverageValidator
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.SleepNadirAnalyzer
-import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.WakeWindowHrCollector
+import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.SleepPercentileRhrCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.PaiScoringStrategy
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.SleepScoringStrategy
@@ -140,7 +140,7 @@ class ScoringRepositoryN1Test {
         val scoringConfigFactory = ScoringConfigFactory()
         val encryptionManager = mockk<EncryptionManager>(relaxed = true)
         val hrvResolver = CurrentNightHrvResolver(hrvDao, dailySummaryDao)
-        val wakeHrCollector = WakeWindowHrCollector(heartRateDao, sleepSessionDao)
+        val sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(heartRateDao, sleepSessionDao)
         val nadirAnalyzer = SleepNadirAnalyzer(heartRateDao, scoringCalculator)
         val coverageValidator = HrCoverageValidator()
         val computeSleepMetricsUseCase =
@@ -152,7 +152,7 @@ class ScoringRepositoryN1Test {
                 scoringConfigFactory,
                 encryptionManager,
                 hrvResolver,
-                wakeHrCollector,
+                sleepPercentileRhrCalculator,
                 nadirAnalyzer,
                 coverageValidator,
             )
@@ -176,7 +176,7 @@ class ScoringRepositoryN1Test {
                 bodyFatRecordDao = bodyFatRecordDao,
                 bloodPressureRecordDao = bloodPressureRecordDao,
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
-                wakeHrCollector = wakeHrCollector,
+                sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
             )
     }
 

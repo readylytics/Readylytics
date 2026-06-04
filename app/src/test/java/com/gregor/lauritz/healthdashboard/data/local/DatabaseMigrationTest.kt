@@ -15,6 +15,7 @@ import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATIO
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_21_22
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_22_23
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_23_24
+import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_24_25
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_2_3
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_3_4
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_4_5
@@ -31,9 +32,9 @@ class DatabaseMigrationTest {
     @Test
     fun `all migrations are registered in sequential order`() {
         val migrations = DatabaseMigrations.all
-        assertEquals("Expected 23 migrations (1..24)", 23, migrations.size)
+        assertEquals("Expected 24 migrations (1..25)", 24, migrations.size)
 
-        val expectedPairs = (1..23).map { it to it + 1 }
+        val expectedPairs = (1..24).map { it to it + 1 }
         val actualPairs = migrations.map { it.startVersion to it.endVersion }
         assertEquals(expectedPairs, actualPairs)
     }
@@ -220,5 +221,17 @@ class DatabaseMigrationTest {
     fun `MIGRATION_23_24 is registered in all array`() {
         val found = DatabaseMigrations.all.any { it === MIGRATION_23_24 }
         assertTrue("MIGRATION_23_24 must be registered in DatabaseMigrations.all", found)
+    }
+
+    @Test
+    fun `MIGRATION_24_25 version range is correct`() {
+        assertEquals(24, MIGRATION_24_25.startVersion)
+        assertEquals(25, MIGRATION_24_25.endVersion)
+    }
+
+    @Test
+    fun `MIGRATION_24_25 is registered in all array`() {
+        val found = DatabaseMigrations.all.any { it === MIGRATION_24_25 }
+        assertTrue("MIGRATION_24_25 must be registered in DatabaseMigrations.all", found)
     }
 }

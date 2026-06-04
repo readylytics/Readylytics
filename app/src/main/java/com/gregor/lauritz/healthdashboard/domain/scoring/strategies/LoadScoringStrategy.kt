@@ -67,11 +67,14 @@ class LoadScoringStrategy
             return (lnToday - mu) / sigma
         }
 
-        fun computeHrvScore(z: Float): Float {
+        fun computeHrvScore(
+            z: Float,
+            saturationZ: Float = ScoringConstants.HRV_SCORE_SATURATION_Z,
+        ): Float {
             val adjustedZ =
-                if (z > ScoringConstants.HRV_SCORE_SATURATION_Z) {
-                    ScoringConstants.HRV_SCORE_SATURATION_Z +
-                        ScoringConstants.HRV_SCORE_SATURATION_SLOPE * (z - ScoringConstants.HRV_SCORE_SATURATION_Z)
+                if (z > saturationZ) {
+                    saturationZ +
+                        ScoringConstants.HRV_SCORE_SATURATION_SLOPE * (z - saturationZ)
                 } else {
                     z
                 }

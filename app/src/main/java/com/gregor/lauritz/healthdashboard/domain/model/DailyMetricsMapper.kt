@@ -30,16 +30,16 @@ object DailyMetricsMapper {
         return DailyMetrics(
             date = summary.date,
             // Raw passthrough
-            nocturnalRhrRaw = summary.nocturnalRhr,
+            nocturnalRhrRaw = summary.restingHeartRate,
             nocturnalHrvRaw = summary.nocturnalHrv,
             rhrBaselineRaw = rhrBaselineRaw,
             hrvBaselineMeanRaw = summary.hrvMuMssd,
             hrvBaselineSdRaw = summary.hrvSigmaMssd,
             rhrSnapshotRaw = summary.rhrBpm,
             // Rounded display ints
-            nocturnalRhrRounded = summary.nocturnalRhr,
+            nocturnalRhrRounded = summary.restingHeartRate,
             nocturnalHrvRounded = summary.nocturnalHrv,
-            restingHeartRateRounded = summary.restingHeartRate ?: summary.nocturnalRhr,
+            restingHeartRateRounded = summary.restingHeartRate,
             rhrBaselineRounded = rhrBaselineRounded,
             hrvBaselineRounded = hrvBaselineRounded,
             sleepScoreRounded = summary.sleepScore?.roundToInt(),
@@ -51,12 +51,12 @@ object DailyMetricsMapper {
             paiDayScoreRounded = summary.paiScore?.roundToInt(),
             spo2Rounded = summary.avgSleepingSpo2?.roundToInt(),
             // Baseline diffs + arrows
-            rhrBaselineDiff = diff(summary.nocturnalRhr, rhrBaselineRounded),
+            rhrBaselineDiff = diff(summary.restingHeartRate, rhrBaselineRounded),
             hrvBaselineDiff = diff(summary.nocturnalHrv, hrvBaselineRounded),
-            restingHrBaselineDiff = diff(summary.restingHeartRate, summary.restingHrBaseline),
-            rhrBaselineArrow = arrow(summary.nocturnalRhr, rhrBaselineRounded),
+            restingHrBaselineDiff = diff(summary.restingHeartRate, summary.rhrBpm?.roundToInt()),
+            rhrBaselineArrow = arrow(summary.restingHeartRate, rhrBaselineRounded),
             hrvBaselineArrow = arrow(summary.nocturnalHrv, hrvBaselineRounded),
-            restingHrBaselineArrow = arrow(summary.restingHeartRate, summary.restingHrBaseline),
+            restingHrBaselineArrow = arrow(summary.restingHeartRate, summary.rhrBpm?.roundToInt()),
             // Display strings
             sleepDurationDisplay = formatSleepDuration(summary.sleepDurationMinutes),
             weightKgDisplay = summary.weightKg?.let { format1(it) },
@@ -70,27 +70,13 @@ object DailyMetricsMapper {
         )
     }
 
-    /**
-     * Resting-HR baseline derivation — the single source of truth for the
-     * `(nocturnalRhr / rhrRatio)` calculation previously duplicated across providers
-     * and ViewModels. Falls back to the stored/override/default baseline when the ratio
-     * is unavailable.
-     */
     private fun deriveRhrBaselineRaw(
         summary: DailySummary,
         prefs: UserPreferences,
-    ): Float? {
-        val ratio = summary.rhrRatio
-        val rhr = summary.nocturnalRhr
-        return if (ratio != null && ratio > 0f && rhr != null) {
-            rhr / ratio
-        } else {
-            summary.restingHrBaseline?.toFloat()
-                ?: summary.rhrBpm
-                ?: prefs.rhrBaselineOverride
-                ?: ScoringConstants.DEFAULT_RHR_BPM
-        }
-    }
+    ): Float? =
+        summary.rhrBpm
+            ?: prefs.rhrBaselineOverride
+            ?: ScoringConstants.DEFAULT_RHR_BPM
 
     private fun diff(
         current: Int?,

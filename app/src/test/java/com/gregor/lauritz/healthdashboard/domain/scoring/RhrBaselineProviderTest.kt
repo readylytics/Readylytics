@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.model.PhysiologyConstants
@@ -8,14 +9,22 @@ import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals
 
 class RhrBaselineProviderTest {
+    private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
     private val baselineComputer = mockk<BaselineComputer>()
     private val settingsRepository = mockk<SettingsRepository>()
-    private val provider = AdaptiveRhrBaselineProvider(baselineComputer, settingsRepository)
+    private val provider = AdaptiveRhrBaselineProvider(dailySummaryDao, settingsRepository, baselineComputer)
+
+    @Before
+    fun setUp() {
+        coEvery { dailySummaryDao.getPreciseRhrBaseline(any()) } returns null
+        coEvery { dailySummaryDao.getRoundedRhrBaseline(any()) } returns null
+    }
 
     @Test
     fun getRhrBaseline_with_override_returns_override() =
@@ -35,8 +44,8 @@ class RhrBaselineProviderTest {
             val dayMidnight = Instant.now()
             val prefs = UserPreferences(rhrBaselineOverride = null)
             coEvery { settingsRepository.userPreferences } returns flowOf(prefs)
-            coEvery { baselineComputer.rhrHistory(dayMidnight, any()) } returns rhrValues
-            coEvery { baselineComputer.resolveBaselineRhrBpm(rhrValues, null) } returns calculatedRhr
+            coEvery { baselineComputer.rhrHistory(any(), any()) } returns rhrValues
+            coEvery { baselineComputer.resolveBaselineRhrBpm(any(), any()) } returns calculatedRhr
             val baseline = provider.getRhrBaseline(dayMidnight)
             assertEquals(calculatedRhr, baseline)
         }
@@ -48,7 +57,7 @@ class RhrBaselineProviderTest {
             val dayMidnight = Instant.now()
             val prefs = UserPreferences(rhrBaselineOverride = null)
             coEvery { settingsRepository.userPreferences } returns flowOf(prefs)
-            coEvery { baselineComputer.rhrHistory(dayMidnight, any()) } returns emptyRhrValues
+            coEvery { baselineComputer.rhrHistory(any(), any()) } returns emptyRhrValues
             val baseline = provider.getRhrBaseline(dayMidnight)
             assertEquals(PhysiologyConstants.DEFAULT_RHR_BPM.toFloat(), baseline)
         }
@@ -59,7 +68,7 @@ class RhrBaselineProviderTest {
             val dayMidnight = Instant.now()
             val prefs = UserPreferences(rhrBaselineOverride = null)
             coEvery { settingsRepository.userPreferences } returns flowOf(prefs)
-            coEvery { baselineComputer.rhrHistory(dayMidnight, any()) } returns emptyList()
+            coEvery { baselineComputer.rhrHistory(any(), any()) } returns emptyList()
             val baseline = provider.getRhrBaseline(dayMidnight)
             assertEquals(PhysiologyConstants.DEFAULT_RHR_BPM.toFloat(), baseline)
         }

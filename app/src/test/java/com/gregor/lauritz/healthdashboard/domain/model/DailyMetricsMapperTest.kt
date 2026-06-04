@@ -15,15 +15,14 @@ class DailyMetricsMapperTest {
 
     @Test
     fun `rhr baseline 60_7 rounds to 61`() {
-        // nocturnalRhr / rhrRatio reconstructs ≈ 60.7
-        val summary = DailySummary(date = date, nocturnalRhr = 122, rhrRatio = 122f / 60.7f)
+        val summary = DailySummary(date = date, rhrBpm = 60.7f)
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
         assertEquals(61, metrics.rhrBaselineRounded)
     }
 
     @Test
     fun `rhr baseline 72_4 rounds to 72`() {
-        val summary = DailySummary(date = date, nocturnalRhr = 145, rhrRatio = 145f / 72.4f)
+        val summary = DailySummary(date = date, rhrBpm = 72.4f)
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
         assertEquals(72, metrics.rhrBaselineRounded)
     }
@@ -73,9 +72,9 @@ class DailyMetricsMapperTest {
         val summary =
             DailySummary(
                 date = date,
-                nocturnalRhr = 50,
+                restingHeartRate = 50,
                 nocturnalHrv = 65,
-                rhrRatio = 0.95f,
+                rhrBpm = 52.6f,
                 totalPai = 74.6f,
                 avgSleepingSpo2 = 96.5f,
                 weightKg = 80.25f,
@@ -88,24 +87,25 @@ class DailyMetricsMapperTest {
     // --- rhrBaseline derivation + fallback chain ---
 
     @Test
-    fun `rhr baseline derives from nocturnalRhr over rhrRatio when available`() {
-        val summary = DailySummary(date = date, nocturnalRhr = 50, rhrRatio = 1.0f)
+    fun `rhr baseline reads directly from rhrBpm snapshot`() {
+        val summary = DailySummary(date = date, rhrBpm = 50f)
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
         assertEquals(50f, metrics.rhrBaselineRaw)
         assertEquals(50, metrics.rhrBaselineRounded)
     }
 
     @Test
-    fun `rhr baseline falls back to stored restingHrBaseline when ratio missing`() {
-        val summary = DailySummary(date = date, nocturnalRhr = null, restingHrBaseline = 48)
-        val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
-        assertEquals(48f, metrics.rhrBaselineRaw)
+    fun `rhr baseline falls back to prefs override when rhrBpm null`() {
+        val overridePrefs = UserPreferences(rhrBaselineOverride = 55f)
+        val summary = DailySummary(date = date, rhrBpm = null)
+        val metrics = DailyMetricsMapper.toMetrics(summary, overridePrefs)
+        assertEquals(55f, metrics.rhrBaselineRaw)
     }
 
     @Test
-    fun `rhr baseline falls back to prefs override when no ratio or stored baseline`() {
+    fun `rhr baseline falls back to prefs override when no rhrBpm`() {
         val overridePrefs = UserPreferences(rhrBaselineOverride = 55f)
-        val summary = DailySummary(date = date, nocturnalRhr = null, restingHrBaseline = null)
+        val summary = DailySummary(date = date)
         val metrics = DailyMetricsMapper.toMetrics(summary, overridePrefs)
         assertEquals(55f, metrics.rhrBaselineRaw)
     }
@@ -113,7 +113,7 @@ class DailyMetricsMapperTest {
     @Test
     fun `rhr baseline falls back to DEFAULT_RHR_BPM when nothing else available`() {
         val noOverridePrefs = UserPreferences(rhrBaselineOverride = null)
-        val summary = DailySummary(date = date, nocturnalRhr = null, restingHrBaseline = null)
+        val summary = DailySummary(date = date)
         val metrics = DailyMetricsMapper.toMetrics(summary, noOverridePrefs)
         assertEquals(ScoringConstants.DEFAULT_RHR_BPM, metrics.rhrBaselineRaw)
     }
@@ -160,7 +160,7 @@ class DailyMetricsMapperTest {
 
     @Test
     fun `baseline arrow and diff reflect measured value relative to baseline`() {
-        val above = DailySummary(date = date, nocturnalRhr = 60, rhrRatio = 60f / 55f)
+        val above = DailySummary(date = date, restingHeartRate = 60, rhrBpm = 55f)
         val metrics = DailyMetricsMapper.toMetrics(above, prefs)
         assertEquals(BaselineArrow.UP, metrics.rhrBaselineArrow)
         assertEquals(5, metrics.rhrBaselineDiff)

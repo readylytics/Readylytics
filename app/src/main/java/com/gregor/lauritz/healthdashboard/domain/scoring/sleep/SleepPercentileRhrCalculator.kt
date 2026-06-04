@@ -13,13 +13,13 @@ import javax.inject.Singleton
 import kotlin.math.roundToInt
 
 @Singleton
-class WakeWindowHrCollector
+class SleepPercentileRhrCalculator
     @Inject
     constructor(
         private val heartRateDao: HeartRateDao,
         private val sleepSessionDao: SleepSessionDao,
     ) {
-        data class WakeHrResult(
+        data class SleepPercentileRhrResult(
             val currentRestingHr: Int?,
             val restingHrBaseline: Int?,
             val restingHrRatio: Float?,
@@ -37,7 +37,7 @@ class WakeWindowHrCollector
             session: SleepSessionEntity,
             dayMidnight: Instant,
             percentile: Int = 5,
-        ): WakeHrResult {
+        ): SleepPercentileRhrResult {
             val baselineFrom = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
             val sessions = sleepSessionDao.getSince(baselineFrom)
             val sessionIds = (sessions.map { it.id } + session.id).distinct()
@@ -76,6 +76,6 @@ class WakeWindowHrCollector
                     null
                 }
 
-            return WakeHrResult(currentRestingHr, restingHrBaseline, restingHrRatio)
+            return SleepPercentileRhrResult(currentRestingHr, restingHrBaseline, restingHrRatio)
         }
     }

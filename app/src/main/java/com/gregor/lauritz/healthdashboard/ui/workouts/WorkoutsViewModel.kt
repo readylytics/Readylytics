@@ -258,7 +258,7 @@ class WorkoutsViewModel
                                                     workout.startTime,
                                                 ).atZone(zoneId)
                                                 .toLocalDate()
-                                        val rhrBaseline = summaryByDate[workoutDate]?.restingHrBaseline?.toFloat()
+                                        val rhrBaseline = summaryByDate[workoutDate]?.rhrBpm
                                         val samples = samplesByWorkoutId[workout.id] ?: emptyList()
 
                                         val computedTrimpResult =

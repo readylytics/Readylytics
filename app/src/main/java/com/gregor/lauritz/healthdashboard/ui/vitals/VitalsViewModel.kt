@@ -12,7 +12,8 @@ import com.gregor.lauritz.healthdashboard.domain.model.rhrZoneBands
 import com.gregor.lauritz.healthdashboard.domain.model.spo2ZoneBands
 import com.gregor.lauritz.healthdashboard.domain.repository.DailyMetricsRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
-import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
+import com.gregor.lauritz.healthdashboard.domain.scoring.HrvBaselineProvider
+import com.gregor.lauritz.healthdashboard.domain.scoring.RhrBaselineProvider
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.domain.util.truncateToDayMs
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
@@ -67,6 +68,8 @@ class VitalsViewModel
         private val selectedDateRepository: SelectedDateRepository,
         private val foregroundSyncController: ForegroundSyncController,
         private val savedStateHandle: SavedStateHandle,
+        private val hrvBaselineProvider: HrvBaselineProvider,
+        private val rhrBaselineProvider: RhrBaselineProvider,
     ) : ViewModel() {
         private val _selectedRange =
             MutableStateFlow(
@@ -74,25 +77,15 @@ class VitalsViewModel
             )
         val selectedRange: StateFlow<TimeRange> = _selectedRange.asStateFlow()
 
-        @OptIn(ExperimentalCoroutinesApi::class)
         val baselinesFlow =
             selectedDateRepository.selectedDate
-                .flatMapLatest { date ->
-                    // Baselines come from the canonical DailyMetrics projection — the single
-                    // site for the (nocturnalRhr / rhrRatio) derivation. No rounding done here.
-                    combine(
-                        dailyMetricsRepository.observeByDate(date),
-                        settingsRepo.userPreferences,
-                    ) { metrics, prefs ->
-                        Baselines(
-                            hrv = metrics?.hrvBaselineRounded?.toFloat() ?: prefs.hrvBaselineOverride,
-                            rhr =
-                                metrics?.rhrBaselineRounded
-                                    ?: prefs.rhrBaselineOverride?.toInt()
-                                    ?: ScoringConstants.DEFAULT_RHR_BPM.toInt(),
-                        )
-                    }
-                }.stateIn(
+                .map { date ->
+                    Baselines(
+                        hrv = hrvBaselineProvider.getRoundedHrvBaseline(date)?.toFloat(),
+                        rhr = rhrBaselineProvider.getRoundedRhrBaseline(date),
+                    )
+                }.flowOn(Dispatchers.IO)
+                .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
                     initialValue = Baselines(),
@@ -155,7 +148,7 @@ class VitalsViewModel
                         val rhrPoints =
                             summaries
                                 .mapNotNull { s ->
-                                    s.nocturnalRhr?.let { rhr ->
+                                    s.restingHeartRate?.let { rhr ->
                                         val d = s.date
                                         DailyDataPoint(
                                             dayOffset = ChronoUnit.DAYS.between(startLocalDate, d).toInt(),
@@ -180,8 +173,8 @@ class VitalsViewModel
                                 }.sortedBy { it.dayOffset }
                                 .padToRange(range.days)
 
-                        val baselineHrv = bHrv ?: calculateMedian(hrvPoints)
-                        val baselineRhr = bRhr?.toFloat() ?: calculateMedian(rhrPoints)
+                        val baselineHrv = bHrv
+                        val baselineRhr = bRhr?.toFloat()
 
                         val hrvBands =
                             baselineHrv?.let { baseline ->

@@ -5,7 +5,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.scoring.*
-import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.WakeWindowHrCollector
+import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -31,7 +31,7 @@ class ScoringRepositoryImplTest {
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
-    private val wakeHrCollector = mockk<WakeWindowHrCollector>(relaxed = true)
+    private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
 
     private lateinit var repo: ScoringRepositoryImpl
 
@@ -54,7 +54,7 @@ class ScoringRepositoryImplTest {
                 bodyFatRecordDao,
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
-                wakeHrCollector,
+                sleepPercentileRhrCalculator,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { dailySummaryDao.getByDate(any()) } returns null
@@ -160,12 +160,11 @@ class ScoringRepositoryImplTest {
         }
 
     @Test
-    fun `calibration path with session populates restingHrBaseline and rhrRatio`() =
+    fun `scoring path with session passes restingHrRatio from computeSleepMetrics result`() =
         runTest {
             val today = LocalDate.now()
             val zoneId = ZoneId.systemDefault()
 
-            // Create a mock session for calibration path
             val mockSession =
                 com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity(
                     id = "test_session",
@@ -179,18 +178,8 @@ class ScoringRepositoryImplTest {
                     awakeMinutes = 15,
                 )
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns mockSession
-            coEvery { sleepSessionDao.countSince(any()) } returns 7 // >= 7, triggers calibration
+            coEvery { sleepSessionDao.countSince(any()) } returns 7
 
-            // Mock wakeHrCollector to return populated WakeHrResult
-            val wakeHrResult =
-                WakeWindowHrCollector.WakeHrResult(
-                    currentRestingHr = 48,
-                    restingHrBaseline = 50,
-                    restingHrRatio = 0.96f,
-                )
-            coEvery { wakeHrCollector.collect(any(), any(), any()) } returns wakeHrResult
-
-            // Mock other required DAOs
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
             coEvery {
                 computeSleepMetricsUseCase(
@@ -206,28 +195,19 @@ class ScoringRepositoryImplTest {
                 )
             } returns
                 com.gregor.lauritz.healthdashboard.domain.model.Result
-                    .success(DailySummaryEntity(0L, restingHrBaseline = 50, rhrRatio = 0.96f))
+                    .success(DailySummaryEntity(0L, restingHeartRate = 48, restingHrRatio = 0.96f))
 
             val result = repo.computeDailySummary(today)
 
-            kotlin.test.assertEquals(
-                50,
-                result.restingHrBaseline,
-                "restingHrBaseline should be populated from wakeHrCollector",
-            )
-            kotlin.test.assertEquals(
-                0.96f,
-                result.rhrRatio,
-                "rhrRatio should be populated from wakeHrCollector",
-            )
+            kotlin.test.assertEquals(48, result.restingHeartRate)
+            kotlin.test.assertEquals(0.96f, result.restingHrRatio)
         }
 
     @Test
-    fun `calibration path without session leaves restingHrBaseline and rhrRatio null`() =
+    fun `scoring path without session leaves restingHeartRate null`() =
         runTest {
             val today = LocalDate.now()
 
-            // No session → calibration branch has session == null
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
             coEvery { sleepSessionDao.countSince(any()) } returns 7
 
@@ -250,18 +230,12 @@ class ScoringRepositoryImplTest {
 
             val result = repo.computeDailySummary(today)
 
-            kotlin.test.assertNull(
-                result.restingHrBaseline,
-                "restingHrBaseline should be null when session is null",
-            )
-            kotlin.test.assertNull(
-                result.rhrRatio,
-                "rhrRatio should be null when session is null",
-            )
+            kotlin.test.assertNull(result.restingHeartRate)
+            kotlin.test.assertNull(result.restingHrRatio)
         }
 
     @Test
-    fun `wakeHrCollector with null fields does not crash and leaves summary fields null`() =
+    fun `wakeHrCollector with null fields does not crash`() =
         runTest {
             val today = LocalDate.now()
             val zoneId = ZoneId.systemDefault()
@@ -281,14 +255,13 @@ class ScoringRepositoryImplTest {
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns mockSession
             coEvery { sleepSessionDao.countSince(any()) } returns 7
 
-            // Mock wakeHrCollector to return WakeHrResult with all null fields
             val nullWakeHrResult =
-                WakeWindowHrCollector.WakeHrResult(
+                SleepPercentileRhrCalculator.SleepPercentileRhrResult(
                     currentRestingHr = null,
                     restingHrBaseline = null,
                     restingHrRatio = null,
                 )
-            coEvery { wakeHrCollector.collect(any(), any(), any()) } returns nullWakeHrResult
+            coEvery { sleepPercentileRhrCalculator.collect(any(), any(), any()) } returns nullWakeHrResult
 
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
             coEvery {
@@ -307,15 +280,8 @@ class ScoringRepositoryImplTest {
                 com.gregor.lauritz.healthdashboard.domain.model.Result
                     .success(DailySummaryEntity(0L))
 
+            // Should not throw
             val result = repo.computeDailySummary(today)
-
-            kotlin.test.assertNull(
-                result.restingHrBaseline,
-                "restingHrBaseline should be null when wakeHrResult has null values",
-            )
-            kotlin.test.assertNull(
-                result.rhrRatio,
-                "rhrRatio should be null when wakeHrResult has null values",
-            )
+            kotlin.test.assertNull(result.restingHeartRate)
         }
 }
