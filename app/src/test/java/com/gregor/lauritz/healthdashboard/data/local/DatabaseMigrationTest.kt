@@ -16,6 +16,7 @@ import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATIO
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_22_23
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_23_24
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_24_25
+import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_25_24
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_2_3
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_3_4
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_4_5
@@ -31,7 +32,7 @@ import org.junit.Test
 class DatabaseMigrationTest {
     @Test
     fun `all migrations are registered in sequential order`() {
-        val migrations = DatabaseMigrations.all
+        val migrations = DatabaseMigrations.all.filter { it.startVersion < it.endVersion }
         assertEquals("Expected 24 migrations (1..25)", 24, migrations.size)
 
         val expectedPairs = (1..24).map { it to it + 1 }
@@ -41,7 +42,7 @@ class DatabaseMigrationTest {
 
     @Test
     fun `no gaps in migration chain`() {
-        val migrations = DatabaseMigrations.all
+        val migrations = DatabaseMigrations.all.filter { it.startVersion < it.endVersion }
         for (i in 0 until migrations.size - 1) {
             val current = migrations[i]
             val next = migrations[i + 1]
@@ -55,17 +56,20 @@ class DatabaseMigrationTest {
 
     @Test
     fun `migration chain starts at version 1`() {
-        assertEquals(1, DatabaseMigrations.all.first().startVersion)
+        val migrations = DatabaseMigrations.all.filter { it.startVersion < it.endVersion }
+        assertEquals(1, migrations.first().startVersion)
     }
 
     @Test
     fun `migration chain ends at DATABASE_VERSION`() {
-        assertEquals(HealthDatabase.DATABASE_VERSION, DatabaseMigrations.all.last().endVersion)
+        val migrations = DatabaseMigrations.all.filter { it.startVersion < it.endVersion }
+        assertEquals(HealthDatabase.DATABASE_VERSION, migrations.last().endVersion)
     }
 
     @Test
     fun `database version matches latest migration end version`() {
-        val latestEndVersion = DatabaseMigrations.all.last().endVersion
+        val migrations = DatabaseMigrations.all.filter { it.startVersion < it.endVersion }
+        val latestEndVersion = migrations.last().endVersion
         assertEquals(
             "HealthDatabase.DATABASE_VERSION must match the latest migration end version",
             latestEndVersion,
@@ -233,5 +237,17 @@ class DatabaseMigrationTest {
     fun `MIGRATION_24_25 is registered in all array`() {
         val found = DatabaseMigrations.all.any { it === MIGRATION_24_25 }
         assertTrue("MIGRATION_24_25 must be registered in DatabaseMigrations.all", found)
+    }
+
+    @Test
+    fun `MIGRATION_25_24 version range is correct`() {
+        assertEquals(25, MIGRATION_25_24.startVersion)
+        assertEquals(24, MIGRATION_25_24.endVersion)
+    }
+
+    @Test
+    fun `MIGRATION_25_24 is registered in all array`() {
+        val found = DatabaseMigrations.all.any { it === MIGRATION_25_24 }
+        assertTrue("MIGRATION_25_24 must be registered in DatabaseMigrations.all", found)
     }
 }

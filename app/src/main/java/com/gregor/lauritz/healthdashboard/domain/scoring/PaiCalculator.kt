@@ -51,7 +51,12 @@ object PaiCalculator {
                 // REF: Cheng et al. 1992; paiesque reference. LT from user HR zones; no fallback.
                 if (ltBpm <= 0f) return 0f
                 val isMale = gender != Gender.FEMALE
-                val sexFactor = if (isMale) ScoringConstants.Trimp.BANISTER_MALE_A else ScoringConstants.Trimp.BANISTER_FEMALE_A
+                val sexFactor =
+                    if (isMale) {
+                        ScoringConstants.Trimp.BANISTER_MALE_A
+                    } else {
+                        ScoringConstants.Trimp.BANISTER_FEMALE_A
+                    }
                 val weight =
                     if (hrAvg <= ltBpm) {
                         0.5f * (hrAvg - rhrBaseline) / (ltBpm - rhrBaseline).coerceAtLeast(1f)
