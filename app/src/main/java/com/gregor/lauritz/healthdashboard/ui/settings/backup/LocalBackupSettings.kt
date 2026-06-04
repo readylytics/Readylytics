@@ -466,12 +466,13 @@ private fun BackupScheduleItem(
     uiState: LocalBackupState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
+    val scheduleLabels = BackupSchedule.entries.associateWith { stringResource(it.labelRes()) }
     DropdownPreferenceItem(
         label = stringResource(R.string.backup_auto_label),
         selectedDisplayValue = stringResource(uiState.backupSchedule.labelRes()),
         options = BackupSchedule.entries,
         onOptionSelected = { onEvent(SettingsEvent.BackupScheduleChanged(it)) },
-        optionLabel = { stringResource(it.labelRes()) },
+        optionLabel = { scheduleLabels[it] ?: it.name },
         modifier = Modifier.fillMaxWidth(),
     )
 }

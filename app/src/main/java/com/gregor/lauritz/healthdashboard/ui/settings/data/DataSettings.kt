@@ -153,12 +153,13 @@ private fun SyncPreferenceItem(
     uiState: SyncSettingsState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
+    val syncPrefLabels = SyncPreference.entries.associateWith { stringResource(it.labelRes()) }
     DropdownPreferenceItem(
         label = stringResource(R.string.settings_foreground_sync_label),
         selectedDisplayValue = stringResource(uiState.syncPreference.labelRes()),
         options = SyncPreference.entries,
         onOptionSelected = { onEvent(SettingsEvent.SyncPreferenceChanged(it)) },
-        optionLabel = { stringResource(it.labelRes()) },
+        optionLabel = { syncPrefLabels[it] ?: it.name },
         modifier =
             Modifier.padding(
                 horizontal = SettingsConstants.HORIZONTAL_PADDING,
@@ -172,12 +173,13 @@ private fun SyncIntervalItem(
     uiState: SyncSettingsState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
+    val intervalLabels = (1..24).associateWith { stringResource(R.string.settings_sync_interval_display, it) }
     DropdownPreferenceItem(
         label = stringResource(R.string.settings_sync_interval_label),
         selectedDisplayValue = stringResource(R.string.settings_sync_interval_display, uiState.syncIntervalHours),
         options = (1..24).toList(),
         onOptionSelected = { onEvent(SettingsEvent.SyncIntervalChanged(it)) },
-        optionLabel = { stringResource(R.string.settings_sync_interval_display, it) },
+        optionLabel = { intervalLabels[it] ?: "${it}h" },
         modifier =
             Modifier.padding(
                 horizontal = SettingsConstants.HORIZONTAL_PADDING,

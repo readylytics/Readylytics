@@ -1,11 +1,10 @@
 package com.gregor.lauritz.healthdashboard.ui.common
 
-import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 
 sealed class UiText {
-    data class StringRes(@StringRes val id: Int) : UiText()
+    data class StringRes(@androidx.annotation.StringRes val id: Int) : UiText()
     data class RawString(val value: String) : UiText()
 }
 

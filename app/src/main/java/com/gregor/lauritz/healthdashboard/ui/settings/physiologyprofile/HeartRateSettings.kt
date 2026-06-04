@@ -441,7 +441,7 @@ fun GenderSelector(
                 )
             }
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_clear)) },
+                text = { Text(stringResource(R.string.accessibility_clear)) },
                 onClick = {
                     onGenderSelected(null)
                     onExpandedChange(false)
