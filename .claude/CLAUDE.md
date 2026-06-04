@@ -44,6 +44,7 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 - **State:** Persistent Domain State (ViewModel->Repo->Room/DataStore). Ephemeral UI State (`rememberSaveable`, toggles, dropdowns in Composables only). Never leak UI state to VM unless domain-relevant.
 - **Validation:** Centralized in `domain/validation/SettingsValidators`. No validation in composables. VMs validate defensively.
 - **UI & Charts:** `dynamicDarkColorScheme` mandatory. Use `M3ScoreDial`, `M3DataCard`, `M3Tooltip`. 16dp rounded corners default. Semantic colors only. Vico charts require Bezier curves, bottom gradient fills, and M3 tonal palette mapping (no hardcoded colors).
+- **Strings & i18n:** All user-facing strings (titles, labels, tooltips, descriptions) must be defined in `app/src/main/res/values/strings.xml`. Reference them in Compose with `stringResource(R.string.key_name)`. Never hardcode strings in code. This supports internationalization and improves maintainability.
 - **File Structure:** Target ≤ 400 lines/file, hard limit ≤ 800 lines (refactor if exceeded). Settings paths map to `ui/settings/{physiologyprofile,sleep,cloud,common}`.
 
 ## Commands & Testing
