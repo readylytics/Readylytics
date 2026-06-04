@@ -51,7 +51,7 @@ fun DailySummary.rhrStatus(
     optimalThreshold: Float,
     warningThreshold: Float,
 ): MetricStatus {
-    val ratio = rhrRatio ?: return MetricStatus.CALIBRATING
+    val ratio = restingHrRatio ?: return MetricStatus.CALIBRATING
     val poorThreshold = warningThreshold + (warningThreshold - 1)
     return when {
         ratio <= optimalThreshold -> MetricStatus.OPTIMAL
@@ -66,12 +66,7 @@ fun DailySummary.restingHrStatus(
     warningThreshold: Float,
 ): MetricStatus {
     val rhr = restingHeartRate ?: return MetricStatus.CALIBRATING
-    val ratio =
-        restingHrRatio ?: restingHrBaseline?.let { baseline ->
-            if (baseline > 0) rhr.toFloat() / baseline else null
-        } ?: rhrRatio
-
-    if (ratio == null) return MetricStatus.CALIBRATING
+    val ratio = restingHrRatio ?: return MetricStatus.CALIBRATING
 
     val poorThreshold = warningThreshold + (warningThreshold - 1)
     return when {

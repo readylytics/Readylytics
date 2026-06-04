@@ -179,7 +179,6 @@ class ComputeSleepMetricsUseCase
                         hrCoverageValid = currentHrCoverage,
                     )
 
-                var rhrRatio: Float? = null
                 var sleepScore: Float? = null
                 var readinessScore: Float? = null
                 var persistedZLnHrv: Float? = null
@@ -213,7 +212,6 @@ class ComputeSleepMetricsUseCase
                 val isCalibrating = totalValidHrvNights < ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
 
                 if (currentNocturnalRhr != null) {
-                    rhrRatio = currentNocturnalRhr.toFloat() / (baselineRhrValue + 0.001f)
                     val nadirCtx = nadirAnalyzer.analyze(session, historicalSessions)
 
                     val zHrv =
@@ -251,6 +249,7 @@ class ComputeSleepMetricsUseCase
                             scoringConfig.restoration,
                             frozenLnMu = frozenHrvMu,
                             frozenLnSigma = frozenHrvSigma,
+                            saturationZ = scoringConfig.hrvSaturationZ,
                         )
                     if (nadirCtx.isLateNadir) sRest *= ScoringConstants.Restoration.LATE_NADIR_PENALTY
 
@@ -322,7 +321,7 @@ class ComputeSleepMetricsUseCase
                             recoveryFlags = recoveryFlags,
                             contributors =
                                 ReadinessResult.Contributors(
-                                    hrvScore = zHrv?.let { scoringCalculator.computeHrvScore(it) },
+                                    hrvScore = zHrv?.let { scoringCalculator.computeHrvScore(it, scoringConfig.hrvSaturationZ) },
                                     rhrScore = zRhr?.let { (50f - 25f * it).coerceIn(0f, 100f) },
                                     durationScore = durationSubScore,
                                     architectureScore = archSubScore,
@@ -350,7 +349,6 @@ class ComputeSleepMetricsUseCase
                     summary.copy(
                         sleepScore = sleepScore,
                         readinessScore = readinessScore,
-                        nocturnalRhr = currentNocturnalRhr,
                         nocturnalHrv = if (sessionHrvSamples.isNotEmpty()) currentHrvMean.roundToInt() else null,
                         sleepDurationMinutes = session.durationMinutes,
                         deepSleepPercent =
@@ -369,10 +367,8 @@ class ComputeSleepMetricsUseCase
                             } else {
                                 null
                             },
-                        rhrRatio = rhrRatio,
                         restingHeartRate = currentRestingHr,
                         restingHrRatio = restingHrRatio,
-                        restingHrBaseline = restingHrBaseline,
                         hrvMuMssd =
                             if (frozenBaseline) {
                                 summary.hrvMuMssd

@@ -105,9 +105,8 @@ class PaiCalculatorTest {
     @Test
     fun `calculateDailyTrimp matches iTRIMP model`() {
         val itrimB = 2.1f
-        // HRr = 0.7692
-        // Td = 40 * 0.7692 * exp(2.1 * 0.7692) * 0.48
-        // Td = 30.769 * 5.0295 * 0.48 = 74.28
+        // HRr = 0.7692 — no PAI calibration factor in TRIMP (canonical Manzi 2009)
+        // Td = 40 * 0.7692 * exp(2.1 * 0.7692) = 30.769 * 5.030 = 154.74
         val result =
             PaiCalculator.calculateDailyTrimp(
                 duration,
@@ -118,13 +117,15 @@ class PaiCalculatorTest {
                 trimpModel = TrimpModel.I_TRIMP,
                 itrimB = itrimB,
             )
-        assertEquals(74.28f, result, 0.1f)
+        assertEquals(154.74f, result, 0.5f)
     }
 
     @Test
     fun `calculateDailyTrimp matches Cheng model below LT`() {
-        // HRr = 0.7692 (Below LT=0.85)
-        // Td = 40 * 0.7692 * 0.36 * 3.2 = 35.45
+        // hrAvg=160 < ltBpm=170 (below LT)
+        // weight = 0.5 * (160-60) / (170-60) = 0.5 * 100/110 = 0.4545
+        // Td = 40 * 0.4545 = 18.18
+        val ltBpm = 170f
         val result =
             PaiCalculator.calculateDailyTrimp(
                 duration,
@@ -133,17 +134,20 @@ class PaiCalculatorTest {
                 hrMax,
                 gender,
                 trimpModel = TrimpModel.CHENG,
+                ltBpm = ltBpm,
             )
-        assertEquals(35.45f, result, 0.1f)
+        assertEquals(18.18f, result, 0.1f)
     }
 
     @Test
     fun `calculateDailyTrimp matches Cheng model above LT`() {
+        // hrAvg=180 > ltBpm=170; sexFactor=0.64 (male)
+        // f = (180-170)/(190-170) = 10/20 = 0.5
+        // weight = 0.5 + 0.64 * 0.5 * exp(0.09 * 0.5) = 0.5 + 0.32 * exp(0.045) ≈ 0.8347
+        // Td = 40 * 0.8347 = 33.39
         val hrAvgAboveLT = 180f
+        val ltBpm = 170f
         val chengBeta = 0.09f
-        // HRr = 0.9231 (Above LT=0.85)
-        // Td = 40 * 0.9231 * 0.72 * exp(0.09 * 0.9231) * 3.2
-        // Td = 26.585 * 1.0866 * 3.2 = 92.44
         val result =
             PaiCalculator.calculateDailyTrimp(
                 duration,
@@ -153,7 +157,48 @@ class PaiCalculatorTest {
                 gender,
                 trimpModel = TrimpModel.CHENG,
                 chengBeta = chengBeta,
+                ltBpm = ltBpm,
             )
-        assertEquals(92.44f, result, 0.1f)
+        assertEquals(33.39f, result, 0.1f)
+    }
+
+    @Test
+    fun `calculateDailyTrimp Cheng is continuous at LT`() {
+        // At hrAvg == ltBpm both branches must yield weight == 0.5
+        val ltBpm = 170f
+        val atLt =
+            PaiCalculator.calculateDailyTrimp(
+                duration, ltBpm, rhr, hrMax, gender,
+                trimpModel = TrimpModel.CHENG, ltBpm = ltBpm,
+            )
+        // expected: 40 * 0.5 = 20.0
+        assertEquals(20.0f, atLt, 0.05f)
+    }
+
+    @Test
+    fun `calculateDailyTrimp Cheng returns 0 when ltBpm not configured`() {
+        val result =
+            PaiCalculator.calculateDailyTrimp(
+                duration, hrAvg, rhr, hrMax, gender,
+                trimpModel = TrimpModel.CHENG, ltBpm = 0f,
+            )
+        assertEquals(0f, result, 0.001f)
+    }
+
+    @Test
+    fun `calculateDailyTrimp HRr clamped to 1 when HR exceeds HRmax`() {
+        // hrAvg=230 > hrMax=190 → hrR should clamp to 1.0, not 2.08
+        val result =
+            PaiCalculator.calculateDailyTrimp(
+                duration, 230f, rhr, hrMax, gender,
+                trimpModel = TrimpModel.BANISTER,
+            )
+        val resultAtHrMax =
+            PaiCalculator.calculateDailyTrimp(
+                duration, hrMax, rhr, hrMax, gender,
+                trimpModel = TrimpModel.BANISTER,
+            )
+        // Both should equal the result at HR=HRmax (clamped)
+        assertEquals(resultAtHrMax, result, 0.001f)
     }
 }

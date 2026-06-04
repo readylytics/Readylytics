@@ -17,9 +17,10 @@ class ComputeWorkoutTrimpUseCase
             prefs: UserPreferences,
             restingHrBaseline: Float? = null,
             storedTrimp: Float? = null,
+            frozenHrMax: Float? = null,
         ): Result<Float> =
             try {
-                val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
+                val hrMax = frozenHrMax ?: HeartRateFormulas.resolveMaxHeartRate(prefs)
 
                 // RHR baseline resolution with exercise-aware fallback:
                 // 1. Use provided baseline if available (from BaselineComputer)
@@ -54,6 +55,7 @@ class ComputeWorkoutTrimpUseCase
                                 banisterMultiplier = prefs.banisterMultiplier,
                                 chengBeta = prefs.chengBeta,
                                 itrimB = prefs.itrimB,
+                                ltBpm = prefs.zone3MaxBpm.toFloat(),
                             )
                         } else {
                             storedTrimp ?: 0f
@@ -78,6 +80,7 @@ class ComputeWorkoutTrimpUseCase
                             banisterMultiplier = prefs.banisterMultiplier,
                             chengBeta = prefs.chengBeta,
                             itrimB = prefs.itrimB,
+                            ltBpm = prefs.zone3MaxBpm.toFloat(),
                         )
                 }
 
@@ -102,6 +105,7 @@ class ComputeWorkoutTrimpUseCase
                                 banisterMultiplier = prefs.banisterMultiplier,
                                 chengBeta = prefs.chengBeta,
                                 itrimB = prefs.itrimB,
+                                ltBpm = prefs.zone3MaxBpm.toFloat(),
                             )
                     }
                 }

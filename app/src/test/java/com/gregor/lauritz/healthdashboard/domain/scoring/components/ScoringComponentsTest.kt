@@ -1,6 +1,5 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring.components
 
-import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -29,19 +28,25 @@ class ScoringComponentsTest {
 
     @Test
     fun sleepArchitectureTargetFactory_age20_returnsAgeRange18To29() {
-        val targets = SleepArchitectureTargetFactory.create(20, Gender.MALE)
+        val targets = SleepArchitectureTargetFactory.create(20)
         assertEquals(SleepArchitectureTargets.AgeRange18To29::class, targets::class)
     }
 
     @Test
-    fun sleepArchitectureTargetFactory_age40Female_returnsAgeRange30To49() {
-        val targets = SleepArchitectureTargetFactory.create(40, Gender.FEMALE)
+    fun sleepArchitectureTargetFactory_age40_returnsAgeRange30To49() {
+        val targets = SleepArchitectureTargetFactory.create(40)
         assertEquals(SleepArchitectureTargets.AgeRange30To49::class, targets::class)
     }
 
     @Test
-    fun sleepArchitectureTargetFactory_age65_returnsAgeRange50To69() {
-        val targets = SleepArchitectureTargetFactory.create(65, null)
-        assertEquals(SleepArchitectureTargets.AgeRange50To69::class, targets::class)
+    fun sleepArchitectureTargetFactory_age55_returnsAgeRange50To59() {
+        val targets = SleepArchitectureTargetFactory.create(55)
+        assertEquals(SleepArchitectureTargets.AgeRange50To59::class, targets::class)
+    }
+
+    @Test
+    fun sleepArchitectureTargetFactory_age65_returnsAgeRange60Plus() {
+        val targets = SleepArchitectureTargetFactory.create(65)
+        assertEquals(SleepArchitectureTargets.AgeRange60Plus::class, targets::class)
     }
 }

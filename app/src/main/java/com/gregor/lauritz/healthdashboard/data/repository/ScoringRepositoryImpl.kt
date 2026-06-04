@@ -79,10 +79,15 @@ class ScoringRepositoryImpl
                 val nextDayMidnightMs = nextDayMidnight.toEpochMilli()
 
                 val prefs = settingsRepo.userPreferences.first()
-                val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
 
                 // Retrieve the nightly frozen HR_rest (nocturnal floor) from the daily summary if available
                 val dailySummary = dailySummaryDao.getByDate(dayMidnightMs)
+
+                val frozenSnapshot = dailySummary?.takeIf { it.baselineCalculatedAtDate != null }
+                val frozenHrMax = frozenSnapshot?.hrMax
+                val frozenPaiScalingFactor = frozenSnapshot?.paiScalingFactor
+                val hrMax = frozenHrMax ?: HeartRateFormulas.resolveMaxHeartRate(prefs)
+
                 val rhrBaselineValue =
                     (if (dailySummary?.baselineCalculatedAtDate != null) dailySummary.rhrBpm else null)
                         ?: prefs.rhrBaselineOverride
@@ -139,6 +144,7 @@ class ScoringRepositoryImpl
                             prefs = prefs,
                             restingHrBaseline = rhrBaselineValue,
                             storedTrimp = workout.trimp,
+                            frozenHrMax = frozenHrMax,
                         )
                     val workoutTrimp = workoutTrimpResult.getOrNull() ?: 0f
                     dailyTrimpRaw += workoutTrimp
@@ -146,7 +152,7 @@ class ScoringRepositoryImpl
 
                 // Enforce 75-point daily cap. Standard PAI is pure load, no readiness penalty.
                 // Round daily PAI to 1 decimal place to ensure display consistency.
-                val dailyPaiRaw = PaiCalculator.calculateDailyPai(dailyTrimpRaw, scoringConfig.paiScalingFactor)
+                val dailyPaiRaw = PaiCalculator.calculateDailyPai(dailyTrimpRaw, frozenPaiScalingFactor ?: scoringConfig.paiScalingFactor)
                 val dailyPai = round(dailyPaiRaw * 10f) / 10f
 
                 val last6DaysPai = sumPaiScoreLastSixDays(targetDate)
@@ -219,7 +225,6 @@ class ScoringRepositoryImpl
                         summary =
                             summary.copy(
                                 nocturnalHrv = avgHrv,
-                                nocturnalRhr = avgRhr,
                                 restingHeartRate = avgRhr,
                                 sleepDurationMinutes = session.durationMinutes,
                                 deepSleepPercent =
@@ -265,9 +270,6 @@ class ScoringRepositoryImpl
                         summary.copy(
                             hrvBaseline = calibHrvBaseline,
                             rhrBpm = rhrBaselineValue,
-                            restingHrBaseline = rhrWakeResult?.restingHrBaseline,
-                            // currentRestingHr not persisted during calibration — baseline trend is sufficient
-                            rhrRatio = rhrWakeResult?.restingHrRatio,
                             baselineVersion = 2,
                         )
 

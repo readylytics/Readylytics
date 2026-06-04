@@ -181,17 +181,17 @@ class NightValidationTest {
 class ArchSubScoreTest {
     @Test
     fun `at age-banded targets for under-30 scores 100`() {
-        assertEquals(100f, calculator.computeArchSubScore(18, 22, 100, 25), DELTA)
+        assertEquals(100f, calculator.computeArchSubScore(20, 22, 100, 25), DELTA)
     }
 
     @Test
     fun `at age-banded targets for age 40 scores 100`() {
-        assertEquals(100f, calculator.computeArchSubScore(16, 21, 100, 40), DELTA)
+        assertEquals(100f, calculator.computeArchSubScore(18, 21, 100, 40), DELTA)
     }
 
     @Test
     fun `at age-banded targets for age 70 scores 100`() {
-        assertEquals(100f, calculator.computeArchSubScore(12, 18, 100, 70), DELTA)
+        assertEquals(100f, calculator.computeArchSubScore(12, 19, 100, 70), DELTA)
     }
 
     @Test
@@ -380,7 +380,7 @@ class SleepScoreIntegrationTest {
             calculator.computeSleepScore(
                 durationMinutes = 100,
                 efficiency = 90f,
-                deepSleepMinutes = 18,
+                deepSleepMinutes = 20,
                 remSleepMinutes = 22,
                 goalSleepHours = (100f / 60f),
                 sRest = 100f,

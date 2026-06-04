@@ -57,7 +57,7 @@ interface ScoringCalculator {
         frozenLnSigma: Float? = null,
     ): Float?
 
-    fun computeHrvScore(z: Float): Float
+    fun computeHrvScore(z: Float, saturationZ: Float = ScoringConstants.HRV_SCORE_SATURATION_Z): Float
 
     fun computeRhrZScore(
         currentRhrBpm: Float,
@@ -77,6 +77,7 @@ interface ScoringCalculator {
         restorationWeights: com.gregor.lauritz.healthdashboard.domain.scoring.components.RestorationWeights? = null,
         frozenLnMu: Float? = null,
         frozenLnSigma: Float? = null,
+        saturationZ: Float = ScoringConstants.HRV_SCORE_SATURATION_Z,
     ): Float
 
     fun computeSleepScore(

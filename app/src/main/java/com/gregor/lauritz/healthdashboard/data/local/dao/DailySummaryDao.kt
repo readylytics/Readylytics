@@ -68,7 +68,10 @@ interface DailySummaryDao {
         "UPDATE daily_summaries SET hrv_mu_mssd = :hrvMuMssd, " +
             "hrv_sigma_mssd = :hrvSigmaMssd, rhr_bpm = :rhrBpm, " +
             "baseline_calculated_at_date = :baselineCalculatedAtDate, " +
-            "baseline_version = :baselineVersion " +
+            "baseline_version = :baselineVersion, " +
+            "hr_max = :hrMax, snapshot_profile = :snapshotProfile, " +
+            "hrv_sigma_prior = :hrvSigmaPrior, pai_scaling_factor = :paiScalingFactor, " +
+            "baseline_observation_count = :baselineObservationCount " +
             "WHERE dateMidnightMs = :dateMidnightMs",
     )
     suspend fun updateBaselines(
@@ -78,6 +81,11 @@ interface DailySummaryDao {
         rhrBpm: Float?,
         baselineCalculatedAtDate: java.time.LocalDate?,
         baselineVersion: Int?,
+        hrMax: Float? = null,
+        snapshotProfile: String? = null,
+        hrvSigmaPrior: Float? = null,
+        paiScalingFactor: Float? = null,
+        baselineObservationCount: Int? = null,
     )
 
     // Clears the freeze flag so BaselineComputer will recompute on next sync.

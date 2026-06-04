@@ -29,11 +29,12 @@ object PaiCalculator {
         banisterMultiplier: Float = 1.0f,
         chengBeta: Float = 0.09f,
         itrimB: Float = 2.1f,
+        ltBpm: Float = 0f,
     ): Float {
         val hrr = hrMax - rhrBaseline
         if (hrr <= 0) return 0f
 
-        val hrR = (hrAvg - rhrBaseline) / hrr
+        val hrR = ((hrAvg - rhrBaseline) / hrr).coerceIn(0f, 1f)
         if (hrAvg < (rhrBaseline + 5)) return 0f
         if (hrR <= 0) return 0f
 
@@ -45,21 +46,25 @@ object PaiCalculator {
                 durationMinutes * hrR * a * exp(b * hrR) * banisterMultiplier
             }
             TrimpModel.CHENG -> {
-                // LT-TRIMP (Cheng): Piecewise logic with Lactate Threshold (LT)
-                // REF: Cheng 2007; paiesque reference
+                // LT-TRIMP (Cheng 1992): piecewise on absolute HR vs lactate threshold (LT).
+                // Continuous at HR=LT: both branches yield weight=0.5.
+                // REF: Cheng et al. 1992; paiesque reference. LT from user HR zones; no fallback.
+                if (ltBpm <= 0f) return 0f
+                val isMale = gender != Gender.FEMALE
+                val sexFactor = if (isMale) ScoringConstants.Trimp.BANISTER_MALE_A else ScoringConstants.Trimp.BANISTER_FEMALE_A
                 val weight =
-                    if (hrR < ScoringConstants.Trimp.CHENG_LT_THRESHOLD) {
-                        ScoringConstants.Trimp.CHENG_WEIGHT_BELOW_LT // Linear weight below LT
+                    if (hrAvg <= ltBpm) {
+                        0.5f * (hrAvg - rhrBaseline) / (ltBpm - rhrBaseline).coerceAtLeast(1f)
                     } else {
-                        // Exponential weight at/above LT
-                        ScoringConstants.Trimp.CHENG_WEIGHT_ABOVE_LT * exp(chengBeta * hrR)
+                        val f = ((hrAvg - ltBpm) / (hrMax - ltBpm).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                        0.5f + sexFactor * f * exp(chengBeta * f)
                     }
-                durationMinutes * hrR * weight * ScoringConstants.Trimp.CHENG_MULTIPLIER
+                durationMinutes * weight
             }
             TrimpModel.I_TRIMP -> {
-                // iTRIMP: Exponential weighting instead of power law
+                // iTRIMP (Manzi et al. 2009): exponential weighting. No PAI calibration factor.
                 // REF: Manzi et al. 2009; paiesque reference
-                durationMinutes * hrR * exp(itrimB * hrR) * ScoringConstants.Trimp.ITRIMP_MULTIPLIER
+                durationMinutes * hrR * exp(itrimB * hrR)
             }
         }
     }

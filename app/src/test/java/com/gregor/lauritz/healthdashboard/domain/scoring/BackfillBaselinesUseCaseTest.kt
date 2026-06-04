@@ -6,11 +6,15 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -102,10 +106,10 @@ class BackfillBaselinesUseCaseTest {
     // --- no-lookahead (rows older than 30 days are excluded) ---
 
     @Test
-    fun `computeHistoricalBaselines skips rows older than 30 days`() =
+    fun `computeHistoricalBaselines processes rows older than 30 days — no cutoff`() =
         runTest {
-            val tooOld = makeSummary(daysAgo = 31)
-            val withinWindow = makeSummary(daysAgo = 20)
+            val oldRow = makeSummary(daysAgo = 31)
+            val recentRow = makeSummary(daysAgo = 20)
 
             coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(listOf(40f, 42f), listOf(40f, 42f))
@@ -114,16 +118,14 @@ class BackfillBaselinesUseCaseTest {
             } returns 60f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
-            val result = computeUseCase.computeHistoricalBaselines(listOf(tooOld, withinWindow))
+            val result = computeUseCase.computeHistoricalBaselines(listOf(oldRow, recentRow), UserPreferences())
 
-            assertEquals(1, result.size)
-            assertEquals(withinWindow.dateMidnightMs, result.first().dateMidnightMs)
+            assertEquals(2, result.size, "All unfrozen rows processed regardless of age")
         }
 
     @Test
     fun `computeHistoricalBaselines includes row exactly 30 days ago`() =
         runTest {
-            // Guard is: date < (now - 30 days). Exactly 30 days ago is on the inclusive boundary.
             val exactly30 = makeSummary(daysAgo = 30)
 
             coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
@@ -133,9 +135,9 @@ class BackfillBaselinesUseCaseTest {
             } returns 62f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
-            val result = computeUseCase.computeHistoricalBaselines(listOf(exactly30))
+            val result = computeUseCase.computeHistoricalBaselines(listOf(exactly30), UserPreferences())
 
-            assertEquals(1, result.size, "Row exactly 30 days ago is within the window")
+            assertEquals(1, result.size)
         }
 
     // --- mu/sigma computed in ln-space matching live pipeline ---
@@ -153,7 +155,7 @@ class BackfillBaselinesUseCaseTest {
             } returns 58f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
-            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 10)))
+            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 10)), UserPreferences())
 
             assertFloatEquals(
                 expectedLnMu,
@@ -178,7 +180,7 @@ class BackfillBaselinesUseCaseTest {
                 loadScoringStrategy.hrvSigma(capture(capturedLnSigmas), PhysiologyProfile.GENERAL.lnSigmaPrior)
             } returns 0.20f
 
-            computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 5)))
+            computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 5)), UserPreferences())
 
             val captured = capturedLnSigmas.captured
             assertEquals(expectedLnSigmas.size, captured.size)
@@ -199,7 +201,7 @@ class BackfillBaselinesUseCaseTest {
                 expectedRhr
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
-            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 15)))
+            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 15)), UserPreferences())
 
             assertEquals(expectedRhr, result.first().rhrBpm)
         }
@@ -217,7 +219,7 @@ class BackfillBaselinesUseCaseTest {
             } returns 60f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
-            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = daysAgo)))
+            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = daysAgo)), UserPreferences())
 
             assertEquals(expectedDate, result.first().baselineCalculatedAtDate)
         }
@@ -232,7 +234,7 @@ class BackfillBaselinesUseCaseTest {
             } returns 60f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
-            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 3)))
+            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 3)), UserPreferences())
 
             assertEquals(1, result.first().baselineVersion)
         }
@@ -251,7 +253,7 @@ class BackfillBaselinesUseCaseTest {
                     rhrBpm = 58f,
                 )
 
-            val result = computeUseCase.computeHistoricalBaselines(listOf(frozen))
+            val result = computeUseCase.computeHistoricalBaselines(listOf(frozen), UserPreferences())
 
             assertTrue(result.isEmpty(), "Frozen rows must not appear in backfill output")
             coVerify(exactly = 0) { baselineComputer.computeHrvWindowsBetween(any(), any(), any()) }
@@ -271,7 +273,7 @@ class BackfillBaselinesUseCaseTest {
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.19f
 
             // First run — row is unfrozen; gets processed.
-            val firstRun = computeUseCase.computeHistoricalBaselines(listOf(summary))
+            val firstRun = computeUseCase.computeHistoricalBaselines(listOf(summary), UserPreferences())
             assertEquals(1, firstRun.size)
 
             // Simulate DAO update: the row is now frozen.
@@ -279,7 +281,7 @@ class BackfillBaselinesUseCaseTest {
             assertNotNull(frozenRow.baselineCalculatedAtDate)
 
             // Second run — frozen row must be skipped.
-            val secondRun = computeUseCase.computeHistoricalBaselines(listOf(frozenRow))
+            val secondRun = computeUseCase.computeHistoricalBaselines(listOf(frozenRow), UserPreferences())
             assertTrue(secondRun.isEmpty(), "Second run on frozen rows must produce no output")
         }
 
@@ -295,8 +297,8 @@ class BackfillBaselinesUseCaseTest {
             } returns 63f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.17f
 
-            val runA = computeUseCase.computeHistoricalBaselines(listOf(summary))
-            val runB = computeUseCase.computeHistoricalBaselines(listOf(summary))
+            val runA = computeUseCase.computeHistoricalBaselines(listOf(summary), UserPreferences())
+            val runB = computeUseCase.computeHistoricalBaselines(listOf(summary), UserPreferences())
 
             assertEquals(1, runA.size)
             assertEquals(1, runB.size)
@@ -314,7 +316,7 @@ class BackfillBaselinesUseCaseTest {
     @Test
     fun `computeHistoricalBaselines returns empty list for empty input`() =
         runTest {
-            val result = computeUseCase.computeHistoricalBaselines(emptyList())
+            val result = computeUseCase.computeHistoricalBaselines(emptyList(), UserPreferences())
             assertTrue(result.isEmpty())
         }
 
@@ -327,7 +329,7 @@ class BackfillBaselinesUseCaseTest {
                 baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns 60f
 
-            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 8)))
+            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 8)), UserPreferences())
 
             assertTrue(result.isEmpty(), "Null HRV windows must cause the row to be skipped")
         }
@@ -341,7 +343,7 @@ class BackfillBaselinesUseCaseTest {
                 baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
             } returns 60f
 
-            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 5)))
+            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 5)), UserPreferences())
 
             assertTrue(result.isEmpty(), "Empty muHistory must cause the row to be skipped")
         }
@@ -356,7 +358,7 @@ class BackfillBaselinesUseCaseTest {
             } returns 63f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
-            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 1)))
+            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 1)), UserPreferences())
 
             assertEquals(1, result.size)
             assertNotNull(result.first().baselineCalculatedAtDate)
@@ -374,9 +376,9 @@ class BackfillBaselinesUseCaseTest {
             } returns 60f
             coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
 
-            val result = computeUseCase.computeHistoricalBaselines(summaries)
+            val result = computeUseCase.computeHistoricalBaselines(summaries, UserPreferences())
 
-            assertEquals(30, result.size, "All 30 in-window rows must be processed")
+            assertEquals(30, result.size, "All 30 rows must be processed")
         }
 
     // =========================================================================
@@ -591,10 +593,17 @@ class BackfillBaselinesUseCaseTest {
     // Suite 3: Integration — BackfillHistoricalBaselinesUseCase end-to-end
     // =========================================================================
 
+    private fun defaultSettingsRepo(prefs: UserPreferences = UserPreferences()): SettingsRepository {
+        val repo = mockk<SettingsRepository>()
+        every { repo.userPreferences } returns flowOf(prefs)
+        return repo
+    }
+
     private fun buildBackfill(
         dao: DailySummaryDao,
+        settingsRepo: SettingsRepository,
         compute: ComputeHistoricalBaselinesUseCase,
-    ) = BackfillHistoricalBaselinesUseCase(dao, compute)
+    ) = BackfillHistoricalBaselinesUseCase(dao, settingsRepo, compute)
 
     private fun buildComputeUseCase(): Triple<
         BaselineComputer,
@@ -620,10 +629,10 @@ class BackfillBaselinesUseCaseTest {
                 60f
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
-            val count = buildBackfill(dao, compute).execute()
+            val count = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
 
             assertEquals(2, count)
-            coVerify(exactly = 2) { dao.updateBaselines(any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 2) { dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
         }
 
     @Test
@@ -639,10 +648,10 @@ class BackfillBaselinesUseCaseTest {
 
             val (bc, ls, compute) = buildComputeUseCase()
 
-            val count = buildBackfill(dao, compute).execute()
+            val count = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
 
             assertEquals(0, count)
-            coVerify(exactly = 0) { dao.updateBaselines(any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 0) { dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
         }
 
     @Test
@@ -660,7 +669,7 @@ class BackfillBaselinesUseCaseTest {
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
             // First run: unfrozen row is processed.
-            val firstCount = buildBackfill(dao, compute).execute()
+            val firstCount = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
             assertEquals(1, firstCount)
 
             // Simulate DAO returning the now-frozen row.
@@ -668,12 +677,12 @@ class BackfillBaselinesUseCaseTest {
             coEvery { dao.getAllSummaries() } returns listOf(frozenRow)
 
             // Second run: frozen row is skipped.
-            val secondCount = buildBackfill(dao, compute).execute()
+            val secondCount = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
             assertEquals(0, secondCount, "Second execute() on frozen data must write 0 rows")
         }
 
     @Test
-    fun `execute skips rows outside the 30-day window`() =
+    fun `execute processes all rows regardless of age — no 30-day cutoff`() =
         runTest {
             val oldRow = makeSummary(daysAgo = 40)
             val newRow = makeSummary(daysAgo = 15)
@@ -687,9 +696,9 @@ class BackfillBaselinesUseCaseTest {
                 61f
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
-            val count = buildBackfill(dao, compute).execute()
+            val count = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
 
-            assertEquals(1, count, "Only in-window rows must be written")
+            assertEquals(2, count, "All unfrozen rows must be written regardless of age")
         }
 
     @Test
@@ -708,9 +717,9 @@ class BackfillBaselinesUseCaseTest {
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
             val capturedMs = slot<Long>()
-            coEvery { dao.updateBaselines(capture(capturedMs), any(), any(), any(), any(), any()) } returns Unit
+            coEvery { dao.updateBaselines(capture(capturedMs), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Unit
 
-            buildBackfill(dao, compute).execute()
+            buildBackfill(dao, defaultSettingsRepo(), compute).execute()
 
             assertEquals(summary.dateMidnightMs, capturedMs.captured)
         }
@@ -723,10 +732,10 @@ class BackfillBaselinesUseCaseTest {
 
             val (_, _, compute) = buildComputeUseCase()
 
-            val count = buildBackfill(dao, compute).execute()
+            val count = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
 
             assertEquals(0, count)
-            coVerify(exactly = 0) { dao.updateBaselines(any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 0) { dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
         }
 
     @Test
@@ -749,7 +758,7 @@ class BackfillBaselinesUseCaseTest {
                 60f
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
-            val computed = compute.computeHistoricalBaselines(listOf(summary))
+            val computed = compute.computeHistoricalBaselines(listOf(summary), UserPreferences())
 
             assertEquals(1, computed.size)
             assertNotNull(

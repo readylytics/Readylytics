@@ -1,8 +1,10 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring.strategies
 
+import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Restoration
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants.Sleep
 import com.gregor.lauritz.healthdashboard.domain.scoring.components.RestorationWeights
+import com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargetFactory
 import com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargets
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -48,12 +50,9 @@ class SleepScoringStrategy
             if (durationMinutes == 0) return 0f
             val deepPct = deepSleepMinutes / durationMinutes.toFloat()
             val remPct = remSleepMinutes / durationMinutes.toFloat()
-            val (deepTarget, remTarget) =
-                if (sleepTargets != null) {
-                    Pair(sleepTargets.deepPercentage, sleepTargets.remPercentage)
-                } else {
-                    Pair(deepSleepTarget(userAge), remSleepTarget(userAge))
-                }
+            val resolvedTargets = sleepTargets ?: SleepArchitectureTargetFactory.create(userAge)
+            val deepTarget = resolvedTargets.deepPercentage
+            val remTarget = resolvedTargets.remPercentage
             val deepComponent = (deepPct / deepTarget).coerceAtMost(1f) * 100f
             val remComponent = (remPct / remTarget).coerceAtMost(1f) * 100f
             val result = Sleep.WEIGHT_DEEP_COMPONENT * deepComponent + Sleep.WEIGHT_REM_COMPONENT * remComponent
@@ -72,6 +71,7 @@ class SleepScoringStrategy
             restorationWeights: RestorationWeights?,
             frozenLnMu: Float?,
             frozenLnSigma: Float?,
+            saturationZ: Float = ScoringConstants.HRV_SCORE_SATURATION_Z,
         ): Float {
             val zHrv =
                 loadStrategy.computeHrvZScore(
@@ -84,7 +84,7 @@ class SleepScoringStrategy
                     frozenLnSigma = frozenLnSigma,
                 )
                     ?: 0f
-            val hrvScore = loadStrategy.computeHrvScore(zHrv)
+            val hrvScore = loadStrategy.computeHrvScore(zHrv, saturationZ)
 
             val zRhr = loadStrategy.computeRhrZScore(currentNocturnalRhr, rhrValues, rhrBaselineOverride) ?: 0f
             val rhrScore = (50f - 25f * zRhr).coerceIn(0f, 100f)
@@ -118,19 +118,4 @@ class SleepScoringStrategy
             return durationWeight * sDur + archWeight * sArch + Sleep.WEIGHT_RESTORATION * sRest
         }
 
-        private fun deepSleepTarget(age: Int): Float =
-            when {
-                age < 30 -> Sleep.DEEP_TARGET_UNDER_30
-                age < 50 -> Sleep.DEEP_TARGET_30_49
-                age < 65 -> Sleep.DEEP_TARGET_50_64
-                else -> Sleep.DEEP_TARGET_65_PLUS
-            }
-
-        private fun remSleepTarget(age: Int): Float =
-            when {
-                age < 30 -> Sleep.REM_TARGET_UNDER_30
-                age < 50 -> Sleep.REM_TARGET_30_49
-                age < 65 -> Sleep.REM_TARGET_50_64
-                else -> Sleep.REM_TARGET_65_PLUS
-            }
     }

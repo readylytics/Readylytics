@@ -113,7 +113,7 @@ class WorkoutMapperTest {
         val today = LocalDate.of(2026, 5, 16)
         val summaries =
             listOf(
-                DailySummary(date = today, paiScore = 85f, restingHrBaseline = 60, totalPai = 85f),
+                DailySummary(date = today, paiScore = 85f, totalPai = 85f),
             )
 
         val result = DailyPaiBreakdownMapper.mapDailyBreakdown(today, summaries)

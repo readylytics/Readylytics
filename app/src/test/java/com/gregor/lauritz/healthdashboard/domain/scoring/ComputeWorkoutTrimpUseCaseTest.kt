@@ -172,4 +172,73 @@ class ComputeWorkoutTrimpUseCaseTest {
         val trimp = result.getOrNull()!!
         assertTrue(trimp in 40f..100f)
     }
+
+    @Test
+    fun frozenHrMax_overridesPrefsHrMaxForHistoricalDay() {
+        val startTime = 0L
+        val endTime = 1000L * 60 * 30 // 30 mins
+        val samples =
+            listOf(
+                ComputeWorkoutTrimpUseCase.HeartRateSample(Instant.ofEpochMilli(0), 150),
+            )
+
+        val prefsHrMax180 = defaultPrefs.copy(maxHeartRate = 180)
+        val trimpWithFrozen180 =
+            useCase
+                .execute(
+                    workoutStartTime = startTime,
+                    workoutEndTime = endTime,
+                    workoutAvgHr = 150f,
+                    samples = samples,
+                    prefs = prefsHrMax180,
+                    frozenHrMax = 180f,
+                ).getOrNull()!!
+
+        // Changing prefs to hrMax=220 must NOT affect result when frozenHrMax=180f
+        val prefsHrMax220 = defaultPrefs.copy(maxHeartRate = 220)
+        val trimpWithFrozenIgnoringNewPrefs =
+            useCase
+                .execute(
+                    workoutStartTime = startTime,
+                    workoutEndTime = endTime,
+                    workoutAvgHr = 150f,
+                    samples = samples,
+                    prefs = prefsHrMax220,
+                    frozenHrMax = 180f,
+                ).getOrNull()!!
+
+        assertEquals(trimpWithFrozen180, trimpWithFrozenIgnoringNewPrefs, 1e-5f)
+    }
+
+    @Test
+    fun noFrozenHrMax_usesPrefHrMaxForUnfrozenDay() {
+        val startTime = 0L
+        val endTime = 1000L * 60 * 30 // 30 mins
+        val samples =
+            listOf(
+                ComputeWorkoutTrimpUseCase.HeartRateSample(Instant.ofEpochMilli(0), 150),
+            )
+
+        val trimpHrMax180 =
+            useCase
+                .execute(
+                    workoutStartTime = startTime,
+                    workoutEndTime = endTime,
+                    workoutAvgHr = 150f,
+                    samples = samples,
+                    prefs = defaultPrefs.copy(maxHeartRate = 180),
+                ).getOrNull()!!
+
+        val trimpHrMax220 =
+            useCase
+                .execute(
+                    workoutStartTime = startTime,
+                    workoutEndTime = endTime,
+                    workoutAvgHr = 150f,
+                    samples = samples,
+                    prefs = defaultPrefs.copy(maxHeartRate = 220),
+                ).getOrNull()!!
+
+        assertTrue(trimpHrMax180 != trimpHrMax220, "Different prefs hrMax must produce different TRIMP when not frozen")
+    }
 }

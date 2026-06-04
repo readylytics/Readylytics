@@ -173,7 +173,7 @@ class GetDashboardDataUseCase
 
             return CardData(
                 title = "Sleep RHR",
-                value = summary.nocturnalRhr?.toString() ?: "—",
+                value = summary.restingHeartRate?.toString() ?: "—",
                 unit = "bpm",
                 status = rhrStatus,
                 action = DashboardAction.NAVIGATE_SLEEP,

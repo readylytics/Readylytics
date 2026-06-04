@@ -155,7 +155,7 @@ class VitalsViewModel
                         val rhrPoints =
                             summaries
                                 .mapNotNull { s ->
-                                    s.nocturnalRhr?.let { rhr ->
+                                    s.restingHeartRate?.let { rhr ->
                                         val d = s.date
                                         DailyDataPoint(
                                             dayOffset = ChronoUnit.DAYS.between(startLocalDate, d).toInt(),

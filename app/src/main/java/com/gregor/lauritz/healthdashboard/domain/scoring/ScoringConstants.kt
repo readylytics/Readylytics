@@ -88,18 +88,7 @@ object ScoringConstants {
         const val EFF_POOR_SCORE = 40f
         const val EFF_VERY_POOR_SCORE = 15f
 
-        // Age-banded deep/REM saturation denominators
-        // REF: Ohayon 2004 Sleep 27:1255; Boulos 2019 Lancet Respir Med 7:533
-        const val DEEP_TARGET_UNDER_30 = 0.18f
-        const val DEEP_TARGET_30_49 = 0.16f
-        const val DEEP_TARGET_50_64 = 0.14f
-        const val DEEP_TARGET_65_PLUS = 0.12f
-        const val REM_TARGET_UNDER_30 = 0.22f
-        const val REM_TARGET_30_49 = 0.21f
-        const val REM_TARGET_50_64 = 0.20f
-        const val REM_TARGET_65_PLUS = 0.18f
-
-        const val DURATION_OPTIMAL_RATIO = 0.9f
+const val DURATION_OPTIMAL_RATIO = 0.9f
         const val DURATION_NEUTRAL_RATIO = 0.8f
         const val DURATION_WARNING_RATIO = 0.7f
     }
@@ -153,21 +142,17 @@ object ScoringConstants {
     }
 
     object Trimp {
-        // Banister TRIMP coefficients — REF: Banister 1991; paiesque reference
+        // Banister TRIMP coefficients — REF: Banister 1991; Morton 1990
         const val BANISTER_MALE_A = 0.64f
         const val BANISTER_MALE_B = 1.92f
         const val BANISTER_FEMALE_A = 0.86f
         const val BANISTER_FEMALE_B = 1.67f
 
-        // Cheng LT-TRIMP (Lactate Threshold) — REF: Cheng 2007; paiesque reference
-        const val CHENG_LT_THRESHOLD = 0.85f // % HRR
-        const val CHENG_WEIGHT_BELOW_LT = 0.36f // Linear zone
-        const val CHENG_WEIGHT_ABOVE_LT = 0.72f // Exponential zone
-        const val CHENG_MULTIPLIER = 3.2f
-        const val CHENG_BETA = 0.09f // Exponential growth rate
+        // Cheng LT-TRIMP — REF: Cheng et al. 1992
+        // sexFactor reuses BANISTER_MALE_A / BANISTER_FEMALE_A (0.64/0.86)
+        const val CHENG_BETA = 0.09f
 
-        // iTRIMP (Individual TRIMP) — REF: Manzi et al. 2009; paiesque reference
+        // iTRIMP — REF: Manzi et al. 2009
         const val ITRIMP_B = 2.1f
-        const val ITRIMP_MULTIPLIER = 0.48f
     }
 }

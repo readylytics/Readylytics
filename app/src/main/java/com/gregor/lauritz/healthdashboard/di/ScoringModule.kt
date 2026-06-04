@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.di
 
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPreferences
+import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.DataStoreCircadianThresholdPreferences
 import com.gregor.lauritz.healthdashboard.data.repository.ScoringRepositoryImpl
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
@@ -31,10 +32,12 @@ class ScoringModule {
     @Singleton
     fun provideBackfillHistoricalBaselinesUseCase(
         dailySummaryDao: DailySummaryDao,
+        settingsRepository: SettingsRepository,
         computeHistoricalBaselines: ComputeHistoricalBaselinesUseCase,
     ): BackfillHistoricalBaselinesUseCase =
         BackfillHistoricalBaselinesUseCase(
             dailySummaryDao,
+            settingsRepository,
             computeHistoricalBaselines,
         )
 
