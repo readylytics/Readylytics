@@ -36,13 +36,8 @@ import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
 import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
-
-private val TRIMP_MODEL_OPTIONS =
-    listOf(
-        TrimpModel.BANISTER to "Banister",
-        TrimpModel.CHENG to "Cheng LT-TRIMP",
-        TrimpModel.I_TRIMP to "iTRIMP",
-    )
+import androidx.compose.ui.res.stringResource
+import com.gregor.lauritz.healthdashboard.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,6 +52,12 @@ fun AdvancedSettingsSection(
     onPhysiologyEvent: (SettingsEvent) -> Unit,
     onUIEvent: (SettingsEvent) -> Unit,
 ) {
+    val trimpModelOptions = listOf(
+        TrimpModel.BANISTER to stringResource(R.string.advanced_trimp_banister),
+        TrimpModel.CHENG to stringResource(R.string.advanced_trimp_cheng),
+        TrimpModel.I_TRIMP to stringResource(R.string.advanced_trimp_itrimp),
+    )
+
     var hrvText by remember(sleepState.hrvBaselineOverride) {
         mutableStateOf(sleepState.hrvBaselineOverride?.toInt()?.toString() ?: "")
     }
@@ -74,7 +75,7 @@ fun AdvancedSettingsSection(
     Column {
         Column(modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING)) {
             Text(
-                "Baseline Overrides",
+                stringResource(R.string.advanced_baseline_overrides_title),
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(bottom = SettingsConstants.VERTICAL_SPACER),
             )

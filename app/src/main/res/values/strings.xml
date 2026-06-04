@@ -394,4 +394,90 @@
     <string name="error_backup_create_failed">Backup failed</string>
     <string name="error_threshold_invalid_range">Invalid threshold value. Range: 0–90 minutes.</string>
     <string name="error_threshold_update_failed">Failed to update threshold settings. Changes rolled back.</string>
+
+    <!-- Settings Screen Sections & Sub-headers -->
+    <string name="settings_section_data_backup">Data &amp; Backup</string>
+    <string name="settings_sub_local_backup">Local Backup</string>
+    <string name="settings_sub_device">Device</string>
+    <string name="settings_sub_data_management">Data Management</string>
+    <string name="settings_sub_health_connect">Health Connect</string>
+    <string name="settings_section_baselines_thresholds">Baselines &amp; Thresholds</string>
+    <string name="label_daily_step_goal">Daily Step Goal</string>
+    <string name="label_sleep">Sleep</string>
+    <string name="settings_sub_heart_rate_zones">Heart Rate Zones</string>
+    <string name="settings_sub_thresholds">Thresholds</string>
+    <string name="settings_section_display">Display</string>
+    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_about_button">About Readylytics</string>
+    <string name="settings_label_app_theme">App Theme</string>
+    <string name="action_reset_to_default">Reset to default</string>
+
+    <!-- Data Management & Sync Settings -->
+    <string name="settings_retention_enabled_label">Retention Enabled</string>
+    <string name="settings_retention_period_label">Retention Period</string>
+    <string name="settings_retention_days_display">%1$d days</string>
+    <string name="settings_retention_description">Automatically delete data older than the retention period.</string>
+    <string name="settings_resync_button">Resync Health Connect Data</string>
+    <string name="settings_resync_description">Clear all data from Health Connect and reload the last 60 days.</string>
+    <string name="settings_foreground_sync_label">Foreground Sync</string>
+    <string name="sync_preference_never">Never</string>
+    <string name="sync_preference_always">Always</string>
+    <string name="sync_preference_by_time">By Time</string>
+    <string name="settings_sync_interval_label">Sync Interval</string>
+    <string name="settings_sync_interval_display">%1$dh</string>
+    <string name="settings_primary_device_label">Primary Device</string>
+    <string name="settings_device_calibrating">Calibrating...</string>
+    <string name="settings_device_select">Select a device</string>
+    <string name="settings_device_description">Device used for metrics calculation</string>
+
+    <!-- Advanced Settings -->
+    <string name="advanced_baseline_overrides_title">Baseline Overrides</string>
+    <string name="advanced_hrv_baseline_label">HRV Baseline (ms)</string>
+    <string name="advanced_baseline_override_tooltip">Overrides the 30-day rolling median used in scoring.</string>
+    <string name="advanced_rhr_baseline_label">RHR Baseline (bpm)</string>
+    <string name="advanced_resting_hr_percentile_label">Resting HR: Percentile</string>
+    <string name="advanced_resting_hr_percentile_tooltip">Use the Nth percentile lowest heart rate reading of the entire sleep period (e.g., 5%% = lowest 5%% threshold). Lower values = lower RHR estimate. Default: 5%%.</string>
+    <string name="advanced_pai_scaling_label">PAI Scaling Factor</string>
+    <string name="advanced_pai_scaling_tooltip">Adjusts how quickly you earn PAI points. Default: 0.20.</string>
+    <string name="advanced_training_load_label">Training Load Model</string>
+    <string name="advanced_trimp_banister">Banister</string>
+    <string name="advanced_trimp_cheng">Cheng LT-TRIMP</string>
+    <string name="advanced_trimp_itrimp">iTRIMP</string>
+    <string name="advanced_banister_multiplier_label">Banister Multiplier</string>
+    <string name="advanced_banister_multiplier_desc">Sedentary=1.75, Active=1.35, Athlete=1.00.</string>
+    <string name="advanced_cheng_beta_label">Cheng Beta</string>
+    <string name="advanced_cheng_beta_desc">Sedentary=0.11, Active=0.09, Athlete=0.07.</string>
+    <string name="advanced_itrimp_b_factor_label">iTRIMP B Factor</string>
+    <string name="advanced_itrimp_b_factor_desc">Sedentary=1.5, Active=2.1, Athlete=2.9.</string>
+
+    <!-- Threshold Settings Sliders -->
+    <string name="threshold_hrv_optimal_label">HRV Optimal</string>
+    <string name="threshold_hrv_optimal_desc">HRV ratio to baseline to be considered Optimal (e.g. 100-120%%).</string>
+    <string name="threshold_hrv_warning_label">HRV Warning</string>
+    <string name="threshold_hrv_warning_desc">HRV ratio to baseline to be considered Warning (e.g. 80-100%%).</string>
+    <string name="threshold_rhr_optimal_label">RHR Optimal</string>
+    <string name="threshold_rhr_optimal_desc">RHR ratio to baseline to be considered Optimal (e.g. 80-100%%).</string>
+    <string name="threshold_rhr_warning_label">RHR Warning</string>
+    <string name="threshold_rhr_warning_desc">RHR ratio to baseline to be considered Warning (e.g. 100-120%%).</string>
+    <string name="threshold_consistency_window_label">Consistency Window</string>
+    <string name="threshold_consistency_window_desc">±Grace period (in minutes) around your median bedtime and wake time before your score starts to drop. Default: 30 min.</string>
+    <string name="threshold_evaluation_period_label">Evaluation Period</string>
+    <string name="threshold_evaluation_period_desc">Number of recent sleep sessions scored to compute your current consistency. Default: 7.</string>
+    <string name="threshold_baseline_window_label">Baseline Window</string>
+    <string name="threshold_baseline_window_desc">Number of past sleep sessions used to calculate your median bedtime anchor. Default: 14.</string>
+    <string name="settings_step_goal_tooltip">Target steps per day. Reaching this goal shows as Optimal on the dashboard.</string>
+    <string name="label_sleep_goal">Sleep Goal</string>
+
+    <!-- Circadian Threshold Settings Section -->
+    <string name="circadian_within_week_mode_label">Within-Week Regularity (Recommended)</string>
+    <string name="circadian_within_week_mode_desc">Compares same day-of-week across weeks</string>
+    <string name="circadian_rolling_anchor_label">Use Standard Rolling-Anchor</string>
+    <string name="circadian_rolling_anchor_desc">14-day rolling window (like other profiles)</string>
+    <string name="circadian_threshold_window_label">Threshold Window</string>
+    <string name="circadian_profile_default">Profile default: %1$dmin</string>
+    <string name="circadian_current_value">Current: %1$d min</string>
+    <string name="circadian_range_min">0 min</string>
+    <string name="circadian_range_max">90 min</string>
+    <string name="circadian_using_profile_default">Using profile default</string>
+    <string name="circadian_using_custom_setting">Using custom setting</string>
 </resources>

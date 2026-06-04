@@ -320,7 +320,7 @@ fun SettingsScreen(
                 // Data & Backup & Health Connect
                 if (matchingSections.any { it.id == "data_backup_sync" }) {
                     M3CollapsibleSection(
-                        header = "Data & Backup",
+                        header = stringResource(R.string.settings_section_data_backup),
                         expanded =
                             !expandState.collapseDataBackup ||
                                 shouldExpandSection("data_backup_sync"),
@@ -329,16 +329,16 @@ fun SettingsScreen(
                         },
                     ) {
                         Column {
-                            SectionHeader("Local Backup")
+                            SectionHeader(stringResource(R.string.settings_sub_local_backup))
                             LocalBackupSection(
                                 uiState = localBackupState,
                                 onEvent = onLocalBackupEvent,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            SectionHeader("Device")
+                            SectionHeader(stringResource(R.string.settings_sub_device))
                             DeviceSelectionSection()
                             Spacer(modifier = Modifier.height(12.dp))
-                            SectionHeader("Data Management")
+                            SectionHeader(stringResource(R.string.settings_sub_data_management))
                             DataManagementSection(
                                 uiState = uiState,
                                 isResyncing = syncState.isResyncing,
@@ -346,7 +346,7 @@ fun SettingsScreen(
                                 onSyncEvent = onSyncEvent,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            SectionHeader("Health Connect")
+                            SectionHeader(stringResource(R.string.settings_sub_health_connect))
                             SyncSettingsSection(uiState = syncState, onEvent = onSyncEvent)
                         }
                     }
@@ -356,7 +356,7 @@ fun SettingsScreen(
                 // Baselines & Thresholds
                 if (matchingSections.any { it.id == "baselines_thresholds" }) {
                     M3CollapsibleSection(
-                        header = "Baselines & Thresholds",
+                        header = stringResource(R.string.settings_section_baselines_thresholds),
                         expanded =
                             !expandState.collapseBaselinesThresholds ||
                                 shouldExpandSection("baselines_thresholds"),
@@ -365,13 +365,13 @@ fun SettingsScreen(
                         },
                     ) {
                         Column {
-                            SectionHeader("Daily Step Goal")
+                            SectionHeader(stringResource(R.string.label_daily_step_goal))
                             ActivitySettingsSection(stepGoal = uiState.stepGoal, onEvent = onUIEvent)
                             Spacer(modifier = Modifier.height(12.dp))
-                            SectionHeader("Sleep")
+                            SectionHeader(stringResource(R.string.label_sleep))
                             SleepSettingsSection(uiState = sleepState, onEvent = onSleepEvent)
                             Spacer(modifier = Modifier.height(12.dp))
-                            SectionHeader("Heart Rate Zones")
+                            SectionHeader(stringResource(R.string.settings_sub_heart_rate_zones))
                             HeartRateZoneSection(
                                 uiState = heartRateState,
                                 physiologyState = physiologyState,
@@ -387,7 +387,7 @@ fun SettingsScreen(
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-                            SectionHeader("Circadian Consistency")
+                            SectionHeader(stringResource(R.string.label_circadian_consistency))
                             CircadianThresholdSettingsSection(
                                 profile = physiologyState.physiologyProfile,
                                 currentOverride = thresholdState.circadianThresholdOverride,
@@ -402,7 +402,7 @@ fun SettingsScreen(
                                 onErrorDismissed = { onThresholdEvent(SettingsEvent.DismissThresholdError) },
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            SectionHeader("Thresholds")
+                            SectionHeader(stringResource(R.string.settings_sub_thresholds))
                             ThresholdSettingsSection(uiState = thresholdState, onEvent = onThresholdEvent)
                         }
                     }
@@ -412,7 +412,7 @@ fun SettingsScreen(
                 // Display
                 if (matchingSections.any { it.id == "display" }) {
                     M3CollapsibleSection(
-                        header = "Display",
+                        header = stringResource(R.string.settings_section_display),
                         expanded =
                             !expandState.collapseDisplay ||
                                 shouldExpandSection("display"),
@@ -423,8 +423,8 @@ fun SettingsScreen(
                         Column {
                             AppThemeItem(uiState = uiState, onEvent = onUIEvent)
                             SettingsToggleItem(
-                                label = "Dynamic Color",
-                                description = "Use colors derived from your wallpaper (Android 12+)",
+                                label = stringResource(R.string.onboarding_dynamic_color_label),
+                                description = stringResource(R.string.onboarding_dynamic_color_desc),
                                 checked = uiState.dynamicColorEnabled,
                                 onCheckedChange = { onUIEvent(SettingsEvent.DynamicColorEnabledChanged(it)) },
                             )
@@ -442,7 +442,7 @@ fun SettingsScreen(
                 // Advanced
                 if (matchingSections.any { it.id == "advanced" }) {
                     M3CollapsibleSection(
-                        header = "Advanced",
+                        header = stringResource(R.string.settings_section_advanced),
                         expanded =
                             !expandState.collapseAdvanced ||
                                 shouldExpandSection("advanced"),
@@ -475,7 +475,7 @@ fun SettingsScreen(
         ) {
             TextButton(onClick = onNavigateToAbout) {
                 Text(
-                    text = "About Readylytics",
+                    text = stringResource(R.string.settings_about_button),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -490,7 +490,7 @@ private fun AppThemeItem(
     onEvent: (SettingsEvent) -> Unit,
 ) {
     DropdownPreferenceItem(
-        label = "App Theme",
+        label = stringResource(R.string.settings_label_app_theme),
         selectedDisplayValue =
             uiState.appTheme.name
                 .lowercase()
