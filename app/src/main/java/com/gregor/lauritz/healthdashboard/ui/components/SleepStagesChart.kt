@@ -217,9 +217,12 @@ fun SleepStagesChart(
                 .mapValues { (_, stages) -> stages.sumOf { it.durationMinutes } }
         }
 
-    // Unconditional pulse animation — visual is only drawn when a segment is selected
+    // State refs (not `by` delegation) so that reading .value inside the Canvas draw
+    // block registers the dependency there — animation frames trigger only a redraw, not
+    // a full recomposition. When selectedSegment == null the values are never read, so
+    // the animation clock causes no draw work at all.
     val infiniteTransition = rememberInfiniteTransition(label = "sleepPulseTransition")
-    val haloAlpha by infiniteTransition.animateFloat(
+    val haloAlphaState = infiniteTransition.animateFloat(
         initialValue = 0.15f,
         targetValue = 0.4f,
         animationSpec =
@@ -229,7 +232,7 @@ fun SleepStagesChart(
             ),
         label = "sleepHaloAlpha",
     )
-    val haloRadiusCoeff by infiniteTransition.animateFloat(
+    val haloRadiusState = infiniteTransition.animateFloat(
         initialValue = 1.0f,
         targetValue = 1.6f,
         animationSpec =
@@ -279,19 +282,17 @@ fun SleepStagesChart(
             val naturalWidth = maxWidth
             val chartWidth = if (needsScroll) naturalWidth * scaleFactor else naturalWidth
 
+            val viewportWidthPx = constraints.maxWidth
             val tooltipData =
-                remember(selectedSegment, scrollState.value) {
+                remember(selectedSegment, scrollState.value, viewportWidthPx) {
                     val sel = selectedSegment ?: return@remember null
-                    val stage = sel.stage
                     val viewportX = (sel.segmentCenterXPx - scrollState.value).roundToInt()
-                    val stageName =
-                        when (stage.stageType) {
-                            SleepStageType.AWAKE.value -> context.getString(R.string.sleep_stage_awake)
-                            SleepStageType.REM.value -> context.getString(R.string.sleep_stage_rem)
-                            SleepStageType.LIGHT.value -> context.getString(R.string.sleep_stage_light)
-                            SleepStageType.DEEP.value -> context.getString(R.string.sleep_stage_deep)
-                            else -> stage.stageType
-                        }
+                    // Hide when the selected segment has scrolled outside the visible viewport
+                    if (viewportX !in 0..viewportWidthPx) return@remember null
+
+                    val stage = sel.stage
+                    val labelResId = LANES.firstOrNull { it.stageType == stage.stageType }?.labelResId
+                    val stageName = if (labelResId != null) context.getString(labelResId) else stage.stageType
                     val h = stage.durationMinutes / 60
                     val m = stage.durationMinutes % 60
                     val durationStr =
@@ -438,8 +439,12 @@ fun SleepStagesChart(
                         }
                     }
 
-                    // 5. Pulsing glow outline for selected segment
+                    // 5. Pulsing glow outline for selected segment.
+                    // Values are read here (draw phase) so animation frames only trigger
+                    // a redraw, not a full recomposition of SleepStagesChart.
                     selectedSegment?.let { sel ->
+                        val haloAlpha = haloAlphaState.value
+                        val haloRadiusCoeff = haloRadiusState.value
                         val selSessionDuration = (session.endTime - session.startTime).coerceAtLeast(1L)
                         val laneIdx = getStageLaneIndex(sel.stage.stageType)
                         val selTop = laneIdx * laneHeightPx + insetPx
