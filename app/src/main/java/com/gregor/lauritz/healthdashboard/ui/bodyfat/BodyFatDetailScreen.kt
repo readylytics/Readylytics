@@ -120,6 +120,13 @@ fun BodyFatDetailScreen(
                                 .padding(vertical = 16.dp),
                         contentAlignment = Alignment.Center,
                     ) {
+                        val genderStringRes = when (Gender.entries.find { it.name == uiState.gender }) {
+                            Gender.MALE -> R.string.gender_male
+                            Gender.FEMALE -> R.string.gender_female
+                            Gender.OTHER -> R.string.gender_other
+                            Gender.PREFER_NOT_TO_SAY -> R.string.gender_prefer_not_to_say
+                            else -> R.string.gender_other
+                        }
                         M3ScoreDial(
                             score = uiState.latestBodyFat,
                             label = stringResource(R.string.label_body_fat),
@@ -130,15 +137,7 @@ fun BodyFatDetailScreen(
                                 R.string.tooltip_body_fat_current,
                                 uiState.bodyFatDisplay ?: "—",
                                 uiState.optimalRangeDisplay ?: "—",
-                                stringResource(
-                                    when (uiState.gender) {
-                                        "MALE" -> R.string.gender_male
-                                        "FEMALE" -> R.string.gender_female
-                                        "OTHER" -> R.string.gender_other
-                                        "PREFER_NOT_TO_SAY" -> R.string.gender_prefer_not_to_say
-                                        else -> R.string.gender_prefer_not_to_say
-                                    }
-                                ),
+                                stringResource(genderStringRes),
                                 uiState.age,
                             ),
                         )
