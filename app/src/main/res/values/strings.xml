@@ -255,4 +255,66 @@
     <!-- Settings Screen -->
     <string name="message_syncing_health_data">Syncing health data...</string>
     <string name="settings_search_placeholder">Search settings...</string>
+
+    <!-- Gender display labels (display only; domain/stored values remain English keys) -->
+    <string name="gender_male">Male</string>
+    <string name="gender_female">Female</string>
+    <string name="gender_other">Other</string>
+    <string name="gender_prefer_not_to_say">Prefer not to say</string>
+
+    <!-- Common form labels -->
+    <string name="label_date_of_birth">Date of Birth</string>
+    <string name="label_not_set">Not set</string>
+    <string name="label_gender">Gender</string>
+    <string name="label_height">Height</string>
+    <string name="label_feet">Feet</string>
+    <string name="label_inches">Inches</string>
+    <string name="unit_ft">ft</string>
+    <string name="unit_in">in</string>
+    <string name="height_range_hint_metric">Range: 120-250 cm</string>
+    <string name="height_range_hint_imperial">Range: 3\'11\" - 8\'2\"</string>
+    <string name="height_bmi_note">Used for BMI calculation in weight tracking</string>
+    <string name="error_height_feet">Feet: 3–8</string>
+    <string name="error_height_inches">Inches: 0–11</string>
+    <string name="error_height_out_of_range">Height out of range (120–250 cm)</string>
+
+    <!-- Onboarding Screen -->
+    <string name="onboarding_welcome_title">Welcome to Readylytics</string>
+    <string name="onboarding_welcome_subtitle">Your personal recovery &amp; readiness tracker — powered entirely by your own data.</string>
+    <string name="onboarding_feature_sleep_title">Sleep Score</string>
+    <string name="onboarding_feature_sleep_desc">Weighted by duration, architecture, and restoration quality.</string>
+    <string name="onboarding_feature_hrv_title">HRV &amp; Resting HR Tracking</string>
+    <string name="onboarding_feature_hrv_desc">Personal baselines calculated from your last 30 days of data.</string>
+    <string name="onboarding_feature_training_title">Training Load Index</string>
+    <string name="onboarding_feature_training_desc">Acute vs. chronic workload ratio to guide your recovery.</string>
+    <string name="onboarding_privacy_note">All data stays on your device. Nothing is ever uploaded to any server.</string>
+    <string name="onboarding_get_started">Get Started</string>
+    <string name="onboarding_profile_title">Your Profile</string>
+    <string name="onboarding_profile_subtitle">Your birthday, gender, and activity profile are used to calculate your max heart rate and personalize scores. They are stored only on your device.</string>
+    <string name="onboarding_activity_profile_label">Activity Profile</string>
+    <string name="onboarding_appearance_label">Appearance</string>
+    <string name="onboarding_dynamic_color_label">Dynamic Color</string>
+    <string name="onboarding_dynamic_color_desc">Use colors derived from your wallpaper (Android 12+)</string>
+    <string name="onboarding_units_label">Measurement Units</string>
+    <string name="onboarding_hc_permissions_label">Health Connect Permissions</string>
+    <string name="onboarding_hc_permissions_desc">This app needs access to Sleep, Heart Rate, HRV, and Exercise data from Health Connect to calculate your scores.</string>
+    <string name="onboarding_grant_access">Grant Access &amp; Continue</string>
+    <string name="onboarding_open_hc_settings">Open Health Connect Settings</string>
+
+    <!-- Heart Rate Settings -->
+    <string name="hr_auto_calculate_label">Auto-calculate Max HR</string>
+    <string name="hr_auto_calculate_desc">Uses age (220 - age) if enabled</string>
+    <string name="hr_age_display">Age: %1$d (auto-calculated)</string>
+    <string name="hr_max_rate_label">Max Heart Rate (bpm)</string>
+    <string name="hr_calculated_from_age">Calculated from age</string>
+    <string name="hr_manual_override">Manual override</string>
+    <string name="hr_manual_zone_editing_label">Manual Zone Editing</string>
+    <string name="hr_manual_zone_editing_desc">Customize percentage thresholds</string>
+    <string name="hr_calculated_zones_header">Calculated Zones</string>
+    <string name="hr_zones_section_title">Heart Rate Zones (bpm)</string>
+    <string name="hr_zones_footer">Zones are used for TRIMP and workout intensity tracking.</string>
+    <string name="hr_save_zones_button">Save Zone Boundaries</string>
+    <string name="hr_zone_range_display">%1$d - %2$d bpm</string>
+    <string name="hr_zone_n">Zone %1$d</string>
+    <string name="error_hr_zones_invalid">Invalid: All values must be 1–%1$d bpm and strictly increasing</string>
 </resources>

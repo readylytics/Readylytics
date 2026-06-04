@@ -17,8 +17,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
 import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
@@ -61,8 +63,8 @@ fun HeightInputField(
                         }
                     }
                 },
-                label = { Text("Height") },
-                suffix = { Text("cm") },
+                label = { Text(stringResource(R.string.label_height)) },
+                suffix = { Text(stringResource(R.string.unit_metric_cm)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = isError,
                 supportingText = {
@@ -72,14 +74,14 @@ fun HeightInputField(
                             color = MaterialTheme.colorScheme.error,
                         )
                     } else {
-                        Text("Range: 120-250 cm")
+                        Text(stringResource(R.string.height_range_hint_metric))
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Used for BMI calculation in weight tracking",
+                stringResource(R.string.height_bmi_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -146,8 +148,8 @@ fun HeightInputField(
                             }
                         }
                     },
-                    label = { Text("Feet") },
-                    suffix = { Text("ft") },
+                    label = { Text(stringResource(R.string.label_feet)) },
+                    suffix = { Text(stringResource(R.string.unit_ft)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     isError = isFeetInvalid || isTotalInvalid,
                     modifier = Modifier.weight(1f),
@@ -169,8 +171,8 @@ fun HeightInputField(
                             }
                         }
                     },
-                    label = { Text("Inches") },
-                    suffix = { Text("in") },
+                    label = { Text(stringResource(R.string.label_inches)) },
+                    suffix = { Text(stringResource(R.string.unit_in)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     isError = isInchesInvalid || isTotalInvalid,
                     modifier = Modifier.weight(1f),
@@ -180,9 +182,9 @@ fun HeightInputField(
             if (isError) {
                 val errorMsg =
                     when {
-                        isFeetInvalid -> "Feet: 3–8"
-                        isInchesInvalid -> "Inches: 0–11"
-                        isTotalInvalid -> "Height out of range (120–250 cm)"
+                        isFeetInvalid -> stringResource(R.string.error_height_feet)
+                        isInchesInvalid -> stringResource(R.string.error_height_inches)
+                        isTotalInvalid -> stringResource(R.string.error_height_out_of_range)
                         else -> ""
                     }
                 Text(
@@ -192,14 +194,14 @@ fun HeightInputField(
                 )
             } else {
                 Text(
-                    "Range: 3'11\" - 8'2\"",
+                    stringResource(R.string.height_range_hint_imperial),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Used for BMI calculation in weight tracking",
+                stringResource(R.string.height_bmi_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

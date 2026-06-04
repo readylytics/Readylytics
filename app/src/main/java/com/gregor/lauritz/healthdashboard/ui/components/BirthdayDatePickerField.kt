@@ -14,6 +14,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.gregor.lauritz.healthdashboard.R
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -29,14 +31,14 @@ fun BirthdayDatePickerField(
     onDialogDismiss: () -> Unit,
 ) {
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-    val displayText = birthDate?.format(dateFormatter) ?: "Not set"
+    val displayText = birthDate?.format(dateFormatter) ?: stringResource(R.string.label_not_set)
 
     Box(modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = displayText,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Date of Birth") },
+            label = { Text(stringResource(R.string.label_date_of_birth)) },
             modifier = Modifier.fillMaxWidth(),
         )
         Box(
@@ -74,12 +76,12 @@ fun BirthdayDatePickerField(
                         }
                     },
                 ) {
-                    Text("OK")
+                    Text(stringResource(R.string.action_ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = onDialogDismiss) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         ) {

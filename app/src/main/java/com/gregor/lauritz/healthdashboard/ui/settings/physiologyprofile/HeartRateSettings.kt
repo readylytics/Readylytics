@@ -30,11 +30,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.annotation.StringRes
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.ui.components.BirthdayDatePickerField
 import com.gregor.lauritz.healthdashboard.ui.settings.HeartRateZonesState
@@ -66,9 +69,9 @@ fun HeartRateZoneSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Auto-calculate Max HR", style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.hr_auto_calculate_label), style = MaterialTheme.typography.bodyLarge)
                 Text(
-                    "Uses age (220 - age) if enabled",
+                    stringResource(R.string.hr_auto_calculate_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -94,7 +97,7 @@ fun HeartRateZoneSection(
                 )
                 Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
                 Text(
-                    "Age: ${physiologyState.age} (auto-calculated)",
+                    stringResource(R.string.hr_age_display, physiologyState.age),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -122,14 +125,14 @@ fun HeartRateZoneSection(
                 maxHrText = it
                 onEvent(SettingsEvent.MaxHeartRateChanged(it))
             },
-            label = { Text("Max Heart Rate (bpm)") },
+            label = { Text(stringResource(R.string.hr_max_rate_label)) },
             enabled = !uiState.autoCalculateMaxHr,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             supportingText = {
                 if (uiState.autoCalculateMaxHr) {
-                    Text("Calculated from age")
+                    Text(stringResource(R.string.hr_calculated_from_age))
                 } else {
-                    Text("Manual override")
+                    Text(stringResource(R.string.hr_manual_override))
                 }
             },
             singleLine = true,
@@ -143,9 +146,9 @@ fun HeartRateZoneSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Manual Zone Editing", style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.hr_manual_zone_editing_label), style = MaterialTheme.typography.bodyLarge)
                 Text(
-                    "Customize percentage thresholds",
+                    stringResource(R.string.hr_manual_zone_editing_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -162,7 +165,7 @@ fun HeartRateZoneSection(
             ZoneEditingSection(uiState = uiState, onEvent = onEvent)
         } else {
             Text(
-                "Calculated Zones",
+                stringResource(R.string.hr_calculated_zones_header),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -178,7 +181,7 @@ fun HeartRateZoneSection(
         }
 
         Text(
-            "Zones are used for TRIMP and workout intensity tracking.",
+            stringResource(R.string.hr_zones_footer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = SettingsConstants.VERTICAL_SPACER),
@@ -201,11 +204,11 @@ fun HeartRateZonesDisplay(
     ) {
         val zones =
             listOf(
-                "Zone 1" to (z1MinP.toDouble()..z1p.toDouble()),
-                "Zone 2" to (z1p.toDouble()..z2p.toDouble()),
-                "Zone 3" to (z2p.toDouble()..z3p.toDouble()),
-                "Zone 4" to (z3p.toDouble()..z4p.toDouble()),
-                "Zone 5" to (z4p.toDouble()..1.00),
+                stringResource(R.string.hr_zone_n, 1) to (z1MinP.toDouble()..z1p.toDouble()),
+                stringResource(R.string.hr_zone_n, 2) to (z1p.toDouble()..z2p.toDouble()),
+                stringResource(R.string.hr_zone_n, 3) to (z2p.toDouble()..z3p.toDouble()),
+                stringResource(R.string.hr_zone_n, 4) to (z3p.toDouble()..z4p.toDouble()),
+                stringResource(R.string.hr_zone_n, 5) to (z4p.toDouble()..1.00),
             )
 
         zones.forEach { (name, range) ->
@@ -215,7 +218,11 @@ fun HeartRateZonesDisplay(
             ) {
                 Text(name, style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    text = "${(maxHr * range.start).roundToInt()} - ${(maxHr * range.endInclusive).roundToInt()} bpm",
+                    text = stringResource(
+                        R.string.hr_zone_range_display,
+                        (maxHr * range.start).roundToInt(),
+                        (maxHr * range.endInclusive).roundToInt(),
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                 )
@@ -254,16 +261,16 @@ fun ZoneEditingSection(
 
     Column(verticalArrangement = Arrangement.spacedBy(SettingsConstants.VERTICAL_SPACER)) {
         Text(
-            "Heart Rate Zones (bpm)",
+            stringResource(R.string.hr_zones_section_title),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
         )
 
-        ZoneRow("Zone 1", z1Min, { z1Min = it }, true, z1Max, { z1Max = it }, true)
-        ZoneRow("Zone 2", z1Max, null, false, z2Max, { z2Max = it }, true)
-        ZoneRow("Zone 3", z2Max, null, false, z3Max, { z3Max = it }, true)
-        ZoneRow("Zone 4", z3Max, null, false, z4Max, { z4Max = it }, true)
-        ZoneRow("Zone 5", z4Max, null, false, maxHr.toString(), null, false)
+        ZoneRow(stringResource(R.string.hr_zone_n, 1), z1Min, { z1Min = it }, true, z1Max, { z1Max = it }, true)
+        ZoneRow(stringResource(R.string.hr_zone_n, 2), z1Max, null, false, z2Max, { z2Max = it }, true)
+        ZoneRow(stringResource(R.string.hr_zone_n, 3), z2Max, null, false, z3Max, { z3Max = it }, true)
+        ZoneRow(stringResource(R.string.hr_zone_n, 4), z3Max, null, false, z4Max, { z4Max = it }, true)
+        ZoneRow(stringResource(R.string.hr_zone_n, 5), z4Max, null, false, maxHr.toString(), null, false)
 
         if (isValid) {
             Button(
@@ -283,11 +290,11 @@ fun ZoneEditingSection(
                         .fillMaxWidth()
                         .padding(top = SettingsConstants.VERTICAL_SPACER),
             ) {
-                Text("Save Zone Boundaries")
+                Text(stringResource(R.string.hr_save_zones_button))
             }
         } else {
             Text(
-                "Invalid: All values must be 1–$maxHr bpm and strictly increasing",
+                stringResource(R.string.error_hr_zones_invalid, maxHr),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -409,10 +416,10 @@ fun GenderSelector(
         modifier = Modifier.fillMaxWidth(),
     ) {
         OutlinedTextField(
-            value = selectedGender?.displayName ?: "Not set",
+            value = selectedGender?.let { stringResource(it.labelRes()) } ?: stringResource(R.string.label_not_set),
             onValueChange = {},
             readOnly = true,
-            label = { Text("Gender") },
+            label = { Text(stringResource(R.string.label_gender)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
             modifier =
                 Modifier
@@ -425,7 +432,7 @@ fun GenderSelector(
         ) {
             genders.forEach { gender ->
                 DropdownMenuItem(
-                    text = { Text(gender.displayName) },
+                    text = { Text(stringResource(gender.labelRes())) },
                     onClick =
                         {
                             onGenderSelected(gender)
@@ -434,7 +441,7 @@ fun GenderSelector(
                 )
             }
             DropdownMenuItem(
-                text = { Text("Clear") },
+                text = { Text(stringResource(R.string.action_clear)) },
                 onClick = {
                     onGenderSelected(null)
                     onExpandedChange(false)
@@ -443,3 +450,12 @@ fun GenderSelector(
         }
     }
 }
+
+@StringRes
+private fun Gender.labelRes(): Int =
+    when (this) {
+        Gender.MALE -> R.string.gender_male
+        Gender.FEMALE -> R.string.gender_female
+        Gender.OTHER -> R.string.gender_other
+        Gender.PREFER_NOT_TO_SAY -> R.string.gender_prefer_not_to_say
+    }
