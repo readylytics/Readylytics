@@ -10,6 +10,10 @@
     <!-- Tooltips -->
     <string name="tooltip_pai">Your 7-day rolling heart health score.\nBased on how often and how hard you challenge your heart.\n\n• 100+: Optimal\n• 75-99: Neutral\n• 50-74: Warning\n• &lt; 50: Poor</string>
 
+    <string name="tooltip_sleep_score">Total quality of rest based on duration and cycles.\n\n• 80–100: Optimal\n• 60–79: Fair\n• &lt; 60: Poor</string>
+
+    <string name="tooltip_circadian_score">Measures how regular your sleep schedule is.\n\nHigh consistency stabilizes your internal clock, improving deep sleep and energy levels.\n\n• ≥ 80%%: Optimal\n• 60–79%%: Neutral\n• 40–59%%: Warning\n• &lt; 40%%: Poor\n\nConsistency Window: ±%1$d min grace period before score drops.</string>
+
     <string name="tooltip_sleep_rhr">Average heart rate during sleep.\nTarget: lower or equal to your 30-day rolling average. (Lower = Recovered)</string>
     <string name="tooltip_sleep_rhr_baseline">\n\nBaseline: %1$d bpm %2$s (%3$d bpm)</string>
     <string name="tooltip_sleep_rhr_no_baseline">\n\nNot enough data to calculate baseline.</string>
@@ -187,4 +191,68 @@
     <string name="spo2_warning">Warning</string>
     <string name="spo2_poor">Poor</string>
     <string name="spo2_calibrating">Calibrating</string>
+
+    <!-- Actions (generic buttons) -->
+    <string name="action_dismiss">Dismiss</string>
+    <string name="action_change">Change</string>
+    <string name="action_set">Set</string>
+    <string name="action_verify">Verify</string>
+    <string name="action_restore">Restore</string>
+    <string name="action_ok">OK</string>
+
+    <!-- Backup Settings -->
+    <string name="backup_description">Backups are stored locally on your device. You can create a new backup at any time or restore from a previous one.</string>
+    <string name="backup_create_button">Create New Backup</string>
+    <string name="backup_reencrypting_message">Updating existing backup passwords...</string>
+    <string name="backup_section_available">Available Backups</string>
+    <string name="backup_none_found">No backups found.</string>
+    <string name="backup_security_section">Security</string>
+    <string name="backup_password_label">Backup Password</string>
+    <string name="backup_encryption_enabled">Encryption is enabled.</string>
+    <string name="backup_encryption_disabled">Encryption is disabled.</string>
+    <string name="backup_test_password_label">Test Backup Password</string>
+    <string name="backup_password_match">Match! ✓</string>
+    <string name="backup_password_no_match">No match ✗</string>
+    <string name="backup_new_password_label">New Password</string>
+    <string name="backup_repeat_password_label">Repeat Password</string>
+    <string name="backup_directory_label">Backup Directory</string>
+    <string name="backup_directory_default">Default (App Internal)</string>
+    <string name="backup_size_kb">%1$d KB</string>
+    <string name="backup_auto_label">Auto Backup</string>
+    <string name="backup_schedule_manual">Manual only</string>
+    <string name="backup_schedule_daily">Daily</string>
+    <string name="backup_schedule_weekly">Weekly</string>
+    <string name="backup_this_backup">this backup</string>
+
+    <!-- Backup Dialogs & Errors -->
+    <string name="dialog_set_password_title">Set Backup Password</string>
+    <string name="dialog_set_password_body">This password will be used to encrypt your backups with AES-256. If you lose it, you won\'t be able to restore your data.</string>
+    <string name="dialog_restore_backup_title">Restore Backup?</string>
+    <string name="dialog_restore_backup_body">This will replace all local health data with the contents of %1$s and restart the app. This cannot be undone.</string>
+    <string name="error_passwords_do_not_match">Passwords do not match</string>
+
+    <!-- Database Recovery Screen -->
+    <string name="recovery_title">Database Access Problem</string>
+    <string name="recovery_description">The secure encryption key for your database could not be decrypted. This typically happens if the Android Keystore was cleared or corrupted.</string>
+    <string name="recovery_success">Database successfully restored! Please restart the application.</string>
+    <string name="recovery_error_default">Failed to restore backup. Please ensure you selected the correct file.</string>
+    <string name="recovery_restoring_message">Restoring database...</string>
+    <string name="recovery_recommended_title">Recommended Recovery Option</string>
+    <string name="recovery_recommended_body">If you have a previously exported backup file (.zip), you can select it to restore your data safely.</string>
+    <string name="recovery_restore_button">Restore from Backup File</string>
+    <string name="recovery_danger_title">Danger Zone</string>
+    <string name="recovery_danger_body">If you don\'t have a backup, you can reset the database. This will permanently delete all existing local health dashboards and records.</string>
+    <string name="recovery_reset_button">Reset Database &amp; Start Fresh</string>
+
+    <!-- Accessibility -->
+    <string name="accessibility_password_hide">Hide password</string>
+    <string name="accessibility_password_show">Show password</string>
+    <string name="accessibility_backup_delete">Delete backup from %1$s</string>
+    <string name="accessibility_security_alert">Security Alert</string>
+    <string name="accessibility_search">Search</string>
+    <string name="accessibility_clear">Clear</string>
+
+    <!-- Settings Screen -->
+    <string name="message_syncing_health_data">Syncing health data...</string>
+    <string name="settings_search_placeholder">Search settings...</string>
 </resources>

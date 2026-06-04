@@ -1,8 +1,9 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.scoring.toStatus
 import com.gregor.lauritz.healthdashboard.domain.scoring.toTimeString
@@ -29,17 +30,14 @@ fun CircadianConsistencyCard(
                 "Median: ${result.medianBedtimeMinutes.toTimeString()}→${result.medianWakeMinutes.toTimeString()}"
         }
 
-    val tooltipText =
-        remember(result) {
-            val thresholdMinutes =
-                when (result) {
-                    is CircadianConsistencyResult.Calibrating,
-                    is CircadianConsistencyResult.MissingData,
-                    -> 30
-                    is CircadianConsistencyResult.Ready -> result.thresholdMinutes
-                }
-            circadianTooltipText(thresholdMinutes)
+    val thresholdMinutes =
+        when (result) {
+            is CircadianConsistencyResult.Calibrating,
+            is CircadianConsistencyResult.MissingData,
+            -> 30
+            is CircadianConsistencyResult.Ready -> result.thresholdMinutes
         }
+    val tooltipText = stringResource(R.string.tooltip_circadian_score, thresholdMinutes)
 
     MetricCard(
         title = "Circadian Consistency",

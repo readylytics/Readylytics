@@ -40,7 +40,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -216,7 +218,7 @@ fun SettingsRoute(
                 CircularProgressIndicator()
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Syncing health data...",
+                    text = stringResource(R.string.message_syncing_health_data),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -258,18 +260,21 @@ fun SettingsScreen(
     if (localBackupState.showRestoreConfirmDialog) {
         AlertDialog(
             onDismissRequest = { onLocalBackupEvent(SettingsEvent.RestoreDismissed) },
-            title = { Text("Restore Backup?") },
+            title = { Text(stringResource(R.string.dialog_restore_backup_title)) },
             text = {
-                val filename = localBackupState.pendingRestoreFile?.name ?: "this backup"
-                Text(
-                    "This will replace all local health data with the contents of $filename and restart the app. This cannot be undone.",
-                )
+                val filename = localBackupState.pendingRestoreFile?.name
+                    ?: stringResource(R.string.backup_this_backup)
+                Text(stringResource(R.string.dialog_restore_backup_body, filename))
             },
             confirmButton = {
-                Button(onClick = { onLocalBackupEvent(SettingsEvent.RestoreConfirmed) }) { Text("Restore") }
+                Button(onClick = { onLocalBackupEvent(SettingsEvent.RestoreConfirmed) }) {
+                    Text(stringResource(R.string.action_restore))
+                }
             },
             dismissButton = {
-                TextButton(onClick = { onLocalBackupEvent(SettingsEvent.RestoreDismissed) }) { Text("Cancel") }
+                TextButton(onClick = { onLocalBackupEvent(SettingsEvent.RestoreDismissed) }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
             },
         )
     }
@@ -295,12 +300,14 @@ fun SettingsScreen(
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Search settings...") },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
+                    placeholder = { Text(stringResource(R.string.settings_search_placeholder)) },
+                    leadingIcon = {
+                        Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.accessibility_search))
+                    },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Filled.Clear, contentDescription = "Clear")
+                                Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.accessibility_clear))
                             }
                         }
                     },
