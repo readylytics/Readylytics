@@ -28,6 +28,9 @@ import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -220,16 +223,15 @@ class HealthSyncUseCase
                         val stepsDevice = deviceFor(HealthDataType.STEPS)
                         val stepsMap = mutableMapOf<LocalDate, Long>()
                         if (stepsDevice == null) {
-                            kotlinx.coroutines.coroutineScope {
-                                val deferredSteps = (0 until windowDays).map { i ->
-                                    val day = today.minusDays(i.toLong())
-                                    val dayStart = day.atStartOfDay(zoneId).toInstant()
-                                    val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
-                                    kotlinx.coroutines.async {
-                                        day to hcRepo.readSteps(dayStart, dayEnd)
+                            coroutineScope {
+                                val deferredSteps =
+                                    (0 until windowDays).map { i ->
+                                        val day = today.minusDays(i.toLong())
+                                        val dayStart = day.atStartOfDay(zoneId).toInstant()
+                                        val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
+                                        async { day to hcRepo.readSteps(dayStart, dayEnd) }
                                     }
-                                }
-                                stepsMap.putAll(deferredSteps.map { it.await() })
+                                stepsMap.putAll(deferredSteps.awaitAll())
                             }
                         } else {
                             val stepEntries =
