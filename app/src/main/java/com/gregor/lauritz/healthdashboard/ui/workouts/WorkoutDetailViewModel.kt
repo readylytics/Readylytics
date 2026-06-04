@@ -9,6 +9,7 @@ import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectReposit
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutRepository
+import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.ui.workouts.mappers.ChartDataMapper
 import com.gregor.lauritz.healthdashboard.ui.workouts.mappers.DailyPaiBreakdownMapper
 import com.gregor.lauritz.healthdashboard.ui.workouts.mappers.RecoveryMetricsMapper
@@ -40,6 +41,8 @@ data class WorkoutDetailUiState(
     val totalPai: Float? = null,
     val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val computedTrimp: Int? = null,
+    val gainedStrain: Float? = null,
+    val pai: Float? = null,
     val isLoading: Boolean = true,
 )
 
@@ -141,6 +144,8 @@ class WorkoutDetailViewModel
                         totalPai = summary?.totalPai,
                         paiDailyBreakdown = paiBreakdown,
                         computedTrimp = computedTrimp.roundToInt().takeIf { it > 0 },
+                        gainedStrain = workout.trimp,
+                        pai = PaiCalculator.calculateDailyPai(workout.trimp, prefs.paiScalingFactor),
                         isLoading = false,
                     )
                 }

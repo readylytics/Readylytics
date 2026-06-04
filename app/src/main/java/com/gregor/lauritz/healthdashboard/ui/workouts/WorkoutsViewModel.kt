@@ -43,6 +43,7 @@ import javax.inject.Inject
 
 data class WorkoutDisplayItem(
     val workout: WorkoutData,
+    val gainedStrain: Float,
     val computedTrimp: Float,
 )
 
@@ -272,7 +273,11 @@ class WorkoutsViewModel
                                                 storedTrimp = workout.trimp,
                                             )
                                         val computedTrimp = computedTrimpResult.getOrNull() ?: 0f
-                                        WorkoutDisplayItem(workout, computedTrimp)
+                                        WorkoutDisplayItem(
+                                            workout = workout,
+                                            gainedStrain = workout.trimp,
+                                            computedTrimp = computedTrimp,
+                                        )
                                     }
 
                             WorkoutsUiState(

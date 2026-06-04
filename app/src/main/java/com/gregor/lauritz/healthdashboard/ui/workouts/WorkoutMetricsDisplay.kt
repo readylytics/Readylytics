@@ -34,30 +34,59 @@ import kotlin.math.roundToInt
 fun WorkoutMetricsDisplay(
     workout: WorkoutData,
     computedTrimp: Int?,
+    gainedStrain: Float?,
+    pai: Float?,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
         WorkoutHeader(workout)
 
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            MetricCard(
-                title = "Training Load",
-                value = (computedTrimp ?: workout.trimp.roundToInt()).toString(),
-                secondaryText = "TRIMP",
-                status = MetricStatus.NEUTRAL,
-                tooltip = "Total training impulse - measures training intensity and duration.",
-                modifier = Modifier.weight(1f),
-            )
-            MetricCard(
-                title = "Avg Pulse",
-                value = if (workout.avgHr > 0) workout.avgHr.roundToInt().toString() else "--",
-                secondaryText = "bpm",
-                status = MetricStatus.NEUTRAL,
-                tooltip = "Average heart rate during the workout.",
-                modifier = Modifier.weight(1f),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                MetricCard(
+                    title = "Training Load",
+                    value = (computedTrimp ?: workout.trimp.roundToInt()).toString(),
+                    secondaryText = "TRIMP",
+                    status = MetricStatus.NEUTRAL,
+                    tooltip = "Total training impulse - measures training intensity and duration.",
+                    modifier = Modifier.weight(1f),
+                )
+                MetricCard(
+                    title = "Avg Pulse",
+                    value = if (workout.avgHr > 0) workout.avgHr.roundToInt().toString() else "--",
+                    secondaryText = "bpm",
+                    status = MetricStatus.NEUTRAL,
+                    tooltip = "Average heart rate during the workout.",
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                MetricCard(
+                    title = "Gained Strain",
+                    value = (gainedStrain ?: workout.trimp).roundToInt().toString(),
+                    secondaryText = "Strain",
+                    status = MetricStatus.NEUTRAL,
+                    tooltip = "Total strain gained from this workout.",
+                    modifier = Modifier.weight(1f),
+                )
+                MetricCard(
+                    title = "PAI",
+                    value = pai?.let { String.format(java.util.Locale.US, "%.1f", it) } ?: "--",
+                    secondaryText = "points",
+                    status = MetricStatus.NEUTRAL,
+                    tooltip = "Personal Activity Intelligence points gained from this workout.",
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
 
         ZoneBreakdownCard(workout)

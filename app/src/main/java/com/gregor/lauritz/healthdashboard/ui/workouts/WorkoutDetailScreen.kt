@@ -81,7 +81,12 @@ fun WorkoutDetailScreen(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         item {
-            WorkoutMetricsDisplay(workout, uiState.computedTrimp)
+            WorkoutMetricsDisplay(
+                workout = workout,
+                computedTrimp = uiState.computedTrimp,
+                gainedStrain = uiState.gainedStrain,
+                pai = uiState.pai,
+            )
         }
 
         item {
