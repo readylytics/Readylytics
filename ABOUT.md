@@ -75,7 +75,7 @@ This tuning means a single noisy night isn't treated as a signal as readily for 
 
 _Implemented in: `SleepScoringStrategy.kt`, `SleepArchitectureTargets.kt`, `ScoringConstants.kt`_
 
-_Restoration/HRV Z-scores implemented in: `LoadScoringStrategy.kt`, `BaselineComputer.kt`_
+_Restoration/HRV Z-scores implemented in: `LoadScoringStrategy.kt`, `BaselineComputer.kt`, `HrvBaselineProvider.kt`, `RhrBaselineProvider.kt`_
 
 ---
 
@@ -147,7 +147,7 @@ If your HRV and RHR patterns suggest possible physiological stress (such as earl
 
 **What we don't do.** We don't penalise you for resting. A week of light activity will _not_ drop Readiness; the score is designed for load _spikes_, not undertraining.
 
-_Implemented in: `LoadScoringStrategy.kt`, `PaiScoringStrategy.kt`, `ComputeSleepMetricsUseCase.kt`_
+_Implemented in: `LoadScoringStrategy.kt`, `PaiScoringStrategy.kt`, `ComputeSleepMetricsUseCase.kt`, `LoadMetricsProvider.kt`, `PaiProvider.kt`_
 
 ---
 
@@ -190,11 +190,11 @@ If you wear your tracker only 3–5 nights a week, the timeline lengthens propor
 - **REM** — the dreaming stage, important for memory and emotional processing.
 - **RHR (Resting Heart Rate)** — your true resting heart rate, calculated as a user-defined low percentile (default 5%) of your heart rate samples across the detected sleep period. This sits below your _average_ overnight heart rate, which is pushed up by REM and brief awakenings — using the low percentile gives a more stable night-to-night baseline. _Note: This nightly-frozen nocturnal floor is the foundational baseline used directly in all downstream recovery, Heart Rate Reserve (HRR), and TRIMP calculations to ensure training load metrics are highly stable and unaffected by wake-time noise or systemic average inflation._
 
-  _Implemented in: `WakeWindowHrCollector.kt`, `BaselineComputer.kt`_
+  _Implemented in: `SleepPercentileRhrCalculator.kt`, `BaselineComputer.kt`, `RhrBaselineProvider.kt`_
 
 - **TRIMP (Training Impulse)** — a single number summarising the intensity-weighted duration of an exercise session. Advanced models (such as LT-TRIMP) rely on the specific Heart Rate Zones configured in your app settings. These zones are always active; it is your responsibility to ensure they accurately reflect your current fitness level.
 
-  _Implemented in: `PaiCalculator.kt`, `ComputeWorkoutTrimpUseCase.kt`, `PaiScoringStrategy.kt`_
+  _Implemented in: `PaiCalculator.kt`, `ComputeWorkoutTrimpUseCase.kt`, `PaiScoringStrategy.kt`, `HrMaxProvider.kt`_
 
 - **ATL / CTL** — short-term and long-term rolling averages of TRIMP. Borrowed from Banister's training-load model and used by most cycling and running apps.
 - **Z-score** — a standardized number telling you how many standard deviations above or below your average a metric is. Z=0 is your average; Z=+2 is very high; Z=−2 is very low.

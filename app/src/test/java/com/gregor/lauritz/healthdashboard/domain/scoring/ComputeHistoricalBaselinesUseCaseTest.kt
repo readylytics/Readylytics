@@ -95,14 +95,18 @@ class ComputeHistoricalBaselinesUseCaseTest {
     }
 
     @Test
-    fun `already-frozen summaries are skipped`() = runTest {
+    fun `already-frozen summaries are not skipped during historical compute`() = runTest {
         val date = LocalDate.of(2026, 1, 1)
         val zone = ZoneId.systemDefault()
         val ms = date.atStartOfDay(zone).toInstant().toEpochMilli()
         val frozen = DailySummaryEntity(dateMidnightMs = ms, baselineCalculatedAtDate = date)
 
+        coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any()) } returns fakeWindows()
+        coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any()) } returns 60f
+        every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+
         val result = useCase.computeHistoricalBaselines(listOf(frozen), UserPreferences())
 
-        assertEquals(0, result.size)
+        assertEquals(1, result.size)
     }
 }

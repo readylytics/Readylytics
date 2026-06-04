@@ -10,6 +10,7 @@ class BackfillHistoricalBaselinesUseCase(
     private val computeHistoricalBaselines: ComputeHistoricalBaselinesUseCase,
 ) {
     suspend fun execute(): Int {
+        dailySummaryDao.wipeDerivedBaselines()
         val prefs = settingsRepository.userPreferences.first()
         val allDailySummaries = dailySummaryDao.getAllSummaries()
         val backfilledSummaries =

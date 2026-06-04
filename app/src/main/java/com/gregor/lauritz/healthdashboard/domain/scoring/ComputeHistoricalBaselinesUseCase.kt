@@ -24,7 +24,6 @@ class ComputeHistoricalBaselinesUseCase(
         val sigmaPrior = profile.lnSigmaPrior
 
         return allDailySummaries.mapNotNull { summary ->
-            if (summary.baselineCalculatedAtDate != null) return@mapNotNull null
 
             val date = summary.dateMidnightMs.toLocalDate()
             val dayMidnightInstant = summary.dateMidnightMs.toInstant()

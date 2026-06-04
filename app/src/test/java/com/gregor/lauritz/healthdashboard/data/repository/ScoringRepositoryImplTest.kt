@@ -5,7 +5,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.scoring.*
-import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.WakeWindowHrCollector
+import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -31,7 +31,7 @@ class ScoringRepositoryImplTest {
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
-    private val wakeHrCollector = mockk<WakeWindowHrCollector>(relaxed = true)
+    private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
 
     private lateinit var repo: ScoringRepositoryImpl
 
@@ -54,7 +54,7 @@ class ScoringRepositoryImplTest {
                 bodyFatRecordDao,
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
-                wakeHrCollector,
+                sleepPercentileRhrCalculator,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { dailySummaryDao.getByDate(any()) } returns null
@@ -240,12 +240,12 @@ class ScoringRepositoryImplTest {
             coEvery { sleepSessionDao.countSince(any()) } returns 7
 
             val nullWakeHrResult =
-                WakeWindowHrCollector.WakeHrResult(
+                SleepPercentileRhrCalculator.SleepPercentileRhrResult(
                     currentRestingHr = null,
                     restingHrBaseline = null,
                     restingHrRatio = null,
                 )
-            coEvery { wakeHrCollector.collect(any(), any(), any()) } returns nullWakeHrResult
+            coEvery { sleepPercentileRhrCalculator.collect(any(), any(), any()) } returns nullWakeHrResult
 
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
             coEvery {

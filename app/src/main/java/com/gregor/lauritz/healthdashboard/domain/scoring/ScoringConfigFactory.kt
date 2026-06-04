@@ -88,8 +88,23 @@ class ScoringConfigFactory
             }
 
         private fun createEmergencyFlagThresholds(profile: PhysiologyProfile): EmergencyFlagThresholds {
-            // Profile-agnostic for now; can be extended per profile if needed
-            return EmergencyFlagThresholds()
+            return when (profile) {
+                PhysiologyProfile.ATHLETE ->
+                    EmergencyFlagThresholds(
+                        overreachingZHrvThreshold = 1.2f,
+                        illnessZHrvThreshold = -1.2f,
+                    )
+                PhysiologyProfile.ACTIVE, PhysiologyProfile.GENERAL ->
+                    EmergencyFlagThresholds(
+                        overreachingZHrvThreshold = 1.5f,
+                        illnessZHrvThreshold = -1.5f,
+                    )
+                PhysiologyProfile.SEDENTARY, PhysiologyProfile.SHIFT_WORKER ->
+                    EmergencyFlagThresholds(
+                        overreachingZHrvThreshold = 2.0f,
+                        illnessZHrvThreshold = -2.0f,
+                    )
+            }
         }
 
         private fun hrvSaturationZForProfile(profile: PhysiologyProfile): Float =

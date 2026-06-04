@@ -242,7 +242,7 @@ class BackfillBaselinesUseCaseTest {
     // --- freeze enforcement (skip already-frozen rows) ---
 
     @Test
-    fun `computeHistoricalBaselines skips rows that already have baselineCalculatedAtDate set`() =
+    fun `computeHistoricalBaselines does not skip rows that already have baselineCalculatedAtDate set`() =
         runTest {
             val frozen =
                 makeSummary(
@@ -253,16 +253,22 @@ class BackfillBaselinesUseCaseTest {
                     rhrBpm = 58f,
                 )
 
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
+                hrvWindows(listOf(50f), listOf(50f))
+            coEvery {
+                baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any())
+            } returns 58f
+            coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+
             val result = computeUseCase.computeHistoricalBaselines(listOf(frozen), UserPreferences())
 
-            assertTrue(result.isEmpty(), "Frozen rows must not appear in backfill output")
-            coVerify(exactly = 0) { baselineComputer.computeHrvWindowsBetween(any(), any(), any()) }
+            assertEquals(1, result.size)
         }
 
     // --- idempotency ---
 
     @Test
-    fun `computeHistoricalBaselines is idempotent — second run on frozen rows produces empty list`() =
+    fun `computeHistoricalBaselines is idempotent — second run on frozen rows still processes them`() =
         runTest {
             val summary = makeSummary(daysAgo = 12)
             coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
@@ -280,9 +286,9 @@ class BackfillBaselinesUseCaseTest {
             val frozenRow = firstRun.first()
             assertNotNull(frozenRow.baselineCalculatedAtDate)
 
-            // Second run — frozen row must be skipped.
+            // Second run — frozen row is still processed (no longer skipped).
             val secondRun = computeUseCase.computeHistoricalBaselines(listOf(frozenRow), UserPreferences())
-            assertTrue(secondRun.isEmpty(), "Second run on frozen rows must produce no output")
+            assertEquals(1, secondRun.size)
         }
 
     @Test
@@ -636,7 +642,7 @@ class BackfillBaselinesUseCaseTest {
         }
 
     @Test
-    fun `execute returns 0 when all rows are already frozen`() =
+    fun `execute recomputes and writes all rows even if they were already frozen`() =
         runTest {
             val frozen =
                 listOf(
@@ -647,15 +653,21 @@ class BackfillBaselinesUseCaseTest {
             coEvery { dao.getAllSummaries() } returns frozen
 
             val (bc, ls, compute) = buildComputeUseCase()
+            coEvery { bc.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
+                hrvWindows(listOf(50f), listOf(50f))
+            coEvery { bc.computeAdaptiveBaselineRhrBpmBetween(any(), any(), percentile = any()) } returns
+                60f
+            coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
             val count = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
 
-            assertEquals(0, count)
-            coVerify(exactly = 0) { dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+            assertEquals(2, count)
+            coVerify(exactly = 1) { dao.wipeDerivedBaselines() }
+            coVerify(exactly = 2) { dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
         }
 
     @Test
-    fun `execute is idempotent — second run after freeze writes 0 rows`() =
+    fun `execute always recomputes and writes rows on subsequent runs`() =
         runTest {
             val summary = makeSummary(daysAgo = 7)
             val dao = mockk<DailySummaryDao>(relaxed = true)
@@ -668,7 +680,7 @@ class BackfillBaselinesUseCaseTest {
                 60f
             coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
 
-            // First run: unfrozen row is processed.
+            // First run: processed.
             val firstCount = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
             assertEquals(1, firstCount)
 
@@ -676,9 +688,9 @@ class BackfillBaselinesUseCaseTest {
             val frozenRow = summary.copy(baselineCalculatedAtDate = LocalDate.now().minusDays(7))
             coEvery { dao.getAllSummaries() } returns listOf(frozenRow)
 
-            // Second run: frozen row is skipped.
+            // Second run: still processed (full rebuild behavior).
             val secondCount = buildBackfill(dao, defaultSettingsRepo(), compute).execute()
-            assertEquals(0, secondCount, "Second execute() on frozen data must write 0 rows")
+            assertEquals(1, secondCount)
         }
 
     @Test

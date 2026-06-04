@@ -96,6 +96,22 @@ interface DailySummaryDao {
             "WHERE baseline_calculated_at_date IS NOT NULL",
     )
     suspend fun clearFrozenBaselines()
+    
+    @Query(
+        "UPDATE daily_summaries SET " +
+            "hrv_mu_mssd = NULL, " +
+            "hrv_sigma_mssd = NULL, " +
+            "rhr_bpm = NULL, " +
+            "baseline_calculated_at_date = NULL, " +
+            "baseline_version = NULL, " +
+            "hr_max = NULL, " +
+            "snapshot_profile = NULL, " +
+            "snapshot_calibration_phase = NULL, " +
+            "hrv_sigma_prior = NULL, " +
+            "pai_scaling_factor = NULL, " +
+            "baseline_observation_count = NULL"
+    )
+    suspend fun wipeDerivedBaselines()
 
     @Query(
         "SELECT COUNT(*) FROM daily_summaries " +
@@ -116,4 +132,31 @@ interface DailySummaryDao {
         "UPDATE daily_summaries SET baseline_version = :version",
     )
     suspend fun setBaselineVersion(version: Int)
+
+    @Query("SELECT rhr_bpm FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
+    suspend fun getPreciseRhrBaseline(dateMidnightMs: Long): Double?
+
+    @Query("SELECT CAST(ROUND(rhr_bpm) AS INTEGER) FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
+    suspend fun getRoundedRhrBaseline(dateMidnightMs: Long): Int?
+
+    @Query("SELECT hrv_mu_mssd FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
+    suspend fun getPreciseHrvMu(dateMidnightMs: Long): Double?
+
+    @Query("SELECT hrvBaseline FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
+    suspend fun getRoundedHrvBaseline(dateMidnightMs: Long): Int?
+
+    @Query("SELECT hr_max FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
+    suspend fun getPreciseHrMax(dateMidnightMs: Long): Double?
+
+    @Query("SELECT CAST(ROUND(hr_max) AS INTEGER) FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
+    suspend fun getRoundedHrMax(dateMidnightMs: Long): Int?
+
+    @Query("SELECT totalPai FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
+    suspend fun getPrecisePai(dateMidnightMs: Long): Double?
+
+    @Query("SELECT CAST(ROUND(totalPai) AS INTEGER) FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
+    suspend fun getRoundedPai(dateMidnightMs: Long): Int?
+
+    @Query("SELECT strainRatio FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
+    suspend fun getPreciseStrainRatio(dateMidnightMs: Long): Double?
 }

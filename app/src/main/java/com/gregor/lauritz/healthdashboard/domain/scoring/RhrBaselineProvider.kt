@@ -1,54 +1,67 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.model.PhysiologyConstants
+import com.gregor.lauritz.healthdashboard.domain.util.toMidnightEpochMilli
 import kotlinx.coroutines.flow.first
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Provides the RHR baseline value for a given moment in time.
- * Centralizes the strategy for calculating or falling back to default RHR.
- */
 interface RhrBaselineProvider {
+    suspend fun getPreciseRhrBaseline(date: LocalDate): Double
+    suspend fun getRoundedRhrBaseline(date: LocalDate): Int
     suspend fun getRhrBaseline(dayMidnight: Instant): Float
 }
 
-/**
- * Adaptive RHR baseline provider.
- * Returns user's calculated baseline if ≥7 days of data exist,
- * otherwise returns safe default (60 bpm).
- *
- * REF: ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION = 7
- */
 @Singleton
-class AdaptiveRhrBaselineProvider
-    @Inject
-    constructor(
-        private val baselineComputer: BaselineComputer,
-        private val settingsRepository: SettingsRepository,
-    ) : RhrBaselineProvider {
-        override suspend fun getRhrBaseline(dayMidnight: Instant): Float {
-            // Get user preferences (flow → single value)
-            val preferences = settingsRepository.userPreferences.first()
+class AdaptiveRhrBaselineProvider @Inject constructor(
+    private val dao: DailySummaryDao,
+    private val settingsRepository: SettingsRepository,
+    private val baselineComputer: BaselineComputer,
+) : RhrBaselineProvider {
 
-            // Check if user has override RHR baseline set
-            val rhrOverride = preferences.rhrBaselineOverride
-            if (rhrOverride != null && rhrOverride > 0f) {
-                return rhrOverride
-            }
+    override suspend fun getPreciseRhrBaseline(date: LocalDate): Double {
+        val dateMs = date.toMidnightEpochMilli()
+        val dbValue = dao.getPreciseRhrBaseline(dateMs)
+        if (dbValue != null) return dbValue
 
-            // Compute RHR history within baseline window
-            val rhrValues = baselineComputer.rhrHistory(dayMidnight, preferences.restingHrPercentile)
+        val prefs = settingsRepository.userPreferences.first()
+        if (prefs.rhrBaselineOverride != null) return prefs.rhrBaselineOverride.toDouble()
 
-            // Need at least 7 days of data for calibration; otherwise use default
-            val hasEnoughData = rhrValues.size >= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
-
-            return if (hasEnoughData) {
-                baselineComputer.resolveBaselineRhrBpm(rhrValues, rhrOverride)
-            } else {
-                PhysiologyConstants.DEFAULT_RHR_BPM.toFloat()
-            }
+        val dayMidnight = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+        val rhrValues = baselineComputer.rhrHistory(dayMidnight, prefs.restingHrPercentile)
+        val hasEnoughData = rhrValues.size >= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
+        return if (hasEnoughData) {
+            baselineComputer.resolveBaselineRhrBpm(rhrValues, null).toDouble()
+        } else {
+            PhysiologyConstants.DEFAULT_RHR_BPM.toDouble()
         }
     }
+
+    override suspend fun getRoundedRhrBaseline(date: LocalDate): Int {
+        val dateMs = date.toMidnightEpochMilli()
+        val dbValue = dao.getRoundedRhrBaseline(dateMs)
+        if (dbValue != null) return dbValue
+
+        val prefs = settingsRepository.userPreferences.first()
+        if (prefs.rhrBaselineOverride != null) return Math.round(prefs.rhrBaselineOverride)
+
+        val dayMidnight = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+        val rhrValues = baselineComputer.rhrHistory(dayMidnight, prefs.restingHrPercentile)
+        val hasEnoughData = rhrValues.size >= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
+        return if (hasEnoughData) {
+            Math.round(baselineComputer.resolveBaselineRhrBpm(rhrValues, null))
+        } else {
+            PhysiologyConstants.DEFAULT_RHR_BPM.toInt()
+        }
+    }
+
+    override suspend fun getRhrBaseline(dayMidnight: Instant): Float {
+        val date = dayMidnight.atZone(ZoneId.systemDefault()).toLocalDate()
+        return getPreciseRhrBaseline(date).toFloat()
+    }
+}

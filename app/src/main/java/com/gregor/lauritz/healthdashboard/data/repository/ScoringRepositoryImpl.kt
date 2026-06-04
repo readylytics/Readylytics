@@ -23,7 +23,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConfigFactory
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
-import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.WakeWindowHrCollector
+import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.SleepPercentileRhrCalculator
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
 import kotlinx.coroutines.Dispatchers
@@ -59,7 +59,7 @@ class ScoringRepositoryImpl
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
-        private val wakeHrCollector: WakeWindowHrCollector,
+        private val sleepPercentileRhrCalculator: SleepPercentileRhrCalculator,
     ) : ScoringRepository {
         private val calculationMutex = Mutex()
 
@@ -257,7 +257,7 @@ class ScoringRepositoryImpl
                     // Calibration bypasses computeSleepMetricsUseCase; collect directly to populate restingHrBaseline + rhrRatio
                     val rhrWakeResult =
                         if (session != null) {
-                            wakeHrCollector.collect(
+                            sleepPercentileRhrCalculator.collect(
                                 session = session,
                                 dayMidnight = dayMidnight,
                                 percentile = prefs.restingHrPercentile,
@@ -344,6 +344,11 @@ class ScoringRepositoryImpl
                         baselineCalculatedAtDate = targetDate,
                         baselineVersion = 2,
                         avgSleepingSpo2 = avgSpo2,
+                        hrMax = summary.hrMax ?: hrMax,
+                        paiScalingFactor = summary.paiScalingFactor ?: scoringConfig.paiScalingFactor,
+                        snapshotProfile = summary.snapshotProfile ?: prefs.physiologyProfile.name,
+                        hrvSigmaPrior = summary.hrvSigmaPrior ?: prefs.physiologyProfile.lnSigmaPrior,
+                        baselineObservationCount = summary.baselineObservationCount ?: muHistory.size,
                     )
 
                 // Final summary remains consistent with the pre-calculated dailyPai and totalPai7d.
