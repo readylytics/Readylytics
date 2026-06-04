@@ -62,9 +62,31 @@ fun HrTimelineChart(
 ) {
     if (samples.isEmpty()) {
         EmptyChartPlaceholder(modifier = modifier)
-        return
+    } else {
+        HrTimelineChartContent(
+            samples = samples,
+            dayStartMs = dayStartMs,
+            zone1MinBpm = zone1MinBpm,
+            zone1MaxBpm = zone1MaxBpm,
+            zone2MaxBpm = zone2MaxBpm,
+            zone3MaxBpm = zone3MaxBpm,
+            zone4MaxBpm = zone4MaxBpm,
+            modifier = modifier,
+        )
     }
+}
 
+@Composable
+private fun HrTimelineChartContent(
+    samples: List<HrSample>,
+    dayStartMs: Long,
+    zone1MinBpm: Int,
+    zone1MaxBpm: Int,
+    zone2MaxBpm: Int,
+    zone3MaxBpm: Int,
+    zone4MaxBpm: Int,
+    modifier: Modifier = Modifier,
+) {
     // Pulsing animation for selected point highlight
     val infiniteTransition = rememberInfiniteTransition(label = "hrPulseTransition")
     val pulseRadiusCoeff by infiniteTransition.animateFloat(
