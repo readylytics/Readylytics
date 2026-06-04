@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.ui.components
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import com.gregor.lauritz.healthdashboard.domain.model.HealthZone
 import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
@@ -30,14 +31,16 @@ data class HrZoneColors(
 fun hrZoneColors(): HrZoneColors {
     val cs = MaterialTheme.colorScheme
     val ext = LocalExtendedColors.current
-    return HrZoneColors(
-        zone0 = ext.neutralContainer.copy(alpha = ChartZoneAlphas.RESTING),
-        zone1 = cs.secondaryContainer.copy(alpha = ChartZoneAlphas.LOW),
-        zone2 = cs.primaryContainer.copy(alpha = ChartZoneAlphas.MODERATE),
-        zone3 = cs.tertiaryContainer.copy(alpha = ChartZoneAlphas.MODERATE),
-        zone4 = ext.warningContainer.copy(alpha = ChartZoneAlphas.HIGH),
-        zone5 = cs.errorContainer.copy(alpha = ChartZoneAlphas.HIGH),
-    )
+    return remember(cs, ext) {
+        HrZoneColors(
+            zone0 = ext.neutralContainer.copy(alpha = ChartZoneAlphas.RESTING),
+            zone1 = cs.secondaryContainer.copy(alpha = ChartZoneAlphas.LOW),
+            zone2 = cs.primaryContainer.copy(alpha = ChartZoneAlphas.MODERATE),
+            zone3 = cs.tertiaryContainer.copy(alpha = ChartZoneAlphas.MODERATE),
+            zone4 = ext.warningContainer.copy(alpha = ChartZoneAlphas.HIGH),
+            zone5 = cs.errorContainer.copy(alpha = ChartZoneAlphas.HIGH),
+        )
+    }
 }
 
 /**
