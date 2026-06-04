@@ -387,4 +387,11 @@
     <!-- Circadian Consistency -->
     <string name="label_circadian_consistency">Circadian Consistency</string>
     <string name="label_circadian_median">Median: %1$s→%2$s</string>
+
+    <!-- Error Messages (ViewModel-surface) -->
+    <string name="error_sync_failed">Sync failed</string>
+    <string name="error_backup_restore_validation">Restore validation failed</string>
+    <string name="error_backup_create_failed">Backup failed</string>
+    <string name="error_threshold_invalid_range">Invalid threshold value. Range: 0–90 minutes.</string>
+    <string name="error_threshold_update_failed">Failed to update threshold settings. Changes rolled back.</string>
 </resources>

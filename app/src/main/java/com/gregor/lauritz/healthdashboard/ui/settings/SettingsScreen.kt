@@ -54,6 +54,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
+import com.gregor.lauritz.healthdashboard.ui.common.resolveOrNull
 import com.gregor.lauritz.healthdashboard.ui.settings.LocalBackupViewModel.SideEffect
 import com.gregor.lauritz.healthdashboard.ui.settings.backup.LocalBackupSection
 import com.gregor.lauritz.healthdashboard.ui.settings.common.UnitSystemSelector
@@ -249,6 +250,7 @@ fun SettingsScreen(
 ) {
     var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
+    val resolvedThresholdError = thresholdState.thresholdError.resolveOrNull()
 
     val matchingSections by remember(searchQuery) {
         derivedStateOf { settingsSections.filter { sectionMatches(it, searchQuery) } }
@@ -396,7 +398,7 @@ fun SettingsScreen(
                                     )
                                 },
                                 isLoading = thresholdState.isUpdatingThreshold,
-                                error = thresholdState.thresholdError,
+                                error = resolvedThresholdError,
                                 onErrorDismissed = { onThresholdEvent(SettingsEvent.DismissThresholdError) },
                             )
                             Spacer(modifier = Modifier.height(12.dp))

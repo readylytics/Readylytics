@@ -21,7 +21,9 @@ import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.ui.common.BaseViewModel
+import com.gregor.lauritz.healthdashboard.ui.common.UiText
 import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateDaySummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -215,13 +217,14 @@ class DashboardViewModel
                     dailyMetricCache.invalidate()
                 } catch (e: Exception) {
                     Log.e(TAG, "Refresh failed", e)
-                    _errorMessage.value = e.message ?: "Sync failed"
+                    _errorMessage.value = e.message?.let { UiText.RawString(it) }
+                        ?: UiText.StringRes(R.string.error_sync_failed)
                 }
             }
         }
 
-        private val _errorMessage = MutableStateFlow<String?>(null)
-        val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+        private val _errorMessage = MutableStateFlow<UiText?>(null)
+        val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
 
         companion object {
             internal const val TAG = "DashboardViewModel"

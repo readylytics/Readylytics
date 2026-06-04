@@ -44,6 +44,7 @@ import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
+import com.gregor.lauritz.healthdashboard.ui.common.resolveOrNull
 import com.gregor.lauritz.healthdashboard.ui.settings.LocalBackupState
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
@@ -55,6 +56,8 @@ fun LocalBackupSection(
     uiState: LocalBackupState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
+    val resolvedBackupError = uiState.backupError.resolveOrNull()
+
     if (uiState.showSetPasswordDialog) {
         SetPasswordDialog(
             onDismiss = { onEvent(SettingsEvent.DismissSetPasswordDialog) },
@@ -153,11 +156,11 @@ fun LocalBackupSection(
             }
         }
 
-        if (uiState.backupError != null) {
+        if (resolvedBackupError != null) {
             Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = uiState.backupError,
+                    text = resolvedBackupError,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.weight(1f),
