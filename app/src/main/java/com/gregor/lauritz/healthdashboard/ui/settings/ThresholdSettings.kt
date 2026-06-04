@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
+import androidx.compose.ui.res.stringResource
+import com.gregor.lauritz.healthdashboard.R
 import kotlin.math.roundToInt
 
 @Composable
@@ -34,66 +36,64 @@ fun ThresholdSettingsSection(
     Column {
         var hrvOptimal by remember(uiState.hrvOptimalThreshold) { mutableFloatStateOf(uiState.hrvOptimalThreshold) }
         ThresholdSliderItem(
-            label = "HRV Optimal",
+            label = stringResource(R.string.threshold_hrv_optimal_label),
             value = hrvOptimal,
             onValueChange = { hrvOptimal = it },
             onValueChangeFinished = { onEvent(SettingsEvent.HrvOptimalThresholdChanged(hrvOptimal)) },
             valueRange = 1.0f..1.2f,
-            description = "HRV ratio to baseline to be considered Optimal (e.g. 100-120%).",
+            description = stringResource(R.string.threshold_hrv_optimal_desc),
         )
 
         var hrvWarning by remember(uiState.hrvWarningThreshold) { mutableFloatStateOf(uiState.hrvWarningThreshold) }
         ThresholdSliderItem(
-            label = "HRV Warning",
+            label = stringResource(R.string.threshold_hrv_warning_label),
             value = hrvWarning,
             onValueChange = { hrvWarning = it },
             onValueChangeFinished = { onEvent(SettingsEvent.HrvWarningThresholdChanged(hrvWarning)) },
             valueRange = 0.8f..1.0f,
-            description = "HRV ratio to baseline to be considered Warning (e.g. 80-100%).",
+            description = stringResource(R.string.threshold_hrv_warning_desc),
         )
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
 
         var rhrOptimal by remember(uiState.rhrOptimalThreshold) { mutableFloatStateOf(uiState.rhrOptimalThreshold) }
         ThresholdSliderItem(
-            label = "RHR Optimal",
+            label = stringResource(R.string.threshold_rhr_optimal_label),
             value = rhrOptimal,
             onValueChange = { rhrOptimal = it },
             onValueChangeFinished = { onEvent(SettingsEvent.RhrOptimalThresholdChanged(rhrOptimal)) },
             valueRange = 0.8f..1.0f,
-            description = "RHR ratio to baseline to be considered Optimal (e.g. 80-100%).",
+            description = stringResource(R.string.threshold_rhr_optimal_desc),
         )
 
         var rhrWarning by remember(uiState.rhrWarningThreshold) { mutableFloatStateOf(uiState.rhrWarningThreshold) }
         ThresholdSliderItem(
-            label = "RHR Warning",
+            label = stringResource(R.string.threshold_rhr_warning_label),
             value = rhrWarning,
             onValueChange = { rhrWarning = it },
             onValueChangeFinished = { onEvent(SettingsEvent.RhrWarningThresholdChanged(rhrWarning)) },
             valueRange = 1.0f..1.2f,
-            description = "RHR ratio to baseline to be considered Warning (e.g. 100-120%).",
+            description = stringResource(R.string.threshold_rhr_warning_desc),
         )
 
         var consistencyWindow by remember(uiState.consistencyThresholdMinutes) {
             mutableFloatStateOf(uiState.consistencyThresholdMinutes.toFloat())
         }
         ThresholdSliderItem(
-            label = "Consistency Window",
+            label = stringResource(R.string.threshold_consistency_window_label),
             value = consistencyWindow,
             onValueChange = { consistencyWindow = it },
             onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyThresholdChanged(consistencyWindow.toInt())) },
             valueRange = 0f..90f,
             steps = 17,
             displayValue = "${consistencyWindow.toInt()} min",
-            description =
-                "±Grace period (in minutes) around your median bedtime and wake time before your score " +
-                    "starts to drop. Default: 30 min.",
+            description = stringResource(R.string.threshold_consistency_window_desc),
         )
 
         var evaluationPeriod by remember(uiState.consistencyEvaluationDays) {
             mutableFloatStateOf(uiState.consistencyEvaluationDays.toFloat())
         }
         ThresholdSliderItem(
-            label = "Evaluation Period",
+            label = stringResource(R.string.threshold_evaluation_period_label),
             value = evaluationPeriod,
             onValueChange = { evaluationPeriod = it },
             onValueChangeFinished = {
@@ -104,21 +104,21 @@ fun ThresholdSettingsSection(
             valueRange = 3f..14f,
             steps = 10,
             displayValue = "${evaluationPeriod.toInt()} days",
-            description = "Number of recent sleep sessions scored to compute your current consistency. Default: 7.",
+            description = stringResource(R.string.threshold_evaluation_period_desc),
         )
 
         var baselineWindow by remember(uiState.consistencyBaselineDays) {
             mutableFloatStateOf(uiState.consistencyBaselineDays.toFloat())
         }
         ThresholdSliderItem(
-            label = "Baseline Window",
+            label = stringResource(R.string.threshold_baseline_window_label),
             value = baselineWindow,
             onValueChange = { baselineWindow = it },
             onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyBaselineDaysChanged(baselineWindow.toInt())) },
             valueRange = 3f..30f,
             steps = 26,
             displayValue = "${baselineWindow.toInt()} sessions",
-            description = "Number of past sleep sessions used to calculate your median bedtime anchor. Default: 14.",
+            description = stringResource(R.string.threshold_baseline_window_desc),
         )
     }
 }
@@ -138,8 +138,8 @@ fun ActivitySettingsSection(
             ),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Daily Step Goal", style = MaterialTheme.typography.bodyMedium)
-            MetricTooltip(description = "Target steps per day. Reaching this goal shows as Optimal on the dashboard.")
+            Text(stringResource(R.string.label_daily_step_goal), style = MaterialTheme.typography.bodyMedium)
+            MetricTooltip(description = stringResource(R.string.settings_step_goal_tooltip))
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = "${currentStepGoal.roundToInt()} steps",
@@ -176,7 +176,7 @@ fun SleepSettingsSection(
                 ),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Sleep Goal", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.label_sleep_goal), style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
                     text = sleepGoalValue.toSleepHoursText(),
@@ -233,7 +233,7 @@ fun ThresholdSliderItem(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Refresh,
-                        contentDescription = "Reset to default",
+                        contentDescription = stringResource(R.string.action_reset_to_default),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }

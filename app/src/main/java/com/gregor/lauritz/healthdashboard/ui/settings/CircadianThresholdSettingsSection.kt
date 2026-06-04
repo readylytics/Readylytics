@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.domain.circadian.CircadianThresholdDefaults
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
+import androidx.compose.ui.res.stringResource
+import com.gregor.lauritz.healthdashboard.R
 
 private const val THRESHOLD_SLIDER_STEPS = 8 // Results in: 0, 10, 20, ..., 90 (Issue #9)
 
@@ -87,7 +89,7 @@ fun CircadianThresholdSettingsSection(
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         modifier = Modifier.heightIn(min = 32.dp),
                     ) {
-                        Text("Dismiss", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.action_dismiss), style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
@@ -180,12 +182,12 @@ private fun ShiftWorkerModeSelector(
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Within-Week Regularity (Recommended)",
+                    stringResource(R.string.circadian_within_week_mode_label),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    "Compares same day-of-week across weeks",
+                    stringResource(R.string.circadian_within_week_mode_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -207,12 +209,12 @@ private fun ShiftWorkerModeSelector(
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Use Standard Rolling-Anchor",
+                    stringResource(R.string.circadian_rolling_anchor_label),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    "14-day rolling window (like other profiles)",
+                    stringResource(R.string.circadian_rolling_anchor_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -243,7 +245,7 @@ private fun ThresholdSlider(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Threshold Window",
+                stringResource(R.string.circadian_threshold_window_label),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -252,7 +254,7 @@ private fun ThresholdSlider(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    "Profile default: ${profileDefault}min",
+                    stringResource(R.string.circadian_profile_default, profileDefault),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -262,7 +264,7 @@ private fun ThresholdSlider(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Refresh,
-                        contentDescription = "Reset to default",
+                        contentDescription = stringResource(R.string.action_reset_to_default),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -294,18 +296,18 @@ private fun ThresholdSlider(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "0 min",
+                stringResource(R.string.circadian_range_min),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                "Current: ${value.toInt()} min",
+                stringResource(R.string.circadian_current_value, value.toInt()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
             )
             Text(
-                "90 min",
+                stringResource(R.string.circadian_range_max),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -314,9 +316,9 @@ private fun ThresholdSlider(
         // Explanation
         Text(
             if (value.toInt() == profileDefault) {
-                "Using profile default"
+                stringResource(R.string.circadian_using_profile_default)
             } else {
-                "Using custom setting"
+                stringResource(R.string.circadian_using_custom_setting)
             },
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
