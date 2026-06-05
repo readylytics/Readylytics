@@ -29,6 +29,10 @@ class ForegroundSyncController
         private val _isSyncing = MutableStateFlow(false)
         val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
+        // Determinate recalculation progress ("day X of Y"); null when no walk-forward is running.
+        private val _recalcProgress = MutableStateFlow<RecalcProgress?>(null)
+        val recalcProgress: StateFlow<RecalcProgress?> = _recalcProgress.asStateFlow()
+
         suspend fun evaluateAndSync() {
             com.gregor.lauritz.healthdashboard.domain.util
                 .logD("ForegroundSyncController") { "evaluateAndSync called" }
@@ -77,15 +81,18 @@ class ForegroundSyncController
                 }
                 return
             }
+            val onProgress: (Int, Int) -> Unit = { current, total ->
+                _recalcProgress.value = RecalcProgress(current = current, total = total)
+            }
             try {
                 _isSyncing.value = true
                 if (isFirstSync) {
                     com.gregor.lauritz.healthdashboard.domain.util.logD(
                         "ForegroundSyncController",
                     ) { "Running catch-up sync..." }
-                    syncUseCase.catchUpSync().getOrThrow()
+                    syncUseCase.catchUpSync(onProgress).getOrThrow()
                 } else {
-                    syncUseCase.sync().getOrThrow()
+                    syncUseCase.sync(onProgress = onProgress).getOrThrow()
                 }
                 com.gregor.lauritz.healthdashboard.domain.util
                     .logD("ForegroundSyncController") { "Sync success" }
@@ -95,7 +102,19 @@ class ForegroundSyncController
                     .logD("ForegroundSyncController") { "Sync failed: ${e.message}" }
             } finally {
                 _isSyncing.value = false
+                _recalcProgress.value = null
                 syncMutex.unlock()
             }
         }
     }
+
+/**
+ * Determinate progress for a historical walk-forward recalculation.
+ *
+ * @param current number of days recomputed so far
+ * @param total   total number of days in this recalculation pass
+ */
+data class RecalcProgress(
+    val current: Int,
+    val total: Int,
+)

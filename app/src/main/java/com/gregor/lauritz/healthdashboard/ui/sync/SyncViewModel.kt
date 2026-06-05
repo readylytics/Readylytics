@@ -62,6 +62,7 @@ class SyncViewModel
         val requiredPermissions = hcRepo.requiredPermissions
         val allPermissions = hcRepo.allPermissions
         val isSyncing = foregroundSyncController.isSyncing
+        val recalcProgress = foregroundSyncController.recalcProgress
 
         private val _syncEvents = Channel<SyncEvent>()
         val syncEvents = _syncEvents.receiveAsFlow()

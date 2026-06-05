@@ -6,6 +6,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.DataStoreCircadianThr
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.ScoringRepositoryImpl
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.TransactionRunner
 import com.gregor.lauritz.healthdashboard.domain.scoring.AdaptiveRhrBaselineProvider
 import com.gregor.lauritz.healthdashboard.domain.scoring.BackfillHistoricalBaselinesUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.BaselineComputer
@@ -40,11 +41,13 @@ class ScoringModule {
         dailySummaryDao: DailySummaryDao,
         settingsRepository: SettingsRepository,
         computeHistoricalBaselines: ComputeHistoricalBaselinesUseCase,
+        transactionRunner: TransactionRunner,
     ): BackfillHistoricalBaselinesUseCase =
         BackfillHistoricalBaselinesUseCase(
             dailySummaryDao,
             settingsRepository,
             computeHistoricalBaselines,
+            transactionRunner,
         )
 
     @Provides

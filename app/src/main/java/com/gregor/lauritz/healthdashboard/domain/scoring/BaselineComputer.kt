@@ -151,7 +151,8 @@ class BaselineComputer
             return if (nadirs.isEmpty()) {
                 ScoringConstants.DEFAULT_RHR_BPM
             } else {
-                nadirs.map { it.roundToInt() }.median()
+                // Median of the float nadirs directly; round only at the final boundary.
+                nadirs.median()
             }
         }
 
@@ -219,7 +220,8 @@ class BaselineComputer
             return if (nadirs.isEmpty()) {
                 ScoringConstants.DEFAULT_RHR_BPM
             } else {
-                nadirs.map { it.roundToInt() }.median()
+                // Median of the float nadirs directly; round only at the final boundary.
+                nadirs.median()
             }
         }
 

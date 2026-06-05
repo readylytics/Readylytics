@@ -5,6 +5,7 @@
     <string name="tab_workouts">Workouts</string>
     <string name="tab_settings">Settings</string>
     <string name="sync_completed">Sync and recalculation completed</string>
+    <string name="recalculating_progress">Recalculating day %1$d of %2$d</string>
     <string name="health_connect_unavailable_message">Health Connect is not installed on this device.\nPlease install it from the Play Store.</string>
 
     <!-- Tooltips -->

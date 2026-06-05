@@ -26,13 +26,16 @@ import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -57,7 +60,17 @@ class HealthSyncUseCase
     ) {
         private val syncMutex = Mutex()
 
-        suspend fun sync(windowDays: Int = 8): Result<Unit> =
+        /**
+         * Runs the foreground sync / recalculation.
+         *
+         * @param onProgress optional reactive hook invoked as the walk-forward recompute advances,
+         *   reporting (completedDays, totalDays) so the UI can surface determinate progress instead
+         *   of a silent spinner. Invoked off the main thread.
+         */
+        suspend fun sync(
+            windowDays: Int = 8,
+            onProgress: ((current: Int, total: Int) -> Unit)? = null,
+        ): Result<Unit> =
             syncMutex.withLock {
                 withContext(Dispatchers.IO) {
                     try {
@@ -219,20 +232,41 @@ class HealthSyncUseCase
                         // One-time migration: all historical days get per-day bounded baselines + recomputed scores.
                         // Stale detection: baseline_version < 2 or NULL means old global-window computation.
                         val staleCount = dailySummaryDao.countRowsWithBaselineVersionBelow(2)
-                        if (staleCount > 0) {
+                        val migrationRange =
+                            if (staleCount > 0) {
+                                dailySummaryDao.getEarliestDateMs()?.let { earliestMs ->
+                                    Instant.ofEpochMilli(earliestMs).atZone(zoneId).toLocalDate() to LocalDate.now(zoneId)
+                                }
+                            } else {
+                                null
+                            }
+                        val migrationDays =
+                            migrationRange
+                                ?.let { (ChronoUnit.DAYS.between(it.first, it.second) + 1).toInt() }
+                                ?.coerceAtLeast(0)
+                                ?: 0
+
+                        // Single determinate progress track across both the migration and window loops.
+                        val totalDays = migrationDays + windowDays
+                        var processedDays = 0
+                        onProgress?.invoke(processedDays, totalDays)
+
+                        if (migrationRange != null) {
                             logD("HealthSyncUseCase") { "Migration triggered: $staleCount stale rows found." }
                             // Clear freeze so ScoringRepositoryImpl (now using bounded variants) can recompute.
                             dailySummaryDao.clearFrozenBaselines()
-                            val earliestMs = dailySummaryDao.getEarliestDateMs()
-                            if (earliestMs != null) {
-                                val startDate = Instant.ofEpochMilli(earliestMs).atZone(zoneId).toLocalDate()
-                                val endDate = LocalDate.now(zoneId)
-                                var current = startDate
-                                while (!current.isAfter(endDate)) {
-                                    val steps = stepsMap[current] ?: 0L
-                                    syncDayScoring(current, steps)
-                                    current = current.plusDays(1)
-                                }
+                            val endDate = migrationRange.second
+                            var current = migrationRange.first
+                            while (!current.isAfter(endDate)) {
+                                ensureActive()
+                                val steps = stepsMap[current] ?: 0L
+                                syncDayScoring(current, steps)
+                                current = current.plusDays(1)
+                                processedDays++
+                                onProgress?.invoke(processedDays, totalDays)
+                                // Cooperative yield: keeps the long walk-forward from starving the
+                                // dispatcher and makes the recompute cancellable.
+                                yield()
                             }
                             dailySummaryDao.setBaselineVersion(2)
                             logD("HealthSyncUseCase") { "Migration complete." }
@@ -242,6 +276,7 @@ class HealthSyncUseCase
                         var failureCount = 0
 
                         for (i in (windowDays - 1) downTo 0) {
+                            ensureActive()
                             val day = today.minusDays(i.toLong())
                             val steps = stepsMap[day] ?: 0L
                             val result = syncDayScoring(day, steps)
@@ -256,6 +291,9 @@ class HealthSyncUseCase
                                     logD("HealthSyncUseCase") { "Day $day: FAILED - ${result.reason}" }
                                 }
                             }
+                            processedDays++
+                            onProgress?.invoke(processedDays, totalDays)
+                            yield()
                         }
 
                         logD("HealthSyncUseCase") {
@@ -269,24 +307,25 @@ class HealthSyncUseCase
                 }
             }
 
-        suspend fun catchUpSync(): Result<Unit> = sync(windowDays = 60)
+        suspend fun catchUpSync(onProgress: ((current: Int, total: Int) -> Unit)? = null): Result<Unit> =
+            sync(windowDays = 60, onProgress = onProgress)
 
+        // Already invoked from the IO context established in [sync]; computeDailySummary
+        // switches to Dispatchers.Default internally for the CPU-heavy scoring.
         private suspend fun syncDayScoring(
             day: LocalDate,
             steps: Long,
         ): Result<Unit> =
-            withContext(Dispatchers.IO) {
-                try {
-                    val afterScoring = scoringRepository.computeDailySummary(day)
-                    val stepCountInt = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-                    val finalSummary = afterScoring.copy(stepCount = stepCountInt)
-                    dailySummaryDao.upsert(finalSummary)
+            try {
+                val afterScoring = scoringRepository.computeDailySummary(day)
+                val stepCountInt = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                val finalSummary = afterScoring.copy(stepCount = stepCountInt)
+                dailySummaryDao.upsert(finalSummary)
 
-                    logD("HealthSyncUseCase") { "Day $day: scored (steps=$steps) and summary persisted" }
-                    Result.success(Unit)
-                } catch (e: Exception) {
-                    Result.failure("Day $day sync failed", "DAY_SYNC_ERROR")
-                }
+                logD("HealthSyncUseCase") { "Day $day: scored (steps=$steps) and summary persisted" }
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure("Day $day sync failed", "DAY_SYNC_ERROR")
             }
 
         private suspend fun updateCalculatedMetrics(prefs: UserPreferences) {

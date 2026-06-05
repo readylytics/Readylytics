@@ -8,6 +8,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.domain.repository.TransactionRunner
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -609,11 +610,17 @@ class BackfillBaselinesUseCaseTest {
         return repo
     }
 
+    /** Passthrough transaction runner: executes the block inline (no real DB transaction in unit tests). */
+    private val passthroughTransactionRunner =
+        object : TransactionRunner {
+            override suspend fun <R> runInTransaction(block: suspend () -> R): R = block()
+        }
+
     private fun buildBackfill(
         dao: DailySummaryDao,
         settingsRepo: SettingsRepository,
         compute: ComputeHistoricalBaselinesUseCase,
-    ) = BackfillHistoricalBaselinesUseCase(dao, settingsRepo, compute)
+    ) = BackfillHistoricalBaselinesUseCase(dao, settingsRepo, compute, passthroughTransactionRunner)
 
     private fun buildComputeUseCase(): Triple<
         BaselineComputer,
