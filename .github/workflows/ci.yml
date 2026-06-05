@@ -33,8 +33,60 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      # --- Verification Phase (continue-on-error allows downstream steps to run) ---
+      # --- Verification Phase ---
+      # By dropping continue-on-error and using !cancelled(), GitHub naturally tracks failures
+      # but continues to execute the remaining steps.
 
+      - name: Check formatting (ktlint)
+        run: ./gradlew ktlintCheck
+
+      - name: Run lint
+        if: ${{ !cancelled() }}
+        run: ./gradlew lint
+
+      - name: Run unit tests
+        if: ${{ !cancelled() }}
+        run: ./gradlew testDebugUnitTest
+
+      - name: Generate coverage report
+        if: ${{ !cancelled() }}
+        run: ./gradlew jacocoTestReport
+
+      - name: Enforce coverage gate (>= 25%)
+        if: ${{ !cancelled() }}
+        run: ./gradlew jacocoCoverageVerification
+
+      # --- Build Phase ---
+
+      - name: Build debug APK
+        id: build_apk # Added an ID so we can verify if this specific step succeeded
+        if: ${{ !cancelled() }}
+        run: ./gradlew assembleDebug
+
+      # --- Artifact Upload Phase ---
+
+      - name: Upload debug APK
+        # This explicitly checks if the build step worked, allowing the upload even if lint failed!
+        if: ${{ !cancelled() && steps.build_apk.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.3.3
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/**/*.apk
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.3.3
+        with:
+          name: coverage-report
+          path: app/build/reports/jacoco/jacocoTestReport/
+
+      - name: Upload lint report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.3.3
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results-debug.xml
+          
       - name: Check formatting (ktlint)
         id: ktlint # ID required to track conclusion
         run: ./gradlew ktlintCheck
