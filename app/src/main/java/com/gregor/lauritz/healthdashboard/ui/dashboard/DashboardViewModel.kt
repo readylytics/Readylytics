@@ -213,7 +213,9 @@ class DashboardViewModel
         fun onRefresh() {
             viewModelScope.launch {
                 try {
-                    foregroundSyncController.triggerImmediateSync()
+                    // Pull-to-refresh recalculates the current day only; the Settings
+                    // "Resync Health Connect data" button drives the full historical resync.
+                    foregroundSyncController.triggerDailySync()
                 } catch (e: Exception) {
                     Log.e(TAG, "Refresh failed", e)
                     _errorMessage.value = e.message ?: "Sync failed"

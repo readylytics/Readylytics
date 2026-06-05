@@ -74,7 +74,44 @@ class ForegroundSyncController
             executeSync(isFirstSync = true)
         }
 
-        private suspend fun executeSync(isFirstSync: Boolean) {
+        /**
+         * Pull-to-refresh entry point: recalculates the current day only (fast, foreground). Full
+         * historical recalculation lives behind the Settings "Resync Health Connect data" button,
+         * which runs durably in WorkManager.
+         */
+        suspend fun triggerDailySync() {
+            com.gregor.lauritz.healthdashboard.domain.util.logD(
+                "ForegroundSyncController",
+            ) { "triggerDailySync called (current day only)" }
+            executeSync(isFirstSync = false, windowDays = 1)
+        }
+
+        // --- Background (WorkManager) recalculation publishing -------------------------------------
+        // The historical resync runs in HealthResyncWorker. It publishes into the same StateFlows so
+        // the existing dashboard progress banner and completion snackbar surface it with no UI rewrite.
+
+        fun onBackgroundRecalcStarted() {
+            _isSyncing.value = true
+            _recalcProgress.value = null
+        }
+
+        fun onBackgroundRecalcProgress(
+            current: Int,
+            total: Int,
+        ) {
+            _recalcProgress.value = RecalcProgress(current = current, total = total)
+        }
+
+        fun onBackgroundRecalcFinished(success: Boolean) {
+            _isSyncing.value = false
+            _recalcProgress.value = null
+            if (success) _syncCompletedEvent.tryEmit(Unit)
+        }
+
+        private suspend fun executeSync(
+            isFirstSync: Boolean,
+            windowDays: Int? = null,
+        ) {
             if (!syncMutex.tryLock()) {
                 com.gregor.lauritz.healthdashboard.domain.util.logD("ForegroundSyncController") {
                     "Sync already in progress, skipping redundant request"
@@ -91,6 +128,8 @@ class ForegroundSyncController
                         "ForegroundSyncController",
                     ) { "Running catch-up sync..." }
                     syncUseCase.catchUpSync(onProgress).getOrThrow()
+                } else if (windowDays != null) {
+                    syncUseCase.sync(windowDays = windowDays, onProgress = onProgress).getOrThrow()
                 } else {
                     syncUseCase.sync(onProgress = onProgress).getOrThrow()
                 }

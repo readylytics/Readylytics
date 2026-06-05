@@ -2,18 +2,20 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
-import com.gregor.lauritz.healthdashboard.domain.sync.ResyncHealthConnectUseCase
 import com.gregor.lauritz.healthdashboard.domain.util.logE
 import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
 import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
+import com.gregor.lauritz.healthdashboard.workers.HealthResyncWorker
+import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -25,12 +27,15 @@ class SyncSettingsViewModel
     constructor(
         private val settingsRepo: SettingsRepository,
         private val healthSyncUseCase: HealthSyncUseCase,
-        private val resyncHealthConnectUseCase: ResyncHealthConnectUseCase,
+        private val workerScheduler: WorkerScheduler,
+        workManager: WorkManager,
     ) : ViewModel() {
-        private val _isResyncing = MutableStateFlow(false)
-        val isResyncing: StateFlow<Boolean> = _isResyncing.asStateFlow()
-
         private val availableDevices = MutableStateFlow<List<String>>(emptyList())
+
+        // Drives the resync button + determinate dialog directly off the worker's lifecycle/progress,
+        // so the UI reflects the durable background job (it survives the screen being left and reopened).
+        private val resyncWorkInfo =
+            workManager.getWorkInfosForUniqueWorkFlow(WorkerScheduler.RESYNC_WORK_NAME)
 
         // Internal property to allow overriding in tests
         var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
@@ -38,13 +43,19 @@ class SyncSettingsViewModel
         val uiState: StateFlow<SyncSettingsState> by lazy {
             combine(
                 settingsRepo.userPreferences,
-                _isResyncing,
+                resyncWorkInfo,
                 availableDevices,
-            ) { prefs, isResyncing, availableDevices ->
+            ) { prefs, workInfos, availableDevices ->
+                val info = workInfos.firstOrNull()
+                val running = info?.state == WorkInfo.State.RUNNING || info?.state == WorkInfo.State.ENQUEUED
+                val current = info?.progress?.getInt(HealthResyncWorker.KEY_CURRENT, 0) ?: 0
+                val total = info?.progress?.getInt(HealthResyncWorker.KEY_TOTAL, 0) ?: 0
                 SyncSettingsState(
                     syncPreference = prefs.syncPreference,
                     syncIntervalHours = prefs.syncIntervalHours,
-                    isResyncing = isResyncing,
+                    isResyncing = running,
+                    resyncCurrent = current,
+                    resyncTotal = total,
                     availableDevices = availableDevices,
                     primaryDeviceName = prefs.primaryDeviceName,
                 )
@@ -89,14 +100,8 @@ class SyncSettingsViewModel
                     }
                 }
                 SettingsEvent.ResyncHealthConnect -> {
-                    viewModelScope.launch {
-                        _isResyncing.value = true
-                        try {
-                            resyncHealthConnectUseCase.execute()
-                        } finally {
-                            _isResyncing.value = false
-                        }
-                    }
+                    // Enqueue the durable foreground worker; progress flows back via resyncWorkInfo.
+                    viewModelScope.launch { workerScheduler.scheduleResyncWorker() }
                 }
                 else -> {}
             }

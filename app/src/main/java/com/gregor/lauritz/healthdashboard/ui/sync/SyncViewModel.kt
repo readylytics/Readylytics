@@ -89,7 +89,9 @@ class SyncViewModel
         fun triggerManualSync() {
             viewModelScope.launch {
                 try {
-                    foregroundSyncController.triggerImmediateSync()
+                    // Pull-to-refresh recalculates the current day only; full historical recalculation
+                    // is exposed via the Settings "Resync Health Connect data" button (WorkManager).
+                    foregroundSyncController.triggerDailySync()
                 } catch (e: HealthConnectPermissionRevokedException) {
                     _uiState.update { SyncUiState.NeedsPermissions }
                 } catch (e: Exception) {

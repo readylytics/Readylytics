@@ -25,7 +25,9 @@ import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectReposit
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -86,137 +88,7 @@ class HealthSyncUseCase
                         val windowStart = today.minusDays((windowDays - 1).toLong()).atStartOfDay(zoneId).toInstant()
                         val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
 
-                        logD("HealthSyncUseCase") { "Bulk fetching HC data for $windowDays days..." }
-
-                        val sleepSessions = hcRepo.readSleepSessions(windowStart, windowEnd)
-                        val sleepEntities = sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
-                        val exerciseRecords = hcRepo.readExerciseSessions(windowStart, windowEnd)
-                        val hrRecords = hcRepo.readHeartRateSamples(windowStart, windowEnd)
-                        val hrvRecords = hcRepo.readHrvSamples(windowStart, windowEnd)
-                        val weightRecords = hcRepo.readWeightRecords(windowStart, windowEnd)
-                        val bodyFatRecords = hcRepo.readBodyFatRecords(windowStart, windowEnd)
-                        val bloodPressureRecords = hcRepo.readBloodPressureRecords(windowStart, windowEnd)
-                        val spo2Records = hcRepo.readOxygenSaturationRecords(windowStart, windowEnd)
-
-                        logD("HealthSyncUseCase") {
-                            "Bulk HC fetch complete: sleep=${sleepEntities.size} " +
-                                "hrv_rmssd=${hrvRecords.size} hr_records=${hrRecords.size} " +
-                                "weight=${weightRecords.size} bodyfat=${bodyFatRecords.size} bp=${bloodPressureRecords.size} spo2=${spo2Records.size}"
-                        }
-
-                        val thresholds =
-                            WorkoutMapper.zoneThresholds(
-                                prefs.zone1MinBpm,
-                                prefs.zone1MaxBpm,
-                                prefs.zone2MaxBpm,
-                                prefs.zone3MaxBpm,
-                                prefs.zone4MaxBpm,
-                            )
-
-                        val initialWorkouts =
-                            exerciseRecords.map {
-                                WorkoutMapper.mapExerciseSession(
-                                    it,
-                                    emptyList(),
-                                    thresholds,
-                                )
-                            }
-                        val hrEntities = HeartRateMapper.mapToEntities(hrRecords, sleepEntities, initialWorkouts)
-                        val hrBySession =
-                            hrEntities
-                                .asSequence()
-                                .filter {
-                                    it.sessionId != null
-                                }.groupBy { it.sessionId }
-                        val workoutEntities =
-                            exerciseRecords.map { session ->
-                                val sessionSamples = hrBySession[session.metadata.id] ?: emptyList()
-                                WorkoutMapper.mapExerciseSession(session, sessionSamples, thresholds)
-                            }
-                        val hrvEntities = HrvMapper.mapToEntities(hrvRecords, sleepEntities)
-
-                        val primaryDevice = prefs.primaryDeviceName
-                        val filteredSleep =
-                            filterByDevicePreference(sleepEntities, primaryDevice, { it.deviceName }, { it.startTime })
-                        val filteredWorkouts =
-                            filterByDevicePreference(
-                                workoutEntities,
-                                primaryDevice,
-                                { it.deviceName },
-                                { it.startTime },
-                            )
-                        val filteredHr =
-                            filterByDevicePreference(hrEntities, primaryDevice, { it.deviceName }, { it.timestampMs })
-                        val filteredHrv =
-                            filterByDevicePreference(hrvEntities, primaryDevice, { it.deviceName }, { it.timestampMs })
-
-                        val weightEntities = WeightDataMapper.toEntities(weightRecords)
-                        val filteredWeight =
-                            filterByDevicePreference(
-                                weightEntities,
-                                primaryDevice,
-                                { it.deviceName },
-                                { it.timestampMs },
-                            )
-
-                        val bodyFatEntities = BodyFatDataMapper.toEntities(bodyFatRecords)
-                        val filteredBodyFat =
-                            filterByDevicePreference(
-                                bodyFatEntities,
-                                primaryDevice,
-                                { it.deviceName },
-                                { it.timestampMs },
-                            )
-
-                        val bloodPressureEntities = BloodPressureDataMapper.toEntities(bloodPressureRecords)
-                        val filteredBloodPressure =
-                            filterByDevicePreference(
-                                bloodPressureEntities,
-                                primaryDevice,
-                                { it.deviceName },
-                                { it.timestampMs },
-                            )
-
-                        val spo2Entities = OxygenSaturationDataMapper.toEntities(spo2Records)
-                        val filteredSpo2 =
-                            filterByDevicePreference(
-                                spo2Entities,
-                                primaryDevice,
-                                { it.deviceName },
-                                { it.timestampMs },
-                            )
-
-                        logD("HealthSyncUseCase") {
-                            "Device filtering: sleep=${filteredSleep.size} workouts=${filteredWorkouts.size} " +
-                                "hr=${filteredHr.size} hrv=${filteredHrv.size} " +
-                                "weight=${filteredWeight.size} bodyfat=${filteredBodyFat.size} " +
-                                "bp=${filteredBloodPressure.size} spo2=${filteredSpo2.size}"
-                        }
-
-                        transactionRunner.runInTransaction {
-                            sleepSessionDao.upsertAll(filteredSleep)
-                            val allStages = sleepSessions.flatMap { SleepDataMapper.mapSleepSessionStages(it) }
-
-                            // FILTER STAGES TO MATCH DEVICE-FILTERED SESSIONS (prevents orphaned stages)
-                            // Use Set for O(1) lookup instead of O(N) linear search (improves O(N×M) to O(N))
-                            val filteredSessionIds = filteredSleep.map { it.id }.toSet()
-                            val filteredStages =
-                                allStages.filter { stage ->
-                                    stage.sessionId in filteredSessionIds
-                                }
-
-                            // DELETE OLD STAGES BEFORE UPSERT (prevents stale stage accumulation)
-                            sleepStageDao.deleteForSessions(filteredSessionIds.toList())
-
-                            sleepStageDao.upsertAll(filteredStages)
-                            workoutDao.upsertAll(filteredWorkouts)
-                            heartRateDao.upsertAll(filteredHr)
-                            hrvDao.upsertAll(filteredHrv)
-                            weightRecordDao.upsertAll(filteredWeight)
-                            bodyFatRecordDao.upsertAll(filteredBodyFat)
-                            bloodPressureRecordDao.upsertAll(filteredBloodPressure)
-                            oxygenSaturationRecordDao.upsertAll(filteredSpo2)
-                        }
+                        ingestWindow(windowStart, windowEnd, prefs)
 
                         // Bulk-fetch steps per day using aggregate API to prevent overlap/duplication
                         logD("HealthSyncUseCase") { "Bulk fetching steps for $windowDays days..." }
@@ -312,6 +184,257 @@ class HealthSyncUseCase
 
         suspend fun catchUpSync(onProgress: ((current: Int, total: Int) -> Unit)? = null): Result<Unit> =
             sync(windowDays = 60, onProgress = onProgress)
+
+        /**
+         * Full historical resync over [startDate]..[endDate] (inclusive), bounded by the caller from
+         * the user's data-retention setting. Health Connect is re-read in [chunkDays]-day chunks (with
+         * bounded backoff to ride out rate limits), then a single walk-forward recompute rebuilds every
+         * day's scores via the unchanged [ScoringRepository.computeDailySummary] path.
+         *
+         * Idempotent by construction: ingestion upserts by stable Health Connect record id (overlaps
+         * replace, never duplicate) and no blanket delete is performed, so a worker killed/failed
+         * mid-pass leaves prior valid data intact and a retry re-runs the same range cleanly.
+         *
+         * @param onProgress reports (completed, total) across both the ingestion and recompute phases.
+         */
+        suspend fun resyncRange(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            chunkDays: Int = 30,
+            onProgress: ((current: Int, total: Int) -> Unit)? = null,
+        ): Result<Unit> =
+            syncMutex.withLock {
+                withContext(Dispatchers.IO) {
+                    try {
+                        val zoneId = ZoneId.systemDefault()
+                        logD("HealthSyncUseCase") { "Full resync $startDate..$endDate (chunk=$chunkDays days)" }
+
+                        val initialPrefs = settingsRepo.userPreferences.first()
+                        updateCalculatedMetrics(initialPrefs)
+                        val prefs = settingsRepo.userPreferences.first()
+
+                        val totalDays = (ChronoUnit.DAYS.between(startDate, endDate) + 1).toInt().coerceAtLeast(0)
+                        // Two passes (ingest day-by-day + recompute day-by-day) → determinate 2× track.
+                        val totalSteps = totalDays * 2
+                        var processed = 0
+                        onProgress?.invoke(processed, totalSteps)
+
+                        // --- Ingestion phase: chunked HC re-fetch + idempotent upsert ---
+                        val stepsMap = mutableMapOf<LocalDate, Long>()
+                        var chunkStart = startDate
+                        while (!chunkStart.isAfter(endDate)) {
+                            ensureActive()
+                            // Exclusive upper bound, capped at the day after endDate.
+                            val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
+                            val windowStart = chunkStart.atStartOfDay(zoneId).toInstant()
+                            val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
+
+                            retryWithBackoff { ingestWindow(windowStart, windowEnd, prefs) }
+
+                            var day = chunkStart
+                            while (day.isBefore(chunkEndExclusive)) {
+                                ensureActive()
+                                val dayStart = day.atStartOfDay(zoneId).toInstant()
+                                val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
+                                stepsMap[day] = retryWithBackoff { hcRepo.readSteps(dayStart, dayEnd) }
+                                processed++
+                                onProgress?.invoke(processed, totalSteps)
+                                day = day.plusDays(1)
+                                yield()
+                            }
+                            chunkStart = chunkEndExclusive
+                        }
+
+                        // --- Recompute phase: walk-forward over the full range ---
+                        // Clear freeze so the bounded baseline variants recompute per day.
+                        dailySummaryDao.clearFrozenBaselines()
+                        var day = startDate
+                        while (!day.isAfter(endDate)) {
+                            ensureActive()
+                            syncDayScoring(day, stepsMap[day])
+                            processed++
+                            onProgress?.invoke(processed, totalSteps)
+                            day = day.plusDays(1)
+                            yield()
+                        }
+                        dailySummaryDao.setBaselineVersion(2)
+
+                        settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
+                        logD("HealthSyncUseCase") { "Full resync complete ($totalDays days)" }
+                        Result.success(Unit)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Result.failure("Full resync failed", "RESYNC_ERROR")
+                    }
+                }
+            }
+
+        /**
+         * Retries [block] with bounded exponential backoff. Used to ride out transient Health Connect
+         * rate-limit / IO failures during a chunked resync. Cancellation is never swallowed.
+         */
+        private suspend fun <T> retryWithBackoff(
+            maxAttempts: Int = 4,
+            initialDelayMs: Long = 1_000,
+            block: suspend () -> T,
+        ): T {
+            var attempt = 0
+            var delayMs = initialDelayMs
+            while (true) {
+                try {
+                    return block()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    attempt++
+                    if (attempt >= maxAttempts) throw e
+                    logD("HealthSyncUseCase") { "Resync chunk failed (attempt $attempt), backing off ${delayMs}ms" }
+                    delay(delayMs)
+                    delayMs *= 2
+                }
+            }
+        }
+
+        /**
+         * Reads one Health Connect window, maps + device-filters it, and upserts every record type into
+         * Room in a single transaction. Shared by the recent-window [sync] and the chunked [resyncRange].
+         */
+        private suspend fun ingestWindow(
+            windowStart: Instant,
+            windowEnd: Instant,
+            prefs: UserPreferences,
+        ) {
+            val sleepSessions = hcRepo.readSleepSessions(windowStart, windowEnd)
+            val sleepEntities = sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
+            val exerciseRecords = hcRepo.readExerciseSessions(windowStart, windowEnd)
+            val hrRecords = hcRepo.readHeartRateSamples(windowStart, windowEnd)
+            val hrvRecords = hcRepo.readHrvSamples(windowStart, windowEnd)
+            val weightRecords = hcRepo.readWeightRecords(windowStart, windowEnd)
+            val bodyFatRecords = hcRepo.readBodyFatRecords(windowStart, windowEnd)
+            val bloodPressureRecords = hcRepo.readBloodPressureRecords(windowStart, windowEnd)
+            val spo2Records = hcRepo.readOxygenSaturationRecords(windowStart, windowEnd)
+
+            logD("HealthSyncUseCase") {
+                "Bulk HC fetch complete: sleep=${sleepEntities.size} " +
+                    "hrv_rmssd=${hrvRecords.size} hr_records=${hrRecords.size} " +
+                    "weight=${weightRecords.size} bodyfat=${bodyFatRecords.size} bp=${bloodPressureRecords.size} spo2=${spo2Records.size}"
+            }
+
+            val thresholds =
+                WorkoutMapper.zoneThresholds(
+                    prefs.zone1MinBpm,
+                    prefs.zone1MaxBpm,
+                    prefs.zone2MaxBpm,
+                    prefs.zone3MaxBpm,
+                    prefs.zone4MaxBpm,
+                )
+
+            val initialWorkouts =
+                exerciseRecords.map {
+                    WorkoutMapper.mapExerciseSession(
+                        it,
+                        emptyList(),
+                        thresholds,
+                    )
+                }
+            val hrEntities = HeartRateMapper.mapToEntities(hrRecords, sleepEntities, initialWorkouts)
+            val hrBySession =
+                hrEntities
+                    .asSequence()
+                    .filter {
+                        it.sessionId != null
+                    }.groupBy { it.sessionId }
+            val workoutEntities =
+                exerciseRecords.map { session ->
+                    val sessionSamples = hrBySession[session.metadata.id] ?: emptyList()
+                    WorkoutMapper.mapExerciseSession(session, sessionSamples, thresholds)
+                }
+            val hrvEntities = HrvMapper.mapToEntities(hrvRecords, sleepEntities)
+
+            val primaryDevice = prefs.primaryDeviceName
+            val filteredSleep =
+                filterByDevicePreference(sleepEntities, primaryDevice, { it.deviceName }, { it.startTime })
+            val filteredWorkouts =
+                filterByDevicePreference(
+                    workoutEntities,
+                    primaryDevice,
+                    { it.deviceName },
+                    { it.startTime },
+                )
+            val filteredHr =
+                filterByDevicePreference(hrEntities, primaryDevice, { it.deviceName }, { it.timestampMs })
+            val filteredHrv =
+                filterByDevicePreference(hrvEntities, primaryDevice, { it.deviceName }, { it.timestampMs })
+
+            val weightEntities = WeightDataMapper.toEntities(weightRecords)
+            val filteredWeight =
+                filterByDevicePreference(
+                    weightEntities,
+                    primaryDevice,
+                    { it.deviceName },
+                    { it.timestampMs },
+                )
+
+            val bodyFatEntities = BodyFatDataMapper.toEntities(bodyFatRecords)
+            val filteredBodyFat =
+                filterByDevicePreference(
+                    bodyFatEntities,
+                    primaryDevice,
+                    { it.deviceName },
+                    { it.timestampMs },
+                )
+
+            val bloodPressureEntities = BloodPressureDataMapper.toEntities(bloodPressureRecords)
+            val filteredBloodPressure =
+                filterByDevicePreference(
+                    bloodPressureEntities,
+                    primaryDevice,
+                    { it.deviceName },
+                    { it.timestampMs },
+                )
+
+            val spo2Entities = OxygenSaturationDataMapper.toEntities(spo2Records)
+            val filteredSpo2 =
+                filterByDevicePreference(
+                    spo2Entities,
+                    primaryDevice,
+                    { it.deviceName },
+                    { it.timestampMs },
+                )
+
+            logD("HealthSyncUseCase") {
+                "Device filtering: sleep=${filteredSleep.size} workouts=${filteredWorkouts.size} " +
+                    "hr=${filteredHr.size} hrv=${filteredHrv.size} " +
+                    "weight=${filteredWeight.size} bodyfat=${filteredBodyFat.size} " +
+                    "bp=${filteredBloodPressure.size} spo2=${filteredSpo2.size}"
+            }
+
+            transactionRunner.runInTransaction {
+                sleepSessionDao.upsertAll(filteredSleep)
+                val allStages = sleepSessions.flatMap { SleepDataMapper.mapSleepSessionStages(it) }
+
+                // FILTER STAGES TO MATCH DEVICE-FILTERED SESSIONS (prevents orphaned stages)
+                // Use Set for O(1) lookup instead of O(N) linear search (improves O(N×M) to O(N))
+                val filteredSessionIds = filteredSleep.map { it.id }.toSet()
+                val filteredStages =
+                    allStages.filter { stage ->
+                        stage.sessionId in filteredSessionIds
+                    }
+
+                // DELETE OLD STAGES BEFORE UPSERT (prevents stale stage accumulation)
+                sleepStageDao.deleteForSessions(filteredSessionIds.toList())
+
+                sleepStageDao.upsertAll(filteredStages)
+                workoutDao.upsertAll(filteredWorkouts)
+                heartRateDao.upsertAll(filteredHr)
+                hrvDao.upsertAll(filteredHrv)
+                weightRecordDao.upsertAll(filteredWeight)
+                bodyFatRecordDao.upsertAll(filteredBodyFat)
+                bloodPressureRecordDao.upsertAll(filteredBloodPressure)
+                oxygenSaturationRecordDao.upsertAll(filteredSpo2)
+            }
+        }
 
         // Already invoked from the IO context established in [sync]; computeDailySummary
         // switches to Dispatchers.Default internally for the CPU-heavy scoring.

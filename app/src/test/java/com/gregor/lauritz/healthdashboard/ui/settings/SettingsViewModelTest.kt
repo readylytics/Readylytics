@@ -8,12 +8,10 @@ import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPre
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
-import com.gregor.lauritz.healthdashboard.domain.sync.ResyncHealthConnectUseCase
 import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
-import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -59,9 +57,6 @@ class SettingsViewModelTest {
 
     @Inject
     lateinit var healthSyncUseCase: HealthSyncUseCase
-
-    @Inject
-    lateinit var resyncHealthConnectUseCase: ResyncHealthConnectUseCase
 
     @Inject
     lateinit var workerScheduler: WorkerScheduler
@@ -153,18 +148,17 @@ class SettingsViewModelTest {
         }
 
     @Test
-    fun `SyncSettingsViewModel resync event sets loading state`() =
+    fun `SyncSettingsViewModel resync event enqueues worker`() =
         runTest {
-            val mockResyncUseCase = mockk<ResyncHealthConnectUseCase>()
-            coEvery { mockResyncUseCase.execute() } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result
-                    .success(Unit)
+            val mockScheduler = mockk<WorkerScheduler>(relaxed = true)
+            val workManager = androidx.work.WorkManager.getInstance(context)
 
             val viewModel =
                 SyncSettingsViewModel(
                     settingsRepo,
                     healthSyncUseCase,
-                    mockResyncUseCase,
+                    mockScheduler,
+                    workManager,
                 )
             viewModel.sharingStarted = SharingStarted.Lazily
 
@@ -175,5 +169,7 @@ class SettingsViewModelTest {
             assertFalse(viewModel.uiState.value.isResyncing)
             viewModel.onEvent(SettingsEvent.ResyncHealthConnect)
             advanceUntilIdle()
+
+            io.mockk.coVerify { mockScheduler.scheduleResyncWorker() }
         }
 }
