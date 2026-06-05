@@ -108,7 +108,8 @@ class HealthSyncUseCase
                         val migrationRange =
                             if (staleCount > 0) {
                                 dailySummaryDao.getEarliestDateMs()?.let { earliestMs ->
-                                    Instant.ofEpochMilli(earliestMs).atZone(zoneId).toLocalDate() to LocalDate.now(zoneId)
+                                    val earliest = Instant.ofEpochMilli(earliestMs).atZone(zoneId).toLocalDate()
+                                    earliest to LocalDate.now(zoneId)
                                 }
                             } else {
                                 null

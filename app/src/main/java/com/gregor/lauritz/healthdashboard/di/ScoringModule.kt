@@ -33,8 +33,7 @@ class ScoringModule {
     fun provideComputeHistoricalBaselinesUseCase(
         baselineComputer: BaselineComputer,
         loadScoringStrategy: LoadScoringStrategy,
-    ): ComputeHistoricalBaselinesUseCase =
-        ComputeHistoricalBaselinesUseCase(baselineComputer, loadScoringStrategy)
+    ): ComputeHistoricalBaselinesUseCase = ComputeHistoricalBaselinesUseCase(baselineComputer, loadScoringStrategy)
 
     @Provides
     @Singleton
