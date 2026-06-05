@@ -183,6 +183,14 @@ keep Android types out of `domain/scoring/**`.
 calibrated (≥ 7 valid sessions); before that, `ScoringRepositoryImpl` reports
 **"Calibrating"** and emits tentative metrics only.
 
+The historical backfill (`domain/scoring/BackfillHistoricalBaselinesUseCase` →
+`ComputeHistoricalBaselinesUseCase`) wipes derived baselines and recomputes the entire
+history at app start. It resolves all per-day HRV/RHR windows via the **batched**
+`BaselineComputer.computeBackfillBaselines()` — a fixed, small number of DB reads for the
+whole range instead of ~11 queries per day — which reproduces the per-day
+`compute*Between` window/validity/nadir math exactly (guarded by an equivalence test). The
+per-day UPDATEs are collapsed into a single transaction by the backfill use-case.
+
 ### 2.5 Sleep & Load scoring strategies
 
 | Component | Path | Output |

@@ -1,7 +1,6 @@
 package com.gregor.lauritz.healthdashboard.di
 
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
-import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.DataStoreCircadianThresholdPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
@@ -34,9 +33,8 @@ class ScoringModule {
     fun provideComputeHistoricalBaselinesUseCase(
         baselineComputer: BaselineComputer,
         loadScoringStrategy: LoadScoringStrategy,
-        sleepSessionDao: SleepSessionDao,
     ): ComputeHistoricalBaselinesUseCase =
-        ComputeHistoricalBaselinesUseCase(baselineComputer, loadScoringStrategy, sleepSessionDao)
+        ComputeHistoricalBaselinesUseCase(baselineComputer, loadScoringStrategy)
 
     @Provides
     @Singleton

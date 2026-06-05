@@ -25,6 +25,7 @@ import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectReposit
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
+import com.gregor.lauritz.healthdashboard.domain.util.logE
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -462,6 +463,7 @@ class HealthSyncUseCase
                 }
                 Result.success(Unit)
             } catch (e: Exception) {
+                logE("HealthSyncUseCase", e) { "Day $day sync failed" }
                 Result.failure("Day $day sync failed", "DAY_SYNC_ERROR")
             }
 
