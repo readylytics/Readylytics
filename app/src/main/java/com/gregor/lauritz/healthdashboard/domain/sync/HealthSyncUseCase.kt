@@ -259,7 +259,10 @@ class HealthSyncUseCase
                             var current = migrationRange.first
                             while (!current.isAfter(endDate)) {
                                 ensureActive()
-                                val steps = stepsMap[current] ?: 0L
+                                // stepsMap only covers the recent window; for older historical days
+                                // pass null so syncDayScoring preserves the existing stored step count
+                                // instead of zeroing it out.
+                                val steps = stepsMap[current]
                                 syncDayScoring(current, steps)
                                 current = current.plusDays(1)
                                 processedDays++
@@ -312,17 +315,28 @@ class HealthSyncUseCase
 
         // Already invoked from the IO context established in [sync]; computeDailySummary
         // switches to Dispatchers.Default internally for the CPU-heavy scoring.
+        //
+        // [steps] is null when no fresh step count is available for [day] (older historical days
+        // outside the sync window). In that case the existing step count is preserved — note that
+        // computeDailySummary copies the stored summary forward without touching stepCount — so a
+        // historical recompute never zeroes out the user's step history.
         private suspend fun syncDayScoring(
             day: LocalDate,
-            steps: Long,
+            steps: Long?,
         ): Result<Unit> =
             try {
                 val afterScoring = scoringRepository.computeDailySummary(day)
-                val stepCountInt = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-                val finalSummary = afterScoring.copy(stepCount = stepCountInt)
+                val finalSummary =
+                    if (steps != null) {
+                        afterScoring.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+                    } else {
+                        afterScoring
+                    }
                 dailySummaryDao.upsert(finalSummary)
 
-                logD("HealthSyncUseCase") { "Day $day: scored (steps=$steps) and summary persisted" }
+                logD("HealthSyncUseCase") {
+                    "Day $day: scored (steps=${steps?.toString() ?: "preserved"}) and summary persisted"
+                }
                 Result.success(Unit)
             } catch (e: Exception) {
                 Result.failure("Day $day sync failed", "DAY_SYNC_ERROR")

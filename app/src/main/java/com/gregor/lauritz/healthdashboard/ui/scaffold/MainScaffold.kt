@@ -149,7 +149,10 @@ fun MainScaffold(
                     RecalcProgressBanner(
                         current = progress.current,
                         total = progress.total,
-                        modifier = Modifier.align(Alignment.TopCenter),
+                        modifier =
+                            Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = innerPadding.calculateTopPadding()),
                     )
                 }
             }
