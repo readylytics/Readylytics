@@ -28,7 +28,7 @@ class ForegroundSyncControllerTest {
                 )
 
             coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
-            coEvery { syncUseCase.sync() } coAnswers {
+            coEvery { syncUseCase.sync(any(), any()) } coAnswers {
                 delay(100) // Simulate long running sync
                 com.gregor.lauritz.healthdashboard.domain.model.Result
                     .Success(Unit)
@@ -41,6 +41,6 @@ class ForegroundSyncControllerTest {
             advanceTimeBy(150)
 
             // Verify sync() was only called once because the second one should have been blocked by the mutex (tryLock)
-            coVerify(exactly = 1) { syncUseCase.sync() }
+            coVerify(exactly = 1) { syncUseCase.sync(any(), any()) }
         }
 }

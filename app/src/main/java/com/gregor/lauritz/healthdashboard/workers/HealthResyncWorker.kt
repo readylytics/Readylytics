@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.workers
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.ServiceInfo
 import android.util.Log
@@ -31,6 +32,9 @@ class HealthResyncWorker
         private val fullHistoricalResyncUseCase: FullHistoricalResyncUseCase,
         private val foregroundSyncController: ForegroundSyncController,
     ) : CoroutineWorker(appContext, params) {
+        // Progress notifications are best-effort (wrapped in runCatching); POST_NOTIFICATIONS is
+        // declared in the manifest and a missing runtime grant simply drops the update.
+        @SuppressLint("MissingPermission")
         override suspend fun doWork(): Result {
             SyncNotifications.ensureChannel(appContext)
             runCatching { setForeground(buildForegroundInfo(0, 0)) }

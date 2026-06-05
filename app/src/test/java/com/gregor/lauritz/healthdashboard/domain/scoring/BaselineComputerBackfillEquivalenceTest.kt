@@ -46,7 +46,12 @@ class BaselineComputerBackfillEquivalenceTest {
     private val avgHrById = mutableMapOf<String, Int>()
     private val hrProjectionById = mutableMapOf<String, List<Int>>()
 
-    private fun dayStartMs(i: Int): Long = day0.plusDays(i.toLong()).atStartOfDay(zone).toInstant().toEpochMilli()
+    private fun dayStartMs(i: Int): Long =
+        day0
+            .plusDays(i.toLong())
+            .atStartOfDay(zone)
+            .toInstant()
+            .toEpochMilli()
 
     @Before
     fun setup() {
