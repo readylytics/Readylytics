@@ -1,10 +1,13 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
+import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -18,7 +21,13 @@ import kotlin.test.assertNotNull
 class ComputeHistoricalBaselinesUseCaseTest {
     private val baselineComputer = mockk<BaselineComputer>()
     private val loadScoringStrategy = mockk<LoadScoringStrategy>()
-    private val useCase = ComputeHistoricalBaselinesUseCase(baselineComputer, loadScoringStrategy)
+    private val sleepSessionDao = mockk<SleepSessionDao>()
+    private val useCase = ComputeHistoricalBaselinesUseCase(baselineComputer, loadScoringStrategy, sleepSessionDao)
+
+    init {
+        // Default: no session recorded for the day. Tests that need one override this.
+        coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
+    }
 
     private fun fakeSummary(date: LocalDate): DailySummaryEntity {
         val zone = ZoneId.systemDefault()
@@ -99,6 +108,47 @@ class ComputeHistoricalBaselinesUseCaseTest {
             assertEquals(PhysiologyProfile.ATHLETE.lnSigmaPrior, capturedSigmaPrior.captured)
             assertEquals(PhysiologyProfile.ATHLETE.name, result.first().snapshotProfile)
             assertEquals(PhysiologyProfile.ATHLETE.lnSigmaPrior, result.first().hrvSigmaPrior)
+        }
+
+    @Test
+    fun `the day's own sleep session is excluded from its HRV baseline window — matches live sync path`() =
+        runTest {
+            val date = LocalDate.of(2026, 1, 1)
+            val summary = fakeSummary(date)
+            val zone = ZoneId.systemDefault()
+            val dayMidnightMs = date.atStartOfDay(zone).toInstant().toEpochMilli()
+            val nextDayMidnightMs = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+
+            val sessionForDay =
+                SleepSessionEntity(
+                    id = "session-today",
+                    startTime = dayMidnightMs,
+                    endTime = dayMidnightMs + 6 * 60 * 60 * 1000L,
+                    durationMinutes = 360,
+                    efficiency = 95f,
+                    deepSleepMinutes = 80,
+                    remSleepMinutes = 90,
+                    lightSleepMinutes = 180,
+                    awakeMinutes = 10,
+                )
+            coEvery {
+                sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
+            } returns sessionForDay
+
+            coEvery {
+                baselineComputer.computeHrvWindowsBetween(any(), any(), any())
+            } returns fakeWindows()
+            coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any()) } returns 60f
+            every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+
+            useCase.computeHistoricalBaselines(listOf(summary), UserPreferences())
+
+            // The backfill must forward the day's session id (not null) so the session is excluded
+            // from its own baseline window, exactly as ScoringRepositoryImpl.computeDailySummary does.
+            coVerify {
+                baselineComputer.computeHrvWindowsBetween(any(), any(), excludeSessionId = "session-today")
+            }
+            coVerify { sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs) }
         }
 
     @Test

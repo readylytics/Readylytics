@@ -95,13 +95,16 @@ class BackfillBaselinesUseCaseTest {
 
     private lateinit var baselineComputer: BaselineComputer
     private lateinit var loadScoringStrategy: LoadScoringStrategy
+    private lateinit var suite1SleepSessionDao: SleepSessionDao
     private lateinit var computeUseCase: ComputeHistoricalBaselinesUseCase
 
     @Before
     fun setupSuite1() {
         baselineComputer = mockk()
         loadScoringStrategy = mockk()
-        computeUseCase = ComputeHistoricalBaselinesUseCase(baselineComputer, loadScoringStrategy)
+        suite1SleepSessionDao = mockk()
+        coEvery { suite1SleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
+        computeUseCase = ComputeHistoricalBaselinesUseCase(baselineComputer, loadScoringStrategy, suite1SleepSessionDao)
     }
 
     // --- no-lookahead (rows older than 30 days are excluded) ---
@@ -629,7 +632,9 @@ class BackfillBaselinesUseCaseTest {
     > {
         val bc = mockk<BaselineComputer>()
         val ls = mockk<LoadScoringStrategy>()
-        return Triple(bc, ls, ComputeHistoricalBaselinesUseCase(bc, ls))
+        val ssd = mockk<SleepSessionDao>()
+        coEvery { ssd.getSessionEndingInRange(any(), any()) } returns null
+        return Triple(bc, ls, ComputeHistoricalBaselinesUseCase(bc, ls, ssd))
     }
 
     @Test
@@ -793,7 +798,9 @@ class BackfillBaselinesUseCaseTest {
             // Verify at the ComputeHistoricalBaselinesUseCase level that baselineCalculatedAtDate is set.
             val bc = mockk<BaselineComputer>()
             val ls = mockk<LoadScoringStrategy>()
-            val compute = ComputeHistoricalBaselinesUseCase(bc, ls)
+            val ssd = mockk<SleepSessionDao>()
+            coEvery { ssd.getSessionEndingInRange(any(), any()) } returns null
+            val compute = ComputeHistoricalBaselinesUseCase(bc, ls, ssd)
 
             coEvery { bc.computeHrvWindowsBetween(any(), any(), excludeSessionId = null) } returns
                 hrvWindows(listOf(50f), listOf(50f))

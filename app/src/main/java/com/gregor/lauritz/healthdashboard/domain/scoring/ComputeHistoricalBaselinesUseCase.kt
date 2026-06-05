@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
+import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
@@ -13,6 +14,7 @@ import kotlin.math.ln
 class ComputeHistoricalBaselinesUseCase(
     private val baselineComputer: BaselineComputer,
     private val loadScoringStrategy: LoadScoringStrategy,
+    private val sleepSessionDao: SleepSessionDao,
 ) {
     suspend fun computeHistoricalBaselines(
         allDailySummaries: List<DailySummaryEntity>,
@@ -28,10 +30,17 @@ class ComputeHistoricalBaselinesUseCase(
             val date = summary.dateMidnightMs.toLocalDate()
             val dayMidnightInstant = summary.dateMidnightMs.toInstant()
             val dayMidnightMs = dayMidnightInstant.toEpochMilli()
-            val dayEndMs = dayMidnightInstant.plus(1, ChronoUnit.DAYS).toEpochMilli() - 1
+            val nextDayMidnightMs = dayMidnightInstant.plus(1, ChronoUnit.DAYS).toEpochMilli()
+            val dayEndMs = nextDayMidnightMs - 1
+
+            // Exclude the sleep session recorded for this day from its own HRV baseline window,
+            // mirroring the live sync path (ScoringRepositoryImpl.computeDailySummary). The session
+            // is the day's measurement, not part of the baseline training data; including it here
+            // produced a frozen backfill baseline that diverged from the live recompute.
+            val sessionForDay = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
 
             val hrvWindows =
-                baselineComputer.computeHrvWindowsBetween(dayMidnightMs, dayEndMs, excludeSessionId = null)
+                baselineComputer.computeHrvWindowsBetween(dayMidnightMs, dayEndMs, excludeSessionId = sessionForDay?.id)
                     ?: return@mapNotNull null
 
             if (hrvWindows.muHistory.isEmpty()) return@mapNotNull null
