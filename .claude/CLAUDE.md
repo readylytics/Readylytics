@@ -32,20 +32,22 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 - **Patterns:** Strict MVVM + Clean Architecture. ViewModels expose StateFlow/SharedFlow only. Compose uses `collectAsStateWithLifecycle`.
 - **Logic Isolation:** All business/calculation logic must be pure Kotlin (zero Android dependencies).
 
+## Sync & Recalculation (Two-Flow Contract)
+
+- **Pull-to-refresh = CURRENT DAY ONLY.** Dashboard/Sync refresh routes through `ForegroundSyncController.triggerDailySync()` → `HealthSyncUseCase.sync(windowDays = 1)`. Fast, foreground. Never widen this back to a 60-day catch-up. `triggerImmediateSync()`/`catchUpSync` is reserved for genuine first-launch.
+- **Settings "Resync Health Connect data" = FULL HISTORICAL RESYNC.** Enqueues `HealthResyncWorker` (WorkManager `OneTimeWork`, unique name `RESYNC_WORK_NAME`, `ExistingWorkPolicy.KEEP`) → `FullHistoricalResyncUseCase` → `HealthSyncUseCase.resyncRange()`. Durable, foreground service (`dataSync`), survives backgrounding. Never run this inline on the VM.
+- **Retention-bounded window:** History scope = `RetentionBounds.resolveResyncStartDate(prefs)` — `retentionDaysEnabled ? today − retentionDays : today − ABSOLUTE_MAX_DAYS (3650/10y)`. `RetentionBounds` is the single source of truth, shared by resync AND `DataCleanupWorker` cutoff. Do not re-inline retention→date math.
+- **Idempotency (non-negotiable):** Ingestion is upsert keyed by stable HC record `id` (overlap → replace, never duplicate). NO blanket `deleteAll()`. Only `clearFrozenBaselines(range)` is mutated up front, recomputed in the same walk-forward pass. A killed/failed worker must leave prior valid data intact and a retry must re-run the same range idempotently.
+- **Chunking + backoff:** HC re-fetch in 30-day chunks (`readAllPages` handles `pageToken`); wrap rate-limit/IO in bounded exponential backoff (`retryWithBackoff`). Whole-pass failure → `Result.retry()` (WorkManager EXPONENTIAL backoff).
+- **Concurrency:** Daily sync and resync share `HealthSyncUseCase.syncMutex` (serialized). Walk-forward recompute loops stay cooperative (`ensureActive()` + `yield()`); never swallow `CancellationException`.
+- **Progress:** Worker publishes `WorkInfo.progress` (KEY_CURRENT/KEY_TOTAL) AND bridges via `ForegroundSyncController.onBackgroundRecalc*`. Settings observes `getWorkInfosForUniqueWorkFlow`; the shared `RecalcProgress` drives the existing banner + determinate notification ("day X of Y"). Reuse this path — do not add parallel progress channels.
+- **Scoring math is OFF-LIMITS here.** Both flows recompute exclusively via `ScoringRepository.computeDailySummary(day)`. Resync refactors data flow/batching/triggers only — never the formulas.
+
 ## Domain Rules & Engine
 
 - **Baselines:** Compute for all historical dates (no 30-day cutoff); snapshot frozen per day (hrMax, profile, PAI factor, HRV prior). If < 7 days data, show "Calibrating".
 - **Sleep Score:** Duration (50%), Architecture (25%), Restoration (25%).
 - **Load Score:** Acute (7-day TRIMP avg), Chronic (42-day TRIMP avg). Output = Strain Ratio (TRIMP default).
-
-## Recalculation & Sync Patterns
-
-- **Two flows (do NOT merge):** Pull-to-refresh = **current day only** (`sync(windowDays = 1)`, foreground via `ForegroundSyncController.triggerDailySync()`). Settings "Resync Health Connect data" = **full historical resync**, retention-bounded, durable via `HealthResyncWorker` (WorkManager). `triggerImmediateSync()` is first-launch/onboarding catch-up only.
-- **No math changes on resync:** All recompute routes through the existing `ScoringRepository.computeDailySummary(day)` walk-forward. Resync refactors data flow/batching/threading/triggers only — never scoring or baseline formulas.
-- **Idempotency (hard rule):** NEVER blanket `deleteAll()`. Ingest via upsert keyed by stable HC record `id` (overlap = idempotent replace). Only `clearFrozenBaselines(range)` is mutated up front, then recomputed in the same pass. A killed/failed worker must leave prior valid data intact; a retry re-runs the same range idempotently.
-- **Retention = single source of truth:** `domain/util/RetentionBounds` resolves start date / cutoff from `UserPreferences` (enabled → `today - retentionDays`; disabled → `today - ABSOLUTE_MAX_DAYS` = 3650). Shared by `DataCleanupWorker` and `FullHistoricalResyncUseCase` — do not inline the rule elsewhere.
-- **Chunked HC re-fetch:** Resync ingests in 30-day windows with bounded exponential backoff for rate-limit/IO. Recompute reads baseline windows from Room (local), not HC. Daily and resync flows share `HealthSyncUseCase.syncMutex` to serialize.
-- **Durable worker conventions:** `@HiltWorker` + foreground service (`foregroundServiceType=dataSync`), determinate notification + `setProgressAsync`. Progress bridges to the existing `RecalcProgressBanner` via `ForegroundSyncController.onBackgroundRecalc*` and to Settings via `WorkInfo`. Enqueue `ExistingWorkPolicy.KEEP`; transient failure → `Result.retry()`.
 
 ## Component Specifications
 
