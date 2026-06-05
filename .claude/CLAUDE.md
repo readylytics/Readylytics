@@ -63,6 +63,11 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 - **Pre-Commit (Mandatory):** `./gradlew ktlintFormat && ./gradlew testDebugUnitTest`
 - **Build Utilities:** `./gradlew installDebug`, `./gradlew assembleDebug`, `./gradlew clean`
 
+## Documentation Sync
+
+- **`docs/DATA_FLOW.md` is load-bearing.** It is the authoritative end-to-end map of the data pipeline (Health Connect → Room → scoring engine → UI). Any change to the **ingestion pipeline** (`HealthConnectRepository*`, `data/healthconnect/*` mappers, `HealthSyncUseCase`/`ForegroundSyncController`/`workers/*`), the **Room schema** (`HealthDatabase`, `data/local/entity/**`, DAOs, DB version/migrations), the **scoring use-cases/coordinators** (`ScoringRepository*`, `domain/scoring/Compute*UseCase`), or the **scoring-engine formulas** (`domain/scoring/**`) MUST include a synchronous update to `docs/DATA_FLOW.md` in the same change. Treat a stale `DATA_FLOW.md` as a broken build.
+- **Keep the separation intact:** `DATA_FLOW.md` documents data flow and points to where each formula lives — it does not duplicate coefficients/derivations. The math source of truth stays in pure-Kotlin `domain/scoring/**`.
+
 ## File Lifecycle & Indexing
 
 - **New/Deleted Files:** Upon creation of any new file, agent MUST execute `codegraph index` after finishing to ensure the codebase context remains current.
