@@ -334,7 +334,14 @@ class ScoringRepositoryImpl
 
                 val muHistory = hrvWindows?.muHistory ?: emptyList()
                 val hrvMuMssd =
-                    if (muHistory.isNotEmpty()) {
+                    if (frozenSnapshot != null) {
+                        // Frozen day: the HRV-window recompute is intentionally skipped
+                        // (computeHrvWindowsBetween returns null), so muHistory is empty here.
+                        // Preserve the stored frozen mu instead of clobbering it to null — otherwise
+                        // each recalculation wipes the baseline, collapsing the HRV z-score to 0 and
+                        // shifting sleep/readiness by several points on the next run.
+                        frozenSnapshot.hrvMuMssd
+                    } else if (muHistory.isNotEmpty()) {
                         muHistory.map { ln(it.coerceAtLeast(0.001f)) }.average().toFloat()
                     } else {
                         null

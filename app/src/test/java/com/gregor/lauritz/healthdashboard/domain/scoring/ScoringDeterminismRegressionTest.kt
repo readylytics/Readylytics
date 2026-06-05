@@ -152,6 +152,47 @@ class ScoringDeterminismRegressionTest {
         }
 
     @Test
+    fun frozenHrvMuIsPreservedNotClobberedAcrossRecomputes() =
+        runTest {
+            val today = LocalDate.now()
+            val zoneId = ZoneId.systemDefault()
+            val dayMidnightMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+            val prefs = UserPreferences(rhrBaselineOverride = 55f, maxHeartRate = 195)
+            every { settingsRepo.userPreferences } returns flowOf(prefs)
+            every { scoringConfigFactory.build(any(), any(), any(), any()) } returns mockk(relaxed = true)
+
+            // Calibrated, frozen day carrying a stored HRV mu baseline. No session, so the sleep-metrics
+            // path is skipped and we directly exercise the baseline write-back.
+            coEvery { sleepSessionDao.countSince(any()) } returns ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
+            coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
+            coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
+
+            val storedMu = 3.5f
+            val frozen =
+                DailySummaryEntity(
+                    dateMidnightMs = dayMidnightMs,
+                    baselineCalculatedAtDate = today,
+                    baselineVersion = 2,
+                    hrMax = 190f,
+                    paiScalingFactor = 0.2f,
+                    rhrBpm = 60f,
+                    hrvMuMssd = storedMu,
+                    hrvSigmaMssd = 0.2f,
+                    baselineObservationCount = 10,
+                )
+            coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns frozen
+            // Frozen day: the HRV-window recompute is intentionally skipped.
+            coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any()) } returns null
+
+            val run1 = repo.computeDailySummary(today)
+            val run2 = repo.computeDailySummary(today)
+
+            assertEquals(storedMu, run1.hrvMuMssd, "frozen hrvMuMssd must be preserved, not clobbered to null")
+            assertEquals(storedMu, run2.hrvMuMssd, "frozen hrvMuMssd must stay stable across recalculations")
+        }
+
+    @Test
     fun archSubScoreIsNotPreRoundedInsideSleepScore() {
         val strategy = SleepScoringStrategy(LoadScoringStrategy())
 
