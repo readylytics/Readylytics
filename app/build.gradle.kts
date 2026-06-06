@@ -107,15 +107,21 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             "**/di/**",
         )
 
+    // AGP 7.x uses tmp/kotlin-classes/debug; AGP 8/9+ uses intermediates/kotlinc/debug
     val debugTree =
-        fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
-            exclude(fileFilter)
-        }
+        files(
+            fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
+                exclude(fileFilter)
+            },
+            fileTree("${layout.buildDirectory.get()}/intermediates/kotlinc/debug") {
+                exclude(fileFilter)
+            },
+        )
 
     val mainSrc = "${project.projectDir}/src/main/java"
 
     sourceDirectories.setFrom(files(mainSrc))
-    classDirectories.setFrom(files(debugTree))
+    classDirectories.setFrom(debugTree)
     executionData.setFrom(
         fileTree(layout.buildDirectory.get()) {
             include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
