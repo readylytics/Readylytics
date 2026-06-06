@@ -59,7 +59,7 @@ class BaselineComputer
             return sessions.mapNotNull { session ->
                 val samples = samplesBySession[session.id] ?: return@mapNotNull null
                 if (samples.isEmpty()) return@mapNotNull null
-                val index = Math.round((percentile / 100.0) * (samples.size - 1)).toInt().coerceIn(0, samples.size - 1)
+                val index = ((percentile / 100.0) * (samples.size - 1)).roundToInt().coerceIn(0, samples.size - 1)
                 samples[index].beatsPerMinute
             }
         }
@@ -84,7 +84,7 @@ class BaselineComputer
             return sessions.mapNotNull { session ->
                 val samples = samplesBySession[session.id] ?: return@mapNotNull null
                 if (samples.isEmpty()) return@mapNotNull null
-                val index = Math.round((percentile / 100.0) * (samples.size - 1)).toInt().coerceIn(0, samples.size - 1)
+                val index = ((percentile / 100.0) * (samples.size - 1)).roundToInt().coerceIn(0, samples.size - 1)
                 samples[index].beatsPerMinute
             }
         }
@@ -212,7 +212,7 @@ class BaselineComputer
 
                     if (count < 10) return@mapNotNull null
 
-                    val idx = Math.round((percentile / 100.0) * (count - 1)).toInt().coerceIn(0, count - 1)
+                    val idx = ((percentile / 100.0) * (count - 1)).roundToInt().coerceIn(0, count - 1)
 
                     // Index into in-memory list (no DB query)
                     samples[idx].beatsPerMinute.toFloat()
@@ -462,9 +462,8 @@ class BaselineComputer
                     val nadirBpm =
                         if (samples != null && samples.size >= 10) {
                             val idx =
-                                Math
-                                    .round((percentile / 100.0) * (samples.size - 1))
-                                    .toInt()
+                                ((percentile / 100.0) * (samples.size - 1))
+                                    .roundToInt()
                                     .coerceIn(0, samples.size - 1)
                             samples[idx].beatsPerMinute.toFloat()
                         } else {
