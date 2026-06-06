@@ -122,7 +122,10 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         val count = debugTree.files.size
         println("jacocoTestReport: classDirectories has $count class file(s)")
         if (count == 0) {
-            val buildDir = project.layout.buildDirectory.get().asFile
+            val buildDir =
+                project.layout.buildDirectory
+                    .get()
+                    .asFile
             buildDir
                 .walkTopDown()
                 .filter { it.extension == "class" }
