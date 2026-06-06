@@ -11,6 +11,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ForegroundSyncControllerTest {
@@ -42,5 +44,52 @@ class ForegroundSyncControllerTest {
 
             // Verify sync() was only called once because the second one should have been blocked by the mutex (tryLock)
             coVerify(exactly = 1) { syncUseCase.sync(any(), any()) }
+        }
+
+    @Test
+    fun `evaluateAndSync uses windowDays=1 when last sync was today`() =
+        runTest {
+            val todayMs =
+                LocalDate.now(ZoneId.systemDefault())
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+            val prefs =
+                UserPreferences(
+                    syncPreference = SyncPreference.ALWAYS,
+                    lastSyncTimestamp = todayMs,
+                )
+
+            coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
+            coEvery { syncUseCase.sync(any(), any()) } returns
+                com.gregor.lauritz.healthdashboard.domain.model.Result.Success(Unit)
+
+            controller.evaluateAndSync()
+
+            coVerify(exactly = 1) { syncUseCase.sync(windowDays = 1, onProgress = any()) }
+        }
+
+    @Test
+    fun `evaluateAndSync uses daysSinceLastSync+1 when last sync was multiple days ago`() =
+        runTest {
+            val threeDaysAgoMs =
+                LocalDate.now(ZoneId.systemDefault())
+                    .minusDays(3)
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+            val prefs =
+                UserPreferences(
+                    syncPreference = SyncPreference.ALWAYS,
+                    lastSyncTimestamp = threeDaysAgoMs,
+                )
+
+            coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
+            coEvery { syncUseCase.sync(any(), any()) } returns
+                com.gregor.lauritz.healthdashboard.domain.model.Result.Success(Unit)
+
+            controller.evaluateAndSync()
+
+            coVerify(exactly = 1) { syncUseCase.sync(windowDays = 4, onProgress = any()) }
         }
 }

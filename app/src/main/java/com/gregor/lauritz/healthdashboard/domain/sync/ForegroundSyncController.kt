@@ -11,6 +11,10 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -48,7 +52,9 @@ class ForegroundSyncController
                     com.gregor.lauritz.healthdashboard.domain.util.logD(
                         "ForegroundSyncController",
                     ) { "Sync type: ALWAYS" }
-                    executeSync(isFirstSync = prefs.lastSyncTimestamp == 0L)
+                    val isFirst = prefs.lastSyncTimestamp == 0L
+                    val windowDays = if (isFirst) null else computeWindowDays(prefs.lastSyncTimestamp)
+                    executeSync(isFirstSync = isFirst, windowDays = windowDays)
                 }
                 SyncPreference.BY_TIME -> {
                     val intervalMs = prefs.syncIntervalHours * 3_600_000L
@@ -57,7 +63,9 @@ class ForegroundSyncController
                         "Sync type: BY_TIME. Time since last: ${timeSinceLast / 1000}s, Interval: ${intervalMs / 1000}s"
                     }
                     if (timeSinceLast > intervalMs) {
-                        executeSync(isFirstSync = prefs.lastSyncTimestamp == 0L)
+                        val isFirst = prefs.lastSyncTimestamp == 0L
+                        val windowDays = if (isFirst) null else computeWindowDays(prefs.lastSyncTimestamp)
+                        executeSync(isFirstSync = isFirst, windowDays = windowDays)
                     } else {
                         com.gregor.lauritz.healthdashboard.domain.util.logD(
                             "ForegroundSyncController",
@@ -106,6 +114,16 @@ class ForegroundSyncController
             _isSyncing.value = false
             _recalcProgress.value = null
             if (success) _syncCompletedEvent.tryEmit(Unit)
+        }
+
+        private fun computeWindowDays(lastSyncTimestamp: Long): Int {
+            val lastSyncDate =
+                Instant.ofEpochMilli(lastSyncTimestamp)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+            val today = LocalDate.now(ZoneId.systemDefault())
+            val daysSince = ChronoUnit.DAYS.between(lastSyncDate, today).toInt()
+            return if (daysSince == 0) 1 else daysSince + 1
         }
 
         private suspend fun executeSync(

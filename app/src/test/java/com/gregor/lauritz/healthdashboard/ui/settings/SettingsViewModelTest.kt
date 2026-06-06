@@ -12,11 +12,13 @@ import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -151,7 +153,12 @@ class SettingsViewModelTest {
     fun `SyncSettingsViewModel resync event enqueues worker`() =
         runTest {
             val mockScheduler = mockk<WorkerScheduler>(relaxed = true)
-            val workManager = androidx.work.WorkManager.getInstance(context)
+            val workManager =
+                mockk<androidx.work.WorkManager> {
+                    every {
+                        getWorkInfosForUniqueWorkFlow(WorkerScheduler.RESYNC_WORK_NAME)
+                    } returns flowOf(emptyList())
+                }
 
             val viewModel =
                 SyncSettingsViewModel(
