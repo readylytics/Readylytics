@@ -6,12 +6,14 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
 import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -152,6 +154,11 @@ class SettingsViewModelTest {
     @Test
     fun `SyncSettingsViewModel resync event enqueues worker`() =
         runTest {
+            val mockSettingsRepo =
+                mockk<SettingsRepository>(relaxed = true) {
+                    every { userPreferences } returns flowOf(UserPreferences())
+                    coEvery { getAvailableDevices() } returns emptyList()
+                }
             val mockScheduler = mockk<WorkerScheduler>(relaxed = true)
             val workManager =
                 mockk<androidx.work.WorkManager> {
@@ -162,7 +169,7 @@ class SettingsViewModelTest {
 
             val viewModel =
                 SyncSettingsViewModel(
-                    settingsRepo,
+                    mockSettingsRepo,
                     healthSyncUseCase,
                     mockScheduler,
                     workManager,
