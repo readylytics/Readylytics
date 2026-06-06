@@ -107,21 +107,34 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             "**/di/**",
         )
 
-    // AGP 7.x uses tmp/kotlin-classes/debug; AGP 8/9+ uses intermediates/kotlinc/debug
+    // Search broadly across all known AGP output locations for compiled Kotlin/Java class files
     val debugTree =
-        files(
-            fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
-                exclude(fileFilter)
-            },
-            fileTree("${layout.buildDirectory.get()}/intermediates/kotlinc/debug") {
-                exclude(fileFilter)
-            },
-        )
+        fileTree(layout.buildDirectory.get()) {
+            include(
+                "tmp/kotlin-classes/debug/**/*.class",
+                "intermediates/kotlinc/debug/**/*.class",
+                "intermediates/javac/debug/**/*.class",
+            )
+            fileFilter.forEach { exclude(it) }
+        }
+
+    doFirst {
+        val count = debugTree.files.size
+        println("jacocoTestReport: classDirectories has $count class file(s)")
+        if (count == 0) {
+            val buildDir = project.layout.buildDirectory.get().asFile
+            buildDir
+                .walkTopDown()
+                .filter { it.extension == "class" }
+                .take(20)
+                .forEach { println("  class: ${it.relativeTo(buildDir)}") }
+        }
+    }
 
     val mainSrc = "${project.projectDir}/src/main/java"
 
     sourceDirectories.setFrom(files(mainSrc))
-    classDirectories.setFrom(debugTree)
+    classDirectories.setFrom(files(debugTree))
     executionData.setFrom(
         fileTree(layout.buildDirectory.get()) {
             include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
