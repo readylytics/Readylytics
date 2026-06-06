@@ -118,7 +118,8 @@ class ForegroundSyncController
 
         private fun computeWindowDays(lastSyncTimestamp: Long): Int {
             val lastSyncDate =
-                Instant.ofEpochMilli(lastSyncTimestamp)
+                Instant
+                    .ofEpochMilli(lastSyncTimestamp)
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate()
             val today = LocalDate.now(ZoneId.systemDefault())
