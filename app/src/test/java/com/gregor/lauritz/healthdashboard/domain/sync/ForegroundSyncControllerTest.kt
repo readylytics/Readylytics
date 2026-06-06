@@ -49,9 +49,11 @@ class ForegroundSyncControllerTest {
     @Test
     fun `evaluateAndSync uses windowDays=1 when last sync was today`() =
         runTest {
+            val zone = ZoneId.systemDefault()
             val todayMs =
-                LocalDate.now(ZoneId.systemDefault())
-                    .atStartOfDay(ZoneId.systemDefault())
+                LocalDate
+                    .now(zone)
+                    .atStartOfDay(zone)
                     .toInstant()
                     .toEpochMilli()
             val prefs =
@@ -62,7 +64,8 @@ class ForegroundSyncControllerTest {
 
             coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
             coEvery { syncUseCase.sync(any(), any()) } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result.Success(Unit)
+                com.gregor.lauritz.healthdashboard.domain.model.Result
+                    .Success(Unit)
 
             controller.evaluateAndSync()
 
@@ -72,10 +75,12 @@ class ForegroundSyncControllerTest {
     @Test
     fun `evaluateAndSync uses daysSinceLastSync+1 when last sync was multiple days ago`() =
         runTest {
+            val zone = ZoneId.systemDefault()
             val threeDaysAgoMs =
-                LocalDate.now(ZoneId.systemDefault())
+                LocalDate
+                    .now(zone)
                     .minusDays(3)
-                    .atStartOfDay(ZoneId.systemDefault())
+                    .atStartOfDay(zone)
                     .toInstant()
                     .toEpochMilli()
             val prefs =
@@ -86,7 +91,8 @@ class ForegroundSyncControllerTest {
 
             coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
             coEvery { syncUseCase.sync(any(), any()) } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result.Success(Unit)
+                com.gregor.lauritz.healthdashboard.domain.model.Result
+                    .Success(Unit)
 
             controller.evaluateAndSync()
 
