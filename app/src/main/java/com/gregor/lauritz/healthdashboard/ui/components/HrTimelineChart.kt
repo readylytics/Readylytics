@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gregor.lauritz.healthdashboard.ui.heartrate.HrSample
-import com.gregor.lauritz.healthdashboard.ui.theme.LocalExtendedColors
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -63,9 +62,31 @@ fun HrTimelineChart(
 ) {
     if (samples.isEmpty()) {
         EmptyChartPlaceholder(modifier = modifier)
-        return
+    } else {
+        HrTimelineChartContent(
+            samples = samples,
+            dayStartMs = dayStartMs,
+            zone1MinBpm = zone1MinBpm,
+            zone1MaxBpm = zone1MaxBpm,
+            zone2MaxBpm = zone2MaxBpm,
+            zone3MaxBpm = zone3MaxBpm,
+            zone4MaxBpm = zone4MaxBpm,
+            modifier = modifier,
+        )
     }
+}
 
+@Composable
+private fun HrTimelineChartContent(
+    samples: List<HrSample>,
+    dayStartMs: Long,
+    zone1MinBpm: Int,
+    zone1MaxBpm: Int,
+    zone2MaxBpm: Int,
+    zone3MaxBpm: Int,
+    zone4MaxBpm: Int,
+    modifier: Modifier = Modifier,
+) {
     // Pulsing animation for selected point highlight
     val infiniteTransition = rememberInfiniteTransition(label = "hrPulseTransition")
     val pulseRadiusCoeff by infiniteTransition.animateFloat(
@@ -89,13 +110,7 @@ fun HrTimelineChart(
         label = "hrPulseAlpha",
     )
 
-    val extendedColors = LocalExtendedColors.current
-    val zone0Color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
-    val zone1Color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
-    val zone2Color = MaterialTheme.colorScheme.error.copy(alpha = 0.25f)
-    val zone3Color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-    val zone4Color = extendedColors.warning.copy(alpha = 0.35f)
-    val zone5Color = MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
+    val zoneColors = hrZoneColors()
     val lineColor = MaterialTheme.colorScheme.primary
     val axisTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val axisLineColor = MaterialTheme.colorScheme.outlineVariant
@@ -207,12 +222,12 @@ fun HrTimelineChart(
             fun bpmToY(bpm: Int): Float = plotTop + (1f - (bpm - yMin).toFloat() / (yMax - yMin).toFloat()) * plotH
 
             // Draw zone bands (physical top y is smaller than physical bottom y)
-            drawZoneBand(zone5Color, plotTop, bpmToY(zone4MaxBpm), plotLeft, plotW)
-            drawZoneBand(zone4Color, bpmToY(zone4MaxBpm), bpmToY(zone3MaxBpm), plotLeft, plotW)
-            drawZoneBand(zone3Color, bpmToY(zone3MaxBpm), bpmToY(zone2MaxBpm), plotLeft, plotW)
-            drawZoneBand(zone2Color, bpmToY(zone2MaxBpm), bpmToY(zone1MaxBpm), plotLeft, plotW)
-            drawZoneBand(zone1Color, bpmToY(zone1MaxBpm), bpmToY(zone1MinBpm), plotLeft, plotW)
-            drawZoneBand(zone0Color, bpmToY(zone1MinBpm), plotBottom, plotLeft, plotW)
+            drawZoneBand(zoneColors.zone5, plotTop, bpmToY(zone4MaxBpm), plotLeft, plotW)
+            drawZoneBand(zoneColors.zone4, bpmToY(zone4MaxBpm), bpmToY(zone3MaxBpm), plotLeft, plotW)
+            drawZoneBand(zoneColors.zone3, bpmToY(zone3MaxBpm), bpmToY(zone2MaxBpm), plotLeft, plotW)
+            drawZoneBand(zoneColors.zone2, bpmToY(zone2MaxBpm), bpmToY(zone1MaxBpm), plotLeft, plotW)
+            drawZoneBand(zoneColors.zone1, bpmToY(zone1MaxBpm), bpmToY(zone1MinBpm), plotLeft, plotW)
+            drawZoneBand(zoneColors.zone0, bpmToY(zone1MinBpm), plotBottom, plotLeft, plotW)
 
             // Draw grid lines
             val gridLineColor = axisLineColor.copy(alpha = 0.4f)
