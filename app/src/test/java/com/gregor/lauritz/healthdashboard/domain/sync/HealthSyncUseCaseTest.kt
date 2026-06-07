@@ -21,10 +21,13 @@ import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -115,6 +118,27 @@ class HealthSyncUseCaseTest {
                 heartRateDao.upsertAll(any())
                 hrvDao.upsertAll(any())
             }
+        }
+
+    @Test
+    fun `daily sync windowDays 1 fetches samples from yesterday to cover cross-midnight sleep`() =
+        runTest {
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+
+            val hrvFromSlot = slot<Instant>()
+            val hrFromSlot = slot<Instant>()
+            coEvery { hcRepo.readHrvSamples(capture(hrvFromSlot), any()) } returns emptyList()
+            coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
+
+            useCase.sync(windowDays = 1)
+
+            // Last night's sleep session begins the previous evening (before midnight); the
+            // ingestion fetch must reach back one extra day so its pre-midnight HR/HRV samples
+            // are captured. windowDays = 1 => fetch from yesterday 00:00, not today 00:00.
+            val zoneId = ZoneId.systemDefault()
+            val yesterdayMidnight = LocalDate.now(zoneId).minusDays(1).atStartOfDay(zoneId).toInstant()
+            assertEquals(yesterdayMidnight, hrvFromSlot.captured)
+            assertEquals(yesterdayMidnight, hrFromSlot.captured)
         }
 
     @Test

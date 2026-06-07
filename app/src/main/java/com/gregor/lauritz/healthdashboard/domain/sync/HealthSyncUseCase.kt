@@ -89,7 +89,14 @@ class HealthSyncUseCase
                         val windowStart = today.minusDays((windowDays - 1).toLong()).atStartOfDay(zoneId).toInstant()
                         val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
 
-                        ingestWindow(windowStart, windowEnd, prefs)
+                        // Overnight sleep sessions cross midnight: a session ending today began the
+                        // previous evening. Reach the raw-sample fetch back one extra day so the
+                        // pre-midnight HR/HRV samples of the earliest in-window night are captured
+                        // (windowDays = 1 → ingest today + yesterday). Scoring scope stays = windowDays
+                        // (current-day-only refresh is unchanged); only the ingestion read widens.
+                        val ingestStart = today.minusDays(windowDays.toLong()).atStartOfDay(zoneId).toInstant()
+
+                        ingestWindow(ingestStart, windowEnd, prefs)
 
                         // Bulk-fetch steps per day using aggregate API to prevent overlap/duplication
                         logD("HealthSyncUseCase") { "Bulk fetching steps for $windowDays days..." }

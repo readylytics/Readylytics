@@ -26,7 +26,9 @@ All paths are rooted at `app/src/main/java/com/gregor/lauritz/healthdashboard/`.
                ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
 │  domain/sync/HealthSyncUseCase                                             │
-│   • sync(windowDays)        — recent window (foreground; daily = 1 day)    │
+│   • sync(windowDays)        — recent window (foreground; daily = 1 day);   │
+│                               ingestion fetch reaches windowDays+1 back to  │
+│                               capture cross-midnight sleep (recalc stays 1) │
 │   • resyncRange(...)        — full historical, chunked (30-day windows)    │
 │   • ingestWindow(...)       — read → map → device-filter → upsert (1 txn)  │
 │   • retryWithBackoff(...)   — bounded exponential backoff on HC/IO faults  │
@@ -87,7 +89,7 @@ All paths are rooted at `app/src/main/java/com/gregor/lauritz/healthdashboard/`.
 
 | Component | Path | Responsibility |
 | :--- | :--- | :--- |
-| `HealthSyncUseCase` | `domain/sync/HealthSyncUseCase.kt` | Core engine. `sync(windowDays, onProgress)` recent-window sync; `resyncRange(start, end, chunkDays = 30, onProgress)` full historical (two-phase: chunked re-fetch then walk-forward recompute); `ingestWindow(start, end, prefs)` the single read→map→filter→upsert funnel; `retryWithBackoff(maxAttempts = 4, initialDelayMs = 1000)` for transient HC/IO faults (never swallows `CancellationException`); `syncMutex` serializes daily vs. resync. |
+| `HealthSyncUseCase` | `domain/sync/HealthSyncUseCase.kt` | Core engine. `sync(windowDays, onProgress)` recent-window sync — note the **ingestion fetch starts one day earlier than the scored window** (`today − windowDays`), because overnight sleep sessions begin the previous evening; clipping at the scored window's midnight would drop a night's pre-midnight HR/HRV samples (lower HRV mean, higher RHR percentile). The recalc loop still covers only `windowDays` (current-day-only refresh unchanged); `resyncRange(start, end, chunkDays = 30, onProgress)` full historical (two-phase: chunked re-fetch then walk-forward recompute); `ingestWindow(start, end, prefs)` the single read→map→filter→upsert funnel; `retryWithBackoff(maxAttempts = 4, initialDelayMs = 1000)` for transient HC/IO faults (never swallows `CancellationException`); `syncMutex` serializes daily vs. resync. |
 | `ForegroundSyncController` | `domain/sync/ForegroundSyncController.kt` | Foreground state + progress bridge. `triggerDailySync()` = pull-to-refresh (current day only, `windowDays = 1`); `triggerImmediateSync()` = first-launch catch-up; `onBackgroundRecalc{Started,Progress,Finished}()` publish WorkManager job progress into `isSyncing` / `recalcProgress` StateFlows + `syncCompletedEvent`. |
 | `FullHistoricalResyncUseCase` | `domain/sync/FullHistoricalResyncUseCase.kt` | Resolves the retention-bounded start date via `RetentionBounds.resolveResyncStartDate()` and delegates to `HealthSyncUseCase.resyncRange(start, today)`. No math. |
 | `HealthResyncWorker` | `workers/HealthResyncWorker.kt` | `@HiltWorker` durable foreground service (`FOREGROUND_SERVICE_TYPE_DATA_SYNC`). Runs the resync use case, emits `WorkInfo` progress (`setProgressAsync`), posts a determinate "day X of Y" notification, bridges progress to `ForegroundSyncController`; `Result.retry()` on transient failure. |
