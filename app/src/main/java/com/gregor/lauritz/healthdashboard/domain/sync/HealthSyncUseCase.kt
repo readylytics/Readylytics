@@ -107,7 +107,7 @@ class HealthSyncUseCase
                         val staleCount = dailySummaryDao.countRowsWithBaselineVersionBelow(2)
                         val migrationRange =
                             if (staleCount > 0) {
-                                dailySummaryDao.getEarliestDateMs()?.let { earliestMs ->
+                                dailySummaryDao.getEarliestStaleDateMs(2)?.let { earliestMs ->
                                     val earliest = Instant.ofEpochMilli(earliestMs).atZone(zoneId).toLocalDate()
                                     earliest to LocalDate.now(zoneId)
                                 }

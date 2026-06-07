@@ -122,6 +122,11 @@ interface DailySummaryDao {
     @Query("SELECT MIN(dateMidnightMs) FROM daily_summaries")
     suspend fun getEarliestDateMs(): Long?
 
+    @Query(
+        "SELECT MIN(dateMidnightMs) FROM daily_summaries WHERE baseline_version IS NULL OR baseline_version < :version",
+    )
+    suspend fun getEarliestStaleDateMs(version: Int): Long?
+
     @Query("SELECT MIN(dateMidnightMs) FROM daily_summaries")
     fun _observeEarliestDateMs(): Flow<Long?>
 

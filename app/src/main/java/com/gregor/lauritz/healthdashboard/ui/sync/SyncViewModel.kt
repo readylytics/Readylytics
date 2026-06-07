@@ -64,7 +64,7 @@ class SyncViewModel
         val isSyncing = foregroundSyncController.isSyncing
         val recalcProgress = foregroundSyncController.recalcProgress
 
-        private val _syncEvents = Channel<SyncEvent>()
+        private val _syncEvents = Channel<SyncEvent>(capacity = Channel.BUFFERED)
         val syncEvents = _syncEvents.receiveAsFlow()
 
         private var foregroundCheckJob: Job? = null
@@ -72,7 +72,7 @@ class SyncViewModel
         init {
             viewModelScope.launch {
                 foregroundSyncController.syncCompletedEvent.collect {
-                    _syncEvents.send(SyncEvent.SyncCompleted)
+                    _syncEvents.trySend(SyncEvent.SyncCompleted)
                 }
             }
 

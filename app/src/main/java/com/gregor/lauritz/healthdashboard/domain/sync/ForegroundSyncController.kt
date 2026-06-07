@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.domain.sync
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.domain.model.getOrThrow
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -27,7 +28,11 @@ class ForegroundSyncController
     ) {
         private val syncMutex = Mutex()
 
-        private val _syncCompletedEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        private val _syncCompletedEvent =
+            MutableSharedFlow<Unit>(
+                extraBufferCapacity = 1,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
         val syncCompletedEvent: SharedFlow<Unit> = _syncCompletedEvent.asSharedFlow()
 
         private val _isSyncing = MutableStateFlow(false)
@@ -52,8 +57,16 @@ class ForegroundSyncController
                     com.gregor.lauritz.healthdashboard.domain.util.logD(
                         "ForegroundSyncController",
                     ) { "Sync type: ALWAYS" }
-                    val isFirst = prefs.lastSyncTimestamp == 0L
-                    val windowDays = if (isFirst) null else computeWindowDays(prefs.lastSyncTimestamp)
+                    val startTimestamp =
+                        if (prefs.lastSyncTimestamp ==
+                            0L
+                        ) {
+                            prefs.installDate
+                        } else {
+                            prefs.lastSyncTimestamp
+                        }
+                    val isFirst = prefs.lastSyncTimestamp == 0L && startTimestamp == 0L
+                    val windowDays = if (isFirst) null else computeWindowDays(startTimestamp)
                     executeSync(isFirstSync = isFirst, windowDays = windowDays)
                 }
                 SyncPreference.BY_TIME -> {
@@ -63,8 +76,16 @@ class ForegroundSyncController
                         "Sync type: BY_TIME. Time since last: ${timeSinceLast / 1000}s, Interval: ${intervalMs / 1000}s"
                     }
                     if (timeSinceLast > intervalMs) {
-                        val isFirst = prefs.lastSyncTimestamp == 0L
-                        val windowDays = if (isFirst) null else computeWindowDays(prefs.lastSyncTimestamp)
+                        val startTimestamp =
+                            if (prefs.lastSyncTimestamp ==
+                                0L
+                            ) {
+                                prefs.installDate
+                            } else {
+                                prefs.lastSyncTimestamp
+                            }
+                        val isFirst = prefs.lastSyncTimestamp == 0L && startTimestamp == 0L
+                        val windowDays = if (isFirst) null else computeWindowDays(startTimestamp)
                         executeSync(isFirstSync = isFirst, windowDays = windowDays)
                     } else {
                         com.gregor.lauritz.healthdashboard.domain.util.logD(

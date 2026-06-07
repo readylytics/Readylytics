@@ -151,8 +151,8 @@ fun MainScaffold(
                         total = progress.total,
                         modifier =
                             Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = innerPadding.calculateTopPadding()),
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = bottomPadding),
                     )
                 }
             }
