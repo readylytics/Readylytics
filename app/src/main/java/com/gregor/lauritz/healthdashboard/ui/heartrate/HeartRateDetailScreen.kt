@@ -301,13 +301,14 @@ private fun ZoneRow(
 
 @Composable
 private fun zoneColor(zone: Int): Color {
-    val extendedColors = LocalExtendedColors.current
+    val cs = MaterialTheme.colorScheme
+    val ext = LocalExtendedColors.current
     return when (zone) {
-        0 -> MaterialTheme.colorScheme.secondaryContainer
-        1 -> MaterialTheme.colorScheme.tertiaryContainer
-        2 -> MaterialTheme.colorScheme.error.copy(alpha = 0.4f)
-        3 -> MaterialTheme.colorScheme.primaryContainer
-        4 -> extendedColors.warning
-        else -> MaterialTheme.colorScheme.error
+        0 -> cs.surfaceVariant
+        1 -> cs.secondaryContainer
+        2 -> cs.primaryContainer
+        3 -> cs.tertiaryContainer
+        4 -> ext.warningContainer
+        else -> cs.errorContainer
     }
 }
