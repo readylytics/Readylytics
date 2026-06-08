@@ -55,8 +55,8 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.compose.cartesian.data.columnSeries
-import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.data.columnModel
+import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
@@ -406,7 +406,7 @@ private fun AcwrChart(
         modelProducer.runTransaction {
             val validTrimp = trimpPoints.filter { it.value != null }
             if (validTrimp.isNotEmpty()) {
-                columnSeries {
+                columnModel {
                     series(
                         x = validTrimp.map { it.dayOffset },
                         y = validTrimp.mapNotNull { it.value?.toDouble() },
@@ -415,7 +415,7 @@ private fun AcwrChart(
             }
             val validRatio = ratioPoints.filter { it.value != null }
             if (validRatio.isNotEmpty()) {
-                lineSeries {
+                lineModel {
                     series(
                         x = validRatio.map { it.dayOffset },
                         y = validRatio.mapNotNull { it.value?.toDouble() },

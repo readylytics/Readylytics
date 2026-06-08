@@ -59,7 +59,7 @@ class AdaptiveRhrBaselineProvider
             return if (hasEnoughData) {
                 Math.round(baselineComputer.resolveBaselineRhrBpm(rhrValues, null))
             } else {
-                PhysiologyConstants.DEFAULT_RHR_BPM.toInt()
+                PhysiologyConstants.DEFAULT_RHR_BPM
             }
         }
 

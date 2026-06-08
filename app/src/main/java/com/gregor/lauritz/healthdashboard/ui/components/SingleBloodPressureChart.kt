@@ -38,7 +38,7 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
@@ -159,7 +159,7 @@ fun SingleBloodPressureChart(
     LaunchedEffect(points) {
         modelProducer.runTransaction {
             val valid = points.filter { it.value != null }
-            lineSeries {
+            lineModel {
                 series(
                     x = valid.map { it.dayOffset },
                     y = valid.mapNotNull { it.value?.toDouble() },
