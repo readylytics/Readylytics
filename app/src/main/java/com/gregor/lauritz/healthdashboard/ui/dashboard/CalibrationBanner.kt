@@ -14,7 +14,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 
 @Composable
 fun CalibrationBanner(modifier: Modifier = Modifier) {
@@ -34,7 +36,7 @@ fun CalibrationBanner(modifier: Modifier = Modifier) {
                 contentDescription = null,
             )
             Text(
-                text = "Calibrating — averages shown may improve as more nights are recorded.",
+                text = stringResource(R.string.message_calibrating_banner),
                 style = MaterialTheme.typography.bodySmall,
             )
         }

@@ -333,15 +333,24 @@ class HealthConnectRepositoryImpl
                     coroutineScope {
                         // Each read is wrapped so a single revoked/missing permission can't
                         // cancel the whole scope and collapse discovery to an empty list.
-                        val sleepSessionsDeferred = async { runCatching { readSleepSessions(from, to) }.getOrDefault(emptyList()) }
-                        val hrRecordsDeferred = async { runCatching { readHeartRateSamples(from, to) }.getOrDefault(emptyList()) }
-                        val hrvRecordsDeferred = async { runCatching { readHrvSamples(from, to) }.getOrDefault(emptyList()) }
-                        val workoutRecordsDeferred = async { runCatching { readExerciseSessions(from, to) }.getOrDefault(emptyList()) }
-                        val stepsRecordsDeferred = async { runCatching { readStepsRecords(from, to) }.getOrDefault(emptyList()) }
-                        val weightRecordsDeferred = async { runCatching { readWeightRecords(from, to) }.getOrDefault(emptyList()) }
-                        val bodyFatRecordsDeferred = async { runCatching { readBodyFatRecords(from, to) }.getOrDefault(emptyList()) }
-                        val bloodPressureRecordsDeferred = async { runCatching { readBloodPressureRecords(from, to) }.getOrDefault(emptyList()) }
-                        val spo2RecordsDeferred = async { runCatching { readOxygenSaturationRecords(from, to) }.getOrDefault(emptyList()) }
+                        val sleepSessionsDeferred =
+                            async { runCatching { readSleepSessions(from, to) }.getOrDefault(emptyList()) }
+                        val hrRecordsDeferred =
+                            async { runCatching { readHeartRateSamples(from, to) }.getOrDefault(emptyList()) }
+                        val hrvRecordsDeferred =
+                            async { runCatching { readHrvSamples(from, to) }.getOrDefault(emptyList()) }
+                        val workoutRecordsDeferred =
+                            async { runCatching { readExerciseSessions(from, to) }.getOrDefault(emptyList()) }
+                        val stepsRecordsDeferred =
+                            async { runCatching { readStepsRecords(from, to) }.getOrDefault(emptyList()) }
+                        val weightRecordsDeferred =
+                            async { runCatching { readWeightRecords(from, to) }.getOrDefault(emptyList()) }
+                        val bodyFatRecordsDeferred =
+                            async { runCatching { readBodyFatRecords(from, to) }.getOrDefault(emptyList()) }
+                        val bloodPressureRecordsDeferred =
+                            async { runCatching { readBloodPressureRecords(from, to) }.getOrDefault(emptyList()) }
+                        val spo2RecordsDeferred =
+                            async { runCatching { readOxygenSaturationRecords(from, to) }.getOrDefault(emptyList()) }
 
                         sleepSessionsDeferred.await().forEach { record ->
                             devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))

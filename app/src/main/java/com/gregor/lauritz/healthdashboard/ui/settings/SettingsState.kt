@@ -9,12 +9,13 @@ import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
+import com.gregor.lauritz.healthdashboard.ui.common.UiText
 import java.time.LocalDate
 
 data class ThresholdSettingsState(
     val circadianThresholdOverride: Int? = null,
     val isUpdatingThreshold: Boolean = false,
-    val thresholdError: String? = null,
+    val thresholdError: UiText? = null,
     val hrvOptimalThreshold: Float = SettingsDefaults.HRV_OPTIMAL_THRESHOLD,
     val hrvWarningThreshold: Float = SettingsDefaults.HRV_WARNING_THRESHOLD,
     val rhrOptimalThreshold: Float = SettingsDefaults.RHR_OPTIMAL_THRESHOLD,
@@ -67,7 +68,7 @@ data class LocalBackupState(
     val isPasswordSet: Boolean = false,
     val showSetPasswordDialog: Boolean = false,
     val showRestoreConfirmDialog: Boolean = false,
-    val backupError: String? = null,
+    val backupError: UiText? = null,
     val restoreSuccess: Boolean = false,
     val pendingRestoreFile: BackupFileInfo? = null,
     val availableBackups: List<BackupFileInfo> = emptyList(),
@@ -94,6 +95,8 @@ data class SyncSettingsState(
     val syncPreference: SyncPreference = SettingsDefaults.SYNC_PREFERENCE,
     val syncIntervalHours: Int = SettingsDefaults.SYNC_INTERVAL_HOURS,
     val isResyncing: Boolean = false,
+    val resyncCurrent: Int = 0,
+    val resyncTotal: Int = 0,
     val availableDevices: List<String> = emptyList(),
     val primaryDeviceName: String? = null,
 )

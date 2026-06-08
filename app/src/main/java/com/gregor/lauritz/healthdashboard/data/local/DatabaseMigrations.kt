@@ -879,6 +879,17 @@ object DatabaseMigrations {
             }
         }
 
+    val MIGRATION_25_26 =
+        object : Migration(25, 26) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE daily_summaries DROP COLUMN baseline_version")
+            }
+
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE daily_summaries DROP COLUMN baseline_version")
+            }
+        }
+
     val all =
         arrayOf(
             MIGRATION_1_2,
@@ -906,5 +917,6 @@ object DatabaseMigrations {
             MIGRATION_23_24,
             MIGRATION_24_25,
             MIGRATION_25_24,
+            MIGRATION_25_26,
         )
 }

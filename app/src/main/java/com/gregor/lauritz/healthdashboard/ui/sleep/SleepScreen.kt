@@ -18,9 +18,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.deepSleepStatus
 import com.gregor.lauritz.healthdashboard.domain.model.efficiencyStatus
@@ -125,7 +127,7 @@ fun SleepScreen(
                 )
             } else {
                 TrendCard(
-                    title = "Sleep Breakdown",
+                    title = stringResource(R.string.sleep_breakdown_title),
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
                     SleepArchitectureBar(
@@ -146,7 +148,7 @@ fun SleepScreen(
                 )
             } else {
                 TrendCard(
-                    title = "Sleep Timeline",
+                    title = stringResource(R.string.sleep_timeline_title),
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
                     SleepStagesChart(
@@ -161,7 +163,7 @@ fun SleepScreen(
         item(key = "spacer_arch") { Spacer(Modifier.height(24.dp)) }
 
         item(key = "metrics_header") {
-            SectionHeader(title = "Metrics")
+            SectionHeader(title = stringResource(R.string.sleep_metrics_title))
             Spacer(Modifier.height(8.dp))
         }
 
@@ -215,11 +217,18 @@ private fun MetricsGrid(
             }
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCard(
-                    title = "Sleep Efficiency",
-                    value = session?.let { "${it.efficiency.roundToPercentInt()}%" } ?: "—",
-                    secondaryText = "Goal: >85%",
+                    title = stringResource(R.string.card_title_sleep_efficiency),
+                    value =
+                        session?.let {
+                            stringResource(
+                                R.string.card_efficiency_format,
+                                it.efficiency.roundToPercentInt(),
+                            )
+                        }
+                            ?: "—",
+                    secondaryText = stringResource(R.string.card_goal_sleep_efficiency),
                     status = efficiencyStatus,
-                    tooltip = "The percentage of time actually asleep while in bed. (Goal: >85%).",
+                    tooltip = stringResource(R.string.tooltip_sleep_efficiency),
                     onClick = null,
                 )
             }
@@ -230,21 +239,21 @@ private fun MetricsGrid(
         ) {
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCard(
-                    title = "Deep Sleep",
+                    title = stringResource(R.string.card_title_deep_sleep),
                     value = metrics?.deepSleepPercentDisplay ?: "—",
-                    secondaryText = "Target: 15–25%",
+                    secondaryText = stringResource(R.string.card_target_deep_sleep),
                     status = deepStatus,
-                    tooltip = "Time in Stage 3 (Physical repair). Target: 15–25% of total sleep.",
+                    tooltip = stringResource(R.string.tooltip_deep_sleep),
                     onClick = null,
                 )
             }
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCard(
-                    title = "REM Sleep",
+                    title = stringResource(R.string.card_title_rem_sleep),
                     value = metrics?.remSleepPercentDisplay ?: "—",
-                    secondaryText = "Target: 20–25%",
+                    secondaryText = stringResource(R.string.card_target_rem_sleep),
                     status = remStatus,
-                    tooltip = "Time in Rapid Eye Movement. Target: 20–25% of total sleep.",
+                    tooltip = stringResource(R.string.tooltip_rem_sleep),
                     onClick = null,
                 )
             }

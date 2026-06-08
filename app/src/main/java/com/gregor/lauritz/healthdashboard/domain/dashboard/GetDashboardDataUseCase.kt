@@ -105,13 +105,20 @@ class GetDashboardDataUseCase
             val efficiency = lastSleepSession?.efficiency?.roundToPercentInt()?.toString() ?: "—"
 
             return CardData(
-                title = "Sleep Efficiency",
-                value = if (efficiency == "—") efficiency else "$efficiency%",
+                title = resourceProvider.getString(R.string.card_title_sleep_efficiency),
+                value =
+                    if (efficiency ==
+                        "—"
+                    ) {
+                        efficiency
+                    } else {
+                        resourceProvider.getString(R.string.card_efficiency_format, efficiency)
+                    },
                 unit = "",
                 status = efficiencyStatus,
                 action = DashboardAction.NAVIGATE_SLEEP,
-                tooltip = "The percentage of time actually asleep while in bed. (Goal: >85%).",
-                secondaryText = "Goal: >85%",
+                tooltip = resourceProvider.getString(R.string.card_tooltip_sleep_efficiency),
+                secondaryText = resourceProvider.getString(R.string.card_goal_sleep_efficiency),
             )
         }
 
@@ -123,7 +130,7 @@ class GetDashboardDataUseCase
             val value = m.paiRounded?.toString() ?: "—"
 
             return CardData(
-                title = "PAI",
+                title = resourceProvider.getString(R.string.card_title_pai),
                 value = value,
                 unit = "",
                 status = status,
@@ -172,9 +179,9 @@ class GetDashboardDataUseCase
                 }
 
             return CardData(
-                title = "Sleep RHR",
+                title = resourceProvider.getString(R.string.card_title_sleep_rhr),
                 value = summary.restingHeartRate?.toString() ?: "—",
-                unit = "bpm",
+                unit = resourceProvider.getString(R.string.unit_bpm),
                 status = rhrStatus,
                 action = DashboardAction.NAVIGATE_SLEEP,
                 tooltip = tooltip,
@@ -220,9 +227,9 @@ class GetDashboardDataUseCase
                 }
 
             return CardData(
-                title = "HRV",
+                title = resourceProvider.getString(R.string.card_title_hrv),
                 value = summary.nocturnalHrv?.toString() ?: "—",
-                unit = "ms",
+                unit = resourceProvider.getString(R.string.unit_ms),
                 status = hrvStatus,
                 action = DashboardAction.NAVIGATE_SLEEP,
                 tooltip = tooltip,
@@ -248,7 +255,7 @@ class GetDashboardDataUseCase
             val goalStr = formatSleepDuration((prefs.goalSleepHours * 60).toInt())
 
             return CardData(
-                title = "Sleep Duration",
+                title = resourceProvider.getString(R.string.card_title_sleep_duration),
                 value = m.sleepDurationDisplay ?: "—",
                 unit = "",
                 status = durationStatus,
@@ -286,9 +293,9 @@ class GetDashboardDataUseCase
                 }
 
             return CardData(
-                title = "Resting Heart Rate",
+                title = resourceProvider.getString(R.string.card_title_resting_hr),
                 value = m.restingHeartRateRounded?.toString() ?: "—",
-                unit = "bpm",
+                unit = resourceProvider.getString(R.string.unit_bpm),
                 status = restingHrStatus,
                 action = DashboardAction.NAVIGATE_RHR,
                 tooltip = tooltip,
@@ -299,7 +306,11 @@ class GetDashboardDataUseCase
             if (minutes == null) return "—"
             val hours = minutes / 60
             val mins = minutes % 60
-            return if (mins == 0) "${hours}h" else "${hours}h ${mins}m"
+            return if (mins == 0) {
+                resourceProvider.getString(R.string.sleep_duration_hours_only, hours)
+            } else {
+                resourceProvider.getString(R.string.sleep_duration_hours_minutes, hours, mins)
+            }
         }
 
         private fun weightCard(
@@ -307,14 +318,19 @@ class GetDashboardDataUseCase
             prefs: UserPreferences,
             m: DailyMetrics,
         ): CardData {
-            val unitStr = if (prefs.unitSystem == UnitSystem.METRIC) "kg" else "lbs"
+            val unitStr =
+                if (prefs.unitSystem == UnitSystem.METRIC) {
+                    resourceProvider.getString(R.string.unit_metric_kg)
+                } else {
+                    resourceProvider.getString(R.string.unit_imperial_lbs)
+                }
             val weightKg =
                 summary.weightKg ?: return CardData(
-                    title = "Weight",
+                    title = resourceProvider.getString(R.string.card_title_weight),
                     value = "—",
                     unit = unitStr,
                     status = MetricStatus.NEUTRAL,
-                    tooltip = "Weight from Health Connect",
+                    tooltip = resourceProvider.getString(R.string.card_tooltip_weight_no_data),
                 )
 
             val heightCm = prefs.heightCm
@@ -336,12 +352,12 @@ class GetDashboardDataUseCase
                 if (prefs.unitSystem == UnitSystem.METRIC) m.weightKgDisplay else m.weightLbsDisplay
 
             return CardData(
-                title = "Weight",
+                title = resourceProvider.getString(R.string.card_title_weight),
                 value = weightValue ?: "—",
                 unit = unitStr,
                 status = bmiStatus,
                 action = DashboardAction.NAVIGATE_WEIGHT,
-                tooltip = "Latest weight measurement.",
+                tooltip = resourceProvider.getString(R.string.card_tooltip_weight_latest),
                 secondaryText = null,
             )
         }
@@ -353,11 +369,11 @@ class GetDashboardDataUseCase
         ): CardData {
             val bodyFatPercent =
                 summary.bodyFatPercent ?: return CardData(
-                    title = "Body Fat",
+                    title = resourceProvider.getString(R.string.card_title_body_fat),
                     value = "—",
-                    unit = "%",
+                    unit = resourceProvider.getString(R.string.unit_percent),
                     status = MetricStatus.NEUTRAL,
-                    tooltip = "Body fat percentage from Health Connect",
+                    tooltip = resourceProvider.getString(R.string.card_tooltip_body_fat_no_data),
                 )
 
             val bodyFatStatus =
@@ -375,12 +391,12 @@ class GetDashboardDataUseCase
                 }
 
             return CardData(
-                title = "Body Fat",
+                title = resourceProvider.getString(R.string.card_title_body_fat),
                 value = m.bodyFatDisplay ?: "—",
                 unit = "",
                 status = status,
                 action = DashboardAction.NAVIGATE_BODY_FAT,
-                tooltip = "Body fat percentage.",
+                tooltip = resourceProvider.getString(R.string.card_tooltip_body_fat_latest),
             )
         }
 
@@ -393,11 +409,11 @@ class GetDashboardDataUseCase
 
             if (systolic == 0 || diastolic == 0) {
                 return CardData(
-                    title = "Blood Pressure",
+                    title = resourceProvider.getString(R.string.card_title_blood_pressure),
                     value = "—",
-                    unit = "mmHg",
+                    unit = resourceProvider.getString(R.string.unit_mmHg),
                     status = MetricStatus.NEUTRAL,
-                    tooltip = "Blood pressure from Health Connect",
+                    tooltip = resourceProvider.getString(R.string.card_tooltip_bp_no_data),
                 )
             }
 
@@ -412,21 +428,27 @@ class GetDashboardDataUseCase
 
             val tooltip =
                 buildString {
-                    append("Latest blood pressure reading.\n\n")
+                    append(resourceProvider.getString(R.string.card_tooltip_bp_latest))
                     when (bpStatus) {
-                        BloodPressureStatus.Optimal -> append("Optimal: <120/80 mmHg")
-                        BloodPressureStatus.Neutral -> append("Elevated: 120-129/<80 mmHg")
+                        BloodPressureStatus.Optimal ->
+                            append(
+                                resourceProvider.getString(R.string.card_bp_status_optimal),
+                            )
+                        BloodPressureStatus.Neutral ->
+                            append(
+                                resourceProvider.getString(R.string.card_bp_status_neutral),
+                            )
                         BloodPressureStatus.HypertensionStage1 ->
-                            append("Hypertension Stage 1: 130-139/80-89 mmHg")
+                            append(resourceProvider.getString(R.string.card_bp_status_warning))
                         BloodPressureStatus.HypertensionStage2 ->
-                            append("Hypertension Stage 2+: ≥140/90 mmHg")
+                            append(resourceProvider.getString(R.string.card_bp_status_poor))
                     }
                 }
 
             return CardData(
-                title = "Blood Pressure",
+                title = resourceProvider.getString(R.string.card_title_blood_pressure),
                 value = m.bloodPressureDisplay ?: "$systolic/$diastolic",
-                unit = "mmHg",
+                unit = resourceProvider.getString(R.string.unit_mmHg),
                 status = status,
                 action = DashboardAction.NAVIGATE_BLOOD_PRESSURE,
                 tooltip = tooltip,
@@ -444,9 +466,9 @@ class GetDashboardDataUseCase
             val roundedSpo2 = m.spo2Rounded
             if (spo2 == null || spo2 <= 0f || roundedSpo2 == null) {
                 return CardData(
-                    title = "Oxygen Saturation",
+                    title = resourceProvider.getString(R.string.card_title_oxygen_saturation),
                     value = "—",
-                    unit = "%",
+                    unit = resourceProvider.getString(R.string.unit_percent),
                     status = MetricStatus.CALIBRATING,
                     tooltip = resourceProvider.getString(R.string.tooltip_vitals_spo2),
                     secondaryText = resourceProvider.getString(R.string.spo2_calibrating),
@@ -461,9 +483,9 @@ class GetDashboardDataUseCase
                 }
 
             return CardData(
-                title = "Oxygen Saturation",
+                title = resourceProvider.getString(R.string.card_title_oxygen_saturation),
                 value = "$roundedSpo2",
-                unit = "%",
+                unit = resourceProvider.getString(R.string.unit_percent),
                 status = status,
                 action = DashboardAction.NAVIGATE_VITALS,
                 tooltip = resourceProvider.getString(R.string.tooltip_vitals_spo2),

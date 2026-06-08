@@ -55,8 +55,8 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.compose.cartesian.data.columnSeries
-import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.data.columnModel
+import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
@@ -140,30 +140,19 @@ fun WorkoutStatsSection(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("PAI", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.workout_stats_pai_title), style = MaterialTheme.typography.titleSmall)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         uiState.todayPaiScore?.let { earned ->
                             if (earned > 0f) {
                                 Text(
-                                    text = "+${earned.roundToPercentInt()} today",
+                                    text = stringResource(R.string.pai_earned_today, earned.roundToPercentInt()),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
-                        val paiTooltip =
-                            remember {
-                                buildString {
-                                    append("Your 7-day rolling heart health score.\n")
-                                    append("Based on how often and how hard you challenge your heart.\n\n")
-                                    append("• 100+: Optimal\n")
-                                    append("• 75–99: Neutral\n")
-                                    append("• 50–74: Warning\n")
-                                    append("• < 50: Poor")
-                                }
-                            }
                         MetricTooltip(
-                            description = paiTooltip,
+                            description = stringResource(R.string.tooltip_pai),
                         )
                     }
                 }
@@ -177,7 +166,7 @@ fun WorkoutStatsSection(
         }
 
         Spacer(Modifier.height(8.dp))
-        SectionHeader(title = "Training Load & Strain Ratio (ACWR)")
+        SectionHeader(title = stringResource(R.string.workout_stats_acwr_title))
         Spacer(Modifier.height(8.dp))
         SingleChoiceSegmentedButtonRow(
             modifier =
@@ -406,7 +395,7 @@ private fun AcwrChart(
         modelProducer.runTransaction {
             val validTrimp = trimpPoints.filter { it.value != null }
             if (validTrimp.isNotEmpty()) {
-                columnSeries {
+                columnModel {
                     series(
                         x = validTrimp.map { it.dayOffset },
                         y = validTrimp.mapNotNull { it.value?.toDouble() },
@@ -415,7 +404,7 @@ private fun AcwrChart(
             }
             val validRatio = ratioPoints.filter { it.value != null }
             if (validRatio.isNotEmpty()) {
-                lineSeries {
+                lineModel {
                     series(
                         x = validRatio.map { it.dayOffset },
                         y = validRatio.mapNotNull { it.value?.toDouble() },
@@ -531,16 +520,15 @@ private fun AcwrChart(
             chartHeight = chartHeight,
             modifier = Modifier.fillMaxWidth(),
         )
-    }
 
-    // ── Tooltip popup ─────────────────────────────────────────────────────────
-    tooltipState?.let { data ->
-        DataPointTooltip(
-            isVisible = true,
-            data = data,
-            yOffsetDp = (-28).dp,
-            onDismissRequest = { selectedState = null },
-        )
+        // ── Tooltip popup ─────────────────────────────────────────────────────────
+        tooltipState?.let { data ->
+            DataPointTooltip(
+                isVisible = true,
+                data = data,
+                onDismissRequest = { selectedState = null },
+            )
+        }
     }
 
     // ── Legends (below chart) ─────────────────────────────────────────────────

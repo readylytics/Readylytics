@@ -29,20 +29,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
 import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
-
-private val TRIMP_MODEL_OPTIONS =
-    listOf(
-        TrimpModel.BANISTER to "Banister",
-        TrimpModel.CHENG to "Cheng LT-TRIMP",
-        TrimpModel.I_TRIMP to "iTRIMP",
-    )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,6 +52,13 @@ fun AdvancedSettingsSection(
     onPhysiologyEvent: (SettingsEvent) -> Unit,
     onUIEvent: (SettingsEvent) -> Unit,
 ) {
+    val trimpModelOptions =
+        listOf(
+            TrimpModel.BANISTER to stringResource(R.string.advanced_trimp_banister),
+            TrimpModel.CHENG to stringResource(R.string.advanced_trimp_cheng),
+            TrimpModel.I_TRIMP to stringResource(R.string.advanced_trimp_itrimp),
+        )
+
     var hrvText by remember(sleepState.hrvBaselineOverride) {
         mutableStateOf(sleepState.hrvBaselineOverride?.toInt()?.toString() ?: "")
     }
@@ -74,7 +76,7 @@ fun AdvancedSettingsSection(
     Column {
         Column(modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING)) {
             Text(
-                "Baseline Overrides",
+                stringResource(R.string.advanced_baseline_overrides_title),
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(bottom = SettingsConstants.VERTICAL_SPACER),
             )
@@ -89,9 +91,9 @@ fun AdvancedSettingsSection(
                 },
                 label = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("HRV Baseline (ms)")
+                        Text(stringResource(R.string.advanced_hrv_baseline_label))
                         MetricTooltip(
-                            description = "Overrides the 30-day rolling median used in scoring.",
+                            description = stringResource(R.string.advanced_baseline_override_tooltip),
                         )
                     }
                 },
@@ -106,7 +108,7 @@ fun AdvancedSettingsSection(
                             hrvText = ""
                             onEvent(SettingsEvent.HrvBaselineCleared)
                         }) {
-                            Icon(Icons.Filled.Clear, contentDescription = "Clear")
+                            Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.accessibility_clear))
                         }
                     }
                 },
@@ -125,9 +127,9 @@ fun AdvancedSettingsSection(
                 },
                 label = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("RHR Baseline (bpm)")
+                        Text(stringResource(R.string.advanced_rhr_baseline_label))
                         MetricTooltip(
-                            description = "Overrides the 30-day rolling median used in scoring.",
+                            description = stringResource(R.string.advanced_baseline_override_tooltip),
                         )
                     }
                 },
@@ -142,7 +144,7 @@ fun AdvancedSettingsSection(
                             rhrText = ""
                             onEvent(SettingsEvent.RhrBaselineCleared)
                         }) {
-                            Icon(Icons.Filled.Clear, contentDescription = "Clear")
+                            Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.accessibility_clear))
                         }
                     }
                 },
@@ -155,11 +157,9 @@ fun AdvancedSettingsSection(
 
         Column(modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Resting HR: Percentile")
+                Text(stringResource(R.string.advanced_resting_hr_percentile_label))
                 MetricTooltip(
-                    description =
-                        "Use the Nth percentile lowest heart rate reading of the entire sleep period " +
-                            "(e.g., 5% = lowest 5% threshold). Lower values = lower RHR estimate. Default: 5%.",
+                    description = stringResource(R.string.advanced_resting_hr_percentile_tooltip),
                 )
             }
             Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
@@ -189,7 +189,7 @@ fun AdvancedSettingsSection(
 
         var paiScaling by remember(paiScalingFactor) { mutableFloatStateOf(paiScalingFactor) }
         ThresholdSliderItem(
-            label = "PAI Scaling Factor",
+            label = stringResource(R.string.advanced_pai_scaling_label),
             value = paiScaling,
             onValueChange = { paiScaling = it },
             onValueChangeFinished = { onUIEvent(SettingsEvent.PaiScalingFactorChanged(paiScaling)) },
@@ -197,17 +197,19 @@ fun AdvancedSettingsSection(
             valueRange = 0.1f..0.3f,
             steps = 20,
             displayValue = "%.2f".format(paiScaling),
-            description = "Adjusts how quickly you earn PAI points. Default: 0.20.",
+            description = stringResource(R.string.advanced_pai_scaling_tooltip),
         )
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
         Text(
-            "Training Load Model",
+            stringResource(R.string.advanced_training_load_label),
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
         )
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
-        val selectedModelLabel = TRIMP_MODEL_OPTIONS.firstOrNull { it.first == trimpModel }?.second ?: "Banister"
+        val selectedModelLabel =
+            trimpModelOptions.firstOrNull { it.first == trimpModel }?.second
+                ?: stringResource(R.string.advanced_trimp_banister)
         var trimpDropdownExpanded by remember { mutableStateOf(false) }
         ExposedDropdownMenuBox(
             expanded = trimpDropdownExpanded,
@@ -221,7 +223,7 @@ fun AdvancedSettingsSection(
                 value = selectedModelLabel,
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("Training Load Model") },
+                label = { Text(stringResource(R.string.advanced_training_load_label)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = trimpDropdownExpanded) },
                 modifier =
                     Modifier
@@ -232,7 +234,7 @@ fun AdvancedSettingsSection(
                 expanded = trimpDropdownExpanded,
                 onDismissRequest = { trimpDropdownExpanded = false },
             ) {
-                TRIMP_MODEL_OPTIONS.forEach { (model, label) ->
+                trimpModelOptions.forEach { (model, label) ->
                     DropdownMenuItem(
                         text = { Text(label) },
                         onClick = {
@@ -248,7 +250,7 @@ fun AdvancedSettingsSection(
             TrimpModel.BANISTER -> {
                 var multiplier by remember(banisterMultiplier) { mutableFloatStateOf(banisterMultiplier) }
                 ThresholdSliderItem(
-                    label = "Banister Multiplier",
+                    label = stringResource(R.string.advanced_banister_multiplier_label),
                     value = multiplier,
                     onValueChange = { multiplier = it },
                     onValueChangeFinished = { onUIEvent(SettingsEvent.BanisterMultiplierChanged(multiplier)) },
@@ -256,13 +258,13 @@ fun AdvancedSettingsSection(
                     valueRange = 0.5f..2.5f,
                     steps = 40,
                     displayValue = "%.2f".format(multiplier),
-                    description = "Sedentary=1.75, Active=1.35, Athlete=1.00.",
+                    description = stringResource(R.string.advanced_banister_multiplier_desc),
                 )
             }
             TrimpModel.CHENG -> {
                 var beta by remember(chengBeta) { mutableFloatStateOf(chengBeta) }
                 ThresholdSliderItem(
-                    label = "Cheng Beta",
+                    label = stringResource(R.string.advanced_cheng_beta_label),
                     value = beta,
                     onValueChange = { beta = it },
                     onValueChangeFinished = { onUIEvent(SettingsEvent.ChengBetaChanged(beta)) },
@@ -270,13 +272,13 @@ fun AdvancedSettingsSection(
                     valueRange = 0.04f..0.12f,
                     steps = 16,
                     displayValue = "%.3f".format(beta),
-                    description = "Sedentary=0.11, Active=0.09, Athlete=0.07.",
+                    description = stringResource(R.string.advanced_cheng_beta_desc),
                 )
             }
             TrimpModel.I_TRIMP -> {
                 var b by remember(itrimB) { mutableFloatStateOf(itrimB) }
                 ThresholdSliderItem(
-                    label = "iTRIMP B Factor",
+                    label = stringResource(R.string.advanced_itrimp_b_factor_label),
                     value = b,
                     onValueChange = { b = it },
                     onValueChangeFinished = { onUIEvent(SettingsEvent.ItrimBChanged(b)) },
@@ -284,7 +286,7 @@ fun AdvancedSettingsSection(
                     valueRange = 1.0f..4.5f,
                     steps = 35,
                     displayValue = "%.1f".format(b),
-                    description = "Sedentary=1.5, Active=2.1, Athlete=2.9.",
+                    description = stringResource(R.string.advanced_itrimp_b_factor_desc),
                 )
             }
         }

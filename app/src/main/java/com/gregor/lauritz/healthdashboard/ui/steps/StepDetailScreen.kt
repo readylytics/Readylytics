@@ -26,9 +26,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.stepsStatus
 import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
 import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
@@ -73,11 +75,11 @@ fun StepDetailScreen(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             TopAppBar(
-                title = { Text("Daily Steps") },
+                title = { Text(stringResource(R.string.label_daily_steps)) },
                 windowInsets = WindowInsets(0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
             )
@@ -112,17 +114,17 @@ fun StepDetailScreen(
                     ) {
                         M3ScoreDial(
                             score = uiState.latestSummary?.stepCount?.toFloat(),
-                            label = "Steps Today",
+                            label = stringResource(R.string.label_steps_today),
                             maxScore = (uiState.stepGoal * 1.5f),
                             status = uiState.latestSummary?.stepCount?.let { stepsStatus(it, uiState.stepGoal) },
-                            tooltipDescription = "Total steps recorded today.\nGoal: ${uiState.stepGoal} steps.",
+                            tooltipDescription = stringResource(R.string.tooltip_steps_today, uiState.stepGoal),
                         )
                     }
                 }
             }
 
             item(key = "trends_header") {
-                SectionHeader(title = "Trends")
+                SectionHeader(title = stringResource(R.string.label_trends))
                 Spacer(Modifier.height(8.dp))
                 SingleChoiceSegmentedButtonRow(
                     modifier =
@@ -156,7 +158,7 @@ fun StepDetailScreen(
                     )
                 } else {
                     TrendCard(
-                        title = "Daily Steps",
+                        title = stringResource(R.string.label_daily_steps),
                         modifier = Modifier.padding(horizontal = 16.dp),
                     ) {
                         TrendChart(

@@ -35,7 +35,6 @@ data class DailySummary(
     val hrvSigmaMssd: Float? = null,
     val rhrBpm: Float? = null,
     val baselineCalculatedAtDate: LocalDate? = null,
-    val baselineVersion: Int? = null,
     val hrMax: Float? = null,
     val snapshotProfile: String? = null,
     val snapshotCalibrationPhase: String? = null,

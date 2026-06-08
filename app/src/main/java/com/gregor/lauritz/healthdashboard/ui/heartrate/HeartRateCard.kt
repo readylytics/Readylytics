@@ -15,10 +15,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 
 @Composable
@@ -54,21 +56,20 @@ fun HeartRateCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Heart Rate",
+                    text = stringResource(R.string.heart_rate_title),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleSmall,
                     color = contentColor,
                 )
                 MetricTooltip(
-                    description =
-                        "Today's heart rate range across all activities. Tap to see full timeline and zone breakdown.",
+                    description = stringResource(R.string.tooltip_heart_rate_card),
                     iconTint = contentColor,
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
             if (summary == null) {
                 Text(
-                    text = "-- bpm",
+                    text = stringResource(R.string.hr_no_data),
                     style = MaterialTheme.typography.headlineLarge,
                     color = contentColor,
                 )
@@ -81,7 +82,7 @@ fun HeartRateCard(
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = "bpm  ·  avg ${summary.avgBpm}",
+                    text = stringResource(R.string.hr_avg_display, summary.avgBpm),
                     style = MaterialTheme.typography.bodySmall,
                     color = contentColor.copy(alpha = 0.7f),
                 )

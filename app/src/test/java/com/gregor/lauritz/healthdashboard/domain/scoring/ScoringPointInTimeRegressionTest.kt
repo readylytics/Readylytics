@@ -77,7 +77,6 @@ class ScoringPointInTimeRegressionTest {
                     paiScalingFactor = 0.2f,
                     rhrBpm = 60f,
                     baselineObservationCount = 10,
-                    baselineVersion = 2,
                 )
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns frozenSnapshot
 

@@ -32,9 +32,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 
 /**
  * Premium recovery screen displayed when the database encryption key is lost or corrupted.
@@ -50,6 +52,9 @@ fun DatabaseRecoveryScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
 
+    val recoverySuccess = stringResource(R.string.recovery_success)
+    val recoveryErrorDefault = stringResource(R.string.recovery_error_default)
+
     val filePickerLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.GetContent(),
@@ -61,10 +66,9 @@ fun DatabaseRecoveryScreen(
                 onRestoreBackup(uri) { success, errorMsg ->
                     isRestoring = false
                     if (success) {
-                        successMessage = "Database successfully restored! Please restart the application."
+                        successMessage = recoverySuccess
                     } else {
-                        errorMessage =
-                            errorMsg ?: "Failed to restore backup. Please ensure you selected the correct file."
+                        errorMessage = errorMsg ?: recoveryErrorDefault
                     }
                 }
             }
@@ -85,13 +89,13 @@ fun DatabaseRecoveryScreen(
         ) {
             Icon(
                 imageVector = Icons.Default.Warning,
-                contentDescription = "Security Alert",
+                contentDescription = stringResource(R.string.accessibility_security_alert),
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(bottom = 16.dp),
             )
 
             Text(
-                text = "Database Access Problem",
+                text = stringResource(R.string.recovery_title),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -101,9 +105,7 @@ fun DatabaseRecoveryScreen(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text =
-                    "The secure encryption key for your database could not be decrypted. " +
-                        "This typically happens if the Android Keystore was cleared or corrupted.",
+                text = stringResource(R.string.recovery_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -156,7 +158,7 @@ fun DatabaseRecoveryScreen(
                     modifier = Modifier.padding(16.dp),
                 )
                 Text(
-                    text = "Restoring database...",
+                    text = stringResource(R.string.recovery_restoring_message),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
@@ -174,16 +176,14 @@ fun DatabaseRecoveryScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
-                            text = "Recommended Recovery Option",
+                            text = stringResource(R.string.recovery_recommended_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text =
-                                "If you have a previously exported backup file (.zip), " +
-                                    "you can select it to restore your data safely.",
+                            text = stringResource(R.string.recovery_recommended_body),
                             style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -193,7 +193,7 @@ fun DatabaseRecoveryScreen(
                             onClick = { filePickerLauncher.launch("application/zip") },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text("Restore from Backup File")
+                            Text(stringResource(R.string.recovery_restore_button))
                         }
                     }
                 }
@@ -213,16 +213,14 @@ fun DatabaseRecoveryScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
-                            text = "Danger Zone",
+                            text = stringResource(R.string.recovery_danger_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text =
-                                "If you don't have a backup, you can reset the database. " +
-                                    "This will permanently delete all existing local health dashboards and records.",
+                            text = stringResource(R.string.recovery_danger_body),
                             style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -236,7 +234,7 @@ fun DatabaseRecoveryScreen(
                                 ),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text("Reset Database & Start Fresh")
+                            Text(stringResource(R.string.recovery_reset_button))
                         }
                     }
                 }

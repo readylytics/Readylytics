@@ -24,7 +24,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 
 private data class StageSegment(
@@ -57,12 +59,17 @@ fun SleepArchitectureBar(
         return
     }
 
+    val deepLabel = stringResource(R.string.sleep_stage_deep)
+    val remLabel = stringResource(R.string.sleep_stage_rem)
+    val lightLabel = stringResource(R.string.sleep_stage_light)
+    val awakeLabel = stringResource(R.string.sleep_stage_awake)
+
     val segments =
         listOf(
-            StageSegment("Deep", session.deepSleepMinutes) { deepColor },
-            StageSegment("REM", session.remSleepMinutes) { remColor },
-            StageSegment("Light", session.lightSleepMinutes) { lightSleep },
-            StageSegment("Awake", session.awakeMinutes) { awakeColor },
+            StageSegment(deepLabel, session.deepSleepMinutes) { deepColor },
+            StageSegment(remLabel, session.remSleepMinutes) { remColor },
+            StageSegment(lightLabel, session.lightSleepMinutes) { lightSleep },
+            StageSegment(awakeLabel, session.awakeMinutes) { awakeColor },
         )
 
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -151,7 +158,7 @@ internal fun CalibrationBar(
         }
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "No data — calibrating",
+            text = stringResource(R.string.message_sleep_no_data_calibrating),
             style = MaterialTheme.typography.labelSmall,
             color = onSurfaceVariant,
         )

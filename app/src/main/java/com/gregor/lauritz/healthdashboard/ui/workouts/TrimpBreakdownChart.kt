@@ -21,7 +21,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltipData
@@ -36,7 +38,7 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
@@ -58,10 +60,10 @@ fun TrimpBreakdownChart(
         shape = RoundedCornerShape(16.dp),
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text("Heart Rate", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.heart_rate_title), style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(16.dp))
             if (chartData.isEmpty()) {
-                Text("No HR data available")
+                Text(stringResource(R.string.message_no_hr_data))
             } else {
                 HrChart(chartData, durationMinutes, parentScrollInProgress)
             }
@@ -97,7 +99,7 @@ private fun HrChart(
     LaunchedEffect(chartData) {
         if (chartData.isEmpty()) return@LaunchedEffect
         modelProducer.runTransaction {
-            lineSeries {
+            lineModel {
                 series(
                     x = chartData.map { it.first },
                     y = chartData.map { it.second },
@@ -139,6 +141,7 @@ private fun HrChart(
             )
         }
 
+    val minutesLabel = stringResource(R.string.label_minutes)
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
@@ -208,7 +211,7 @@ private fun HrChart(
                     bottomAxis =
                         HorizontalAxis.rememberBottom(
                             label = labelComponent,
-                            title = { "Minutes" },
+                            title = { minutesLabel },
                             titleComponent = axisLabelComponent,
                             guideline = guidelineComponent,
                             valueFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() },
@@ -230,14 +233,14 @@ private fun HrChart(
             selectedPointOffset = selectedPointOffset,
             modifier = Modifier.fillMaxWidth().height(200.dp),
         )
-    }
 
-    if (tooltipState != null) {
-        DataPointTooltip(
-            isVisible = true,
-            data = tooltipState!!,
-            onDismissRequest = { tooltipState = null },
-        )
+        if (tooltipState != null) {
+            DataPointTooltip(
+                isVisible = true,
+                data = tooltipState!!,
+                onDismissRequest = { tooltipState = null },
+            )
+        }
     }
 }
 

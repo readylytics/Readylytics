@@ -3,8 +3,6 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 import android.content.Intent
 import android.net.Uri
 import android.os.Parcelable
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -20,11 +18,11 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -40,14 +38,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.MainActivity
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
+import com.gregor.lauritz.healthdashboard.ui.common.resolveOrNull
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
@@ -213,34 +212,44 @@ fun SettingsRoute(
         onNavigateToAbout = onNavigateToAbout,
     )
 
-    // Loading dialog during resync
-    if (syncState.isResyncing) {
-        Dialog(
-            onDismissRequest = {},
-            properties =
-                DialogProperties(
-                    dismissOnBackPress = false,
-                    dismissOnClickOutside = false,
-                    usePlatformDefaultWidth = false,
-                ),
-        ) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Syncing health data...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+    // Determinate, non-blocking progress dialog during resync. The work runs durably in WorkManager
+    // (with a foreground notification), so the user may dismiss this and leave — the resync continues.
+    var resyncDialogDismissed by rememberSaveable { mutableStateOf(false) }
+    if (!syncState.isResyncing) resyncDialogDismissed = false
+    if (syncState.isResyncing && !resyncDialogDismissed) {
+        AlertDialog(
+            onDismissRequest = { resyncDialogDismissed = true },
+            confirmButton = {
+                TextButton(onClick = { resyncDialogDismissed = true }) {
+                    Text(stringResource(R.string.resync_dialog_continue_in_background))
+                }
+            },
+            title = { Text(stringResource(R.string.resync_button_label)) },
+            text = {
+                Column {
+                    val total = syncState.resyncTotal
+                    val current = syncState.resyncCurrent
+                    if (total > 0) {
+                        Text(
+                            text = stringResource(R.string.recalculating_progress, current, total),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LinearProgressIndicator(
+                            progress = { current.toFloat() / total.toFloat() },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.resync_notification_preparing),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            },
+        )
     }
 }
 
@@ -266,6 +275,7 @@ fun SettingsScreen(
 ) {
     var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
+    val resolvedThresholdError = thresholdState.thresholdError.resolveOrNull()
 
     val matchingSections by remember(searchQuery) {
         derivedStateOf { settingsSections.filter { sectionMatches(it, searchQuery) } }
@@ -277,18 +287,22 @@ fun SettingsScreen(
     if (localBackupState.showRestoreConfirmDialog) {
         AlertDialog(
             onDismissRequest = { onLocalBackupEvent(SettingsEvent.RestoreDismissed) },
-            title = { Text("Restore Backup?") },
+            title = { Text(stringResource(R.string.dialog_restore_backup_title)) },
             text = {
-                val filename = localBackupState.pendingRestoreFile?.name ?: "this backup"
-                Text(
-                    "This will replace all local health data with the contents of $filename and restart the app. This cannot be undone.",
-                )
+                val filename =
+                    localBackupState.pendingRestoreFile?.name
+                        ?: stringResource(R.string.backup_this_backup)
+                Text(stringResource(R.string.dialog_restore_backup_body, filename))
             },
             confirmButton = {
-                Button(onClick = { onLocalBackupEvent(SettingsEvent.RestoreConfirmed) }) { Text("Restore") }
+                Button(onClick = { onLocalBackupEvent(SettingsEvent.RestoreConfirmed) }) {
+                    Text(stringResource(R.string.action_restore))
+                }
             },
             dismissButton = {
-                TextButton(onClick = { onLocalBackupEvent(SettingsEvent.RestoreDismissed) }) { Text("Cancel") }
+                TextButton(onClick = { onLocalBackupEvent(SettingsEvent.RestoreDismissed) }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
             },
         )
     }
@@ -314,12 +328,17 @@ fun SettingsScreen(
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Search settings...") },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
+                    placeholder = { Text(stringResource(R.string.settings_search_placeholder)) },
+                    leadingIcon = {
+                        Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.accessibility_search))
+                    },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Filled.Clear, contentDescription = "Clear")
+                                Icon(
+                                    Icons.Filled.Clear,
+                                    contentDescription = stringResource(R.string.accessibility_clear),
+                                )
                             }
                         }
                     },
@@ -330,7 +349,7 @@ fun SettingsScreen(
                 // Data & Backup & Health Connect
                 if (matchingSections.any { it.id == "data_backup_sync" }) {
                     M3CollapsibleSection(
-                        header = "Data & Backup",
+                        header = stringResource(R.string.settings_section_data_backup),
                         expanded =
                             !expandState.collapseDataBackup ||
                                 shouldExpandSection("data_backup_sync"),
@@ -339,13 +358,13 @@ fun SettingsScreen(
                         },
                     ) {
                         Column {
-                            SectionHeader("Local Backup")
+                            SectionHeader(stringResource(R.string.settings_sub_local_backup))
                             LocalBackupSection(
                                 uiState = localBackupState,
                                 onEvent = onLocalBackupEvent,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            SectionHeader("Data Management")
+                            SectionHeader(stringResource(R.string.settings_sub_data_management))
                             DataManagementSection(
                                 uiState = uiState,
                                 isResyncing = syncState.isResyncing,
@@ -353,7 +372,7 @@ fun SettingsScreen(
                                 onSyncEvent = onSyncEvent,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            SectionHeader("Health Connect")
+                            SectionHeader(stringResource(R.string.settings_sub_health_connect))
                             SyncSettingsSection(uiState = syncState, onEvent = onSyncEvent)
                         }
                     }
@@ -379,7 +398,7 @@ fun SettingsScreen(
                 // Baselines & Thresholds
                 if (matchingSections.any { it.id == "baselines_thresholds" }) {
                     M3CollapsibleSection(
-                        header = "Baselines & Thresholds",
+                        header = stringResource(R.string.settings_section_baselines_thresholds),
                         expanded =
                             !expandState.collapseBaselinesThresholds ||
                                 shouldExpandSection("baselines_thresholds"),
@@ -388,13 +407,13 @@ fun SettingsScreen(
                         },
                     ) {
                         Column {
-                            SectionHeader("Daily Step Goal")
+                            SectionHeader(stringResource(R.string.label_daily_step_goal))
                             ActivitySettingsSection(stepGoal = uiState.stepGoal, onEvent = onUIEvent)
                             Spacer(modifier = Modifier.height(12.dp))
-                            SectionHeader("Sleep")
+                            SectionHeader(stringResource(R.string.label_sleep))
                             SleepSettingsSection(uiState = sleepState, onEvent = onSleepEvent)
                             Spacer(modifier = Modifier.height(12.dp))
-                            SectionHeader("Heart Rate Zones")
+                            SectionHeader(stringResource(R.string.settings_sub_heart_rate_zones))
                             HeartRateZoneSection(
                                 uiState = heartRateState,
                                 physiologyState = physiologyState,
@@ -410,7 +429,7 @@ fun SettingsScreen(
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-                            SectionHeader("Circadian Consistency")
+                            SectionHeader(stringResource(R.string.label_circadian_consistency))
                             CircadianThresholdSettingsSection(
                                 profile = physiologyState.physiologyProfile,
                                 currentOverride = thresholdState.circadianThresholdOverride,
@@ -421,11 +440,11 @@ fun SettingsScreen(
                                     )
                                 },
                                 isLoading = thresholdState.isUpdatingThreshold,
-                                error = thresholdState.thresholdError,
+                                error = resolvedThresholdError,
                                 onErrorDismissed = { onThresholdEvent(SettingsEvent.DismissThresholdError) },
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            SectionHeader("Thresholds")
+                            SectionHeader(stringResource(R.string.settings_sub_thresholds))
                             ThresholdSettingsSection(uiState = thresholdState, onEvent = onThresholdEvent)
                         }
                     }
@@ -435,7 +454,7 @@ fun SettingsScreen(
                 // Display
                 if (matchingSections.any { it.id == "display" }) {
                     M3CollapsibleSection(
-                        header = "Display",
+                        header = stringResource(R.string.settings_section_display),
                         expanded =
                             !expandState.collapseDisplay ||
                                 shouldExpandSection("display"),
@@ -446,8 +465,8 @@ fun SettingsScreen(
                         Column {
                             AppThemeItem(uiState = uiState, onEvent = onUIEvent)
                             SettingsToggleItem(
-                                label = "Dynamic Color",
-                                description = "Use colors derived from your wallpaper (Android 12+)",
+                                label = stringResource(R.string.onboarding_dynamic_color_label),
+                                description = stringResource(R.string.onboarding_dynamic_color_desc),
                                 checked = uiState.dynamicColorEnabled,
                                 onCheckedChange = { onUIEvent(SettingsEvent.DynamicColorEnabledChanged(it)) },
                             )
@@ -465,7 +484,7 @@ fun SettingsScreen(
                 // Advanced
                 if (matchingSections.any { it.id == "advanced" }) {
                     M3CollapsibleSection(
-                        header = "Advanced",
+                        header = stringResource(R.string.settings_section_advanced),
                         expanded =
                             !expandState.collapseAdvanced ||
                                 shouldExpandSection("advanced"),
@@ -498,7 +517,7 @@ fun SettingsScreen(
         ) {
             TextButton(onClick = onNavigateToAbout) {
                 Text(
-                    text = "About Readylytics",
+                    text = stringResource(R.string.settings_about_button),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -513,7 +532,7 @@ private fun AppThemeItem(
     onEvent: (SettingsEvent) -> Unit,
 ) {
     DropdownPreferenceItem(
-        label = "App Theme",
+        label = stringResource(R.string.settings_label_app_theme),
         selectedDisplayValue =
             uiState.appTheme.name
                 .lowercase()

@@ -2,12 +2,14 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.security.EncryptionManager
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupService
 import com.gregor.lauritz.healthdashboard.domain.backup.RestoreResult
 import com.gregor.lauritz.healthdashboard.domain.backup.RestoreService
+import com.gregor.lauritz.healthdashboard.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -120,7 +122,12 @@ class LocalBackupViewModel
                                 }
                             }.onFailure { e ->
                                 transientState.update {
-                                    it.copy(isRestoring = false, backupError = e.message ?: "Restore validation failed")
+                                    it.copy(
+                                        isRestoring = false,
+                                        backupError =
+                                            e.message?.let { UiText.RawString(it) }
+                                                ?: UiText.StringRes(R.string.error_backup_restore_validation),
+                                    )
                                 }
                             }
                     }
@@ -137,7 +144,7 @@ class LocalBackupViewModel
                                 transientState.update {
                                     it.copy(
                                         isRestoring = false,
-                                        backupError = result.cause.message,
+                                        backupError = result.cause.message?.let { UiText.RawString(it) },
                                     )
                                 }
                             }
@@ -162,7 +169,7 @@ class LocalBackupViewModel
                             .deleteBackup(event.file.uri)
                             .onFailure { e ->
                                 android.util.Log.e("LocalBackupViewModel", "Failed to delete backup", e)
-                                transientState.update { it.copy(backupError = e.message) }
+                                transientState.update { it.copy(backupError = e.message?.let { UiText.RawString(it) }) }
                             }
                         // Force refresh the list
                         transientState.update { it.copy(refreshTrigger = it.refreshTrigger + 1) }
@@ -237,7 +244,13 @@ class LocalBackupViewModel
                     settingsRepo.updateLastBackupTimestamp(System.currentTimeMillis())
                     transientState.update { it.copy(refreshTrigger = it.refreshTrigger + 1) }
                 }.onFailure { e ->
-                    transientState.update { it.copy(backupError = e.message ?: "Backup failed") }
+                    transientState.update {
+                        it.copy(
+                            backupError =
+                                e.message?.let { UiText.RawString(it) }
+                                    ?: UiText.StringRes(R.string.error_backup_create_failed),
+                        )
+                    }
                 }
             transientState.update { it.copy(isBackingUp = false) }
         }
@@ -248,7 +261,7 @@ class LocalBackupViewModel
             val isReencrypting: Boolean = false,
             val showRestoreConfirmDialog: Boolean = false,
             val showSetPasswordDialog: Boolean = false,
-            val backupError: String? = null,
+            val backupError: UiText? = null,
             val restoreSuccess: Boolean = false,
             val pendingRestoreFile: BackupFileInfo? = null,
             val passwordVerificationResult: Boolean? = null,

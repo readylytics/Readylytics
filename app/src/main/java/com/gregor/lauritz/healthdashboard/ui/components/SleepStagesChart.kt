@@ -1,6 +1,13 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
+import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,16 +22,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.SleepStageType
@@ -34,6 +46,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import kotlin.math.roundToInt
 
 private val LANE_HEIGHT = 56.dp
 private val SHAPE_INSET = 4.dp
@@ -136,6 +149,12 @@ private fun getLabelTimestamps(
 }
 
 @Composable
+private fun stageDisplayName(stageType: String): String {
+    val labelResId = LANES.firstOrNull { it.stageType == stageType }?.labelResId
+    return if (labelResId != null) stringResource(labelResId) else stageType
+}
+
+@Composable
 private fun formatStageDuration(minutes: Int): String {
     val h = minutes / 60
     val m = minutes % 60
@@ -158,6 +177,12 @@ private val LANES =
         LaneInfo(SleepStageType.LIGHT.value, R.string.sleep_stage_light),
         LaneInfo(SleepStageType.DEEP.value, R.string.sleep_stage_deep),
     )
+
+private data class SelectedSegmentState(
+    val stage: SleepStageData,
+    val segmentCenterXPx: Float,
+    val segmentCenterYPx: Float,
+)
 
 @Composable
 fun SleepStagesChart(
@@ -197,6 +222,42 @@ fun SleepStagesChart(
                 .mapValues { (_, stages) -> stages.sumOf { it.durationMinutes } }
         }
 
+    // State refs (not `by` delegation) so that reading .value inside the Canvas draw
+    // block registers the dependency there — animation frames trigger only a redraw, not
+    // a full recomposition. When selectedSegment == null the values are never read, so
+    // the animation clock causes no draw work at all.
+    val infiniteTransition = rememberInfiniteTransition(label = "sleepPulseTransition")
+    val haloAlphaState =
+        infiniteTransition.animateFloat(
+            initialValue = 0.15f,
+            targetValue = 0.4f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(1200, easing = EaseInOutSine),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "sleepHaloAlpha",
+        )
+    val haloRadiusState =
+        infiniteTransition.animateFloat(
+            initialValue = 1.0f,
+            targetValue = 1.6f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(1200, easing = EaseInOutSine),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "sleepHaloRadiusCoeff",
+        )
+
+    var selectedSegment by remember { mutableStateOf<SelectedSegmentState?>(null) }
+
+    // Resolved here (composable scope) via stringResource so locale changes recompose correctly;
+    // the remember block below only consumes plain strings, never LocalContext.
+    val selectedStageName = selectedSegment?.let { stageDisplayName(it.stage.stageType) }
+    val selectedDurationStr = selectedSegment?.let { formatStageDuration(it.stage.durationMinutes) }
+    val scrollState = rememberScrollState()
+
     Row(modifier = modifier.fillMaxWidth()) {
         // Left column: fixed-width lane labels with stage name + duration
         Column(modifier = Modifier.width(LABEL_WIDTH)) {
@@ -227,10 +288,31 @@ fun SleepStagesChart(
         }
 
         // Right column: chart canvas + x-axis, optionally scrollable for long sessions
-        val scrollState = rememberScrollState()
         BoxWithConstraints(modifier = Modifier.weight(1f)) {
             val naturalWidth = maxWidth
             val chartWidth = if (needsScroll) naturalWidth * scaleFactor else naturalWidth
+
+            val viewportWidthPx = constraints.maxWidth
+            val tooltipData =
+                remember(
+                    selectedSegment,
+                    scrollState.value,
+                    viewportWidthPx,
+                    selectedStageName,
+                    selectedDurationStr,
+                ) {
+                    val sel = selectedSegment ?: return@remember null
+                    val viewportX = (sel.segmentCenterXPx - scrollState.value).roundToInt()
+                    // Hide when the selected segment has scrolled outside the visible viewport
+                    if (viewportX !in 0..viewportWidthPx) return@remember null
+
+                    DataPointTooltipData(
+                        valueText = selectedStageName ?: "",
+                        dateText = timeFormatter.format(Instant.ofEpochMilli(sel.stage.startTime)),
+                        extraLine = selectedDurationStr,
+                        offset = IntOffset(viewportX, 0),
+                    )
+                }
 
             Column(
                 modifier =
@@ -245,7 +327,49 @@ fun SleepStagesChart(
                         Modifier
                             .width(chartWidth)
                             .height(CHART_TOTAL_HEIGHT)
-                            .testTag("SleepStagesChartCanvas"),
+                            .testTag("SleepStagesChartCanvas")
+                            .pointerInput(mergedTimeline, session) {
+                                detectTapGestures { tapOffset ->
+                                    val canvasWidth = size.width.toFloat()
+                                    val laneHeightPx = LANE_HEIGHT.toPx()
+                                    val insetPx = SHAPE_INSET.toPx()
+                                    val minW = 4.dp.toPx()
+                                    val sessionDuration = (session.endTime - session.startTime).coerceAtLeast(1L)
+
+                                    val hit =
+                                        mergedTimeline.firstOrNull { stageData ->
+                                            val laneIdx = getStageLaneIndex(stageData.stageType)
+                                            val top = laneIdx * laneHeightPx + insetPx
+                                            val height = laneHeightPx - 2 * insetPx
+                                            val sx =
+                                                (stageData.startTime - session.startTime).toFloat() /
+                                                    sessionDuration * canvasWidth
+                                            val w =
+                                                (
+                                                    (stageData.endTime - stageData.startTime).toFloat() /
+                                                        sessionDuration * canvasWidth
+                                                ).coerceAtLeast(minW)
+                                            tapOffset.x in sx..(sx + w) && tapOffset.y in top..(top + height)
+                                        }
+                                    selectedSegment =
+                                        hit?.let {
+                                            val laneIdx = getStageLaneIndex(it.stageType)
+                                            val sx =
+                                                (it.startTime - session.startTime).toFloat() /
+                                                    sessionDuration * canvasWidth
+                                            val w =
+                                                (
+                                                    (it.endTime - it.startTime).toFloat() /
+                                                        sessionDuration * canvasWidth
+                                                ).coerceAtLeast(minW)
+                                            SelectedSegmentState(
+                                                stage = it,
+                                                segmentCenterXPx = sx + w / 2f,
+                                                segmentCenterYPx = (laneIdx + 0.5f) * laneHeightPx,
+                                            )
+                                        }
+                                }
+                            },
                 ) {
                     val canvasWidth = size.width
                     val laneHeightPx = LANE_HEIGHT.toPx()
@@ -323,6 +447,43 @@ fun SleepStagesChart(
                             )
                         }
                     }
+
+                    // 5. Vertical indicator line and pulsing glow outline for selected segment.
+                    // Values are read here (draw phase) so animation frames only trigger
+                    // a redraw, not a full recomposition of SleepStagesChart.
+                    selectedSegment?.let { sel ->
+                        val selSessionDuration = (session.endTime - session.startTime).coerceAtLeast(1L)
+                        val selSx =
+                            (sel.stage.startTime - session.startTime).toFloat() / selSessionDuration * canvasWidth
+                        val selW =
+                            (
+                                (sel.stage.endTime - sel.stage.startTime).toFloat() /
+                                    selSessionDuration * canvasWidth
+                            ).coerceAtLeast(4.dp.toPx())
+                        val centerX = selSx + selW / 2f
+
+                        // Vertical indicator line
+                        drawLine(
+                            color = colorScheme.primary.copy(alpha = 0.4f),
+                            start = Offset(centerX, 0f),
+                            end = Offset(centerX, size.height),
+                            strokeWidth = 1.5.dp.toPx(),
+                        )
+
+                        val haloAlpha = haloAlphaState.value
+                        val haloRadiusCoeff = haloRadiusState.value
+                        val laneIdx = getStageLaneIndex(sel.stage.stageType)
+                        val selTop = laneIdx * laneHeightPx + insetPx
+                        val selHeight = laneHeightPx - 2 * insetPx
+                        val haloPad = 3.dp.toPx() * haloRadiusCoeff
+                        val stageColor = getStageColor(sel.stage.stageType, colorScheme)
+                        drawRoundRect(
+                            color = stageColor.copy(alpha = haloAlpha),
+                            topLeft = Offset(selSx - haloPad, selTop - haloPad),
+                            size = Size(selW + 2 * haloPad, selHeight + 2 * haloPad),
+                            cornerRadius = CornerRadius(cornerPx + haloPad),
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -351,6 +512,14 @@ fun SleepStagesChart(
                         )
                     }
                 }
+            }
+
+            if (tooltipData != null) {
+                DataPointTooltip(
+                    isVisible = true,
+                    data = tooltipData,
+                    onDismissRequest = { selectedSegment = null },
+                )
             }
         }
     }

@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -67,7 +68,7 @@ fun DateSwitcher(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Previous day",
+                contentDescription = stringResource(R.string.accessibility_prev_day),
                 tint =
                     if (canGoBack) {
                         MaterialTheme.colorScheme.onSurface
@@ -86,7 +87,7 @@ fun DateSwitcher(
             )
             Icon(
                 imageVector = Icons.Default.DateRange,
-                contentDescription = "Open date picker",
+                contentDescription = stringResource(R.string.accessibility_open_date_picker),
                 modifier =
                     Modifier
                         .padding(start = 4.dp)
@@ -100,7 +101,7 @@ fun DateSwitcher(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "Next day",
+                contentDescription = stringResource(R.string.accessibility_next_day),
                 tint =
                     if (canGoForward) {
                         MaterialTheme.colorScheme.onSurface

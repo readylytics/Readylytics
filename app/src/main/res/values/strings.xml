@@ -5,10 +5,29 @@
     <string name="tab_workouts">Workouts</string>
     <string name="tab_settings">Settings</string>
     <string name="sync_completed">Sync and recalculation completed</string>
+    <string name="recalculating_progress">Recalculating day %1$d of %2$d</string>
+
+    <!-- Historical Health Connect resync -->
+    <string name="resync_button_label">Resync Health Connect data</string>
+    <string name="resync_button_description">Re-fetch and recalculate your full history within your retention period. Runs in the background — you can keep using the app.</string>
+    <string name="resync_dialog_continue_in_background">Continue in background</string>
+    <string name="resync_notification_title">Recalculating health history</string>
+    <string name="resync_notification_preparing">Preparing…</string>
+    <string name="resync_channel_name">Health resync</string>
+    <string name="resync_channel_description">Progress while recalculating your full Health Connect history.</string>
     <string name="health_connect_unavailable_message">Health Connect is not installed on this device.\nPlease install it from the Play Store.</string>
 
     <!-- Tooltips -->
+    <string name="tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
+    <string name="tooltip_deep_sleep">Time in Stage 3 (Physical repair).</string>
+    <string name="tooltip_rem_sleep">Time in Rapid Eye Movement.</string>
+
     <string name="tooltip_pai">Your 7-day rolling heart health score.\nBased on how often and how hard you challenge your heart.\n\n• 100+: Optimal\n• 75-99: Neutral\n• 50-74: Warning\n• &lt; 50: Poor</string>
+    <string name="tooltip_readiness">Preparation for stress based on recent load &amp; recovery.\n\n• 85–100: Peak\n• 60–84: Maintain\n• 30–59: Caution\n• &lt; 30: High Fatigue</string>
+
+    <string name="tooltip_sleep_score">Total quality of rest based on duration and cycles.\n\n• 80–100: Optimal\n• 60–79: Fair\n• &lt; 60: Poor</string>
+
+    <string name="tooltip_circadian_score">Measures how regular your sleep schedule is.\n\nHigh consistency stabilizes your internal clock, improving deep sleep and energy levels.\n\n• ≥ 80%%: Optimal\n• 60–79%%: Neutral\n• 40–59%%: Warning\n• &lt; 40%%: Poor\n\nConsistency Window: ±%1$d min grace period before score drops.</string>
 
     <string name="tooltip_sleep_rhr">Average heart rate during sleep.\nTarget: lower or equal to your 30-day rolling average. (Lower = Recovered)</string>
     <string name="tooltip_sleep_rhr_baseline">\n\nBaseline: %1$d bpm %2$s (%3$d bpm)</string>
@@ -187,10 +206,411 @@
 
     <!-- Vitals Tab & Oxygen Saturation -->
     <string name="tab_vitals">Vitals</string>
-    <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last night. Goal: >95%.\n\n• Optimal: 98–100%\n• Normal: 95–97%\n• Warning: 90–94%\n• Poor: &lt;90%</string>
+    <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last night.\n\n• Optimal: 98–100%\n• Normal: 95–97%\n• Warning: 90–94%\n• Poor: &lt;90%</string>
     <string name="spo2_optimal">Optimal</string>
     <string name="spo2_normal">Normal</string>
     <string name="spo2_warning">Warning</string>
     <string name="spo2_poor">Poor</string>
     <string name="spo2_calibrating">Calibrating</string>
+
+    <!-- Actions (generic buttons) -->
+    <string name="action_dismiss">Dismiss</string>
+    <string name="action_change">Change</string>
+    <string name="action_set">Set</string>
+    <string name="action_verify">Verify</string>
+    <string name="action_restore">Restore</string>
+    <string name="action_ok">OK</string>
+
+    <!-- Backup Settings -->
+    <string name="backup_description">Backups are stored locally on your device. You can create a new backup at any time or restore from a previous one.</string>
+    <string name="backup_create_button">Create New Backup</string>
+    <string name="backup_reencrypting_message">Updating existing backup passwords...</string>
+    <string name="backup_section_available">Available Backups</string>
+    <string name="backup_none_found">No backups found.</string>
+    <string name="backup_security_section">Security</string>
+    <string name="backup_password_label">Backup Password</string>
+    <string name="backup_encryption_enabled">Encryption is enabled.</string>
+    <string name="backup_encryption_disabled">Encryption is disabled.</string>
+    <string name="backup_test_password_label">Test Backup Password</string>
+    <string name="backup_password_match">Match! ✓</string>
+    <string name="backup_password_no_match">No match ✗</string>
+    <string name="backup_new_password_label">New Password</string>
+    <string name="backup_repeat_password_label">Repeat Password</string>
+    <string name="backup_directory_label">Backup Directory</string>
+    <string name="backup_directory_default">Default (App Internal)</string>
+    <string name="backup_size_kb">%1$d KB</string>
+    <string name="backup_auto_label">Auto Backup</string>
+    <string name="backup_schedule_manual">Manual only</string>
+    <string name="backup_schedule_daily">Daily</string>
+    <string name="backup_schedule_weekly">Weekly</string>
+    <string name="backup_this_backup">this backup</string>
+
+    <!-- Backup Dialogs & Errors -->
+    <string name="dialog_set_password_title">Set Backup Password</string>
+    <string name="dialog_set_password_body">This password will be used to encrypt your backups with AES-256. If you lose it, you won\'t be able to restore your data.</string>
+    <string name="dialog_restore_backup_title">Restore Backup?</string>
+    <string name="dialog_restore_backup_body">This will replace all local health data with the contents of %1$s and restart the app. This cannot be undone.</string>
+    <string name="error_passwords_do_not_match">Passwords do not match</string>
+
+    <!-- Database Recovery Screen -->
+    <string name="recovery_title">Database Access Problem</string>
+    <string name="recovery_description">The secure encryption key for your database could not be decrypted. This typically happens if the Android Keystore was cleared or corrupted.</string>
+    <string name="recovery_success">Database successfully restored! Please restart the application.</string>
+    <string name="recovery_error_default">Failed to restore backup. Please ensure you selected the correct file.</string>
+    <string name="recovery_restoring_message">Restoring database...</string>
+    <string name="recovery_recommended_title">Recommended Recovery Option</string>
+    <string name="recovery_recommended_body">If you have a previously exported backup file (.zip), you can select it to restore your data safely.</string>
+    <string name="recovery_restore_button">Restore from Backup File</string>
+    <string name="recovery_danger_title">Danger Zone</string>
+    <string name="recovery_danger_body">If you don\'t have a backup, you can reset the database. This will permanently delete all existing local health dashboards and records.</string>
+    <string name="recovery_reset_button">Reset Database &amp; Start Fresh</string>
+
+    <!-- Accessibility -->
+    <string name="accessibility_password_hide">Hide password</string>
+    <string name="accessibility_password_show">Show password</string>
+    <string name="accessibility_backup_delete">Delete backup from %1$s</string>
+    <string name="accessibility_security_alert">Security Alert</string>
+    <string name="accessibility_search">Search</string>
+    <string name="accessibility_clear">Clear</string>
+
+    <!-- Settings Screen -->
+    <string name="message_syncing_health_data">Syncing health data...</string>
+    <string name="settings_search_placeholder">Search settings...</string>
+
+    <!-- Gender display labels (display only; domain/stored values remain English keys) -->
+    <string name="gender_male">Male</string>
+    <string name="gender_female">Female</string>
+    <string name="gender_other">Other</string>
+    <string name="gender_prefer_not_to_say">Prefer not to say</string>
+
+    <!-- Common form labels -->
+    <string name="label_date_of_birth">Date of Birth</string>
+    <string name="label_not_set">Not set</string>
+    <string name="label_gender">Gender</string>
+    <string name="label_height">Height</string>
+    <string name="label_feet">Feet</string>
+    <string name="label_inches">Inches</string>
+    <string name="unit_ft">ft</string>
+    <string name="unit_in">in</string>
+    <string name="height_range_hint_metric">Range: 120-250 cm</string>
+    <string name="height_range_hint_imperial">Range: 3\'11\" - 8\'2\"</string>
+    <string name="height_bmi_note">Used for BMI calculation in weight tracking</string>
+    <string name="error_height_feet">Feet: 3–8</string>
+    <string name="error_height_inches">Inches: 0–11</string>
+    <string name="error_height_out_of_range">Height out of range (120–250 cm)</string>
+
+    <!-- Onboarding Screen -->
+    <string name="onboarding_welcome_title">Welcome to Readylytics</string>
+    <string name="onboarding_welcome_subtitle">Your personal recovery &amp; readiness tracker — powered entirely by your own data.</string>
+    <string name="onboarding_feature_sleep_title">Sleep Score</string>
+    <string name="onboarding_feature_sleep_desc">Weighted by duration, architecture, and restoration quality.</string>
+    <string name="onboarding_feature_hrv_title">HRV &amp; Resting HR Tracking</string>
+    <string name="onboarding_feature_hrv_desc">Personal baselines calculated from your last 30 days of data.</string>
+    <string name="onboarding_feature_training_title">Training Load Index</string>
+    <string name="onboarding_feature_training_desc">Acute vs. chronic workload ratio to guide your recovery.</string>
+    <string name="onboarding_privacy_note">All data stays on your device. Nothing is ever uploaded to any server.</string>
+    <string name="onboarding_get_started">Get Started</string>
+    <string name="onboarding_profile_title">Your Profile</string>
+    <string name="onboarding_profile_subtitle">Your birthday, gender, and activity profile are used to calculate your max heart rate and personalize scores. They are stored only on your device.</string>
+    <string name="onboarding_activity_profile_label">Activity Profile</string>
+    <string name="onboarding_appearance_label">Appearance</string>
+    <string name="onboarding_dynamic_color_label">Dynamic Color</string>
+    <string name="onboarding_dynamic_color_desc">Use colors derived from your wallpaper (Android 12+)</string>
+    <string name="onboarding_units_label">Measurement Units</string>
+    <string name="onboarding_hc_permissions_label">Health Connect Permissions</string>
+    <string name="onboarding_hc_permissions_desc">This app needs access to Sleep, Heart Rate, HRV, and Exercise data from Health Connect to calculate your scores.</string>
+    <string name="onboarding_grant_access">Grant Access &amp; Continue</string>
+    <string name="onboarding_open_hc_settings">Open Health Connect Settings</string>
+
+    <!-- Heart Rate Settings -->
+    <string name="hr_auto_calculate_label">Auto-calculate Max HR</string>
+    <string name="hr_auto_calculate_desc">Uses age (220 - age) if enabled</string>
+    <string name="hr_age_display">Age: %1$d (auto-calculated)</string>
+    <string name="hr_max_rate_label">Max Heart Rate (bpm)</string>
+    <string name="hr_calculated_from_age">Calculated from age</string>
+    <string name="hr_manual_override">Manual override</string>
+    <string name="hr_manual_zone_editing_label">Manual Zone Editing</string>
+    <string name="hr_manual_zone_editing_desc">Customize percentage thresholds</string>
+    <string name="hr_calculated_zones_header">Calculated Zones</string>
+    <string name="hr_zones_section_title">Heart Rate Zones (bpm)</string>
+    <string name="hr_zones_footer">Zones are used for TRIMP and workout intensity tracking.</string>
+    <string name="hr_save_zones_button">Save Zone Boundaries</string>
+    <string name="hr_zone_range_display">%1$d - %2$d bpm</string>
+    <string name="hr_zone_n">Zone %1$d</string>
+    <string name="error_hr_zones_invalid">Invalid: All values must be 1–%1$d bpm and strictly increasing</string>
+
+    <!-- Dashboard & Calibration Messages -->
+    <string name="message_calibrating_banner">Calibrating — averages shown may improve as more nights are recorded.</string>
+    <string name="message_sleep_no_data_calibrating">No data — calibrating</string>
+    <string name="message_no_hr_data">No HR data available</string>
+    <string name="message_no_data_available">No data available</string>
+    <string name="action_continue_to_app">Continue to App</string>
+
+    <!-- Chart Labels & Section Headers -->
+    <string name="label_baseline">Baseline</string>
+    <string name="label_average">Average</string>
+    <string name="label_normal_limit">Normal Limit</string>
+    <string name="label_min">Min</string>
+    <string name="label_max">Max</string>
+    <string name="label_avg">Avg</string>
+    <string name="label_timeline">Timeline</string>
+    <string name="label_zone_breakdown">Zone Breakdown</string>
+    <string name="label_trends">Trends</string>
+    <string name="label_minutes">Minutes</string>
+    <string name="label_physiological_trends">Physiological Trends</string>
+    <string name="label_systolic_ref">Systolic (Ref: &lt;120)</string>
+    <string name="label_diastolic_ref">Diastolic (Ref: &lt;80)</string>
+
+    <!-- Steps -->
+    <string name="label_daily_steps">Daily Steps</string>
+    <string name="steps_goal_display">Goal: %1$s</string>
+    <string name="label_steps_today">Steps Today</string>
+    <string name="tooltip_steps_today">Total steps recorded today.\nGoal: %1$d steps.</string>
+
+    <!-- Heart Rate Card & Detail -->
+    <string name="tooltip_heart_rate_card">Today\'s heart rate range across all activities. Tap to see full timeline and zone breakdown.</string>
+    <string name="hr_no_data">-- bpm</string>
+    <string name="hr_avg_display">bpm  ·  avg %1$d</string>
+    <string name="hr_zone_0_range">&lt; %1$d bpm</string>
+    <string name="hr_zone_inner_range">%1$d–%2$d bpm</string>
+    <string name="hr_zone_above_range">&gt; %1$d bpm</string>
+
+    <!-- Weight Detail -->
+    <string name="label_weight">Weight</string>
+    <string name="label_weight_unit_format">Weight (%1$s)</string>
+    <string name="tooltip_weight_current">Latest weight: %1$s\nHeight: %2$s</string>
+    <string name="label_bmi">BMI</string>
+    <string name="tooltip_bmi">Body Mass Index (Normal: 18.5–24.9)\n\nUnder 25: Normal\n25-30: Overweight\n30+: Obese</string>
+    <string name="label_weight_trend">Weight Trend</string>
+
+    <!-- Body Fat Detail -->
+    <string name="label_body_fat_percentage">Body Fat Percentage</string>
+    <string name="label_body_fat">Body Fat</string>
+    <string name="tooltip_body_fat_current">Current: %1$s%%\nOptimal: %2$s\n\n%3$s, Age %4$d</string>
+    <string name="label_body_fat_trend">Body Fat Trend</string>
+
+    <!-- Blood Pressure Detail -->
+    <string name="label_blood_pressure">Blood Pressure</string>
+    <string name="label_systolic">Systolic</string>
+    <string name="tooltip_blood_pressure_systolic">Latest systolic blood pressure measurement.\n\nOptimal: &lt;120\nElevated: 120–129\nStage 1: 130–139\nStage 2: ≥140</string>
+    <string name="label_diastolic">Diastolic</string>
+    <string name="tooltip_blood_pressure_diastolic">Latest diastolic blood pressure measurement.\n\nOptimal: &lt;80\nStage 1: 80–89\nStage 2: ≥90</string>
+    <string name="label_blood_pressure_trend">Blood Pressure Trend</string>
+
+    <!-- Vitals Screen -->
+    <string name="label_hrv_rmssd">HRV (RMSSD)</string>
+    <string name="label_resting_heart_rate">Resting Heart Rate</string>
+    <string name="label_oxygen_saturation">Oxygen Saturation</string>
+
+    <!-- Workout Detail -->
+    <string name="label_workout_details">Workout Details</string>
+
+    <!-- Circadian Consistency -->
+    <string name="label_circadian_consistency">Circadian Consistency</string>
+    <string name="label_circadian_median">Median: %1$s→%2$s</string>
+
+    <!-- Error Messages (ViewModel-surface) -->
+    <string name="error_sync_failed">Sync failed</string>
+    <string name="error_backup_restore_validation">Restore validation failed</string>
+    <string name="error_backup_create_failed">Backup failed</string>
+    <string name="error_threshold_invalid_range">Invalid threshold value. Range: 0–90 minutes.</string>
+    <string name="error_threshold_update_failed">Failed to update threshold settings. Changes rolled back.</string>
+
+    <!-- Settings Screen Sections & Sub-headers -->
+    <string name="settings_section_data_backup">Data &amp; Backup</string>
+    <string name="settings_sub_local_backup">Local Backup</string>
+    <string name="settings_sub_device">Device</string>
+    <string name="settings_sub_data_management">Data Management</string>
+    <string name="settings_sub_health_connect">Health Connect</string>
+    <string name="settings_section_baselines_thresholds">Baselines &amp; Thresholds</string>
+    <string name="label_daily_step_goal">Daily Step Goal</string>
+    <string name="label_sleep">Sleep</string>
+    <string name="settings_sub_heart_rate_zones">Heart Rate Zones</string>
+    <string name="settings_sub_thresholds">Thresholds</string>
+    <string name="settings_section_display">Display</string>
+    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_about_button">About Readylytics</string>
+    <string name="settings_label_app_theme">App Theme</string>
+    <string name="action_reset_to_default">Reset to default</string>
+
+    <!-- Data Management & Sync Settings -->
+    <string name="settings_retention_enabled_label">Retention Enabled</string>
+    <string name="settings_retention_period_label">Retention Period</string>
+    <string name="settings_retention_days_display">%1$d days</string>
+    <string name="settings_retention_description">Automatically delete data older than the retention period.</string>
+    <string name="settings_resync_button">Resync Health Connect Data</string>
+    <string name="settings_resync_description">Clear all data from Health Connect and reload the last 60 days.</string>
+    <string name="settings_foreground_sync_label">Foreground Sync</string>
+    <string name="sync_preference_never">Never</string>
+    <string name="sync_preference_always">Always</string>
+    <string name="sync_preference_by_time">By Time</string>
+    <string name="settings_sync_interval_label">Sync Interval</string>
+    <string name="settings_sync_interval_display">%1$dh</string>
+    <string name="settings_primary_device_label">Primary Device</string>
+    <string name="settings_device_calibrating">Calibrating...</string>
+    <string name="settings_device_select">Select a device</string>
+    <string name="settings_device_description">Device used for metrics calculation</string>
+
+    <!-- Advanced Settings -->
+    <string name="advanced_baseline_overrides_title">Baseline Overrides</string>
+    <string name="advanced_hrv_baseline_label">HRV Baseline (ms)</string>
+    <string name="advanced_baseline_override_tooltip">Overrides the 30-day rolling median used in scoring.</string>
+    <string name="advanced_rhr_baseline_label">RHR Baseline (bpm)</string>
+    <string name="advanced_resting_hr_percentile_label">Resting HR: Percentile</string>
+    <string name="advanced_resting_hr_percentile_tooltip">Use the Nth percentile lowest heart rate reading of the entire sleep period (e.g., 5%% = lowest 5%% threshold). Lower values = lower RHR estimate. Default: 5%%.</string>
+    <string name="advanced_pai_scaling_label">PAI Scaling Factor</string>
+    <string name="advanced_pai_scaling_tooltip">Adjusts how quickly you earn PAI points. Default: 0.20.</string>
+    <string name="advanced_training_load_label">Training Load Model</string>
+    <string name="advanced_trimp_banister">Banister</string>
+    <string name="advanced_trimp_cheng">Cheng LT-TRIMP</string>
+    <string name="advanced_trimp_itrimp">iTRIMP</string>
+    <string name="advanced_banister_multiplier_label">Banister Multiplier</string>
+    <string name="advanced_banister_multiplier_desc">Sedentary=1.75, Active=1.35, Athlete=1.00.</string>
+    <string name="advanced_cheng_beta_label">Cheng Beta</string>
+    <string name="advanced_cheng_beta_desc">Sedentary=0.11, Active=0.09, Athlete=0.07.</string>
+    <string name="advanced_itrimp_b_factor_label">iTRIMP B Factor</string>
+    <string name="advanced_itrimp_b_factor_desc">Sedentary=1.5, Active=2.1, Athlete=2.9.</string>
+
+    <!-- Threshold Settings Sliders -->
+    <string name="threshold_hrv_optimal_label">HRV Optimal</string>
+    <string name="threshold_hrv_optimal_desc">HRV ratio to baseline to be considered Optimal (e.g. 100-120%%).</string>
+    <string name="threshold_hrv_warning_label">HRV Warning</string>
+    <string name="threshold_hrv_warning_desc">HRV ratio to baseline to be considered Warning (e.g. 80-100%%).</string>
+    <string name="threshold_rhr_optimal_label">RHR Optimal</string>
+    <string name="threshold_rhr_optimal_desc">RHR ratio to baseline to be considered Optimal (e.g. 80-100%%).</string>
+    <string name="threshold_rhr_warning_label">RHR Warning</string>
+    <string name="threshold_rhr_warning_desc">RHR ratio to baseline to be considered Warning (e.g. 100-120%%).</string>
+    <string name="threshold_consistency_window_label">Consistency Window</string>
+    <string name="threshold_consistency_window_desc">±Grace period (in minutes) around your median bedtime and wake time before your score starts to drop. Default: 30 min.</string>
+    <string name="threshold_evaluation_period_label">Evaluation Period</string>
+    <string name="threshold_evaluation_period_desc">Number of recent sleep sessions scored to compute your current consistency. Default: 7.</string>
+    <string name="threshold_baseline_window_label">Baseline Window</string>
+    <string name="threshold_baseline_window_desc">Number of past sleep sessions used to calculate your median bedtime anchor. Default: 14.</string>
+    <string name="settings_step_goal_tooltip">Target steps per day. Reaching this goal shows as Optimal on the dashboard.</string>
+    <string name="label_sleep_goal">Sleep Goal</string>
+
+    <!-- Circadian Threshold Settings Section -->
+    <string name="circadian_within_week_mode_label">Within-Week Regularity (Recommended)</string>
+    <string name="circadian_within_week_mode_desc">Compares same day-of-week across weeks</string>
+    <string name="circadian_rolling_anchor_label">Use Standard Rolling-Anchor</string>
+    <string name="circadian_rolling_anchor_desc">14-day rolling window (like other profiles)</string>
+    <string name="circadian_threshold_window_label">Threshold Window</string>
+    <string name="circadian_profile_default">Profile default: %1$dmin</string>
+    <string name="circadian_current_value">Current: %1$d min</string>
+    <string name="circadian_range_min">0 min</string>
+    <string name="circadian_range_max">90 min</string>
+    <string name="circadian_using_profile_default">Using profile default</string>
+    <string name="circadian_using_custom_setting">Using custom setting</string>
+
+    <!-- Audited Strings -->
+    <string name="manage_cards">Manage Cards</string>
+    <string name="action_reset_to_defaults">Reset to defaults</string>
+    <string name="accessibility_more_information">More information</string>
+    <string name="accessibility_drag_to_reorder">Drag to reorder</string>
+    <string name="accessibility_prev_day">Previous day</string>
+    <string name="accessibility_open_date_picker">Open date picker</string>
+    <string name="accessibility_next_day">Next day</string>
+    <string name="accessibility_circadian_threshold_adjustment">Circadian threshold adjustment. Range: 0 to 90 minutes</string>
+    <string name="accessibility_circadian_threshold_state">Current value: %1$d minutes</string>
+    <string name="profile_title_general">General Profile</string>
+    <string name="profile_title_shift_worker">Shift Worker Profile</string>
+    <string name="unit_system_label">Unit System</string>
+    <string name="unit_system_metric_label">Metric (cm, kg)</string>
+    <string name="unit_system_imperial_label">Imperial (ft/in, lbs)</string>
+    <string name="workout_zones_title">Heart Rate Zones</string>
+    <string name="workout_stats_pai_title">PAI</string>
+    <string name="workout_stats_history_title">History</string>
+    <string name="sleep_metrics_title">Metrics</string>
+
+    <!-- Card Titles -->
+    <string name="card_title_sleep_score">Sleep Score</string>
+    <string name="card_title_readiness">Readiness</string>
+    <string name="card_title_steps">Steps</string>
+    <string name="card_title_hrv">HRV</string>
+    <string name="card_title_sleep_rhr">Sleep RHR</string>
+    <string name="card_title_sleep_duration">Sleep Duration</string>
+    <string name="card_title_sleep_architecture">Sleep Architecture</string>
+    <string name="card_title_strain_ratio">Strain Ratio</string>
+    <string name="card_title_pai_daily">PAI Daily</string>
+    <string name="card_title_pai">PAI</string>
+    <string name="card_title_circadian_consistency">Circadian Consistency</string>
+    <string name="card_title_resting_hr">Resting Heart Rate</string>
+    <string name="card_title_recovery_index">Recovery Index</string>
+    <string name="card_title_acute_chronic_ratio">Acute/Chronic Ratio</string>
+    <string name="card_title_sleep_efficiency">Sleep Efficiency</string>
+    <string name="card_title_heart_rate">Heart Rate</string>
+    <string name="card_title_weight">Weight</string>
+    <string name="card_title_body_fat">Body Fat</string>
+    <string name="card_title_blood_pressure">Blood Pressure</string>
+    <string name="card_title_oxygen_saturation">Oxygen Saturation</string>
+
+    <!-- Card Tooltips & Secondary Texts -->
+    <string name="card_tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
+    <string name="card_goal_sleep_efficiency">Goal: &gt;85%</string>
+    <string name="card_efficiency_format">%1$s%%</string>
+
+    <!-- Plurals -->
+    <plurals name="settings_retention_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+
+    <!-- Privacy Rationale -->
+    <string name="privacy_rationale_title">Privacy &amp; Health Data</string>
+    <string name="privacy_rationale_description">This app reads sleep, heart rate, heart rate variability, and exercise data from Health Connect solely to compute your personal recovery and readiness scores. All data is processed locally on your device and is never uploaded to any server.</string>
+
+    <!-- Workout Metrics -->
+    <string name="workout_metric_training_load">Training Load</string>
+    <string name="workout_metric_avg_pulse">Avg Pulse</string>
+    <string name="workout_metric_gained_strain">Gained Strain</string>
+    <string name="workout_metric_pai">PAI</string>
+    <string name="workout_metric_trimp">TRIMP</string>
+    <string name="workout_metric_bpm">bpm</string>
+    <string name="workout_metric_strain">Strain</string>
+    <string name="workout_metric_points">points</string>
+    <string name="workout_tooltip_training_load">Total training impulse - measures training intensity and duration.</string>
+    <string name="workout_tooltip_avg_pulse">Average heart rate during the workout.</string>
+    <string name="workout_tooltip_gained_strain">Total strain gained from this workout.</string>
+    <string name="workout_tooltip_pai">Personal Activity Intelligence points gained from this workout.</string>
+    <string name="pai_earned_today">+%1$d today</string>
+    <string name="workout_stats_acwr_title">Training Load &amp; Strain Ratio (ACWR)</string>
+
+    <!-- Workout Intensities -->
+    <string name="workout_intensity_very_hard">Very Hard</string>
+    <string name="workout_intensity_hard">Hard</string>
+    <string name="workout_intensity_moderate">Moderate</string>
+    <string name="workout_intensity_light">Light</string>
+    <string name="workout_intensity_very_light">Very Light</string>
+
+    <!-- Workout History Formats -->
+    <string name="workout_history_item_subtitle">%1$d min  ·  Strain %2$s  ·  %3$s</string>
+    <string name="workout_history_bpm_format">%1$d bpm</string>
+    <string name="workout_history_bpm_na">-- bpm</string>
+
+    <!-- Sleep Metrics Cards -->
+    <string name="card_title_deep_sleep">Deep Sleep</string>
+    <string name="card_target_deep_sleep">Target: 15–25%</string>
+    <string name="card_title_rem_sleep">REM Sleep</string>
+    <string name="card_target_rem_sleep">Target: 20–25%</string>
+
+    <!-- Units -->
+    <string name="unit_bpm">bpm</string>
+    <string name="unit_mmHg">mmHg</string>
+    <string name="unit_ms">ms</string>
+    <string name="unit_percent">%</string>
+
+    <!-- Additional Card Tooltips -->
+    <string name="card_tooltip_weight_no_data">Weight from Health Connect</string>
+    <string name="card_tooltip_weight_latest">Latest weight measurement.</string>
+    <string name="card_tooltip_body_fat_no_data">Body fat percentage from Health Connect</string>
+    <string name="card_tooltip_body_fat_latest">Body fat percentage.</string>
+    <string name="card_tooltip_bp_no_data">Blood pressure from Health Connect</string>
+    <string name="card_tooltip_bp_latest">Latest blood pressure reading.\n\n</string>
+    <string name="card_bp_status_optimal">Optimal: &lt;120/80 mmHg</string>
+    <string name="card_bp_status_neutral">Elevated: 120-129/&lt;80 mmHg</string>
+    <string name="card_bp_status_warning">Hypertension Stage 1: 130-139/80-89 mmHg</string>
+    <string name="card_bp_status_poor">Hypertension Stage 2+: \u2265140/90 mmHg</string>
+
+    <!-- Additional Duration Formats -->
+    <string name="sleep_duration_hours_only">%1$dh</string>
 </resources>

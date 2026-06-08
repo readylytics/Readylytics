@@ -399,7 +399,7 @@ private fun ReorderableCardItem(
             if (isEditing) {
                 Icon(
                     imageVector = Icons.Outlined.DragIndicator,
-                    contentDescription = "Drag to reorder",
+                    contentDescription = stringResource(R.string.accessibility_drag_to_reorder),
                     modifier = Modifier.padding(end = 8.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
