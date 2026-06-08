@@ -76,8 +76,7 @@
             <meta-data
                 android:name="androidx.work.WorkManagerInitializer"
                 android:value="androidx.startup"
-                tools:node="remove"
-                tools:ignore="RemoveInManifest" />
+                tools:node="remove" />
         </provider>
 
         <!-- Declare the data-sync foreground type for WorkManager's foreground service (Android 14+)

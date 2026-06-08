@@ -201,7 +201,6 @@ fun BloodPressureSplitChart(
                 isVisible = true,
                 data = tooltipState!!,
                 onDismissRequest = { tooltipState = null },
-                yOffsetDp = (-40).dp,
             )
         }
     }

@@ -376,7 +376,6 @@ private fun HrTimelineChartContent(
             DataPointTooltip(
                 isVisible = true,
                 data = tooltipState,
-                yOffsetDp = (-28).dp,
                 onDismissRequest = { selectedSample = null },
             )
         }
