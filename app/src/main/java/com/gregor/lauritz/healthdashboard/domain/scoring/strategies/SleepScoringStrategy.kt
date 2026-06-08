@@ -72,6 +72,7 @@ class SleepScoringStrategy
             restorationWeights: RestorationWeights?,
             frozenLnMu: Float?,
             frozenLnSigma: Float?,
+            frozenRhrSigma: Float? = null,
             saturationZ: Float = ScoringConstants.HRV_SCORE_SATURATION_Z,
         ): Float {
             val zHrv =
@@ -87,7 +88,13 @@ class SleepScoringStrategy
                     ?: 0f
             val hrvScore = loadStrategy.computeHrvScore(zHrv, saturationZ)
 
-            val zRhr = loadStrategy.computeRhrZScore(currentNocturnalRhr, rhrValues, rhrBaselineOverride) ?: 0f
+            val zRhr =
+                loadStrategy.computeRhrZScore(
+                    currentNocturnalRhr,
+                    rhrValues,
+                    rhrBaselineOverride,
+                    frozenRhrSigma,
+                ) ?: 0f
             val rhrScore = (50f - 25f * zRhr).coerceIn(0f, 100f)
 
             return if (restorationWeights != null) {

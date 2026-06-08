@@ -63,6 +63,8 @@ data class DailySummaryEntity(
     val hrvSigmaMssd: Float? = null,
     @ColumnInfo(name = "rhr_bpm")
     val rhrBpm: Float? = null,
+    @ColumnInfo(name = "rhr_sigma", defaultValue = "NULL")
+    val rhrSigma: Float? = null,
     @ColumnInfo(name = "baseline_calculated_at_date")
     @Contextual
     val baselineCalculatedAtDate: LocalDate? = null,

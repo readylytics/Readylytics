@@ -86,7 +86,8 @@ class CompositeScoringCalculator
             currentRhrBpm: Float,
             rhrHistory: List<Int>,
             baselineOverride: Float?,
-        ): Float? = loadStrategy.computeRhrZScore(currentRhrBpm, rhrHistory, baselineOverride)
+            frozenSigma: Float?,
+        ): Float? = loadStrategy.computeRhrZScore(currentRhrBpm, rhrHistory, baselineOverride, frozenSigma)
 
         override fun computeRestorationSubScore(
             currentHrvMean: Float,
@@ -100,6 +101,7 @@ class CompositeScoringCalculator
             restorationWeights: RestorationWeights?,
             frozenLnMu: Float?,
             frozenLnSigma: Float?,
+            frozenRhrSigma: Float?,
             saturationZ: Float,
         ): Float =
             sleepStrategy.computeRestorationSubScore(
@@ -114,6 +116,7 @@ class CompositeScoringCalculator
                 restorationWeights,
                 frozenLnMu,
                 frozenLnSigma,
+                frozenRhrSigma,
                 saturationZ,
             )
 

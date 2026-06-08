@@ -10,5 +10,18 @@
     "inlineThinkingMode": "off",
     "theme": "dark",
     "compactToolOutput": true
+  },
+  "tools": {
+    "core": [
+      "run_shell_command(gradlew)",
+      "run_shell_command(./gradlew)",
+      "run_shell_command(.\\gradlew)",
+      "read_file",
+      "write_file",
+      "glob",
+      "grep_search",
+      "list_directory",
+      "replace"
+    ]
   }
 }

@@ -93,7 +93,22 @@ class WorkoutsViewModelTest {
             mockk {
                 every { userPreferences } returns MutableStateFlow(UserPreferences())
             }
-        computeWorkoutTrimpUseCase = mockk(relaxed = true)
+        computeWorkoutTrimpUseCase =
+            mockk(relaxed = true) {
+                every {
+                    execute(
+                        workoutStartTime = any(),
+                        workoutEndTime = any(),
+                        workoutAvgHr = any(),
+                        samples = any(),
+                        prefs = any(),
+                        restingHrBaseline = any(),
+                        storedTrimp = any(),
+                    )
+                } returns
+                    com.gregor.lauritz.healthdashboard.domain.model.Result
+                        .success(50f)
+            }
         foregroundSyncController =
             mockk {
                 every { isSyncing } returns isSyncingFlow

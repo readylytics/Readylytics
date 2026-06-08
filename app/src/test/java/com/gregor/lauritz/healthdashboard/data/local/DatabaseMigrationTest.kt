@@ -34,9 +34,9 @@ class DatabaseMigrationTest {
     @Test
     fun `all migrations are registered in sequential order`() {
         val migrations = DatabaseMigrations.all.filter { it.startVersion < it.endVersion }
-        assertEquals("Expected 25 migrations (1..26)", 25, migrations.size)
+        assertEquals("Expected 26 migrations (1..27)", 26, migrations.size)
 
-        val expectedPairs = (1..25).map { it to it + 1 }
+        val expectedPairs = (1..26).map { it to it + 1 }
         val actualPairs = migrations.map { it.startVersion to it.endVersion }
         assertEquals(expectedPairs, actualPairs)
     }

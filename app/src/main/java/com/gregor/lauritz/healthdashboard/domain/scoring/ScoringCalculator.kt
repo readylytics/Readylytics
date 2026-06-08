@@ -66,6 +66,7 @@ interface ScoringCalculator {
         currentRhrBpm: Float,
         rhrHistory: List<Int>,
         baselineOverride: Float? = null,
+        frozenSigma: Float? = null,
     ): Float?
 
     fun computeRestorationSubScore(
@@ -80,6 +81,7 @@ interface ScoringCalculator {
         restorationWeights: com.gregor.lauritz.healthdashboard.domain.scoring.components.RestorationWeights? = null,
         frozenLnMu: Float? = null,
         frozenLnSigma: Float? = null,
+        frozenRhrSigma: Float? = null,
         saturationZ: Float = ScoringConstants.HRV_SCORE_SATURATION_Z,
     ): Float
 

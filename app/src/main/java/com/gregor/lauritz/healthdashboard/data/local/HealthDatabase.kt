@@ -40,6 +40,9 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
         OxygenSaturationRecordEntity::class,
     ],
     version = HealthDatabase.DATABASE_VERSION,
+    autoMigrations = [
+        androidx.room.AutoMigration(from = 26, to = 27),
+    ],
 )
 @TypeConverters(Converters::class)
 abstract class HealthDatabase : RoomDatabase() {
@@ -64,7 +67,7 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun oxygenSaturationRecordDao(): OxygenSaturationRecordDao
 
     companion object {
-        const val DATABASE_VERSION = 26
+        const val DATABASE_VERSION = 27
 
         fun create(context: Context): HealthDatabase =
             Room
