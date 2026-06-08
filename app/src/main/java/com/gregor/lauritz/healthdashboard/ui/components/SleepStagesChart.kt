@@ -33,7 +33,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -150,6 +149,12 @@ private fun getLabelTimestamps(
 }
 
 @Composable
+private fun stageDisplayName(stageType: String): String {
+    val labelResId = LANES.firstOrNull { it.stageType == stageType }?.labelResId
+    return if (labelResId != null) stringResource(labelResId) else stageType
+}
+
+@Composable
 private fun formatStageDuration(minutes: Int): String {
     val h = minutes / 60
     val m = minutes % 60
@@ -247,7 +252,10 @@ fun SleepStagesChart(
 
     var selectedSegment by remember { mutableStateOf<SelectedSegmentState?>(null) }
 
-    val context = LocalContext.current
+    // Resolved here (composable scope) via stringResource so locale changes recompose correctly;
+    // the remember block below only consumes plain strings, never LocalContext.
+    val selectedStageName = selectedSegment?.let { stageDisplayName(it.stage.stageType) }
+    val selectedDurationStr = selectedSegment?.let { formatStageDuration(it.stage.durationMinutes) }
     val scrollState = rememberScrollState()
 
     Row(modifier = modifier.fillMaxWidth()) {
@@ -286,23 +294,18 @@ fun SleepStagesChart(
 
             val viewportWidthPx = constraints.maxWidth
             val tooltipData =
-                remember(selectedSegment, scrollState.value, viewportWidthPx) {
+                remember(
+                    selectedSegment,
+                    scrollState.value,
+                    viewportWidthPx,
+                    selectedStageName,
+                    selectedDurationStr,
+                ) {
                     val sel = selectedSegment ?: return@remember null
                     val viewportX = (sel.segmentCenterXPx - scrollState.value).roundToInt()
                     // Hide when the selected segment has scrolled outside the visible viewport
                     if (viewportX !in 0..viewportWidthPx) return@remember null
 
-                    val stage = sel.stage
-                    val labelResId = LANES.firstOrNull { it.stageType == stage.stageType }?.labelResId
-                    val stageName = if (labelResId != null) context.getString(labelResId) else stage.stageType
-                    val h = stage.durationMinutes / 60
-                    val m = stage.durationMinutes % 60
-                    val durationStr =
-                        if (h > 0) {
-                            context.getString(R.string.sleep_duration_hours_minutes, h, m)
-                        } else {
-                            context.getString(R.string.sleep_duration_minutes_only, m)
-                        }
                     DataPointTooltipData(
                         valueText = stageName,
                         dateText = timeFormatter.format(Instant.ofEpochMilli(stage.startTime)),
