@@ -278,9 +278,9 @@ fun SingleBloodPressureChart(
             minY = minY,
             maxY = maxY,
         )
-    }
 
-    if (showTooltip && tooltipState != null) {
-        DataPointTooltip(isVisible = true, data = tooltipState!!, onDismissRequest = { tooltipState = null })
+        if (showTooltip && tooltipState != null) {
+            DataPointTooltip(isVisible = true, data = tooltipState!!, onDismissRequest = { tooltipState = null })
+        }
     }
 }

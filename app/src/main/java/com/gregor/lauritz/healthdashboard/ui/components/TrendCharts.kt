@@ -361,14 +361,14 @@ fun TrendChart(
             pulseColor = dotColor,
             modifier = Modifier.fillMaxWidth().height(180.dp),
         )
-    }
 
-    if (tooltipState != null) {
-        DataPointTooltip(
-            isVisible = true,
-            data = tooltipState!!,
-            onDismissRequest = { tooltipState = null },
-        )
+        if (tooltipState != null) {
+            DataPointTooltip(
+                isVisible = true,
+                data = tooltipState!!,
+                onDismissRequest = { tooltipState = null },
+            )
+        }
     }
 
     if (shouldShowBaseline) {
@@ -658,14 +658,14 @@ fun BloodPressureTrendChart(
             pulseColor = systolicColor,
             modifier = Modifier.fillMaxWidth().height(180.dp),
         )
-    }
 
-    if (tooltipState != null) {
-        DataPointTooltip(
-            isVisible = true,
-            data = tooltipState!!,
-            onDismissRequest = { tooltipState = null },
-        )
+        if (tooltipState != null) {
+            DataPointTooltip(
+                isVisible = true,
+                data = tooltipState!!,
+                onDismissRequest = { tooltipState = null },
+            )
+        }
     }
 
     Spacer(Modifier.height(12.dp))

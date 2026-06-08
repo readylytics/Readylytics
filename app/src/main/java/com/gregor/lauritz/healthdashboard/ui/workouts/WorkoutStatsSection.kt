@@ -531,16 +531,15 @@ private fun AcwrChart(
             chartHeight = chartHeight,
             modifier = Modifier.fillMaxWidth(),
         )
-    }
 
-    // ── Tooltip popup ─────────────────────────────────────────────────────────
-    tooltipState?.let { data ->
-        DataPointTooltip(
-            isVisible = true,
-            data = data,
-            yOffsetDp = (-28).dp,
-            onDismissRequest = { selectedState = null },
-        )
+        // ── Tooltip popup ─────────────────────────────────────────────────────────
+        tooltipState?.let { data ->
+            DataPointTooltip(
+                isVisible = true,
+                data = data,
+                onDismissRequest = { selectedState = null },
+            )
+        }
     }
 
     // ── Legends (below chart) ─────────────────────────────────────────────────

@@ -91,8 +91,8 @@ class TooltipPopupPositionProvider(
     ): IntOffset {
         // Horizontally center the popup above the tap point
         val x = anchorBounds.left + tapOffset.x - (popupContentSize.width / 2)
-        // Position it always at the top of the diagram plus custom offset
-        val y = anchorBounds.top + yOffsetPx
+        // Position it right above the top of the diagram plus custom offset
+        val y = anchorBounds.top - popupContentSize.height + yOffsetPx
 
         // Keep popup on screen horizontally
         val maxX = windowSize.width - popupContentSize.width

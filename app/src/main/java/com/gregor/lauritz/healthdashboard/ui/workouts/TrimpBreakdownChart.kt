@@ -230,14 +230,14 @@ private fun HrChart(
             selectedPointOffset = selectedPointOffset,
             modifier = Modifier.fillMaxWidth().height(200.dp),
         )
-    }
 
-    if (tooltipState != null) {
-        DataPointTooltip(
-            isVisible = true,
-            data = tooltipState!!,
-            onDismissRequest = { tooltipState = null },
-        )
+        if (tooltipState != null) {
+            DataPointTooltip(
+                isVisible = true,
+                data = tooltipState!!,
+                onDismissRequest = { tooltipState = null },
+            )
+        }
     }
 }
 
