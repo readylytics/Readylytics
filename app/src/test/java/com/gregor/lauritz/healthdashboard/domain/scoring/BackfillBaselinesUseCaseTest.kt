@@ -216,17 +216,6 @@ class BackfillBaselinesUseCaseTest {
             assertEquals(expectedDate, result.first().baselineCalculatedAtDate)
         }
 
-    @Test
-    fun `computeHistoricalBaselines sets baselineVersion to 1`() =
-        runTest {
-            stubBackfill(baselineComputer, listOf(50f), listOf(50f), 60f)
-            coEvery { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
-
-            val result = computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 3)), UserPreferences())
-
-            assertEquals(1, result.first().baselineVersion)
-        }
-
     // --- freeze handling (use case does not pre-skip frozen rows) ---
 
     @Test
@@ -603,7 +592,7 @@ class BackfillBaselinesUseCaseTest {
 
             assertEquals(2, count)
             coVerify(exactly = 2) {
-                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
             }
         }
 
@@ -627,7 +616,7 @@ class BackfillBaselinesUseCaseTest {
             assertEquals(2, count)
             coVerify(exactly = 1) { dao.wipeDerivedBaselines() }
             coVerify(exactly = 2) {
-                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
             }
         }
 
@@ -697,7 +686,6 @@ class BackfillBaselinesUseCaseTest {
                     any(),
                     any(),
                     any(),
-                    any(),
                 )
             } returns Unit
 
@@ -718,7 +706,7 @@ class BackfillBaselinesUseCaseTest {
 
             assertEquals(0, count)
             coVerify(exactly = 0) {
-                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
             }
         }
 

@@ -42,7 +42,7 @@ All paths are rooted at `app/src/main/java/com/gregor/lauritz/healthdashboard/`.
                │ @Upsert by stable HC id (idempotent; overlap → replace)
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v25) │   10 entities — single source of truth
+│  HealthDatabase (SQLite v26) │   10 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -89,7 +89,7 @@ All paths are rooted at `app/src/main/java/com/gregor/lauritz/healthdashboard/`.
 
 | Component | Path | Responsibility |
 | :--- | :--- | :--- |
-| `HealthSyncUseCase` | `domain/sync/HealthSyncUseCase.kt` | Core engine. `sync(windowDays, onProgress)` recent-window sync — note the **ingestion fetch starts one day earlier than the scored window** (`today − windowDays`), because overnight sleep sessions begin the previous evening; clipping at the scored window's midnight would drop a night's pre-midnight HR/HRV samples (lower HRV mean, higher RHR percentile). The recalc loop still covers only `windowDays` (current-day-only refresh unchanged); `resyncRange(start, end, chunkDays = 30, onProgress)` full historical (two-phase: chunked re-fetch then walk-forward recompute); `ingestWindow(start, end, prefs)` the single read→map→filter→upsert funnel; `retryWithBackoff(maxAttempts = 4, initialDelayMs = 1000)` for transient HC/IO faults (never swallows `CancellationException`); `syncMutex` serializes daily vs. resync. |
+| `HealthSyncUseCase` | `domain/sync/HealthSyncUseCase.kt` | Core engine. `sync(windowDays, onProgress)` recent-window sync — note the **ingestion fetch starts one day earlier than the scored window** (`today − windowDays`), because overnight sleep sessions begin the previous evening; clipping at the scored window's midnight would drop a night's pre-midnight HR/HRV samples (lower HRV mean, higher RHR percentile). The recalc loop still covers only `windowDays` (current-day-only refresh unchanged); `resyncRange(start, end, chunkDays = 30, onProgress)` full historical (two-phase: chunked re-fetch then walk-forward recompute); **the first ingestion chunk of resyncRange also starts one day early** to capture cross-midnight sleep at the range boundary. `ingestWindow(start, end, prefs)` the single read→map→filter→upsert funnel; `retryWithBackoff(maxAttempts = 4, initialDelayMs = 1000)` for transient HC/IO faults (never swallows `CancellationException`); `syncMutex` serializes daily vs. resync. |
 | `ForegroundSyncController` | `domain/sync/ForegroundSyncController.kt` | Foreground state + progress bridge. `triggerDailySync()` = pull-to-refresh (current day only, `windowDays = 1`); `triggerImmediateSync()` = first-launch catch-up; `onBackgroundRecalc{Started,Progress,Finished}()` publish WorkManager job progress into `isSyncing` / `recalcProgress` StateFlows + `syncCompletedEvent`. |
 | `FullHistoricalResyncUseCase` | `domain/sync/FullHistoricalResyncUseCase.kt` | Resolves the retention-bounded start date via `RetentionBounds.resolveResyncStartDate()` and delegates to `HealthSyncUseCase.resyncRange(start, today)`. No math. |
 | `HealthResyncWorker` | `workers/HealthResyncWorker.kt` | `@HiltWorker` durable foreground service (`FOREGROUND_SERVICE_TYPE_DATA_SYNC`). Runs the resync use case, emits `WorkInfo` progress (`setProgressAsync`), posts a determinate "day X of Y" notification, bridges progress to `ForegroundSyncController`; `Result.retry()` on transient failure. |
@@ -131,7 +131,7 @@ Connect directly.**
 | `BodyFatRecordEntity` | `body_fat_records` | `id: String` (composite) | %, `timestampMs`, `deviceName` |
 | `BloodPressureRecordEntity` | `blood_pressure_records` | `id: String` (composite) | systolic/diastolic, `timestampMs`, `deviceName` |
 | `OxygenSaturationRecordEntity` | `oxygen_saturation_records` | `id: String` (composite) | %, `timestampMs`, `deviceName` |
-| `DailySummaryEntity` | `daily_summaries` | `dateMidnightMs: Long` | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `baseline_version`, …), weight/BP/SpO2 snapshots |
+| `DailySummaryEntity` | `daily_summaries` | `dateMidnightMs: Long` | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hr_max`, …), weight/BP/SpO2 snapshots |
 
 **Idempotency contract:** every DAO uses `@Upsert` keyed on the stable primary key, so
 re-fetching a record **replaces** rather than duplicates. There is no blanket `deleteAll()`
@@ -181,7 +181,7 @@ keep Android types out of `domain/scoring/**`.
 
 `domain/scoring/BaselineComputer.kt` computes and snapshots per-day frozen baselines:
 `hrMax`, `rhrBpm`, HRV `mu`/`sigma` (with profile-prior blending for new users),
-`paiScalingFactor`, physiology profile, and `baselineVersion`. Baselines freeze once
+`paiScalingFactor`, and physiology profile. Baselines freeze once
 calibrated (≥ 7 valid sessions); before that, `ScoringRepositoryImpl` reports
 **"Calibrating"** and emits tentative metrics only.
 
@@ -280,7 +280,7 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | `data/healthconnect/HrvMapper.kt` | Ingestion — mapper | RMSSD samples |
 | `data/healthconnect/WorkoutMapper.kt` | Ingestion — mapper | zone minutes + workout TRIMP |
 | `data/mapper/{Weight,BodyFat,BloodPressure,OxygenSaturation}DataMapper.kt` | Ingestion — mappers | weight / body fat / BP / SpO2 |
-| `data/local/HealthDatabase.kt` | Storage — Room DB (v25) | 10 entities, migrations |
+| `data/local/HealthDatabase.kt` | Storage — Room DB (v26) | 10 entities, migrations |
 | `data/local/entity/DailySummaryEntity.kt` | Storage — computed-day snapshot | scores + frozen baselines |
 | `data/local/entity/*.kt` (sleep, HR, HRV, workout, weight, …) | Storage — raw metric entities | upsert by stable HC id |
 | `data/local/dao/*.kt` | Storage — DAOs | `@Upsert`, `clearFrozenBaselines`, `deleteBeforeTimestamp` |

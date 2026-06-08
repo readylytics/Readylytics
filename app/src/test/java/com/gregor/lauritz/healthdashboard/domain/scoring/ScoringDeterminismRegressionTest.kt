@@ -94,7 +94,6 @@ class ScoringDeterminismRegressionTest {
             dateMidnightMs = dayMidnightMs,
             // Legitimate frozen baseline fields — held constant across runs.
             baselineCalculatedAtDate = date,
-            baselineVersion = 2,
             hrMax = 190f,
             paiScalingFactor = 0.2f,
             rhrBpm = 60f,
@@ -173,7 +172,6 @@ class ScoringDeterminismRegressionTest {
                 DailySummaryEntity(
                     dateMidnightMs = dayMidnightMs,
                     baselineCalculatedAtDate = today,
-                    baselineVersion = 2,
                     hrMax = 190f,
                     paiScalingFactor = 0.2f,
                     rhrBpm = 60f,
