@@ -40,9 +40,6 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.WorkoutRecordEntity
         OxygenSaturationRecordEntity::class,
     ],
     version = HealthDatabase.DATABASE_VERSION,
-    autoMigrations = [
-        androidx.room.AutoMigration(from = 26, to = 27),
-    ],
 )
 @TypeConverters(Converters::class)
 abstract class HealthDatabase : RoomDatabase() {

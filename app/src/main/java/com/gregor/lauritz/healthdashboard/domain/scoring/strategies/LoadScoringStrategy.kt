@@ -91,8 +91,9 @@ class LoadScoringStrategy
             val mu = baselineOverride ?: rhrHistory.median()
             val sigma =
                 frozenSigma ?: rhrHistory
-                    .stdev()
-                    .takeIf { it > 0f } ?: (mu * 0.05f).coerceAtLeast(1f)
+                    .takeIf { it.size > 1 }
+                    ?.stdev()
+                    ?.takeIf { it > 0f } ?: (mu * 0.05f).coerceAtLeast(1f)
             return (currentRhrBpm - mu) / sigma
         }
 

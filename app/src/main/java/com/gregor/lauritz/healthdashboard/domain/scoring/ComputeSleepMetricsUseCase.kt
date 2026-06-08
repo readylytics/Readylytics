@@ -202,7 +202,7 @@ class ComputeSleepMetricsUseCase
 
                 // Determine effective sigma for RHR
                 val calculatedRhrSigma =
-                    if (!frozenBaseline) {
+                    if (!frozenBaseline && rhrValues.size > 1) {
                         rhrValues
                             .stdev()
                             .takeIf { it > 0f }
