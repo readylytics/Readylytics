@@ -890,6 +890,17 @@ object DatabaseMigrations {
             }
         }
 
+    val MIGRATION_26_27 =
+        object : Migration(26, 27) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE daily_summaries ADD COLUMN rhr_sigma REAL DEFAULT NULL")
+            }
+
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE daily_summaries ADD COLUMN rhr_sigma REAL DEFAULT NULL")
+            }
+        }
+
     val all =
         arrayOf(
             MIGRATION_1_2,
@@ -918,5 +929,6 @@ object DatabaseMigrations {
             MIGRATION_24_25,
             MIGRATION_25_24,
             MIGRATION_25_26,
+            MIGRATION_26_27,
         )
 }

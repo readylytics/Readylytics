@@ -42,7 +42,7 @@ All paths are rooted at `app/src/main/java/com/gregor/lauritz/healthdashboard/`.
                │ @Upsert by stable HC id (idempotent; overlap → replace)
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v26) │   10 entities — single source of truth
+│  HealthDatabase (SQLite v27) │   10 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -114,7 +114,7 @@ deterministic composite IDs (`${hcRecordId}_${timestampMs}`) so re-ingestion is 
 | `BloodPressureDataMapper` | `data/mapper/BloodPressureDataMapper.kt` | `BloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg). |
 | `OxygenSaturationDataMapper` | `data/mapper/OxygenSaturationDataMapper.kt` | `OxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%). |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 25)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 27)`)
 
 Defined in `data/local/HealthDatabase.kt`; entities in `data/local/entity/`, DAOs in
 `data/local/dao/`. **The database is the single source of truth; the UI never reads Health
@@ -131,7 +131,7 @@ Connect directly.**
 | `BodyFatRecordEntity` | `body_fat_records` | `id: String` (composite) | %, `timestampMs`, `deviceName` |
 | `BloodPressureRecordEntity` | `blood_pressure_records` | `id: String` (composite) | systolic/diastolic, `timestampMs`, `deviceName` |
 | `OxygenSaturationRecordEntity` | `oxygen_saturation_records` | `id: String` (composite) | %, `timestampMs`, `deviceName` |
-| `DailySummaryEntity` | `daily_summaries` | `dateMidnightMs: Long` | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hr_max`, …), weight/BP/SpO2 snapshots |
+| `DailySummaryEntity` | `daily_summaries` | `dateMidnightMs: Long` | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hrv_sigma_mssd`, `rhr_bpm`, `rhr_sigma`, `hr_max`, …), weight/BP/SpO2 snapshots |
 
 **Idempotency contract:** every DAO uses `@Upsert` keyed on the stable primary key, so
 re-fetching a record **replaces** rather than duplicates. There is no blanket `deleteAll()`

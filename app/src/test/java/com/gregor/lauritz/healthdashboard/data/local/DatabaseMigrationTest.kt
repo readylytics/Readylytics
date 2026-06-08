@@ -18,6 +18,7 @@ import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATIO
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_24_25
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_25_24
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_25_26
+import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_26_27
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_2_3
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_3_4
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_4_5
@@ -34,9 +35,9 @@ class DatabaseMigrationTest {
     @Test
     fun `all migrations are registered in sequential order`() {
         val migrations = DatabaseMigrations.all.filter { it.startVersion < it.endVersion }
-        assertEquals("Expected 25 migrations (1..26)", 25, migrations.size)
+        assertEquals("Expected 26 migrations (1..27)", 26, migrations.size)
 
-        val expectedPairs = (1..25).map { it to it + 1 }
+        val expectedPairs = (1..26).map { it to it + 1 }
         val actualPairs = migrations.map { it.startVersion to it.endVersion }
         assertEquals(expectedPairs, actualPairs)
     }
@@ -262,5 +263,17 @@ class DatabaseMigrationTest {
     fun `MIGRATION_25_26 is registered in all array`() {
         val found = DatabaseMigrations.all.any { it === MIGRATION_25_26 }
         assertTrue("MIGRATION_25_26 must be registered in DatabaseMigrations.all", found)
+    }
+
+    @Test
+    fun `MIGRATION_26_27 version range is correct`() {
+        assertEquals(26, MIGRATION_26_27.startVersion)
+        assertEquals(27, MIGRATION_26_27.endVersion)
+    }
+
+    @Test
+    fun `MIGRATION_26_27 is registered in all array`() {
+        val found = DatabaseMigrations.all.any { it === MIGRATION_26_27 }
+        assertTrue("MIGRATION_26_27 must be registered in DatabaseMigrations.all", found)
     }
 }

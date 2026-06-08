@@ -85,13 +85,15 @@ class LoadScoringStrategy
             currentRhrBpm: Float,
             rhrHistory: List<Int>,
             baselineOverride: Float?,
+            frozenSigma: Float? = null,
         ): Float? {
             if (rhrHistory.isEmpty() && baselineOverride == null) return null
             val mu = baselineOverride ?: rhrHistory.median()
             val sigma =
-                rhrHistory
-                    .stdev()
-                    .takeIf { it > 0f } ?: (mu * 0.05f).coerceAtLeast(1f)
+                frozenSigma ?: rhrHistory
+                    .takeIf { it.size > 1 }
+                    ?.stdev()
+                    ?.takeIf { it > 0f } ?: (mu * 0.05f).coerceAtLeast(1f)
             return (currentRhrBpm - mu) / sigma
         }
 

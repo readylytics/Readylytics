@@ -14,6 +14,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.SleepNadirAnalyze
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.SleepPercentileRhrCalculator
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
+import com.gregor.lauritz.healthdashboard.domain.util.stdev
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -83,6 +84,7 @@ class ComputeSleepMetricsUseCase
                 val frozenHrvMu: Float?
                 val frozenHrvSigma: Float?
                 val frozenRhr: Float?
+                val frozenRhrSigma: Float?
 
                 if (frozenBaseline) {
                     // Frozen baselines stored on the summary — skip live recompute
@@ -94,6 +96,7 @@ class ComputeSleepMetricsUseCase
                     frozenHrvMu = summary.hrvMuMssd
                     frozenHrvSigma = summary.hrvSigmaMssd
                     frozenRhr = summary.rhrBpm
+                    frozenRhrSigma = summary.rhrSigma
                 } else {
                     // Live recompute path — no stored baselines yet.
                     // computeHrvWindows returns null only when the baseline is frozen (US-B6);
@@ -122,6 +125,7 @@ class ComputeSleepMetricsUseCase
                     frozenHrvMu = null
                     frozenHrvSigma = null
                     frozenRhr = null
+                    frozenRhrSigma = null
                 }
 
                 val yesterdayMidnightMs =
@@ -195,13 +199,31 @@ class ComputeSleepMetricsUseCase
                     } else {
                         sigmaHrvHistory
                     }
-                val lnSigmaHistory = effectiveSigmaHistory.map { ln(it.coerceAtLeast(0.001f)) }
+
+                // Determine effective sigma for RHR.
+                // Note: preserving null when rhrValues.size <= 1 is intentional to ensure downstream scoring
+                // (e.g. LoadScoringStrategy) uses its percentage-based fallback logic during recalculations.
+                val calculatedRhrSigma =
+                    if (!frozenBaseline && rhrValues.size > 1) {
+                        rhrValues
+                            .stdev()
+                            .takeIf { it > 0f }
+                    } else {
+                        null
+                    }
+                val effectiveRhrSigma = frozenRhrSigma ?: calculatedRhrSigma
+
                 val hrvSigma =
                     if (sessionHrvSamples.isNotEmpty()) {
-                        scoringCalculator.hrvSigma(
-                            lnSigmaHistory,
-                            sigmaPrior,
-                        )
+                        if (frozenBaseline && frozenHrvSigma != null) {
+                            frozenHrvSigma
+                        } else {
+                            val lnSigmaHistory = effectiveSigmaHistory.map { ln(it.coerceAtLeast(0.001f)) }
+                            scoringCalculator.hrvSigma(
+                                lnSigmaHistory,
+                                sigmaPrior,
+                            )
+                        }
                     } else {
                         null
                     }
@@ -234,6 +256,7 @@ class ComputeSleepMetricsUseCase
                             currentNocturnalRhr.toFloat(),
                             rhrValues,
                             frozenRhr ?: prefs.rhrBaselineOverride,
+                            effectiveRhrSigma,
                         )
                     val rhrDeltaBpm = currentNocturnalRhr.toFloat() - baselineRhrValue.toFloat()
 
@@ -250,6 +273,7 @@ class ComputeSleepMetricsUseCase
                             scoringConfig.restoration,
                             frozenLnMu = frozenHrvMu,
                             frozenLnSigma = frozenHrvSigma,
+                            frozenRhrSigma = effectiveRhrSigma,
                             saturationZ = scoringConfig.hrvSaturationZ,
                         )
                     if (nadirCtx.isLateNadir) sRest *= ScoringConstants.Restoration.LATE_NADIR_PENALTY
@@ -289,7 +313,9 @@ class ComputeSleepMetricsUseCase
                         if (recoveryFlags.isNotEmpty()) recoveryFlags.joinToString(",") { it.name } else null
 
                     val rollingMu =
-                        if (muHrvHistory.isNotEmpty()) {
+                        if (frozenBaseline) {
+                            summary.hrvMuMssd
+                        } else if (muHrvHistory.isNotEmpty()) {
                             muHrvHistory
                                 .map {
                                     ln(it.coerceAtLeast(0.001f))
@@ -393,6 +419,7 @@ class ComputeSleepMetricsUseCase
                             },
                         hrvSigmaMssd = if (frozenBaseline) summary.hrvSigmaMssd else hrvSigma,
                         rhrBpm = if (frozenBaseline) summary.rhrBpm else restingHrBaseline?.toFloat(),
+                        rhrSigma = if (frozenBaseline) summary.rhrSigma else effectiveRhrSigma,
                         baselineCalculatedAtDate =
                             if (frozenBaseline) {
                                 summary.baselineCalculatedAtDate
