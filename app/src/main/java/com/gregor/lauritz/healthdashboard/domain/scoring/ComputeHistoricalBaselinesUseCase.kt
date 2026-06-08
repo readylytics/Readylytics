@@ -53,7 +53,6 @@ class ComputeHistoricalBaselinesUseCase(
                 hrvSigmaPrior = sigmaPrior,
                 baselineCalculatedAtDate = date,
                 baselineObservationCount = windows.muHistory.size,
-                baselineVersion = 1,
             )
         }
     }

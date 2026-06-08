@@ -136,7 +136,12 @@ class HealthSyncUseCaseTest {
             // ingestion fetch must reach back one extra day so its pre-midnight HR/HRV samples
             // are captured. windowDays = 1 => fetch from yesterday 00:00, not today 00:00.
             val zoneId = ZoneId.systemDefault()
-            val yesterdayMidnight = LocalDate.now(zoneId).minusDays(1).atStartOfDay(zoneId).toInstant()
+            val yesterdayMidnight =
+                LocalDate
+                    .now(zoneId)
+                    .minusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
             assertEquals(yesterdayMidnight, hrvFromSlot.captured)
             assertEquals(yesterdayMidnight, hrFromSlot.captured)
         }

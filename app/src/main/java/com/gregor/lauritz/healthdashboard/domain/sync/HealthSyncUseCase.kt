@@ -109,52 +109,10 @@ class HealthSyncUseCase
                             stepsMap[day] = daySteps
                         }
 
-                        // One-time migration: all historical days get per-day bounded baselines + recomputed scores.
-                        // Stale detection: baseline_version < 2 or NULL means old global-window computation.
-                        val staleCount = dailySummaryDao.countRowsWithBaselineVersionBelow(2)
-                        val migrationRange =
-                            if (staleCount > 0) {
-                                dailySummaryDao.getEarliestStaleDateMs(2)?.let { earliestMs ->
-                                    val earliest = Instant.ofEpochMilli(earliestMs).atZone(zoneId).toLocalDate()
-                                    earliest to LocalDate.now(zoneId)
-                                }
-                            } else {
-                                null
-                            }
-                        val migrationDays =
-                            migrationRange
-                                ?.let { (ChronoUnit.DAYS.between(it.first, it.second) + 1).toInt() }
-                                ?.coerceAtLeast(0)
-                                ?: 0
-
                         // Single determinate progress track across both the migration and window loops.
-                        val totalDays = migrationDays + windowDays
+                        val totalDays = windowDays
                         var processedDays = 0
                         onProgress?.invoke(processedDays, totalDays)
-
-                        if (migrationRange != null) {
-                            logD("HealthSyncUseCase") { "Migration triggered: $staleCount stale rows found." }
-                            // Clear freeze so ScoringRepositoryImpl (now using bounded variants) can recompute.
-                            dailySummaryDao.clearFrozenBaselines()
-                            val endDate = migrationRange.second
-                            var current = migrationRange.first
-                            while (!current.isAfter(endDate)) {
-                                ensureActive()
-                                // stepsMap only covers the recent window; for older historical days
-                                // pass null so syncDayScoring preserves the existing stored step count
-                                // instead of zeroing it out.
-                                val steps = stepsMap[current]
-                                syncDayScoring(current, steps)
-                                current = current.plusDays(1)
-                                processedDays++
-                                onProgress?.invoke(processedDays, totalDays)
-                                // Cooperative yield: keeps the long walk-forward from starving the
-                                // dispatcher and makes the recompute cancellable.
-                                yield()
-                            }
-                            dailySummaryDao.setBaselineVersion(2)
-                            logD("HealthSyncUseCase") { "Migration complete." }
-                        }
 
                         var successCount = 0
                         var failureCount = 0
@@ -231,11 +189,16 @@ class HealthSyncUseCase
                         // --- Ingestion phase: chunked HC re-fetch + idempotent upsert ---
                         val stepsMap = mutableMapOf<LocalDate, Long>()
                         var chunkStart = startDate
+                        var firstChunk = true
                         while (!chunkStart.isAfter(endDate)) {
                             ensureActive()
                             // Exclusive upper bound, capped at the day after endDate.
                             val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
-                            val windowStart = chunkStart.atStartOfDay(zoneId).toInstant()
+
+                            // For the first chunk only, ingest from startDate.minusDays(1) to capture
+                            // overnight sleep sessions that began the previous evening.
+                            val ingestFromDate = if (firstChunk) chunkStart.minusDays(1) else chunkStart
+                            val windowStart = ingestFromDate.atStartOfDay(zoneId).toInstant()
                             val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
 
                             retryWithBackoff { ingestWindow(windowStart, windowEnd, prefs) }
@@ -252,6 +215,7 @@ class HealthSyncUseCase
                                 yield()
                             }
                             chunkStart = chunkEndExclusive
+                            firstChunk = false
                         }
 
                         // --- Recompute phase: walk-forward over the full range ---
@@ -266,7 +230,6 @@ class HealthSyncUseCase
                             day = day.plusDays(1)
                             yield()
                         }
-                        dailySummaryDao.setBaselineVersion(2)
 
                         settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
                         logD("HealthSyncUseCase") { "Full resync complete ($totalDays days)" }

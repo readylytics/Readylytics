@@ -64,7 +64,7 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun oxygenSaturationRecordDao(): OxygenSaturationRecordDao
 
     companion object {
-        const val DATABASE_VERSION = 25
+        const val DATABASE_VERSION = 26
 
         fun create(context: Context): HealthDatabase =
             Room

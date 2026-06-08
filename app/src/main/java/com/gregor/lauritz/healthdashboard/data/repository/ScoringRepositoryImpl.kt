@@ -274,7 +274,6 @@ class ScoringRepositoryImpl
                         summary.copy(
                             hrvBaseline = calibHrvBaseline,
                             rhrBpm = rhrBaselineValue,
-                            baselineVersion = 2,
                         )
 
                     val updatedAudit =
@@ -353,7 +352,6 @@ class ScoringRepositoryImpl
                         rhrBpm = rhrBaselineValue,
                         hrvMuMssd = hrvMuMssd,
                         baselineCalculatedAtDate = targetDate,
-                        baselineVersion = 2,
                         avgSleepingSpo2 = avgSpo2,
                         hrMax = summary.hrMax ?: hrMax,
                         paiScalingFactor = summary.paiScalingFactor ?: scoringConfig.paiScalingFactor,

@@ -68,7 +68,6 @@ interface DailySummaryDao {
         "UPDATE daily_summaries SET hrv_mu_mssd = :hrvMuMssd, " +
             "hrv_sigma_mssd = :hrvSigmaMssd, rhr_bpm = :rhrBpm, " +
             "baseline_calculated_at_date = :baselineCalculatedAtDate, " +
-            "baseline_version = :baselineVersion, " +
             "hr_max = :hrMax, snapshot_profile = :snapshotProfile, " +
             "hrv_sigma_prior = :hrvSigmaPrior, pai_scaling_factor = :paiScalingFactor, " +
             "baseline_observation_count = :baselineObservationCount " +
@@ -80,7 +79,6 @@ interface DailySummaryDao {
         hrvSigmaMssd: Float?,
         rhrBpm: Float?,
         baselineCalculatedAtDate: java.time.LocalDate?,
-        baselineVersion: Int?,
         hrMax: Float? = null,
         snapshotProfile: String? = null,
         hrvSigmaPrior: Float? = null,
@@ -91,8 +89,7 @@ interface DailySummaryDao {
     // Clears the freeze flag so BaselineComputer will recompute on next sync.
     @Query(
         "UPDATE daily_summaries SET " +
-            "baseline_calculated_at_date = NULL, " +
-            "baseline_version = NULL " +
+            "baseline_calculated_at_date = NULL " +
             "WHERE baseline_calculated_at_date IS NOT NULL",
     )
     suspend fun clearFrozenBaselines()
@@ -103,7 +100,6 @@ interface DailySummaryDao {
             "hrv_sigma_mssd = NULL, " +
             "rhr_bpm = NULL, " +
             "baseline_calculated_at_date = NULL, " +
-            "baseline_version = NULL, " +
             "hr_max = NULL, " +
             "snapshot_profile = NULL, " +
             "snapshot_calibration_phase = NULL, " +
@@ -113,30 +109,13 @@ interface DailySummaryDao {
     )
     suspend fun wipeDerivedBaselines()
 
-    @Query(
-        "SELECT COUNT(*) FROM daily_summaries " +
-            "WHERE baseline_version IS NULL OR baseline_version < :version",
-    )
-    suspend fun countRowsWithBaselineVersionBelow(version: Int): Int
-
     @Query("SELECT MIN(dateMidnightMs) FROM daily_summaries")
     suspend fun getEarliestDateMs(): Long?
-
-    @Query(
-        "SELECT MIN(dateMidnightMs) FROM daily_summaries WHERE baseline_version IS NULL OR baseline_version < :version",
-    )
-    suspend fun getEarliestStaleDateMs(version: Int): Long?
 
     @Query("SELECT MIN(dateMidnightMs) FROM daily_summaries")
     fun _observeEarliestDateMs(): Flow<Long?>
 
     fun observeEarliestDateMs(): Flow<Long?> = _observeEarliestDateMs().distinctUntilChanged()
-
-    // Call only after re-computing baselines; stamps successfully recomputed rows.
-    @Query(
-        "UPDATE daily_summaries SET baseline_version = :version",
-    )
-    suspend fun setBaselineVersion(version: Int)
 
     @Query("SELECT rhr_bpm FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
     suspend fun getPreciseRhrBaseline(dateMidnightMs: Long): Double?
