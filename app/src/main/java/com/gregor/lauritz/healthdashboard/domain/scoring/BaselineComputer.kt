@@ -4,6 +4,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
+import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.domain.util.logD
 import com.gregor.lauritz.healthdashboard.domain.util.mean
@@ -58,7 +59,7 @@ class BaselineComputer
             return sessions.mapNotNull { session ->
                 val samples = samplesBySession[session.id] ?: return@mapNotNull null
                 if (samples.isEmpty()) return@mapNotNull null
-                val index = Math.round((percentile / 100.0) * (samples.size - 1)).toInt().coerceIn(0, samples.size - 1)
+                val index = ((percentile / 100.0) * (samples.size - 1)).roundToInt().coerceIn(0, samples.size - 1)
                 samples[index].beatsPerMinute
             }
         }
@@ -83,7 +84,7 @@ class BaselineComputer
             return sessions.mapNotNull { session ->
                 val samples = samplesBySession[session.id] ?: return@mapNotNull null
                 if (samples.isEmpty()) return@mapNotNull null
-                val index = Math.round((percentile / 100.0) * (samples.size - 1)).toInt().coerceIn(0, samples.size - 1)
+                val index = ((percentile / 100.0) * (samples.size - 1)).roundToInt().coerceIn(0, samples.size - 1)
                 samples[index].beatsPerMinute
             }
         }
@@ -151,7 +152,8 @@ class BaselineComputer
             return if (nadirs.isEmpty()) {
                 ScoringConstants.DEFAULT_RHR_BPM
             } else {
-                nadirs.map { it.roundToInt() }.median()
+                // Median of the float nadirs directly; round only at the final boundary.
+                nadirs.median()
             }
         }
 
@@ -210,7 +212,7 @@ class BaselineComputer
 
                     if (count < 10) return@mapNotNull null
 
-                    val idx = Math.round((percentile / 100.0) * (count - 1)).toInt().coerceIn(0, count - 1)
+                    val idx = ((percentile / 100.0) * (count - 1)).roundToInt().coerceIn(0, count - 1)
 
                     // Index into in-memory list (no DB query)
                     samples[idx].beatsPerMinute.toFloat()
@@ -219,7 +221,8 @@ class BaselineComputer
             return if (nadirs.isEmpty()) {
                 ScoringConstants.DEFAULT_RHR_BPM
             } else {
-                nadirs.map { it.roundToInt() }.median()
+                // Median of the float nadirs directly; round only at the final boundary.
+                nadirs.median()
             }
         }
 
@@ -391,6 +394,137 @@ class BaselineComputer
             )
         }
 
+        /**
+         * Batched, point-in-time-correct baseline inputs for the historical backfill.
+         *
+         * Equivalent to invoking [computeHrvWindowsBetween] (excluding the day's own session) plus
+         * [computeAdaptiveBaselineRhrBpmBetween] for every day in [summaries] — but performs a
+         * fixed, small number of DB reads for the whole range instead of ~11 queries per day
+         * (a classic N+1). It pre-fetches the widest window (the 56-day HRV sigma window) once and
+         * derives each day's rolling windows in memory.
+         *
+         * Equivalence is by construction: the prefetch is a superset [SleepSessionDao.getBetween]
+         * over `[min(day) − 56d .. max(day) end]`, and each day re-applies the identical
+         * `startTime >= from AND endTime <= to` predicate in the same start-ASC order, so per-day
+         * membership, validity gating ([ScoringCalculator.validateNight]), session ordering and the
+         * percentile-nadir math are byte-identical to the per-day methods. The RHR window does NOT
+         * exclude the day's own session (mirroring [computeAdaptiveBaselineRhrBpmBetween]); the HRV
+         * window does (mirroring the live sync path).
+         *
+         * No freeze-skip is applied here: the historical backfill wipes derived baselines before
+         * calling, so the per-day methods' freeze guard never fires in practice.
+         */
+        suspend fun computeBackfillBaselines(
+            summaries: List<DailySummaryEntity>,
+            percentile: Int,
+        ): Map<Long, BackfillBaseline> {
+            if (summaries.isEmpty()) return emptyMap()
+
+            val minMidnightMs = summaries.minOf { it.dateMidnightMs }
+            val maxMidnightMs = summaries.maxOf { it.dateMidnightMs }
+            val maxDayEndMs =
+                Instant.ofEpochMilli(maxMidnightMs).plus(1, ChronoUnit.DAYS).toEpochMilli() - 1
+            val prefetchFromMs =
+                Instant
+                    .ofEpochMilli(minMidnightMs)
+                    .minus(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong(), ChronoUnit.DAYS)
+                    .toEpochMilli()
+                    .coerceAtLeast(0)
+
+            val sessionsAsc = sleepSessionDao.getBetween(prefetchFromMs, maxDayEndMs)
+            if (sessionsAsc.isEmpty()) {
+                return summaries.associate {
+                    it.dateMidnightMs to BackfillBaseline(emptyList(), emptyList(), ScoringConstants.DEFAULT_RHR_BPM)
+                }
+            }
+
+            val ids = sessionsAsc.map { it.id }
+            val rmssdBySession = hrvDao.getSleepRmssdForSessionsMap(ids)
+            val avgHrBySession = heartRateDao.getAvgSleepHrForSessions(ids)
+            val hrProjectionBySession = heartRateDao.getSleepHrProjectionForSessions(ids).groupBy { it.sessionId }
+
+            // Precompute per-night derived values once (validity, nightly RMSSD mean, percentile nadir).
+            val nights =
+                sessionsAsc.map { session ->
+                    val rmssd = rmssdBySession[session.id] ?: emptyList()
+                    val hrvMean = if (rmssd.isNotEmpty()) rmssd.mean() else null
+                    val canContribute =
+                        scoringCalculator
+                            .validateNight(
+                                rmssdMs = hrvMean,
+                                rhrBpm = avgHrBySession[session.id]?.toFloat(),
+                                durationMinutes = session.durationMinutes,
+                                deepMinutes = session.deepSleepMinutes,
+                                remMinutes = session.remSleepMinutes,
+                                hrCoverageValid = true,
+                            ).canContributeToBaseline
+                    val samples = hrProjectionBySession[session.id]
+                    val nadirBpm =
+                        if (samples != null && samples.size >= 10) {
+                            val idx =
+                                ((percentile / 100.0) * (samples.size - 1))
+                                    .roundToInt()
+                                    .coerceIn(0, samples.size - 1)
+                            samples[idx].beatsPerMinute.toFloat()
+                        } else {
+                            null
+                        }
+                    BackfillNight(session.id, session.startTime, session.endTime, hrvMean, canContribute, nadirBpm)
+                }
+
+            return summaries.associate { summary ->
+                val dayMidnightMs = summary.dateMidnightMs
+                val dayInstant = Instant.ofEpochMilli(dayMidnightMs)
+                val nextDayMidnightMs = dayInstant.plus(1, ChronoUnit.DAYS).toEpochMilli()
+                val dayEndMs = nextDayMidnightMs - 1
+
+                // The day's own session: first session whose endTime falls within the day
+                // (mirrors getSessionEndingInRange(dayMidnight, nextDayMidnight)).
+                val ownSessionId =
+                    nights
+                        .filter { it.endTime in dayMidnightMs until nextDayMidnightMs }
+                        .minByOrNull { it.endTime }
+                        ?.id
+
+                // HRV sigma window: [dayMidnight − 56d .. dayEnd], excluding the day's own session.
+                val hrvFromMs =
+                    dayInstant
+                        .minus(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong(), ChronoUnit.DAYS)
+                        .toEpochMilli()
+                        .coerceAtLeast(0)
+                val sigmaHistory =
+                    nights
+                        .asSequence()
+                        .filter {
+                            it.startTime >= hrvFromMs &&
+                                it.endTime <= dayEndMs &&
+                                it.id != ownSessionId &&
+                                it.canContributeToBaseline
+                        }.mapNotNull { it.hrvMean }
+                        .toList()
+                val muHistory = sigmaHistory.takeLast(ScoringConstants.HRV_MU_WINDOW_DAYS)
+
+                // RHR window: [dayMidnight − 30d .. dayEnd] (own session NOT excluded).
+                val rhrFromMs =
+                    dayInstant
+                        .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
+                        .toEpochMilli()
+                        .coerceAtLeast(0)
+                val nadirs =
+                    nights
+                        .asSequence()
+                        .filter {
+                            it.startTime >= rhrFromMs &&
+                                it.endTime <= dayEndMs &&
+                                it.canContributeToBaseline
+                        }.mapNotNull { it.nadirBpm }
+                        .toList()
+                val rhrBpm = if (nadirs.isEmpty()) ScoringConstants.DEFAULT_RHR_BPM else nadirs.median()
+
+                dayMidnightMs to BackfillBaseline(muHistory, sigmaHistory, rhrBpm)
+            }
+        }
+
         private suspend fun filterValidBaselineSessions(
             sessions: List<SleepSessionEntity>,
             assumeCoverageValid: Boolean = false,
@@ -439,5 +573,25 @@ class BaselineComputer
             val sigmaHistory: List<Float>,
             val historicalSessions: List<SleepSessionEntity>,
             val validHistoricalSessionIds: List<String>,
+        )
+
+        /**
+         * Per-day baseline inputs produced by [computeBackfillBaselines]: the HRV mu/sigma history
+         * windows and the resolved RHR baseline (already defaulted when no valid nadirs exist).
+         */
+        data class BackfillBaseline(
+            val muHistory: List<Float>,
+            val sigmaHistory: List<Float>,
+            val rhrBpm: Float,
+        )
+
+        /** Pre-derived per-night values used to build each day's windows in memory. */
+        private data class BackfillNight(
+            val id: String,
+            val startTime: Long,
+            val endTime: Long,
+            val hrvMean: Float?,
+            val canContributeToBaseline: Boolean,
+            val nadirBpm: Float?,
         )
     }

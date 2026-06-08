@@ -5,6 +5,16 @@
     <string name="tab_workouts">Workouts</string>
     <string name="tab_settings">Settings</string>
     <string name="sync_completed">Sync and recalculation completed</string>
+    <string name="recalculating_progress">Recalculating day %1$d of %2$d</string>
+
+    <!-- Historical Health Connect resync -->
+    <string name="resync_button_label">Resync Health Connect data</string>
+    <string name="resync_button_description">Re-fetch and recalculate your full history within your retention period. Runs in the background — you can keep using the app.</string>
+    <string name="resync_dialog_continue_in_background">Continue in background</string>
+    <string name="resync_notification_title">Recalculating health history</string>
+    <string name="resync_notification_preparing">Preparing…</string>
+    <string name="resync_channel_name">Health resync</string>
+    <string name="resync_channel_description">Progress while recalculating your full Health Connect history.</string>
     <string name="health_connect_unavailable_message">Health Connect is not installed on this device.\nPlease install it from the Play Store.</string>
 
     <!-- Tooltips -->

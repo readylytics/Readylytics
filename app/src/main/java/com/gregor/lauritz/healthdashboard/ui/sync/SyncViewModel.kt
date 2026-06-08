@@ -62,8 +62,9 @@ class SyncViewModel
         val requiredPermissions = hcRepo.requiredPermissions
         val allPermissions = hcRepo.allPermissions
         val isSyncing = foregroundSyncController.isSyncing
+        val recalcProgress = foregroundSyncController.recalcProgress
 
-        private val _syncEvents = Channel<SyncEvent>()
+        private val _syncEvents = Channel<SyncEvent>(capacity = Channel.BUFFERED)
         val syncEvents = _syncEvents.receiveAsFlow()
 
         private var foregroundCheckJob: Job? = null
@@ -71,7 +72,7 @@ class SyncViewModel
         init {
             viewModelScope.launch {
                 foregroundSyncController.syncCompletedEvent.collect {
-                    _syncEvents.send(SyncEvent.SyncCompleted)
+                    _syncEvents.trySend(SyncEvent.SyncCompleted)
                 }
             }
 
@@ -88,7 +89,9 @@ class SyncViewModel
         fun triggerManualSync() {
             viewModelScope.launch {
                 try {
-                    foregroundSyncController.triggerImmediateSync()
+                    // Pull-to-refresh recalculates the current day only; full historical recalculation
+                    // is exposed via the Settings "Resync Health Connect data" button (WorkManager).
+                    foregroundSyncController.triggerDailySync()
                 } catch (e: HealthConnectPermissionRevokedException) {
                     _uiState.update { SyncUiState.NeedsPermissions }
                 } catch (e: Exception) {

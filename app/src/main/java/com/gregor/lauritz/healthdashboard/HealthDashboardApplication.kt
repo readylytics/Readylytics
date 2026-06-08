@@ -64,6 +64,11 @@ class HealthDashboardApplication :
         }
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
 
+        // Create the resync progress notification channel up front so the foreground worker can post
+        // immediately on first use.
+        com.gregor.lauritz.healthdashboard.workers.SyncNotifications
+            .ensureChannel(this)
+
         appScope.launch(Dispatchers.IO) {
             // Run historical baseline backfill once per app start
             runCatching {

@@ -8,6 +8,7 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_22_23
+import com.gregor.lauritz.healthdashboard.data.local.DatabaseMigrations.MIGRATION_25_26
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -24,6 +25,39 @@ class MigrationTest {
             emptyList(),
             FrameworkSQLiteOpenHelperFactory(),
         )
+
+    @Test
+    fun testMigration25To26_baselineVersionDropped() {
+        val db = helper.createDatabase(TEST_DB_NAME_5, 25)
+
+        db.query("PRAGMA table_info(daily_summaries)").use { cursor ->
+            val columnNames = mutableSetOf<String>()
+            while (cursor.moveToNext()) {
+                columnNames.add(cursor.getString(1))
+            }
+            assert(columnNames.contains("baseline_version")) { "v25 must have baseline_version column" }
+        }
+
+        db.close()
+
+        val migratedDb =
+            helper.runMigrationsAndValidate(
+                TEST_DB_NAME_5,
+                26,
+                true,
+                MIGRATION_25_26,
+            )
+
+        migratedDb.query("PRAGMA table_info(daily_summaries)").use { cursor ->
+            val columnNames = mutableSetOf<String>()
+            while (cursor.moveToNext()) {
+                columnNames.add(cursor.getString(1))
+            }
+            assert(!columnNames.contains("baseline_version")) { "v26 must NOT have baseline_version column" }
+        }
+
+        migratedDb.close()
+    }
 
     @Test
     fun testMigration22To23_schemaColumnsAdded() {
@@ -177,5 +211,6 @@ class MigrationTest {
         private const val TEST_DB_NAME_2 = "migration_test_2.db"
         private const val TEST_DB_NAME_3 = "migration_test_3.db"
         private const val TEST_DB_NAME_4 = "migration_test_4.db"
+        private const val TEST_DB_NAME_5 = "migration_test_5.db"
     }
 }
