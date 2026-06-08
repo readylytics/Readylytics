@@ -21,6 +21,7 @@ import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
+import com.gregor.lauritz.healthdashboard.domain.sync.RecalcProgress
 import com.gregor.lauritz.healthdashboard.ui.common.BaseViewModel
 import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateDaySummary
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -132,6 +133,7 @@ class DashboardViewModel
                 cardConfigurations = cardState.pendingConfiguration ?: cardState.cardConfiguration,
                 isManagingCards = cardState.isManagingCards,
                 isRefreshing = realtimeState.isSyncing,
+                recalcProgress = realtimeState.recalcProgress,
                 isComputingMetrics = realtimeState.isSyncing && basicInputs.summary == null,
                 isCalibrating = basicInputs.summary?.isCalibrating ?: false,
                 errorMessage = if (cardsResult.isFailure) "Failed to load dashboard data" else null,
@@ -211,11 +213,16 @@ class DashboardViewModel
         fun onRefresh() {
             viewModelScope.launch {
                 try {
-                    foregroundSyncController.triggerImmediateSync()
-                    dailyMetricCache.invalidate()
+                    // Pull-to-refresh recalculates the current day only; the Settings
+                    // "Resync Health Connect data" button drives the full historical resync.
+                    foregroundSyncController.triggerDailySync()
                 } catch (e: Exception) {
                     Log.e(TAG, "Refresh failed", e)
                     _errorMessage.value = e.message ?: "Sync failed"
+                } finally {
+                    // Always clear cached derived metrics, even if the sync failed partway, so the
+                    // dashboard never serves stale sleep/load scores from a previous recalculation.
+                    dailyMetricCache.invalidate()
                 }
             }
         }
@@ -242,6 +249,7 @@ data class DashboardUiState(
     val cardConfigurations: List<CardConfiguration> = emptyList(),
     val isManagingCards: Boolean = false,
     val isRefreshing: Boolean = false,
+    val recalcProgress: RecalcProgress? = null,
     val isComputingMetrics: Boolean = false,
     val isCalibrating: Boolean = false,
     val errorMessage: String? = null,

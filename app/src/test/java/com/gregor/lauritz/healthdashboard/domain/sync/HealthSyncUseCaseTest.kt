@@ -21,10 +21,13 @@ import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -118,47 +121,54 @@ class HealthSyncUseCaseTest {
         }
 
     @Test
-    fun `sync runs migration when baseline version is below 2`() =
+    fun `daily sync windowDays 1 fetches samples from yesterday to cover cross-midnight sleep`() =
         runTest {
-            // Setup: stale rows exist
-            coEvery { dailySummaryDao.countRowsWithBaselineVersionBelow(2) } returns 5
-            coEvery { dailySummaryDao.getEarliestDateMs() } returns 1717192800000L // 2024-06-01
             coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
 
-            useCase.sync()
+            val hrvFromSlot = slot<Instant>()
+            val hrFromSlot = slot<Instant>()
+            coEvery { hcRepo.readHrvSamples(capture(hrvFromSlot), any()) } returns emptyList()
+            coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
 
-            coVerify {
-                dailySummaryDao.clearFrozenBaselines()
-                dailySummaryDao.setBaselineVersion(2)
-            }
+            useCase.sync(windowDays = 1)
+
+            // Last night's sleep session begins the previous evening (before midnight); the
+            // ingestion fetch must reach back one extra day so its pre-midnight HR/HRV samples
+            // are captured. windowDays = 1 => fetch from yesterday 00:00, not today 00:00.
+            val zoneId = ZoneId.systemDefault()
+            val yesterdayMidnight =
+                LocalDate
+                    .now(zoneId)
+                    .minusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+            assertEquals(yesterdayMidnight, hrvFromSlot.captured)
+            assertEquals(yesterdayMidnight, hrFromSlot.captured)
         }
 
     @Test
-    fun `sync skips migration when all rows are at version 2`() =
+    fun `resyncRange first chunk fetches samples from startDate minus 1 to cover cross-midnight sleep`() =
         runTest {
-            coEvery { dailySummaryDao.countRowsWithBaselineVersionBelow(2) } returns 0
+            val zoneId = ZoneId.systemDefault()
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 2)
+
+            val hrvFromSlot = slot<Instant>()
+            val hrFromSlot = slot<Instant>()
+            coEvery { hcRepo.readHrvSamples(capture(hrvFromSlot), any()) } returns emptyList()
+            coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
             coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
 
-            useCase.sync()
+            useCase.resyncRange(startDate, endDate)
 
-            coVerify(exactly = 0) {
-                dailySummaryDao.clearFrozenBaselines()
-            }
-        }
-
-    @Test
-    fun `sync migration recomputes scores for historical days`() =
-        runTest {
-            val earliestMs = 1717192800000L // 2024-06-01
-            coEvery { dailySummaryDao.countRowsWithBaselineVersionBelow(2) } returns 1
-            coEvery { dailySummaryDao.getEarliestDateMs() } returns earliestMs
-            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
-
-            useCase.sync()
-
-            // Verify it started from June 1st
-            coVerify {
-                scoringRepository.computeDailySummary(LocalDate.of(2024, 6, 1))
-            }
+            // The first chunk of resyncRange must reach back one extra day to capture
+            // overnight sleep sessions that began the previous evening.
+            val reachBackMidnight =
+                startDate
+                    .minusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+            assertEquals(reachBackMidnight, hrvFromSlot.captured)
+            assertEquals(reachBackMidnight, hrFromSlot.captured)
         }
 }

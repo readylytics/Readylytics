@@ -10,11 +10,10 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.domain.util.RetentionBounds
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
-import java.time.LocalDate
-import java.time.ZoneId
 
 @HiltWorker
 class DataCleanupWorker
@@ -32,14 +31,8 @@ class DataCleanupWorker
         override suspend fun doWork(): Result {
             return runCatching {
                 val prefs = settingsRepo.userPreferences.first()
-                if (!prefs.retentionDaysEnabled) {
-                    return Result.success()
-                }
-
-                val retentionDays = prefs.retentionDays
-                val zoneId = ZoneId.systemDefault()
-                val cutoffDate = LocalDate.now(zoneId).minusDays(retentionDays.toLong())
-                val cutoffMs = cutoffDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                // Null cutoff means retention is disabled ("unlimited") — keep everything.
+                val cutoffMs = RetentionBounds.resolveRetentionCutoffMs(prefs) ?: return Result.success()
 
                 sleepDao.deleteBeforeTimestamp(cutoffMs)
                 heartRateDao.deleteBeforeTimestamp(cutoffMs)
