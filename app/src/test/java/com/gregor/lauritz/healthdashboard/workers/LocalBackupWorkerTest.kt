@@ -1,49 +1,65 @@
 package com.gregor.lauritz.healthdashboard.workers
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import androidx.work.ListenableWorker
+import androidx.work.WorkerParameters
 import com.gregor.lauritz.healthdashboard.data.backup.LocalBackupManager
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import java.io.File
+import java.io.IOException
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@RunWith(RobolectricTestRunner::class)
 class LocalBackupWorkerTest {
-    @Test
-    fun localBackupManager_success_returnsSuccess() =
-        runTest {
-            val mockBackupManager = mockk<LocalBackupManager>()
-            coEvery { mockBackupManager.createBackup() } returns
-                Result.success(File("/tmp/backup.json"))
+    private lateinit var context: Context
+    private lateinit var mockBackupManager: LocalBackupManager
+    private lateinit var workerParams: WorkerParameters
 
-            val result = mockBackupManager.createBackup()
-
-            assertTrue(result.isSuccess)
-            assertTrue(result.getOrNull()?.name?.startsWith("backup") ?: false)
-        }
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+        mockBackupManager = mockk()
+        workerParams = mockk(relaxed = true)
+    }
 
     @Test
-    fun localBackupManager_failure_returnsFailure() =
-        runTest {
-            val mockBackupManager = mockk<LocalBackupManager>()
-            coEvery { mockBackupManager.createBackup() } returns
-                Result.failure(Exception("Backup failed"))
+    fun doWork_success_returnsSuccess() = runTest {
+        coEvery { mockBackupManager.createBackup() } returns Result.success(File("backup.zip"))
 
-            val result = mockBackupManager.createBackup()
+        val worker = LocalBackupWorker(context, workerParams, mockBackupManager)
+        val result = worker.doWork()
 
-            assertTrue(result.isFailure)
-        }
+        assertEquals(ListenableWorker.Result.success(), result)
+    }
 
     @Test
-    fun localBackupManager_capturesErrorMessage() =
-        runTest {
-            val errorMessage = "Disk space exceeded"
-            val mockBackupManager = mockk<LocalBackupManager>()
-            coEvery { mockBackupManager.createBackup() } returns
-                Result.failure(Exception(errorMessage))
+    fun doWork_ioException_returnsRetry() = runTest {
+        coEvery { mockBackupManager.createBackup() } returns Result.failure(IOException("Disk full"))
 
-            val result = mockBackupManager.createBackup()
+        val worker = LocalBackupWorker(context, workerParams, mockBackupManager)
+        val result = worker.doWork()
 
-            assertTrue(result.exceptionOrNull()?.message?.contains(errorMessage) ?: false)
-        }
+        assertEquals(ListenableWorker.Result.retry(), result)
+    }
+
+    @Test
+    fun doWork_otherException_returnsFailure() = runTest {
+        val errorMessage = "Fatal error"
+        coEvery { mockBackupManager.createBackup() } returns Result.failure(Exception(errorMessage))
+
+        val worker = LocalBackupWorker(context, workerParams, mockBackupManager)
+        val result = worker.doWork()
+
+        assertTrue(result is ListenableWorker.Result.Failure)
+        val outputData = result.outputData
+        assertEquals(errorMessage, outputData.getString("error"))
+    }
 }
