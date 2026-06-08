@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +25,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -63,7 +64,12 @@ fun TrendCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.Bottom) {
@@ -246,10 +252,19 @@ fun TrendChart(
     val line =
         LineCartesianLayer.rememberLine(
             fill = LineCartesianLayer.LineFill.single(Fill(dotColor)),
+            areaFill =
+                LineCartesianLayer.AreaFill.single(
+                    Fill(
+                        Brush.verticalGradient(
+                            listOf(dotColor.copy(alpha = 0.3f), Color.Transparent),
+                        ),
+                    ),
+                ),
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
                     LineCartesianLayer.Point(dotComponent, 6.dp),
                 ),
+            interpolator = LineCartesianLayer.Interpolator.catmullRom(),
         )
 
     val extendedColors = LocalExtendedColors.current
@@ -549,20 +564,38 @@ fun BloodPressureTrendChart(
     val systolicLine =
         LineCartesianLayer.rememberLine(
             fill = LineCartesianLayer.LineFill.single(Fill(systolicColor)),
+            areaFill =
+                LineCartesianLayer.AreaFill.single(
+                    Fill(
+                        Brush.verticalGradient(
+                            listOf(systolicColor.copy(alpha = 0.2f), Color.Transparent),
+                        ),
+                    ),
+                ),
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
                     LineCartesianLayer.Point(systolicDotComponent, 6.dp),
                 ),
+            interpolator = LineCartesianLayer.Interpolator.catmullRom(),
         )
 
     val diastolicDotComponent = rememberShapeComponent(fill = Fill(diastolicColor), shape = CircleShape)
     val diastolicLine =
         LineCartesianLayer.rememberLine(
             fill = LineCartesianLayer.LineFill.single(Fill(diastolicColor)),
+            areaFill =
+                LineCartesianLayer.AreaFill.single(
+                    Fill(
+                        Brush.verticalGradient(
+                            listOf(diastolicColor.copy(alpha = 0.2f), Color.Transparent),
+                        ),
+                    ),
+                ),
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
                     LineCartesianLayer.Point(diastolicDotComponent, 6.dp),
                 ),
+            interpolator = LineCartesianLayer.Interpolator.catmullRom(),
         )
 
     val lineProvider =

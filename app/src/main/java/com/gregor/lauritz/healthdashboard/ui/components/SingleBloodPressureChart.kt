@@ -14,6 +14,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.domain.model.diastolicZoneBands
@@ -182,10 +184,19 @@ fun SingleBloodPressureChart(
     val line =
         LineCartesianLayer.rememberLine(
             fill = LineCartesianLayer.LineFill.single(Fill(lineColor)),
+            areaFill =
+                LineCartesianLayer.AreaFill.single(
+                    Fill(
+                        Brush.verticalGradient(
+                            listOf(lineColor.copy(alpha = 0.2f), Color.Transparent),
+                        ),
+                    ),
+                ),
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
                     LineCartesianLayer.Point(dotComponent, 6.dp),
                 ),
+            interpolator = LineCartesianLayer.Interpolator.catmullRom(),
         )
 
     val markerVisibilityListener =
