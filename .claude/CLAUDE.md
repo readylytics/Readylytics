@@ -28,9 +28,20 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 ## Core Architecture & Tech Stack
 
 - **Data Flow:** Room DB is single source of truth. Health Connect is ingestion-only. UI must NEVER access Health Connect directly.
-- **Stack:** Kotlin, Compose (M3), Room, Health Connect API, WorkManager (sync/backup), DataStore (prefs), Google Drive API (AppData), Vico (charts).
+- **Stack:** Kotlin, Compose (M3), Room, Health Connect API, WorkManager (sync/backup/historical resync), DataStore (prefs), Google Drive API (AppData), Vico (charts).
 - **Patterns:** Strict MVVM + Clean Architecture. ViewModels expose StateFlow/SharedFlow only. Compose uses `collectAsStateWithLifecycle`.
 - **Logic Isolation:** All business/calculation logic must be pure Kotlin (zero Android dependencies).
+
+## Sync & Recalculation (Two-Flow Contract)
+
+- **Pull-to-refresh = CURRENT DAY ONLY.** Dashboard/Sync refresh routes through `ForegroundSyncController.triggerDailySync()` → `HealthSyncUseCase.sync(windowDays = 1)`. Fast, foreground. Never widen this back to a 60-day catch-up. `triggerImmediateSync()`/`catchUpSync` is reserved for genuine first-launch.
+- **Settings "Resync Health Connect data" = FULL HISTORICAL RESYNC.** Enqueues `HealthResyncWorker` (WorkManager `OneTimeWork`, unique name `RESYNC_WORK_NAME`, `ExistingWorkPolicy.KEEP`) → `FullHistoricalResyncUseCase` → `HealthSyncUseCase.resyncRange()`. Durable, foreground service (`dataSync`), survives backgrounding. Never run this inline on the VM.
+- **Retention-bounded window:** History scope = `RetentionBounds.resolveResyncStartDate(prefs)` — `retentionDaysEnabled ? today − retentionDays : today − ABSOLUTE_MAX_DAYS (3650/10y)`. `RetentionBounds` is the single source of truth, shared by resync AND `DataCleanupWorker` cutoff. Do not re-inline retention→date math.
+- **Idempotency (non-negotiable):** Ingestion is upsert keyed by stable HC record `id` (overlap → replace, never duplicate). NO blanket `deleteAll()`. Only `clearFrozenBaselines(range)` is mutated up front, recomputed in the same walk-forward pass. A killed/failed worker must leave prior valid data intact and a retry must re-run the same range idempotently.
+- **Chunking + backoff:** HC re-fetch in 30-day chunks (`readAllPages` handles `pageToken`); wrap rate-limit/IO in bounded exponential backoff (`retryWithBackoff`). Whole-pass failure → `Result.retry()` (WorkManager EXPONENTIAL backoff).
+- **Concurrency:** Daily sync and resync share `HealthSyncUseCase.syncMutex` (serialized). Walk-forward recompute loops stay cooperative (`ensureActive()` + `yield()`); never swallow `CancellationException`.
+- **Progress:** Worker publishes `WorkInfo.progress` (KEY_CURRENT/KEY_TOTAL) AND bridges via `ForegroundSyncController.onBackgroundRecalc*`. Settings observes `getWorkInfosForUniqueWorkFlow`; the shared `RecalcProgress` drives the existing banner + determinate notification ("day X of Y"). Reuse this path — do not add parallel progress channels.
+- **Scoring math is OFF-LIMITS here.** Both flows recompute exclusively via `ScoringRepository.computeDailySummary(day)`. Resync refactors data flow/batching/triggers only — never the formulas.
 
 ## Domain Rules & Engine
 
@@ -44,6 +55,7 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 - **State:** Persistent Domain State (ViewModel->Repo->Room/DataStore). Ephemeral UI State (`rememberSaveable`, toggles, dropdowns in Composables only). Never leak UI state to VM unless domain-relevant.
 - **Validation:** Centralized in `domain/validation/SettingsValidators`. No validation in composables. VMs validate defensively.
 - **UI & Charts:** `dynamicDarkColorScheme` mandatory. Use `M3ScoreDial`, `M3DataCard`, `M3Tooltip`. 16dp rounded corners default. Semantic colors only. Vico charts require Bezier curves, bottom gradient fills, and M3 tonal palette mapping (no hardcoded colors).
+- **Strings & i18n:** All user-facing strings (titles, labels, tooltips, descriptions) must be defined in `app/src/main/res/values/strings.xml`. Reference them in Compose with `stringResource(R.string.key_name)`. Never hardcode strings in code. This supports internationalization and improves maintainability.
 - **File Structure:** Target ≤ 400 lines/file, hard limit ≤ 800 lines (refactor if exceeded). Settings paths map to `ui/settings/{physiologyprofile,sleep,cloud,common}`.
 
 ## Commands & Testing
@@ -51,6 +63,11 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 - **Tests:** Mirror source package structure. Must test boundary conditions and calculation logic. Zero Android dependencies in unit tests.
 - **Pre-Commit (Mandatory):** `./gradlew ktlintFormat && ./gradlew testDebugUnitTest`
 - **Build Utilities:** `./gradlew installDebug`, `./gradlew assembleDebug`, `./gradlew clean`
+
+## Documentation Sync
+
+- **`docs/DATA_FLOW.md` is load-bearing.** It is the authoritative end-to-end map of the data pipeline (Health Connect → Room → scoring engine → UI). Any change to the **ingestion pipeline** (`HealthConnectRepository*`, `data/healthconnect/*` mappers, `HealthSyncUseCase`/`ForegroundSyncController`/`workers/*`), the **Room schema** (`HealthDatabase`, `data/local/entity/**`, DAOs, DB version/migrations), the **scoring use-cases/coordinators** (`ScoringRepository*`, `domain/scoring/Compute*UseCase`), or the **scoring-engine formulas** (`domain/scoring/**`) MUST include a synchronous update to `docs/DATA_FLOW.md` in the same change. Treat a stale `DATA_FLOW.md` as a broken build.
+- **Keep the separation intact:** `DATA_FLOW.md` documents data flow and points to where each formula lives — it does not duplicate coefficients/derivations. The math source of truth stays in pure-Kotlin `domain/scoring/**`.
 
 ## File Lifecycle & Indexing
 

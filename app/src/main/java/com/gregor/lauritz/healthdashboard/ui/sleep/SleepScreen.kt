@@ -18,9 +18,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.deepSleepStatus
 import com.gregor.lauritz.healthdashboard.domain.model.efficiencyStatus
@@ -219,7 +221,7 @@ private fun MetricsGrid(
                     value = session?.let { "${it.efficiency.roundToPercentInt()}%" } ?: "—",
                     secondaryText = "Goal: >85%",
                     status = efficiencyStatus,
-                    tooltip = "The percentage of time actually asleep while in bed. (Goal: >85%).",
+                    tooltip = stringResource(R.string.tooltip_sleep_efficiency),
                     onClick = null,
                 )
             }
@@ -234,7 +236,7 @@ private fun MetricsGrid(
                     value = metrics?.deepSleepPercentDisplay ?: "—",
                     secondaryText = "Target: 15–25%",
                     status = deepStatus,
-                    tooltip = "Time in Stage 3 (Physical repair). Target: 15–25% of total sleep.",
+                    tooltip = stringResource(R.string.tooltip_deep_sleep),
                     onClick = null,
                 )
             }
@@ -244,7 +246,7 @@ private fun MetricsGrid(
                     value = metrics?.remSleepPercentDisplay ?: "—",
                     secondaryText = "Target: 20–25%",
                     status = remStatus,
-                    tooltip = "Time in Rapid Eye Movement. Target: 20–25% of total sleep.",
+                    tooltip = stringResource(R.string.tooltip_rem_sleep),
                     onClick = null,
                 )
             }

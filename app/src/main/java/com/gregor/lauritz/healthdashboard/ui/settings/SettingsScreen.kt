@@ -3,8 +3,6 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 import android.content.Intent
 import android.net.Uri
 import android.os.Parcelable
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -20,11 +18,11 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -40,12 +38,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.MainActivity
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
@@ -194,34 +192,44 @@ fun SettingsRoute(
         onNavigateToAbout = onNavigateToAbout,
     )
 
-    // Loading dialog during resync
-    if (syncState.isResyncing) {
-        Dialog(
-            onDismissRequest = {},
-            properties =
-                DialogProperties(
-                    dismissOnBackPress = false,
-                    dismissOnClickOutside = false,
-                    usePlatformDefaultWidth = false,
-                ),
-        ) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Syncing health data...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+    // Determinate, non-blocking progress dialog during resync. The work runs durably in WorkManager
+    // (with a foreground notification), so the user may dismiss this and leave — the resync continues.
+    var resyncDialogDismissed by rememberSaveable { mutableStateOf(false) }
+    if (!syncState.isResyncing) resyncDialogDismissed = false
+    if (syncState.isResyncing && !resyncDialogDismissed) {
+        AlertDialog(
+            onDismissRequest = { resyncDialogDismissed = true },
+            confirmButton = {
+                TextButton(onClick = { resyncDialogDismissed = true }) {
+                    Text(stringResource(R.string.resync_dialog_continue_in_background))
+                }
+            },
+            title = { Text(stringResource(R.string.resync_button_label)) },
+            text = {
+                Column {
+                    val total = syncState.resyncTotal
+                    val current = syncState.resyncCurrent
+                    if (total > 0) {
+                        Text(
+                            text = stringResource(R.string.recalculating_progress, current, total),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LinearProgressIndicator(
+                            progress = { current.toFloat() / total.toFloat() },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.resync_notification_preparing),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            },
+        )
     }
 }
 

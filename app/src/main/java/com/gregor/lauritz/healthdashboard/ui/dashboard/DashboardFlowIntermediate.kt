@@ -12,6 +12,7 @@ import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
+import com.gregor.lauritz.healthdashboard.domain.sync.RecalcProgress
 import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateDaySummary
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -62,6 +63,7 @@ data class DashboardCardState(
 @Immutable
 data class DashboardRealtimeState(
     val isSyncing: Boolean,
+    val recalcProgress: RecalcProgress? = null,
 )
 
 /**
@@ -176,8 +178,11 @@ fun createDashboardCardStateFlow(
 fun createDashboardRealtimeStateFlow(
     foregroundSyncController: ForegroundSyncController,
 ): Flow<DashboardRealtimeState> =
-    foregroundSyncController.isSyncing.map { isSyncing ->
-        DashboardRealtimeState(isSyncing = isSyncing)
+    combine(
+        foregroundSyncController.isSyncing,
+        foregroundSyncController.recalcProgress,
+    ) { isSyncing, recalcProgress ->
+        DashboardRealtimeState(isSyncing = isSyncing, recalcProgress = recalcProgress)
     }
 
 /**

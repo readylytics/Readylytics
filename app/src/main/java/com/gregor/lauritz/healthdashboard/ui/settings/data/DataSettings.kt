@@ -22,9 +22,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
@@ -133,10 +135,10 @@ fun DataManagementSection(
                     )
                     Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER))
                 }
-                Text("Resync Health Connect Data")
+                Text(stringResource(R.string.resync_button_label))
             }
             Text(
-                text = "Clear all data from Health Connect and reload the last 60 days.",
+                text = stringResource(R.string.resync_button_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = SettingsConstants.VERTICAL_SPACER_SMALL),

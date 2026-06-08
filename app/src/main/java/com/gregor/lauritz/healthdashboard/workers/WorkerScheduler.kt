@@ -3,7 +3,10 @@ package com.gregor.lauritz.healthdashboard.workers
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
@@ -24,6 +27,31 @@ class WorkerScheduler
             const val LOCAL_BACKUP_WORK_NAME = "local_backup_periodic"
             const val BIRTHDAY_WORK_NAME = "birthday_check_periodic"
             const val DATA_CLEANUP_WORK_NAME = "data_cleanup_periodic"
+            const val RESYNC_WORK_NAME = "health_resync_onetime"
+        }
+
+        /**
+         * Enqueues the full historical Health Connect resync as a unique one-time foreground worker.
+         * [ExistingWorkPolicy.KEEP] means a tap while a resync is already running is a no-op rather
+         * than restarting it. Expedited so it starts promptly when the user explicitly requests it.
+         */
+        suspend fun scheduleResyncWorker() =
+            withContext(Dispatchers.IO) {
+                val request =
+                    OneTimeWorkRequestBuilder<HealthResyncWorker>()
+                        .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                        .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                        .build()
+
+                workManager.get().enqueueUniqueWork(
+                    RESYNC_WORK_NAME,
+                    ExistingWorkPolicy.KEEP,
+                    request,
+                )
+            }
+
+        fun cancelResyncWorker() {
+            workManager.get().cancelUniqueWork(RESYNC_WORK_NAME)
         }
 
         suspend fun scheduleBackupWorker(schedule: BackupSchedule) =
