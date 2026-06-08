@@ -6,14 +6,15 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
+import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.HealthSyncUseCase
-import com.gregor.lauritz.healthdashboard.domain.sync.ResyncHealthConnectUseCase
 import com.gregor.lauritz.healthdashboard.workers.WorkerScheduler
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,6 +22,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -59,9 +61,6 @@ class SettingsViewModelTest {
 
     @Inject
     lateinit var healthSyncUseCase: HealthSyncUseCase
-
-    @Inject
-    lateinit var resyncHealthConnectUseCase: ResyncHealthConnectUseCase
 
     @Inject
     lateinit var workerScheduler: WorkerScheduler
@@ -153,18 +152,27 @@ class SettingsViewModelTest {
         }
 
     @Test
-    fun `SyncSettingsViewModel resync event sets loading state`() =
+    fun `SyncSettingsViewModel resync event enqueues worker`() =
         runTest {
-            val mockResyncUseCase = mockk<ResyncHealthConnectUseCase>()
-            coEvery { mockResyncUseCase.execute() } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result
-                    .success(Unit)
+            val mockSettingsRepo =
+                mockk<SettingsRepository>(relaxed = true) {
+                    every { userPreferences } returns flowOf(UserPreferences())
+                    coEvery { getAvailableDevices() } returns emptyList()
+                }
+            val mockScheduler = mockk<WorkerScheduler>(relaxed = true)
+            val workManager =
+                mockk<androidx.work.WorkManager> {
+                    every {
+                        getWorkInfosForUniqueWorkFlow(WorkerScheduler.RESYNC_WORK_NAME)
+                    } returns flowOf(emptyList())
+                }
 
             val viewModel =
                 SyncSettingsViewModel(
-                    settingsRepo,
+                    mockSettingsRepo,
                     healthSyncUseCase,
-                    mockResyncUseCase,
+                    mockScheduler,
+                    workManager,
                 )
             viewModel.sharingStarted = SharingStarted.Lazily
 
@@ -175,5 +183,7 @@ class SettingsViewModelTest {
             assertFalse(viewModel.uiState.value.isResyncing)
             viewModel.onEvent(SettingsEvent.ResyncHealthConnect)
             advanceUntilIdle()
+
+            io.mockk.coVerify { mockScheduler.scheduleResyncWorker() }
         }
 }

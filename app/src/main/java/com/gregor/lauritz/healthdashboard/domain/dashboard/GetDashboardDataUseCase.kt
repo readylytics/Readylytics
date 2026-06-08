@@ -110,7 +110,7 @@ class GetDashboardDataUseCase
                 unit = "",
                 status = efficiencyStatus,
                 action = DashboardAction.NAVIGATE_SLEEP,
-                tooltip = "The percentage of time actually asleep while in bed. (Goal: >85%).",
+                tooltip = "The percentage of time actually asleep while in bed.",
                 secondaryText = "Goal: >85%",
             )
         }

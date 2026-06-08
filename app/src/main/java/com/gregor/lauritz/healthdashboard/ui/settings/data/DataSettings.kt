@@ -22,9 +22,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
@@ -136,10 +138,10 @@ fun DataManagementSection(
                     )
                     Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER))
                 }
-                Text(stringResource(R.string.settings_resync_button))
+                Text(stringResource(R.string.resync_button_label))
             }
             Text(
-                text = stringResource(R.string.settings_resync_description),
+                text = stringResource(R.string.resync_button_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = SettingsConstants.VERTICAL_SPACER_SMALL),

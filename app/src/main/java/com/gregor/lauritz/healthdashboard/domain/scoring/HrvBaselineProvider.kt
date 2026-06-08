@@ -21,7 +21,7 @@ class HrvBaselineProvider
         suspend fun getPreciseHrvBaseline(date: LocalDate): Double? {
             val dateMs = date.toMidnightEpochMilli()
             val mu = dao.getPreciseHrvMu(dateMs)
-            if (mu != null) return exp(mu).toDouble()
+            if (mu != null) return exp(mu)
 
             val prefs = settingsRepository.userPreferences.first()
             if (prefs.hrvBaselineOverride != null) return prefs.hrvBaselineOverride.toDouble()

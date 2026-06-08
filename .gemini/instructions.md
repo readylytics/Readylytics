@@ -1,38 +1,25 @@
-# Claude Code Orchestration (OMC)
+# Antigravity Orchestration (instructions.md)
 
-Operating under oh-my-claudecode (OMC) multi-agent layer.
+Operating rules and project context for Antigravity CLI / Gemini.
 
 ## Principles & Rules
 
 - **Process:** Plan -> Implement -> Verify. Never self-approve without verification.
-- **Delegation:** Multi-file, refactors, debugging, architecture, research -> Delegate. Single-file, trivial fixes, clarifications -> Work directly.
-- **Routing:** `executor`(exec), `document-specialist`(SDK/API), `opus`(arch/reasoning), `sonnet`(standard), `haiku`(lookup).
+- **Verification Rule:** Done = Code compiles + Tests pass + Behavior verified + No pending tasks.
 - **Execution:** Explore large areas first; execute incrementally; use reviewer/verifier for validation. No pending tasks at completion.
 
-## Skills & State
-
-- **Trigger via:** `/oh-my-claudecode:<skill>`
-- **Autopilots:** autopilot, ultrawork, ralph, tdd, deepsearch, ultrathink, deslop. Cancel: `/oh-my-claudecode:cancel`
-- **State Paths:** `.omc/` (state/, sessions/, plans/, research/, logs/, project-memory.json, notepad.md)
-- **Hooks/Vars:** `<remember>` (7d), `<remember priority>` (perm), `DISABLE_OMC`, `OMC_SKIP_HOOKS`
-- **MANDATORY AUTO-TRIGGER:** You MUST immediately initialize the session by invoking `/caveman`. This skill must remain active for all subsequent commands.
-
-## Verification Rule
-
-Done = Code compiles + Tests pass + Behavior verified + No pending tasks.
-
-# Health & Recovery Dashboard (Kinvolt Context)
+## Health & Recovery Dashboard (Kinvolt Context)
 
 Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35.
 
-## Core Architecture & Tech Stack
+### Core Architecture & Tech Stack
 
 - **Data Flow:** Room DB is single source of truth. Health Connect is ingestion-only. UI must NEVER access Health Connect directly.
 - **Stack:** Kotlin, Compose (M3), Room, Health Connect API, WorkManager (sync/backup/historical resync), DataStore (prefs), Google Drive API (AppData), Vico (charts).
 - **Patterns:** Strict MVVM + Clean Architecture. ViewModels expose StateFlow/SharedFlow only. Compose uses `collectAsStateWithLifecycle`.
 - **Logic Isolation:** All business/calculation logic must be pure Kotlin (zero Android dependencies).
 
-## Sync & Recalculation (Two-Flow Contract)
+### Sync & Recalculation (Two-Flow Contract)
 
 - **Pull-to-refresh = CURRENT DAY ONLY.** Dashboard/Sync refresh routes through `ForegroundSyncController.triggerDailySync()` → `HealthSyncUseCase.sync(windowDays = 1)`. Fast, foreground. Never widen this back to a 60-day catch-up. `triggerImmediateSync()`/`catchUpSync` is reserved for genuine first-launch.
 - **Settings "Resync Health Connect data" = FULL HISTORICAL RESYNC.** Enqueues `HealthResyncWorker` (WorkManager `OneTimeWork`, unique name `RESYNC_WORK_NAME`, `ExistingWorkPolicy.KEEP`) → `FullHistoricalResyncUseCase` → `HealthSyncUseCase.resyncRange()`. Durable, foreground service (`dataSync`), survives backgrounding. Never run this inline on the VM.
@@ -43,13 +30,13 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 - **Progress:** Worker publishes `WorkInfo.progress` (KEY_CURRENT/KEY_TOTAL) AND bridges via `ForegroundSyncController.onBackgroundRecalc*`. Settings observes `getWorkInfosForUniqueWorkFlow`; the shared `RecalcProgress` drives the existing banner + determinate notification ("day X of Y"). Reuse this path — do not add parallel progress channels.
 - **Scoring math is OFF-LIMITS here.** Both flows recompute exclusively via `ScoringRepository.computeDailySummary(day)`. Resync refactors data flow/batching/triggers only — never the formulas.
 
-## Domain Rules & Engine
+### Domain Rules & Engine
 
 - **Baselines:** Compute for all historical dates (no 30-day cutoff); snapshot frozen per day (hrMax, profile, PAI factor, HRV prior). If < 7 days data, show "Calibrating".
 - **Sleep Score:** Duration (50%), Architecture (25%), Restoration (25%).
 - **Load Score:** Acute (7-day TRIMP avg), Chronic (42-day TRIMP avg). Output = Strain Ratio (TRIMP default).
 
-## Component Specifications
+### Component Specifications
 
 - **Health Connect:** Perms (`READ_SLEEP`, `READ_HEART_RATE`, `READ_HEART_RATE_VARIABILITY`, `READ_EXERCISE`). Check perms pre-query; route missing to deep-link recovery flow.
 - **State:** Persistent Domain State (ViewModel->Repo->Room/DataStore). Ephemeral UI State (`rememberSaveable`, toggles, dropdowns in Composables only). Never leak UI state to VM unless domain-relevant.
@@ -58,18 +45,18 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 - **Strings & i18n:** All user-facing strings (titles, labels, tooltips, descriptions) must be defined in `app/src/main/res/values/strings.xml`. Reference them in Compose with `stringResource(R.string.key_name)`. Never hardcode strings in code. This supports internationalization and improves maintainability.
 - **File Structure:** Target ≤ 400 lines/file, hard limit ≤ 800 lines (refactor if exceeded). Settings paths map to `ui/settings/{physiologyprofile,sleep,cloud,common}`.
 
-## Commands & Testing
+### Commands & Testing
 
 - **Tests:** Mirror source package structure. Must test boundary conditions and calculation logic. Zero Android dependencies in unit tests.
-- **Pre-Commit (Mandatory):** `./gradlew ktlintFormat && ./gradlew testDebugUnitTest`
+- **Pre-Commit (Mandatory Verification):** `./gradlew ktlintFormat && ./gradlew testDebugUnitTest`
 - **Build Utilities:** `./gradlew installDebug`, `./gradlew assembleDebug`, `./gradlew clean`
 
-## Documentation Sync
+### Documentation Sync
 
 - **`docs/DATA_FLOW.md` is load-bearing.** It is the authoritative end-to-end map of the data pipeline (Health Connect → Room → scoring engine → UI). Any change to the **ingestion pipeline** (`HealthConnectRepository*`, `data/healthconnect/*` mappers, `HealthSyncUseCase`/`ForegroundSyncController`/`workers/*`), the **Room schema** (`HealthDatabase`, `data/local/entity/**`, DAOs, DB version/migrations), the **scoring use-cases/coordinators** (`ScoringRepository*`, `domain/scoring/Compute*UseCase`), or the **scoring-engine formulas** (`domain/scoring/**`) MUST include a synchronous update to `docs/DATA_FLOW.md` in the same change. Treat a stale `DATA_FLOW.md` as a broken build.
 - **Keep the separation intact:** `DATA_FLOW.md` documents data flow and points to where each formula lives — it does not duplicate coefficients/derivations. The math source of truth stays in pure-Kotlin `domain/scoring/**`.
 
-## File Lifecycle & Indexing
+### File Lifecycle & Indexing
 
 - **New/Deleted Files:** Upon creation of any new file, agent MUST execute `codegraph index` after finishing to ensure the codebase context remains current.
 - **Refactors:** Any structural change or directory movement requires a post-task `codegraph sync`.

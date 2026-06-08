@@ -66,8 +66,6 @@ data class DailySummaryEntity(
     @ColumnInfo(name = "baseline_calculated_at_date")
     @Contextual
     val baselineCalculatedAtDate: LocalDate? = null,
-    @ColumnInfo(name = "baseline_version")
-    val baselineVersion: Int? = 1,
     @ColumnInfo(name = "hr_max")
     val hrMax: Float? = null,
     @ColumnInfo(name = "snapshot_profile")

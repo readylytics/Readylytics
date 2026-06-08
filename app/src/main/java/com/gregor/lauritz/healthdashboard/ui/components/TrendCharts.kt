@@ -40,7 +40,7 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
@@ -221,7 +221,7 @@ fun TrendChart(
     LaunchedEffect(points) {
         modelProducer.runTransaction {
             val validPoints = points.filter { it.value != null }
-            lineSeries {
+            lineModel {
                 series(
                     x = validPoints.map { it.dayOffset },
                     y = validPoints.mapNotNull { it.value?.toDouble() },
@@ -365,14 +365,14 @@ fun TrendChart(
             pulseColor = dotColor,
             modifier = Modifier.fillMaxWidth().height(180.dp),
         )
-    }
 
-    if (tooltipState != null) {
-        DataPointTooltip(
-            isVisible = true,
-            data = tooltipState!!,
-            onDismissRequest = { tooltipState = null },
-        )
+        if (tooltipState != null) {
+            DataPointTooltip(
+                isVisible = true,
+                data = tooltipState!!,
+                onDismissRequest = { tooltipState = null },
+            )
+        }
     }
 
     if (shouldShowBaseline) {
@@ -522,7 +522,7 @@ fun BloodPressureTrendChart(
         modelProducer.runTransaction {
             val validSystolic = systolicPoints.filter { it.value != null }
             val validDiastolic = diastolicPoints.filter { it.value != null }
-            lineSeries {
+            lineModel {
                 series(
                     x = validSystolic.map { it.dayOffset },
                     y = validSystolic.mapNotNull { it.value?.toDouble() },
@@ -662,14 +662,14 @@ fun BloodPressureTrendChart(
             pulseColor = systolicColor,
             modifier = Modifier.fillMaxWidth().height(180.dp),
         )
-    }
 
-    if (tooltipState != null) {
-        DataPointTooltip(
-            isVisible = true,
-            data = tooltipState!!,
-            onDismissRequest = { tooltipState = null },
-        )
+        if (tooltipState != null) {
+            DataPointTooltip(
+                isVisible = true,
+                data = tooltipState!!,
+                onDismissRequest = { tooltipState = null },
+            )
+        }
     }
 
     Spacer(Modifier.height(12.dp))

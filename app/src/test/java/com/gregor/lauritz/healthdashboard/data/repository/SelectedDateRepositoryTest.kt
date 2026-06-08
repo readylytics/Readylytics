@@ -9,6 +9,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -20,6 +21,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SelectedDateRepositoryTest {
     private lateinit var repository: SelectedDateRepository
     private val dao: DailySummaryDao =

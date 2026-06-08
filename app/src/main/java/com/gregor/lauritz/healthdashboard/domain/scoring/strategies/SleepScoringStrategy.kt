@@ -8,7 +8,6 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchite
 import com.gregor.lauritz.healthdashboard.domain.scoring.components.SleepArchitectureTargets
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.round
 
 @Singleton
 class SleepScoringStrategy
@@ -55,8 +54,10 @@ class SleepScoringStrategy
             val remTarget = resolvedTargets.remPercentage
             val deepComponent = (deepPct / deepTarget).coerceAtMost(1f) * 100f
             val remComponent = (remPct / remTarget).coerceAtMost(1f) * 100f
-            val result = Sleep.WEIGHT_DEEP_COMPONENT * deepComponent + Sleep.WEIGHT_REM_COMPONENT * remComponent
-            return round(result * 10) / 10
+            // Return full precision; rounding happens only at the final UI/DAO boundary.
+            // Pre-rounding here previously leaked into the weighted sleep-score sum (computeSleepScore),
+            // causing the composite score to shift by ±1 on recalculation.
+            return Sleep.WEIGHT_DEEP_COMPONENT * deepComponent + Sleep.WEIGHT_REM_COMPONENT * remComponent
         }
 
         fun computeRestorationSubScore(
