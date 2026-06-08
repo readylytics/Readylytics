@@ -307,9 +307,9 @@ fun SleepStagesChart(
                     if (viewportX !in 0..viewportWidthPx) return@remember null
 
                     DataPointTooltipData(
-                        valueText = stageName,
-                        dateText = timeFormatter.format(Instant.ofEpochMilli(stage.startTime)),
-                        extraLine = durationStr,
+                        valueText = selectedStageName ?: "",
+                        dateText = timeFormatter.format(Instant.ofEpochMilli(sel.stage.startTime)),
+                        extraLine = selectedDurationStr,
                         offset = IntOffset(viewportX, 0),
                     )
                 }
