@@ -29,6 +29,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.domain.model.HealthDataCategory
 import com.gregor.lauritz.healthdashboard.domain.model.HealthDataType
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
@@ -219,11 +220,16 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
     val hasDevices = availableDevices.isNotEmpty()
     val allDevicesLabel = stringResource(R.string.data_sources_all_devices)
     val calibratingLabel = stringResource(R.string.data_sources_calibrating)
+    val phoneLabel = stringResource(R.string.device_this_phone)
     // Include currently selected devices so a previously chosen but no-longer-detected
     // device (e.g. inactive within the discovery window) stays visible and re-selectable.
     val options =
         remember(availableDevices, deviceByDataType, allDevicesLabel) {
             (listOf(allDevicesLabel) + availableDevices + deviceByDataType.values).distinct()
+        }
+    val optionsDisplay =
+        remember(options, phoneLabel) {
+            options.associateWith { if (it == "This Phone") phoneLabel else it }
         }
 
     Column {
@@ -241,15 +247,17 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
         HealthDataType.entries
             .groupBy { it.category }
             .forEach { (category, types) ->
-                SectionHeader(category.displayName)
+                SectionHeader(stringResource(category.labelRes()))
                 types.forEach { type ->
                     val selected = deviceByDataType[type.name]
                     DropdownPreferenceItem(
-                        label = type.displayName,
+                        label = stringResource(type.labelRes()),
                         selectedDisplayValue =
                             when {
                                 !hasDevices && selected == null -> calibratingLabel
-                                selected != null -> selected
+                                selected != null -> {
+                                    if (selected == "This Phone") phoneLabel else selected
+                                }
                                 else -> allDevicesLabel
                             },
                         options = options,
@@ -259,7 +267,7 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
                                 deviceLabel = choice.takeIf { it != allDevicesLabel },
                             )
                         },
-                        optionLabel = { it },
+                        optionLabel = { optionsDisplay[it] ?: it },
                         modifier =
                             Modifier
                                 .fillMaxWidth()
@@ -273,3 +281,26 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
             }
     }
 }
+
+@StringRes
+private fun HealthDataCategory.labelRes(): Int =
+    when (this) {
+        HealthDataCategory.ACTIVITY -> R.string.category_activity
+        HealthDataCategory.BODY_MEASUREMENTS -> R.string.category_body_measurements
+        HealthDataCategory.SLEEP -> R.string.category_sleep
+        HealthDataCategory.VITALS -> R.string.category_vitals
+    }
+
+@StringRes
+private fun HealthDataType.labelRes(): Int =
+    when (this) {
+        HealthDataType.EXERCISE -> R.string.data_type_exercise
+        HealthDataType.STEPS -> R.string.data_type_steps
+        HealthDataType.BODY_FAT -> R.string.data_type_body_fat
+        HealthDataType.WEIGHT -> R.string.data_type_weight
+        HealthDataType.SLEEP -> R.string.data_type_sleep
+        HealthDataType.BLOOD_PRESSURE -> R.string.data_type_blood_pressure
+        HealthDataType.HEART_RATE -> R.string.data_type_heart_rate
+        HealthDataType.HRV -> R.string.data_type_hrv
+        HealthDataType.OXYGEN_SATURATION -> R.string.data_type_oxygen_saturation
+    }

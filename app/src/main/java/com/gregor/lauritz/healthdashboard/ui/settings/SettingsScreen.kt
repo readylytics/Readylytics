@@ -382,7 +382,7 @@ fun SettingsScreen(
                 // Data Sources (per–data-type source device selection)
                 if (matchingSections.any { it.id == "data_sources" }) {
                     M3CollapsibleSection(
-                        header = "Data Sources",
+                        header = stringResource(R.string.data_sources_title),
                         expanded =
                             !expandState.collapseDataSources ||
                                 shouldExpandSection("data_sources"),

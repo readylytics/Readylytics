@@ -65,6 +65,24 @@
     <string name="data_sources_description">Pick the source device individually for each health data type. "All devices" (the default) applies no source filter.</string>
     <string name="data_sources_all_devices">All devices</string>
     <string name="data_sources_calibrating">Calibrating…</string>
+    <string name="device_this_phone">This Phone</string>
+
+    <!-- Health Data Categories -->
+    <string name="category_activity">Activity</string>
+    <string name="category_body_measurements">Body measurements</string>
+    <string name="category_sleep">Sleep</string>
+    <string name="category_vitals">Vitals</string>
+
+    <!-- Health Data Types -->
+    <string name="data_type_exercise">Exercise</string>
+    <string name="data_type_steps">Steps</string>
+    <string name="data_type_body_fat">Body fat</string>
+    <string name="data_type_weight">Weight</string>
+    <string name="data_type_sleep">Sleep</string>
+    <string name="data_type_blood_pressure">Blood pressure</string>
+    <string name="data_type_heart_rate">Heart rate</string>
+    <string name="data_type_hrv">Heart rate variability</string>
+    <string name="data_type_oxygen_saturation">Oxygen saturation</string>
 
     <!-- Workout Recovery Section -->
     <string name="workout_recovery_header">Heart Rate Recovery</string>
