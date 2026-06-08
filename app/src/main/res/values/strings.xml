@@ -18,7 +18,12 @@
     <string name="health_connect_unavailable_message">Health Connect is not installed on this device.\nPlease install it from the Play Store.</string>
 
     <!-- Tooltips -->
+    <string name="tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
+    <string name="tooltip_deep_sleep">Time in Stage 3 (Physical repair).</string>
+    <string name="tooltip_rem_sleep">Time in Rapid Eye Movement.</string>
+
     <string name="tooltip_pai">Your 7-day rolling heart health score.\nBased on how often and how hard you challenge your heart.\n\n• 100+: Optimal\n• 75-99: Neutral\n• 50-74: Warning\n• &lt; 50: Poor</string>
+    <string name="tooltip_readiness">Preparation for stress based on recent load &amp; recovery.\n\n• 85–100: Peak\n• 60–84: Maintain\n• 30–59: Caution\n• &lt; 30: High Fatigue</string>
 
     <string name="tooltip_sleep_rhr">Average heart rate during sleep.\nTarget: lower or equal to your 30-day rolling average. (Lower = Recovered)</string>
     <string name="tooltip_sleep_rhr_baseline">\n\nBaseline: %1$d bpm %2$s (%3$d bpm)</string>
@@ -191,7 +196,7 @@
 
     <!-- Vitals Tab & Oxygen Saturation -->
     <string name="tab_vitals">Vitals</string>
-    <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last night. Goal: >95%.\n\n• Optimal: 98–100%\n• Normal: 95–97%\n• Warning: 90–94%\n• Poor: &lt;90%</string>
+    <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last night.\n\n• Optimal: 98–100%\n• Normal: 95–97%\n• Warning: 90–94%\n• Poor: &lt;90%</string>
     <string name="spo2_optimal">Optimal</string>
     <string name="spo2_normal">Normal</string>
     <string name="spo2_warning">Warning</string>
