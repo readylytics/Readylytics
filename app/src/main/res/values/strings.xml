@@ -495,4 +495,116 @@
     <string name="circadian_range_max">90 min</string>
     <string name="circadian_using_profile_default">Using profile default</string>
     <string name="circadian_using_custom_setting">Using custom setting</string>
+
+    <!-- Audited Strings -->
+    <string name="manage_cards">Manage Cards</string>
+    <string name="action_reset_to_defaults">Reset to defaults</string>
+    <string name="accessibility_more_information">More information</string>
+    <string name="accessibility_drag_to_reorder">Drag to reorder</string>
+    <string name="accessibility_prev_day">Previous day</string>
+    <string name="accessibility_open_date_picker">Open date picker</string>
+    <string name="accessibility_next_day">Next day</string>
+    <string name="accessibility_circadian_threshold_adjustment">Circadian threshold adjustment. Range: 0 to 90 minutes</string>
+    <string name="accessibility_circadian_threshold_state">Current value: %1$d minutes</string>
+    <string name="profile_title_general">General Profile</string>
+    <string name="profile_title_shift_worker">Shift Worker Profile</string>
+    <string name="unit_system_label">Unit System</string>
+    <string name="unit_system_metric_label">Metric (cm, kg)</string>
+    <string name="unit_system_imperial_label">Imperial (ft/in, lbs)</string>
+    <string name="workout_zones_title">Heart Rate Zones</string>
+    <string name="workout_stats_pai_title">PAI</string>
+    <string name="workout_stats_history_title">History</string>
+    <string name="sleep_metrics_title">Metrics</string>
+
+    <!-- Card Titles -->
+    <string name="card_title_sleep_score">Sleep Score</string>
+    <string name="card_title_readiness">Readiness</string>
+    <string name="card_title_steps">Steps</string>
+    <string name="card_title_hrv">HRV</string>
+    <string name="card_title_sleep_rhr">Sleep RHR</string>
+    <string name="card_title_sleep_duration">Sleep Duration</string>
+    <string name="card_title_sleep_architecture">Sleep Architecture</string>
+    <string name="card_title_strain_ratio">Strain Ratio</string>
+    <string name="card_title_pai_daily">PAI Daily</string>
+    <string name="card_title_pai">PAI</string>
+    <string name="card_title_circadian_consistency">Circadian Consistency</string>
+    <string name="card_title_resting_hr">Resting Heart Rate</string>
+    <string name="card_title_recovery_index">Recovery Index</string>
+    <string name="card_title_acute_chronic_ratio">Acute/Chronic Ratio</string>
+    <string name="card_title_sleep_efficiency">Sleep Efficiency</string>
+    <string name="card_title_heart_rate">Heart Rate</string>
+    <string name="card_title_weight">Weight</string>
+    <string name="card_title_body_fat">Body Fat</string>
+    <string name="card_title_blood_pressure">Blood Pressure</string>
+    <string name="card_title_oxygen_saturation">Oxygen Saturation</string>
+
+    <!-- Card Tooltips & Secondary Texts -->
+    <string name="card_tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
+    <string name="card_goal_sleep_efficiency">Goal: &gt;85%</string>
+    <string name="card_efficiency_format">%1$s%%</string>
+
+    <!-- Plurals -->
+    <plurals name="settings_retention_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+
+    <!-- Privacy Rationale -->
+    <string name="privacy_rationale_title">Privacy &amp; Health Data</string>
+    <string name="privacy_rationale_description">This app reads sleep, heart rate, heart rate variability, and exercise data from Health Connect solely to compute your personal recovery and readiness scores. All data is processed locally on your device and is never uploaded to any server.</string>
+
+    <!-- Workout Metrics -->
+    <string name="workout_metric_training_load">Training Load</string>
+    <string name="workout_metric_avg_pulse">Avg Pulse</string>
+    <string name="workout_metric_gained_strain">Gained Strain</string>
+    <string name="workout_metric_pai">PAI</string>
+    <string name="workout_metric_trimp">TRIMP</string>
+    <string name="workout_metric_bpm">bpm</string>
+    <string name="workout_metric_strain">Strain</string>
+    <string name="workout_metric_points">points</string>
+    <string name="workout_tooltip_training_load">Total training impulse - measures training intensity and duration.</string>
+    <string name="workout_tooltip_avg_pulse">Average heart rate during the workout.</string>
+    <string name="workout_tooltip_gained_strain">Total strain gained from this workout.</string>
+    <string name="workout_tooltip_pai">Personal Activity Intelligence points gained from this workout.</string>
+    <string name="pai_earned_today">+%1$d today</string>
+    <string name="workout_stats_acwr_title">Training Load &amp; Strain Ratio (ACWR)</string>
+
+    <!-- Workout Intensities -->
+    <string name="workout_intensity_very_hard">Very Hard</string>
+    <string name="workout_intensity_hard">Hard</string>
+    <string name="workout_intensity_moderate">Moderate</string>
+    <string name="workout_intensity_light">Light</string>
+    <string name="workout_intensity_very_light">Very Light</string>
+
+    <!-- Workout History Formats -->
+    <string name="workout_history_item_subtitle">%1$d min  ·  Strain %2$s  ·  %3$s</string>
+    <string name="workout_history_bpm_format">%1$d bpm</string>
+    <string name="workout_history_bpm_na">-- bpm</string>
+
+    <!-- Sleep Metrics Cards -->
+    <string name="card_title_deep_sleep">Deep Sleep</string>
+    <string name="card_target_deep_sleep">Target: 15–25%</string>
+    <string name="card_title_rem_sleep">REM Sleep</string>
+    <string name="card_target_rem_sleep">Target: 20–25%</string>
+
+    <!-- Units -->
+    <string name="unit_bpm">bpm</string>
+    <string name="unit_mmHg">mmHg</string>
+    <string name="unit_ms">ms</string>
+    <string name="unit_percent">%</string>
+
+    <!-- Additional Card Tooltips -->
+    <string name="card_tooltip_weight_no_data">Weight from Health Connect</string>
+    <string name="card_tooltip_weight_latest">Latest weight measurement.</string>
+    <string name="card_tooltip_body_fat_no_data">Body fat percentage from Health Connect</string>
+    <string name="card_tooltip_body_fat_latest">Body fat percentage.</string>
+    <string name="card_tooltip_bp_no_data">Blood pressure from Health Connect</string>
+    <string name="card_tooltip_bp_latest">Latest blood pressure reading.\n\n</string>
+    <string name="card_bp_status_optimal">Optimal: &lt;120/80 mmHg</string>
+    <string name="card_bp_status_neutral">Elevated: 120-129/&lt;80 mmHg</string>
+    <string name="card_bp_status_warning">Hypertension Stage 1: 130-139/80-89 mmHg</string>
+    <string name="card_bp_status_poor">Hypertension Stage 2+: \u2265140/90 mmHg</string>
+
+    <!-- Additional Duration Formats -->
+    <string name="sleep_duration_hours_only">%1$dh</string>
 </resources>

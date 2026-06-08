@@ -127,7 +127,7 @@ fun SleepScreen(
                 )
             } else {
                 TrendCard(
-                    title = "Sleep Breakdown",
+                    title = stringResource(R.string.sleep_breakdown_title),
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
                     SleepArchitectureBar(
@@ -148,7 +148,7 @@ fun SleepScreen(
                 )
             } else {
                 TrendCard(
-                    title = "Sleep Timeline",
+                    title = stringResource(R.string.sleep_timeline_title),
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
                     SleepStagesChart(
@@ -163,7 +163,7 @@ fun SleepScreen(
         item(key = "spacer_arch") { Spacer(Modifier.height(24.dp)) }
 
         item(key = "metrics_header") {
-            SectionHeader(title = "Metrics")
+            SectionHeader(title = stringResource(R.string.sleep_metrics_title))
             Spacer(Modifier.height(8.dp))
         }
 
@@ -217,9 +217,16 @@ private fun MetricsGrid(
             }
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCard(
-                    title = "Sleep Efficiency",
-                    value = session?.let { "${it.efficiency.roundToPercentInt()}%" } ?: "—",
-                    secondaryText = "Goal: >85%",
+                    title = stringResource(R.string.card_title_sleep_efficiency),
+                    value =
+                        session?.let {
+                            stringResource(
+                                R.string.card_efficiency_format,
+                                it.efficiency.roundToPercentInt(),
+                            )
+                        }
+                            ?: "—",
+                    secondaryText = stringResource(R.string.card_goal_sleep_efficiency),
                     status = efficiencyStatus,
                     tooltip = stringResource(R.string.tooltip_sleep_efficiency),
                     onClick = null,
@@ -232,9 +239,9 @@ private fun MetricsGrid(
         ) {
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCard(
-                    title = "Deep Sleep",
+                    title = stringResource(R.string.card_title_deep_sleep),
                     value = metrics?.deepSleepPercentDisplay ?: "—",
-                    secondaryText = "Target: 15–25%",
+                    secondaryText = stringResource(R.string.card_target_deep_sleep),
                     status = deepStatus,
                     tooltip = stringResource(R.string.tooltip_deep_sleep),
                     onClick = null,
@@ -242,9 +249,9 @@ private fun MetricsGrid(
             }
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCard(
-                    title = "REM Sleep",
+                    title = stringResource(R.string.card_title_rem_sleep),
                     value = metrics?.remSleepPercentDisplay ?: "—",
-                    secondaryText = "Target: 20–25%",
+                    secondaryText = stringResource(R.string.card_target_rem_sleep),
                     status = remStatus,
                     tooltip = stringResource(R.string.tooltip_rem_sleep),
                     onClick = null,

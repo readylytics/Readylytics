@@ -30,7 +30,7 @@ class GetWorkoutMetricsUseCase
                 val strainRatioCard =
                     summary.strainRatio?.let { createStrainRatioCard(it) }
                         ?: CardData(
-                            title = "Strain Ratio",
+                            title = resourceProvider.getString(R.string.card_title_strain_ratio),
                             value = "—",
                             unit = "",
                             status = MetricStatus.CALIBRATING,
@@ -48,7 +48,7 @@ class GetWorkoutMetricsUseCase
             val value = String.format("%.2f", strainRatio)
 
             return CardData(
-                title = "Strain Ratio",
+                title = resourceProvider.getString(R.string.card_title_strain_ratio),
                 value = value,
                 unit = "",
                 status = status,

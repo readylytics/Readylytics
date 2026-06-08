@@ -19,8 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
 import com.gregor.lauritz.healthdashboard.ui.common.DateFormatUtils
@@ -49,19 +51,19 @@ fun WorkoutMetricsDisplay(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 MetricCard(
-                    title = "Training Load",
+                    title = stringResource(R.string.workout_metric_training_load),
                     value = (computedTrimp ?: workout.trimp.roundToInt()).toString(),
-                    secondaryText = "TRIMP",
+                    secondaryText = stringResource(R.string.workout_metric_trimp),
                     status = MetricStatus.NEUTRAL,
-                    tooltip = "Total training impulse - measures training intensity and duration.",
+                    tooltip = stringResource(R.string.workout_tooltip_training_load),
                     modifier = Modifier.weight(1f),
                 )
                 MetricCard(
-                    title = "Avg Pulse",
+                    title = stringResource(R.string.workout_metric_avg_pulse),
                     value = if (workout.avgHr > 0) workout.avgHr.roundToInt().toString() else "--",
-                    secondaryText = "bpm",
+                    secondaryText = stringResource(R.string.workout_metric_bpm),
                     status = MetricStatus.NEUTRAL,
-                    tooltip = "Average heart rate during the workout.",
+                    tooltip = stringResource(R.string.workout_tooltip_avg_pulse),
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -71,19 +73,19 @@ fun WorkoutMetricsDisplay(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 MetricCard(
-                    title = "Gained Strain",
+                    title = stringResource(R.string.workout_metric_gained_strain),
                     value = gainedStrain?.let { String.format(java.util.Locale.US, "%.2f", it) } ?: "--",
-                    secondaryText = "Strain",
+                    secondaryText = stringResource(R.string.workout_metric_strain),
                     status = MetricStatus.NEUTRAL,
-                    tooltip = "Total strain gained from this workout.",
+                    tooltip = stringResource(R.string.workout_tooltip_gained_strain),
                     modifier = Modifier.weight(1f),
                 )
                 MetricCard(
-                    title = "PAI",
+                    title = stringResource(R.string.workout_metric_pai),
                     value = pai?.roundToInt()?.toString() ?: "--",
-                    secondaryText = "points",
+                    secondaryText = stringResource(R.string.workout_metric_points),
                     status = MetricStatus.NEUTRAL,
-                    tooltip = "Personal Activity Intelligence points gained from this workout.",
+                    tooltip = stringResource(R.string.workout_tooltip_pai),
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -129,18 +131,22 @@ private fun ZoneBreakdownCard(workout: WorkoutData) {
     val statusColors = LocalStatusColors.current
     val zones =
         listOf(
-            Triple("Zone 5", workout.zone5Minutes, statusColors.poor),
-            Triple("Zone 4", workout.zone4Minutes, statusColors.warning),
-            Triple("Zone 3", workout.zone3Minutes, statusColors.optimal),
-            Triple("Zone 2", workout.zone2Minutes, statusColors.neutral),
-            Triple("Zone 1", workout.zone1Minutes, MaterialTheme.colorScheme.onSurfaceVariant),
+            Triple(stringResource(R.string.hr_zone_n, 5), workout.zone5Minutes, statusColors.poor),
+            Triple(stringResource(R.string.hr_zone_n, 4), workout.zone4Minutes, statusColors.warning),
+            Triple(stringResource(R.string.hr_zone_n, 3), workout.zone3Minutes, statusColors.optimal),
+            Triple(stringResource(R.string.hr_zone_n, 2), workout.zone2Minutes, statusColors.neutral),
+            Triple(
+                stringResource(R.string.hr_zone_n, 1),
+                workout.zone1Minutes,
+                MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
         )
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text("Heart Rate Zones", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.workout_zones_title), style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(12.dp))
             zones.forEach { (label, minutes, color) ->
                 ZoneRow(label, minutes, totalMinutes, color)

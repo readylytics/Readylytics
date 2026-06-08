@@ -271,6 +271,9 @@ private fun ThresholdSlider(
             }
         }
 
+        val contentDesc = stringResource(R.string.accessibility_circadian_threshold_adjustment)
+        val stateDesc = stringResource(R.string.accessibility_circadian_threshold_state, value.toInt())
+
         // Slider
         Slider(
             value = value,
@@ -281,8 +284,8 @@ private fun ThresholdSlider(
                 Modifier
                     .fillMaxWidth()
                     .semantics {
-                        contentDescription = "Circadian threshold adjustment. Range: 0 to 90 minutes"
-                        stateDescription = "Current value: ${value.toInt()} minutes"
+                        contentDescription = contentDesc
+                        stateDescription = stateDesc
                     },
         )
 
@@ -335,7 +338,7 @@ fun CircadianThresholdSettingsSectionPreview() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text("General Profile", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.profile_title_general), style = MaterialTheme.typography.titleSmall)
             CircadianThresholdSettingsSection(
                 profile = PhysiologyProfile.GENERAL,
                 currentOverride = null,
@@ -345,7 +348,7 @@ fun CircadianThresholdSettingsSectionPreview() {
 
             HorizontalDivider()
 
-            Text("Shift Worker Profile", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.profile_title_shift_worker), style = MaterialTheme.typography.titleSmall)
             CircadianThresholdSettingsSection(
                 profile = PhysiologyProfile.SHIFT_WORKER,
                 currentOverride = 30,

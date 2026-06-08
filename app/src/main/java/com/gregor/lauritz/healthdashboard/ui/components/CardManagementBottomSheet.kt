@@ -22,10 +22,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
-import com.gregor.lauritz.healthdashboard.domain.dashboard.displayName
+import com.gregor.lauritz.healthdashboard.ui.common.displayNameResId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,13 +59,13 @@ fun CardManagementBottomSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Manage Cards",
+                    text = stringResource(R.string.manage_cards),
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 IconButton(onClick = onResetToDefaults) {
                     Icon(
                         imageVector = Icons.Outlined.RestartAlt,
-                        contentDescription = "Reset to defaults",
+                        contentDescription = stringResource(R.string.action_reset_to_defaults),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -96,7 +98,7 @@ fun CardManagementBottomSheet(
                         .align(Alignment.End)
                         .padding(top = 16.dp),
             ) {
-                Text("Done")
+                Text(stringResource(R.string.action_done))
             }
         }
     }
@@ -114,7 +116,7 @@ private fun CardManagementItem(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = card.cardId.displayName(),
+            text = stringResource(card.cardId.displayNameResId),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
