@@ -1,9 +1,11 @@
 package com.gregor.lauritz.healthdashboard.ui.settings
 
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
+import com.gregor.lauritz.healthdashboard.ui.common.UiText
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -106,7 +108,7 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             assertEquals(
-                "Invalid threshold value. Range: 0-90 minutes.",
+                UiText.StringRes(R.string.error_threshold_invalid_range),
                 thresholdViewModel.consolidatedState.value.thresholdError,
             )
             job.cancel()

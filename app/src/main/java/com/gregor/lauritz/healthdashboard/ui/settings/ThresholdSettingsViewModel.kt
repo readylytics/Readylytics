@@ -3,12 +3,14 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.CircadianThresholdPreferences
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.circadian.CircadianThresholdValue
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
 import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
+import com.gregor.lauritz.healthdashboard.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -111,7 +113,7 @@ class ThresholdSettingsViewModel
                                 }.onFailure { _ ->
                                     transientState.update {
                                         it.copy(
-                                            error = "Invalid threshold value. Range: 0-90 minutes.",
+                                            error = UiText.StringRes(R.string.error_threshold_invalid_range),
                                         )
                                     }
                                 }
@@ -125,7 +127,7 @@ class ThresholdSettingsViewModel
                             transientState.update {
                                 it.copy(
                                     isUpdating = false,
-                                    error = "Failed to update threshold settings. Changes rolled back.",
+                                    error = UiText.StringRes(R.string.error_threshold_update_failed),
                                 )
                             }
                         }
@@ -140,6 +142,6 @@ class ThresholdSettingsViewModel
 
         private data class TransientThresholdState(
             val isUpdating: Boolean = false,
-            val error: String? = null,
+            val error: UiText? = null,
         )
     }

@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.dashboard
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
@@ -23,6 +24,7 @@ import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRes
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.domain.sync.RecalcProgress
 import com.gregor.lauritz.healthdashboard.ui.common.BaseViewModel
+import com.gregor.lauritz.healthdashboard.ui.common.UiText
 import com.gregor.lauritz.healthdashboard.ui.heartrate.HeartRateDaySummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -218,7 +220,8 @@ class DashboardViewModel
                     foregroundSyncController.triggerDailySync()
                 } catch (e: Exception) {
                     Log.e(TAG, "Refresh failed", e)
-                    _errorMessage.value = e.message ?: "Sync failed"
+                    _errorMessage.value = e.message?.let { UiText.RawString(it) }
+                        ?: UiText.StringRes(R.string.error_sync_failed)
                 } finally {
                     // Always clear cached derived metrics, even if the sync failed partway, so the
                     // dashboard never serves stale sleep/load scores from a previous recalculation.
@@ -227,8 +230,8 @@ class DashboardViewModel
             }
         }
 
-        private val _errorMessage = MutableStateFlow<String?>(null)
-        val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+        private val _errorMessage = MutableStateFlow<UiText?>(null)
+        val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
 
         companion object {
             internal const val TAG = "DashboardViewModel"

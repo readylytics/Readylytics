@@ -140,30 +140,19 @@ fun WorkoutStatsSection(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("PAI", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.workout_stats_pai_title), style = MaterialTheme.typography.titleSmall)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         uiState.todayPaiScore?.let { earned ->
                             if (earned > 0f) {
                                 Text(
-                                    text = "+${earned.roundToPercentInt()} today",
+                                    text = stringResource(R.string.pai_earned_today, earned.roundToPercentInt()),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
-                        val paiTooltip =
-                            remember {
-                                buildString {
-                                    append("Your 7-day rolling heart health score.\n")
-                                    append("Based on how often and how hard you challenge your heart.\n\n")
-                                    append("• 100+: Optimal\n")
-                                    append("• 75–99: Neutral\n")
-                                    append("• 50–74: Warning\n")
-                                    append("• < 50: Poor")
-                                }
-                            }
                         MetricTooltip(
-                            description = paiTooltip,
+                            description = stringResource(R.string.tooltip_pai),
                         )
                     }
                 }
@@ -177,7 +166,7 @@ fun WorkoutStatsSection(
         }
 
         Spacer(Modifier.height(8.dp))
-        SectionHeader(title = "Training Load & Strain Ratio (ACWR)")
+        SectionHeader(title = stringResource(R.string.workout_stats_acwr_title))
         Spacer(Modifier.height(8.dp))
         SingleChoiceSegmentedButtonRow(
             modifier =

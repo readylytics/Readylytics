@@ -16,8 +16,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.ui.theme.FitDashboardTheme
@@ -46,22 +48,18 @@ class PrivacyRationaleActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Center,
                     ) {
                         Text(
-                            text = "Privacy & Health Data",
+                            text = stringResource(R.string.privacy_rationale_title),
                             style = MaterialTheme.typography.headlineMedium,
                         )
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            text =
-                                "This app reads sleep, heart rate, heart rate variability, " +
-                                    "and exercise data from Health Connect solely to compute your " +
-                                    "personal recovery and readiness scores. All data is processed " +
-                                    "locally on your device and is never uploaded to any server.",
+                            text = stringResource(R.string.privacy_rationale_description),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.height(32.dp))
                         Button(onClick = { finish() }) {
-                            Text("Back")
+                            Text(stringResource(R.string.back))
                         }
                     }
                 }

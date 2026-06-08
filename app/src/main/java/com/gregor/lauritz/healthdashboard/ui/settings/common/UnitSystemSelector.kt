@@ -11,7 +11,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 
 @Composable
@@ -22,7 +24,7 @@ fun UnitSystemSelector(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = "Unit System",
+            text = stringResource(R.string.unit_system_label),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -35,13 +37,13 @@ fun UnitSystemSelector(
                 selected = selectedUnit == UnitSystem.METRIC,
                 onClick = { onUnitSelected(UnitSystem.METRIC) },
             )
-            Text("Metric (cm, kg)", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.unit_system_metric_label), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.width(16.dp))
             RadioButton(
                 selected = selectedUnit == UnitSystem.IMPERIAL,
                 onClick = { onUnitSelected(UnitSystem.IMPERIAL) },
             )
-            Text("Imperial (ft/in, lbs)", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.unit_system_imperial_label), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

@@ -26,7 +26,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
@@ -110,7 +112,7 @@ fun TrendChart(
     metricName: String,
     baselineUnit: String,
     baseline: Float? = null,
-    baselineLabel: String = "Baseline",
+    baselineLabel: String? = null,
     baselineDecimalPlaces: Int = 0,
     axisDecimalPlaces: Int = 0,
     tooltipDecimalPlaces: Int = axisDecimalPlaces,
@@ -170,6 +172,8 @@ fun TrendChart(
         tooltipState = null
         selectedPointOffset = null
     }
+
+    val resolvedBaselineLabel = baselineLabel ?: stringResource(R.string.label_baseline)
 
     if (points.none { it.value != null }) {
         EmptyChartPlaceholder(modifier = modifier)
@@ -376,7 +380,7 @@ fun TrendChart(
         BaselineLegend(
             value = baselineValue,
             unit = baselineUnit,
-            label = baselineLabel,
+            label = resolvedBaselineLabel,
             color = baselineColor,
             decimalPlaces = baselineDecimalPlaces,
         )
@@ -681,7 +685,7 @@ fun BloodPressureTrendChart(
         )
         Spacer(Modifier.width(8.dp))
         Text(
-            text = "Systolic (Ref: <120)",
+            text = stringResource(R.string.label_systolic_ref),
             style = MaterialTheme.typography.labelSmall,
             color = systolicColor,
         )
@@ -696,7 +700,7 @@ fun BloodPressureTrendChart(
         )
         Spacer(Modifier.width(8.dp))
         Text(
-            text = "Diastolic (Ref: <80)",
+            text = stringResource(R.string.label_diastolic_ref),
             style = MaterialTheme.typography.labelSmall,
             color = diastolicColor,
         )
@@ -713,7 +717,7 @@ fun EmptyChartPlaceholder(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "No data available",
+            text = stringResource(R.string.message_no_data_available),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

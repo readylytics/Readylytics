@@ -34,6 +34,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.ui.common.resolveOrNull
 import com.gregor.lauritz.healthdashboard.ui.components.CardConfigurationsList
 import com.gregor.lauritz.healthdashboard.ui.components.CardDataMap
 import com.gregor.lauritz.healthdashboard.ui.components.CardManagementBottomSheet
@@ -60,12 +61,13 @@ fun DashboardRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val resolvedError = errorMessage.resolveOrNull()
     val earliestDate by viewModel.earliestDate.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(errorMessage) {
-        if (errorMessage != null) {
-            snackbarHostState.showSnackbar(errorMessage ?: "Error")
+        if (resolvedError != null) {
+            snackbarHostState.showSnackbar(resolvedError)
         }
     }
 

@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.settings.data
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -71,7 +73,10 @@ fun DataManagementSection(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Retention Enabled", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    stringResource(R.string.settings_retention_enabled_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
                 Spacer(modifier = Modifier.weight(1f))
                 Switch(
                     checked = uiState.retentionDaysEnabled,
@@ -89,10 +94,18 @@ fun DataManagementSection(
                     ),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Retention Period", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        stringResource(R.string.settings_retention_period_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
-                        text = "${retentionDays.toInt()} days",
+                        text =
+                            pluralStringResource(
+                                R.plurals.settings_retention_days,
+                                retentionDays.toInt(),
+                                retentionDays.toInt(),
+                            ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -108,7 +121,7 @@ fun DataManagementSection(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
-                    text = "Automatically delete data older than the retention period.",
+                    text = stringResource(R.string.settings_retention_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = SettingsConstants.VERTICAL_SPACER_SMALL),
@@ -152,12 +165,13 @@ private fun SyncPreferenceItem(
     uiState: SyncSettingsState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
+    val syncPrefLabels = SyncPreference.entries.associateWith { stringResource(it.labelRes()) }
     DropdownPreferenceItem(
-        label = "Foreground Sync",
-        selectedDisplayValue = uiState.syncPreference.displayName,
+        label = stringResource(R.string.settings_foreground_sync_label),
+        selectedDisplayValue = stringResource(uiState.syncPreference.labelRes()),
         options = SyncPreference.entries,
         onOptionSelected = { onEvent(SettingsEvent.SyncPreferenceChanged(it)) },
-        optionLabel = { it.displayName },
+        optionLabel = { syncPrefLabels[it] ?: it.name },
         modifier =
             Modifier.padding(
                 horizontal = SettingsConstants.HORIZONTAL_PADDING,
@@ -171,12 +185,13 @@ private fun SyncIntervalItem(
     uiState: SyncSettingsState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
+    val intervalLabels = (1..24).associateWith { stringResource(R.string.settings_sync_interval_display, it) }
     DropdownPreferenceItem(
-        label = "Sync Interval",
-        selectedDisplayValue = "${uiState.syncIntervalHours}h",
+        label = stringResource(R.string.settings_sync_interval_label),
+        selectedDisplayValue = stringResource(R.string.settings_sync_interval_display, uiState.syncIntervalHours),
         options = (1..24).toList(),
         onOptionSelected = { onEvent(SettingsEvent.SyncIntervalChanged(it)) },
-        optionLabel = { "${it}h" },
+        optionLabel = { intervalLabels[it] ?: "${it}h" },
         modifier =
             Modifier.padding(
                 horizontal = SettingsConstants.HORIZONTAL_PADDING,
@@ -185,13 +200,13 @@ private fun SyncIntervalItem(
     )
 }
 
-private val SyncPreference.displayName: String
-    get() =
-        when (this) {
-            SyncPreference.NEVER -> "Never"
-            SyncPreference.ALWAYS -> "Always"
-            SyncPreference.BY_TIME -> "By Time"
-        }
+@StringRes
+private fun SyncPreference.labelRes(): Int =
+    when (this) {
+        SyncPreference.NEVER -> R.string.sync_preference_never
+        SyncPreference.ALWAYS -> R.string.sync_preference_always
+        SyncPreference.BY_TIME -> R.string.sync_preference_by_time
+    }
 
 @Composable
 fun DeviceSelectionSection(viewModel: DeviceSettingsViewModel = hiltViewModel()) {
@@ -208,12 +223,12 @@ fun DeviceSelectionSection(viewModel: DeviceSettingsViewModel = hiltViewModel())
             ),
     ) {
         DropdownPreferenceItem(
-            label = "Primary Device",
+            label = stringResource(R.string.settings_primary_device_label),
             selectedDisplayValue =
                 when {
-                    !hasDevices -> "Calibrating..."
+                    !hasDevices -> stringResource(R.string.settings_device_calibrating)
                     primaryDevice != null -> primaryDevice!!
-                    else -> "Select a device"
+                    else -> stringResource(R.string.settings_device_select)
                 },
             options = availableDevices,
             onOptionSelected = { deviceName ->
@@ -224,7 +239,7 @@ fun DeviceSelectionSection(viewModel: DeviceSettingsViewModel = hiltViewModel())
             enabled = hasDevices,
         )
         Text(
-            text = "Device used for metrics calculation",
+            text = stringResource(R.string.settings_device_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 16.dp, top = 4.dp),

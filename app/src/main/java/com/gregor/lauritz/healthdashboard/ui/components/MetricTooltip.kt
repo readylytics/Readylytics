@@ -20,8 +20,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import com.gregor.lauritz.healthdashboard.R
 
 @Composable
 fun MetricTooltip(
@@ -46,7 +48,7 @@ fun MetricTooltip(
         ) {
             Icon(
                 imageVector = Icons.Outlined.Info,
-                contentDescription = "More information",
+                contentDescription = stringResource(R.string.accessibility_more_information),
                 tint = iconTint,
                 modifier = Modifier.size(18.dp),
             )

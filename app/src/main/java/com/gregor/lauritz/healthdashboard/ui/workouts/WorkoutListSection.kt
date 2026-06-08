@@ -14,7 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
@@ -30,7 +32,7 @@ fun WorkoutListSection(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        SectionHeader(title = "History")
+        SectionHeader(title = stringResource(R.string.workout_stats_history_title))
         workouts.forEach { item ->
             WorkoutHistoryItem(
                 item = item,
@@ -76,21 +78,28 @@ private fun WorkoutHistoryItem(
                     text = "$displayType $dateStr",
                     style = MaterialTheme.typography.titleSmall,
                 )
+                val strainStr = String.format(java.util.Locale.US, "%.2f", item.gainedStrain)
+                val bpmStr =
+                    if (workout.avgHr > 0) {
+                        stringResource(R.string.workout_history_bpm_format, workout.avgHr.roundToInt())
+                    } else {
+                        stringResource(R.string.workout_history_bpm_na)
+                    }
                 Text(
                     text =
-                        "${workout.durationMinutes} min  ·  Strain ${String.format(
-                            java.util.Locale.US,
-                            "%.2f",
-                            item.gainedStrain,
-                        )}  ·  " +
-                            if (workout.avgHr > 0) "${workout.avgHr.roundToInt()} bpm" else "-- bpm",
+                        stringResource(
+                            R.string.workout_history_item_subtitle,
+                            workout.durationMinutes,
+                            strainStr,
+                            bpmStr,
+                        ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             IntensityBadge(
-                label = workout.intensityLabel(),
+                label = stringResource(workout.intensityLabelResId()),
                 status = workout.intensityStatus(),
             )
         }
@@ -117,13 +126,13 @@ private fun IntensityBadge(
     }
 }
 
-private fun WorkoutData.intensityLabel(): String =
+private fun WorkoutData.intensityLabelResId(): Int =
     when {
-        trimp > 200 -> "Very Hard"
-        trimp > 150 -> "Hard"
-        trimp > 100 -> "Moderate"
-        trimp > 50 -> "Light"
-        else -> "Very Light"
+        trimp > 200 -> R.string.workout_intensity_very_hard
+        trimp > 150 -> R.string.workout_intensity_hard
+        trimp > 100 -> R.string.workout_intensity_moderate
+        trimp > 50 -> R.string.workout_intensity_light
+        else -> R.string.workout_intensity_very_light
     }
 
 private fun WorkoutData.intensityStatus(): MetricStatus =

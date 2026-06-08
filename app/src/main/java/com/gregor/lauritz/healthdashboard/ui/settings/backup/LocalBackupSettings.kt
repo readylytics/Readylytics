@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings.backup
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,13 +34,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
 import com.gregor.lauritz.healthdashboard.domain.backup.BackupFileInfo
+import com.gregor.lauritz.healthdashboard.ui.common.resolveOrNull
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.settings.LocalBackupState
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
@@ -52,6 +56,8 @@ fun LocalBackupSection(
     uiState: LocalBackupState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
+    val resolvedBackupError = uiState.backupError.resolveOrNull()
+
     if (uiState.showSetPasswordDialog) {
         SetPasswordDialog(
             onDismiss = { onEvent(SettingsEvent.DismissSetPasswordDialog) },
@@ -74,26 +80,21 @@ fun LocalBackupSection(
             ),
     ) {
         Text(
-            text =
-                "Backups are stored locally on your device. " +
-                    "You can create a new backup at any time or restore from a previous one.",
+            text = stringResource(R.string.backup_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
 
-        // Directory Picker
         BackupDirectoryItem(uiState = uiState, onEvent = onEvent)
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
 
-        // Password Section
         BackupPasswordSection(uiState = uiState, onEvent = onEvent)
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
 
-        // Create Backup Button
         Button(
             onClick = { onEvent(SettingsEvent.CreateLocalBackup) },
             enabled = !uiState.isBackingUp && !uiState.isRestoring && !uiState.isReencrypting,
@@ -106,7 +107,7 @@ fun LocalBackupSection(
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
             } else {
-                Text("Create New Backup")
+                Text(stringResource(R.string.backup_create_button))
             }
         }
 
@@ -115,7 +116,7 @@ fun LocalBackupSection(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 Text(
-                    text = "Updating existing backup passwords...",
+                    text = stringResource(R.string.backup_reencrypting_message),
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(start = 8.dp),
                 )
@@ -124,13 +125,12 @@ fun LocalBackupSection(
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
 
-        // Backup schedule dropdown
         BackupScheduleItem(uiState = uiState, onEvent = onEvent)
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
 
         Text(
-            text = "Available Backups",
+            text = stringResource(R.string.backup_section_available),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
         )
@@ -139,7 +139,7 @@ fun LocalBackupSection(
 
         if (uiState.availableBackups.isEmpty()) {
             Text(
-                text = "No backups found.",
+                text = stringResource(R.string.backup_none_found),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -156,18 +156,17 @@ fun LocalBackupSection(
             }
         }
 
-        // Inline error display
-        if (uiState.backupError != null) {
+        if (resolvedBackupError != null) {
             Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = uiState.backupError,
+                    text = resolvedBackupError,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = { onEvent(SettingsEvent.DismissBackupError) }) {
-                    Text("Dismiss")
+                    Text(stringResource(R.string.action_dismiss))
                 }
             }
         }
@@ -184,40 +183,47 @@ private fun BackupPasswordSection(
 
     Column {
         Text(
-            text = "Security",
+            text = stringResource(R.string.backup_security_section),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
         )
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
 
-        // Change Password Row
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Backup Password", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.backup_password_label), style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    text = if (uiState.isPasswordSet) "Encryption is enabled." else "Encryption is disabled.",
+                    text =
+                        if (uiState.isPasswordSet) {
+                            stringResource(R.string.backup_encryption_enabled)
+                        } else {
+                            stringResource(R.string.backup_encryption_disabled)
+                        },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             TextButton(onClick = { onEvent(SettingsEvent.OpenSetPasswordDialog) }) {
-                Text(if (uiState.isPasswordSet) "Change" else "Set")
+                Text(
+                    stringResource(
+                        if (uiState.isPasswordSet) R.string.action_change else R.string.action_set,
+                    ),
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
 
-        // Test Password
         OutlinedTextField(
             value = testPassword,
             onValueChange = {
                 testPassword = it
                 onEvent(SettingsEvent.ClearPasswordVerificationResult)
             },
-            label = { Text("Test Backup Password") },
+            label = { Text(stringResource(R.string.backup_test_password_label)) },
             modifier = Modifier.fillMaxWidth(),
             visualTransformation = if (showTestPassword) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions =
@@ -230,7 +236,14 @@ private fun BackupPasswordSection(
                 IconButton(onClick = { showTestPassword = !showTestPassword }) {
                     Icon(
                         imageVector = if (showTestPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (showTestPassword) "Hide password" else "Show password",
+                        contentDescription =
+                            stringResource(
+                                if (showTestPassword) {
+                                    R.string.accessibility_password_hide
+                                } else {
+                                    R.string.accessibility_password_show
+                                },
+                            ),
                     )
                 }
             },
@@ -243,7 +256,10 @@ private fun BackupPasswordSection(
             val result = uiState.passwordVerificationResult
             if (result != null) {
                 Text(
-                    text = if (result) "Match! ✓" else "No match ✗",
+                    text =
+                        stringResource(
+                            if (result) R.string.backup_password_match else R.string.backup_password_no_match,
+                        ),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (result) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     modifier = Modifier.weight(1f),
@@ -255,7 +271,7 @@ private fun BackupPasswordSection(
                 onClick = { onEvent(SettingsEvent.VerifyBackupPassword(testPassword)) },
                 enabled = testPassword.isNotEmpty(),
             ) {
-                Text("Verify")
+                Text(stringResource(R.string.action_verify))
             }
         }
     }
@@ -272,19 +288,18 @@ private fun SetPasswordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Set Backup Password") },
+        title = { Text(stringResource(R.string.dialog_set_password_title)) },
         text = {
             Column {
                 Text(
-                    "This password will be used to encrypt your backups with AES-256. " +
-                        "If you lose it, you won't be able to restore your data.",
+                    stringResource(R.string.dialog_set_password_body),
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(bottom = 16.dp),
                 )
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("New Password") },
+                    label = { Text(stringResource(R.string.backup_new_password_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation =
                         if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
@@ -299,7 +314,14 @@ private fun SetPasswordDialog(
                             Icon(
                                 imageVector =
                                     if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = if (showPassword) "Hide password" else "Show password",
+                                contentDescription =
+                                    stringResource(
+                                        if (showPassword) {
+                                            R.string.accessibility_password_hide
+                                        } else {
+                                            R.string.accessibility_password_show
+                                        },
+                                    ),
                             )
                         }
                     },
@@ -309,7 +331,7 @@ private fun SetPasswordDialog(
                 OutlinedTextField(
                     value = repeatPassword,
                     onValueChange = { repeatPassword = it },
-                    label = { Text("Repeat Password") },
+                    label = { Text(stringResource(R.string.backup_repeat_password_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation =
                         if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
@@ -324,7 +346,7 @@ private fun SetPasswordDialog(
                 )
                 if (password != repeatPassword && repeatPassword.isNotEmpty()) {
                     Text(
-                        text = "Passwords do not match",
+                        text = stringResource(R.string.error_passwords_do_not_match),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 4.dp),
@@ -337,12 +359,12 @@ private fun SetPasswordDialog(
                 onClick = { onConfirm(password) },
                 enabled = password.isNotEmpty() && password == repeatPassword,
             ) {
-                Text("Save")
+                Text(stringResource(R.string.action_done))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         },
     )
@@ -358,7 +380,6 @@ private fun BackupDirectoryItem(
             contract = ActivityResultContracts.OpenDocumentTree(),
         ) { uri ->
             uri?.let {
-                // Use the URI string for persistence and access via SAF
                 onEvent(SettingsEvent.ChangeBackupDirectory(it.toString()))
             }
         }
@@ -368,10 +389,10 @@ private fun BackupDirectoryItem(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text("Backup Directory", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.backup_directory_label), style = MaterialTheme.typography.bodyMedium)
             val displayPath =
                 if (uiState.backupDirectory.isNullOrBlank()) {
-                    "Default (App Internal)"
+                    stringResource(R.string.backup_directory_default)
                 } else {
                     Uri.parse(uiState.backupDirectory).path ?: uiState.backupDirectory
                 }
@@ -382,7 +403,7 @@ private fun BackupDirectoryItem(
             )
         }
         TextButton(onClick = { launcher.launch(null) }) {
-            Text("Change")
+            Text(stringResource(R.string.action_change))
         }
     }
 }
@@ -419,13 +440,13 @@ private fun BackupFileItem(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
-                text = "${file.sizeBytes / 1024} KB",
+                text = stringResource(R.string.backup_size_kb, file.sizeBytes / 1024),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         TextButton(onClick = onRestore, enabled = enabled) {
-            Text("Restore")
+            Text(stringResource(R.string.action_restore))
         }
         IconButton(
             onClick = onDelete,
@@ -433,7 +454,7 @@ private fun BackupFileItem(
         ) {
             Icon(
                 imageVector = Icons.Default.Delete,
-                contentDescription = "Delete backup from $backupDate",
+                contentDescription = stringResource(R.string.accessibility_backup_delete, backupDate),
                 tint = MaterialTheme.colorScheme.error,
             )
         }
@@ -445,20 +466,21 @@ private fun BackupScheduleItem(
     uiState: LocalBackupState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
+    val scheduleLabels = BackupSchedule.entries.associateWith { stringResource(it.labelRes()) }
     DropdownPreferenceItem(
-        label = "Auto Backup",
-        selectedDisplayValue = uiState.backupSchedule.displayName,
+        label = stringResource(R.string.backup_auto_label),
+        selectedDisplayValue = stringResource(uiState.backupSchedule.labelRes()),
         options = BackupSchedule.entries,
         onOptionSelected = { onEvent(SettingsEvent.BackupScheduleChanged(it)) },
-        optionLabel = { it.displayName },
+        optionLabel = { scheduleLabels[it] ?: it.name },
         modifier = Modifier.fillMaxWidth(),
     )
 }
 
-private val BackupSchedule.displayName: String
-    get() =
-        when (this) {
-            BackupSchedule.MANUAL -> "Manual only"
-            BackupSchedule.DAILY -> "Daily"
-            BackupSchedule.WEEKLY -> "Weekly"
-        }
+@StringRes
+private fun BackupSchedule.labelRes(): Int =
+    when (this) {
+        BackupSchedule.MANUAL -> R.string.backup_schedule_manual
+        BackupSchedule.DAILY -> R.string.backup_schedule_daily
+        BackupSchedule.WEEKLY -> R.string.backup_schedule_weekly
+    }

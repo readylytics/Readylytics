@@ -188,7 +188,7 @@ fun VitalsScreen(
 
         // Time Range selection
         item(key = "trends_header") {
-            SectionHeader(title = "Physiological Trends")
+            SectionHeader(title = stringResource(R.string.label_physiological_trends))
             Spacer(Modifier.height(8.dp))
             SingleChoiceSegmentedButtonRow(
                 modifier =
@@ -223,7 +223,7 @@ fun VitalsScreen(
             } else {
                 val isCalibrating = uiState.latestSummary?.isCalibrating ?: false
                 TrendCard(
-                    title = "HRV (RMSSD)",
+                    title = stringResource(R.string.label_hrv_rmssd),
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
                     TrendChart(
@@ -255,7 +255,7 @@ fun VitalsScreen(
             } else {
                 val isCalibrating = uiState.latestSummary?.isCalibrating ?: false
                 TrendCard(
-                    title = "Resting Heart Rate",
+                    title = stringResource(R.string.label_resting_heart_rate),
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
                     TrendChart(
@@ -286,7 +286,7 @@ fun VitalsScreen(
                 )
             } else {
                 TrendCard(
-                    title = "Oxygen Saturation",
+                    title = stringResource(R.string.label_oxygen_saturation),
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
                     TrendChart(
@@ -296,7 +296,7 @@ fun VitalsScreen(
                         metricName = "SpO2",
                         baselineUnit = "%",
                         baseline = 95f,
-                        baselineLabel = "Normal Limit",
+                        baselineLabel = stringResource(R.string.label_normal_limit),
                         showBaseline = true,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,

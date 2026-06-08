@@ -25,9 +25,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.domain.model.bodyFatZoneBands
 import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
@@ -82,11 +84,11 @@ fun BodyFatDetailScreen(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             TopAppBar(
-                title = { Text("Body Fat Percentage") },
+                title = { Text(stringResource(R.string.label_body_fat_percentage)) },
                 windowInsets = WindowInsets(0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
             )
@@ -118,23 +120,35 @@ fun BodyFatDetailScreen(
                                 .padding(vertical = 16.dp),
                         contentAlignment = Alignment.Center,
                     ) {
+                        val genderStringRes =
+                            when (Gender.entries.find { it.name == uiState.gender }) {
+                                Gender.MALE -> R.string.gender_male
+                                Gender.FEMALE -> R.string.gender_female
+                                Gender.OTHER -> R.string.gender_other
+                                Gender.PREFER_NOT_TO_SAY -> R.string.gender_prefer_not_to_say
+                                else -> R.string.gender_other
+                            }
                         M3ScoreDial(
                             score = uiState.latestBodyFat,
-                            label = "Body Fat",
+                            label = stringResource(R.string.label_body_fat),
                             maxScore = uiState.optimalRangeMax * 2f,
                             status = uiState.bodyFatStatus,
                             displayText = uiState.bodyFatDisplay,
                             tooltipDescription =
-                                "Current: ${uiState.bodyFatDisplay}%\n" +
-                                    "Optimal: ${uiState.optimalRangeDisplay ?: "—"}\n\n" +
-                                    "${uiState.gender}, Age ${uiState.age}",
+                                stringResource(
+                                    R.string.tooltip_body_fat_current,
+                                    uiState.bodyFatDisplay ?: "—",
+                                    uiState.optimalRangeDisplay ?: "—",
+                                    stringResource(genderStringRes),
+                                    uiState.age,
+                                ),
                         )
                     }
                 }
             }
 
             item(key = "trends_header") {
-                SectionHeader(title = "Trends")
+                SectionHeader(title = stringResource(R.string.label_trends))
                 Spacer(Modifier.height(8.dp))
                 SingleChoiceSegmentedButtonRow(
                     modifier =
@@ -168,7 +182,7 @@ fun BodyFatDetailScreen(
                     )
                 } else {
                     TrendCard(
-                        title = "Body Fat Trend",
+                        title = stringResource(R.string.label_body_fat_trend),
                         modifier = Modifier.padding(horizontal = 16.dp),
                     ) {
                         TrendChart(
@@ -178,7 +192,7 @@ fun BodyFatDetailScreen(
                             metricName = "Body Fat",
                             baselineUnit = "%",
                             baseline = uiState.averageBodyFat,
-                            baselineLabel = "Average",
+                            baselineLabel = stringResource(R.string.label_average),
                             baselineDecimalPlaces = 1,
                             axisDecimalPlaces = 1,
                             scrollState = chartScrollState,

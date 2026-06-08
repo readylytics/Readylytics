@@ -33,8 +33,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.ui.components.BirthdayDatePickerField
@@ -92,7 +94,7 @@ private fun WelcomeScreen(onNext: () -> Unit) {
         Spacer(Modifier.height(24.dp))
 
         Text(
-            text = "Welcome to Readylytics",
+            text = stringResource(R.string.onboarding_welcome_title),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center,
         )
@@ -100,7 +102,7 @@ private fun WelcomeScreen(onNext: () -> Unit) {
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = "Your personal recovery & readiness tracker — powered entirely by your own data.",
+            text = stringResource(R.string.onboarding_welcome_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -110,8 +112,8 @@ private fun WelcomeScreen(onNext: () -> Unit) {
 
         FeatureItem(
             icon = { Icon(Icons.Filled.Favorite, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-            title = "Sleep Score",
-            description = "Weighted by duration, architecture, and restoration quality.",
+            title = stringResource(R.string.onboarding_feature_sleep_title),
+            description = stringResource(R.string.onboarding_feature_sleep_desc),
         )
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
         FeatureItem(
@@ -122,8 +124,8 @@ private fun WelcomeScreen(onNext: () -> Unit) {
                     tint = MaterialTheme.colorScheme.secondary,
                 )
             },
-            title = "HRV & Resting HR Tracking",
-            description = "Personal baselines calculated from your last 30 days of data.",
+            title = stringResource(R.string.onboarding_feature_hrv_title),
+            description = stringResource(R.string.onboarding_feature_hrv_desc),
         )
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
         FeatureItem(
@@ -134,14 +136,14 @@ private fun WelcomeScreen(onNext: () -> Unit) {
                     tint = MaterialTheme.colorScheme.tertiary,
                 )
             },
-            title = "Training Load Index",
-            description = "Acute vs. chronic workload ratio to guide your recovery.",
+            title = stringResource(R.string.onboarding_feature_training_title),
+            description = stringResource(R.string.onboarding_feature_training_desc),
         )
 
         Spacer(Modifier.height(32.dp))
 
         Text(
-            text = "All data stays on your device. Nothing is ever uploaded to any server.",
+            text = stringResource(R.string.onboarding_privacy_note),
             style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -153,7 +155,7 @@ private fun WelcomeScreen(onNext: () -> Unit) {
             onClick = onNext,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Get Started")
+            Text(stringResource(R.string.onboarding_get_started))
         }
     }
 }
@@ -185,6 +187,7 @@ private fun ProfileSetupScreen(
 ) {
     var birthDate by remember { mutableStateOf(LocalDate.now().minusYears(30)) }
     var showBirthdatePicker by remember { mutableStateOf(false) }
+    // Domain keys: these English strings are compared with stored/domain values — do NOT translate here
     var gender by remember { mutableStateOf("Other") }
     var physiologyProfile by remember { mutableStateOf(PhysiologyProfile.GENERAL) }
     var dynamicColorEnabled by remember { mutableStateOf(true) }
@@ -202,7 +205,7 @@ private fun ProfileSetupScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Your Profile",
+            text = stringResource(R.string.onboarding_profile_title),
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -210,9 +213,7 @@ private fun ProfileSetupScreen(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text =
-                "Your birthday, gender, and activity profile are used to calculate your max heart rate and " +
-                    "personalize scores. They are stored only on your device.",
+            text = stringResource(R.string.onboarding_profile_subtitle),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -220,7 +221,7 @@ private fun ProfileSetupScreen(
         Spacer(Modifier.height(20.dp))
 
         Text(
-            text = "Activity Profile",
+            text = stringResource(R.string.onboarding_activity_profile_label),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -244,7 +245,7 @@ private fun ProfileSetupScreen(
         Spacer(Modifier.height(16.dp))
 
         Text(
-            text = "Gender",
+            text = stringResource(R.string.label_gender),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -252,14 +253,15 @@ private fun ProfileSetupScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // onClick uses English domain key; label uses translated string resource
             RadioButton(selected = gender == "Male", onClick = { gender = "Male" })
-            Text("Male", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.gender_male), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.width(8.dp))
             RadioButton(selected = gender == "Female", onClick = { gender = "Female" })
-            Text("Female", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.gender_female), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.width(8.dp))
             RadioButton(selected = gender == "Other", onClick = { gender = "Other" })
-            Text("Other", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.gender_other), style = MaterialTheme.typography.bodyMedium)
         }
 
         Spacer(Modifier.height(16.dp))
@@ -275,15 +277,15 @@ private fun ProfileSetupScreen(
         Spacer(Modifier.height(16.dp))
 
         Text(
-            text = "Appearance",
+            text = stringResource(R.string.onboarding_appearance_label),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(8.dp))
 
         SettingsToggleItem(
-            label = "Dynamic Color",
-            description = "Use colors derived from your wallpaper (Android 12+)",
+            label = stringResource(R.string.onboarding_dynamic_color_label),
+            description = stringResource(R.string.onboarding_dynamic_color_desc),
             checked = dynamicColorEnabled,
             onCheckedChange = { dynamicColorEnabled = it },
             modifier = Modifier.fillMaxWidth(),
@@ -292,7 +294,7 @@ private fun ProfileSetupScreen(
         Spacer(Modifier.height(24.dp))
 
         Text(
-            text = "Measurement Units",
+            text = stringResource(R.string.onboarding_units_label),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -307,15 +309,13 @@ private fun ProfileSetupScreen(
         Spacer(Modifier.height(24.dp))
 
         Text(
-            text = "Health Connect Permissions",
+            text = stringResource(R.string.onboarding_hc_permissions_label),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            text =
-                "This app needs access to Sleep, Heart Rate, HRV, and Exercise data from Health Connect " +
-                    "to calculate your scores.",
+            text = stringResource(R.string.onboarding_hc_permissions_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -341,13 +341,13 @@ private fun ProfileSetupScreen(
             modifier = Modifier.fillMaxWidth(),
             enabled = isInputValid,
         ) {
-            Text("Grant Access & Continue")
+            Text(stringResource(R.string.onboarding_grant_access))
         }
 
         Spacer(Modifier.height(12.dp))
 
         TextButton(onClick = onOpenSettingsClick) {
-            Text("Open Health Connect Settings")
+            Text(stringResource(R.string.onboarding_open_hc_settings))
         }
     }
 }
