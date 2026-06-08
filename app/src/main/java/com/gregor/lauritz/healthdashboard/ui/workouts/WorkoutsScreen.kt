@@ -38,6 +38,8 @@ fun WorkoutsRoute(
         onRangeSelected = viewModel::onRangeSelected,
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
+        onPreviousPage = viewModel::onPreviousPage,
+        onNextPage = viewModel::onNextPage,
         onDateSelected = viewModel::onDateSelected,
         earliestDate = earliestDate,
         onWorkoutClick = onWorkoutClick,
@@ -51,6 +53,8 @@ fun WorkoutsScreen(
     onRangeSelected: (TimeRange) -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
+    onPreviousPage: () -> Unit,
+    onNextPage: () -> Unit,
     onWorkoutClick: (String) -> Unit,
     onDateSelected: (java.time.LocalDate) -> Unit = {},
     earliestDate: java.time.LocalDate? = null,
@@ -111,6 +115,10 @@ fun WorkoutsScreen(
             } else {
                 WorkoutListSection(
                     workouts = uiState.recentWorkouts,
+                    currentPage = uiState.currentPage,
+                    totalPages = uiState.totalPages,
+                    onPreviousPage = onPreviousPage,
+                    onNextPage = onNextPage,
                     onWorkoutClick = onWorkoutClick,
                 )
             }

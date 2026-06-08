@@ -26,10 +26,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -58,6 +61,8 @@ data class WorkoutsUiState(
     val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val todayPaiScore: Float? = null,
     val isLoading: Boolean = false,
+    val currentPage: Int = 1,
+    val totalPages: Int = 1,
 )
 
 private data class WorkoutFlowData(
@@ -66,6 +71,13 @@ private data class WorkoutFlowData(
     val trimpSummaries: List<DailySummary>,
     val paiSummaries: List<DailySummary>,
     val prefs: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences,
+)
+
+private data class CombinedParams(
+    val range: TimeRange,
+    val date: LocalDate,
+    val isSyncing: Boolean,
+    val page: Int,
 )
 
 @HiltViewModel
@@ -90,14 +102,31 @@ class WorkoutsViewModel
 
         val selectedRange = _selectedRange.asStateFlow()
 
+        private val _currentPage = MutableStateFlow(1)
+        val currentPage = _currentPage.asStateFlow()
+
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
             combine(
                 _selectedRange,
                 selectedDateRepository.selectedDate,
                 foregroundSyncController.isSyncing,
-            ) { range, date, isSyncing -> Triple(range, date, isSyncing) }
-                .flatMapLatest { (range, date, isSyncing) ->
+                _currentPage,
+            ) { range, date, isSyncing, page -> CombinedParams(range, date, isSyncing, page) }
+                .scan(null as CombinedParams?) { prev, current ->
+                    if (prev != null && (prev.range != current.range || prev.date != current.date)) {
+                        _currentPage.value = 1
+                        current.copy(page = 1)
+                    } else {
+                        current
+                    }
+                }.filterNotNull()
+                .distinctUntilChanged()
+                .flatMapLatest { params ->
+                    val range = params.range
+                    val date = params.date
+                    val isSyncing = params.isSyncing
+                    val page = params.page
                     val earliestWorkoutMs = workoutRepository.getEarliestWorkoutTimestamp() ?: 0L
                     val zoneId = ZoneId.systemDefault()
                     val earliestLocalDate =
@@ -318,17 +347,32 @@ class WorkoutsViewModel
                                         )
                                     }
 
+                            val pageSize = 10
+                            val totalItems = recentItems.size
+                            val totalPages = maxOf(1, (totalItems + pageSize - 1) / pageSize)
+                            val clampedPage = page.coerceIn(1, totalPages)
+                            val startIndex = (clampedPage - 1) * pageSize
+                            val endIndex = minOf(startIndex + pageSize, totalItems)
+                            val paginatedItems =
+                                if (startIndex < totalItems) {
+                                    recentItems.subList(startIndex, endIndex)
+                                } else {
+                                    emptyList()
+                                }
+
                             WorkoutsUiState(
                                 latestSummary = latest,
                                 dailyTrimp = dailyTrimp,
                                 dailyStrainRatio = dailyStrainRatio,
-                                recentWorkouts = recentItems,
+                                recentWorkouts = paginatedItems,
                                 selectedRange = range,
                                 selectedDate = date,
                                 rangeStartMs = displayStartDayMs,
                                 paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries),
                                 todayPaiScore = latest?.paiScore,
                                 isLoading = isSyncing,
+                                currentPage = clampedPage,
+                                totalPages = totalPages,
                             ).also { emit(it) }
                         }
                     }
@@ -352,6 +396,7 @@ class WorkoutsViewModel
         }
 
         fun onRangeSelected(range: TimeRange) {
+            _currentPage.value = 1
             _selectedRange.value = range
             savedStateHandle["selectedRange"] = range
         }
@@ -365,20 +410,36 @@ class WorkoutsViewModel
                 )
 
         fun onDateSelected(date: LocalDate) {
+            _currentPage.value = 1
             viewModelScope.launch {
                 selectedDateRepository.updateSelectedDate(date)
             }
         }
 
         fun onPreviousDay() {
+            _currentPage.value = 1
             viewModelScope.launch {
                 selectedDateRepository.selectPreviousDay()
             }
         }
 
         fun onNextDay() {
+            _currentPage.value = 1
             viewModelScope.launch {
                 selectedDateRepository.selectNextDay()
+            }
+        }
+
+        fun onNextPage() {
+            val totalPages = uiState.value.totalPages
+            if (_currentPage.value < totalPages) {
+                _currentPage.value += 1
+            }
+        }
+
+        fun onPreviousPage() {
+            if (_currentPage.value > 1) {
+                _currentPage.value -= 1
             }
         }
     }

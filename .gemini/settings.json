@@ -1,1 +1,14 @@
-{}
+{
+  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
+  "general": {
+    "defaultApprovalMode": "default",
+    "preferredEditor": "vscode",
+    "vimMode": false,
+    "topicUpdateNarration": true
+  },
+  "ui": {
+    "inlineThinkingMode": "off",
+    "theme": "dark",
+    "compactToolOutput": true
+  }
+}

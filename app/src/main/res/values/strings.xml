@@ -604,6 +604,9 @@
     <string name="workout_history_item_subtitle">%1$d min  ·  Strain %2$s  ·  %3$s</string>
     <string name="workout_history_bpm_format">%1$d bpm</string>
     <string name="workout_history_bpm_na">-- bpm</string>
+    <string name="workout_history_page_info">Page %1$d of %2$d</string>
+    <string name="workout_history_button_prev">Previous page</string>
+    <string name="workout_history_button_next">Next page</string>
 
     <!-- Sleep Metrics Cards -->
     <string name="card_title_deep_sleep">Deep Sleep</string>

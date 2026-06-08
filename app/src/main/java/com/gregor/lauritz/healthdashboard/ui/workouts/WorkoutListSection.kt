@@ -3,11 +3,18 @@ package com.gregor.lauritz.healthdashboard.ui.workouts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +35,10 @@ import kotlin.math.roundToInt
 @Composable
 fun WorkoutListSection(
     workouts: List<WorkoutDisplayItem>,
+    currentPage: Int,
+    totalPages: Int,
+    onPreviousPage: () -> Unit,
+    onNextPage: () -> Unit,
     onWorkoutClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -39,6 +50,48 @@ fun WorkoutListSection(
                 onClick = { onWorkoutClick(item.workout.id) },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
+        }
+
+        if (totalPages > 1) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp, horizontal = 16.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedIconButton(
+                    onClick = onPreviousPage,
+                    enabled = currentPage > 1,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = stringResource(R.string.workout_history_button_prev),
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text =
+                        stringResource(
+                            R.string.workout_history_page_info,
+                            currentPage,
+                            totalPages,
+                        ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                OutlinedIconButton(
+                    onClick = onNextPage,
+                    enabled = currentPage < totalPages,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = stringResource(R.string.workout_history_button_next),
+                    )
+                }
+            }
         }
     }
 }
