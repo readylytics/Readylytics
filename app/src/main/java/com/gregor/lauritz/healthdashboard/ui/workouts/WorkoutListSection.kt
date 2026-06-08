@@ -52,43 +52,45 @@ fun WorkoutListSection(
             )
         }
 
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp, horizontal = 16.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            OutlinedIconButton(
-                onClick = onPreviousPage,
-                enabled = currentPage > 1,
+        if (totalPages > 1) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp, horizontal = 16.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = stringResource(R.string.workout_history_button_prev),
+                OutlinedIconButton(
+                    onClick = onPreviousPage,
+                    enabled = currentPage > 1,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = stringResource(R.string.workout_history_button_prev),
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text =
+                        stringResource(
+                            R.string.workout_history_page_info,
+                            currentPage,
+                            totalPages,
+                        ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text =
-                    stringResource(
-                        R.string.workout_history_page_info,
-                        currentPage,
-                        totalPages,
-                    ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            OutlinedIconButton(
-                onClick = onNextPage,
-                enabled = currentPage < totalPages,
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = stringResource(R.string.workout_history_button_next),
-                )
+                Spacer(modifier = Modifier.width(16.dp))
+                OutlinedIconButton(
+                    onClick = onNextPage,
+                    enabled = currentPage < totalPages,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = stringResource(R.string.workout_history_button_next),
+                    )
+                }
             }
         }
     }

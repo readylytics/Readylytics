@@ -26,10 +26,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -102,15 +105,6 @@ class WorkoutsViewModel
         private val _currentPage = MutableStateFlow(1)
         val currentPage = _currentPage.asStateFlow()
 
-        init {
-            viewModelScope.launch {
-                combine(_selectedRange, selectedDateRepository.selectedDate) { _, _ -> }
-                    .collect {
-                        _currentPage.value = 1
-                    }
-            }
-        }
-
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
             combine(
@@ -119,6 +113,15 @@ class WorkoutsViewModel
                 foregroundSyncController.isSyncing,
                 _currentPage,
             ) { range, date, isSyncing, page -> CombinedParams(range, date, isSyncing, page) }
+                .scan(null as CombinedParams?) { prev, current ->
+                    if (prev != null && (prev.range != current.range || prev.date != current.date)) {
+                        _currentPage.value = 1
+                        current.copy(page = 1)
+                    } else {
+                        current
+                    }
+                }.filterNotNull()
+                .distinctUntilChanged()
                 .flatMapLatest { params ->
                     val range = params.range
                     val date = params.date
@@ -344,11 +347,12 @@ class WorkoutsViewModel
                                         )
                                     }
 
+                            val pageSize = 10
                             val totalItems = recentItems.size
-                            val totalPages = maxOf(1, kotlin.math.ceil(totalItems.toFloat() / 10f).toInt())
+                            val totalPages = maxOf(1, (totalItems + pageSize - 1) / pageSize)
                             val clampedPage = page.coerceIn(1, totalPages)
-                            val startIndex = (clampedPage - 1) * 10
-                            val endIndex = minOf(startIndex + 10, totalItems)
+                            val startIndex = (clampedPage - 1) * pageSize
+                            val endIndex = minOf(startIndex + pageSize, totalItems)
                             val paginatedItems =
                                 if (startIndex < totalItems) {
                                     recentItems.subList(startIndex, endIndex)
