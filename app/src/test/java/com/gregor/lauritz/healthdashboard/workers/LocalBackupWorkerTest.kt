@@ -31,35 +31,38 @@ class LocalBackupWorkerTest {
     }
 
     @Test
-    fun doWork_success_returnsSuccess() = runTest {
-        coEvery { mockBackupManager.createBackup() } returns Result.success(File("backup.zip"))
+    fun doWork_success_returnsSuccess() =
+        runTest {
+            coEvery { mockBackupManager.createBackup() } returns Result.success(File("backup.zip"))
 
-        val worker = LocalBackupWorker(context, workerParams, mockBackupManager)
-        val result = worker.doWork()
+            val worker = LocalBackupWorker(context, workerParams, mockBackupManager)
+            val result = worker.doWork()
 
-        assertEquals(ListenableWorker.Result.success(), result)
-    }
-
-    @Test
-    fun doWork_ioException_returnsRetry() = runTest {
-        coEvery { mockBackupManager.createBackup() } returns Result.failure(IOException("Disk full"))
-
-        val worker = LocalBackupWorker(context, workerParams, mockBackupManager)
-        val result = worker.doWork()
-
-        assertEquals(ListenableWorker.Result.retry(), result)
-    }
+            assertEquals(ListenableWorker.Result.success(), result)
+        }
 
     @Test
-    fun doWork_otherException_returnsFailure() = runTest {
-        val errorMessage = "Fatal error"
-        coEvery { mockBackupManager.createBackup() } returns Result.failure(Exception(errorMessage))
+    fun doWork_ioException_returnsRetry() =
+        runTest {
+            coEvery { mockBackupManager.createBackup() } returns Result.failure(IOException("Disk full"))
 
-        val worker = LocalBackupWorker(context, workerParams, mockBackupManager)
-        val result = worker.doWork()
+            val worker = LocalBackupWorker(context, workerParams, mockBackupManager)
+            val result = worker.doWork()
 
-        assertTrue(result is ListenableWorker.Result.Failure)
-        val outputData = result.outputData
-        assertEquals(errorMessage, outputData.getString("error"))
-    }
+            assertEquals(ListenableWorker.Result.retry(), result)
+        }
+
+    @Test
+    fun doWork_otherException_returnsFailure() =
+        runTest {
+            val errorMessage = "Fatal error"
+            coEvery { mockBackupManager.createBackup() } returns Result.failure(Exception(errorMessage))
+
+            val worker = LocalBackupWorker(context, workerParams, mockBackupManager)
+            val result = worker.doWork()
+
+            assertTrue(result is ListenableWorker.Result.Failure)
+            val outputData = result.outputData
+            assertEquals(errorMessage, outputData.getString("error"))
+        }
 }
