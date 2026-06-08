@@ -200,7 +200,9 @@ class ComputeSleepMetricsUseCase
                         sigmaHrvHistory
                     }
 
-                // Determine effective sigma for RHR
+                // Determine effective sigma for RHR.
+                // Note: preserving null when rhrValues.size <= 1 is intentional to ensure downstream scoring
+                // (e.g. LoadScoringStrategy) uses its percentage-based fallback logic during recalculations.
                 val calculatedRhrSigma =
                     if (!frozenBaseline && rhrValues.size > 1) {
                         rhrValues

@@ -204,4 +204,40 @@ class LoadScoringStrategyTest {
             )
         assertEquals(ScoringConstants.Readiness.ILLNESS_MAX_SCORE, result, DELTA)
     }
+
+    @Test
+    fun `rhrZScore uses frozenSigma when provided`() {
+        val result =
+            loadStrategy.computeRhrZScore(
+                currentRhrBpm = 65f,
+                rhrHistory = listOf(60, 62, 58),
+                baselineOverride = 60f,
+                frozenSigma = 2.0f,
+            )
+        assertEquals(2.5f, result!!, 0.001f)
+    }
+
+    @Test
+    fun `rhrZScore uses fallback when frozenSigma is null and rhrHistory is empty`() {
+        val result =
+            loadStrategy.computeRhrZScore(
+                currentRhrBpm = 65f,
+                rhrHistory = emptyList(),
+                baselineOverride = 60f,
+                frozenSigma = null,
+            )
+        assertEquals(1.66667f, result!!, 0.001f)
+    }
+
+    @Test
+    fun `rhrZScore uses fallback when frozenSigma is null and rhrHistory size is 1`() {
+        val result =
+            loadStrategy.computeRhrZScore(
+                currentRhrBpm = 65f,
+                rhrHistory = listOf(60),
+                baselineOverride = null,
+                frozenSigma = null,
+            )
+        assertEquals(1.66667f, result!!, 0.001f)
+    }
 }
