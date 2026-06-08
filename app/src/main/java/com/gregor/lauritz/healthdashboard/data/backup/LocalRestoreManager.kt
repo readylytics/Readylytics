@@ -480,6 +480,7 @@ class LocalRestoreManager
                 backup.chengBeta?.let { chengBeta = it }
                 backup.itrimB?.let { itrimpB = it }
                 backup.primaryDeviceName?.let { primaryDeviceName = it }
+                backup.deviceByDataType?.let { putAllDeviceByDataType(it) }
                 backup.backupDirectoryUri?.let { backupDirectoryUri = it }
             }
         }

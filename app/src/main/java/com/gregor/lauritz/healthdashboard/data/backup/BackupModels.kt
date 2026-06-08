@@ -68,5 +68,6 @@ data class UserPreferencesBackup(
     val chengBeta: Float? = null,
     val itrimB: Float? = null,
     val primaryDeviceName: String? = null,
+    val deviceByDataType: Map<String, String>? = null,
     val backupDirectoryUri: String? = null,
 )

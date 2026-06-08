@@ -19,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,12 +29,14 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
+import com.gregor.lauritz.healthdashboard.domain.model.HealthDataCategory
+import com.gregor.lauritz.healthdashboard.domain.model.HealthDataType
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
+import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
 import com.gregor.lauritz.healthdashboard.ui.settings.SyncSettingsState
 import com.gregor.lauritz.healthdashboard.ui.settings.UIState
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
-import kotlinx.coroutines.launch
 
 @Composable
 fun SyncSettingsSection(
@@ -208,41 +209,98 @@ private fun SyncPreference.labelRes(): Int =
         SyncPreference.BY_TIME -> R.string.sync_preference_by_time
     }
 
+/**
+ * Lets the user pick the source device individually for each Health Connect data
+ * type, grouped by category. "All devices" (the default) applies no source filter.
+ */
 @Composable
-fun DeviceSelectionSection(viewModel: DeviceSettingsViewModel = hiltViewModel()) {
+fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewModel()) {
     val availableDevices by viewModel.availableDevices.collectAsStateWithLifecycle()
-    val primaryDevice by viewModel.primaryDevice.collectAsStateWithLifecycle()
-    val coroutineScope = rememberCoroutineScope()
+    val deviceByDataType by viewModel.deviceByDataType.collectAsStateWithLifecycle()
     val hasDevices = availableDevices.isNotEmpty()
+    val allDevicesLabel = stringResource(R.string.data_sources_all_devices)
+    val calibratingLabel = stringResource(R.string.data_sources_calibrating)
+    val phoneLabel = stringResource(R.string.device_this_phone)
+    // Include currently selected devices so a previously chosen but no-longer-detected
+    // device (e.g. inactive within the discovery window) stays visible and re-selectable.
+    val options =
+        remember(availableDevices, deviceByDataType, allDevicesLabel) {
+            (listOf(allDevicesLabel) + availableDevices + deviceByDataType.values).distinct()
+        }
+    val optionsDisplay =
+        remember(options, phoneLabel) {
+            options.associateWith { if (it == "This Phone") phoneLabel else it }
+        }
 
-    Column(
-        modifier =
-            Modifier.padding(
-                horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
-            ),
-    ) {
-        DropdownPreferenceItem(
-            label = stringResource(R.string.settings_primary_device_label),
-            selectedDisplayValue =
-                when {
-                    !hasDevices -> stringResource(R.string.settings_device_calibrating)
-                    primaryDevice != null -> primaryDevice!!
-                    else -> stringResource(R.string.settings_device_select)
-                },
-            options = availableDevices,
-            onOptionSelected = { deviceName ->
-                coroutineScope.launch { viewModel.updatePrimaryDevice(deviceName) }
-            },
-            optionLabel = { it },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = hasDevices,
-        )
+    Column {
         Text(
-            text = stringResource(R.string.settings_device_description),
+            text = stringResource(R.string.data_sources_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 16.dp, top = 4.dp),
+            modifier =
+                Modifier.padding(
+                    horizontal = SettingsConstants.HORIZONTAL_PADDING,
+                    vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
+                ),
         )
+
+        HealthDataType.entries
+            .groupBy { it.category }
+            .forEach { (category, types) ->
+                SectionHeader(stringResource(category.labelRes()))
+                types.forEach { type ->
+                    val selected = deviceByDataType[type.name]
+                    DropdownPreferenceItem(
+                        label = stringResource(type.labelRes()),
+                        selectedDisplayValue =
+                            when {
+                                !hasDevices && selected == null -> calibratingLabel
+                                selected != null -> {
+                                    if (selected == "This Phone") phoneLabel else selected
+                                }
+                                else -> allDevicesLabel
+                            },
+                        options = options,
+                        onOptionSelected = { choice ->
+                            viewModel.updateDevice(
+                                type = type,
+                                deviceLabel = choice.takeIf { it != allDevicesLabel },
+                            )
+                        },
+                        optionLabel = { optionsDisplay[it] ?: it },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    horizontal = SettingsConstants.HORIZONTAL_PADDING,
+                                    vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
+                                ),
+                        enabled = hasDevices || selected != null,
+                    )
+                }
+            }
     }
 }
+
+@StringRes
+private fun HealthDataCategory.labelRes(): Int =
+    when (this) {
+        HealthDataCategory.ACTIVITY -> R.string.category_activity
+        HealthDataCategory.BODY_MEASUREMENTS -> R.string.category_body_measurements
+        HealthDataCategory.SLEEP -> R.string.category_sleep
+        HealthDataCategory.VITALS -> R.string.category_vitals
+    }
+
+@StringRes
+private fun HealthDataType.labelRes(): Int =
+    when (this) {
+        HealthDataType.EXERCISE -> R.string.data_type_exercise
+        HealthDataType.STEPS -> R.string.data_type_steps
+        HealthDataType.BODY_FAT -> R.string.data_type_body_fat
+        HealthDataType.WEIGHT -> R.string.data_type_weight
+        HealthDataType.SLEEP -> R.string.data_type_sleep
+        HealthDataType.BLOOD_PRESSURE -> R.string.data_type_blood_pressure
+        HealthDataType.HEART_RATE -> R.string.data_type_heart_rate
+        HealthDataType.HRV -> R.string.data_type_hrv
+        HealthDataType.OXYGEN_SATURATION -> R.string.data_type_oxygen_saturation
+    }

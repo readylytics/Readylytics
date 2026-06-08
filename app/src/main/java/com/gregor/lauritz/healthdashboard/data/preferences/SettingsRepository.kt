@@ -51,6 +51,8 @@ class SettingsRepository
 
         val primaryDeviceName: Flow<String?> = userPreferences.map { it.primaryDeviceName }
 
+        val deviceByDataType: Flow<Map<String, String>> = userPreferences.map { it.deviceByDataType }
+
         // --- Update Methods (delegated to preference modules) ---
 
         suspend fun updateGoalSleepHours(hours: Float) = sleep.updateGoalSleepHours(hours)
@@ -166,6 +168,13 @@ class SettingsRepository
         suspend fun updateDynamicColorEnabled(enabled: Boolean) = ui.updateDynamicColorEnabled(enabled)
 
         suspend fun updatePrimaryDevice(deviceName: String?) = ui.updatePrimaryDevice(deviceName)
+
+        suspend fun updateDeviceForDataType(
+            dataTypeKey: String,
+            deviceLabel: String?,
+        ) = ui.updateDeviceForDataType(dataTypeKey, deviceLabel)
+
+        suspend fun migrateDeviceSelectionIfNeeded() = ui.migrateDeviceSelectionIfNeeded()
 
         suspend fun getAvailableDevices(): List<String> = ui.getAvailableDevices()
 

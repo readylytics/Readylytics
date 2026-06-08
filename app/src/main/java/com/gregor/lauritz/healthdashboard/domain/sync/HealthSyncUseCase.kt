@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.domain.sync
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HeartRateMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.HrvMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.SleepDataMapper
+import com.gregor.lauritz.healthdashboard.data.healthconnect.StepsMapper
 import com.gregor.lauritz.healthdashboard.data.healthconnect.WorkoutMapper
 import com.gregor.lauritz.healthdashboard.data.local.dao.BloodPressureRecordDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.BodyFatRecordDao
@@ -20,6 +21,7 @@ import com.gregor.lauritz.healthdashboard.data.mapper.OxygenSaturationDataMapper
 import com.gregor.lauritz.healthdashboard.data.mapper.WeightDataMapper
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.domain.model.HealthDataType
 import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
@@ -28,11 +30,16 @@ import com.gregor.lauritz.healthdashboard.domain.util.logD
 import com.gregor.lauritz.healthdashboard.domain.util.logE
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import java.time.Instant
@@ -63,6 +70,11 @@ class HealthSyncUseCase
     ) {
         private val syncMutex = Mutex()
 
+        private companion object {
+            // Max concurrent Health Connect step reads during a catch-up sync.
+            const val STEPS_FETCH_CONCURRENCY = 4
+        }
+
         /**
          * Runs the foreground sync / recalculation.
          *
@@ -80,6 +92,8 @@ class HealthSyncUseCase
                         logD("HealthSyncUseCase") { "Starting sync (window=$windowDays days)..." }
                         val today = LocalDate.now(ZoneId.systemDefault())
                         val zoneId = ZoneId.systemDefault()
+                        // Migrate any legacy global "primary device" into the per-data-type map.
+                        settingsRepo.migrateDeviceSelectionIfNeeded()
                         val initialPrefs = settingsRepo.userPreferences.first()
 
                         updateCalculatedMetrics(initialPrefs)
@@ -98,15 +112,44 @@ class HealthSyncUseCase
 
                         ingestWindow(ingestStart, windowEnd, prefs)
 
-                        // Bulk-fetch steps per day using aggregate API to prevent overlap/duplication
+                        val deviceByType = prefs.deviceByDataType
+
+                        fun deviceFor(type: HealthDataType): String? =
+                            deviceByType[type.name]?.takeIf { it.isNotBlank() }
+
+                        // Fetch steps respecting the per-data-type source-device selection.
+                        // When a specific device is selected the aggregate API can't filter by
+                        // device, so read raw records and aggregate by day after filtering. When
+                        // "All devices" is selected, use the aggregate API which de-duplicates
+                        // overlapping records across data origins.
                         logD("HealthSyncUseCase") { "Bulk fetching steps for $windowDays days..." }
+                        val stepsDevice = deviceFor(HealthDataType.STEPS)
                         val stepsMap = mutableMapOf<LocalDate, Long>()
-                        for (i in (windowDays - 1) downTo 0) {
-                            val day = today.minusDays(i.toLong())
-                            val dayStart = day.atStartOfDay(zoneId).toInstant()
-                            val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
-                            val daySteps = hcRepo.readSteps(dayStart, dayEnd)
-                            stepsMap[day] = daySteps
+                        if (stepsDevice == null) {
+                            // Cap concurrent Health Connect IPC calls to avoid rate limiting
+                            // (RateLimitExceededException) and memory pressure on large windows.
+                            val stepsSemaphore = Semaphore(STEPS_FETCH_CONCURRENCY)
+                            coroutineScope {
+                                val deferredSteps =
+                                    (0 until windowDays).map { i ->
+                                        val day = today.minusDays(i.toLong())
+                                        val dayStart = day.atStartOfDay(zoneId).toInstant()
+                                        val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
+                                        async {
+                                            stepsSemaphore.withPermit {
+                                                day to hcRepo.readSteps(dayStart, dayEnd)
+                                            }
+                                        }
+                                    }
+                                stepsMap.putAll(deferredSteps.awaitAll())
+                            }
+                        } else {
+                            val stepEntries =
+                                DeviceSourceFilter.filterToDevice(
+                                    StepsMapper.toStepEntries(hcRepo.readStepsRecords(windowStart, windowEnd)),
+                                    stepsDevice,
+                                ) { it.deviceName }
+                            stepsMap.putAll(StepsMapper.sumByDay(stepEntries, zoneId))
                         }
 
                         // Single determinate progress track across both the migration and window loops.
@@ -324,56 +367,58 @@ class HealthSyncUseCase
                 }
             val hrvEntities = HrvMapper.mapToEntities(hrvRecords, sleepEntities)
 
-            val primaryDevice = prefs.primaryDeviceName
+            val deviceByType = prefs.deviceByDataType
+
+            fun deviceFor(type: HealthDataType): String? = deviceByType[type.name]?.takeIf { it.isNotBlank() }
+
             val filteredSleep =
-                filterByDevicePreference(sleepEntities, primaryDevice, { it.deviceName }, { it.startTime })
+                DeviceSourceFilter.filterToDevice(
+                    sleepEntities,
+                    deviceFor(HealthDataType.SLEEP),
+                ) { it.deviceName }
             val filteredWorkouts =
-                filterByDevicePreference(
+                DeviceSourceFilter.filterToDevice(
                     workoutEntities,
-                    primaryDevice,
-                    { it.deviceName },
-                    { it.startTime },
-                )
+                    deviceFor(HealthDataType.EXERCISE),
+                ) { it.deviceName }
             val filteredHr =
-                filterByDevicePreference(hrEntities, primaryDevice, { it.deviceName }, { it.timestampMs })
+                DeviceSourceFilter.filterToDevice(
+                    hrEntities,
+                    deviceFor(HealthDataType.HEART_RATE),
+                ) { it.deviceName }
             val filteredHrv =
-                filterByDevicePreference(hrvEntities, primaryDevice, { it.deviceName }, { it.timestampMs })
+                DeviceSourceFilter.filterToDevice(
+                    hrvEntities,
+                    deviceFor(HealthDataType.HRV),
+                ) { it.deviceName }
 
             val weightEntities = WeightDataMapper.toEntities(weightRecords)
             val filteredWeight =
-                filterByDevicePreference(
+                DeviceSourceFilter.filterToDevice(
                     weightEntities,
-                    primaryDevice,
-                    { it.deviceName },
-                    { it.timestampMs },
-                )
+                    deviceFor(HealthDataType.WEIGHT),
+                ) { it.deviceName }
 
             val bodyFatEntities = BodyFatDataMapper.toEntities(bodyFatRecords)
             val filteredBodyFat =
-                filterByDevicePreference(
+                DeviceSourceFilter.filterToDevice(
                     bodyFatEntities,
-                    primaryDevice,
-                    { it.deviceName },
-                    { it.timestampMs },
-                )
+                    deviceFor(HealthDataType.BODY_FAT),
+                ) { it.deviceName }
 
             val bloodPressureEntities = BloodPressureDataMapper.toEntities(bloodPressureRecords)
             val filteredBloodPressure =
-                filterByDevicePreference(
+                DeviceSourceFilter.filterToDevice(
                     bloodPressureEntities,
-                    primaryDevice,
-                    { it.deviceName },
-                    { it.timestampMs },
-                )
+                    deviceFor(HealthDataType.BLOOD_PRESSURE),
+                ) { it.deviceName }
 
             val spo2Entities = OxygenSaturationDataMapper.toEntities(spo2Records)
             val filteredSpo2 =
-                filterByDevicePreference(
+                DeviceSourceFilter.filterToDevice(
                     spo2Entities,
-                    primaryDevice,
-                    { it.deviceName },
-                    { it.timestampMs },
-                )
+                    deviceFor(HealthDataType.OXYGEN_SATURATION),
+                ) { it.deviceName }
 
             logD("HealthSyncUseCase") {
                 "Device filtering: sleep=${filteredSleep.size} workouts=${filteredWorkouts.size} " +
@@ -446,71 +491,5 @@ class HealthSyncUseCase
                     settingsRepo.updateMaxHeartRate(calculatedMaxHr)
                 }
             }
-        }
-
-        /**
-         * Filter [records] so that data from [primaryDevice] is preferred. Records from other
-         * devices are only retained for calendar days that have no primary-device coverage,
-         * preventing duplicate entries while still allowing graceful fallback when the primary
-         * device hasn't reported data for a given day.
-         */
-        private fun <T> filterByDevicePreference(
-            records: List<T>,
-            primaryDevice: String?,
-            getDeviceName: (T) -> String?,
-            getTimestamp: (T) -> Long,
-        ): List<T> {
-            if (primaryDevice == null || records.isEmpty()) return records
-
-            val (primary, secondary) = records.partition { getDeviceName(it) == primaryDevice }
-
-            if (primary.isEmpty()) {
-                logD("DeviceFilter") {
-                    "No primary device ($primaryDevice) records found, returning all records"
-                }
-                return records
-            }
-            if (secondary.isEmpty()) return primary
-
-            val zoneId = ZoneId.systemDefault()
-            var lastTimestamp = -1L
-            var lastLocalDate: LocalDate? = null
-
-            val primaryDays =
-                primary.mapTo(mutableSetOf()) {
-                    val ts = getTimestamp(it)
-                    if (ts == lastTimestamp && lastLocalDate != null) {
-                        lastLocalDate
-                    } else {
-                        val date = Instant.ofEpochMilli(ts).atZone(zoneId).toLocalDate()
-                        lastTimestamp = ts
-                        lastLocalDate = date
-                        date
-                    }
-                }
-
-            // Reset for secondary filtering
-            lastTimestamp = -1L
-            lastLocalDate = null
-
-            val fallback =
-                secondary.filter {
-                    val ts = getTimestamp(it)
-                    val date =
-                        if (ts == lastTimestamp && lastLocalDate != null) {
-                            lastLocalDate
-                        } else {
-                            val d = Instant.ofEpochMilli(ts).atZone(zoneId).toLocalDate()
-                            lastTimestamp = ts
-                            lastLocalDate = d
-                            d
-                        }
-                    date !in primaryDays
-                }
-
-            if (fallback.isNotEmpty()) {
-                logD("DeviceFilter") { "Added ${fallback.size} secondary device records as fallback" }
-            }
-            return primary + fallback
         }
     }
