@@ -29,15 +29,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.scoring.TrimpModel
 import com.gregor.lauritz.healthdashboard.domain.validation.SettingsValidators
 import com.gregor.lauritz.healthdashboard.domain.validation.ValidationResult
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
-import androidx.compose.ui.res.stringResource
-import com.gregor.lauritz.healthdashboard.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,11 +52,12 @@ fun AdvancedSettingsSection(
     onPhysiologyEvent: (SettingsEvent) -> Unit,
     onUIEvent: (SettingsEvent) -> Unit,
 ) {
-    val trimpModelOptions = listOf(
-        TrimpModel.BANISTER to stringResource(R.string.advanced_trimp_banister),
-        TrimpModel.CHENG to stringResource(R.string.advanced_trimp_cheng),
-        TrimpModel.I_TRIMP to stringResource(R.string.advanced_trimp_itrimp),
-    )
+    val trimpModelOptions =
+        listOf(
+            TrimpModel.BANISTER to stringResource(R.string.advanced_trimp_banister),
+            TrimpModel.CHENG to stringResource(R.string.advanced_trimp_cheng),
+            TrimpModel.I_TRIMP to stringResource(R.string.advanced_trimp_itrimp),
+        )
 
     var hrvText by remember(sleepState.hrvBaselineOverride) {
         mutableStateOf(sleepState.hrvBaselineOverride?.toInt()?.toString() ?: "")
@@ -206,7 +207,9 @@ fun AdvancedSettingsSection(
             modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
         )
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
-        val selectedModelLabel = trimpModelOptions.firstOrNull { it.first == trimpModel }?.second ?: stringResource(R.string.advanced_trimp_banister)
+        val selectedModelLabel =
+            trimpModelOptions.firstOrNull { it.first == trimpModel }?.second
+                ?: stringResource(R.string.advanced_trimp_banister)
         var trimpDropdownExpanded by remember { mutableStateOf(false) }
         ExposedDropdownMenuBox(
             expanded = trimpDropdownExpanded,

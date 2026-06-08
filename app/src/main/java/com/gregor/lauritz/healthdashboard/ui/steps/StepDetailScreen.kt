@@ -28,9 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.R
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.stepsStatus
 import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
 import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard

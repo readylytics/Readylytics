@@ -124,8 +124,9 @@ class LocalBackupViewModel
                                 transientState.update {
                                     it.copy(
                                         isRestoring = false,
-                                        backupError = e.message?.let { UiText.RawString(it) }
-                                            ?: UiText.StringRes(R.string.error_backup_restore_validation),
+                                        backupError =
+                                            e.message?.let { UiText.RawString(it) }
+                                                ?: UiText.StringRes(R.string.error_backup_restore_validation),
                                     )
                                 }
                             }
@@ -245,8 +246,9 @@ class LocalBackupViewModel
                 }.onFailure { e ->
                     transientState.update {
                         it.copy(
-                            backupError = e.message?.let { UiText.RawString(it) }
-                                ?: UiText.StringRes(R.string.error_backup_create_failed),
+                            backupError =
+                                e.message?.let { UiText.RawString(it) }
+                                    ?: UiText.StringRes(R.string.error_backup_create_failed),
                         )
                     }
                 }

@@ -57,7 +57,13 @@ fun StepsCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = stringResource(R.string.steps_goal_display, java.text.NumberFormat.getNumberInstance().format(stepGoal)),
+                    text =
+                        stringResource(
+                            R.string.steps_goal_display,
+                            java.text.NumberFormat
+                                .getNumberInstance()
+                                .format(stepGoal),
+                        ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

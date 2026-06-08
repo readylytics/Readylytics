@@ -28,9 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.R
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.weightZoneBands
@@ -189,11 +189,12 @@ fun WeightDetailScreen(
                             maxScore = weightMaxScore,
                             status = bmiStatus,
                             displayText = uiState.weightDisplay,
-                            tooltipDescription = stringResource(
-                                R.string.tooltip_weight_current,
-                                uiState.weightDisplay?.let { "$it $unitLabel" } ?: "—",
-                                heightTooltip,
-                            ),
+                            tooltipDescription =
+                                stringResource(
+                                    R.string.tooltip_weight_current,
+                                    uiState.weightDisplay?.let { "$it $unitLabel" } ?: "—",
+                                    heightTooltip,
+                                ),
                         )
                         M3ScoreDial(
                             score = uiState.bmi,

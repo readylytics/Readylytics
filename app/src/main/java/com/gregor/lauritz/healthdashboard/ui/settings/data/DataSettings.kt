@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.settings.data
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,9 +34,6 @@ import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
 import com.gregor.lauritz.healthdashboard.ui.settings.SyncSettingsState
 import com.gregor.lauritz.healthdashboard.ui.settings.UIState
 import com.gregor.lauritz.healthdashboard.ui.settings.common.SettingsConstants
-import androidx.annotation.StringRes
-import androidx.compose.ui.res.stringResource
-import com.gregor.lauritz.healthdashboard.R
 import kotlinx.coroutines.launch
 
 @Composable
@@ -74,7 +72,10 @@ fun DataManagementSection(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(R.string.settings_retention_enabled_label), style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    stringResource(R.string.settings_retention_enabled_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
                 Spacer(modifier = Modifier.weight(1f))
                 Switch(
                     checked = uiState.retentionDaysEnabled,
@@ -92,7 +93,10 @@ fun DataManagementSection(
                     ),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.settings_retention_period_label), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        stringResource(R.string.settings_retention_period_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
                         text = stringResource(R.string.settings_retention_days_display, retentionDays.toInt()),

@@ -26,7 +26,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.model.ZoneBand
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
@@ -51,8 +53,6 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
-import com.gregor.lauritz.healthdashboard.R
-import androidx.compose.ui.res.stringResource
 import kotlin.math.roundToInt
 
 @Composable

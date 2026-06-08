@@ -40,18 +40,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.MainActivity
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
+import com.gregor.lauritz.healthdashboard.ui.common.resolveOrNull
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.PhysiologyProfilePicker
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
-import com.gregor.lauritz.healthdashboard.ui.common.resolveOrNull
 import com.gregor.lauritz.healthdashboard.ui.settings.LocalBackupViewModel.SideEffect
 import com.gregor.lauritz.healthdashboard.ui.settings.backup.LocalBackupSection
 import com.gregor.lauritz.healthdashboard.ui.settings.common.UnitSystemSelector
@@ -271,8 +270,9 @@ fun SettingsScreen(
             onDismissRequest = { onLocalBackupEvent(SettingsEvent.RestoreDismissed) },
             title = { Text(stringResource(R.string.dialog_restore_backup_title)) },
             text = {
-                val filename = localBackupState.pendingRestoreFile?.name
-                    ?: stringResource(R.string.backup_this_backup)
+                val filename =
+                    localBackupState.pendingRestoreFile?.name
+                        ?: stringResource(R.string.backup_this_backup)
                 Text(stringResource(R.string.dialog_restore_backup_body, filename))
             },
             confirmButton = {
@@ -316,7 +316,10 @@ fun SettingsScreen(
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.accessibility_clear))
+                                Icon(
+                                    Icons.Filled.Clear,
+                                    contentDescription = stringResource(R.string.accessibility_clear),
+                                )
                             }
                         }
                     },

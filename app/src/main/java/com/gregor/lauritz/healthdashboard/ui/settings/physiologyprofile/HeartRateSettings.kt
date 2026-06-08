@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.settings.physiologyprofile
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,7 +31,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.annotation.StringRes
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -218,11 +218,12 @@ fun HeartRateZonesDisplay(
             ) {
                 Text(name, style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    text = stringResource(
-                        R.string.hr_zone_range_display,
-                        (maxHr * range.start).roundToInt(),
-                        (maxHr * range.endInclusive).roundToInt(),
-                    ),
+                    text =
+                        stringResource(
+                            R.string.hr_zone_range_display,
+                            (maxHr * range.start).roundToInt(),
+                            (maxHr * range.endInclusive).roundToInt(),
+                        ),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                 )

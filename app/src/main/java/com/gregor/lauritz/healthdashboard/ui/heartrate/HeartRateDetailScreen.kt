@@ -182,12 +182,52 @@ fun HeartRateDetailScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         val zoneDefs =
                             listOf(
-                                Triple(0, stringResource(R.string.hr_zone_n, 0), stringResource(R.string.hr_zone_0_range, uiState.zone1MinBpm)),
-                                Triple(1, stringResource(R.string.hr_zone_n, 1), stringResource(R.string.hr_zone_inner_range, uiState.zone1MinBpm, uiState.zone1MaxBpm)),
-                                Triple(2, stringResource(R.string.hr_zone_n, 2), stringResource(R.string.hr_zone_inner_range, uiState.zone1MaxBpm + 1, uiState.zone2MaxBpm)),
-                                Triple(3, stringResource(R.string.hr_zone_n, 3), stringResource(R.string.hr_zone_inner_range, uiState.zone2MaxBpm + 1, uiState.zone3MaxBpm)),
-                                Triple(4, stringResource(R.string.hr_zone_n, 4), stringResource(R.string.hr_zone_inner_range, uiState.zone3MaxBpm + 1, uiState.zone4MaxBpm)),
-                                Triple(5, stringResource(R.string.hr_zone_n, 5), stringResource(R.string.hr_zone_above_range, uiState.zone4MaxBpm)),
+                                Triple(
+                                    0,
+                                    stringResource(R.string.hr_zone_n, 0),
+                                    stringResource(R.string.hr_zone_0_range, uiState.zone1MinBpm),
+                                ),
+                                Triple(
+                                    1,
+                                    stringResource(R.string.hr_zone_n, 1),
+                                    stringResource(
+                                        R.string.hr_zone_inner_range,
+                                        uiState.zone1MinBpm,
+                                        uiState.zone1MaxBpm,
+                                    ),
+                                ),
+                                Triple(
+                                    2,
+                                    stringResource(R.string.hr_zone_n, 2),
+                                    stringResource(
+                                        R.string.hr_zone_inner_range,
+                                        uiState.zone1MaxBpm + 1,
+                                        uiState.zone2MaxBpm,
+                                    ),
+                                ),
+                                Triple(
+                                    3,
+                                    stringResource(R.string.hr_zone_n, 3),
+                                    stringResource(
+                                        R.string.hr_zone_inner_range,
+                                        uiState.zone2MaxBpm + 1,
+                                        uiState.zone3MaxBpm,
+                                    ),
+                                ),
+                                Triple(
+                                    4,
+                                    stringResource(R.string.hr_zone_n, 4),
+                                    stringResource(
+                                        R.string.hr_zone_inner_range,
+                                        uiState.zone3MaxBpm + 1,
+                                        uiState.zone4MaxBpm,
+                                    ),
+                                ),
+                                Triple(
+                                    5,
+                                    stringResource(R.string.hr_zone_n, 5),
+                                    stringResource(R.string.hr_zone_above_range, uiState.zone4MaxBpm),
+                                ),
                             )
 
                         if (uiState.zoneTotals.isEmpty()) {

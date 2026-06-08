@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.dashboard
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.CardConfigurationRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
@@ -21,7 +22,6 @@ import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
-import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.sync.RecalcProgress
 import com.gregor.lauritz.healthdashboard.ui.common.BaseViewModel
 import com.gregor.lauritz.healthdashboard.ui.common.UiText

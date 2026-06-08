@@ -27,9 +27,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.gregor.lauritz.healthdashboard.R
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.domain.model.bodyFatZoneBands
 import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
@@ -120,26 +120,28 @@ fun BodyFatDetailScreen(
                                 .padding(vertical = 16.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        val genderStringRes = when (Gender.entries.find { it.name == uiState.gender }) {
-                            Gender.MALE -> R.string.gender_male
-                            Gender.FEMALE -> R.string.gender_female
-                            Gender.OTHER -> R.string.gender_other
-                            Gender.PREFER_NOT_TO_SAY -> R.string.gender_prefer_not_to_say
-                            else -> R.string.gender_other
-                        }
+                        val genderStringRes =
+                            when (Gender.entries.find { it.name == uiState.gender }) {
+                                Gender.MALE -> R.string.gender_male
+                                Gender.FEMALE -> R.string.gender_female
+                                Gender.OTHER -> R.string.gender_other
+                                Gender.PREFER_NOT_TO_SAY -> R.string.gender_prefer_not_to_say
+                                else -> R.string.gender_other
+                            }
                         M3ScoreDial(
                             score = uiState.latestBodyFat,
                             label = stringResource(R.string.label_body_fat),
                             maxScore = uiState.optimalRangeMax * 2f,
                             status = uiState.bodyFatStatus,
                             displayText = uiState.bodyFatDisplay,
-                            tooltipDescription = stringResource(
-                                R.string.tooltip_body_fat_current,
-                                uiState.bodyFatDisplay ?: "—",
-                                uiState.optimalRangeDisplay ?: "—",
-                                stringResource(genderStringRes),
-                                uiState.age,
-                            ),
+                            tooltipDescription =
+                                stringResource(
+                                    R.string.tooltip_body_fat_current,
+                                    uiState.bodyFatDisplay ?: "—",
+                                    uiState.optimalRangeDisplay ?: "—",
+                                    stringResource(genderStringRes),
+                                    uiState.age,
+                                ),
                         )
                     }
                 }

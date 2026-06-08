@@ -18,6 +18,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
+import com.gregor.lauritz.healthdashboard.R
+import com.gregor.lauritz.healthdashboard.ui.common.UiText
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -106,7 +108,7 @@ class SleepAndThresholdSettingsViewModelTest {
             advanceUntilIdle()
 
             assertEquals(
-                "Invalid threshold value. Range: 0-90 minutes.",
+                UiText.StringRes(R.string.error_threshold_invalid_range),
                 thresholdViewModel.consolidatedState.value.thresholdError,
             )
             job.cancel()
