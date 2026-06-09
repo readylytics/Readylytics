@@ -13,6 +13,7 @@ import com.gregor.lauritz.healthdashboard.data.local.dao.WorkoutDao
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.domain.model.HealthDataType
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.TransactionRunner
@@ -170,5 +171,100 @@ class HealthSyncUseCaseTest {
                     .toInstant()
             assertEquals(reachBackMidnight, hrvFromSlot.captured)
             assertEquals(reachBackMidnight, hrFromSlot.captured)
+        }
+
+    @Test
+    fun `resyncRange each chunk fetches samples from previous day to cover cross-midnight sleep`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 7, 2)
+            val chunkDays = 30
+
+            val hrvFromInstants = mutableListOf<Instant>()
+            val hrFromInstants = mutableListOf<Instant>()
+            coEvery { hcRepo.readHrvSamples(capture(hrvFromInstants), any()) } returns emptyList()
+            coEvery { hcRepo.readHeartRateSamples(capture(hrFromInstants), any()) } returns emptyList()
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+
+            useCase.resyncRange(startDate, endDate, chunkDays = chunkDays)
+
+            val secondChunkStart = startDate.plusDays(chunkDays.toLong())
+            val expectedSecondChunkReadStart =
+                secondChunkStart
+                    .minusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+            assertEquals(expectedSecondChunkReadStart, hrvFromInstants[1])
+            assertEquals(expectedSecondChunkReadStart, hrFromInstants[1])
+        }
+
+    @Test
+    fun `resyncRange fetches sessions past chunk end while keeping metric samples capped to chunk`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val startDate = LocalDate.of(2024, 6, 1)
+            val chunkDays = 30
+            val firstChunkEnd =
+                startDate
+                    .plusDays(chunkDays.toLong())
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+
+            val sleepToInstants = mutableListOf<Instant>()
+            val hrvToInstants = mutableListOf<Instant>()
+            val hrToInstants = mutableListOf<Instant>()
+            coEvery { hcRepo.readSleepSessions(any(), capture(sleepToInstants)) } returns emptyList()
+            coEvery { hcRepo.readHrvSamples(any(), capture(hrvToInstants)) } returns emptyList()
+            coEvery { hcRepo.readHeartRateSamples(any(), capture(hrToInstants)) } returns emptyList()
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+
+            useCase.resyncRange(
+                startDate = startDate,
+                endDate = LocalDate.of(2024, 7, 2),
+                chunkDays = chunkDays,
+            )
+
+            assertEquals(firstChunkEnd.plusSeconds(86_400), sleepToInstants[0])
+            assertEquals(firstChunkEnd, hrvToInstants[0])
+            assertEquals(firstChunkEnd, hrToInstants[0])
+        }
+
+    @Test
+    fun `resyncRange filters selected step device using raw step records`() =
+        runTest {
+            every { settingsRepo.userPreferences } returns
+                flowOf(
+                    UserPreferences(
+                        deviceByDataType = mapOf(HealthDataType.STEPS.name to "Watch"),
+                    ),
+                )
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+
+            useCase.resyncRange(
+                startDate = LocalDate.of(2024, 6, 1),
+                endDate = LocalDate.of(2024, 6, 1),
+            )
+
+            coVerify(exactly = 1) { hcRepo.readStepsRecords(any(), any()) }
+            coVerify(exactly = 0) { hcRepo.readSteps(any(), any()) }
+        }
+
+    @Test
+    fun `resyncRange progress reports calendar days not internal two phase steps`() =
+        runTest {
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+            val progress = mutableListOf<Pair<Int, Int>>()
+
+            useCase.resyncRange(
+                startDate = LocalDate.of(2024, 6, 1),
+                endDate = LocalDate.of(2024, 6, 3),
+            ) { current, total ->
+                progress += current to total
+            }
+
+            assertEquals(3, progress.last().first)
+            assertEquals(3, progress.last().second)
+            assert(progress.all { (_, total) -> total == 3 })
         }
 }
