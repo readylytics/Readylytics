@@ -93,7 +93,7 @@ fun HighlightBox(content: @Composable () -> Unit) {
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.large,
     ) {
         Column(modifier = Modifier.padding(vertical = 8.dp)) { content() }
     }

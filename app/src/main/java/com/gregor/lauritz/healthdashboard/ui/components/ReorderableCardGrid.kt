@@ -338,7 +338,7 @@ private fun RenderCardItem(
         if (card.cardId in setOf(CardId.SLEEP_SCORE, CardId.READINESS)) {
             @Composable {
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(140.dp),
+                    modifier = Modifier.fillMaxWidth().height(156.dp),
                     contentAlignment = Alignment.Center,
                 ) { cardContent() }
             }

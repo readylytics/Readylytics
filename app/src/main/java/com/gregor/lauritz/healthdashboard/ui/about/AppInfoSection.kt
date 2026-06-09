@@ -50,7 +50,7 @@ private fun ScoreTable() {
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.small,
+        shape = MaterialTheme.shapes.large,
     ) {
         Column(
             modifier = Modifier.padding(8.dp),

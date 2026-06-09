@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -195,6 +196,20 @@ private fun HrChart(
                             LineCartesianLayer.LineProvider.series(
                                 LineCartesianLayer.rememberLine(
                                     fill = LineCartesianLayer.LineFill.single(Fill(MaterialTheme.colorScheme.primary)),
+                                    areaFill =
+                                        LineCartesianLayer.AreaFill.single(
+                                            Fill(
+                                                brush =
+                                                    Brush.verticalGradient(
+                                                        colors =
+                                                            listOf(
+                                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.0f),
+                                                            ),
+                                                    ),
+                                            ),
+                                        ),
+                                    interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
                                 ),
                             ),
                         rangeProvider = rangeProvider,

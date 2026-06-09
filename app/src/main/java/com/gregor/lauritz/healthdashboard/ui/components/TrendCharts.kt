@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +28,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -245,10 +250,20 @@ fun TrendChart(
     val line =
         LineCartesianLayer.rememberLine(
             fill = LineCartesianLayer.LineFill.single(Fill(dotColor)),
+            areaFill =
+                LineCartesianLayer.AreaFill.single(
+                    Fill(
+                        brush =
+                            Brush.verticalGradient(
+                                colors = listOf(dotColor.copy(alpha = 0.3f), dotColor.copy(alpha = 0.0f)),
+                            ),
+                    ),
+                ),
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
                     LineCartesianLayer.Point(dotComponent, 6.dp),
                 ),
+            interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
         )
 
     val extendedColors = LocalExtendedColors.current
@@ -548,20 +563,40 @@ fun BloodPressureTrendChart(
     val systolicLine =
         LineCartesianLayer.rememberLine(
             fill = LineCartesianLayer.LineFill.single(Fill(systolicColor)),
+            areaFill =
+                LineCartesianLayer.AreaFill.single(
+                    Fill(
+                        brush =
+                            Brush.verticalGradient(
+                                colors = listOf(systolicColor.copy(alpha = 0.3f), systolicColor.copy(alpha = 0.0f)),
+                            ),
+                    ),
+                ),
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
                     LineCartesianLayer.Point(systolicDotComponent, 6.dp),
                 ),
+            interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
         )
 
     val diastolicDotComponent = rememberShapeComponent(fill = Fill(diastolicColor), shape = CircleShape)
     val diastolicLine =
         LineCartesianLayer.rememberLine(
             fill = LineCartesianLayer.LineFill.single(Fill(diastolicColor)),
+            areaFill =
+                LineCartesianLayer.AreaFill.single(
+                    Fill(
+                        brush =
+                            Brush.verticalGradient(
+                                colors = listOf(diastolicColor.copy(alpha = 0.2f), diastolicColor.copy(alpha = 0.0f)),
+                            ),
+                    ),
+                ),
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
                     LineCartesianLayer.Point(diastolicDotComponent, 6.dp),
                 ),
+            interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
         )
 
     val lineProvider =
@@ -708,13 +743,21 @@ fun BloodPressureTrendChart(
 
 @Composable
 fun EmptyChartPlaceholder(modifier: Modifier = Modifier) {
-    Box(
+    Column(
         modifier =
             modifier
                 .fillMaxWidth()
                 .height(180.dp),
-        contentAlignment = Alignment.Center,
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Icon(
+            imageVector = Icons.Outlined.BarChart,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            modifier = Modifier.size(36.dp),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.message_no_data_available),
             style = MaterialTheme.typography.bodyMedium,

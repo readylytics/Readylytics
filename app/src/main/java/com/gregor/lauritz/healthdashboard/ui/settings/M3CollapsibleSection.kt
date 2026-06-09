@@ -35,7 +35,7 @@ fun M3CollapsibleSection(
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp)
                 .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
                     shape = MaterialTheme.shapes.large,
                 ),
     ) {
@@ -71,7 +71,7 @@ fun M3CollapsibleSection(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surface)
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
                     content()

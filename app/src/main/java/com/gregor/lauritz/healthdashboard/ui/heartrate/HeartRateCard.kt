@@ -16,8 +16,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.ui.components.MetricTooltip
@@ -35,7 +37,7 @@ fun HeartRateCard(
         onClick = onClick,
         modifier =
             modifier
-                .height(140.dp)
+                .height(156.dp)
                 .semantics { role = Role.Button },
         shape = MaterialTheme.shapes.large,
         colors =
@@ -48,17 +50,23 @@ fun HeartRateCard(
             modifier =
                 Modifier
                     .fillMaxHeight()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .semantics { heading() },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.heart_rate_title),
                     modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     color = contentColor,
+                    minLines = 2,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 MetricTooltip(
                     description = stringResource(R.string.tooltip_heart_rate_card),

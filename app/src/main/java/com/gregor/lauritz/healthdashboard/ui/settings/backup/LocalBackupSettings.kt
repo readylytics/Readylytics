@@ -23,6 +23,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -34,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -384,28 +387,34 @@ private fun BackupDirectoryItem(
             }
         }
 
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(stringResource(R.string.backup_directory_label), style = MaterialTheme.typography.bodyMedium)
-            val displayPath =
-                if (uiState.backupDirectory.isNullOrBlank()) {
-                    stringResource(R.string.backup_directory_default)
-                } else {
-                    Uri.parse(uiState.backupDirectory).path ?: uiState.backupDirectory
-                }
+    val displayPath =
+        if (uiState.backupDirectory.isNullOrBlank()) {
+            stringResource(R.string.backup_directory_default)
+        } else {
+            Uri.parse(uiState.backupDirectory).path ?: uiState.backupDirectory
+        }
+
+    ListItem(
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        headlineContent = {
+            Text(
+                text = stringResource(R.string.backup_directory_label),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        supportingContent = {
             Text(
                 text = displayPath,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-        TextButton(onClick = { launcher.launch(null) }) {
-            Text(stringResource(R.string.action_change))
-        }
-    }
+        },
+        trailingContent = {
+            TextButton(onClick = { launcher.launch(null) }) {
+                Text(stringResource(R.string.action_change))
+            }
+        },
+    )
 }
 
 @Composable
@@ -422,43 +431,46 @@ private fun BackupFileItem(
                 DateFormat.SHORT,
             ).format(Date(file.lastModified))
 
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.Default.History,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Column(
-            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-        ) {
+    ListItem(
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        leadingContent = {
+            Icon(
+                imageVector = Icons.Default.History,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        },
+        headlineContent = {
             Text(
                 text = backupDate,
                 style = MaterialTheme.typography.bodyMedium,
             )
+        },
+        supportingContent = {
             Text(
                 text = stringResource(R.string.backup_size_kb, file.sizeBytes / 1024),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-        TextButton(onClick = onRestore, enabled = enabled) {
-            Text(stringResource(R.string.action_restore))
-        }
-        IconButton(
-            onClick = onDelete,
-            enabled = enabled,
-        ) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = stringResource(R.string.accessibility_backup_delete, backupDate),
-                tint = MaterialTheme.colorScheme.error,
-            )
-        }
-    }
+        },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onRestore, enabled = enabled) {
+                    Text(stringResource(R.string.action_restore))
+                }
+                IconButton(
+                    onClick = onDelete,
+                    enabled = enabled,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.accessibility_backup_delete, backupDate),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+    )
 }
 
 @Composable

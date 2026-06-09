@@ -78,7 +78,7 @@ fun SkeletonCard(
 @Composable
 fun MetricCardSkeleton(
     modifier: Modifier = Modifier,
-    height: Dp = 140.dp,
+    height: Dp = 156.dp,
 ) {
     Card(
         modifier = modifier.fillMaxWidth().height(height),
