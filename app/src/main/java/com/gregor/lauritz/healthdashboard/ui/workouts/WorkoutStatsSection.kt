@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +27,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -132,7 +132,7 @@ fun WorkoutStatsSection(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -218,7 +218,7 @@ private fun AcwrChartCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -418,10 +418,20 @@ private fun AcwrChart(
     val ratioLine =
         LineCartesianLayer.rememberLine(
             fill = LineCartesianLayer.LineFill.single(Fill(ratioColor)),
+            areaFill =
+                LineCartesianLayer.AreaFill.single(
+                    Fill(
+                        brush =
+                            Brush.verticalGradient(
+                                colors = listOf(ratioColor.copy(alpha = 0.3f), ratioColor.copy(alpha = 0.0f)),
+                            ),
+                    ),
+                ),
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
                     LineCartesianLayer.Point(dotComponent, 6.dp),
                 ),
+            interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
         )
 
     val trimpColumn =
@@ -546,7 +556,7 @@ private fun EmptyChartPlaceholder(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "Not enough data",
+            text = stringResource(R.string.message_no_data_available),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

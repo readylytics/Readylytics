@@ -73,6 +73,17 @@ private val DarkColorScheme =
         tertiary = Pink80,
         primaryContainer = PrimaryContainerDark,
         onPrimaryContainer = OnPrimaryContainerDark,
+        surface = Color(0xFF141218),
+        onSurface = Color(0xFFE6E1E5),
+        surfaceContainerLowest = Color(0xFF0F0D13),
+        surfaceContainerLow = Color(0xFF1D1B20),
+        surfaceContainer = Color(0xFF211F26),
+        surfaceContainerHigh = Color(0xFF2B2930),
+        surfaceContainerHighest = Color(0xFF36343B),
+        surfaceVariant = Color(0xFF49454F),
+        onSurfaceVariant = Color(0xFFCAC4D0),
+        outline = Color(0xFF938F99),
+        outlineVariant = Color(0xFF49454F),
     )
 
 private val LightColorScheme =
@@ -82,15 +93,17 @@ private val LightColorScheme =
         tertiary = Pink40,
         primaryContainer = PrimaryContainerLight,
         onPrimaryContainer = OnPrimaryContainerLight,
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-     */
+        surface = Color(0xFFFEF7FF),
+        onSurface = Color(0xFF1D1B20),
+        surfaceContainerLowest = Color(0xFFFFFFFF),
+        surfaceContainerLow = Color(0xFFF7F2FA),
+        surfaceContainer = Color(0xFFF3EDF7),
+        surfaceContainerHigh = Color(0xFFECE6F0),
+        surfaceContainerHighest = Color(0xFFE6E0E9),
+        surfaceVariant = Color(0xFFE7E0EC),
+        onSurfaceVariant = Color(0xFF49454F),
+        outline = Color(0xFF79747E),
+        outlineVariant = Color(0xFFC4C7C5),
     )
 
 @Composable

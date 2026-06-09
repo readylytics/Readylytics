@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -54,7 +53,7 @@ fun SkeletonCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth().height(height),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         colors =
             CardDefaults.cardColors(
                 containerColor =
@@ -70,7 +69,7 @@ fun SkeletonCard(
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(
                             alpha = 0.2f,
                         ),
-                        RoundedCornerShape(4.dp),
+                        MaterialTheme.shapes.extraSmall,
                     ).shimmerAnimation(),
         )
     }
@@ -79,11 +78,11 @@ fun SkeletonCard(
 @Composable
 fun MetricCardSkeleton(
     modifier: Modifier = Modifier,
-    height: Dp = 140.dp,
+    height: Dp = 156.dp,
 ) {
     Card(
         modifier = modifier.fillMaxWidth().height(height),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         colors =
             CardDefaults.cardColors(
                 containerColor =
@@ -106,7 +105,7 @@ fun MetricCardSkeleton(
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(
                                 alpha = 0.2f,
                             ),
-                            RoundedCornerShape(4.dp),
+                            MaterialTheme.shapes.extraSmall,
                         ),
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -119,7 +118,7 @@ fun MetricCardSkeleton(
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(
                                 alpha = 0.2f,
                             ),
-                            RoundedCornerShape(4.dp),
+                            MaterialTheme.shapes.extraSmall,
                         ),
             )
         }

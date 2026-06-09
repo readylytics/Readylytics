@@ -23,6 +23,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -34,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -75,7 +78,6 @@ fun LocalBackupSection(
     Column(
         modifier =
             Modifier.padding(
-                horizontal = SettingsConstants.HORIZONTAL_PADDING,
                 vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
             ),
     ) {
@@ -83,6 +85,7 @@ fun LocalBackupSection(
             text = stringResource(R.string.backup_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
         )
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
@@ -98,7 +101,10 @@ fun LocalBackupSection(
         Button(
             onClick = { onEvent(SettingsEvent.CreateLocalBackup) },
             enabled = !uiState.isBackingUp && !uiState.isRestoring && !uiState.isReencrypting,
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
         ) {
             if (uiState.isBackingUp) {
                 CircularProgressIndicator(
@@ -113,7 +119,10 @@ fun LocalBackupSection(
 
         if (uiState.isReencrypting) {
             Spacer(modifier = Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+            ) {
                 CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 Text(
                     text = stringResource(R.string.backup_reencrypting_message),
@@ -133,6 +142,7 @@ fun LocalBackupSection(
             text = stringResource(R.string.backup_section_available),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
         )
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
@@ -142,7 +152,11 @@ fun LocalBackupSection(
                 text = stringResource(R.string.backup_none_found),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 8.dp),
+                modifier =
+                    Modifier.padding(
+                        horizontal = SettingsConstants.HORIZONTAL_PADDING,
+                        vertical = 8.dp,
+                    ),
             )
         } else {
             uiState.availableBackups.forEach { file ->
@@ -152,13 +166,23 @@ fun LocalBackupSection(
                     onDelete = { onEvent(SettingsEvent.DeleteLocalBackup(file)) },
                     enabled = !uiState.isBackingUp && !uiState.isRestoring && !uiState.isReencrypting,
                 )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
+                HorizontalDivider(
+                    modifier =
+                        Modifier.padding(
+                            horizontal = SettingsConstants.HORIZONTAL_PADDING,
+                            vertical = 4.dp,
+                        ),
+                    thickness = 0.5.dp,
+                )
             }
         }
 
         if (resolvedBackupError != null) {
             Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+            ) {
                 Text(
                     text = resolvedBackupError,
                     style = MaterialTheme.typography.bodySmall,
@@ -181,7 +205,9 @@ private fun BackupPasswordSection(
     var testPassword by remember { mutableStateOf("") }
     var showTestPassword by remember { mutableStateOf(false) }
 
-    Column {
+    Column(
+        modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+    ) {
         Text(
             text = stringResource(R.string.backup_security_section),
             style = MaterialTheme.typography.titleSmall,
@@ -384,28 +410,34 @@ private fun BackupDirectoryItem(
             }
         }
 
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(stringResource(R.string.backup_directory_label), style = MaterialTheme.typography.bodyMedium)
-            val displayPath =
-                if (uiState.backupDirectory.isNullOrBlank()) {
-                    stringResource(R.string.backup_directory_default)
-                } else {
-                    Uri.parse(uiState.backupDirectory).path ?: uiState.backupDirectory
-                }
+    val displayPath =
+        if (uiState.backupDirectory.isNullOrBlank()) {
+            stringResource(R.string.backup_directory_default)
+        } else {
+            Uri.parse(uiState.backupDirectory).path ?: uiState.backupDirectory
+        }
+
+    ListItem(
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        headlineContent = {
+            Text(
+                text = stringResource(R.string.backup_directory_label),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        supportingContent = {
             Text(
                 text = displayPath,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-        TextButton(onClick = { launcher.launch(null) }) {
-            Text(stringResource(R.string.action_change))
-        }
-    }
+        },
+        trailingContent = {
+            TextButton(onClick = { launcher.launch(null) }) {
+                Text(stringResource(R.string.action_change))
+            }
+        },
+    )
 }
 
 @Composable
@@ -422,43 +454,46 @@ private fun BackupFileItem(
                 DateFormat.SHORT,
             ).format(Date(file.lastModified))
 
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.Default.History,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Column(
-            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-        ) {
+    ListItem(
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        leadingContent = {
+            Icon(
+                imageVector = Icons.Default.History,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        },
+        headlineContent = {
             Text(
                 text = backupDate,
                 style = MaterialTheme.typography.bodyMedium,
             )
+        },
+        supportingContent = {
             Text(
                 text = stringResource(R.string.backup_size_kb, file.sizeBytes / 1024),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-        TextButton(onClick = onRestore, enabled = enabled) {
-            Text(stringResource(R.string.action_restore))
-        }
-        IconButton(
-            onClick = onDelete,
-            enabled = enabled,
-        ) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = stringResource(R.string.accessibility_backup_delete, backupDate),
-                tint = MaterialTheme.colorScheme.error,
-            )
-        }
-    }
+        },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onRestore, enabled = enabled) {
+                    Text(stringResource(R.string.action_restore))
+                }
+                IconButton(
+                    onClick = onDelete,
+                    enabled = enabled,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.accessibility_backup_delete, backupDate),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+    )
 }
 
 @Composable
@@ -473,7 +508,10 @@ private fun BackupScheduleItem(
         options = BackupSchedule.entries,
         onOptionSelected = { onEvent(SettingsEvent.BackupScheduleChanged(it)) },
         optionLabel = { scheduleLabels[it] ?: it.name },
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
     )
 }
 

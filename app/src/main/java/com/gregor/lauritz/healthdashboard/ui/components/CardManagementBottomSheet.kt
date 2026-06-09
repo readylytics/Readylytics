@@ -14,6 +14,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
@@ -48,13 +49,13 @@ fun CardManagementBottomSheet(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(vertical = 16.dp),
         ) {
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp),
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -96,7 +97,7 @@ fun CardManagementBottomSheet(
                 modifier =
                     Modifier
                         .align(Alignment.End)
-                        .padding(top = 16.dp),
+                        .padding(end = 16.dp, top = 16.dp),
             ) {
                 Text(stringResource(R.string.action_done))
             }
@@ -110,19 +111,19 @@ private fun CardManagementItem(
     onVisibilityChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(card.cardId.displayNameResId),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-        Checkbox(
-            checked = card.isVisible,
-            onCheckedChange = onVisibilityChanged,
-        )
-    }
+    ListItem(
+        headlineContent = {
+            Text(
+                text = stringResource(card.cardId.displayNameResId),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        trailingContent = {
+            Checkbox(
+                checked = card.isVisible,
+                onCheckedChange = onVisibilityChanged,
+            )
+        },
+        modifier = modifier,
+    )
 }

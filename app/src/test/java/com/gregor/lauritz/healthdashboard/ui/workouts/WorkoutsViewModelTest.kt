@@ -131,10 +131,11 @@ class WorkoutsViewModelTest {
 
     @After
     fun tearDown() {
-        appScope.cancel()
         if (::viewModel.isInitialized) {
             viewModel.viewModelScope.cancel()
         }
+        appScope.cancel()
+        testDispatcher.scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
     }
 

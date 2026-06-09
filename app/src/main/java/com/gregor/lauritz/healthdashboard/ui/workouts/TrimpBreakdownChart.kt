@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -57,7 +57,7 @@ fun TrimpBreakdownChart(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(stringResource(R.string.heart_rate_title), style = MaterialTheme.typography.titleSmall)
@@ -196,6 +196,20 @@ private fun HrChart(
                             LineCartesianLayer.LineProvider.series(
                                 LineCartesianLayer.rememberLine(
                                     fill = LineCartesianLayer.LineFill.single(Fill(MaterialTheme.colorScheme.primary)),
+                                    areaFill =
+                                        LineCartesianLayer.AreaFill.single(
+                                            Fill(
+                                                brush =
+                                                    Brush.verticalGradient(
+                                                        colors =
+                                                            listOf(
+                                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.0f),
+                                                            ),
+                                                    ),
+                                            ),
+                                        ),
+                                    interpolator = LineCartesianLayer.Interpolator.cubic(0.2f),
                                 ),
                             ),
                         rangeProvider = rangeProvider,

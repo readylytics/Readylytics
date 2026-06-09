@@ -7,12 +7,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Surface
@@ -21,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.R
@@ -118,26 +120,24 @@ private fun WorkoutHistoryItem(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         onClick = onClick,
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
+        val strainStr = String.format(java.util.Locale.US, "%.2f", item.gainedStrain)
+        val bpmStr =
+            if (workout.avgHr > 0) {
+                stringResource(R.string.workout_history_bpm_format, workout.avgHr.roundToInt())
+            } else {
+                stringResource(R.string.workout_history_bpm_na)
+            }
+        ListItem(
+            headlineContent = {
                 Text(
                     text = "$displayType $dateStr",
                     style = MaterialTheme.typography.titleSmall,
                 )
-                val strainStr = String.format(java.util.Locale.US, "%.2f", item.gainedStrain)
-                val bpmStr =
-                    if (workout.avgHr > 0) {
-                        stringResource(R.string.workout_history_bpm_format, workout.avgHr.roundToInt())
-                    } else {
-                        stringResource(R.string.workout_history_bpm_na)
-                    }
+            },
+            supportingContent = {
                 Text(
                     text =
                         stringResource(
@@ -149,13 +149,15 @@ private fun WorkoutHistoryItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-
-            IntensityBadge(
-                label = stringResource(workout.intensityLabelResId()),
-                status = workout.intensityStatus(),
-            )
-        }
+            },
+            trailingContent = {
+                IntensityBadge(
+                    label = stringResource(workout.intensityLabelResId()),
+                    status = workout.intensityStatus(),
+                )
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        )
     }
 }
 
@@ -167,7 +169,7 @@ private fun IntensityBadge(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         color = status.containerColor(),
     ) {
         Text(

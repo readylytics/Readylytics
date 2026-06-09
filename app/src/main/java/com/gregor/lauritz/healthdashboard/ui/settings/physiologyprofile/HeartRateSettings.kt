@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -374,7 +373,7 @@ fun CompactOutlinedTextField(
             modifier
                 .background(
                     MaterialTheme.colorScheme.surface,
-                    RoundedCornerShape(8.dp),
+                    MaterialTheme.shapes.small,
                 ).border(
                     width = 1.dp,
                     color =
@@ -385,7 +384,7 @@ fun CompactOutlinedTextField(
                         } else {
                             MaterialTheme.colorScheme.outline
                         },
-                    shape = RoundedCornerShape(8.dp),
+                    shape = MaterialTheme.shapes.small,
                 ).padding(horizontal = 12.dp, vertical = SettingsConstants.VERTICAL_SPACER),
         textStyle =
             MaterialTheme.typography.bodySmall.copy(
