@@ -180,18 +180,22 @@ fun SingleBloodPressureChart(
         }
 
     val dotComponent = rememberShapeComponent(fill = Fill(lineColor), shape = CircleShape)
+    val lineFill = remember(lineColor) { LineCartesianLayer.LineFill.single(Fill(lineColor)) }
+    val areaFill =
+        remember(lineColor) {
+            LineCartesianLayer.AreaFill.single(
+                Fill(
+                    brush =
+                        Brush.verticalGradient(
+                            colors = listOf(lineColor.copy(alpha = 0.3f), lineColor.copy(alpha = 0.0f)),
+                        ),
+                ),
+            )
+        }
     val line =
         LineCartesianLayer.rememberLine(
-            fill = LineCartesianLayer.LineFill.single(Fill(lineColor)),
-            areaFill =
-                LineCartesianLayer.AreaFill.single(
-                    Fill(
-                        brush =
-                            Brush.verticalGradient(
-                                colors = listOf(lineColor.copy(alpha = 0.3f), lineColor.copy(alpha = 0.0f)),
-                            ),
-                    ),
-                ),
+            fill = lineFill,
+            areaFill = areaFill,
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
                     LineCartesianLayer.Point(dotComponent, 6.dp),

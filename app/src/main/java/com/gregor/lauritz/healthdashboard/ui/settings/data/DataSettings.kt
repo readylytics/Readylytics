@@ -80,7 +80,6 @@ fun DataManagementSection(
                     onCheckedChange = { onEvent(SettingsEvent.RetentionDaysEnabledChanged(it)) },
                 )
             },
-            modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
         )
 
         AnimatedVisibility(visible = uiState.retentionDaysEnabled) {

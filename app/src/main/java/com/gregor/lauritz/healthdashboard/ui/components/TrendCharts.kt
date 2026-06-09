@@ -247,18 +247,22 @@ fun TrendChart(
             )
         }
     val dotComponent = rememberShapeComponent(fill = Fill(dotColor), shape = CircleShape)
+    val lineFill = remember(dotColor) { LineCartesianLayer.LineFill.single(Fill(dotColor)) }
+    val areaFill =
+        remember(dotColor) {
+            LineCartesianLayer.AreaFill.single(
+                Fill(
+                    brush =
+                        Brush.verticalGradient(
+                            colors = listOf(dotColor.copy(alpha = 0.3f), dotColor.copy(alpha = 0.0f)),
+                        ),
+                ),
+            )
+        }
     val line =
         LineCartesianLayer.rememberLine(
-            fill = LineCartesianLayer.LineFill.single(Fill(dotColor)),
-            areaFill =
-                LineCartesianLayer.AreaFill.single(
-                    Fill(
-                        brush =
-                            Brush.verticalGradient(
-                                colors = listOf(dotColor.copy(alpha = 0.3f), dotColor.copy(alpha = 0.0f)),
-                            ),
-                    ),
-                ),
+            fill = lineFill,
+            areaFill = areaFill,
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
                     LineCartesianLayer.Point(dotComponent, 6.dp),
@@ -560,18 +564,22 @@ fun BloodPressureTrendChart(
         }
 
     val systolicDotComponent = rememberShapeComponent(fill = Fill(systolicColor), shape = CircleShape)
+    val systolicLineFill = remember(systolicColor) { LineCartesianLayer.LineFill.single(Fill(systolicColor)) }
+    val systolicAreaFill =
+        remember(systolicColor) {
+            LineCartesianLayer.AreaFill.single(
+                Fill(
+                    brush =
+                        Brush.verticalGradient(
+                            colors = listOf(systolicColor.copy(alpha = 0.3f), systolicColor.copy(alpha = 0.0f)),
+                        ),
+                ),
+            )
+        }
     val systolicLine =
         LineCartesianLayer.rememberLine(
-            fill = LineCartesianLayer.LineFill.single(Fill(systolicColor)),
-            areaFill =
-                LineCartesianLayer.AreaFill.single(
-                    Fill(
-                        brush =
-                            Brush.verticalGradient(
-                                colors = listOf(systolicColor.copy(alpha = 0.3f), systolicColor.copy(alpha = 0.0f)),
-                            ),
-                    ),
-                ),
+            fill = systolicLineFill,
+            areaFill = systolicAreaFill,
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
                     LineCartesianLayer.Point(systolicDotComponent, 6.dp),
@@ -580,18 +588,22 @@ fun BloodPressureTrendChart(
         )
 
     val diastolicDotComponent = rememberShapeComponent(fill = Fill(diastolicColor), shape = CircleShape)
+    val diastolicLineFill = remember(diastolicColor) { LineCartesianLayer.LineFill.single(Fill(diastolicColor)) }
+    val diastolicAreaFill =
+        remember(diastolicColor) {
+            LineCartesianLayer.AreaFill.single(
+                Fill(
+                    brush =
+                        Brush.verticalGradient(
+                            colors = listOf(diastolicColor.copy(alpha = 0.2f), diastolicColor.copy(alpha = 0.0f)),
+                        ),
+                ),
+            )
+        }
     val diastolicLine =
         LineCartesianLayer.rememberLine(
-            fill = LineCartesianLayer.LineFill.single(Fill(diastolicColor)),
-            areaFill =
-                LineCartesianLayer.AreaFill.single(
-                    Fill(
-                        brush =
-                            Brush.verticalGradient(
-                                colors = listOf(diastolicColor.copy(alpha = 0.2f), diastolicColor.copy(alpha = 0.0f)),
-                            ),
-                    ),
-                ),
+            fill = diastolicLineFill,
+            areaFill = diastolicAreaFill,
             pointProvider =
                 LineCartesianLayer.PointProvider.single(
                     LineCartesianLayer.Point(diastolicDotComponent, 6.dp),

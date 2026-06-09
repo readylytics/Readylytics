@@ -49,13 +49,13 @@ fun CardManagementBottomSheet(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(vertical = 16.dp),
         ) {
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp),
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -97,7 +97,7 @@ fun CardManagementBottomSheet(
                 modifier =
                     Modifier
                         .align(Alignment.End)
-                        .padding(top = 16.dp),
+                        .padding(end = 16.dp, top = 16.dp),
             ) {
                 Text(stringResource(R.string.action_done))
             }

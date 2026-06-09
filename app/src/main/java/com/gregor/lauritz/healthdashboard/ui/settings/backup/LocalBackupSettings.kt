@@ -78,7 +78,6 @@ fun LocalBackupSection(
     Column(
         modifier =
             Modifier.padding(
-                horizontal = SettingsConstants.HORIZONTAL_PADDING,
                 vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
             ),
     ) {
@@ -86,6 +85,7 @@ fun LocalBackupSection(
             text = stringResource(R.string.backup_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
         )
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
@@ -101,7 +101,10 @@ fun LocalBackupSection(
         Button(
             onClick = { onEvent(SettingsEvent.CreateLocalBackup) },
             enabled = !uiState.isBackingUp && !uiState.isRestoring && !uiState.isReencrypting,
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
         ) {
             if (uiState.isBackingUp) {
                 CircularProgressIndicator(
@@ -116,7 +119,10 @@ fun LocalBackupSection(
 
         if (uiState.isReencrypting) {
             Spacer(modifier = Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+            ) {
                 CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 Text(
                     text = stringResource(R.string.backup_reencrypting_message),
@@ -136,6 +142,7 @@ fun LocalBackupSection(
             text = stringResource(R.string.backup_section_available),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
         )
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_SMALL))
@@ -145,7 +152,11 @@ fun LocalBackupSection(
                 text = stringResource(R.string.backup_none_found),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 8.dp),
+                modifier =
+                    Modifier.padding(
+                        horizontal = SettingsConstants.HORIZONTAL_PADDING,
+                        vertical = 8.dp,
+                    ),
             )
         } else {
             uiState.availableBackups.forEach { file ->
@@ -155,13 +166,23 @@ fun LocalBackupSection(
                     onDelete = { onEvent(SettingsEvent.DeleteLocalBackup(file)) },
                     enabled = !uiState.isBackingUp && !uiState.isRestoring && !uiState.isReencrypting,
                 )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
+                HorizontalDivider(
+                    modifier =
+                        Modifier.padding(
+                            horizontal = SettingsConstants.HORIZONTAL_PADDING,
+                            vertical = 4.dp,
+                        ),
+                    thickness = 0.5.dp,
+                )
             }
         }
 
         if (resolvedBackupError != null) {
             Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+            ) {
                 Text(
                     text = resolvedBackupError,
                     style = MaterialTheme.typography.bodySmall,
@@ -184,7 +205,9 @@ private fun BackupPasswordSection(
     var testPassword by remember { mutableStateOf("") }
     var showTestPassword by remember { mutableStateOf(false) }
 
-    Column {
+    Column(
+        modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+    ) {
         Text(
             text = stringResource(R.string.backup_security_section),
             style = MaterialTheme.typography.titleSmall,
@@ -485,7 +508,10 @@ private fun BackupScheduleItem(
         options = BackupSchedule.entries,
         onOptionSelected = { onEvent(SettingsEvent.BackupScheduleChanged(it)) },
         optionLabel = { scheduleLabels[it] ?: it.name },
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
     )
 }
 
