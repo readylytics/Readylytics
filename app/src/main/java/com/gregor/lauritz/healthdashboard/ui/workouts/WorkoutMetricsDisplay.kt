@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -143,7 +142,7 @@ private fun ZoneBreakdownCard(workout: WorkoutData) {
         )
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(stringResource(R.string.workout_zones_title), style = MaterialTheme.typography.titleSmall)
@@ -178,7 +177,7 @@ private fun ZoneRow(
                 Modifier
                     .weight(1f)
                     .height(10.dp)
-                    .clip(RoundedCornerShape(4.dp)),
+                    .clip(MaterialTheme.shapes.extraSmall),
             color = color,
             trackColor = color.copy(alpha = 0.15f),
         )

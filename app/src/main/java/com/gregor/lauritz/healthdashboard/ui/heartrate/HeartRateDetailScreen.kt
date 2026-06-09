@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
@@ -145,7 +144,7 @@ fun HeartRateDetailScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = MaterialTheme.shapes.large,
                     ) {
                         HrTimelineChart(
                             samples = uiState.samples,
@@ -177,7 +176,7 @@ fun HeartRateDetailScreen(
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = MaterialTheme.shapes.large,
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         val zoneDefs =
@@ -266,7 +265,7 @@ private fun HrStatCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
