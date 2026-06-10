@@ -378,6 +378,43 @@ class ComputeSleepMetricsUseCase
                                 ),
                         )
                 }
+                val debugPayload =
+                    """
+                    {
+                        "targetDate": "$targetDate",
+                        "dayMidnightMs": ${dayMidnight.toEpochMilli()},
+                        "dayEndMs": $dayEndMs,
+                        "frozenBaseline": $frozenBaseline,
+                        "isCalibrating": $isCalibrating,
+                        "windows": {
+                            "hrvMuHistorySize": ${muHrvHistory.size},
+                            "rhrValuesSize": ${rhrValues.size}
+                        },
+                        "inputs": {
+                            "currentHrvMean": $currentHrvMean,
+                            "currentNocturnalRhr": $currentNocturnalRhr,
+                            "durationMinutes": ${session.durationMinutes},
+                            "loadScore": $loadScore
+                        },
+                        "baselines": {
+                            "frozenHrvMu": $frozenHrvMu,
+                            "frozenHrvSigma": $frozenHrvSigma,
+                            "activeHrvMu": ${readinessResult.diagnostics.rollingMu},
+                            "activeHrvSigma": $hrvSigma,
+                            "frozenRhr": $frozenRhr,
+                            "effectiveRhrSigma": $effectiveRhrSigma
+                        },
+                        "scores": {
+                            "zHrv": $persistedZLnHrv,
+                            "zRhr": $persistedZRhr,
+                            "sRest": ${readinessResult.sRest},
+                            "sleepScore": $sleepScore,
+                            "readinessScore": $readinessScore,
+                            "recoveryFlags": "$persistedFlags"
+                        }
+                    }
+                    """.trimIndent()
+                logD("ScoringDebug") { "\n$debugPayload" }
 
                 Result.success(
                     summary.copy(
