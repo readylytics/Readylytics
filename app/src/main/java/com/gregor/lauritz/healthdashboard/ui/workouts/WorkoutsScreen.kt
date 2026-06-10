@@ -19,7 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gregor.lauritz.healthdashboard.ui.common.CardLoader
 import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
+import com.gregor.lauritz.healthdashboard.ui.common.ScreenHeaderSection
 import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
@@ -72,60 +74,62 @@ fun WorkoutsScreen(
             key = uiState.selectedRange,
         )
 
-    LazyColumn(
-        state = listState,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 16.dp),
-    ) {
-        item(key = "date_switcher") {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-            ) {
-                DateSwitcher(
-                    selectedDate = uiState.selectedDate,
-                    onPreviousDay = onPreviousDay,
-                    onNextDay = onNextDay,
-                    onDateSelected = onDateSelected,
-                    earliestDate = earliestDate,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+    Column(modifier = modifier.fillMaxSize()) {
+        ScreenHeaderSection(isLoading = uiState.isLoading) { isDisabled ->
+            DateSwitcher(
+                selectedDate = uiState.selectedDate,
+                onPreviousDay = onPreviousDay,
+                onNextDay = onNextDay,
+                onDateSelected = onDateSelected,
+                earliestDate = earliestDate,
+                enabled = !isDisabled,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+            )
         }
 
-        item(key = "stats_section") {
-            if (uiState.isLoading) {
-                WorkoutStatsSectionSkeleton()
-            } else {
-                WorkoutStatsSection(
-                    uiState = uiState,
-                    onRangeSelected = onRangeSelected,
-                    scrollState = chartScrollState,
-                    zoomState = chartZoomState,
-                    parentScrollInProgress = listState.isScrollInProgress,
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = 16.dp),
+        ) {
+            item(key = "stats_section") {
+                CardLoader(
+                    isLoading = uiState.isLoading,
+                    skeleton = { WorkoutStatsSectionSkeleton() },
+                    content = {
+                        WorkoutStatsSection(
+                            uiState = uiState,
+                            onRangeSelected = onRangeSelected,
+                            scrollState = chartScrollState,
+                            zoomState = chartZoomState,
+                            parentScrollInProgress = listState.isScrollInProgress,
+                        )
+                    },
                 )
             }
-        }
 
-        item(key = "list_section") {
-            if (uiState.isLoading) {
-                WorkoutListSectionSkeleton()
-            } else {
-                WorkoutListSection(
-                    workouts = uiState.recentWorkouts,
-                    currentPage = uiState.currentPage,
-                    totalPages = uiState.totalPages,
-                    onPreviousPage = onPreviousPage,
-                    onNextPage = onNextPage,
-                    onWorkoutClick = onWorkoutClick,
+            item(key = "list_section") {
+                CardLoader(
+                    isLoading = uiState.isLoading,
+                    skeleton = { WorkoutListSectionSkeleton() },
+                    content = {
+                        WorkoutListSection(
+                            workouts = uiState.recentWorkouts,
+                            currentPage = uiState.currentPage,
+                            totalPages = uiState.totalPages,
+                            onPreviousPage = onPreviousPage,
+                            onNextPage = onNextPage,
+                            onWorkoutClick = onWorkoutClick,
+                        )
+                    },
                 )
             }
-        }
 
-        item(key = "status_legend") {
-            StatusLegend()
+            item(key = "status_legend") {
+                StatusLegend()
+            }
         }
     }
 }

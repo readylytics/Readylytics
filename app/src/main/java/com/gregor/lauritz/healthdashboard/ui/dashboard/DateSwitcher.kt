@@ -29,6 +29,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.R
@@ -48,23 +49,31 @@ fun DateSwitcher(
     today: LocalDate = LocalDate.now(),
     onDateSelected: (LocalDate) -> Unit = {},
     earliestDate: LocalDate? = null,
+    enabled: Boolean = true,
 ) {
     val label = remember(selectedDate) { formatDateLabel(selectedDate, today) }
     val canGoForward = selectedDate < today
     val canGoBack = earliestDate == null || selectedDate > earliestDate
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
+    val prevEnabled = canGoBack && enabled
+    val nextEnabled = canGoForward && enabled
+    val datePickerEnabled = enabled
+
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .graphicsLayer {
+                    alpha = if (enabled) 1.0f else 0.5f
+                },
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(
             onClick = onPreviousDay,
-            enabled = canGoBack,
+            enabled = prevEnabled,
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -79,7 +88,7 @@ fun DateSwitcher(
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.clickable { showDatePicker = true },
+            modifier = Modifier.clickable(enabled = datePickerEnabled) { showDatePicker = true },
         ) {
             Text(
                 text = label,
@@ -97,7 +106,7 @@ fun DateSwitcher(
         }
         IconButton(
             onClick = onNextDay,
-            enabled = canGoForward,
+            enabled = nextEnabled,
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
