@@ -48,6 +48,13 @@ class DailyMetricsMapperTest {
         assertEquals(82, metrics.readinessRounded)
     }
 
+    @Test
+    fun `strain ratio display uses canonical two decimal formatting`() {
+        val summary = DailySummary(date = date, strainRatio = 0.365f)
+        val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
+        assertEquals("0.37", metrics.strainRatioDisplay)
+    }
+
     // --- H4: frozen baseline columns pass through verbatim (no recompute) ---
 
     @Test

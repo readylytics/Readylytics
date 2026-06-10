@@ -35,7 +35,6 @@ import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.display.MetricFormatter
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.strainRatioStatus
-import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -114,13 +113,14 @@ fun WorkoutStatsSection(
                 label = "Strain Ratio",
                 maxScore = 2.0f,
                 status = strainStatus,
-                displayText = strainRatio?.let { "%.2f".format(it) } ?: "—",
+                displayText = uiState.latestMetrics?.strainRatioDisplay ?: "—",
                 tooltipDescription = strainTooltip,
                 modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
             )
             M3ScoreDial(
                 score = uiState.latestSummary?.readinessScore,
                 label = "Readiness",
+                displayText = uiState.latestMetrics?.readinessRounded?.toString() ?: "—",
                 tooltipDescription = "Physical preparedness for strain today.",
                 modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
             )
@@ -143,10 +143,10 @@ fun WorkoutStatsSection(
                 ) {
                     Text(stringResource(R.string.workout_stats_pai_title), style = MaterialTheme.typography.titleSmall)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        uiState.todayPaiScore?.let { earned ->
-                            if (earned > 0f) {
+                        uiState.latestMetrics?.paiDayScoreRounded?.let { earned ->
+                            if (earned > 0) {
                                 Text(
-                                    text = stringResource(R.string.pai_earned_today, earned.roundToPercentInt()),
+                                    text = stringResource(R.string.pai_earned_today, earned),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )

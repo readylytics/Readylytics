@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.model.DailyMetrics
+import com.gregor.lauritz.healthdashboard.domain.model.DailyMetricsMapper
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
@@ -53,6 +55,7 @@ data class WorkoutDisplayItem(
 
 data class WorkoutsUiState(
     val latestSummary: DailySummary? = null,
+    val latestMetrics: DailyMetrics? = null,
     val dailyTrimp: List<DailyDataPoint> = emptyList(),
     val dailyStrainRatio: List<DailyDataPoint> = emptyList(),
     val recentWorkouts: List<WorkoutDisplayItem> = emptyList(),
@@ -324,6 +327,7 @@ class WorkoutsViewModel
 
                             WorkoutsUiState(
                                 latestSummary = latest,
+                                latestMetrics = latest?.let { DailyMetricsMapper.toMetrics(it, prefs) },
                                 dailyTrimp = dailyTrimp,
                                 dailyStrainRatio = dailyStrainRatio,
                                 recentWorkouts = paginatedItems,

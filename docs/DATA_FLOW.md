@@ -173,6 +173,13 @@ keep Android types out of `domain/scoring/**`.
 | `ComputeWorkoutLoadMetricsUseCase` | `domain/scoring/ComputeWorkoutLoadMetricsUseCase.kt` | Single per-workout load source for workout history/detail UI: resolves precise TRIMP + gained strain from DB-backed workout samples, then returns the rounded TRIMP/strain display values used by cards and rows. |
 | `ScoringConfigFactory` | `domain/scoring/ScoringConfigFactory.kt` | Threads `userPreferences.trimpModel` into the scoring config. |
 
+Daily score display values are projected through `DailyMetricsMapper` /
+`DailyMetricsRepository`. UI screens may use raw `DailySummary` floats for chart
+geometry and dial progress, but visible Sleep Score, Readiness, Restoration, TRIMP,
+PAI, RHR/HRV baselines, SpO2, and Strain Ratio text must use `DailyMetrics`
+rounded/display fields or the workout-specific `ComputeWorkoutLoadMetricsUseCase`
+result.
+
 **Variants (reference only — see `PaiCalculator.calculateDailyTrimp` for the implementation):**
 - **BANISTER** *(default)* — classic exponential HR-reserve TRIMP (Banister / Morton), sex-specific weighting.
 - **CHENG** — LT-TRIMP, piecewise around the lactate-threshold zone (requires a zone-3 / LT bound).

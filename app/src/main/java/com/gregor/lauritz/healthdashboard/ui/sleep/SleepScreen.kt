@@ -113,6 +113,7 @@ fun SleepScreen(
                     M3ScoreDial(
                         score = uiState.latestSummary?.sleepScore,
                         label = "Sleep Score",
+                        displayText = uiState.latestMetrics?.sleepScoreRounded?.toString() ?: "—",
                         tooltipDescription = sleepScoreTooltip,
                     )
                 }

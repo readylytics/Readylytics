@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.domain.model
 
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.domain.display.MetricFormatter
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
 import com.gregor.lauritz.healthdashboard.domain.util.UnitConverter
 import java.util.Locale
@@ -62,6 +63,7 @@ object DailyMetricsMapper {
             weightKgDisplay = summary.weightKg?.let { format1(it) },
             weightLbsDisplay = summary.weightKg?.let { format1(it * UnitConverter.KG_TO_LBS) },
             bodyFatDisplay = summary.bodyFatPercent?.let { "${format1(it)}%" },
+            strainRatioDisplay = summary.strainRatio?.let { MetricFormatter.formatStrain(it) },
             zLnHrvDisplay = summary.zLnHrv?.let { format2(it) },
             hrvSigmaDisplay = summary.hrvSigma?.let { format3(it) },
             bloodPressureDisplay = formatBloodPressure(summary.bloodPressureSystolic, summary.bloodPressureDiastolic),

@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.R
+import com.gregor.lauritz.healthdashboard.domain.display.MetricFormatter
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
 import com.gregor.lauritz.healthdashboard.ui.common.DateFormatUtils
@@ -52,7 +53,7 @@ fun WorkoutMetricsDisplay(
             ) {
                 MetricCard(
                     title = stringResource(R.string.workout_metric_training_load),
-                    value = (computedTrimp ?: workout.trimp.roundToInt()).toString(),
+                    value = (computedTrimp ?: MetricFormatter.roundTrimp(workout.trimp)).toString(),
                     secondaryText = stringResource(R.string.workout_metric_trimp),
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.workout_tooltip_training_load),
@@ -82,7 +83,7 @@ fun WorkoutMetricsDisplay(
                 )
                 MetricCard(
                     title = stringResource(R.string.workout_metric_pai),
-                    value = pai?.roundToInt()?.toString() ?: "--",
+                    value = MetricFormatter.formatPai(pai),
                     secondaryText = stringResource(R.string.workout_metric_points),
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.workout_tooltip_pai),

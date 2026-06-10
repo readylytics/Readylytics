@@ -245,13 +245,11 @@ class HealthSyncUseCase
                             val ingestFromDate = chunkStart.minusDays(1)
                             val windowStart = ingestFromDate.atStartOfDay(zoneId).toInstant()
                             val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
-                            val eventWindowEnd = chunkEndExclusive.plusDays(1).atStartOfDay(zoneId).toInstant()
 
                             retryWithBackoff {
                                 ingestWindow(
                                     windowStart = windowStart,
                                     windowEnd = windowEnd,
-                                    eventWindowEnd = eventWindowEnd,
                                     prefs = prefs,
                                 )
                             }
@@ -343,11 +341,10 @@ class HealthSyncUseCase
             windowStart: Instant,
             windowEnd: Instant,
             prefs: UserPreferences,
-            eventWindowEnd: Instant = windowEnd,
         ) {
-            val sleepSessions = hcRepo.readSleepSessions(windowStart, eventWindowEnd)
+            val sleepSessions = hcRepo.readSleepSessions(windowStart, windowEnd)
             val sleepEntities = sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
-            val exerciseRecords = hcRepo.readExerciseSessions(windowStart, eventWindowEnd)
+            val exerciseRecords = hcRepo.readExerciseSessions(windowStart, windowEnd)
             val hrRecords = hcRepo.readHeartRateSamples(windowStart, windowEnd)
             val hrvRecords = hcRepo.readHrvSamples(windowStart, windowEnd)
             val weightRecords = hcRepo.readWeightRecords(windowStart, windowEnd)

@@ -155,8 +155,10 @@ class HealthSyncUseCaseTest {
             val startDate = LocalDate.of(2024, 6, 1)
             val endDate = LocalDate.of(2024, 6, 2)
 
+            val sleepFromSlot = slot<Instant>()
             val hrvFromSlot = slot<Instant>()
             val hrFromSlot = slot<Instant>()
+            coEvery { hcRepo.readSleepSessions(capture(sleepFromSlot), any()) } returns emptyList()
             coEvery { hcRepo.readHrvSamples(capture(hrvFromSlot), any()) } returns emptyList()
             coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
             coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
@@ -170,6 +172,7 @@ class HealthSyncUseCaseTest {
                     .minusDays(1)
                     .atStartOfDay(zoneId)
                     .toInstant()
+            assertEquals(reachBackMidnight, sleepFromSlot.captured)
             assertEquals(reachBackMidnight, hrvFromSlot.captured)
             assertEquals(reachBackMidnight, hrFromSlot.captured)
         }
@@ -201,7 +204,7 @@ class HealthSyncUseCaseTest {
         }
 
     @Test
-    fun `resyncRange fetches sessions past chunk end while keeping metric samples capped to chunk`() =
+    fun `resyncRange caps sleep and workout interval reads to chunk end`() =
         runTest {
             val zoneId = ZoneId.systemDefault()
             val startDate = LocalDate.of(2024, 6, 1)
@@ -213,9 +216,11 @@ class HealthSyncUseCaseTest {
                     .toInstant()
 
             val sleepToInstants = mutableListOf<Instant>()
+            val workoutToInstants = mutableListOf<Instant>()
             val hrvToInstants = mutableListOf<Instant>()
             val hrToInstants = mutableListOf<Instant>()
             coEvery { hcRepo.readSleepSessions(any(), capture(sleepToInstants)) } returns emptyList()
+            coEvery { hcRepo.readExerciseSessions(any(), capture(workoutToInstants)) } returns emptyList()
             coEvery { hcRepo.readHrvSamples(any(), capture(hrvToInstants)) } returns emptyList()
             coEvery { hcRepo.readHeartRateSamples(any(), capture(hrToInstants)) } returns emptyList()
             coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
@@ -226,7 +231,8 @@ class HealthSyncUseCaseTest {
                 chunkDays = chunkDays,
             )
 
-            assertEquals(firstChunkEnd.plusSeconds(86_400), sleepToInstants[0])
+            assertEquals(firstChunkEnd, sleepToInstants[0])
+            assertEquals(firstChunkEnd, workoutToInstants[0])
             assertEquals(firstChunkEnd, hrvToInstants[0])
             assertEquals(firstChunkEnd, hrToInstants[0])
         }

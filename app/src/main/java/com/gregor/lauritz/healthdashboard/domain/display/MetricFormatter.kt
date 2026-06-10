@@ -70,4 +70,6 @@ object MetricFormatter {
         if (value == null || value <= 0f) return "—"
         return roundTrimp(value).toString()
     }
+
+    fun formatPai(value: Float?): String = value?.roundToInt()?.toString() ?: "—"
 }

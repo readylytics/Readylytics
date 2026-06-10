@@ -3,8 +3,6 @@ package com.gregor.lauritz.healthdashboard.ui.dashboard
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import com.gregor.lauritz.healthdashboard.ui.common.CardLoader
 import com.gregor.lauritz.healthdashboard.ui.common.MetricCardSkeleton
@@ -42,12 +40,14 @@ fun buildCardDataMap(
             isLoading = isLoading,
             skeleton = { ScoreDialSkeleton() },
             content = {
+                val sleepScoreCard = uiState.cardDataMap[CardId.SLEEP_SCORE]
                 M3ScoreDial(
                     label = "Sleep Score",
                     score = summary?.sleepScore,
+                    displayText = sleepScoreCard?.value ?: "—",
+                    status = sleepScoreCard?.status,
                     onClick = if (isEditing) ({}) else onNavigateToSleep,
-                    tooltipDescription =
-                        "Total quality of rest based on duration and cycles.\n\n• 80–100: Optimal\n• 60–79: Fair\n• < 60: Poor",
+                    tooltipDescription = sleepScoreCard?.tooltip,
                 )
             },
         )
@@ -58,11 +58,14 @@ fun buildCardDataMap(
             isLoading = isLoading,
             skeleton = { ScoreDialSkeleton() },
             content = {
+                val readinessCard = uiState.cardDataMap[CardId.READINESS]
                 M3ScoreDial(
                     label = "Readiness",
                     score = summary?.readinessScore,
+                    displayText = readinessCard?.value ?: "—",
+                    status = readinessCard?.status,
                     onClick = if (isEditing) ({}) else onNavigateToWorkouts,
-                    tooltipDescription = stringResource(R.string.tooltip_readiness),
+                    tooltipDescription = readinessCard?.tooltip,
                 )
             },
         )

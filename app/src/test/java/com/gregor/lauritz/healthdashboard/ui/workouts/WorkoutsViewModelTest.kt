@@ -349,4 +349,28 @@ class WorkoutsViewModelTest {
 
             collectJob.cancelAndJoin()
         }
+
+    @Test
+    fun `stats state exposes canonical latest daily metrics`() =
+        runTest {
+            val today = LocalDate.now()
+            summariesFlow.value =
+                listOf(
+                    DailySummary(
+                        date = today,
+                        readinessScore = 72.5f,
+                        strainRatio = 0.365f,
+                    ),
+                )
+            every { dailySummaryRepository.observeLatest() } returns flowOf(summariesFlow.value.single())
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            val state = viewModel.uiState.first { it.latestMetrics != null }
+
+            assertEquals(73, state.latestMetrics?.readinessRounded)
+            assertEquals("0.37", state.latestMetrics?.strainRatioDisplay)
+
+            collectJob.cancelAndJoin()
+        }
 }
