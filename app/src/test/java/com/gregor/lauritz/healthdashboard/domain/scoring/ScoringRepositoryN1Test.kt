@@ -265,6 +265,7 @@ class ScoringRepositoryN1Test {
             val shortSession = makeSleepSession("short", 2).copy(durationMinutes = 120) // 2h < 4h threshold
             val sessions = listOf(validSession, shortSession)
             coEvery { sleepSessionDao.getSince(any()) } returns sessions
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns sessions
 
             coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns
                 mapOf("valid" to listOf(60f), "short" to listOf(60f))
@@ -292,6 +293,7 @@ class ScoringRepositoryN1Test {
                 )
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns todaySession
             coEvery { sleepSessionDao.getSince(any()) } returns listOf(todaySession, prevSession)
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns listOf(todaySession, prevSession)
 
             val sessionDurationMs = todaySession.durationMinutes * 60 * 1000L
             val lateNadirTs = todaySession.startTime + (sessionDurationMs * 0.8).toLong()
@@ -321,6 +323,7 @@ class ScoringRepositoryN1Test {
         runTest {
             val sessions = (1..5).map { makeSleepSession("s$it", it) }
             coEvery { sleepSessionDao.getSince(any()) } returns sessions
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns sessions
             coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns sessions.associate { it.id to listOf(60f) }
             coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns sessions.associate { it.id to 55 }
 

@@ -361,36 +361,10 @@ class BaselineComputer
             dayMidnight: Instant,
             excludeSessionId: String?,
         ): HrvWindows? {
-            val frozenSummary = dailySummaryDao.getByDate(dayMidnight.toEpochMilli())
-            if (frozenSummary?.baselineCalculatedAtDate != null) {
-                logD(TAG) {
-                    "Baseline frozen for date=${frozenSummary.baselineCalculatedAtDate}; " +
-                        "hrvMu=${frozenSummary.hrvMuMssd}, hrvSigma=${frozenSummary.hrvSigmaMssd} — skipping HRV window recompute"
-                }
-                return null
-            }
-            val sigmaWindowFromMs =
-                dayMidnight
-                    .minus(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong(), ChronoUnit.DAYS)
-                    .toEpochMilli()
-            val historicalSessions =
-                sleepSessionDao
-                    .getSince(sigmaWindowFromMs)
-                    .filter { it.id != excludeSessionId }
-            val validIds = filterValidBaselineSessions(historicalSessions, assumeCoverageValid = true)
-            val hrvMap = hrvDao.getSleepRmssdForSessionsMap(validIds)
-            val sigmaHistory =
-                validIds.mapNotNull { sessionId ->
-                    val samples = hrvMap[sessionId] ?: return@mapNotNull null
-                    if (samples.isEmpty()) return@mapNotNull null
-                    samples.mean()
-                }
-            val muHistory = sigmaHistory.takeLast(ScoringConstants.HRV_MU_WINDOW_DAYS)
-            return HrvWindows(
-                muHistory = muHistory,
-                sigmaHistory = sigmaHistory,
-                historicalSessions = historicalSessions,
-                validHistoricalSessionIds = validIds,
+            return computeHrvWindowsBetween(
+                fromMs = dayMidnight.toEpochMilli(),
+                toMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli(),
+                excludeSessionId = excludeSessionId,
             )
         }
 

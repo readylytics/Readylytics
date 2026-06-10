@@ -109,8 +109,9 @@ class ComputeSleepMetricsUseCase
                             prefs.restingHrPercentile,
                         )
                     val hrvWindows =
-                        baselineComputer.computeHrvWindows(
-                            dayMidnight = dayMidnight,
+                        baselineComputer.computeHrvWindowsBetween(
+                            fromMs = dayMidnight.toEpochMilli(),
+                            toMs = dayEndMs,
                             excludeSessionId = session.id,
                         ) ?: BaselineComputer.HrvWindows(
                             muHistory = emptyList(),

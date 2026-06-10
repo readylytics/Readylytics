@@ -398,6 +398,7 @@ class BackfillBaselinesUseCaseTest {
             val scoringCalculator = mockk<ScoringCalculator>()
 
             coEvery { sleepSessionDao.getSince(any()) } returns emptyList()
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns emptyList()
             coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } returns emptyMap()
             coEvery { heartRateDao.getAvgSleepHrForSessions(any()) } returns emptyMap()
             coEvery { hrvDao.getSleepRmssdValuesForSessions(any()) } returns emptyList()
