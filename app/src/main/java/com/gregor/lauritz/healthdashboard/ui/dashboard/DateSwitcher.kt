@@ -79,7 +79,7 @@ fun DateSwitcher(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = stringResource(R.string.accessibility_prev_day),
                 tint =
-                    if (canGoBack) {
+                    if (prevEnabled) {
                         MaterialTheme.colorScheme.onSurface
                     } else {
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
@@ -112,7 +112,7 @@ fun DateSwitcher(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = stringResource(R.string.accessibility_next_day),
                 tint =
-                    if (canGoForward) {
+                    if (nextEnabled) {
                         MaterialTheme.colorScheme.onSurface
                     } else {
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)

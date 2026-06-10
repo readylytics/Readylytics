@@ -20,7 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -204,10 +203,7 @@ fun VitalsScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .graphicsLayer {
-                                alpha = if (uiState.isLoading) 0.5f else 1.0f
-                            },
+                            .padding(horizontal = 16.dp),
                 ) {
                     TimeRange.entries.forEachIndexed { index, range ->
                         SegmentedButton(
