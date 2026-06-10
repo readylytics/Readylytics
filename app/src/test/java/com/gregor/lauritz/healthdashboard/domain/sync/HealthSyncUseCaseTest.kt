@@ -20,6 +20,7 @@ import com.gregor.lauritz.healthdashboard.domain.repository.TransactionRunner
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
+import io.mockk.coJustRun
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -248,6 +249,51 @@ class HealthSyncUseCaseTest {
 
             coVerify(exactly = 1) { hcRepo.readStepsRecords(any(), any()) }
             coVerify(exactly = 0) { hcRepo.readSteps(any(), any()) }
+        }
+
+    @Test
+    fun `resyncRange retries selected step device raw record fetch`() =
+        runTest {
+            every { settingsRepo.userPreferences } returns
+                flowOf(
+                    UserPreferences(
+                        deviceByDataType = mapOf(HealthDataType.STEPS.name to "Watch"),
+                    ),
+                )
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+            coEvery { hcRepo.readStepsRecords(any(), any()) } throws RuntimeException("rate limited") andThen emptyList()
+
+            useCase.resyncRange(
+                startDate = LocalDate.of(2024, 6, 1),
+                endDate = LocalDate.of(2024, 6, 1),
+            )
+
+            coVerify(exactly = 2) { hcRepo.readStepsRecords(any(), any()) }
+        }
+
+    @Test
+    fun `resyncRange writes zero steps for selected device days without raw step records`() =
+        runTest {
+            every { settingsRepo.userPreferences } returns
+                flowOf(
+                    UserPreferences(
+                        deviceByDataType = mapOf(HealthDataType.STEPS.name to "Watch"),
+                    ),
+                )
+            coEvery { hcRepo.readStepsRecords(any(), any()) } returns emptyList()
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(
+                dateMidnightMs = 0L,
+                stepCount = 999,
+            )
+            val summarySlot = slot<DailySummaryEntity>()
+            coJustRun { dailySummaryDao.upsert(capture(summarySlot)) }
+
+            useCase.resyncRange(
+                startDate = LocalDate.of(2024, 6, 1),
+                endDate = LocalDate.of(2024, 6, 1),
+            )
+
+            assertEquals(0, summarySlot.captured.stepCount)
         }
 
     @Test

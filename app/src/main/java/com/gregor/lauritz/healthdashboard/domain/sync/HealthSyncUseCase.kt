@@ -228,6 +228,12 @@ class HealthSyncUseCase
 
                         // --- Ingestion phase: chunked HC re-fetch + idempotent upsert ---
                         val stepsMap = mutableMapOf<LocalDate, Long>()
+                        val deviceByType = prefs.deviceByDataType
+
+                        fun deviceFor(type: HealthDataType): String? =
+                            deviceByType[type.name]?.takeIf { it.isNotBlank() }
+
+                        val stepsDevice = deviceFor(HealthDataType.STEPS)
                         var chunkStart = startDate
                         while (!chunkStart.isAfter(endDate)) {
                             ensureActive()
@@ -249,18 +255,15 @@ class HealthSyncUseCase
                                     prefs = prefs,
                                 )
                             }
-
-                            val deviceByType = prefs.deviceByDataType
-
-                            fun deviceFor(type: HealthDataType): String? =
-                                deviceByType[type.name]?.takeIf { it.isNotBlank() }
-
-                            val stepsDevice = deviceFor(HealthDataType.STEPS)
                             if (stepsDevice != null) {
                                 val stepsWindowStart = chunkStart.atStartOfDay(zoneId).toInstant()
+                                val stepsRecords =
+                                    retryWithBackoff {
+                                        hcRepo.readStepsRecords(stepsWindowStart, windowEnd)
+                                    }
                                 val stepEntries =
                                     DeviceSourceFilter.filterToDevice(
-                                        StepsMapper.toStepEntries(hcRepo.readStepsRecords(stepsWindowStart, windowEnd)),
+                                        StepsMapper.toStepEntries(stepsRecords),
                                         stepsDevice,
                                     ) { it.deviceName }
                                 stepsMap.putAll(StepsMapper.sumByDay(stepEntries, zoneId))
@@ -287,7 +290,8 @@ class HealthSyncUseCase
                         var recomputedDays = 0
                         while (!day.isAfter(endDate)) {
                             ensureActive()
-                            syncDayScoring(day, stepsMap[day])
+                            val stepsForDay = if (stepsDevice != null) stepsMap[day] ?: 0L else stepsMap[day]
+                            syncDayScoring(day, stepsForDay)
                             recomputedDays++
                             onProgress?.invoke(recomputedDays, totalDays)
                             day = day.plusDays(1)
