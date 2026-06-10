@@ -87,6 +87,7 @@ fun WorkoutDetailScreen(
                 workout = workout,
                 computedTrimp = uiState.computedTrimp,
                 gainedStrain = uiState.gainedStrain,
+                gainedStrainDisplay = uiState.gainedStrainDisplay,
                 pai = uiState.pai,
             )
         }

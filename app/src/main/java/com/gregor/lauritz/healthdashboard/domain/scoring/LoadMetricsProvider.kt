@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring
 
 import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
+import com.gregor.lauritz.healthdashboard.domain.display.MetricFormatter
 import com.gregor.lauritz.healthdashboard.domain.util.toMidnightEpochMilli
 import java.time.LocalDate
 import javax.inject.Inject
@@ -19,6 +20,6 @@ class LoadMetricsProvider
 
         suspend fun getRoundedStrainRatio(date: LocalDate): Float? {
             val dateMs = date.toMidnightEpochMilli()
-            return dao.getPreciseStrainRatio(dateMs)?.toFloat()
+            return dao.getPreciseStrainRatio(dateMs)?.toFloat()?.let(MetricFormatter::roundStrain)
         }
     }

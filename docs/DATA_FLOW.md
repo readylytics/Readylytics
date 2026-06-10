@@ -170,6 +170,7 @@ keep Android types out of `domain/scoring/**`.
 | `TrimpModel` (enum) | `domain/scoring/TrimpModel.kt` | `BANISTER`, `I_TRIMP`, `CHENG`. |
 | `PaiCalculator` | `domain/scoring/PaiCalculator.kt` | `calculateDailyTrimp(..., trimpModel = TrimpModel.BANISTER)` switches per model — **BANISTER is the operational default** (default parameter value). `calculateDailyPai()` converts TRIMP → PAI via a profile scaling factor (capped at 75). |
 | `ComputeWorkoutTrimpUseCase` | `domain/scoring/ComputeWorkoutTrimpUseCase.kt` | Per-workout integration over HR samples; reads the user-selected model from `prefs.trimpModel`. |
+| `ComputeWorkoutLoadMetricsUseCase` | `domain/scoring/ComputeWorkoutLoadMetricsUseCase.kt` | Single per-workout load source for workout history/detail UI: resolves precise TRIMP + gained strain from DB-backed workout samples, then returns the rounded TRIMP/strain display values used by cards and rows. |
 | `ScoringConfigFactory` | `domain/scoring/ScoringConfigFactory.kt` | Threads `userPreferences.trimpModel` into the scoring config. |
 
 **Variants (reference only — see `PaiCalculator.calculateDailyTrimp` for the implementation):**
@@ -224,7 +225,7 @@ ViewModels collect repository flows, fuse them with `combine()`, and expose immu
 | `SyncViewModel` | `ui/sync/SyncViewModel.kt` | `uiState` (sealed sync state machine), `isSyncing`, `recalcProgress` (forwarded from `ForegroundSyncController`). |
 | `VitalsViewModel` | `ui/vitals/VitalsViewModel.kt` | HRV / RHR / SpO2 daily trends + baseline bands. |
 | `SleepViewModel` | `ui/sleep/SleepViewModel.kt` | Sleep summary, stage timeline, circadian consistency. |
-| `WorkoutsViewModel` / `WorkoutDetailViewModel` | `ui/workouts/` | Daily TRIMP/strain trends, PAI breakdown; per-workout TRIMP/strain/HRR. |
+| `WorkoutsViewModel` / `WorkoutDetailViewModel` | `ui/workouts/` | Daily TRIMP/strain trends, PAI breakdown; per-workout TRIMP/strain/HRR. Per-workout load cards/rows consume `ComputeWorkoutLoadMetricsUseCase` so history and detail show the same rounded TRIMP and gained-strain values. |
 | `HeartRateDetailViewModel` | `ui/heartrate/HeartRateDetailViewModel.kt` | Intra-day HR samples + zone totals. |
 | `StepDetailViewModel` / `WeightDetailViewModel` / `BloodPressureDetailViewModel` / `BodyFatDetailViewModel` | `ui/steps/`, `ui/weight/`, `ui/bloodpressure/`, `ui/bodyfat/` | Per-metric trends, statuses, formatted display. |
 

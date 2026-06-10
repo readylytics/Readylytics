@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.R
+import com.gregor.lauritz.healthdashboard.domain.display.MetricFormatter
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.strainRatioStatus
 import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
@@ -301,8 +302,8 @@ private fun AcwrChart(
             selectedState?.let { s ->
                 val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
                 val anchorY = s.lineCanvasY ?: s.barCanvasYTop ?: 0f
-                val trimpText = s.trimpValue?.toInt()?.toString() ?: "—"
-                val strainText = s.strainRatioValue?.let { "%.2f".format(it) } ?: "—"
+                val trimpText = s.trimpValue?.let { MetricFormatter.roundTrimp(it).toString() } ?: "—"
+                val strainText = MetricFormatter.formatStrain(s.strainRatioValue)
                 DataPointTooltipData(
                     valueText = trimpFormat.format(trimpText),
                     dateText = strainFormat.format(strainText),
@@ -318,8 +319,26 @@ private fun AcwrChart(
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
-    val trimpAxisFormatter = remember { CartesianValueFormatter { _, value, _ -> value.toInt().toString() } }
-    val ratioAxisFormatter = remember { CartesianValueFormatter { _, value, _ -> "%.2f".format(value) } }
+    val trimpAxisFormatter =
+        remember {
+            CartesianValueFormatter {
+                _,
+                value,
+                _,
+                ->
+                MetricFormatter.roundTrimp(value.toFloat()).toString()
+            }
+        }
+    val ratioAxisFormatter =
+        remember {
+            CartesianValueFormatter {
+                _,
+                value,
+                _,
+                ->
+                MetricFormatter.formatStrain(value.toFloat())
+            }
+        }
 
     val modelProducer = remember { CartesianChartModelProducer() }
 

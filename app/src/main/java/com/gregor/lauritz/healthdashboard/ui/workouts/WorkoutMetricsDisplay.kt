@@ -36,6 +36,7 @@ fun WorkoutMetricsDisplay(
     workout: WorkoutData,
     computedTrimp: Int?,
     gainedStrain: Float?,
+    gainedStrainDisplay: String,
     pai: Float?,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -73,7 +74,7 @@ fun WorkoutMetricsDisplay(
             ) {
                 MetricCard(
                     title = stringResource(R.string.workout_metric_gained_strain),
-                    value = gainedStrain?.let { String.format(java.util.Locale.US, "%.2f", it) } ?: "--",
+                    value = gainedStrain?.let { gainedStrainDisplay } ?: "--",
                     secondaryText = stringResource(R.string.workout_metric_strain),
                     status = MetricStatus.NEUTRAL,
                     tooltip = stringResource(R.string.workout_tooltip_gained_strain),

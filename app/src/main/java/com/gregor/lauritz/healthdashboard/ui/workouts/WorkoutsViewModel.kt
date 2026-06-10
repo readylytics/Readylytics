@@ -6,11 +6,11 @@ import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
-import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutRepository
+import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutLoadMetricsUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
@@ -47,7 +47,8 @@ import javax.inject.Inject
 data class WorkoutDisplayItem(
     val workout: WorkoutData,
     val gainedStrain: Float,
-    val computedTrimp: Float,
+    val computedTrimp: Int,
+    val gainedStrainDisplay: String,
 )
 
 data class WorkoutsUiState(
@@ -90,8 +91,7 @@ class WorkoutsViewModel
         private val selectedDateRepository: SelectedDateRepository,
         private val scoringCalculator: ScoringCalculator,
         private val settingsRepo: SettingsRepository,
-        private val computeWorkoutTrimpUseCase:
-            com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase,
+        private val computeWorkoutLoadMetricsUseCase: ComputeWorkoutLoadMetricsUseCase,
         private val foregroundSyncController: ForegroundSyncController,
         private val savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
@@ -291,59 +291,21 @@ class WorkoutsViewModel
                                         val rhrBaseline = summaryByDate[workoutDate]?.rhrBpm
                                         val samples = samplesByWorkoutId[workout.id] ?: emptyList()
 
-                                        val computedTrimpResult =
-                                            computeWorkoutTrimpUseCase.execute(
-                                                workoutStartTime = workout.startTime,
-                                                workoutEndTime = workout.endTime,
-                                                workoutAvgHr = workout.avgHr,
+                                        val loadMetrics =
+                                            computeWorkoutLoadMetricsUseCase.execute(
+                                                workout = workout,
+                                                workoutDate = workoutDate,
                                                 samples = samples,
                                                 prefs = prefs,
                                                 restingHrBaseline = rhrBaseline,
-                                                storedTrimp = workout.trimp,
+                                                trimpByDate = trimpByDate,
                                             )
-                                        val computedTrimp = computedTrimpResult.getOrNull() ?: 0f
-
-                                        val originalDayTrimp = trimpByDate[workoutDate] ?: 0f
-                                        val trimpWithoutWorkout = (originalDayTrimp - computedTrimp).coerceAtLeast(0f)
-                                        val trimpMapWith = trimpByDate.toMutableMap()
-                                        val trimpMapWithout =
-                                            trimpByDate.toMutableMap().apply {
-                                                put(
-                                                    workoutDate,
-                                                    trimpWithoutWorkout,
-                                                )
-                                            }
-
-                                        val atlWith =
-                                            scoringCalculator.computeAtlEmaWithDecay(
-                                                trimpMapWith,
-                                                workoutDate,
-                                            )
-                                        val ctlWith =
-                                            scoringCalculator.computeCtlEmaWithDecay(
-                                                trimpMapWith,
-                                                workoutDate,
-                                            )
-                                        val srWith = scoringCalculator.computeStrainRatio(atlWith, ctlWith)
-
-                                        val atlWithout =
-                                            scoringCalculator.computeAtlEmaWithDecay(
-                                                trimpMapWithout,
-                                                workoutDate,
-                                            )
-                                        val ctlWithout =
-                                            scoringCalculator.computeCtlEmaWithDecay(
-                                                trimpMapWithout,
-                                                workoutDate,
-                                            )
-                                        val srWithout = scoringCalculator.computeStrainRatio(atlWithout, ctlWithout)
-
-                                        val gainedStrainRatio = srWith - srWithout
 
                                         WorkoutDisplayItem(
                                             workout = workout,
-                                            gainedStrain = gainedStrainRatio.takeIf { it > 0f } ?: 0f,
-                                            computedTrimp = computedTrimp,
+                                            gainedStrain = loadMetrics.roundedGainedStrain,
+                                            computedTrimp = loadMetrics.roundedTrimp,
+                                            gainedStrainDisplay = loadMetrics.gainedStrainDisplay,
                                         )
                                     }
 
