@@ -2,8 +2,10 @@ package com.gregor.lauritz.healthdashboard.data.repository
 
 import com.gregor.lauritz.healthdashboard.data.local.dao.*
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
+import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.scoring.*
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
@@ -90,7 +92,7 @@ class ScoringRepositoryImplTest {
 
             // Mock sleep sessions so the sleep metrics flow is exercised
             val mockSession =
-                com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity(
+                SleepSessionEntity(
                     id = "test_session",
                     startTime = 0L,
                     endTime = 0L,
@@ -117,7 +119,7 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result
+                Result
                     .success(DailySummaryEntity(todayMs, hrvMuMssd = 3.5f))
 
             coEvery {
@@ -133,7 +135,7 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result
+                Result
                     .success(DailySummaryEntity(yesterdayMs, hrvMuMssd = 4.0f))
 
             val resultToday = repo.computeDailySummary(today)
@@ -173,7 +175,7 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result
+                Result
                     .success(existingSummary)
 
             val result = repo.computeDailySummary(today)
@@ -188,7 +190,7 @@ class ScoringRepositoryImplTest {
             val zoneId = ZoneId.systemDefault()
 
             val mockSession =
-                com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity(
+                SleepSessionEntity(
                     id = "test_session",
                     startTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() - 8 * 3600000,
                     endTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() + 1800000,
@@ -216,7 +218,7 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result
+                Result
                     .success(DailySummaryEntity(0L, restingHeartRate = 48, restingHrRatio = 0.96f))
 
             val result = repo.computeDailySummary(today)
@@ -247,7 +249,7 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result
+                Result
                     .success(DailySummaryEntity(0L))
 
             val result = repo.computeDailySummary(today)
@@ -263,7 +265,7 @@ class ScoringRepositoryImplTest {
             val zoneId = ZoneId.systemDefault()
 
             val mockSession =
-                com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity(
+                SleepSessionEntity(
                     id = "test_session",
                     startTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() - 8 * 3600000,
                     endTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() + 1800000,
@@ -299,7 +301,7 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result
+                Result
                     .success(DailySummaryEntity(0L))
 
             // Should not throw

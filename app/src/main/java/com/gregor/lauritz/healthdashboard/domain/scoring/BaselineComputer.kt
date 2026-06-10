@@ -360,13 +360,12 @@ class BaselineComputer
         suspend fun computeHrvWindows(
             dayMidnight: Instant,
             excludeSessionId: String?,
-        ): HrvWindows? {
-            return computeHrvWindowsBetween(
+        ): HrvWindows? =
+            computeHrvWindowsBetween(
                 fromMs = dayMidnight.toEpochMilli(),
                 toMs = dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli(),
                 excludeSessionId = excludeSessionId,
             )
-        }
 
         /**
          * Batched, point-in-time-correct baseline inputs for the historical backfill.

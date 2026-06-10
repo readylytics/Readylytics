@@ -44,53 +44,57 @@ class SyncScopeDeterminismTest {
     private val targetDayEndMs = targetDay.plus(1, ChronoUnit.DAYS).toEpochMilli()
 
     // Generate 365 days of synthetic sleep sessions (1 per night).
-    private val allSessions = (0 until 365).map { i ->
-        val dayStart = day0.plus(i.toLong(), ChronoUnit.DAYS)
-        SleepSessionEntity(
-            id = "session-$i",
-            startTime = dayStart.minus(8, ChronoUnit.HOURS).toEpochMilli(), // previous evening
-            endTime = dayStart.plus(0, ChronoUnit.HOURS).toEpochMilli(),    // midnight = day start
-            durationMinutes = 480,
-            deepSleepMinutes = 90,
-            remSleepMinutes = 100,
-            lightSleepMinutes = 240,
-            awakeMinutes = 50,
-            efficiency = 92f,
-        )
-    }
+    private val allSessions =
+        (0 until 365).map { i ->
+            val dayStart = day0.plus(i.toLong(), ChronoUnit.DAYS)
+            SleepSessionEntity(
+                id = "session-$i",
+                startTime = dayStart.minus(8, ChronoUnit.HOURS).toEpochMilli(), // previous evening
+                endTime = dayStart.plus(0, ChronoUnit.HOURS).toEpochMilli(), // midnight = day start
+                durationMinutes = 480,
+                deepSleepMinutes = 90,
+                remSleepMinutes = 100,
+                lightSleepMinutes = 240,
+                awakeMinutes = 50,
+                efficiency = 92f,
+            )
+        }
 
     // The session ending on the target day.
     private val targetSession = allSessions[60]
 
     @Before
     fun setup() {
-        baselineComputer = BaselineComputer(
-            heartRateDao = heartRateDao,
-            hrvDao = hrvDao,
-            sleepSessionDao = sleepSessionDao,
-            scoringCalculator = scoringCalculator,
-            dailySummaryDao = dailySummaryDao,
-        )
+        baselineComputer =
+            BaselineComputer(
+                heartRateDao = heartRateDao,
+                hrvDao = hrvDao,
+                sleepSessionDao = sleepSessionDao,
+                scoringCalculator = scoringCalculator,
+                dailySummaryDao = dailySummaryDao,
+            )
 
         // Every night is valid for baseline contribution.
         coEvery {
             scoringCalculator.validateNight(any(), any(), any(), any(), any(), any())
-        } returns ScoringCalculator.NightValidationResult(
-            rmssdValid = true,
-            rhrValid = true,
-            durationValid = true,
-            stagesValid = true,
-            stagesSuspicious = false,
-            hrCoverageValid = true,
-        )
+        } returns
+            ScoringCalculator.NightValidationResult(
+                rmssdValid = true,
+                rhrValid = true,
+                durationValid = true,
+                stagesValid = true,
+                stagesSuspicious = false,
+                hrCoverageValid = true,
+            )
 
         // No frozen baselines.
         coEvery { dailySummaryDao.getByDate(any()) } returns null
 
         // HRV data: each session has a distinct nightly RMSSD mean.
-        val hrvMap = allSessions.associate { s ->
-            s.id to listOf(30f + (s.id.substringAfter("-").toInt() % 20).toFloat())
-        }
+        val hrvMap =
+            allSessions.associate { s ->
+                s.id to listOf(30f + (s.id.substringAfter("-").toInt() % 20).toFloat())
+            }
         coEvery { hrvDao.getSleepRmssdForSessionsMap(any()) } answers {
             val requestedIds = firstArg<List<String>>()
             requestedIds.associateWith { id -> hrvMap[id] ?: emptyList() }
@@ -112,50 +116,54 @@ class SyncScopeDeterminismTest {
         coEvery { sleepSessionDao.getBetween(any(), any()) } answers {
             val fromMs = firstArg<Long>()
             val toMs = secondArg<Long>()
-            allSessions.filter { it.startTime >= fromMs && it.endTime <= toMs }
+            allSessions
+                .filter { it.startTime >= fromMs && it.endTime <= toMs }
                 .sortedBy { it.startTime }
         }
     }
 
     @Test
-    fun `HRV sigma history must be identical between bounded and unbounded queries`() = runTest {
-        // Bounded (correct): computeHrvWindowsBetween — only sees data up to target day.
-        val bounded = baselineComputer.computeHrvWindowsBetween(
-            fromMs = targetDayMs,
-            toMs = targetDayEndMs,
-            excludeSessionId = targetSession.id,
-        )
+    fun `HRV sigma history must be identical between bounded and unbounded queries`() =
+        runTest {
+            // Bounded (correct): computeHrvWindowsBetween — only sees data up to target day.
+            val bounded =
+                baselineComputer.computeHrvWindowsBetween(
+                    fromMs = targetDayMs,
+                    toMs = targetDayEndMs,
+                    excludeSessionId = targetSession.id,
+                )
 
-        // Unbounded (buggy): computeHrvWindows — uses getSince, sees all future data.
-        val unbounded = baselineComputer.computeHrvWindows(
-            dayMidnight = targetDay,
-            excludeSessionId = targetSession.id,
-        )
+            // Unbounded (buggy): computeHrvWindows — uses getSince, sees all future data.
+            val unbounded =
+                baselineComputer.computeHrvWindows(
+                    dayMidnight = targetDay,
+                    excludeSessionId = targetSession.id,
+                )
 
-        assertNotNull(bounded, "bounded HRV windows should not be null")
-        assertNotNull(unbounded, "unbounded HRV windows should not be null")
+            assertNotNull(bounded, "bounded HRV windows should not be null")
+            assertNotNull(unbounded, "unbounded HRV windows should not be null")
 
-        // THIS ASSERTION SHOULD FAIL BEFORE THE FIX:
-        // sigmaHistory from unbounded will have MORE entries (future sessions leaked in).
-        assertEquals(
-            bounded.sigmaHistory.size,
-            unbounded.sigmaHistory.size,
-            "sigmaHistory size must match: bounded saw ${bounded.sigmaHistory.size} nights, " +
-                "unbounded saw ${unbounded.sigmaHistory.size} nights. " +
-                "The difference of ${unbounded.sigmaHistory.size - bounded.sigmaHistory.size} " +
-                "entries is future data leaking into the baseline.",
-        )
+            // THIS ASSERTION SHOULD FAIL BEFORE THE FIX:
+            // sigmaHistory from unbounded will have MORE entries (future sessions leaked in).
+            assertEquals(
+                bounded.sigmaHistory.size,
+                unbounded.sigmaHistory.size,
+                "sigmaHistory size must match: bounded saw ${bounded.sigmaHistory.size} nights, " +
+                    "unbounded saw ${unbounded.sigmaHistory.size} nights. " +
+                    "The difference of ${unbounded.sigmaHistory.size - bounded.sigmaHistory.size} " +
+                    "entries is future data leaking into the baseline.",
+            )
 
-        assertEquals(
-            bounded.sigmaHistory,
-            unbounded.sigmaHistory,
-            "sigmaHistory values must be identical — future data must not leak",
-        )
+            assertEquals(
+                bounded.sigmaHistory,
+                unbounded.sigmaHistory,
+                "sigmaHistory values must be identical — future data must not leak",
+            )
 
-        assertEquals(
-            bounded.muHistory,
-            unbounded.muHistory,
-            "muHistory (last 7 of sigma) must be identical",
-        )
-    }
+            assertEquals(
+                bounded.muHistory,
+                unbounded.muHistory,
+                "muHistory (last 7 of sigma) must be identical",
+            )
+        }
 }

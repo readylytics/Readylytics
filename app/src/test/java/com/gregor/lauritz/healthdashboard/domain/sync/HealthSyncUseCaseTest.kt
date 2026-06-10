@@ -18,9 +18,9 @@ import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectReposit
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.TransactionRunner
 import io.mockk.coEvery
+import io.mockk.coJustRun
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
-import io.mockk.coJustRun
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -261,7 +261,8 @@ class HealthSyncUseCaseTest {
                     ),
                 )
             coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
-            coEvery { hcRepo.readStepsRecords(any(), any()) } throws RuntimeException("rate limited") andThen emptyList()
+            coEvery { hcRepo.readStepsRecords(any(), any()) } throws RuntimeException("rate limited") andThen
+                emptyList()
 
             useCase.resyncRange(
                 startDate = LocalDate.of(2024, 6, 1),
@@ -281,10 +282,11 @@ class HealthSyncUseCaseTest {
                     ),
                 )
             coEvery { hcRepo.readStepsRecords(any(), any()) } returns emptyList()
-            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(
-                dateMidnightMs = 0L,
-                stepCount = 999,
-            )
+            coEvery { scoringRepository.computeDailySummary(any()) } returns
+                DailySummaryEntity(
+                    dateMidnightMs = 0L,
+                    stepCount = 999,
+                )
             val summarySlot = slot<DailySummaryEntity>()
             coJustRun { dailySummaryDao.upsert(capture(summarySlot)) }
 
