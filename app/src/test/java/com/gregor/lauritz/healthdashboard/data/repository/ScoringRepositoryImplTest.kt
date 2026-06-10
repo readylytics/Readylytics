@@ -88,21 +88,27 @@ class ScoringRepositoryImplTest {
                 baselineComputer.computeAdaptiveBaselineRhrBpmBetween(yesterdayMs, todayMs, any())
             } returns 60f
 
-            // Mock HRV windows to ensure hrvMuMssd is also different
-            coEvery {
-                baselineComputer.computeHrvWindowsBetween(todayMs, tomorrowMs, any())
-            } returns BaselineComputer.HrvWindows(listOf(60f, 62f), emptyList(), emptyList(), emptyList())
+            // Mock sleep sessions so the sleep metrics flow is exercised
+            val mockSession =
+                com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity(
+                    id = "test_session",
+                    startTime = 0L,
+                    endTime = 0L,
+                    durationMinutes = 480,
+                    efficiency = 90f,
+                    deepSleepMinutes = 90,
+                    remSleepMinutes = 90,
+                    lightSleepMinutes = 240,
+                    awakeMinutes = 60,
+                )
+            coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns mockSession
 
-            coEvery {
-                baselineComputer.computeHrvWindowsBetween(yesterdayMs, todayMs, any())
-            } returns BaselineComputer.HrvWindows(listOf(70f, 72f), emptyList(), emptyList(), emptyList())
-
-            // Ensure use case returns something
+            // Ensure use case returns different hrvMuMssd values based on date
             coEvery {
                 computeSleepMetricsUseCase(
                     any(),
                     any(),
-                    any(),
+                    eq(today),
                     any(),
                     any(),
                     any(),
@@ -112,7 +118,23 @@ class ScoringRepositoryImplTest {
                 )
             } returns
                 com.gregor.lauritz.healthdashboard.domain.model.Result
-                    .success(DailySummaryEntity(0L))
+                    .success(DailySummaryEntity(todayMs, hrvMuMssd = 3.5f))
+
+            coEvery {
+                computeSleepMetricsUseCase(
+                    any(),
+                    any(),
+                    eq(yesterday),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns
+                com.gregor.lauritz.healthdashboard.domain.model.Result
+                    .success(DailySummaryEntity(yesterdayMs, hrvMuMssd = 4.0f))
 
             val resultToday = repo.computeDailySummary(today)
             val resultYesterday = repo.computeDailySummary(yesterday)
