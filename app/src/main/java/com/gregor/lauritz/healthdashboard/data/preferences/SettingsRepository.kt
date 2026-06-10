@@ -37,6 +37,10 @@ class SettingsRepository
 
         val syncIntervalHours: Flow<Int> = userPreferences.map { it.syncIntervalHours }
 
+        val backgroundSyncEnabled: Flow<Boolean> = userPreferences.map { it.backgroundSyncEnabled }
+
+        val backgroundSyncIntervalMinutes: Flow<Int> = userPreferences.map { it.backgroundSyncIntervalMinutes }
+
         val lastSyncTimestamp: Flow<Long> = userPreferences.map { it.lastSyncTimestamp }
 
         val appTheme: Flow<AppTheme> = userPreferences.map { it.appTheme }
@@ -149,6 +153,10 @@ class SettingsRepository
         suspend fun updateSyncPreference(pref: SyncPreference) = sync.updateSyncPreference(pref)
 
         suspend fun updateSyncIntervalHours(hours: Int) = sync.updateSyncIntervalHours(hours)
+
+        suspend fun updateBackgroundSyncEnabled(enabled: Boolean) = sync.updateBackgroundSyncEnabled(enabled)
+
+        suspend fun updateBackgroundSyncIntervalMinutes(minutes: Int) = sync.updateBackgroundSyncIntervalMinutes(minutes)
 
         suspend fun updateDriveAccountEmail(email: String?) = sync.updateDriveAccountEmail(email)
 

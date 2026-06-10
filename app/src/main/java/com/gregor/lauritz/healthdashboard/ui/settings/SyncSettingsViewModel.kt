@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -58,6 +59,8 @@ class SyncSettingsViewModel
                     resyncTotal = total,
                     availableDevices = availableDevices,
                     primaryDeviceName = prefs.primaryDeviceName,
+                    backgroundSyncEnabled = prefs.backgroundSyncEnabled,
+                    backgroundSyncIntervalMinutes = prefs.backgroundSyncIntervalMinutes,
                 )
             }.stateIn(
                 scope = viewModelScope,
@@ -96,6 +99,25 @@ class SyncSettingsViewModel
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             settingsRepo.updateSyncIntervalHours(hours = event.hours)
+                        }
+                    }
+                }
+                is SettingsEvent.BackgroundSyncToggled -> {
+                    viewModelScope.launch {
+                        settingsRepo.updateBackgroundSyncEnabled(event.enabled)
+                        if (event.enabled) {
+                            val intervalMinutes = settingsRepo.backgroundSyncIntervalMinutes.first()
+                            workerScheduler.schedulePeriodicSync(intervalMinutes.toLong())
+                        } else {
+                            workerScheduler.cancelPeriodicSync()
+                        }
+                    }
+                }
+                is SettingsEvent.BackgroundSyncIntervalChanged -> {
+                    viewModelScope.launch {
+                        settingsRepo.updateBackgroundSyncIntervalMinutes(event.minutes)
+                        if (settingsRepo.backgroundSyncEnabled.first()) {
+                            workerScheduler.schedulePeriodicSync(event.minutes.toLong())
                         }
                     }
                 }

@@ -101,4 +101,6 @@ data class SyncSettingsState(
     val resyncTotal: Int = 0,
     val availableDevices: List<String> = emptyList(),
     val primaryDeviceName: String? = null,
+    val backgroundSyncEnabled: Boolean = SettingsDefaults.BACKGROUND_SYNC_ENABLED,
+    val backgroundSyncIntervalMinutes: Int = SettingsDefaults.BACKGROUND_SYNC_INTERVAL.minutes,
 )

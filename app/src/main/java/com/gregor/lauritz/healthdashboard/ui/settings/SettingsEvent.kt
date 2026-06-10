@@ -35,6 +35,14 @@ sealed interface SettingsEvent {
         val hours: Int,
     ) : SettingsEvent
 
+    data class BackgroundSyncToggled(
+        val enabled: Boolean,
+    ) : SettingsEvent
+
+    data class BackgroundSyncIntervalChanged(
+        val minutes: Int,
+    ) : SettingsEvent
+
     data class MaxHeartRateChanged(
         val text: String,
     ) : SettingsEvent

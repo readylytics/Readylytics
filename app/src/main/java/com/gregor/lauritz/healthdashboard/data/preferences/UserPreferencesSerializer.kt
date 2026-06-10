@@ -56,6 +56,8 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
             .setAboutDismissed(SettingsDefaults.ABOUT_DISMISSED)
             .setPhysiologyProfile(PhysiologyProfileProto.valueOf("PROFILE_${SettingsDefaults.PHYSIOLOGY_PROFILE.name}"))
             .setInstallDate(SettingsDefaults.INSTALL_DATE)
+            .setBackgroundSyncEnabled(SettingsDefaults.BACKGROUND_SYNC_ENABLED)
+            .setBackgroundSyncIntervalMinutes(SettingsDefaults.BACKGROUND_SYNC_INTERVAL.minutes)
             .build()
 
     override suspend fun readFrom(input: InputStream): UserPreferencesProto {
@@ -150,6 +152,8 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         ).setPaiCalibration(domain.banisterMultiplier)
         .setChengBeta(domain.chengBeta)
         .setItrimpB(domain.itrimB)
+        .setBackgroundSyncEnabled(domain.backgroundSyncEnabled)
+        .setBackgroundSyncIntervalMinutes(domain.backgroundSyncIntervalMinutes)
 
     domain.hrvBaselineOverride?.let { builder.setHrvBaselineOverride(it) }
     domain.rhrBaselineOverride?.let { builder.setRhrBaselineOverride(it) }

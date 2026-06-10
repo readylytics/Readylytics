@@ -15,6 +15,9 @@ object SyncNotifications {
     const val CHANNEL_ID = "resync_progress"
     const val NOTIFICATION_ID = 4011
 
+    const val BACKGROUND_SYNC_CHANNEL_ID = "background_sync"
+    const val BACKGROUND_SYNC_NOTIFICATION_ID = 4012
+
     fun ensureChannel(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         if (manager.getNotificationChannel(CHANNEL_ID) == null) {
@@ -30,6 +33,32 @@ object SyncNotifications {
             manager.createNotificationChannel(channel)
         }
     }
+
+    fun ensureBackgroundSyncChannel(context: Context) {
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        if (manager.getNotificationChannel(BACKGROUND_SYNC_CHANNEL_ID) == null) {
+            val channel =
+                NotificationChannel(
+                    BACKGROUND_SYNC_CHANNEL_ID,
+                    context.getString(R.string.background_sync_channel_name),
+                    NotificationManager.IMPORTANCE_LOW,
+                ).apply {
+                    description = context.getString(R.string.background_sync_channel_description)
+                    setShowBadge(false)
+                }
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    fun buildBackgroundSyncNotification(context: Context): Notification =
+        NotificationCompat
+            .Builder(context, BACKGROUND_SYNC_CHANNEL_ID)
+            .setContentTitle(context.getString(R.string.background_sync_notification_title))
+            .setSmallIcon(android.R.drawable.stat_notify_sync)
+            .setOnlyAlertOnce(true)
+            .setProgress(0, 0, true)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .build()
 
     fun buildProgressNotification(
         context: Context,

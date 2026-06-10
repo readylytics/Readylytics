@@ -1,5 +1,9 @@
 package com.gregor.lauritz.healthdashboard.ui.settings.data
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
@@ -28,14 +32,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.permission.HealthPermission
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.R
+import com.gregor.lauritz.healthdashboard.data.preferences.BackgroundSyncInterval
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
 import com.gregor.lauritz.healthdashboard.domain.model.HealthDataCategory
 import com.gregor.lauritz.healthdashboard.domain.model.HealthDataType
 import com.gregor.lauritz.healthdashboard.ui.components.DropdownPreferenceItem
 import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
+import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
 import com.gregor.lauritz.healthdashboard.ui.settings.SettingsEvent
 import com.gregor.lauritz.healthdashboard.ui.settings.SyncSettingsState
 import com.gregor.lauritz.healthdashboard.ui.settings.UIState
@@ -46,13 +54,96 @@ fun SyncSettingsSection(
     uiState: SyncSettingsState,
     onEvent: (SettingsEvent) -> Unit,
 ) {
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    val backgroundPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = PermissionController.createRequestPermissionResultContract(),
+        ) { granted ->
+            if (granted.contains(HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND)) {
+                onEvent(SettingsEvent.BackgroundSyncToggled(true))
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        }
+
     Column {
-        SyncPreferenceItem(uiState = uiState, onEvent = onEvent)
-        AnimatedVisibility(visible = uiState.syncPreference == SyncPreference.BY_TIME) {
-            SyncIntervalItem(uiState = uiState, onEvent = onEvent)
+        ListItem(
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            headlineContent = {
+                Text(
+                    stringResource(R.string.sync_on_app_open_label),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            },
+            trailingContent = {
+                Switch(
+                    checked = uiState.syncPreference != SyncPreference.NEVER,
+                    onCheckedChange = {
+                        onEvent(
+                            SettingsEvent.SyncPreferenceChanged(
+                                if (it) SyncPreference.ALWAYS else SyncPreference.NEVER,
+                            ),
+                        )
+                    },
+                )
+            },
+        )
+
+        SettingsToggleItem(
+            label = stringResource(R.string.background_sync_label),
+            description = stringResource(R.string.background_sync_description),
+            checked = uiState.backgroundSyncEnabled,
+            onCheckedChange = { enabled ->
+                if (enabled) {
+                    backgroundPermissionLauncher.launch(
+                        setOf(HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND),
+                    )
+                } else {
+                    onEvent(SettingsEvent.BackgroundSyncToggled(false))
+                }
+            },
+        )
+
+        AnimatedVisibility(visible = uiState.backgroundSyncEnabled) {
+            BackgroundSyncIntervalItem(uiState = uiState, onEvent = onEvent)
         }
     }
 }
+
+@Composable
+private fun BackgroundSyncIntervalItem(
+    uiState: SyncSettingsState,
+    onEvent: (SettingsEvent) -> Unit,
+) {
+    val intervalLabels =
+        BackgroundSyncInterval.entries.associateWith { stringResource(it.labelRes()) }
+    val selected = BackgroundSyncInterval.fromMinutes(uiState.backgroundSyncIntervalMinutes)
+    DropdownPreferenceItem(
+        label = stringResource(R.string.background_sync_interval_label),
+        selectedDisplayValue = intervalLabels[selected] ?: selected.name,
+        options = BackgroundSyncInterval.entries,
+        onOptionSelected = { onEvent(SettingsEvent.BackgroundSyncIntervalChanged(it.minutes)) },
+        optionLabel = { intervalLabels[it] ?: it.name },
+        modifier =
+            Modifier.padding(
+                horizontal = SettingsConstants.HORIZONTAL_PADDING,
+                vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
+            ),
+    )
+}
+
+@StringRes
+private fun BackgroundSyncInterval.labelRes(): Int =
+    when (this) {
+        BackgroundSyncInterval.MINUTES_15 -> R.string.background_sync_interval_15m
+        BackgroundSyncInterval.HOUR_1 -> R.string.background_sync_interval_1h
+        BackgroundSyncInterval.HOURS_4 -> R.string.background_sync_interval_4h
+        BackgroundSyncInterval.HOURS_12 -> R.string.background_sync_interval_12h
+        BackgroundSyncInterval.DAILY -> R.string.background_sync_interval_daily
+    }
 
 @Composable
 fun DataManagementSection(
@@ -156,54 +247,6 @@ fun DataManagementSection(
         }
     }
 }
-
-@Composable
-private fun SyncPreferenceItem(
-    uiState: SyncSettingsState,
-    onEvent: (SettingsEvent) -> Unit,
-) {
-    val syncPrefLabels = SyncPreference.entries.associateWith { stringResource(it.labelRes()) }
-    DropdownPreferenceItem(
-        label = stringResource(R.string.settings_foreground_sync_label),
-        selectedDisplayValue = stringResource(uiState.syncPreference.labelRes()),
-        options = SyncPreference.entries,
-        onOptionSelected = { onEvent(SettingsEvent.SyncPreferenceChanged(it)) },
-        optionLabel = { syncPrefLabels[it] ?: it.name },
-        modifier =
-            Modifier.padding(
-                horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
-            ),
-    )
-}
-
-@Composable
-private fun SyncIntervalItem(
-    uiState: SyncSettingsState,
-    onEvent: (SettingsEvent) -> Unit,
-) {
-    val intervalLabels = (1..24).associateWith { stringResource(R.string.settings_sync_interval_display, it) }
-    DropdownPreferenceItem(
-        label = stringResource(R.string.settings_sync_interval_label),
-        selectedDisplayValue = stringResource(R.string.settings_sync_interval_display, uiState.syncIntervalHours),
-        options = (1..24).toList(),
-        onOptionSelected = { onEvent(SettingsEvent.SyncIntervalChanged(it)) },
-        optionLabel = { intervalLabels[it] ?: "${it}h" },
-        modifier =
-            Modifier.padding(
-                horizontal = SettingsConstants.HORIZONTAL_PADDING,
-                vertical = SettingsConstants.VERTICAL_SPACER_SMALL,
-            ),
-    )
-}
-
-@StringRes
-private fun SyncPreference.labelRes(): Int =
-    when (this) {
-        SyncPreference.NEVER -> R.string.sync_preference_never
-        SyncPreference.ALWAYS -> R.string.sync_preference_always
-        SyncPreference.BY_TIME -> R.string.sync_preference_by_time
-    }
 
 /**
  * Lets the user pick the source device individually for each Health Connect data
