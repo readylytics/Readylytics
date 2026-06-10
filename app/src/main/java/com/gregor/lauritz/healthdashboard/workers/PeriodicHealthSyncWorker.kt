@@ -50,12 +50,7 @@ class PeriodicHealthSyncWorker
                     success = true
                     Result.success()
                 } else {
-                    val exception = result.exceptionOrNull()
-                    if (exception is SecurityException || exception is HealthConnectPermissionRevokedException) {
-                        Result.failure()
-                    } else {
-                        Result.retry()
-                    }
+                    Result.retry()
                 }
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) Log.e(TAG, "Periodic sync worker failed", e)

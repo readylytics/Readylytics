@@ -156,7 +156,8 @@ class SettingsRepository
 
         suspend fun updateBackgroundSyncEnabled(enabled: Boolean) = sync.updateBackgroundSyncEnabled(enabled)
 
-        suspend fun updateBackgroundSyncIntervalMinutes(minutes: Int) = sync.updateBackgroundSyncIntervalMinutes(minutes)
+        suspend fun updateBackgroundSyncIntervalMinutes(minutes: Int) =
+            sync.updateBackgroundSyncIntervalMinutes(minutes)
 
         suspend fun updateDriveAccountEmail(email: String?) = sync.updateDriveAccountEmail(email)
 
