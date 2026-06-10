@@ -28,6 +28,7 @@ class BackfillHistoricalBaselinesUseCase(
                     hrvMuMssd = summary.hrvMuMssd,
                     hrvSigmaMssd = summary.hrvSigmaMssd,
                     rhrBpm = summary.rhrBpm,
+                    rhrSigma = summary.rhrSigma,
                     baselineCalculatedAtDate = summary.baselineCalculatedAtDate,
                     hrMax = summary.hrMax,
                     snapshotProfile = summary.snapshotProfile,

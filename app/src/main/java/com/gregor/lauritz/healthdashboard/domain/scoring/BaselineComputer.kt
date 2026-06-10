@@ -69,12 +69,13 @@ class BaselineComputer
             toMs: Long,
             percentile: Int,
         ): List<Int> {
+            val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             val baselineFromMs =
                 Instant
                     .ofEpochMilli(fromMs)
                     .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
-            val sessions = sleepSessionDao.getBetween(baselineFromMs.coerceAtLeast(0), toMs)
+            val sessions = sleepSessionDao.getBetween(baselineFromMs.coerceAtLeast(0), inclusiveToMs)
             val sessionIds = sessions.map { it.id }
             if (sessionIds.isEmpty()) return emptyList()
 
@@ -119,6 +120,7 @@ class BaselineComputer
             toMs: Long,
             percentile: Int,
         ): Float? {
+            val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             val frozenSummary = dailySummaryDao.getByDate(fromMs)
             if (frozenSummary?.baselineCalculatedAtDate != null) {
                 logD(TAG) { "Baseline frozen; skipping RHR recompute" }
@@ -130,7 +132,7 @@ class BaselineComputer
                         fromMs,
                     ).minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
-            val sessions = sleepSessionDao.getBetween(baselineFromMs.coerceAtLeast(0), toMs)
+            val sessions = sleepSessionDao.getBetween(baselineFromMs.coerceAtLeast(0), inclusiveToMs)
             val validIds = filterValidBaselineSessions(sessions)
             if (validIds.isEmpty()) {
                 return ScoringConstants.DEFAULT_RHR_BPM
@@ -265,6 +267,7 @@ class BaselineComputer
             toMs: Long,
             hrvBaselineOverride: Float?,
         ): Int? {
+            val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             if (hrvBaselineOverride != null) return hrvBaselineOverride.roundToInt()
             val frozenSummary = dailySummaryDao.getByDate(fromMs)
             if (frozenSummary?.baselineCalculatedAtDate != null) {
@@ -280,7 +283,7 @@ class BaselineComputer
                 sleepSessionDao
                     .getBetween(
                         baselineFromMs.coerceAtLeast(0),
-                        toMs,
+                        inclusiveToMs,
                     )
             val validIds = filterValidBaselineSessions(historicalSessions, assumeCoverageValid = true)
             if (validIds.isEmpty()) return null
@@ -307,6 +310,7 @@ class BaselineComputer
             toMs: Long,
             excludeSessionId: String?,
         ): HrvWindows? {
+            val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             val frozenSummary = dailySummaryDao.getByDate(fromMs)
             if (frozenSummary?.baselineCalculatedAtDate != null) {
                 logD(
@@ -326,7 +330,7 @@ class BaselineComputer
                 sleepSessionDao
                     .getBetween(
                         sigmaWindowFromMs.coerceAtLeast(0),
-                        toMs,
+                        inclusiveToMs,
                     ).filter { it.id != excludeSessionId }
             val validIds = filterValidBaselineSessions(historicalSessions, assumeCoverageValid = true)
             val hrvMap = hrvDao.getSleepRmssdForSessionsMap(validIds)
@@ -407,7 +411,13 @@ class BaselineComputer
             val sessionsAsc = sleepSessionDao.getBetween(prefetchFromMs, maxDayEndMs)
             if (sessionsAsc.isEmpty()) {
                 return summaries.associate {
-                    it.dateMidnightMs to BackfillBaseline(emptyList(), emptyList(), ScoringConstants.DEFAULT_RHR_BPM)
+                    it.dateMidnightMs to
+                        BackfillBaseline(
+                            emptyList(),
+                            emptyList(),
+                            ScoringConstants.DEFAULT_RHR_BPM,
+                            emptyList(),
+                        )
                 }
             }
 
@@ -442,7 +452,25 @@ class BaselineComputer
                         } else {
                             null
                         }
-                    BackfillNight(session.id, session.startTime, session.endTime, hrvMean, canContribute, nadirBpm)
+                    val rhrPercentileBpm =
+                        if (samples != null && samples.isNotEmpty()) {
+                            val idx =
+                                ((percentile / 100.0) * (samples.size - 1))
+                                    .roundToInt()
+                                    .coerceIn(0, samples.size - 1)
+                            samples[idx].beatsPerMinute
+                        } else {
+                            null
+                        }
+                    BackfillNight(
+                        session.id,
+                        session.startTime,
+                        session.endTime,
+                        hrvMean,
+                        canContribute,
+                        nadirBpm,
+                        rhrPercentileBpm,
+                    )
                 }
 
             return summaries.associate { summary ->
@@ -493,8 +521,16 @@ class BaselineComputer
                         }.mapNotNull { it.nadirBpm }
                         .toList()
                 val rhrBpm = if (nadirs.isEmpty()) ScoringConstants.DEFAULT_RHR_BPM else nadirs.median()
+                val rhrHistory =
+                    nights
+                        .asSequence()
+                        .filter {
+                            it.startTime >= rhrFromMs &&
+                                it.endTime <= dayEndMs
+                        }.mapNotNull { it.rhrPercentileBpm }
+                        .toList()
 
-                dayMidnightMs to BackfillBaseline(muHistory, sigmaHistory, rhrBpm)
+                dayMidnightMs to BackfillBaseline(muHistory, sigmaHistory, rhrBpm, rhrHistory)
             }
         }
 
@@ -556,6 +592,7 @@ class BaselineComputer
             val muHistory: List<Float>,
             val sigmaHistory: List<Float>,
             val rhrBpm: Float,
+            val rhrHistory: List<Int> = emptyList(),
         )
 
         /** Pre-derived per-night values used to build each day's windows in memory. */
@@ -566,5 +603,6 @@ class BaselineComputer
             val hrvMean: Float?,
             val canContributeToBaseline: Boolean,
             val nadirBpm: Float?,
+            val rhrPercentileBpm: Int?,
         )
     }

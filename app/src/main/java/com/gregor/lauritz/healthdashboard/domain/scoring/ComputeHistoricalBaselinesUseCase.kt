@@ -4,6 +4,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
+import com.gregor.lauritz.healthdashboard.domain.util.stdev
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -42,11 +43,17 @@ class ComputeHistoricalBaselinesUseCase(
 
             val hrvMu = lnMuHistory.average().toFloat()
             val hrvSigma = loadScoringStrategy.hrvSigma(lnSigmaHistory, sigmaPrior)
+            val rhrSigma =
+                windows.rhrHistory
+                    .takeIf { it.size > 1 }
+                    ?.stdev()
+                    ?.takeIf { it > 0f }
 
             summary.copy(
                 hrvMuMssd = hrvMu,
                 hrvSigmaMssd = hrvSigma,
                 rhrBpm = windows.rhrBpm,
+                rhrSigma = rhrSigma,
                 hrMax = hrMax,
                 snapshotProfile = profile.name,
                 paiScalingFactor = paiScalingFactor,

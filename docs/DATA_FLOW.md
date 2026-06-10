@@ -180,7 +180,7 @@ keep Android types out of `domain/scoring/**`.
 ### 2.4 Baselines & calibration
 
 `domain/scoring/BaselineComputer.kt` computes and snapshots per-day frozen baselines:
-`hrMax`, `rhrBpm`, HRV `mu`/`sigma` (with profile-prior blending for new users),
+`hrMax`, `rhrBpm`, `rhrSigma`, HRV `mu`/`sigma` (with profile-prior blending for new users),
 `paiScalingFactor`, and physiology profile. Baselines freeze once
 calibrated (≥ 7 valid sessions); before that, `ScoringRepositoryImpl` reports
 **"Calibrating"** and emits tentative metrics only.
@@ -190,7 +190,11 @@ The historical backfill (`domain/scoring/BackfillHistoricalBaselinesUseCase` →
 history at app start. It resolves all per-day HRV/RHR windows via the **batched**
 `BaselineComputer.computeBackfillBaselines()` — a fixed, small number of DB reads for the
 whole range instead of ~11 queries per day — which reproduces the per-day
-`compute*Between` window/validity/nadir math exactly (guarded by an equivalence test). The
+`compute*Between` window/validity/nadir math exactly. Daily baseline upper bounds are
+treated as exclusive next-day midnights before hitting Room's inclusive `getBetween`
+predicate, so a session ending exactly at the next midnight belongs to the next day. The
+same backfill path also carries the RHR history used to freeze `rhrSigma` for later RHR
+z-score restoration (guarded by equivalence tests). The
 per-day UPDATEs are collapsed into a single transaction by the backfill use-case.
 
 ### 2.5 Sleep & Load scoring strategies

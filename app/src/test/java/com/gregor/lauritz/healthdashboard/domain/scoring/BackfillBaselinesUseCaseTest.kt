@@ -10,6 +10,7 @@ import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.repository.TransactionRunner
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
+import com.gregor.lauritz.healthdashboard.domain.util.stdev
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -80,10 +81,11 @@ class BackfillBaselinesUseCaseTest {
         mu: List<Float>,
         sigma: List<Float> = mu,
         rhr: Float = 60f,
+        rhrHistory: List<Int> = emptyList(),
     ) {
         coEvery { computer.computeBackfillBaselines(any(), any()) } answers {
             firstArg<List<DailySummaryEntity>>().associate {
-                it.dateMidnightMs to BaselineComputer.BackfillBaseline(mu, sigma, rhr)
+                it.dateMidnightMs to BaselineComputer.BackfillBaseline(mu, sigma, rhr, rhrHistory)
             }
         }
     }
@@ -593,7 +595,7 @@ class BackfillBaselinesUseCaseTest {
 
             assertEquals(2, count)
             coVerify(exactly = 2) {
-                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
             }
         }
 
@@ -617,7 +619,7 @@ class BackfillBaselinesUseCaseTest {
             assertEquals(2, count)
             coVerify(exactly = 1) { dao.wipeDerivedBaselines() }
             coVerify(exactly = 2) {
-                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
             }
         }
 
@@ -687,12 +689,62 @@ class BackfillBaselinesUseCaseTest {
                     any(),
                     any(),
                     any(),
+                    any(),
                 )
             } returns Unit
 
             buildBackfill(dao, defaultSettingsRepo(), compute).execute()
 
             assertEquals(summary.dateMidnightMs, capturedMs.captured)
+        }
+
+    @Test
+    fun `execute writes rhr sigma to frozen baseline snapshot`() =
+        runTest {
+            val summary = makeSummary(daysAgo = 6)
+            val dao = mockk<DailySummaryDao>(relaxed = true)
+            coEvery { dao.getAllSummaries() } returns listOf(summary)
+
+            val (bc, ls, compute) = buildComputeUseCase()
+            val rhrHistory = listOf(52, 54, 56, 58)
+            stubBackfill(bc, listOf(50f), listOf(50f), 60f, rhrHistory)
+            coEvery { ls.hrvSigma(any(), any()) } returns 0.18f
+
+            val capturedRhrSigma = slot<Float>()
+            coEvery {
+                dao.updateBaselines(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    capture(capturedRhrSigma),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns Unit
+
+            buildBackfill(dao, defaultSettingsRepo(), compute).execute()
+
+            coVerify(exactly = 1) {
+                dao.updateBaselines(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    capture(capturedRhrSigma),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            }
+            assertFloatEquals(rhrHistory.stdev(), capturedRhrSigma.captured, msg = "rhrSigma")
         }
 
     @Test
@@ -707,7 +759,7 @@ class BackfillBaselinesUseCaseTest {
 
             assertEquals(0, count)
             coVerify(exactly = 0) {
-                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+                dao.updateBaselines(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
             }
         }
 
