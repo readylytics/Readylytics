@@ -1,8 +1,8 @@
 package com.gregor.lauritz.healthdashboard.ui.settings
 
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
-import com.gregor.lauritz.healthdashboard.data.preferences.FallbackThemeColor
 import com.gregor.lauritz.healthdashboard.data.preferences.BackupSchedule
+import com.gregor.lauritz.healthdashboard.data.preferences.FallbackThemeColor
 import com.gregor.lauritz.healthdashboard.data.preferences.Gender
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.SyncPreference
