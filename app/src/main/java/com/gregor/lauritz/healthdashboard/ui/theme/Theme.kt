@@ -13,6 +13,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -108,9 +109,12 @@ private val LightColorScheme =
         outlineVariant = Color(0xFFC4C7C5),
     )
 
+private fun onColorFor(seed: Color): Color = if (seed.luminance() > 0.179f) Color.Black else Color.White
+
 private fun fallbackLightScheme(seed: Color): ColorScheme =
     LightColorScheme.copy(
         primary = seed,
+        onPrimary = onColorFor(seed),
         primaryContainer = PrimaryContainerLight.harmonizeWith(seed),
         onPrimaryContainer = OnPrimaryContainerLight,
         secondary = PurpleGrey40.harmonizeWith(seed),
@@ -120,6 +124,7 @@ private fun fallbackLightScheme(seed: Color): ColorScheme =
 private fun fallbackDarkScheme(seed: Color): ColorScheme =
     DarkColorScheme.copy(
         primary = seed,
+        onPrimary = onColorFor(seed),
         primaryContainer = PrimaryContainerDark.harmonizeWith(seed),
         onPrimaryContainer = OnPrimaryContainerDark,
         secondary = PurpleGrey80.harmonizeWith(seed),

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -23,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -56,6 +58,7 @@ fun FallbackThemeColorSelector(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .padding(top = 8.dp)
                     .horizontalScroll(rememberScrollState())
                     .selectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -63,7 +66,6 @@ fun FallbackThemeColorSelector(
             FallbackThemeColor.entries.forEach { option ->
                 val isSelected = option == selectedColor
                 val label = stringResource(option.labelRes())
-                val selectedLabel = stringResource(R.string.fallback_color_selected, label)
                 Box(
                     modifier =
                         Modifier
@@ -79,7 +81,7 @@ fun FallbackThemeColorSelector(
                                 onClick = { onColorSelected(option) },
                                 role = Role.RadioButton,
                             ).semantics {
-                                contentDescription = if (isSelected) selectedLabel else label
+                                contentDescription = label
                             },
                     contentAlignment = Alignment.Center,
                 ) {
@@ -96,7 +98,5 @@ fun FallbackThemeColorSelector(
     }
 }
 
-private fun contentColorFor(background: Color): Color {
-    val luminance = 0.299 * background.red + 0.587 * background.green + 0.114 * background.blue
-    return if (luminance > 0.5) Color.Black else Color.White
-}
+private fun contentColorFor(background: Color): Color =
+    if (background.luminance() > 0.179f) Color.Black else Color.White

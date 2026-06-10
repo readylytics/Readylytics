@@ -340,7 +340,6 @@
     <string name="fallback_color_turquoise">Turquoise</string>
     <string name="fallback_color_green">Green</string>
     <string name="fallback_color_recovery_blue">Recovery blue</string>
-    <string name="fallback_color_selected">%1$s selected</string>
     <string name="onboarding_units_label">Measurement units</string>
     <string name="onboarding_hc_permissions_label">Health Connect permissions</string>
     <string name="onboarding_hc_permissions_desc">This app needs access to Sleep, Heart Rate, HRV, and Exercise data from Health Connect to calculate your scores.</string>

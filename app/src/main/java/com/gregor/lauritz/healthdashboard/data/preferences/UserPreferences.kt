@@ -138,7 +138,15 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         installDate = installDate,
         circadianThresholdOverride = if (hasCircadianThresholdOverride()) circadianThresholdOverride else null,
         dynamicColorEnabled = dynamicColorEnabled,
-        fallbackThemeColor = FallbackThemeColor.valueOf(fallbackThemeColor.name.removePrefix("FALLBACK_")),
+        fallbackThemeColor =
+            when (fallbackThemeColor) {
+                FallbackThemeColorProto.FALLBACK_BRAND_PURPLE -> FallbackThemeColor.BRAND_PURPLE
+                FallbackThemeColorProto.FALLBACK_BRAND_BLUE -> FallbackThemeColor.BRAND_BLUE
+                FallbackThemeColorProto.FALLBACK_TURQUOISE -> FallbackThemeColor.TURQUOISE
+                FallbackThemeColorProto.FALLBACK_GREEN -> FallbackThemeColor.GREEN
+                FallbackThemeColorProto.FALLBACK_RECOVERY_BLUE -> FallbackThemeColor.RECOVERY_BLUE
+                else -> SettingsDefaults.FALLBACK_THEME_COLOR
+            },
         trimpModel =
             when (trimpMethod) {
                 TrimpMethodProto.TRIMP_ITRIMP -> TrimpModel.I_TRIMP

@@ -57,7 +57,7 @@ internal class UIPreferences
             dataStore.updateData {
                 it
                     .toBuilder()
-                    .setFallbackThemeColor(FallbackThemeColorProto.valueOf("FALLBACK_${color.name}"))
+                    .setFallbackThemeColor(color.toProto())
                     .build()
             }
         }

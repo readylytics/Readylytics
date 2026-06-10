@@ -38,9 +38,7 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
             .setRhrWarningThreshold(SettingsDefaults.RHR_WARNING_THRESHOLD)
             .setAppTheme(AppThemeProto.valueOf("THEME_${SettingsDefaults.APP_THEME.name}"))
             .setDynamicColorEnabled(SettingsDefaults.DYNAMIC_COLOR_ENABLED)
-            .setFallbackThemeColor(
-                FallbackThemeColorProto.valueOf("FALLBACK_${SettingsDefaults.FALLBACK_THEME_COLOR.name}"),
-            )
+            .setFallbackThemeColor(SettingsDefaults.FALLBACK_THEME_COLOR.toProto())
             .setBackupSchedule(BackupScheduleProto.valueOf("BACKUP_${SettingsDefaults.BACKUP_SCHEDULE.name}"))
             .setLastBackupTimestamp(SettingsDefaults.LAST_BACKUP_TIMESTAMP)
             .setConsistencyThresholdMinutes(SettingsDefaults.CONSISTENCY_THRESHOLD_MINUTES)
@@ -75,6 +73,15 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
         t.writeTo(output)
     }
 }
+
+fun FallbackThemeColor.toProto(): FallbackThemeColorProto =
+    when (this) {
+        FallbackThemeColor.BRAND_PURPLE -> FallbackThemeColorProto.FALLBACK_BRAND_PURPLE
+        FallbackThemeColor.BRAND_BLUE -> FallbackThemeColorProto.FALLBACK_BRAND_BLUE
+        FallbackThemeColor.TURQUOISE -> FallbackThemeColorProto.FALLBACK_TURQUOISE
+        FallbackThemeColor.GREEN -> FallbackThemeColorProto.FALLBACK_GREEN
+        FallbackThemeColor.RECOVERY_BLUE -> FallbackThemeColorProto.FALLBACK_RECOVERY_BLUE
+    }
 
 fun UserPreferences.toProto(): UserPreferencesProto {
     val domain = this
@@ -116,7 +123,7 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         .setRhrWarningThreshold(domain.rhrWarningThreshold)
         .setAppTheme(AppThemeProto.valueOf("THEME_${domain.appTheme.name}"))
         .setDynamicColorEnabled(domain.dynamicColorEnabled)
-        .setFallbackThemeColor(FallbackThemeColorProto.valueOf("FALLBACK_${domain.fallbackThemeColor.name}"))
+        .setFallbackThemeColor(domain.fallbackThemeColor.toProto())
         .setBackupSchedule(BackupScheduleProto.valueOf("BACKUP_${domain.backupSchedule.name}"))
         .setLastBackupTimestamp(domain.lastBackupTimestamp)
         .setConsistencyThresholdMinutes(domain.consistencyThresholdMinutes)
