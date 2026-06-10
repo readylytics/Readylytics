@@ -53,6 +53,15 @@ internal class UIPreferences
             dataStore.updateData { it.toBuilder().setDynamicColorEnabled(enabled).build() }
         }
 
+        suspend fun updateFallbackThemeColor(color: FallbackThemeColor) {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setFallbackThemeColor(FallbackThemeColorProto.valueOf("FALLBACK_${color.name}"))
+                    .build()
+            }
+        }
+
         suspend fun updatePrimaryDevice(deviceName: String?) {
             dataStore.updateData { builder ->
                 if (deviceName != null) {

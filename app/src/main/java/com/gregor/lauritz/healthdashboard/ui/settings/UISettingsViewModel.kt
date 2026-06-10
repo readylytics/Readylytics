@@ -32,6 +32,7 @@ class UISettingsViewModel
                     UIState(
                         appTheme = prefs.appTheme,
                         dynamicColorEnabled = prefs.dynamicColorEnabled,
+                        fallbackThemeColor = prefs.fallbackThemeColor,
                         paiScalingFactor = prefs.paiScalingFactor,
                         stepGoal = prefs.stepGoal,
                         retentionDaysEnabled = prefs.retentionDaysEnabled,
@@ -55,6 +56,8 @@ class UISettingsViewModel
                     viewModelScope.launch { settingsRepo.updateAppTheme(theme = event.theme) }
                 is SettingsEvent.DynamicColorEnabledChanged ->
                     viewModelScope.launch { settingsRepo.updateDynamicColorEnabled(enabled = event.enabled) }
+                is SettingsEvent.FallbackThemeColorChanged ->
+                    viewModelScope.launch { settingsRepo.updateFallbackThemeColor(color = event.color) }
                 is SettingsEvent.PaiScalingFactorChanged -> {
                     val validation = SettingsValidators.PAI_SCALING_FACTOR_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {

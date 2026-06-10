@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -17,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.google.android.material.color.MaterialColors
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
+import com.gregor.lauritz.healthdashboard.data.preferences.FallbackThemeColor
 
 data class StatusColors(
     val optimal: Color,
@@ -106,6 +108,24 @@ private val LightColorScheme =
         outlineVariant = Color(0xFFC4C7C5),
     )
 
+private fun fallbackLightScheme(seed: Color): ColorScheme =
+    LightColorScheme.copy(
+        primary = seed,
+        primaryContainer = PrimaryContainerLight.harmonizeWith(seed),
+        onPrimaryContainer = OnPrimaryContainerLight,
+        secondary = PurpleGrey40.harmonizeWith(seed),
+        tertiary = Pink40.harmonizeWith(seed),
+    )
+
+private fun fallbackDarkScheme(seed: Color): ColorScheme =
+    DarkColorScheme.copy(
+        primary = seed,
+        primaryContainer = PrimaryContainerDark.harmonizeWith(seed),
+        onPrimaryContainer = OnPrimaryContainerDark,
+        secondary = PurpleGrey80.harmonizeWith(seed),
+        tertiary = Pink80.harmonizeWith(seed),
+    )
+
 @Composable
 fun FitDashboardTheme(
     appTheme: AppTheme = AppTheme.SYSTEM,
@@ -113,6 +133,8 @@ fun FitDashboardTheme(
     content: @Composable () -> Unit,
 ) {
     val dynamicColor = viewModel.dynamicColorFlow.collectAsState(initial = true).value
+    val fallbackThemeColor =
+        viewModel.fallbackThemeColorFlow.collectAsState(initial = FallbackThemeColor.BRAND_PURPLE).value
     val darkTheme =
         when (appTheme) {
             AppTheme.LIGHT -> false
@@ -127,8 +149,8 @@ fun FitDashboardTheme(
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             }
 
-            darkTheme -> DarkColorScheme
-            else -> LightColorScheme
+            darkTheme -> fallbackDarkScheme(Color(fallbackThemeColor.seedColor))
+            else -> fallbackLightScheme(Color(fallbackThemeColor.seedColor))
         }
 
     val semanticColors =

@@ -57,6 +57,7 @@ data class UserPreferences(
     /** Encrypted ciphertext via EncryptionManager. DO NOT use as plaintext. Decrypt before reading. */
     val circadianThresholdOverride: String? = SettingsDefaults.CIRCADIAN_THRESHOLD_OVERRIDE,
     val dynamicColorEnabled: Boolean = SettingsDefaults.DYNAMIC_COLOR_ENABLED,
+    val fallbackThemeColor: FallbackThemeColor = SettingsDefaults.FALLBACK_THEME_COLOR,
     val trimpModel: TrimpModel = SettingsDefaults.TRIMP_MODEL,
     val banisterMultiplier: Float = PhysiologyProfile.GENERAL.banisterMultiplier,
     val chengBeta: Float = PhysiologyProfile.GENERAL.defaultChengBeta,
@@ -137,6 +138,7 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         installDate = installDate,
         circadianThresholdOverride = if (hasCircadianThresholdOverride()) circadianThresholdOverride else null,
         dynamicColorEnabled = dynamicColorEnabled,
+        fallbackThemeColor = FallbackThemeColor.valueOf(fallbackThemeColor.name.removePrefix("FALLBACK_")),
         trimpModel =
             when (trimpMethod) {
                 TrimpMethodProto.TRIMP_ITRIMP -> TrimpModel.I_TRIMP

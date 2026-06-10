@@ -38,6 +38,9 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
             .setRhrWarningThreshold(SettingsDefaults.RHR_WARNING_THRESHOLD)
             .setAppTheme(AppThemeProto.valueOf("THEME_${SettingsDefaults.APP_THEME.name}"))
             .setDynamicColorEnabled(SettingsDefaults.DYNAMIC_COLOR_ENABLED)
+            .setFallbackThemeColor(
+                FallbackThemeColorProto.valueOf("FALLBACK_${SettingsDefaults.FALLBACK_THEME_COLOR.name}"),
+            )
             .setBackupSchedule(BackupScheduleProto.valueOf("BACKUP_${SettingsDefaults.BACKUP_SCHEDULE.name}"))
             .setLastBackupTimestamp(SettingsDefaults.LAST_BACKUP_TIMESTAMP)
             .setConsistencyThresholdMinutes(SettingsDefaults.CONSISTENCY_THRESHOLD_MINUTES)
@@ -113,6 +116,7 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         .setRhrWarningThreshold(domain.rhrWarningThreshold)
         .setAppTheme(AppThemeProto.valueOf("THEME_${domain.appTheme.name}"))
         .setDynamicColorEnabled(domain.dynamicColorEnabled)
+        .setFallbackThemeColor(FallbackThemeColorProto.valueOf("FALLBACK_${domain.fallbackThemeColor.name}"))
         .setBackupSchedule(BackupScheduleProto.valueOf("BACKUP_${domain.backupSchedule.name}"))
         .setLastBackupTimestamp(domain.lastBackupTimestamp)
         .setConsistencyThresholdMinutes(domain.consistencyThresholdMinutes)

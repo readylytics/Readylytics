@@ -1,6 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.theme
 
 import androidx.lifecycle.ViewModel
+import com.gregor.lauritz.healthdashboard.data.preferences.FallbackThemeColor
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
@@ -13,4 +14,5 @@ class ThemeViewModel
         private val settingsRepo: SettingsRepository,
     ) : ViewModel() {
         val dynamicColorFlow: Flow<Boolean> = settingsRepo.dynamicColorEnabled
+        val fallbackThemeColorFlow: Flow<FallbackThemeColor> = settingsRepo.fallbackThemeColor
     }
