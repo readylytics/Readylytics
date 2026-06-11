@@ -19,11 +19,11 @@ kotlin {
 }
 
 android {
-    namespace = "com.gregor.lauritz.healthdashboard"
+    namespace = "app.readylytics.health"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.gregor.lauritz.healthdashboard"
+        applicationId = "app.readylytics.health"
         minSdk = 26
         targetSdk = 37
         versionCode = 1
