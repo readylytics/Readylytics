@@ -133,6 +133,13 @@ fun buildCardDataMap(
                             onRestore = onRestoreInsights,
                             modifier = Modifier.fillMaxWidth(),
                         )
+
+                    InsightType.WORKOUT_IMPACT,
+                    InsightType.REST_DAY_SUCCESS,
+                    InsightType.REST_DAY_NO_IMPACT,
+                    -> {
+                        // Pending implementation in Task 6
+                    }
                 }
             }
         }
