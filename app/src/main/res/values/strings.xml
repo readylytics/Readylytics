@@ -9,12 +9,14 @@
 
     <!-- Historical Health Connect resync -->
     <string name="resync_button_label">Resync Health Connect data</string>
-    <string name="resync_button_description">Re-fetch and recalculate your full history within your retention period. Runs in the background — you can keep using the app.</string>
+    <string name="resync_button_description">Re-fetch and recalculate your full history within your
+        retention period. Runs in the background — you can keep using the app.</string>
     <string name="resync_dialog_continue_in_background">Continue in background</string>
     <string name="resync_notification_title">Recalculating health history</string>
     <string name="resync_notification_preparing">Preparing…</string>
     <string name="resync_channel_name">Health resync</string>
-    <string name="resync_channel_description">Progress while recalculating your full Health Connect history.</string>
+    <string name="resync_channel_description">Progress while recalculating your full Health Connect
+        history.</string>
 
     <!-- Sync settings: app-open / background sync toggles -->
     <string name="sync_on_app_open_label">Sync on app open</string>
@@ -28,42 +30,64 @@
     <string name="background_sync_interval_daily">Daily</string>
     <string name="background_sync_notification_title">Readylytics is syncing health data…</string>
     <string name="background_sync_channel_name">Background sync</string>
-    <string name="background_sync_channel_description">Silent notification shown briefly while background Health Connect sync runs.</string>
-    <string name="health_connect_unavailable_message">Health Connect is not installed on this device.\nInstall it from the Play Store.</string>
+    <string name="background_sync_channel_description">Silent notification shown briefly while
+        background Health Connect sync runs.</string>
+    <string name="health_connect_unavailable_message">Health Connect is not installed on this
+        device.\nInstall it from the Play Store.</string>
 
     <!-- Tooltips -->
     <string name="tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
     <string name="tooltip_deep_sleep">Time in Stage 3 (Physical repair).</string>
     <string name="tooltip_rem_sleep">Time in Rapid Eye Movement.</string>
 
-    <string name="tooltip_pai">Your 7-day rolling heart health score.\nBased on how often and how hard you challenge your heart.\n\n• 100+: Optimal\n• 75-99: Neutral\n• 50-74: Warning\n• &lt; 50: Poor</string>
-    <string name="tooltip_readiness">Preparation for stress based on recent load &amp; recovery.\n\n• 85–100: Peak\n• 60–84: Maintain\n• 30–59: Caution\n• &lt; 30: High Fatigue</string>
+    <string name="tooltip_pai">Your 7-day rolling heart health score.\nBased on how often and how
+        hard you challenge your heart.\n\n• 100+: Optimal\n• 75-99: Neutral\n• 50-74: Warning\n•
+        &lt; 50: Poor</string>
+    <string name="tooltip_readiness">Preparation for stress based on recent load &amp;
+        recovery.\n\n• 85–100: Peak\n• 60–84: Maintain\n• 30–59: Caution\n• &lt; 30: High Fatigue</string>
 
-    <string name="tooltip_sleep_score">Total quality of rest based on duration and cycles.\n\n• 80–100: Optimal\n• 60–79: Fair\n• &lt; 60: Poor</string>
+    <string name="tooltip_sleep_score">Total quality of rest based on duration and cycles.\n\n•
+        80–100: Optimal\n• 60–79: Fair\n• &lt; 60: Poor</string>
 
-    <string name="tooltip_circadian_score">Measures how regular your sleep schedule is.\n\nHigh consistency stabilizes your internal clock, improving deep sleep and energy levels.\n\n• ≥ 80%%: Optimal\n• 60–79%%: Neutral\n• 40–59%%: Warning\n• &lt; 40%%: Poor\n\nConsistency Window: ±%1$d min grace period before score drops.</string>
+    <string name="tooltip_circadian_score">Measures how regular your sleep schedule is.\n\nHigh
+        consistency stabilizes your internal clock, improving deep sleep and energy levels.\n\n• ≥
+        80%%: Optimal\n• 60–79%%: Neutral\n• 40–59%%: Warning\n• &lt; 40%%: Poor\n\nConsistency
+        Window: ±%1$d min grace period before score drops.</string>
 
-    <string name="tooltip_sleep_rhr">Average heart rate during sleep.\nTarget: lower or equal to your 30-day rolling average. (Lower = Recovered)</string>
+    <string name="tooltip_sleep_rhr">Average heart rate during sleep.\nTarget: lower or equal to
+        your 30-day rolling average. (Lower = Recovered)</string>
     <string name="tooltip_sleep_rhr_baseline">\n\nBaseline: %1$d bpm %2$s (%3$d bpm)</string>
     <string name="tooltip_sleep_rhr_no_baseline">\n\nNot enough data to calculate baseline.</string>
 
-    <string name="tooltip_sleep_hrv">Variation between heartbeats in milliseconds.\nTarget: Within or above your 30-day rolling average. (Higher = Recovered)</string>
+    <string name="tooltip_sleep_hrv">Variation between heartbeats in milliseconds.\nTarget: Within
+        or above your 30-day rolling average. (Higher = Recovered)</string>
     <string name="tooltip_sleep_hrv_baseline">\n\nBaseline: %1$d ms %2$s (%3$d ms)</string>
-    <string name="tooltip_sleep_hrv_baseline_no_today">\n\nBaseline: %1$d ms (today\'s HRV not yet available)</string>
+    <string name="tooltip_sleep_hrv_baseline_no_today">\n\nBaseline: %1$d ms (today\'s HRV not yet
+        available)</string>
     <string name="tooltip_sleep_hrv_no_baseline">\n\nNot enough data to calculate baseline.</string>
-    <string name="tooltip_sleep_hrv_diagnostics">\n\nDiagnostics:\n• Z-score: %1$s\n• σ (ln-scale): %2$s</string>
+    <string name="tooltip_sleep_hrv_diagnostics">\n\nDiagnostics:\n• Z-score: %1$s\n• σ (ln-scale):
+        %2$s</string>
 
     <string name="tooltip_sleep_duration">Total time asleep last night.\n\nGoal: %1$s</string>
 
-    <string name="tooltip_resting_hr_baseline">Resting heart rate calculated as the low-percentile of the entire sleep period.\n\nBaseline: %1$d bpm %2$s (%3$d bpm)</string>
-    <string name="tooltip_resting_hr_no_baseline">Resting heart rate calculated as the low-percentile of the entire sleep period.\n\nNot enough data to calculate baseline.</string>
+    <string name="tooltip_resting_hr_baseline">Resting heart rate calculated as the low-percentile
+        of the entire sleep period.\n\nBaseline: %1$d bpm %2$s (%3$d bpm)</string>
+    <string name="tooltip_resting_hr_no_baseline">Resting heart rate calculated as the
+        low-percentile of the entire sleep period.\n\nNot enough data to calculate baseline.</string>
 
-    <string name="tooltip_strain_ratio">The ACWR (Acute:Chronic Workload Ratio). Compares recent training load to your baseline.\n\n• 0.8–1.3: In your normal range — sweet spot\n• 1.3–1.5: Load increasing; linear decay begins\n• 1.5–2.0: Overtraining; high injury risk\n• &gt;2.0: Severe overtraining; recovery needed\n• 0.5–0.8: Under-training\n• &lt;0.5: Severe under-training</string>
+    <string name="tooltip_strain_ratio">The ACWR (Acute:Chronic Workload Ratio). Compares recent
+        training load to your baseline.\n\n• 0.8–1.3: In your normal range — sweet spot\n• 1.3–1.5:
+        Load increasing; linear decay begins\n• 1.5–2.0: Overtraining; high injury risk\n• &gt;2.0:
+        Severe overtraining; recovery needed\n• 0.5–0.8: Under-training\n• &lt;0.5: Severe
+        under-training</string>
 
     <!-- Device Selection -->
     <string name="device_selection_title">Choose your primary device</string>
-    <string name="device_selection_description">We found data from multiple sources. Pick the device whose readings should drive your scores — we\'ll fall back to other devices for days it didn\'t record.</string>
-    <string name="device_selection_no_devices">No specific devices were detected. We\'ll use all available data sources.</string>
+    <string name="device_selection_description">We found data from multiple sources. Pick the device
+        whose readings should drive your scores — we\'ll fall back to other devices for days it
+        didn\'t record.</string>
+    <string name="device_selection_no_devices">No specific devices were detected. We\'ll use all
+        available data sources.</string>
     <string name="device_selection_use_all">Use all devices</string>
     <string name="device_selection_continue_with">Continue with %1$s</string>
     <string name="device_selection_dialog_title">Select primary device</string>
@@ -76,7 +100,8 @@
 
     <!-- Data Sources Section -->
     <string name="data_sources_title">Data sources</string>
-    <string name="data_sources_description">Pick the source device individually for each health data type. "All devices" (the default) applies no source filter.</string>
+    <string name="data_sources_description">Pick the source device individually for each health data
+        type. "All devices" (the default) applies no source filter.</string>
     <string name="data_sources_all_devices">All devices</string>
     <string name="data_sources_calibrating">Calibrating…</string>
     <string name="device_this_phone">This Phone</string>
@@ -100,7 +125,8 @@
 
     <!-- Workout Recovery Section -->
     <string name="workout_recovery_header">Heart rate recovery</string>
-    <string name="workout_recovery_tooltip_description">A drop of 18+ bpm in the first minute is considered good.</string>
+    <string name="workout_recovery_tooltip_description">A drop of 18+ bpm in the first minute is
+        considered good.</string>
     <string name="workout_recovery_item_1min">1 Minute</string>
     <string name="workout_recovery_item_2min">2 Minutes</string>
     <string name="workout_recovery_item_3min">3 Minutes</string>
@@ -109,88 +135,184 @@
 
     <!-- About Sections -->
     <string name="about_header_sleep_score">## Sleep Score</string>
-    <string name="about_sleep_score_intro">A 100-point summary of last night\'s sleep, made of three parts:</string>
-    <string name="about_sleep_duration_bullet">**Duration (50%)** — how much sleep you got, compared to your goal (default 8 hours, configurable). Includes a small adjustment for how efficient your time in bed was.</string>
-    <string name="about_sleep_architecture_bullet">**Architecture (25%)** — how much of your sleep was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery happens; REM is when your brain processes memory and emotion. Targets are age-specific to account for the natural biological decline in deep sleep across the lifespan (Ohayon 2004).</string>
-    <string name="about_sleep_restoration_bullet">**Restoration (25%)** — how rested your estimated recovery-related physiology looks. We use the natural log of RMSSD (**lnRMSSD**) and overnight resting heart rate (**RHR**) to compute Z-scores. The log transformation is the scientific gold standard (Plews 2013, Buchheit 2014) for monitoring recovery, as it normalises the skewed distribution of raw HRV data.</string>
+    <string name="about_sleep_score_intro">A 100-point summary of last night\'s sleep, made of three
+        parts:</string>
+    <string name="about_sleep_duration_bullet">**Duration (50%)** — how much sleep you got, compared
+        to your goal (default 8 hours, configurable). Includes a small adjustment for how efficient
+        your time in bed was.</string>
+    <string name="about_sleep_architecture_bullet">**Architecture (25%)** — how much of your sleep
+        was deep (slow-wave) sleep and REM. Both matter. Deep sleep is when most physical recovery
+        happens; REM is when your brain processes memory and emotion. Targets are age-specific to
+        account for the natural biological decline in deep sleep across the lifespan (Ohayon 2004).</string>
+    <string name="about_sleep_restoration_bullet">**Restoration (25%)** — how rested your estimated
+        recovery-related physiology looks. We use the natural log of RMSSD (**lnRMSSD**) and
+        overnight resting heart rate (**RHR**) to compute Z-scores. The log transformation is the
+        scientific gold standard (Plews 2013, Buchheit 2014) for monitoring recovery, as it
+        normalises the skewed distribution of raw HRV data.</string>
     <string name="about_reading_score_label">**Reading the score**</string>
-    <string name="about_reading_score_excellent">**85-100** Excellent. You slept enough, your sleep stages looked balanced, and your autonomic recovery markers were strong.</string>
-    <string name="about_reading_score_good">**70-84** Good. Most components are healthy; one is slightly below your norm.</string>
-    <string name="about_reading_score_fair">**50-69** Fair. Likely a duration shortfall, fragmented sleep, or an off night for HRV/RHR.</string>
-    <string name="about_reading_score_poor">**Below 50** Poor. Multiple components are below typical. One bad night is rarely meaningful; a streak deserves attention.</string>
+    <string name="about_reading_score_excellent">**85-100** Excellent. You slept enough, your sleep
+        stages looked balanced, and your autonomic recovery markers were strong.</string>
+    <string name="about_reading_score_good">**70-84** Good. Most components are healthy; one is
+        slightly below your norm.</string>
+    <string name="about_reading_score_fair">**50-69** Fair. Likely a duration shortfall, fragmented
+        sleep, or an off night for HRV/RHR.</string>
+    <string name="about_reading_score_poor">**Below 50** Poor. Multiple components are below
+        typical. One bad night is rarely meaningful; a streak deserves attention.</string>
     <string name="about_tooltips_label">**Tooltips you\'ll see**</string>
-<string name="about_tooltip_deep_sleep">*Deep sleep target 15-25%* of total sleep, with the healthy range narrowing as you age. We do not penalize you if your wearable reports unusual numbers — wearable stage detection is imperfect.</string>
-    <string name="about_tooltip_rem">*REM target 20-25%* of total sleep, also drifting slightly downward with age.</string>
-    <string name="about_tooltip_efficiency">*Sleep efficiency above 85%* is considered good (American Academy of Sleep Medicine consensus).</string>
+    <string name="about_tooltip_deep_sleep">*Deep sleep target 15-25%* of total sleep, with the
+        healthy range narrowing as you age. We do not penalize you if your wearable reports unusual
+        numbers — wearable stage detection is imperfect.</string>
+    <string name="about_tooltip_rem">*REM target 20-25%* of total sleep, also drifting slightly
+        downward with age.</string>
+    <string name="about_tooltip_efficiency">*Sleep efficiency above 85%* is considered good
+        (American Academy of Sleep Medicine consensus).</string>
 
     <string name="about_header_circadian">## Circadian Consistency</string>
-    <string name="about_circadian_intro">This score asks: **do you go to bed and wake up at roughly the same times each day?** Schedule regularity is independently linked to better metabolic, cognitive, and cardiovascular outcomes — sometimes more strongly than sleep duration itself (Windred et al. 2023, UK Biobank).</string>
-    <string name="about_circadian_mechanism">We compare each night\'s bedtime and wake time to your *typical* (median) bedtime and wake time over the last 14 days. The bigger the deviation, the lower the daily score. The number you see is a 7-day rolling average so a single late night doesn\'t tank it.</string>
+    <string name="about_circadian_intro">This score asks: **do you go to bed and wake up at roughly
+        the same times each day?** Schedule regularity is independently linked to better metabolic,
+        cognitive, and cardiovascular outcomes — sometimes more strongly than sleep duration itself
+        (Windred et al. 2023, UK Biobank).</string>
+    <string name="about_circadian_mechanism">We compare each night\'s bedtime and wake time to your
+        *typical* (median) bedtime and wake time over the last 14 days. The bigger the deviation,
+        the lower the daily score. The number you see is a 7-day rolling average so a single late
+        night doesn\'t tank it.</string>
     <string name="about_threshold_label">**Tunable threshold (default 30 min)**</string>
     <string name="about_threshold_30">Within ±30 minutes of your typical times → full score.</string>
     <string name="about_threshold_30_90">30-90 minutes off → score decays linearly.</string>
     <string name="about_threshold_90">More than 90 minutes off → score is 0 for that day.</string>
-    <string name="about_threshold_tuning">You can tighten the threshold to 15 minutes if you\'re aiming for athlete-grade regularity, or relax it up to 90 minutes.</string>
-    <string name="about_circadian_caveat">**A caveat for shift workers and biphasic sleepers.** This metric is calibrated for people with one main sleep period per day. If you work rotating shifts or sleep in two segments by choice, the score may misclassify your schedule. We exclude any single sleep period under 3 hours from the median calculation so naps don\'t pull your \"typical\" times around — but this rule has imperfect coverage of every sleep pattern.</string>
+    <string name="about_threshold_tuning">You can tighten the threshold to 15 minutes if you\'re
+        aiming for athlete-grade regularity, or relax it up to 90 minutes.</string>
+    <string name="about_circadian_caveat">**A caveat for shift workers and biphasic sleepers.** This
+        metric is calibrated for people with one main sleep period per day. If you work rotating
+        shifts or sleep in two segments by choice, the score may misclassify your schedule. We
+        exclude any single sleep period under 3 hours from the median calculation so naps don\'t
+        pull your \"typical\" times around — but this rule has imperfect coverage of every sleep
+        pattern.</string>
 
     <string name="about_header_readiness">## Readiness</string>
-    <string name="about_readiness_intro">A daily 0-100 number reflecting whether your recent training load is in a healthy range.</string>
+    <string name="about_readiness_intro">A daily 0-100 number reflecting whether your recent
+        training load is in a healthy range.</string>
     <string name="about_readiness_averages">We compute two rolling averages of your training load:</string>
     <string name="about_atl_bullet">**Acute load (ATL)** — roughly the last week</string>
     <string name="about_ctl_bullet">**Chronic load (CTL)** — roughly the last 6 weeks</string>
-    <string name="about_readiness_ratio">The ratio (ATL ÷ CTL) tells us whether you\'ve recently spiked above your recent norm. Around 1.0 means you\'re training in line with your fitness; substantially above 1.0 means a relative spike.</string>
+    <string name="about_readiness_ratio">The ratio (ATL ÷ CTL) tells us whether you\'ve recently
+        spiked above your recent norm. Around 1.0 means you\'re training in line with your fitness;
+        substantially above 1.0 means a relative spike.</string>
     <string name="about_ratio_scoring_label">**How we score the ratio**</string>
     <string name="about_ratio_sweet_spot">0.8-1.3 → 100 (in your normal range — \"sweet spot\")</string>
     <string name="about_ratio_decay">1.3-1.5 → linearly decays</string>
     <string name="about_ratio_quadratic">Above 1.5 → smooth quadratic decay (Gabbett 2016)</string>
     <string name="about_readiness_tooltips_label">**Tooltips**</string>
-    <string name="about_tooltip_peak">*Peak (85-100)* — your recent load is consistent with your fitness.</string>
+    <string name="about_tooltip_peak">*Peak (85-100)* — your recent load is consistent with your
+        fitness.</string>
     <string name="about_tooltip_maintain">*Maintain (60-84)* — manageable load increase.</string>
-    <string name="about_tooltip_caution">*Caution (30-59)* — meaningful load spike; consider an easier day.</string>
+    <string name="about_tooltip_caution">*Caution (30-59)* — meaningful load spike; consider an
+        easier day.</string>
     <string name="about_tooltip_fatigue">*High Fatigue (&lt;30)* — large spike vs. your norm.</string>
-<string name="about_readiness_no_penalty">**What we don\'t do.** We don\'t penalize you for resting. A week of light activity will *not* drop Readiness; the score is designed for load *spikes*, not undertraining.</string>
+    <string name="about_readiness_no_penalty">**What we don\'t do.** We don\'t penalize you for
+        resting. A week of light activity will *not* drop Readiness; the score is designed for load
+        *spikes*, not undertraining.</string>
 
     <string name="about_header_needs">## What the app needs from you</string>
     <string name="about_hc_reads">We read from Android Health Connect:</string>
-    <string name="about_bullet_sleep_sessions">**Sleep sessions** (with stages if your device records them)</string>
+    <string name="about_bullet_sleep_sessions">**Sleep sessions** (with stages if your device
+        records them)</string>
     <string name="about_bullet_sleep_hr">**Heart rate** during sleep (for restoration metrics)</string>
     <string name="about_bullet_sleep_hrv">**Heart rate variability (RMSSD)** during sleep</string>
-    <string name="about_bullet_exercise_hr">**Heart rate** during exercise sessions (for training load)</string>
-    <string name="about_reads_only">The app reads only — it never writes. You can revoke access at any time in Health Connect settings.</string>
-    <string name="about_missing_data">If a particular metric is missing on a given day, we\'ll either:</string>
-    <string name="about_missing_data_partial">show the score with a \"data partial\" badge and explain which component was estimated, or</string>
-    <string name="about_missing_data_skip">skip the score for that day entirely if too much is missing (especially total sleep time).</string>
+    <string name="about_bullet_exercise_hr">**Heart rate** during exercise sessions (for training
+        load)</string>
+    <string name="about_reads_only">The app reads only — it never writes. You can revoke access at
+        any time in Health Connect settings.</string>
+    <string name="about_missing_data">If a particular metric is missing on a given day, we\'ll
+        either:</string>
+    <string name="about_missing_data_partial">show the score with a \"data partial\" badge and
+        explain which component was estimated, or</string>
+    <string name="about_missing_data_skip">skip the score for that day entirely if too much is
+        missing (especially total sleep time).</string>
 
     <string name="about_header_stabilise">## How long until your scores stabilise</string>
-    <string name="about_baselines_intro">Biological baselines take time to learn. We are explicit about the phases:</string>
-    <string name="about_phase_calibration">**Days 1-7 (Calibration).** We collect data. Sleep Score and Circadian Consistency are visible from the first night you log enough sleep, but **HRV-based Restoration is hidden** because a single night of HRV is not interpretable on its own. Readiness uses a placeholder fitness value based on the activity level you tell us during onboarding.</string>
-    <string name="about_phase_provisional">**Days 8-21 (Provisional).** We start showing all three scores, but Restoration uses a population-typical estimate of how much your HRV varies day to day. Expect more variability than the mature score.</string>
-    <string name="about_phase_maturing">**Days 22-60 (Maturing).** Your personal HRV mean is settled, and we begin blending your personal day-to-day variability with the population estimate. Confidence indicator visible.</string>
-    <string name="about_phase_mature">**Day 60+ (Mature).** All scores use your own personal baselines for both the average and the variability. This is when small day-to-day differences become trustworthy.</string>
-    <string name="about_tracker_frequency">If you wear your tracker only 3-5 nights a week, the timeline lengthens proportionally.</string>
+    <string name="about_baselines_intro">Biological baselines take time to learn. We are explicit
+        about the phases:</string>
+    <string name="about_phase_calibration">**Days 1-7 (Calibration).** We collect data. Sleep Score
+        and Circadian Consistency are visible from the first night you log enough sleep, but
+        **HRV-based Restoration is hidden** because a single night of HRV is not interpretable on
+        its own. Readiness uses a placeholder fitness value based on the activity level you tell us
+        during onboarding.</string>
+    <string name="about_phase_provisional">**Days 8-21 (Provisional).** We start showing all three
+        scores, but Restoration uses a population-typical estimate of how much your HRV varies day
+        to day. Expect more variability than the mature score.</string>
+    <string name="about_phase_maturing">**Days 22-60 (Maturing).** Your personal HRV mean is
+        settled, and we begin blending your personal day-to-day variability with the population
+        estimate. Confidence indicator visible.</string>
+    <string name="about_phase_mature">**Day 60+ (Mature).** All scores use your own personal
+        baselines for both the average and the variability. This is when small day-to-day
+        differences become trustworthy.</string>
+    <string name="about_tracker_frequency">If you wear your tracker only 3-5 nights a week, the
+        timeline lengthens proportionally.</string>
 
     <string name="about_header_glossary">## A short glossary</string>
-    <string name="about_glossary_hrv">**HRV (Heart Rate Variability)** — the millisecond-level variation in time between heartbeats. Higher generally indicates better autonomic recovery, *up to a point*.</string>
-<string name="about_glossary_rmssd">**RMSSD** — the specific HRV measure most apps use. We work with the natural log of RMSSD (**lnRMSSD**) internally because it linearizes the naturally skewed distribution of heart rate variability, making statistical comparison (Z-scores) valid (Plews 2013, Buchheit 2014).</string>
-    <string name="about_glossary_rhr">**RHR (Resting Heart Rate)** — your nocturnal heart rate, averaged across deep portions of sleep.</string>
-    <string name="about_glossary_deep">**Deep sleep / Slow-Wave Sleep / N3** — the deepest stage of NREM sleep; growth-hormone release is concentrated here.</string>
-    <string name="about_glossary_rem">**REM** — the dreaming stage, important for memory and emotional processing.</string>
-<string name="about_glossary_trimp">**TRIMP (Training Impulse)** — a single number summarizing the intensity-weighted duration of an exercise session.</string>
-    <string name="about_glossary_atl_ctl">**ATL / CTL** — short-term and long-term rolling averages of TRIMP. Borrowed from Banister\'s training-load model and used by most cycling and running apps.</string>
+    <string name="about_glossary_hrv">**HRV (Heart Rate Variability)** — the millisecond-level
+        variation in time between heartbeats. Higher generally indicates better autonomic recovery,
+        *up to a point*.</string>
+    <string name="about_glossary_rmssd">**RMSSD** — the specific HRV measure most apps use. We work
+        with the natural log of RMSSD (**lnRMSSD**) internally because it linearizes the naturally
+        skewed distribution of heart rate variability, making statistical comparison (Z-scores)
+        valid (Plews 2013, Buchheit 2014).</string>
+    <string name="about_glossary_rhr">**RHR (Resting Heart Rate)** — your nocturnal heart rate,
+        averaged across deep portions of sleep.</string>
+    <string name="about_glossary_deep">**Deep sleep / Slow-Wave Sleep / N3** — the deepest stage of
+        NREM sleep; growth-hormone release is concentrated here.</string>
+    <string name="about_glossary_rem">**REM** — the dreaming stage, important for memory and
+        emotional processing.</string>
+    <string name="about_glossary_trimp">**TRIMP (Training Impulse)** — a single number summarizing
+        the intensity-weighted duration of an exercise session.</string>
+    <string name="about_glossary_atl_ctl">**ATL / CTL** — short-term and long-term rolling averages
+        of TRIMP. Borrowed from Banister\'s training-load model and used by most cycling and running
+        apps.</string>
 
     <string name="about_header_limitations">## Honest limitations</string>
-<string name="about_limit_1">**1. Wearable stage detection is imperfect.** Even premium devices misclassify deep and REM sleep on individual nights. We use age-adjusted targets and don\'t penalize you for differences within ~5% of the target. Architecture differences within that margin are not meaningful.</string>
-    <string name="about_limit_2">**2. Population norms are not destiny.** The age-banded deep sleep ranges come from polysomnography studies of healthy adults. Your healthy normal may sit anywhere in your age band. Our scoring uses age-banded targets so the ceiling shifts with you.</string>
-    <string name="about_limit_3">**3. The ACWR (Readiness load ratio) is descriptive, not predictive.** The methodological literature (Lolli et al. 2019; Impellizzeri et al. 2020, 2021) has demonstrated that the acute-to-chronic ratio is often a mathematical artifact and is not a validated *causal* injury predictor. We follow the Gabbett (2016) quadratic penalty model but present it strictly as a **load change indicator** to help you visualize spikes in training intensity, not as a diagnostic injury risk score.</string>
-    <string name="about_limit_4">**4. Recovery flag.** When your HRV and RHR patterns suggest possible physiological stress (such as early illness or functional overreaching), we surface a soft notification. To ensure accuracy and filter out acute noise, the algorithm requires the thresholds to be breached on **two consecutive nights** (Mishra 2020, Le Meur 2013). This is informational only, not medical advice.</string>
-    <string name="about_limit_5">**5. One night is noise; trends are signal.** Treat any single day\'s score as a data point, not a verdict. Look at the 7-day trend.</string>
-    <string name="about_limit_6">**6. This app does not diagnose anything.** If you suspect sleep apnea, a heart condition, an infection, or an injury, see a clinician.</string>
+    <string name="about_limit_1">**1. Wearable stage detection is imperfect.** Even premium devices
+        misclassify deep and REM sleep on individual nights. We use age-adjusted targets and don\'t
+        penalize you for differences within ~5% of the target. Architecture differences within that
+        margin are not meaningful.</string>
+    <string name="about_limit_2">**2. Population norms are not destiny.** The age-banded deep sleep
+        ranges come from polysomnography studies of healthy adults. Your healthy normal may sit
+        anywhere in your age band. Our scoring uses age-banded targets so the ceiling shifts with
+        you.</string>
+    <string name="about_limit_3">**3. The ACWR (Readiness load ratio) is descriptive, not
+        predictive.** The methodological literature (Lolli et al. 2019; Impellizzeri et al. 2020,
+        2021) has demonstrated that the acute-to-chronic ratio is often a mathematical artifact and
+        is not a validated *causal* injury predictor. We follow the Gabbett (2016) quadratic penalty
+        model but present it strictly as a **load change indicator** to help you visualize spikes in
+        training intensity, not as a diagnostic injury risk score.</string>
+    <string name="about_limit_4">**4. Recovery flag.** When your HRV and RHR patterns suggest
+        possible physiological stress (such as early illness or functional overreaching), we surface
+        a soft notification. To ensure accuracy and filter out acute noise, the algorithm requires
+        the thresholds to be breached on **two consecutive nights** (Mishra 2020, Le Meur 2013).
+        This is informational only, not medical advice.</string>
+    <string name="about_limit_5">**5. One night is noise; trends are signal.** Treat any single
+        day\'s score as a data point, not a verdict. Look at the 7-day trend.</string>
+    <string name="about_limit_6">**6. This app does not diagnose anything.** If you suspect sleep
+        apnea, a heart condition, an infection, or an injury, see a clinician.</string>
 
-    <string name="about_sources_footer">*Selected primary sources informing the scoring: Buysse 1989 (PSQI); Buysse 2014 (RU-SATED); Ohayon et al. 2004, 2017; Hirshkowitz et al. 2015 (NSF); Boulos et al. 2019 (Lancet Respir Med); Plews et al. 2012, 2013, 2014 (HRV monitoring); Buchheit 2014 (Front Physiol); Le Meur et al. 2013 (parasympathetic hyperactivity); Mishra et al. 2020 (Nat Biomed Eng); Quer et al. 2021 (Nat Med); Phillips et al. 2017 (Sleep Regularity Index); Lunsford-Avery et al. 2018; Windred et al. 2023/2024; Khalsa et al. 2003 (phase-response curve); Banister 1991; Foster 1998; Gabbett 2016; Lolli et al. 2019; Impellizzeri et al. 2020/2021.*</string>
+    <string name="about_sources_footer">*Selected primary sources informing the scoring: Buysse 1989
+        (PSQI); Buysse 2014 (RU-SATED); Ohayon et al. 2004, 2017; Hirshkowitz et al. 2015 (NSF);
+        Boulos et al. 2019 (Lancet Respir Med); Plews et al. 2012, 2013, 2014 (HRV monitoring);
+        Buchheit 2014 (Front Physiol); Le Meur et al. 2013 (parasympathetic hyperactivity); Mishra
+        et al. 2020 (Nat Biomed Eng); Quer et al. 2021 (Nat Med); Phillips et al. 2017 (Sleep
+        Regularity Index); Lunsford-Avery et al. 2018; Windred et al. 2023/2024; Khalsa et al. 2003
+        (phase-response curve); Banister 1991; Foster 1998; Gabbett 2016; Lolli et al. 2019;
+        Impellizzeri et al. 2020/2021.*</string>
 
     <string name="about_header_disclaimer">## Scientific and medical disclaimer</string>
-    <string name="about_disclaimer_p1">This app describes a wellness-oriented monitoring framework derived from consumer wearable signals and sports-science literature. The framework is **not validated for medical diagnosis, disease screening, treatment guidance, or injury prediction**. Physiological metrics such as HRV, sleep staging, and resting heart rate are non-specific and can be influenced by numerous behavioral, environmental, pharmacological, and measurement-related factors.</string>
-    <string name="about_disclaimer_p2">If you have concerns about your health, sleep, or recovery, consult a qualified healthcare provider.</string>
+    <string name="about_disclaimer_p1">This app describes a wellness-oriented monitoring framework
+        derived from consumer wearable signals and sports-science literature. The framework is **not
+        validated for medical diagnosis, disease screening, treatment guidance, or injury
+        prediction**. Physiological metrics such as HRV, sleep staging, and resting heart rate are
+        non-specific and can be influenced by numerous behavioral, environmental, pharmacological,
+        and measurement-related factors.</string>
+    <string name="about_disclaimer_p2">If you have concerns about your health, sleep, or recovery,
+        consult a qualified healthcare provider.</string>
 
     <!-- Sleep Detail Screen -->
     <string name="time_unit_hours">h</string>
@@ -208,6 +330,14 @@
     <string name="sleep_stage_deep">Deep</string>
     <string name="sleep_breakdown_row_format">%1$s • %2$s</string>
     <string name="sleep_hypnogram_title">Hypnogram</string>
+
+    <!-- Sleep Trend Chart -->
+    <string name="sleep_trend_section_title">Sleep durations and bedtimes</string>
+    <string name="sleep_trend_title">Sleep trend</string>
+    <string name="sleep_trend_legend_window">Sleep window</string>
+    <string name="sleep_trend_legend_duration">Sleep duration</string>
+    <string name="sleep_trend_tooltip_duration_format">Duration: %1$.1fh</string>
+    <string name="sleep_trend_tooltip_bedtime_format">Bedtime: %1$s - %2$s</string>
 
     <!-- ACWR / Training Load Chart -->
     <string name="acwr_training_load">Training load</string>
@@ -238,7 +368,8 @@
 
     <!-- Vitals Tab & Oxygen Saturation -->
     <string name="tab_vitals">Vitals</string>
-    <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last night.\n\n• Optimal: 98–100%\n• Normal: 95–97%\n• Warning: 90–94%\n• Poor: &lt;90%</string>
+    <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last
+        night.\n\n• Optimal: 98–100%\n• Normal: 95–97%\n• Warning: 90–94%\n• Poor: &lt;90%</string>
     <string name="spo2_optimal">Optimal</string>
     <string name="spo2_normal">Normal</string>
     <string name="spo2_warning">Warning</string>
@@ -254,7 +385,8 @@
     <string name="action_ok">OK</string>
 
     <!-- Backup Settings -->
-    <string name="backup_description">Backups are stored locally on your device. You can create a new backup at any time or restore from a previous one.</string>
+    <string name="backup_description">Backups are stored locally on your device. You can create a
+        new backup at any time or restore from a previous one.</string>
     <string name="backup_create_button">Create new backup</string>
     <string name="backup_reencrypting_message">Updating existing backup passwords...</string>
     <string name="backup_section_available">Available backups</string>
@@ -279,22 +411,28 @@
 
     <!-- Backup Dialogs & Errors -->
     <string name="dialog_set_password_title">Set backup password</string>
-    <string name="dialog_set_password_body">This password will be used to encrypt your backups with AES-256. If you lose it, you won\'t be able to restore your data.</string>
+    <string name="dialog_set_password_body">This password will be used to encrypt your backups with
+        AES-256. If you lose it, you won\'t be able to restore your data.</string>
     <string name="dialog_restore_backup_title">Restore backup?</string>
-    <string name="dialog_restore_backup_body">This will replace all local health data with the contents of %1$s and restart the app. This cannot be undone.</string>
+    <string name="dialog_restore_backup_body">This will replace all local health data with the
+        contents of %1$s and restart the app. This cannot be undone.</string>
     <string name="error_passwords_do_not_match">Passwords do not match</string>
 
     <!-- Database Recovery Screen -->
     <string name="recovery_title">Database access problem</string>
-    <string name="recovery_description">The secure encryption key for your database could not be decrypted. This typically happens if the Android Keystore was cleared or corrupted.</string>
+    <string name="recovery_description">The secure encryption key for your database could not be
+        decrypted. This typically happens if the Android Keystore was cleared or corrupted.</string>
     <string name="recovery_success">Database restored. Restart the app.</string>
-    <string name="recovery_error_default">Could not restore backup. Make sure you selected the correct file.</string>
+    <string name="recovery_error_default">Could not restore backup. Make sure you selected the
+        correct file.</string>
     <string name="recovery_restoring_message">Restoring database...</string>
     <string name="recovery_recommended_title">Recommended recovery option</string>
-    <string name="recovery_recommended_body">If you have a previously exported backup file (.zip), you can select it to restore your data safely.</string>
+    <string name="recovery_recommended_body">If you have a previously exported backup file (.zip),
+        you can select it to restore your data safely.</string>
     <string name="recovery_restore_button">Restore from backup file</string>
     <string name="recovery_danger_title">Danger zone</string>
-    <string name="recovery_danger_body">If you don\'t have a backup, you can reset the database. This will permanently delete all existing local health dashboards and records.</string>
+    <string name="recovery_danger_body">If you don\'t have a backup, you can reset the database.
+        This will permanently delete all existing local health dashboards and records.</string>
     <string name="recovery_reset_button">Reset database &amp; start fresh</string>
 
     <!-- Accessibility -->
@@ -333,21 +471,29 @@
 
     <!-- Onboarding Screen -->
     <string name="onboarding_welcome_title">Welcome to Readylytics</string>
-    <string name="onboarding_welcome_subtitle">Your personal recovery &amp; readiness tracker — powered entirely by your own data.</string>
+    <string name="onboarding_welcome_subtitle">Your personal recovery &amp; readiness tracker —
+        powered entirely by your own data.</string>
     <string name="onboarding_feature_sleep_title">Sleep score</string>
-    <string name="onboarding_feature_sleep_desc">Weighted by duration, architecture, and restoration quality.</string>
+    <string name="onboarding_feature_sleep_desc">Weighted by duration, architecture, and restoration
+        quality.</string>
     <string name="onboarding_feature_hrv_title">HRV &amp; resting HR tracking</string>
-    <string name="onboarding_feature_hrv_desc">Personal baselines calculated from your last 30 days of data.</string>
+    <string name="onboarding_feature_hrv_desc">Personal baselines calculated from your last 30 days
+        of data.</string>
     <string name="onboarding_feature_training_title">Training load index</string>
-    <string name="onboarding_feature_training_desc">Acute vs. chronic workload ratio to guide your recovery.</string>
-    <string name="onboarding_privacy_note">All data stays on your device. Nothing is ever uploaded to any server.</string>
+    <string name="onboarding_feature_training_desc">Acute vs. chronic workload ratio to guide your
+        recovery.</string>
+    <string name="onboarding_privacy_note">All data stays on your device. Nothing is ever uploaded
+        to any server.</string>
     <string name="onboarding_get_started">Get Started</string>
     <string name="onboarding_profile_title">Your profile</string>
-    <string name="onboarding_profile_subtitle">Your birthday, gender, and activity profile are used to calculate your max heart rate and personalize scores. They are stored only on your device.</string>
+    <string name="onboarding_profile_subtitle">Your birthday, gender, and activity profile are used
+        to calculate your max heart rate and personalize scores. They are stored only on your
+        device.</string>
     <string name="onboarding_activity_profile_label">Activity profile</string>
     <string name="onboarding_appearance_label">Appearance</string>
     <string name="onboarding_dynamic_color_label">Dynamic color</string>
-    <string name="onboarding_dynamic_color_desc">Use colors derived from your wallpaper (Android 12+)</string>
+    <string name="onboarding_dynamic_color_desc">Use colors derived from your wallpaper (Android
+        12+)</string>
     <string name="fallback_theme_color_label">Accent color</string>
     <string name="fallback_color_brand_purple">Brand purple</string>
     <string name="fallback_color_brand_blue">Brand blue</string>
@@ -356,7 +502,8 @@
     <string name="fallback_color_recovery_blue">Recovery blue</string>
     <string name="onboarding_units_label">Measurement units</string>
     <string name="onboarding_hc_permissions_label">Health Connect permissions</string>
-    <string name="onboarding_hc_permissions_desc">This app needs access to Sleep, Heart Rate, HRV, and Exercise data from Health Connect to calculate your scores.</string>
+    <string name="onboarding_hc_permissions_desc">This app needs access to Sleep, Heart Rate, HRV,
+        and Exercise data from Health Connect to calculate your scores.</string>
     <string name="onboarding_grant_access">Grant Access &amp; Continue</string>
     <string name="onboarding_open_hc_settings">Open Health Connect Settings</string>
 
@@ -375,10 +522,12 @@
     <string name="hr_save_zones_button">Save zone boundaries</string>
     <string name="hr_zone_range_display">%1$d - %2$d bpm</string>
     <string name="hr_zone_n">Zone %1$d</string>
-    <string name="error_hr_zones_invalid">Invalid: All values must be 1–%1$d bpm and strictly increasing</string>
+    <string name="error_hr_zones_invalid">Invalid: All values must be 1–%1$d bpm and strictly
+        increasing</string>
 
     <!-- Dashboard & Calibration Messages -->
-    <string name="message_calibrating_banner">Calibrating — averages shown may improve as more nights are recorded.</string>
+    <string name="message_calibrating_banner">Calibrating — averages shown may improve as more
+        nights are recorded.</string>
     <string name="message_sleep_no_data_calibrating">No data — calibrating</string>
     <string name="message_no_hr_data">No HR data available</string>
     <string name="message_no_data_available">No data available</string>
@@ -406,9 +555,10 @@
     <string name="tooltip_steps_today">Total steps recorded today.\nGoal: %1$d steps.</string>
 
     <!-- Heart Rate Card & Detail -->
-    <string name="tooltip_heart_rate_card">Today\'s heart rate range across all activities. Tap to see full timeline and zone breakdown.</string>
+    <string name="tooltip_heart_rate_card">Today\'s heart rate range across all activities. Tap to
+        see full timeline and zone breakdown.</string>
     <string name="hr_no_data">-- bpm</string>
-    <string name="hr_avg_display">bpm  ·  avg %1$d</string>
+    <string name="hr_avg_display">bpm · avg %1$d</string>
     <string name="hr_zone_0_range">&lt; %1$d bpm</string>
     <string name="hr_zone_inner_range">%1$d–%2$d bpm</string>
     <string name="hr_zone_above_range">&gt; %1$d bpm</string>
@@ -418,7 +568,8 @@
     <string name="label_weight_unit_format">Weight (%1$s)</string>
     <string name="tooltip_weight_current">Latest weight: %1$s\nHeight: %2$s</string>
     <string name="label_bmi">BMI</string>
-    <string name="tooltip_bmi">Body Mass Index (Normal: 18.5–24.9)\n\nUnder 25: Normal\n25-30: Overweight\n30+: Obese</string>
+    <string name="tooltip_bmi">Body Mass Index (Normal: 18.5–24.9)\n\nUnder 25: Normal\n25-30:
+        Overweight\n30+: Obese</string>
     <string name="label_weight_trend">Weight Trend</string>
 
     <!-- Body Fat Detail -->
@@ -430,9 +581,11 @@
     <!-- Blood Pressure Detail -->
     <string name="label_blood_pressure">Blood Pressure</string>
     <string name="label_systolic">Systolic</string>
-    <string name="tooltip_blood_pressure_systolic">Latest systolic blood pressure measurement.\n\nOptimal: &lt;120\nElevated: 120–129\nStage 1: 130–139\nStage 2: ≥140</string>
+    <string name="tooltip_blood_pressure_systolic">Latest systolic blood pressure
+        measurement.\n\nOptimal: &lt;120\nElevated: 120–129\nStage 1: 130–139\nStage 2: ≥140</string>
     <string name="label_diastolic">Diastolic</string>
-    <string name="tooltip_blood_pressure_diastolic">Latest diastolic blood pressure measurement.\n\nOptimal: &lt;80\nStage 1: 80–89\nStage 2: ≥90</string>
+    <string name="tooltip_blood_pressure_diastolic">Latest diastolic blood pressure
+        measurement.\n\nOptimal: &lt;80\nStage 1: 80–89\nStage 2: ≥90</string>
     <string name="label_blood_pressure_trend">Blood Pressure Trend</string>
 
     <!-- Vitals Screen -->
@@ -452,7 +605,8 @@
     <string name="error_backup_restore_validation">Restore validation failed</string>
     <string name="error_backup_create_failed">Backup failed</string>
     <string name="error_threshold_invalid_range">Invalid threshold value. Range: 0–90 minutes.</string>
-    <string name="error_threshold_update_failed">Failed to update threshold settings. Changes rolled back.</string>
+    <string name="error_threshold_update_failed">Failed to update threshold settings. Changes rolled
+        back.</string>
 
     <!-- Settings Screen Sections & Sub-headers -->
     <string name="settings_section_data_backup">Data &amp; backup</string>
@@ -475,9 +629,11 @@
     <string name="settings_retention_enabled_label">Retention Enabled</string>
     <string name="settings_retention_period_label">Retention Period</string>
     <string name="settings_retention_days_display">%1$d days</string>
-    <string name="settings_retention_description">Automatically delete data older than the retention period.</string>
+    <string name="settings_retention_description">Automatically delete data older than the retention
+        period.</string>
     <string name="settings_resync_button">Resync Health Connect Data</string>
-    <string name="settings_resync_description">Clear all data from Health Connect and reload the last 60 days.</string>
+    <string name="settings_resync_description">Clear all data from Health Connect and reload the
+        last 60 days.</string>
     <string name="settings_foreground_sync_label">Foreground Sync</string>
     <string name="sync_preference_never">Never</string>
     <string name="sync_preference_always">Always</string>
@@ -492,12 +648,16 @@
     <!-- Advanced Settings -->
     <string name="advanced_baseline_overrides_title">Baseline Overrides</string>
     <string name="advanced_hrv_baseline_label">HRV Baseline (ms)</string>
-    <string name="advanced_baseline_override_tooltip">Overrides the 30-day rolling median used in scoring.</string>
+    <string name="advanced_baseline_override_tooltip">Overrides the 30-day rolling median used in
+        scoring.</string>
     <string name="advanced_rhr_baseline_label">RHR Baseline (bpm)</string>
     <string name="advanced_resting_hr_percentile_label">Resting HR: Percentile</string>
-    <string name="advanced_resting_hr_percentile_tooltip">Use the Nth percentile lowest heart rate reading of the entire sleep period (e.g., 5%% = lowest 5%% threshold). Lower values = lower RHR estimate. Default: 5%%.</string>
+    <string name="advanced_resting_hr_percentile_tooltip">Use the Nth percentile lowest heart rate
+        reading of the entire sleep period (e.g., 5%% = lowest 5%% threshold). Lower values = lower
+        RHR estimate. Default: 5%%.</string>
     <string name="advanced_pai_scaling_label">PAI Scaling Factor</string>
-    <string name="advanced_pai_scaling_tooltip">Adjusts how quickly you earn PAI points. Default: 0.20.</string>
+    <string name="advanced_pai_scaling_tooltip">Adjusts how quickly you earn PAI points. Default:
+        0.20.</string>
     <string name="advanced_training_load_label">Training Load Model</string>
     <string name="advanced_trimp_banister">Banister</string>
     <string name="advanced_trimp_cheng">Cheng LT-TRIMP</string>
@@ -511,20 +671,28 @@
 
     <!-- Threshold Settings Sliders -->
     <string name="threshold_hrv_optimal_label">HRV Optimal</string>
-    <string name="threshold_hrv_optimal_desc">HRV ratio to baseline to be considered Optimal (e.g. 100-120%%).</string>
+    <string name="threshold_hrv_optimal_desc">HRV ratio to baseline to be considered Optimal (e.g.
+        100-120%%).</string>
     <string name="threshold_hrv_warning_label">HRV Warning</string>
-    <string name="threshold_hrv_warning_desc">HRV ratio to baseline to be considered Warning (e.g. 80-100%%).</string>
+    <string name="threshold_hrv_warning_desc">HRV ratio to baseline to be considered Warning (e.g.
+        80-100%%).</string>
     <string name="threshold_rhr_optimal_label">RHR Optimal</string>
-    <string name="threshold_rhr_optimal_desc">RHR ratio to baseline to be considered Optimal (e.g. 80-100%%).</string>
+    <string name="threshold_rhr_optimal_desc">RHR ratio to baseline to be considered Optimal (e.g.
+        80-100%%).</string>
     <string name="threshold_rhr_warning_label">RHR Warning</string>
-    <string name="threshold_rhr_warning_desc">RHR ratio to baseline to be considered Warning (e.g. 100-120%%).</string>
+    <string name="threshold_rhr_warning_desc">RHR ratio to baseline to be considered Warning (e.g.
+        100-120%%).</string>
     <string name="threshold_consistency_window_label">Consistency Window</string>
-    <string name="threshold_consistency_window_desc">±Grace period (in minutes) around your median bedtime and wake time before your score starts to drop. Default: 30 min.</string>
+    <string name="threshold_consistency_window_desc">±Grace period (in minutes) around your median
+        bedtime and wake time before your score starts to drop. Default: 30 min.</string>
     <string name="threshold_evaluation_period_label">Evaluation Period</string>
-    <string name="threshold_evaluation_period_desc">Number of recent sleep sessions scored to compute your current consistency. Default: 7.</string>
+    <string name="threshold_evaluation_period_desc">Number of recent sleep sessions scored to
+        compute your current consistency. Default: 7.</string>
     <string name="threshold_baseline_window_label">Baseline Window</string>
-    <string name="threshold_baseline_window_desc">Number of past sleep sessions used to calculate your median bedtime anchor. Default: 14.</string>
-    <string name="settings_step_goal_tooltip">Target steps per day. Reaching this goal shows as Optimal on the dashboard.</string>
+    <string name="threshold_baseline_window_desc">Number of past sleep sessions used to calculate
+        your median bedtime anchor. Default: 14.</string>
+    <string name="settings_step_goal_tooltip">Target steps per day. Reaching this goal shows as
+        Optimal on the dashboard.</string>
     <string name="label_sleep_goal">Sleep Goal</string>
 
     <!-- Circadian Threshold Settings Section -->
@@ -548,7 +716,8 @@
     <string name="accessibility_prev_day">Previous day</string>
     <string name="accessibility_open_date_picker">Open date picker</string>
     <string name="accessibility_next_day">Next day</string>
-    <string name="accessibility_circadian_threshold_adjustment">Circadian threshold adjustment. Range: 0 to 90 minutes</string>
+    <string name="accessibility_circadian_threshold_adjustment">Circadian threshold adjustment.
+        Range: 0 to 90 minutes</string>
     <string name="accessibility_circadian_threshold_state">Current value: %1$d minutes</string>
     <string name="profile_title_general">General Profile</string>
     <string name="profile_title_shift_worker">Shift Worker Profile</string>
@@ -583,7 +752,8 @@
     <string name="card_title_oxygen_saturation">Oxygen saturation</string>
 
     <!-- Card Tooltips & Secondary Texts -->
-    <string name="card_tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
+    <string name="card_tooltip_sleep_efficiency">The percentage of time actually asleep while in
+        bed.</string>
     <string name="card_goal_sleep_efficiency">Goal: &gt;85%</string>
     <string name="card_efficiency_format">%1$s%%</string>
 
@@ -595,7 +765,10 @@
 
     <!-- Privacy Rationale -->
     <string name="privacy_rationale_title">Privacy &amp; Health Data</string>
-    <string name="privacy_rationale_description">This app reads sleep, heart rate, heart rate variability, and exercise data from Health Connect solely to compute your personal recovery and readiness scores. All data is processed locally on your device and is never uploaded to any server.</string>
+    <string name="privacy_rationale_description">This app reads sleep, heart rate, heart rate
+        variability, and exercise data from Health Connect solely to compute your personal recovery
+        and readiness scores. All data is processed locally on your device and is never uploaded to
+        any server.</string>
 
     <!-- Workout Metrics -->
     <string name="workout_metric_training_load">Training load</string>
@@ -606,10 +779,12 @@
     <string name="workout_metric_bpm">bpm</string>
     <string name="workout_metric_strain">Strain</string>
     <string name="workout_metric_points">points</string>
-    <string name="workout_tooltip_training_load">Total training impulse - measures training intensity and duration.</string>
+    <string name="workout_tooltip_training_load">Total training impulse - measures training
+        intensity and duration.</string>
     <string name="workout_tooltip_avg_pulse">Average heart rate during the workout.</string>
     <string name="workout_tooltip_gained_strain">Total strain gained from this workout.</string>
-    <string name="workout_tooltip_pai">Personal Activity Intelligence points gained from this workout.</string>
+    <string name="workout_tooltip_pai">Personal Activity Intelligence points gained from this
+        workout.</string>
     <string name="pai_earned_today">+%1$d today</string>
     <string name="workout_stats_acwr_title">Training Load &amp; Strain Ratio (ACWR)</string>
 
@@ -621,7 +796,7 @@
     <string name="workout_intensity_very_light">Very Light</string>
 
     <!-- Workout History Formats -->
-    <string name="workout_history_item_subtitle">%1$d min  ·  Strain %2$s  ·  %3$s</string>
+    <string name="workout_history_item_subtitle">%1$d min · Strain %2$s · %3$s</string>
     <string name="workout_history_bpm_format">%1$d bpm</string>
     <string name="workout_history_bpm_na">-- bpm</string>
     <string name="workout_history_page_info">Page %1$d of %2$d</string>

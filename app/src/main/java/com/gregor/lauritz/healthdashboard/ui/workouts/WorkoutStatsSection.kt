@@ -175,8 +175,9 @@ fun WorkoutStatsSection(
                             verticalAlignment = Alignment.Top,
                         ) {
                             Text(
-                                stringResource(R.string.workout_stats_pai_title),
+                                text = stringResource(R.string.workout_stats_pai_title),
                                 style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 uiState.latestMetrics?.paiDayScoreRounded?.let { earned ->
@@ -281,6 +282,7 @@ private fun AcwrChartCard(
             Text(
                 text = stringResource(R.string.acwr_training_load),
                 style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(16.dp))
             if (trimpPoints.isEmpty() && ratioPoints.isEmpty()) {
@@ -370,8 +372,8 @@ private fun AcwrChart(
         }
 
     // ── Colours & Vico style helpers ─────────────────────────────────────────
-    val ratioColor = MaterialTheme.colorScheme.primary
-    val trimpColor = MaterialTheme.colorScheme.outline
+    val ratioColor = MaterialTheme.colorScheme.tertiary
+    val trimpColor = MaterialTheme.colorScheme.primary
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()

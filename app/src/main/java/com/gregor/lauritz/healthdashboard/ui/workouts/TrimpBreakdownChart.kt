@@ -60,7 +60,11 @@ fun TrimpBreakdownChart(
         shape = MaterialTheme.shapes.large,
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text(stringResource(R.string.heart_rate_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = stringResource(R.string.heart_rate_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
             Spacer(Modifier.height(16.dp))
             if (chartData.isEmpty()) {
                 Text(stringResource(R.string.message_no_hr_data))
