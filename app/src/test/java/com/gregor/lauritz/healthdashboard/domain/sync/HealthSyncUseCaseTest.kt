@@ -17,6 +17,7 @@ import com.gregor.lauritz.healthdashboard.domain.model.HealthDataType
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.TransactionRunner
+import com.gregor.lauritz.healthdashboard.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify
@@ -48,6 +49,7 @@ class HealthSyncUseCaseTest {
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
+    private val sessionLinkReconciler = mockk<SessionLinkReconciler>(relaxed = true)
 
     private lateinit var useCase: HealthSyncUseCase
 
@@ -74,6 +76,7 @@ class HealthSyncUseCaseTest {
                 scoringRepository = scoringRepository,
                 transactionRunner = transactionRunner,
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
+                sessionLinkReconciler = sessionLinkReconciler,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
     }

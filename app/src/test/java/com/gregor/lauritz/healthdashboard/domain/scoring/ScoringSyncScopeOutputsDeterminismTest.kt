@@ -228,7 +228,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
             )
         val scoringConfigFactory = ScoringConfigFactory()
         val encryptionManager = mockk<EncryptionManager>(relaxed = true)
-        val currentNightHrvResolver = CurrentNightHrvResolver(hrvDao, dailySummaryDao)
+        val currentNightHrvResolver = CurrentNightHrvResolver(hrvDao)
         val sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(heartRateDao, sleepSessionDao)
         val sleepNadirAnalyzer = SleepNadirAnalyzer(heartRateDao, scoringCalculator)
         val coverageValidator = HrCoverageValidator()

@@ -484,7 +484,7 @@ class BaselineComputer
                 val ownSessionId =
                     nights
                         .filter { it.endTime in dayMidnightMs until nextDayMidnightMs }
-                        .minByOrNull { it.endTime }
+                        .minWithOrNull(compareBy({ it.endTime }, { it.id }))
                         ?.id
 
                 // HRV sigma window: [dayMidnight − 56d .. dayEnd], excluding the day's own session.

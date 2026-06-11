@@ -89,7 +89,7 @@ All paths are rooted at `app/src/main/java/com/gregor/lauritz/healthdashboard/`.
 
 | Component | Path | Responsibility |
 | :--- | :--- | :--- |
-| `HealthSyncUseCase` | `domain/sync/HealthSyncUseCase.kt` | Core engine. `sync(windowDays, onProgress)` recent-window sync — note the **ingestion fetch starts one day earlier than the scored window** (`today − windowDays`), because overnight sleep sessions begin the previous evening; clipping at the scored window's midnight would drop a night's pre-midnight HR/HRV samples (lower HRV mean, higher RHR percentile). The recalc loop still covers only `windowDays` (current-day-only refresh unchanged); `resyncRange(start, end, chunkDays = 30, onProgress)` full historical (two-phase: chunked re-fetch then walk-forward recompute); **every ingestion chunk of resyncRange starts one day early and fetches sleep/exercise sessions one day past the chunk end** so HR/HRV samples at either side of a 30-day boundary can still be assigned to cross-midnight sessions. Metric sample reads remain capped to the chunk. Selected-step-device resync reads raw `StepsRecord`s for each chunk, filters by device, and aggregates locally; all-devices resync keeps the HC aggregate path. Historical resync progress reports recomputed calendar days, not internal ingest+recompute work units. `ingestWindow(start, end, prefs)` the single read→map→filter→upsert funnel; `retryWithBackoff(maxAttempts = 4, initialDelayMs = 1000)` for transient HC/IO faults (never swallows `CancellationException`); `syncMutex` serializes daily vs. resync. |
+| `HealthSyncUseCase` | `domain/sync/HealthSyncUseCase.kt` | Core engine. `sync(windowDays, onProgress)` recent-window sync — note the **ingestion fetch starts one day earlier than the scored window** (`today − windowDays`), because overnight sleep sessions begin the previous evening; clipping at the scored window's midnight would drop a night's pre-midnight HR/HRV samples (lower HRV mean, higher RHR percentile). The recalc loop still covers only `windowDays` (current-day-only refresh unchanged); `resyncRange(start, end, chunkDays = 30, onProgress)` full historical (three-phase: chunked re-fetch → session-link reconcile → walk-forward recompute); **every ingestion chunk of resyncRange starts one day early and fetches sleep/exercise sessions one day past the chunk end** so HR/HRV samples at either side of a 30-day boundary can still be assigned to cross-midnight sessions. Metric sample reads remain capped to the chunk. Selected-step-device resync reads raw `StepsRecord`s for each chunk, filters by device, and aggregates locally; all-devices resync keeps the HC aggregate path. After all chunks are ingested, a single `SessionLinkReconciler.reconcile(...)` pass over the full `[start, end]` range re-derives HR/HRV session linkage and recomputes affected workout metrics (see 1.2.1) — this makes the result independent of chunk alignment. Historical resync progress reports recomputed calendar days, not internal ingest+recompute work units. `ingestWindow(start, end, prefs)` the single read→map→filter→upsert funnel; `retryWithBackoff(maxAttempts = 4, initialDelayMs = 1000)` for transient HC/IO faults (never swallows `CancellationException`); `syncMutex` serializes daily vs. resync. |
 | `ForegroundSyncController` | `domain/sync/ForegroundSyncController.kt` | Foreground state + progress bridge. `triggerDailySync()` = pull-to-refresh (current day only, `windowDays = 1`); `triggerImmediateSync()` = first-launch catch-up; `onBackgroundRecalc{Started,Progress,Finished}()` publish WorkManager job progress into `isSyncing` / `recalcProgress` StateFlows + `syncCompletedEvent`. |
 | `FullHistoricalResyncUseCase` | `domain/sync/FullHistoricalResyncUseCase.kt` | Resolves the retention-bounded start date via `RetentionBounds.resolveResyncStartDate()` and delegates to `HealthSyncUseCase.resyncRange(start, today)`. No math. |
 | `HealthResyncWorker` | `workers/HealthResyncWorker.kt` | `@HiltWorker` durable foreground service (`FOREGROUND_SERVICE_TYPE_DATA_SYNC`). Runs the resync use case, emits `WorkInfo` progress (`setProgressAsync`), posts a determinate "day X of Y" notification, bridges progress to `ForegroundSyncController`; `Result.retry()` on transient failure. |
@@ -97,6 +97,22 @@ All paths are rooted at `app/src/main/java/com/gregor/lauritz/healthdashboard/`.
 | `DataCleanupWorker` | `workers/DataCleanupWorker.kt` | Daily retention enforcement; cutoff resolved via `RetentionBounds.resolveRetentionCutoffMs()` (shared with resync). No-op when retention disabled. |
 | `RetentionBounds` | `domain/util/RetentionBounds.kt` | Single source of truth for retention→date math: enabled → `today − retentionDays`; disabled → `today − ABSOLUTE_MAX_DAYS` (3650 / 10y). |
 | `RoomTransactionRunner` | `data/local/RoomTransactionRunner.kt` | Wraps `HealthDatabase.withTransaction { … }` so an entire ingest window upserts atomically. |
+
+### 1.2.1 Session-link reconciliation — chunk-independent determinism
+
+| Component | Path | Responsibility |
+| :--- | :--- | :--- |
+| `SessionLinker` | `domain/sync/link/SessionLinker.kt` | Pure function `resolve(sampleMs, sleepSessions, workoutSessions): SampleLink`. Single source of truth for "which session does this HR/HRV sample belong to?" — sleep > workout > resting precedence, ties on overlapping spans broken by earliest `(startTime, id)`. Mathematically equivalent to the forward-pointer logic in `HeartRateMapper`/`HrvMapper` for ascending-sorted samples. |
+| `SessionLinkReconciler` | `domain/sync/link/SessionLinkReconciler.kt` | Post-ingestion pass run **once per `resyncRange` call** (not per chunk). Loads the complete sleep + workout session spans for `[start, end]`, re-tags every HR/HRV row in range via `SessionLinker.resolve`, and recomputes `trimp`/zone-minutes/`avgHr`/`durationMinutes` for every workout in range via `WorkoutMapper.computeMetrics`. Runs in one `transactionRunner.runInTransaction`; only changed rows are upserted. |
+
+**Why this exists:** during chunked ingestion, `HeartRateMapper`/`HrvMapper` only see the
+sleep/workout sessions present in the *current* Health Connect fetch window. A sleep
+session straddling a chunk boundary can have its samples split across two windows, each
+tagging only the subset it saw (the rest fall to `RESTING`). Because chunk boundaries are
+anchored to the resync start date — which depends on the user's retention setting — this
+made `currentNocturnalRhr`/`currentHrvMean`/workout TRIMP retention-dependent for the same
+underlying data. The reconcile pass re-derives tagging from the full session list, making
+the result a pure function of the data, independent of chunking.
 
 ### 1.3 Mappers — HC record → Room entity
 
@@ -288,6 +304,8 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | `workers/WorkerScheduler.kt` | Ingestion — work scheduling | unique resync work (KEEP) |
 | `workers/DataCleanupWorker.kt` | Ingestion — retention enforcement | retention cutoff (shared) |
 | `data/local/RoomTransactionRunner.kt` | Ingestion — atomic transaction | per-window upsert |
+| `domain/sync/link/SessionLinker.kt` | Ingestion — session linkage | pure `resolve()`: sleep > workout > resting precedence |
+| `domain/sync/link/SessionLinkReconciler.kt` | Ingestion — post-resync reconcile | re-tags HR/HRV by session, recomputes workout TRIMP/zones |
 | `data/healthconnect/SleepDataMapper.kt` | Ingestion — mapper | sleep session + stages |
 | `data/healthconnect/HeartRateMapper.kt` | Ingestion — mapper | HR samples → SLEEP/EXERCISE/RESTING |
 | `data/healthconnect/HrvMapper.kt` | Ingestion — mapper | RMSSD samples |

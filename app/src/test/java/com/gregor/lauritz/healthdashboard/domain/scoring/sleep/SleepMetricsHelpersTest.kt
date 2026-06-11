@@ -1,11 +1,9 @@
 package com.gregor.lauritz.healthdashboard.domain.scoring.sleep
 
-import com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HeartRateDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.HrvDao
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepHrSample
 import com.gregor.lauritz.healthdashboard.data.local.dao.SleepSessionDao
-import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.HeartRateRecordEntity
 import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
@@ -23,20 +21,18 @@ private const val DELTA = 0.5f
 
 class CurrentNightHrvResolverTest {
     private val hrvDao = mockk<HrvDao>()
-    private val dailySummaryDao = mockk<DailySummaryDao>()
-    private val resolver = CurrentNightHrvResolver(hrvDao, dailySummaryDao)
+    private val resolver = CurrentNightHrvResolver(hrvDao)
 
     @Test
     fun `resolve_sessionHrvPresent_returnsSessionSamples`() =
         runTest {
             val session = mockSession(id = "1")
-            val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
             val samples = listOf(30f, 35f, 40f)
 
             coEvery { hrvDao.getSleepRmssdForSession("1") } returns samples
             coEvery { hrvDao.getRmssdInTimeRange(any(), any()) } returns emptyList()
 
-            val result = resolver.resolve(session, dayMidnight)
+            val result = resolver.resolve(session)
 
             assertEquals(samples, result.samples)
             assertEquals(35f, result.mean, DELTA)
@@ -46,38 +42,14 @@ class CurrentNightHrvResolverTest {
     fun `resolve_sessionHrvEmpty_fallsBackToTimeRange`() =
         runTest {
             val session = mockSession(id = "1", startTime = 1000L, endTime = 5000L)
-            val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
             val samples = listOf(28f, 32f)
 
             coEvery { hrvDao.getSleepRmssdForSession("1") } returns emptyList()
             coEvery { hrvDao.getRmssdInTimeRange(1000L, 5000L) } returns samples
 
-            val result = resolver.resolve(session, dayMidnight)
+            val result = resolver.resolve(session)
 
             assertEquals(samples, result.samples)
-            assertEquals(30f, result.mean, DELTA)
-        }
-
-    @Test
-    fun `resolve_timeRangeEmpty_fallsBackToRollingMean`() =
-        runTest {
-            val session = mockSession(id = "1")
-            val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
-            val dayMidnightMs = dayMidnight.toEpochMilli()
-
-            coEvery { hrvDao.getSleepRmssdForSession("1") } returns emptyList()
-            coEvery { hrvDao.getRmssdInTimeRange(any(), any()) } returns emptyList()
-            coEvery {
-                dailySummaryDao.getSince(dayMidnightMs - 7 * 86400000)
-            } returns
-                listOf(
-                    mockDailySummary(dateMidnightMs = dayMidnightMs - 86400000, nocturnalHrv = 32),
-                    mockDailySummary(dateMidnightMs = dayMidnightMs - 172800000, nocturnalHrv = 28),
-                )
-
-            val result = resolver.resolve(session, dayMidnight)
-
-            assertEquals(emptyList<Float>(), result.samples)
             assertEquals(30f, result.mean, DELTA)
         }
 
@@ -85,13 +57,27 @@ class CurrentNightHrvResolverTest {
     fun `resolve_allEmpty_returnsMeanZero`() =
         runTest {
             val session = mockSession(id = "1")
-            val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
 
             coEvery { hrvDao.getSleepRmssdForSession("1") } returns emptyList()
             coEvery { hrvDao.getRmssdInTimeRange(any(), any()) } returns emptyList()
-            coEvery { dailySummaryDao.getSince(any()) } returns emptyList()
 
-            val result = resolver.resolve(session, dayMidnight)
+            val result = resolver.resolve(session)
+
+            assertEquals(emptyList<Float>(), result.samples)
+            assertEquals(0f, result.mean, DELTA)
+        }
+
+    @Test
+    fun `resolve_allEmpty_meanIsDeterministic_regardlessOfDbContent`() =
+        runTest {
+            // Verifies that no fallback to stored summaries exists: result must be 0f
+            // regardless of what daily summaries are in the DB.
+            val session = mockSession(id = "1")
+
+            coEvery { hrvDao.getSleepRmssdForSession("1") } returns emptyList()
+            coEvery { hrvDao.getRmssdInTimeRange(any(), any()) } returns emptyList()
+
+            val result = resolver.resolve(session)
 
             assertEquals(emptyList<Float>(), result.samples)
             assertEquals(0f, result.mean, DELTA)
@@ -109,7 +95,7 @@ class SleepPercentileRhrCalculatorTest {
             val session = mockSession(id = "1", endTime = 10000L)
             val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
 
-            coEvery { sleepSessionDao.getSince(any()) } returns
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns
                 listOf(
                     mockSession(id = "1", endTime = 10000L),
                     mockSession(id = "2", endTime = 9000L),
@@ -134,7 +120,7 @@ class SleepPercentileRhrCalculatorTest {
             val session = mockSession(id = "1")
             val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
 
-            coEvery { sleepSessionDao.getSince(any()) } returns listOf(session)
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns listOf(session)
             coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns emptyList()
 
             val result = collector.collect(session, dayMidnight)
@@ -150,7 +136,7 @@ class SleepPercentileRhrCalculatorTest {
             val session = mockSession(id = "1", endTime = 10000L)
             val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
 
-            coEvery { sleepSessionDao.getSince(any()) } returns
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns
                 listOf(
                     mockSession(id = "1", endTime = 10000L),
                     mockSession(id = "2", endTime = 9000L),
@@ -172,7 +158,7 @@ class SleepPercentileRhrCalculatorTest {
             val session = mockSession(id = "1", endTime = 10000L)
             val dayMidnight = Instant.parse("2026-05-16T00:00:00Z")
 
-            coEvery { sleepSessionDao.getSince(any()) } returns listOf(session)
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns listOf(session)
 
             // Provide 10 heart rate records for the current window: bpm values from 50 to 59
             val records =
@@ -198,6 +184,39 @@ class SleepPercentileRhrCalculatorTest {
             // Expected: 51.
             val resultFifteen = collector.collect(session, dayMidnight, percentile = 15)
             assertEquals(51, resultFifteen.currentRestingHr)
+        }
+
+    @Test
+    fun `collect_currentRestingHr_identicalRegardlessOfExtraSessionsInDb`() =
+        runTest {
+            // Regression: currentRestingHr must be deterministic for session X
+            // regardless of how many other sessions exist in the DB (1y vs 10y retention).
+            val session = mockSession(id = "target", endTime = 10000L)
+            val dayMidnight = Instant.parse("2026-05-21T00:00:00Z")
+            val targetHrSamples = (50..59).map { SleepHrSample(sessionId = "target", beatsPerMinute = it) }
+
+            // Minimal DB: only target session
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns listOf(session)
+            coEvery { heartRateDao.getSleepHrProjectionForSessions(listOf("target")) } returns targetHrSamples
+
+            val resultMinimal = collector.collect(session, dayMidnight)
+
+            // Full DB: target session + 50 extra sessions with different HR profiles
+            val extraSessions = (1..50).map { mockSession(id = "extra-$it", endTime = (it * 100).toLong()) }
+            val extraHrSamples =
+                extraSessions.flatMap { s ->
+                    (70..79).map { SleepHrSample(sessionId = s.id, beatsPerMinute = it) }
+                }
+            coEvery { sleepSessionDao.getBetween(any(), any()) } returns (extraSessions + session)
+            coEvery { heartRateDao.getSleepHrProjectionForSessions(any()) } returns (targetHrSamples + extraHrSamples)
+
+            val resultFull = collector.collect(session, dayMidnight)
+
+            assertEquals(
+                "currentRestingHr must not depend on other sessions in the DB",
+                resultMinimal.currentRestingHr,
+                resultFull.currentRestingHr,
+            )
         }
 }
 
@@ -332,13 +351,4 @@ private fun mockHeartRateRecord(
         timestampMs = timestampMs,
         recordType = "SLEEP",
         sessionId = sessionId,
-    )
-
-private fun mockDailySummary(
-    dateMidnightMs: Long = 0L,
-    nocturnalHrv: Int? = null,
-): DailySummaryEntity =
-    DailySummaryEntity(
-        dateMidnightMs = dateMidnightMs,
-        nocturnalHrv = nocturnalHrv,
     )

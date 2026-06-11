@@ -25,6 +25,7 @@ import com.gregor.lauritz.healthdashboard.domain.model.HealthDataType
 import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
+import com.gregor.lauritz.healthdashboard.domain.sync.link.SessionLinkReconciler
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
 import com.gregor.lauritz.healthdashboard.domain.util.logE
@@ -67,6 +68,7 @@ class HealthSyncUseCase
         private val settingsRepo: SettingsRepository,
         private val scoringRepository: ScoringRepository,
         private val transactionRunner: com.gregor.lauritz.healthdashboard.domain.repository.TransactionRunner,
+        private val sessionLinkReconciler: SessionLinkReconciler,
     ) {
         private val syncMutex = Mutex()
 
@@ -279,6 +281,32 @@ class HealthSyncUseCase
                                 yield()
                             }
                             chunkStart = chunkEndExclusive
+                        }
+
+                        // --- Reconcile phase: chunk-independent session linkage ---
+                        // Re-derives (recordType, sessionId) for every HR/HRV sample in range from the
+                        // *complete* set of sleep + workout sessions, and recomputes affected workout
+                        // metrics. Without this, a night straddling a chunk boundary could have its
+                        // samples split across two Health Connect fetch windows, each tagging only the
+                        // subset it saw - making linkage (and everything derived from it) depend on
+                        // chunk alignment, which itself depends on the retention setting.
+                        run {
+                            val reconcileStartMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                            val reconcileEndMs =
+                                endDate
+                                    .plusDays(1)
+                                    .atStartOfDay(zoneId)
+                                    .toInstant()
+                                    .toEpochMilli() - 1
+                            val zoneThresholds =
+                                WorkoutMapper.zoneThresholds(
+                                    prefs.zone1MinBpm,
+                                    prefs.zone1MaxBpm,
+                                    prefs.zone2MaxBpm,
+                                    prefs.zone3MaxBpm,
+                                    prefs.zone4MaxBpm,
+                                )
+                            sessionLinkReconciler.reconcile(reconcileStartMs, reconcileEndMs, zoneThresholds)
                         }
 
                         // --- Recompute phase: walk-forward over the full range ---

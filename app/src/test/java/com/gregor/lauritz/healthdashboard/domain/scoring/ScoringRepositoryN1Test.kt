@@ -139,7 +139,7 @@ class ScoringRepositoryN1Test {
             BaselineComputer(heartRateDao, hrvDao, sleepSessionDao, scoringCalculator, dailySummaryDao)
         val scoringConfigFactory = ScoringConfigFactory()
         val encryptionManager = mockk<EncryptionManager>(relaxed = true)
-        val hrvResolver = CurrentNightHrvResolver(hrvDao, dailySummaryDao)
+        val hrvResolver = CurrentNightHrvResolver(hrvDao)
         val sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(heartRateDao, sleepSessionDao)
         val nadirAnalyzer = SleepNadirAnalyzer(heartRateDao, scoringCalculator)
         val coverageValidator = HrCoverageValidator()

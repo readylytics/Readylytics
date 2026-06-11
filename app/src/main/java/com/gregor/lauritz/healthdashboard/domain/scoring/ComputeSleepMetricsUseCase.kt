@@ -137,7 +137,7 @@ class ComputeSleepMetricsUseCase
                         .toEpochMilli()
                 val yesterdaySummary = dailySummaryDao.getByDate(yesterdayMidnightMs)
 
-                val hrvResult = hrvResolver.resolve(session, dayMidnight)
+                val hrvResult = hrvResolver.resolve(session)
                 val sessionHrvSamples = hrvResult.samples
                 val currentHrvMean = hrvResult.mean
                 logD("ComputeSleepMetrics") { "HRV resolved: samples=${sessionHrvSamples.size}, mean=$currentHrvMean" }
@@ -391,6 +391,7 @@ class ComputeSleepMetricsUseCase
                             "rhrValuesSize": ${rhrValues.size}
                         },
                         "inputs": {
+                            "sessionId": "${session.id}",
                             "currentHrvMean": $currentHrvMean,
                             "currentNocturnalRhr": $currentNocturnalRhr,
                             "durationMinutes": ${session.durationMinutes},
