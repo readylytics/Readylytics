@@ -10,13 +10,13 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.material.color.MaterialColors
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
 import com.gregor.lauritz.healthdashboard.data.preferences.FallbackThemeColor
@@ -170,7 +170,12 @@ private fun hslToColor(
         b = hueToRgb(p, q, h / 360f - 1f / 3f)
     }
 
-    return Color(red = r, green = g, blue = b, alpha = alpha)
+    return Color(
+        red = r.coerceIn(0f, 1f),
+        green = g.coerceIn(0f, 1f),
+        blue = b.coerceIn(0f, 1f),
+        alpha = alpha,
+    )
 }
 
 private fun hueToRgb(
@@ -220,9 +225,10 @@ private fun colorSchemeFromSeed(
     fun e(tone: Int): Color = hslToColor(0f, 0.85f, tone / 100f)
 
     return if (isDark) {
+        val primaryColor = p(80)
         darkColorScheme(
-            primary = p(80),
-            onPrimary = p(20),
+            primary = primaryColor,
+            onPrimary = onColorFor(primaryColor),
             primaryContainer = p(30),
             onPrimaryContainer = p(90),
             inversePrimary = p(40),
@@ -240,7 +246,7 @@ private fun colorSchemeFromSeed(
             onSurface = n(90),
             surfaceVariant = nv(30),
             onSurfaceVariant = nv(80),
-            surfaceTint = p(80),
+            surfaceTint = primaryColor,
             inverseSurface = n(90),
             inverseOnSurface = n(10),
             outline = nv(50),
@@ -256,9 +262,10 @@ private fun colorSchemeFromSeed(
             surfaceContainerHighest = n(22),
         )
     } else {
+        val primaryColor = p(40)
         lightColorScheme(
-            primary = p(40),
-            onPrimary = p(100),
+            primary = primaryColor,
+            onPrimary = onColorFor(primaryColor),
             primaryContainer = p(90),
             onPrimaryContainer = p(10),
             inversePrimary = p(80),
@@ -276,7 +283,7 @@ private fun colorSchemeFromSeed(
             onSurface = n(10),
             surfaceVariant = nv(90),
             onSurfaceVariant = nv(30),
-            surfaceTint = p(40),
+            surfaceTint = primaryColor,
             inverseSurface = n(20),
             inverseOnSurface = n(95),
             outline = nv(50),
@@ -300,9 +307,12 @@ fun FitDashboardTheme(
     viewModel: ThemeViewModel = hiltViewModel(),
     content: @Composable () -> Unit,
 ) {
-    val dynamicColor = viewModel.dynamicColorFlow.collectAsState(initial = true).value
+    val dynamicColor = viewModel.dynamicColorFlow.collectAsStateWithLifecycle(initialValue = true).value
     val fallbackThemeColor =
-        viewModel.fallbackThemeColorFlow.collectAsState(initial = FallbackThemeColor.BRAND_PURPLE).value
+        viewModel.fallbackThemeColorFlow
+            .collectAsStateWithLifecycle(
+                initialValue = FallbackThemeColor.BRAND_PURPLE,
+            ).value
     val darkTheme =
         when (appTheme) {
             AppTheme.LIGHT -> false

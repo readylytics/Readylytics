@@ -69,14 +69,8 @@ fun FallbackThemeColorSelector(
                 Box(
                     modifier =
                         Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color(option.seedColor))
-                            .border(
-                                width = if (isSelected) 3.dp else 0.dp,
-                                color = MaterialTheme.colorScheme.outline,
-                                shape = CircleShape,
-                            ).selectable(
+                            .size(48.dp)
+                            .selectable(
                                 selected = isSelected,
                                 onClick = { onColorSelected(option) },
                                 role = Role.RadioButton,
@@ -85,12 +79,26 @@ fun FallbackThemeColorSelector(
                             },
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (isSelected) {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = null,
-                            tint = contentColorFor(Color(option.seedColor)),
-                        )
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color(option.seedColor))
+                                .border(
+                                    width = if (isSelected) 3.dp else 0.dp,
+                                    color = MaterialTheme.colorScheme.outline,
+                                    shape = CircleShape,
+                                ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = contentColorFor(Color(option.seedColor)),
+                            )
+                        }
                     }
                 }
             }
