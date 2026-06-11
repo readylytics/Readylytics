@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -89,6 +90,10 @@ fun SleepTrendCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -157,6 +162,10 @@ fun SleepTrendChart(
         if (parentScrollInProgress) selectedState = null
     }
 
+    val durationFormat = stringResource(R.string.sleep_trend_tooltip_duration_format)
+    val bedtimeFormat = stringResource(R.string.sleep_trend_tooltip_bedtime_format)
+    val hoursOnlyFormat = stringResource(R.string.sleep_duration_hours_only)
+
     var layerBounds by remember { mutableStateOf<Rect?>(null) }
     val invisibleMarker =
         remember {
@@ -178,7 +187,7 @@ fun SleepTrendChart(
         }
 
     val tooltipState =
-        remember(selectedState, rangeStartMs) {
+        remember(selectedState, rangeStartMs, durationFormat, bedtimeFormat) {
             selectedState?.let { s ->
                 val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
                 val dateText = ChartUtils.formatTooltipDate(date)
@@ -186,14 +195,13 @@ fun SleepTrendChart(
                 fun formatTime(offsetHours: Float?): String {
                     if (offsetHours == null) return "—"
                     val totalMinutes = (offsetHours * 60f).roundToInt()
-                    val hour = ((12 + totalMinutes / 60) % 24)
-                    val minute = totalMinutes % 60
+                    val positiveMinutes = (720 + totalMinutes).mod(1440)
+                    val hour = positiveMinutes / 60
+                    val minute = positiveMinutes % 60
                     return String.format(
                         Locale.getDefault(),
                         "%d:%02d %s",
-                        if (hour >
-                            12
-                        ) {
+                        if (hour > 12) {
                             hour - 12
                         } else if (hour == 0) {
                             12
@@ -205,29 +213,33 @@ fun SleepTrendChart(
                     )
                 }
 
-                fun formatDuration(durationHours: Float?): String {
-                    if (durationHours == null) return "—"
-                    val totalMinutes = (durationHours * 60f).roundToInt()
-                    val hours = totalMinutes / 60
-                    val minutes = totalMinutes % 60
-                    return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
-                }
-
                 val bedtimeText = formatTime(s.startOffsetValue)
                 val wakeupText =
                     formatTime(
                         s.startOffsetValue?.let { start ->
                             s.durationSpanValue?.let { span ->
-                                start +
-                                    span
+                                start + span
                             }
                         },
                     )
-                val actualText = formatDuration(s.actualDurationValue)
+
+                val valueText =
+                    String.format(
+                        Locale.getDefault(),
+                        durationFormat,
+                        s.actualDurationValue ?: 0f,
+                    )
+                val dateTextVal =
+                    String.format(
+                        Locale.getDefault(),
+                        bedtimeFormat,
+                        bedtimeText,
+                        wakeupText,
+                    )
 
                 DataPointTooltipData(
-                    valueText = "Duration: $actualText",
-                    dateText = "Bedtime: $bedtimeText - $wakeupText",
+                    valueText = valueText,
+                    dateText = dateTextVal,
                     extraLine = dateText,
                     offset =
                         IntOffset(
@@ -247,7 +259,7 @@ fun SleepTrendChart(
     val leftAxisFormatter =
         remember {
             CartesianValueFormatter { _, value, _ ->
-                val hour = ((12 + value.roundToInt()) % 24)
+                val hour = (12 + value.roundToInt()).mod(24)
                 val amPm = if (hour >= 12) "PM" else "AM"
                 val displayHour =
                     when {
@@ -260,9 +272,9 @@ fun SleepTrendChart(
         }
 
     val rightAxisFormatter =
-        remember {
+        remember(hoursOnlyFormat) {
             CartesianValueFormatter { _, value, _ ->
-                String.format(Locale.getDefault(), "%.0fh", value)
+                String.format(Locale.getDefault(), hoursOnlyFormat, value.roundToInt())
             }
         }
 
@@ -343,6 +355,13 @@ fun SleepTrendChart(
         }
 
     val xAxisFormatter = ChartDefaults.rememberDayOffsetFormatter(rangeStartMs)
+
+    val hasData =
+        remember(startOffsetPoints, durationSpanPoints, actualDurationPoints) {
+            startOffsetPoints.any { it.value != null } ||
+                durationSpanPoints.any { it.value != null } ||
+                actualDurationPoints.any { it.value != null }
+        }
 
     LaunchedEffect(startOffsetPoints, durationSpanPoints, actualDurationPoints) {
         modelProducer.runTransaction {
@@ -429,74 +448,90 @@ fun SleepTrendChart(
         )
 
     val chartHeight = 220.dp
-    Box(modifier = modifier.fillMaxWidth()) {
-        CartesianChartHost(
-            chart =
-                rememberCartesianChart(
-                    columnLayer,
-                    lineLayer,
-                    startAxis =
-                        VerticalAxis.rememberStart(
-                            label = labelComponent,
-                            valueFormatter = leftAxisFormatter,
-                            guideline = guidelineComponent,
-                            itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
-                        ),
-                    bottomAxis =
-                        HorizontalAxis.rememberBottom(
-                            label = labelComponent,
-                            valueFormatter = xAxisFormatter,
-                            itemPlacer = remember(rangeDays) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
-                            guideline = guidelineComponent,
-                        ),
-                    endAxis =
-                        VerticalAxis.rememberEnd(
-                            label = labelComponent,
-                            valueFormatter = rightAxisFormatter,
-                            itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
-                        ),
-                    marker = invisibleMarker,
-                    markerVisibilityListener = markerVisibilityListener,
-                ),
-            modelProducer = modelProducer,
-            scrollState = scrollState,
-            zoomState = zoomState,
-            modifier = Modifier.fillMaxWidth().height(chartHeight),
-        )
-
-        SleepTrendOverlay(
-            selectedState = selectedState,
-            barColor = barColor,
-            lineColor = lineColor,
-            layerBounds = layerBounds,
-            barThicknessDp = 8.dp,
-            chartHeight = chartHeight,
-        )
-
-        VicoChartTooltipOverlay(
-            selectedPointOffset =
-                selectedState?.let { s ->
-                    Offset(s.canvasX, s.lineCanvasY ?: s.barCanvasYTop ?: 0f)
-                },
-            pulseColor = lineColor,
-            modifier = Modifier.fillMaxWidth().height(chartHeight),
-        )
-
-        if (tooltipState != null) {
-            DataPointTooltip(
-                isVisible = true,
-                data = tooltipState,
-                onDismissRequest = { selectedState = null },
+    if (!hasData) {
+        Box(
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .height(chartHeight),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = stringResource(R.string.message_no_data_available),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    } else {
+        Box(modifier = modifier.fillMaxWidth()) {
+            CartesianChartHost(
+                chart =
+                    rememberCartesianChart(
+                        columnLayer,
+                        lineLayer,
+                        startAxis =
+                            VerticalAxis.rememberStart(
+                                label = labelComponent,
+                                valueFormatter = leftAxisFormatter,
+                                guideline = guidelineComponent,
+                                itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
+                            ),
+                        bottomAxis =
+                            HorizontalAxis.rememberBottom(
+                                label = labelComponent,
+                                valueFormatter = xAxisFormatter,
+                                itemPlacer = remember(rangeDays) { ChartDefaults.itemPlacerForRangeDays(rangeDays) },
+                                guideline = guidelineComponent,
+                            ),
+                        endAxis =
+                            VerticalAxis.rememberEnd(
+                                label = labelComponent,
+                                valueFormatter = rightAxisFormatter,
+                                itemPlacer = remember { VerticalAxis.ItemPlacer.count(count = { 5 }) },
+                            ),
+                        marker = invisibleMarker,
+                        markerVisibilityListener = markerVisibilityListener,
+                    ),
+                modelProducer = modelProducer,
+                scrollState = scrollState,
+                zoomState = zoomState,
+                modifier = Modifier.fillMaxWidth().height(chartHeight),
+            )
+
+            SleepTrendOverlay(
+                selectedState = selectedState,
+                barColor = barColor,
+                lineColor = lineColor,
+                layerBounds = layerBounds,
+                barThicknessDp = 8.dp,
+                chartHeight = chartHeight,
+            )
+
+            VicoChartTooltipOverlay(
+                selectedPointOffset =
+                    selectedState?.let { s ->
+                        Offset(s.canvasX, s.lineCanvasY ?: s.barCanvasYTop ?: 0f)
+                    },
+                pulseColor = lineColor,
+                modifier = Modifier.fillMaxWidth().height(chartHeight),
+            )
+
+            if (tooltipState != null) {
+                DataPointTooltip(
+                    isVisible = true,
+                    data = tooltipState,
+                    onDismissRequest = { selectedState = null },
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        SleepTrendChartLegends(
+            barColor = barColor,
+            lineColor = lineColor,
+        )
     }
-
-    Spacer(Modifier.height(16.dp))
-
-    SleepTrendChartLegends(
-        barColor = barColor,
-        lineColor = lineColor,
-    )
 }
 
 @Composable
@@ -582,6 +617,10 @@ fun SleepTrendSkeleton(modifier: Modifier = Modifier) {
         Card(
             modifier = Modifier.fillMaxWidth().height(250.dp),
             shape = MaterialTheme.shapes.large,
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                ),
         ) {
             Box(
                 modifier =

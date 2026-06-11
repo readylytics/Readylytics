@@ -257,7 +257,7 @@ ViewModels collect repository flows, fuse them with `combine()`, and expose immu
 | `DashboardViewModel` | `ui/dashboard/DashboardViewModel.kt` | `uiState: StateFlow<DashboardUiState>` (summary, card map, circadian, PAI, `recalcProgress`); `onRefresh()` → `foregroundSyncController.triggerDailySync()`. |
 | `SyncViewModel` | `ui/sync/SyncViewModel.kt` | `uiState` (sealed sync state machine), `isSyncing`, `recalcProgress` (forwarded from `ForegroundSyncController`). |
 | `VitalsViewModel` | `ui/vitals/VitalsViewModel.kt` | HRV / RHR / SpO2 daily trends + baseline bands. |
-| `SleepViewModel` | `ui/sleep/SleepViewModel.kt` | Sleep summary, stage timeline, circadian consistency. |
+| `SleepViewModel` | `ui/sleep/SleepViewModel.kt` | Sleep summary, stage timeline, circadian consistency, sleep window/duration trend data. |
 | `WorkoutsViewModel` / `WorkoutDetailViewModel` | `ui/workouts/` | Daily TRIMP/strain trends, PAI breakdown; per-workout TRIMP/strain/HRR. Per-workout load cards/rows consume `ComputeWorkoutLoadMetricsUseCase` so history and detail show the same rounded TRIMP and gained-strain values. |
 | `HeartRateDetailViewModel` | `ui/heartrate/HeartRateDetailViewModel.kt` | Intra-day HR samples + zone totals. |
 | `StepDetailViewModel` / `WeightDetailViewModel` / `BloodPressureDetailViewModel` / `BodyFatDetailViewModel` | `ui/steps/`, `ui/weight/`, `ui/bloodpressure/`, `ui/bodyfat/` | Per-metric trends, statuses, formatted display. |
@@ -282,6 +282,7 @@ progress).
 | `HrTimelineChart` / `SleepStagesChart` / `SleepArchitectureBar` / `PaiWeeklyBar` / `StepsBar` | `ui/components/` | Custom `Canvas` visualizations. |
 | `VicoChartTooltipOverlay` / `DataPointTooltip` | `ui/components/` | Touch interception + floating tooltip overlay for Vico charts. |
 | `ReorderableCardGrid` (+ `reorder/DragController`) | `ui/components/` | Drag-and-drop dashboard card grid. |
+| `SleepTrendChart` | `ui/sleep/SleepTrendChart.kt` | Vico stacked column & line dual-axis sleep window & duration chart. |
 
 ### 3.4 Recalc-progress trace (background job → UI)
 
@@ -340,7 +341,7 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | `ui/dashboard/DashboardViewModel.kt` | UI — dashboard state | summary, cards, PAI, recalc progress |
 | `ui/sync/SyncViewModel.kt` | UI — sync state | `recalcProgress` forward |
 | `ui/vitals/VitalsViewModel.kt` | UI — vitals state | HRV / RHR / SpO2 trends + bands |
-| `ui/sleep/SleepViewModel.kt` | UI — sleep state | sleep score, stage timeline |
+| `ui/sleep/SleepViewModel.kt` | UI — sleep state | sleep score, stage timeline, sleep window/duration trend data |
 | `ui/workouts/WorkoutsViewModel.kt` | UI — workouts state | TRIMP / strain / PAI |
 | `ui/settings/SettingsState.kt` | UI — settings state | `SyncSettingsState` resync progress |
 | `ui/scaffold/MainScaffold.kt` | UI — scaffold + banner | "Recalculating day X of Y" |
@@ -349,6 +350,7 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | `ui/components/HrTimelineChart.kt` | UI — Canvas chart | intra-day HR + zones |
 | `ui/components/SleepStagesChart.kt` | UI — Canvas chart | sleep stage timeline |
 | `ui/components/PaiWeeklyBar.kt` | UI — Canvas chart | 7-day PAI breakdown |
+| `ui/sleep/SleepTrendChart.kt` | UI — Vico chart | stacked column & line dual-axis sleep window & duration chart |
 
 ---
 

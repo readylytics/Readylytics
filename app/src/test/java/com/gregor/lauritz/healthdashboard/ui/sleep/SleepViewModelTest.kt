@@ -173,4 +173,23 @@ class SleepViewModelTest {
             viewModel.viewModelScope.cancel()
             testDispatcher.scheduler.advanceUntilIdle()
         }
+
+    @Test
+    fun `trend data points are padded with null values when no sleep sessions exist`() =
+        runTest {
+            every { sleepSessionRepository.observeSince(any()) } returns flowOf(emptyList())
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading }
+            assertEquals(TimeRange.SEVEN_DAYS, state.selectedTrendRange)
+            assertEquals(7, state.trendStartOffsetPoints.size)
+            assertEquals(true, state.trendStartOffsetPoints.all { it.value == null })
+            assertEquals(true, state.trendDurationSpanPoints.all { it.value == null })
+            assertEquals(true, state.trendActualDurationPoints.all { it.value == null })
+
+            viewModel.viewModelScope.cancel()
+            testDispatcher.scheduler.advanceUntilIdle()
+        }
 }
