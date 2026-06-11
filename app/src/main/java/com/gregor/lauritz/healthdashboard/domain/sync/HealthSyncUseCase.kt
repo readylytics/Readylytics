@@ -311,7 +311,13 @@ class HealthSyncUseCase
                         // subset it saw - making linkage (and everything derived from it) depend on
                         // chunk alignment, which itself depends on the retention setting.
                         run {
-                            val reconcileStartMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                            val reconcileStartMs =
+                                startDate
+                                    .minusDays(
+                                        1,
+                                    ).atStartOfDay(zoneId)
+                                    .toInstant()
+                                    .toEpochMilli()
                             val reconcileEndMs =
                                 endDate
                                     .plusDays(1)
