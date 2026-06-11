@@ -10,25 +10,25 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Dao
 interface HrvDao {
-    @Query("SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
+    @Query("SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, id ASC")
     fun _observeSince(fromMs: Long): Flow<List<HrvRecordEntity>>
 
     fun observeSince(fromMs: Long): Flow<List<HrvRecordEntity>> = _observeSince(fromMs).distinctUntilChanged()
 
     @Query(
         "SELECT * FROM hrv_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +
-            "ORDER BY timestampMs ASC",
+            "ORDER BY timestampMs ASC, id ASC",
     )
     fun _observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordEntity>>
 
     fun observeSleepHrvSince(fromMs: Long): Flow<List<HrvRecordEntity>> =
         _observeSleepHrvSince(fromMs).distinctUntilChanged()
 
-    @Query("SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
+    @Query("SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, id ASC")
     suspend fun getSince(fromMs: Long): List<HrvRecordEntity>
 
     @Query(
-        "SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset",
+        "SELECT * FROM hrv_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, id ASC LIMIT :limit OFFSET :offset",
     )
     suspend fun getPaged(
         fromMs: Long,
@@ -38,7 +38,7 @@ interface HrvDao {
 
     @Query(
         "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +
-            "ORDER BY timestampMs ASC",
+            "ORDER BY timestampMs ASC, id ASC",
     )
     suspend fun getSleepRmssdValues(fromMs: Long): List<Float>
 
@@ -52,12 +52,14 @@ interface HrvDao {
     ): List<Float>
 
     @Query(
-        "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId = :sessionId",
+        "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId = :sessionId " +
+            "ORDER BY timestampMs ASC, id ASC",
     )
     suspend fun getSleepRmssdForSession(sessionId: String): List<Float>
 
     @Query(
-        "SELECT sessionId, rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId IN (:sessionIds)",
+        "SELECT sessionId, rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId IN (:sessionIds) " +
+            "ORDER BY sessionId ASC, timestampMs ASC, id ASC",
     )
     suspend fun getSleepRmssdForSessionsMap(
         sessionIds: List<String>,
@@ -71,12 +73,14 @@ interface HrvDao {
     >
 
     @Query(
-        "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId IN (:sessionIds)",
+        "SELECT rmssdMs FROM hrv_records WHERE recordType = 'SLEEP' AND sessionId IN (:sessionIds) " +
+            "ORDER BY sessionId ASC, timestampMs ASC, id ASC",
     )
     suspend fun getSleepRmssdValuesForSessions(sessionIds: List<String>): List<Float>
 
     @Query(
-        "SELECT rmssdMs FROM hrv_records WHERE timestampMs >= :fromMs AND timestampMs <= :toMs",
+        "SELECT rmssdMs FROM hrv_records WHERE timestampMs >= :fromMs AND timestampMs <= :toMs " +
+            "ORDER BY timestampMs ASC, id ASC",
     )
     suspend fun getRmssdInTimeRange(
         fromMs: Long,
@@ -84,7 +88,8 @@ interface HrvDao {
     ): List<Float>
 
     @Query(
-        "SELECT * FROM hrv_records WHERE timestampMs >= :fromMs AND timestampMs <= :toMs ORDER BY timestampMs ASC",
+        "SELECT * FROM hrv_records WHERE timestampMs >= :fromMs AND timestampMs <= :toMs " +
+            "ORDER BY timestampMs ASC, id ASC",
     )
     suspend fun getByTimeRange(
         fromMs: Long,

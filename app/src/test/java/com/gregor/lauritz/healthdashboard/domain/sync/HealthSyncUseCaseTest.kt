@@ -105,6 +105,79 @@ class HealthSyncUseCaseTest {
         }
 
     @Test
+    fun `sync clears frozen baselines for scoring window before recomputing days`() =
+        runTest {
+            val windowDays = 2
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(zoneId)
+            val windowStartMs =
+                today
+                    .minusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val windowEndExclusiveMs =
+                today
+                    .plusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+            coJustRun { dailySummaryDao.clearFrozenBaselinesBetween(any(), any()) }
+
+            useCase.sync(windowDays = windowDays)
+
+            coVerifyOrder {
+                dailySummaryDao.clearFrozenBaselinesBetween(windowStartMs, windowEndExclusiveMs)
+                scoringRepository.computeDailySummary(today.minusDays(1))
+                dailySummaryDao.upsert(any())
+                scoringRepository.computeDailySummary(today)
+                dailySummaryDao.upsert(any())
+            }
+        }
+
+    @Test
+    fun `sync reconciles ingested overlap before scoring days`() =
+        runTest {
+            val windowDays = 1
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(zoneId)
+            val ingestStartMs =
+                today
+                    .minusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val windowEndExclusiveMs =
+                today
+                    .plusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+            coJustRun { dailySummaryDao.clearFrozenBaselinesBetween(any(), any()) }
+            coJustRun { sessionLinkReconciler.reconcile(any(), any(), any()) }
+
+            useCase.sync(windowDays = windowDays)
+
+            coVerifyOrder {
+                sessionLinkReconciler.reconcile(
+                    startMs = ingestStartMs,
+                    endMs = windowEndExclusiveMs - 1,
+                    zoneThresholds = any(),
+                )
+                dailySummaryDao.clearFrozenBaselinesBetween(
+                    today.atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                    windowEndExclusiveMs,
+                )
+                scoringRepository.computeDailySummary(today)
+                dailySummaryDao.upsert(any())
+            }
+        }
+
+    @Test
     fun `sync fetches and upserts all heart-related record types`() =
         runTest {
             coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
@@ -323,5 +396,35 @@ class HealthSyncUseCaseTest {
             assertEquals(3, progress.last().first)
             assertEquals(3, progress.last().second)
             assert(progress.all { (_, total) -> total == 3 })
+        }
+
+    @Test
+    fun `resyncRange clears frozen baselines only for requested range before walk-forward recompute`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 3)
+            val clearFromMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val clearToExclusiveMs =
+                endDate
+                    .plusDays(1)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+            coJustRun { dailySummaryDao.clearFrozenBaselinesBetween(any(), any()) }
+
+            useCase.resyncRange(startDate = startDate, endDate = endDate)
+
+            coVerifyOrder {
+                dailySummaryDao.clearFrozenBaselinesBetween(clearFromMs, clearToExclusiveMs)
+                scoringRepository.computeDailySummary(startDate)
+                dailySummaryDao.upsert(any())
+                scoringRepository.computeDailySummary(startDate.plusDays(1))
+                dailySummaryDao.upsert(any())
+                scoringRepository.computeDailySummary(endDate)
+                dailySummaryDao.upsert(any())
+            }
         }
 }
