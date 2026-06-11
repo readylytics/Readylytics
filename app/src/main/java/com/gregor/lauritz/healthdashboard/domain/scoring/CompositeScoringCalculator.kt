@@ -154,6 +154,10 @@ class CompositeScoringCalculator
             isLateNadir: Boolean,
             isCalibrating: Boolean,
             emergencyFlags: EmergencyFlagThresholds?,
+            yesterdayTrimp: Float?,
+            yesterdayHrv: Float?,
+            currentHrv: Float?,
+            hrvOptimalThreshold: Float,
         ): Set<RecoveryFlag> =
             loadStrategy.computeRecoveryFlags(
                 zLnHrv,
@@ -166,6 +170,10 @@ class CompositeScoringCalculator
                 isLateNadir,
                 isCalibrating,
                 emergencyFlags,
+                yesterdayTrimp,
+                yesterdayHrv,
+                currentHrv,
+                hrvOptimalThreshold,
             )
 
         override fun computeReadinessScore(

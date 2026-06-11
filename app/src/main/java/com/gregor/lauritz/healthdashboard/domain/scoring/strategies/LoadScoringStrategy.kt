@@ -108,6 +108,10 @@ class LoadScoringStrategy
             isLateNadir: Boolean,
             isCalibrating: Boolean,
             emergencyFlags: EmergencyFlagThresholds?,
+            yesterdayTrimp: Float? = null,
+            yesterdayHrv: Float? = null,
+            currentHrv: Float? = null,
+            hrvOptimalThreshold: Float = 1.0f,
         ): Set<RecoveryFlag> {
             val flags = mutableSetOf<RecoveryFlag>()
             if (isCalibrating) flags += RecoveryFlag.CALIBRATING
@@ -142,6 +146,23 @@ class LoadScoringStrategy
                         yesterdayZRhr >= thresholds.illnessZRhrThreshold
                 if (todayIllness && prevIllness) flags += RecoveryFlag.ILLNESS_ONSET
             }
+
+            // Workout Impact & Rest Day Insight Logic
+            if (yesterdayTrimp != null && yesterdayTrimp >= 120f) {
+                flags.add(RecoveryFlag.WORKOUT_IMPACT)
+            } else if (yesterdayTrimp != null && yesterdayTrimp < 10f) {
+                if (currentHrv != null && yesterdayHrv != null && yesterdayHrv > 0) {
+                    val targetHrv = yesterdayHrv * hrvOptimalThreshold
+                    if (currentHrv >= targetHrv) {
+                        flags.add(RecoveryFlag.REST_DAY_SUCCESS)
+                    } else {
+                        flags.add(RecoveryFlag.REST_DAY_NO_IMPACT)
+                    }
+                } else {
+                    flags.add(RecoveryFlag.REST_DAY_NO_IMPACT)
+                }
+            }
+
             return flags
         }
 

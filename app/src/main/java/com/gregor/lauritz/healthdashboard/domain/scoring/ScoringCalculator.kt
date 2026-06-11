@@ -108,6 +108,10 @@ interface ScoringCalculator {
         isLateNadir: Boolean,
         isCalibrating: Boolean,
         emergencyFlags: com.gregor.lauritz.healthdashboard.domain.scoring.components.EmergencyFlagThresholds? = null,
+        yesterdayTrimp: Float? = null,
+        yesterdayHrv: Float? = null,
+        currentHrv: Float? = null,
+        hrvOptimalThreshold: Float = 1.0f,
     ): Set<RecoveryFlag>
 
     fun computeReadinessScore(
