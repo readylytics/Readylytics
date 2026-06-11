@@ -113,11 +113,9 @@ private val LightColorScheme =
 
 private fun onColorFor(seed: Color): Color = if (seed.luminance() > 0.179f) Color.Black else Color.White
 
-private fun fallbackLightScheme(seed: Color): ColorScheme =
-    colorSchemeFromSeed(seed, isDark = false)
+private fun fallbackLightScheme(seed: Color): ColorScheme = colorSchemeFromSeed(seed, isDark = false)
 
-private fun fallbackDarkScheme(seed: Color): ColorScheme =
-    colorSchemeFromSeed(seed, isDark = true)
+private fun fallbackDarkScheme(seed: Color): ColorScheme = colorSchemeFromSeed(seed, isDark = true)
 
 private fun Color.toHsl(outHsl: FloatArray) {
     val r = red

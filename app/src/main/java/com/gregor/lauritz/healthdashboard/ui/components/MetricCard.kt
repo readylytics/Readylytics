@@ -68,7 +68,7 @@ fun MetricCard(
                         .fillMaxWidth()
                         .semantics { heading() },
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
             ) {
                 Text(
                     text = title,

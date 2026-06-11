@@ -30,7 +30,7 @@ fun WorkoutRecoverySection(uiState: WorkoutDetailUiState) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
             ) {
                 Text(
                     text = stringResource(R.string.workout_recovery_header),
