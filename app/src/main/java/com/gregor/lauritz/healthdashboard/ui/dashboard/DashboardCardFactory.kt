@@ -147,9 +147,16 @@ fun buildCardDataMap(
                         val baseText = stringResource(R.string.insight_rest_day_success_body)
                         val sleepScore = uiState.summary?.sleepScore ?: 0f
                         val duration = uiState.summary?.sleepDurationMinutes ?: 0
-                        val isPerfectSleep = sleepScore >= 85f && duration >= (uiState.goalSleepHours * 60)
-                        
-                        val extraText = if (isPerfectSleep) stringResource(R.string.insight_rest_day_perfect_sleep) else ""
+                        val isPerfectSleep = sleepScore >= 85f && duration >= (uiState.goalSleepHours * 60).toInt()
+
+                        val extraText =
+                            if (isPerfectSleep) {
+                                stringResource(
+                                    R.string.insight_rest_day_perfect_sleep,
+                                )
+                            } else {
+                                ""
+                            }
                         InsightCard(
                             title = stringResource(R.string.insight_rest_day_success_title),
                             body = baseText + extraText,

@@ -158,8 +158,6 @@ class LoadScoringStrategy
                     } else {
                         flags.add(RecoveryFlag.REST_DAY_NO_IMPACT)
                     }
-                } else {
-                    flags.add(RecoveryFlag.REST_DAY_NO_IMPACT)
                 }
             }
 
