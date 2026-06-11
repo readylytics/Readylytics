@@ -113,6 +113,18 @@ class HealthSyncUseCase
                         val ingestStart = today.minusDays(windowDays.toLong()).atStartOfDay(zoneId).toInstant()
 
                         ingestWindow(ingestStart, windowEnd, prefs)
+                        sessionLinkReconciler.reconcile(
+                            startMs = ingestStart.toEpochMilli(),
+                            endMs = windowEnd.toEpochMilli() - 1,
+                            zoneThresholds =
+                                WorkoutMapper.zoneThresholds(
+                                    prefs.zone1MinBpm,
+                                    prefs.zone1MaxBpm,
+                                    prefs.zone2MaxBpm,
+                                    prefs.zone3MaxBpm,
+                                    prefs.zone4MaxBpm,
+                                ),
+                        )
 
                         val deviceByType = prefs.deviceByDataType
 
@@ -161,6 +173,14 @@ class HealthSyncUseCase
 
                         var successCount = 0
                         var failureCount = 0
+
+                        val scoringStartMs =
+                            today
+                                .minusDays((windowDays - 1).coerceAtLeast(0).toLong())
+                                .atStartOfDay(zoneId)
+                                .toInstant()
+                                .toEpochMilli()
+                        dailySummaryDao.clearFrozenBaselinesBetween(scoringStartMs, windowEnd.toEpochMilli())
 
                         for (i in (windowDays - 1) downTo 0) {
                             ensureActive()
@@ -310,8 +330,17 @@ class HealthSyncUseCase
                         }
 
                         // --- Recompute phase: walk-forward over the full range ---
-                        // Clear freeze so the bounded baseline variants recompute per day.
-                        dailySummaryDao.clearFrozenBaselines()
+                        // Clear frozen snapshots for the exact range so bounded baseline variants
+                        // recompute per day and recent sync/resync use the same baseline path.
+                        dailySummaryDao.clearFrozenBaselinesBetween(
+                            fromMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                            toExclusiveMs =
+                                endDate
+                                    .plusDays(1)
+                                    .atStartOfDay(zoneId)
+                                    .toInstant()
+                                    .toEpochMilli(),
+                        )
                         var day = startDate
                         var recomputedDays = 0
                         while (!day.isAfter(endDate)) {

@@ -88,13 +88,25 @@ interface DailySummaryDao {
         baselineObservationCount: Int? = null,
     )
 
-    // Clears the freeze flag so BaselineComputer will recompute on next sync.
     @Query(
         "UPDATE daily_summaries SET " +
-            "baseline_calculated_at_date = NULL " +
-            "WHERE baseline_calculated_at_date IS NOT NULL",
+            "hrv_mu_mssd = NULL, " +
+            "hrv_sigma_mssd = NULL, " +
+            "rhr_bpm = NULL, " +
+            "rhr_sigma = NULL, " +
+            "baseline_calculated_at_date = NULL, " +
+            "hr_max = NULL, " +
+            "snapshot_profile = NULL, " +
+            "snapshot_calibration_phase = NULL, " +
+            "hrv_sigma_prior = NULL, " +
+            "pai_scaling_factor = NULL, " +
+            "baseline_observation_count = NULL " +
+            "WHERE dateMidnightMs >= :fromMs AND dateMidnightMs < :toExclusiveMs",
     )
-    suspend fun clearFrozenBaselines()
+    suspend fun clearFrozenBaselinesBetween(
+        fromMs: Long,
+        toExclusiveMs: Long,
+    )
 
     @Query(
         "UPDATE daily_summaries SET " +

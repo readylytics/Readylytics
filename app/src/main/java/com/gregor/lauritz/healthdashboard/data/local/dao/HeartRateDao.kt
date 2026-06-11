@@ -17,18 +17,18 @@ data class SleepHrSample(
 interface HeartRateDao {
     @Query(
         "SELECT * FROM heart_rate_records WHERE recordType = 'SLEEP' AND timestampMs >= :fromMs " +
-            "ORDER BY timestampMs ASC",
+            "ORDER BY timestampMs ASC, id ASC",
     )
     fun _observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordEntity>>
 
     fun observeSleepHrSince(fromMs: Long): Flow<List<HeartRateRecordEntity>> =
         _observeSleepHrSince(fromMs).distinctUntilChanged()
 
-    @Query("SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC")
+    @Query("SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, id ASC")
     suspend fun getSince(fromMs: Long): List<HeartRateRecordEntity>
 
     @Query(
-        "SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC LIMIT :limit OFFSET :offset",
+        "SELECT * FROM heart_rate_records WHERE timestampMs >= :fromMs ORDER BY timestampMs ASC, id ASC LIMIT :limit OFFSET :offset",
     )
     suspend fun getPaged(
         fromMs: Long,
@@ -66,7 +66,7 @@ interface HeartRateDao {
     @Query(
         "SELECT beatsPerMinute FROM heart_rate_records " +
             "WHERE sessionId = :sessionId AND recordType = 'SLEEP' " +
-            "ORDER BY beatsPerMinute ASC",
+            "ORDER BY beatsPerMinute ASC, timestampMs ASC, id ASC",
     )
     suspend fun getSleepHrSamplesForSession(sessionId: String): List<Int>
 
@@ -79,7 +79,7 @@ interface HeartRateDao {
     @Query(
         "SELECT beatsPerMinute FROM heart_rate_records " +
             "WHERE sessionId = :sessionId AND recordType = 'SLEEP' " +
-            "ORDER BY beatsPerMinute ASC LIMIT 1 OFFSET :offset",
+            "ORDER BY beatsPerMinute ASC, timestampMs ASC, id ASC LIMIT 1 OFFSET :offset",
     )
     suspend fun getSleepHrSampleAtOffset(
         sessionId: String,
@@ -98,13 +98,13 @@ interface HeartRateDao {
     @Query(
         "SELECT timestampMs FROM heart_rate_records " +
             "WHERE recordType = 'SLEEP' AND sessionId = :sessionId " +
-            "ORDER BY beatsPerMinute ASC, timestampMs ASC LIMIT 1",
+            "ORDER BY beatsPerMinute ASC, timestampMs ASC, id ASC LIMIT 1",
     )
     suspend fun getMinHrTimestamp(sessionId: String): Long?
 
     @Query(
         "SELECT * FROM heart_rate_records WHERE timestampMs >= :startMs AND timestampMs <= :endMs " +
-            "ORDER BY timestampMs ASC",
+            "ORDER BY timestampMs ASC, id ASC",
     )
     suspend fun getByTimeRange(
         startMs: Long,
@@ -113,7 +113,7 @@ interface HeartRateDao {
 
     @Query(
         "SELECT * FROM heart_rate_records WHERE timestampMs >= :startMs AND timestampMs < :endMs " +
-            "ORDER BY timestampMs ASC",
+            "ORDER BY timestampMs ASC, id ASC",
     )
     fun _observeByTimeRange(
         startMs: Long,
@@ -151,7 +151,7 @@ interface HeartRateDao {
         "SELECT id, sessionId, recordType, beatsPerMinute, timestampMs, deviceName " +
             "FROM heart_rate_records " +
             "WHERE sessionId IN (:sessionIds) AND recordType = 'SLEEP' " +
-            "ORDER BY sessionId, beatsPerMinute ASC",
+            "ORDER BY sessionId ASC, beatsPerMinute ASC, timestampMs ASC, id ASC",
     )
     suspend fun getSleepHrSamplesForSessions(sessionIds: List<String>): List<HeartRateRecordEntity>
 
@@ -159,7 +159,7 @@ interface HeartRateDao {
         "SELECT sessionId, beatsPerMinute " +
             "FROM heart_rate_records " +
             "WHERE sessionId IN (:sessionIds) AND recordType = 'SLEEP' " +
-            "ORDER BY sessionId, beatsPerMinute ASC",
+            "ORDER BY sessionId ASC, beatsPerMinute ASC, timestampMs ASC, id ASC",
     )
     suspend fun getSleepHrProjectionForSessions(sessionIds: List<String>): List<SleepHrSample>
 

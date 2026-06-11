@@ -36,6 +36,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.fail
 
@@ -90,10 +91,37 @@ class ScoringSyncScopeOutputsDeterminismTest {
             assertSameMatrix(results)
         }
 
+    @Test
+    fun `same target date keeps rounded sleep and readiness when live summary becomes frozen`() =
+        runTest {
+            val fixture = buildFixture(includeFutureSessions = false)
+            val live = computeForScope("live", fixture, scopeDays = 60).summary
+            val frozenReplay =
+                computeForScope(
+                    label = "frozen replay",
+                    fixture = fixture,
+                    scopeDays = 60,
+                    existingTargetSummary = live,
+                ).summary
+
+            assertMatrixPopulated(live)
+            assertEquals(
+                live.sleepScore?.roundToInt(),
+                frozenReplay.sleepScore?.roundToInt(),
+                "Rounded sleepScore must not flip when a live-computed day is recomputed from its frozen summary.",
+            )
+            assertEquals(
+                live.readinessScore?.roundToInt(),
+                frozenReplay.readinessScore?.roundToInt(),
+                "Rounded readinessScore must not flip when a live-computed day is recomputed from its frozen summary.",
+            )
+        }
+
     private suspend fun computeForScope(
         label: String,
         fixture: Fixture,
         scopeDays: Int?,
+        existingTargetSummary: DailySummaryEntity? = null,
     ): ScopeResult {
         val cutoffMs =
             scopeDays?.let {
@@ -200,7 +228,11 @@ class ScoringSyncScopeOutputsDeterminismTest {
             firstArg<List<String>>().associateWith { sessionId -> scopedHrvSamples[sessionId].orEmpty() }
         }
 
-        coEvery { dailySummaryDao.getByDate(any()) } returns null
+        val targetMidnightMs = targetDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+        coEvery { dailySummaryDao.getByDate(any()) } coAnswers {
+            val dateMs = firstArg<Long>()
+            if (dateMs == targetMidnightMs) existingTargetSummary else null
+        }
         coEvery { dailySummaryDao.getByDates(any()) } returns emptyList()
         coEvery { dailySummaryDao.getSince(any()) } returns emptyList()
 
