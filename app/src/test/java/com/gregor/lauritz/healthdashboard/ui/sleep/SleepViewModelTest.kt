@@ -88,7 +88,7 @@ class SleepViewModelTest {
 
     @Test
     fun `initial state has default trend range and empty points`() =
-        runTest {
+        runTest(testDispatcher) {
             viewModel = createViewModel()
             testDispatcher.scheduler.advanceUntilIdle()
 
@@ -97,14 +97,11 @@ class SleepViewModelTest {
             assertEquals(7, state.trendStartOffsetPoints.size)
             assertEquals(7, state.trendDurationSpanPoints.size)
             assertEquals(7, state.trendActualDurationPoints.size)
-
-            viewModel.viewModelScope.cancel()
-            testDispatcher.scheduler.advanceUntilIdle()
         }
 
     @Test
     fun `onTrendRangeSelected updates selected trend range`() =
-        runTest {
+        runTest(testDispatcher) {
             viewModel = createViewModel()
             testDispatcher.scheduler.advanceUntilIdle()
 
@@ -114,14 +111,11 @@ class SleepViewModelTest {
             val state = viewModel.uiState.first { !it.isLoading && it.selectedTrendRange == TimeRange.THIRTY_DAYS }
             assertEquals(TimeRange.THIRTY_DAYS, state.selectedTrendRange)
             assertEquals(30, state.trendStartOffsetPoints.size)
-
-            viewModel.viewModelScope.cancel()
-            testDispatcher.scheduler.advanceUntilIdle()
         }
 
     @Test
     fun `trend data points are correctly calculated from sleep sessions`() =
-        runTest {
+        runTest(testDispatcher) {
             val zoneId = ZoneId.systemDefault()
             val session =
                 SleepSessionData(
@@ -169,14 +163,11 @@ class SleepViewModelTest {
             assertEquals(10f, startPoint.value!!, 0.01f)
             assertEquals(8f, spanPoint.value!!, 0.01f)
             assertEquals(7.5f, actualPoint.value!!, 0.01f)
-
-            viewModel.viewModelScope.cancel()
-            testDispatcher.scheduler.advanceUntilIdle()
         }
 
     @Test
     fun `trend data points are padded with null values when no sleep sessions exist`() =
-        runTest {
+        runTest(testDispatcher) {
             every { sleepSessionRepository.observeSince(any()) } returns flowOf(emptyList())
 
             viewModel = createViewModel()
@@ -188,8 +179,5 @@ class SleepViewModelTest {
             assertEquals(true, state.trendStartOffsetPoints.all { it.value == null })
             assertEquals(true, state.trendDurationSpanPoints.all { it.value == null })
             assertEquals(true, state.trendActualDurationPoints.all { it.value == null })
-
-            viewModel.viewModelScope.cancel()
-            testDispatcher.scheduler.advanceUntilIdle()
         }
 }

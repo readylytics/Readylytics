@@ -46,7 +46,11 @@ import com.gregor.lauritz.healthdashboard.ui.components.reorder.DragController
 import kotlin.math.roundToInt
 
 // Cards that should span entire width instead of pairing into a row.
-private val FULL_WIDTH_CARDS = setOf(CardId.STEPS)
+private val FULL_WIDTH_CARDS =
+    setOf(
+        CardId.STEPS,
+        CardId.INSIGHTS,
+    )
 
 /**
  * Grid that supports drag-and-drop reordering of cards.

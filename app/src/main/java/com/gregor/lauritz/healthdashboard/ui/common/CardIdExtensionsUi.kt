@@ -27,4 +27,5 @@ val CardId.displayNameResId: Int
             CardId.BODY_FAT -> R.string.card_title_body_fat
             CardId.BLOOD_PRESSURE -> R.string.card_title_blood_pressure
             CardId.OXYGEN_SATURATION -> R.string.card_title_oxygen_saturation
+            CardId.INSIGHTS -> R.string.card_title_insights
         }

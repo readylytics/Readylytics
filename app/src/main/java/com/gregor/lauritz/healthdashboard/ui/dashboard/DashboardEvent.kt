@@ -1,5 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
+import com.gregor.lauritz.healthdashboard.domain.model.InsightType
 import java.time.LocalDate
 
 sealed interface DashboardEvent {
@@ -14,4 +15,10 @@ sealed interface DashboardEvent {
     data object Refresh : DashboardEvent
 
     data object ToggleCardManagement : DashboardEvent
+
+    data class DismissInsight(
+        val type: InsightType,
+    ) : DashboardEvent
+
+    data object RestoreInsights : DashboardEvent
 }

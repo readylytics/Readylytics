@@ -901,6 +901,27 @@ object DatabaseMigrations {
             }
         }
 
+    val MIGRATION_27_28 =
+        object : Migration(27, 28) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS insight_dismissals (" +
+                        "dateMidnightMs INTEGER NOT NULL, " +
+                        "type TEXT NOT NULL, " +
+                        "PRIMARY KEY(dateMidnightMs, type))",
+                )
+            }
+
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "CREATE TABLE IF NOT EXISTS insight_dismissals (" +
+                        "dateMidnightMs INTEGER NOT NULL, " +
+                        "type TEXT NOT NULL, " +
+                        "PRIMARY KEY(dateMidnightMs, type))",
+                )
+            }
+        }
+
     val all =
         arrayOf(
             MIGRATION_1_2,
@@ -930,5 +951,6 @@ object DatabaseMigrations {
             MIGRATION_25_24,
             MIGRATION_25_26,
             MIGRATION_26_27,
+            MIGRATION_27_28,
         )
 }

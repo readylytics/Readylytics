@@ -6,8 +6,10 @@ import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardManagementDelegate
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.model.InsightType
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.InsightDismissalRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.SleepSessionData
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
@@ -36,6 +38,7 @@ data class DashboardBasicInputs(
     val userPreferences: com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences,
     val circadianResult: CircadianConsistencyResult?,
     val paiSummaries: List<DailySummary>,
+    val dismissedInsightTypes: Set<InsightType> = emptySet(),
 )
 
 /**
@@ -82,6 +85,7 @@ fun createDashboardBasicInputsFlow(
     dailySummaryRepository: DailySummaryRepository,
     settingsRepository: SettingsRepository,
     circadianRepository: CircadianConsistencyRepository,
+    insightDismissalRepository: InsightDismissalRepository,
 ): Flow<DashboardBasicInputs> =
     selectedDate.flatMapLatest { date ->
         val zoneId = ZoneId.systemDefault()
@@ -106,19 +110,25 @@ fun createDashboardBasicInputsFlow(
                 .toEpochMilli()
         val paiBreakdownFlow = dailySummaryRepository.observeSince(paiFromMs)
 
+        val dismissalFlow =
+            insightDismissalRepository
+                .observeForDate(date.atStartOfDay(zoneId).toInstant().toEpochMilli())
+
         // Combine all basic inputs
         combine(
             summaryFlow,
             settingsRepository.userPreferences,
             circadianRepository.resultFor(date),
             paiBreakdownFlow,
-        ) { summary, prefs, circadian, paiSummaries ->
+            dismissalFlow,
+        ) { summary, prefs, circadian, paiSummaries, dismissed ->
             DashboardBasicInputs(
                 selectedDate = date,
                 summary = summary,
                 userPreferences = prefs,
                 circadianResult = circadian,
                 paiSummaries = paiSummaries,
+                dismissedInsightTypes = dismissed,
             )
         }
     }

@@ -7,6 +7,7 @@ import com.gregor.lauritz.healthdashboard.domain.cache.DailyMetricCache
 import com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.InsightDismissalRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import io.mockk.mockk
@@ -24,6 +25,7 @@ class DashboardViewModelTest {
     private lateinit var circadianRepo: CircadianConsistencyRepository
     private lateinit var dailyMetricCache: DailyMetricCache
     private lateinit var heartRateRepository: HeartRateRepository
+    private lateinit var insightDismissalRepository: InsightDismissalRepository
     private lateinit var viewModel: DashboardViewModel
 
     @Before
@@ -37,6 +39,7 @@ class DashboardViewModelTest {
         circadianRepo = mockk(relaxed = true)
         dailyMetricCache = mockk(relaxed = true)
         heartRateRepository = mockk(relaxed = true)
+        insightDismissalRepository = mockk(relaxed = true)
 
         viewModel =
             DashboardViewModel(
@@ -49,6 +52,7 @@ class DashboardViewModelTest {
                 circadianRepo = circadianRepo,
                 dailyMetricCache = dailyMetricCache,
                 heartRateRepository = heartRateRepository,
+                insightDismissalRepository = insightDismissalRepository,
             )
     }
 

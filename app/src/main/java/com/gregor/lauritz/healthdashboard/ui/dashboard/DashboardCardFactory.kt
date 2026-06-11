@@ -1,13 +1,27 @@
 package com.gregor.lauritz.healthdashboard.ui.dashboard
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.domain.model.InsightType
 import com.gregor.lauritz.healthdashboard.ui.common.CardLoader
 import com.gregor.lauritz.healthdashboard.ui.common.MetricCardSkeleton
 import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
 import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
+import com.gregor.lauritz.healthdashboard.ui.components.InsightCard
+import com.gregor.lauritz.healthdashboard.ui.components.InsightRerunCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
 import com.gregor.lauritz.healthdashboard.ui.components.StepsCard
@@ -30,6 +44,8 @@ fun buildCardDataMap(
     onNavigateToVitals: () -> Unit = {},
     isEditing: Boolean = false,
     isLoading: Boolean = false,
+    onDismissInsight: (InsightType) -> Unit = {},
+    onRestoreInsights: () -> Unit = {},
 ): Map<CardId, @Composable () -> Unit> {
     val cardMap = mutableMapOf<CardId, @Composable () -> Unit>()
 
@@ -69,6 +85,57 @@ fun buildCardDataMap(
                 )
             },
         )
+    }
+
+    if (uiState.activeInsightTypes.isNotEmpty()) {
+        cardMap[CardId.INSIGHTS] = {
+            AnimatedContent(
+                targetState = uiState.currentInsight,
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                label = "dashboard_insight_card",
+            ) { insight ->
+                when (insight) {
+                    InsightType.LATE_NADIR ->
+                        InsightCard(
+                            title = stringResource(R.string.insight_late_nadir_title),
+                            body = stringResource(R.string.insight_late_nadir_body),
+                            icon = Icons.Default.Schedule,
+                            onDismiss = { onDismissInsight(InsightType.LATE_NADIR) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                    InsightType.SICK_INDICATOR ->
+                        InsightCard(
+                            title = stringResource(R.string.insight_sick_indicator_title),
+                            body = stringResource(R.string.insight_sick_indicator_body),
+                            icon = Icons.Default.MonitorHeart,
+                            onDismiss = { onDismissInsight(InsightType.SICK_INDICATOR) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                    InsightType.OVERREACHING ->
+                        InsightCard(
+                            title = stringResource(R.string.insight_overreaching_title),
+                            body = stringResource(R.string.insight_overreaching_body),
+                            icon = Icons.AutoMirrored.Filled.TrendingUp,
+                            onDismiss = { onDismissInsight(InsightType.OVERREACHING) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                    null ->
+                        InsightRerunCard(
+                            text =
+                                stringResource(
+                                    R.string.insight_restore_dismissed,
+                                    uiState.dismissedInsightCount,
+                                ),
+                            icon = Icons.Default.Refresh,
+                            onRestore = onRestoreInsights,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                }
+            }
+        }
     }
 
     cardMap[CardId.STEPS] = {
