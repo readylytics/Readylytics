@@ -129,7 +129,7 @@ fun WorkoutStatsSection(
                     val strainTooltip = stringResource(R.string.tooltip_strain_ratio)
                     M3ScoreDial(
                         score = strainRatio,
-                        label = "Strain Ratio",
+                        label = stringResource(R.string.card_title_strain_ratio),
                         maxScore = 2.0f,
                         status = strainStatus,
                         displayText = uiState.latestMetrics?.strainRatioDisplay ?: "—",
@@ -138,9 +138,9 @@ fun WorkoutStatsSection(
                     )
                     M3ScoreDial(
                         score = uiState.latestSummary?.readinessScore,
-                        label = "Readiness",
+                        label = stringResource(R.string.card_title_readiness),
                         displayText = uiState.latestMetrics?.readinessRounded?.toString() ?: "—",
-                        tooltipDescription = "Physical preparedness for strain today.",
+                        tooltipDescription = stringResource(R.string.tooltip_readiness),
                         modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
                     )
                 }
@@ -538,6 +538,8 @@ private fun AcwrChart(
 
     // ── Chart host + animated overlay ────────────────────────────────────────
     val chartHeight = 220.dp
+    val trimpTitle = stringResource(R.string.workout_metric_trimp)
+    val strainTitle = stringResource(R.string.workout_metric_strain)
     Box(modifier = modifier.fillMaxWidth()) {
         CartesianChartHost(
             chart =
@@ -553,7 +555,7 @@ private fun AcwrChart(
                             label = labelComponent,
                             valueFormatter = trimpAxisFormatter,
                             titleComponent = axisLabelComponent,
-                            title = { "TRIMP" },
+                            title = { trimpTitle },
                             itemPlacer = trimpAxisItemPlacer,
                             guideline = guidelineComponent,
                         ),
@@ -562,7 +564,7 @@ private fun AcwrChart(
                             label = labelComponent,
                             valueFormatter = ratioAxisFormatter,
                             titleComponent = axisLabelComponent,
-                            title = { "Strain" },
+                            title = { strainTitle },
                             itemPlacer = ratioAxisItemPlacer,
                             guideline = null,
                         ),
