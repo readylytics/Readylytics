@@ -152,14 +152,15 @@ class BaselineComputerBackfillEquivalenceTest {
                         .ofEpochMilli(dayMidnightMs)
                         .plus(1, java.time.temporal.ChronoUnit.DAYS)
                         .toEpochMilli()
-                val dayEndMs = nextDayMidnightMs - 1
 
                 // Reproduce exactly what ComputeHistoricalBaselinesUseCase did per day.
                 val ownSession = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
                 val expectedWindows =
-                    baselineComputer.computeHrvWindowsBetween(dayMidnightMs, dayEndMs, ownSession?.id)
+                    baselineComputer.computeHrvWindowsBetween(dayMidnightMs, nextDayMidnightMs, ownSession?.id)
                 val expectedRhr =
-                    baselineComputer.computeAdaptiveBaselineRhrBpmBetween(dayMidnightMs, dayEndMs, percentile)
+                    baselineComputer.computeAdaptiveBaselineRhrBpmBetween(dayMidnightMs, nextDayMidnightMs, percentile)
+                val expectedRhrHistory =
+                    baselineComputer.rhrHistoryBetween(dayMidnightMs, nextDayMidnightMs, percentile)
 
                 val actual = batched[dayMidnightMs]
                 requireNotNull(actual) { "missing batched result for day $dayMidnightMs" }
@@ -175,6 +176,7 @@ class BaselineComputerBackfillEquivalenceTest {
                     "sigmaHistory mismatch for day $dayMidnightMs",
                 )
                 assertEquals(expectedRhr, actual.rhrBpm, "rhrBpm mismatch for day $dayMidnightMs")
+                assertEquals(expectedRhrHistory, actual.rhrHistory, "rhrHistory mismatch for day $dayMidnightMs")
             }
         }
 
@@ -191,6 +193,7 @@ class BaselineComputerBackfillEquivalenceTest {
                 assertEquals(emptyList(), it.muHistory)
                 assertEquals(emptyList(), it.sigmaHistory)
                 assertEquals(ScoringConstants.DEFAULT_RHR_BPM, it.rhrBpm)
+                assertEquals(emptyList(), it.rhrHistory)
             }
         }
 }

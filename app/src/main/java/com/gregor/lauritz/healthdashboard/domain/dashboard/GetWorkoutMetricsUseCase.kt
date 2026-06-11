@@ -1,6 +1,8 @@
 package com.gregor.lauritz.healthdashboard.domain.dashboard
 
 import com.gregor.lauritz.healthdashboard.R
+import com.gregor.lauritz.healthdashboard.domain.display.MetricFormatter
+import com.gregor.lauritz.healthdashboard.domain.model.DailyMetrics
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.Result
@@ -21,14 +23,22 @@ class GetWorkoutMetricsUseCase
             val strainRatioCard: CardData?,
         )
 
-        operator fun invoke(summary: DailySummary?): Result<WorkoutMetrics> =
+        operator fun invoke(
+            summary: DailySummary?,
+            metrics: DailyMetrics? = null,
+        ): Result<WorkoutMetrics> =
             try {
                 if (summary == null) {
                     return@invoke Result.success(WorkoutMetrics(null))
                 }
 
                 val strainRatioCard =
-                    summary.strainRatio?.let { createStrainRatioCard(it) }
+                    summary.strainRatio?.let { strainRatio ->
+                        createStrainRatioCard(
+                            strainRatio = strainRatio,
+                            displayValue = metrics?.strainRatioDisplay ?: MetricFormatter.formatStrain(strainRatio),
+                        )
+                    }
                         ?: CardData(
                             title = resourceProvider.getString(R.string.card_title_strain_ratio),
                             value = "—",
@@ -43,13 +53,15 @@ class GetWorkoutMetricsUseCase
                 Result.failure("Failed to compute workout metrics", "WORKOUT_METRICS_ERROR")
             }
 
-        private fun createStrainRatioCard(strainRatio: Float): CardData {
+        private fun createStrainRatioCard(
+            strainRatio: Float,
+            displayValue: String,
+        ): CardData {
             val status = strainRatio.strainRatioStatus()
-            val value = String.format("%.2f", strainRatio)
 
             return CardData(
                 title = resourceProvider.getString(R.string.card_title_strain_ratio),
-                value = value,
+                value = displayValue,
                 unit = "",
                 status = status,
                 action = DashboardAction.NAVIGATE_WORKOUTS,

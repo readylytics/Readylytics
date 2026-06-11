@@ -48,7 +48,15 @@ interface SleepSessionDao {
     ): List<SleepSessionEntity>
 
     @Query(
-        "SELECT * FROM sleep_sessions WHERE endTime >= :fromMs AND endTime < :toMs ORDER BY endTime ASC LIMIT 1",
+        "SELECT * FROM sleep_sessions WHERE endTime >= :fromMs AND startTime <= :toMs ORDER BY startTime ASC, id ASC",
+    )
+    suspend fun getOverlapping(
+        fromMs: Long,
+        toMs: Long,
+    ): List<SleepSessionEntity>
+
+    @Query(
+        "SELECT * FROM sleep_sessions WHERE endTime >= :fromMs AND endTime < :toMs ORDER BY endTime ASC, id ASC LIMIT 1",
     )
     suspend fun getSessionEndingInRange(
         fromMs: Long,
@@ -56,7 +64,7 @@ interface SleepSessionDao {
     ): SleepSessionEntity?
 
     @Query(
-        "SELECT * FROM sleep_sessions WHERE endTime >= :fromMs AND endTime < :toMs ORDER BY endTime ASC LIMIT 1",
+        "SELECT * FROM sleep_sessions WHERE endTime >= :fromMs AND endTime < :toMs ORDER BY endTime ASC, id ASC LIMIT 1",
     )
     fun _observeFirstSessionEndingInRange(
         fromMs: Long,

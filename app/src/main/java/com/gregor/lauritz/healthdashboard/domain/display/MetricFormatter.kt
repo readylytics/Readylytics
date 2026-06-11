@@ -2,6 +2,8 @@ package com.gregor.lauritz.healthdashboard.domain.display
 
 import com.gregor.lauritz.healthdashboard.data.preferences.UnitSystem
 import com.gregor.lauritz.healthdashboard.domain.util.UnitConverter
+import java.util.Locale
+import kotlin.math.roundToInt
 
 object MetricFormatter {
     fun formatWeight(
@@ -54,4 +56,20 @@ object MetricFormatter {
         if (bmi <= 0f) return "—"
         return "%.1f".format(bmi)
     }
+
+    fun roundStrain(value: Float): Float = (value * 100f).roundToInt() / 100f
+
+    fun formatStrain(value: Float?): String {
+        if (value == null) return "—"
+        return String.format(Locale.US, "%.2f", roundStrain(value))
+    }
+
+    fun roundTrimp(value: Float): Int = value.roundToInt()
+
+    fun formatTrimp(value: Float?): String {
+        if (value == null || value <= 0f) return "—"
+        return roundTrimp(value).toString()
+    }
+
+    fun formatPai(value: Float?): String = value?.roundToInt()?.toString() ?: "—"
 }

@@ -39,7 +39,11 @@ class SleepPercentileRhrCalculator
             percentile: Int = 5,
         ): SleepPercentileRhrResult {
             val baselineFrom = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
-            val sessions = sleepSessionDao.getSince(baselineFrom)
+            val sessions =
+                sleepSessionDao.getBetween(
+                    baselineFrom,
+                    dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli() - 1,
+                )
             val sessionIds = (sessions.map { it.id } + session.id).distinct()
 
             // Fetch all sleep HR samples for all these sessions batched using a lightweight projection

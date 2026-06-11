@@ -2,8 +2,10 @@ package com.gregor.lauritz.healthdashboard.data.repository
 
 import com.gregor.lauritz.healthdashboard.data.local.dao.*
 import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
+import com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
+import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.scoring.*
 import com.gregor.lauritz.healthdashboard.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
@@ -88,21 +90,27 @@ class ScoringRepositoryImplTest {
                 baselineComputer.computeAdaptiveBaselineRhrBpmBetween(yesterdayMs, todayMs, any())
             } returns 60f
 
-            // Mock HRV windows to ensure hrvMuMssd is also different
-            coEvery {
-                baselineComputer.computeHrvWindowsBetween(todayMs, tomorrowMs, any())
-            } returns BaselineComputer.HrvWindows(listOf(60f, 62f), emptyList(), emptyList(), emptyList())
+            // Mock sleep sessions so the sleep metrics flow is exercised
+            val mockSession =
+                SleepSessionEntity(
+                    id = "test_session",
+                    startTime = 0L,
+                    endTime = 0L,
+                    durationMinutes = 480,
+                    efficiency = 90f,
+                    deepSleepMinutes = 90,
+                    remSleepMinutes = 90,
+                    lightSleepMinutes = 240,
+                    awakeMinutes = 60,
+                )
+            coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns mockSession
 
-            coEvery {
-                baselineComputer.computeHrvWindowsBetween(yesterdayMs, todayMs, any())
-            } returns BaselineComputer.HrvWindows(listOf(70f, 72f), emptyList(), emptyList(), emptyList())
-
-            // Ensure use case returns something
+            // Ensure use case returns different hrvMuMssd values based on date
             coEvery {
                 computeSleepMetricsUseCase(
                     any(),
                     any(),
-                    any(),
+                    eq(today),
                     any(),
                     any(),
                     any(),
@@ -111,8 +119,24 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result
-                    .success(DailySummaryEntity(0L))
+                Result
+                    .success(DailySummaryEntity(todayMs, hrvMuMssd = 3.5f))
+
+            coEvery {
+                computeSleepMetricsUseCase(
+                    any(),
+                    any(),
+                    eq(yesterday),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns
+                Result
+                    .success(DailySummaryEntity(yesterdayMs, hrvMuMssd = 4.0f))
 
             val resultToday = repo.computeDailySummary(today)
             val resultYesterday = repo.computeDailySummary(yesterday)
@@ -151,7 +175,7 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result
+                Result
                     .success(existingSummary)
 
             val result = repo.computeDailySummary(today)
@@ -166,7 +190,7 @@ class ScoringRepositoryImplTest {
             val zoneId = ZoneId.systemDefault()
 
             val mockSession =
-                com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity(
+                SleepSessionEntity(
                     id = "test_session",
                     startTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() - 8 * 3600000,
                     endTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() + 1800000,
@@ -194,7 +218,7 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result
+                Result
                     .success(DailySummaryEntity(0L, restingHeartRate = 48, restingHrRatio = 0.96f))
 
             val result = repo.computeDailySummary(today)
@@ -225,7 +249,7 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result
+                Result
                     .success(DailySummaryEntity(0L))
 
             val result = repo.computeDailySummary(today)
@@ -241,7 +265,7 @@ class ScoringRepositoryImplTest {
             val zoneId = ZoneId.systemDefault()
 
             val mockSession =
-                com.gregor.lauritz.healthdashboard.data.local.entity.SleepSessionEntity(
+                SleepSessionEntity(
                     id = "test_session",
                     startTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() - 8 * 3600000,
                     endTime = today.atStartOfDay(zoneId).toInstant().toEpochMilli() + 1800000,
@@ -277,7 +301,7 @@ class ScoringRepositoryImplTest {
                     any(),
                 )
             } returns
-                com.gregor.lauritz.healthdashboard.domain.model.Result
+                Result
                     .success(DailySummaryEntity(0L))
 
             // Should not throw

@@ -10,8 +10,9 @@ import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryReposito
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutRepository
-import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase
+import com.gregor.lauritz.healthdashboard.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
+import com.gregor.lauritz.healthdashboard.domain.scoring.WorkoutDisplayMetrics
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import io.mockk.coEvery
@@ -21,6 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -45,7 +47,7 @@ class WorkoutsViewModelTest {
     private lateinit var selectedDateRepository: SelectedDateRepository
     private lateinit var scoringCalculator: ScoringCalculator
     private lateinit var settingsRepo: SettingsRepository
-    private lateinit var computeWorkoutTrimpUseCase: ComputeWorkoutTrimpUseCase
+    private lateinit var getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase
     private lateinit var foregroundSyncController: ForegroundSyncController
     private lateinit var savedStateHandle: SavedStateHandle
     private lateinit var appScope: CoroutineScope
@@ -93,21 +95,21 @@ class WorkoutsViewModelTest {
             mockk {
                 every { userPreferences } returns MutableStateFlow(UserPreferences())
             }
-        computeWorkoutTrimpUseCase =
+        getWorkoutDisplayMetricsUseCase =
             mockk(relaxed = true) {
-                every {
+                coEvery {
                     execute(
-                        workoutStartTime = any(),
-                        workoutEndTime = any(),
-                        workoutAvgHr = any(),
+                        workout = any(),
                         samples = any(),
-                        prefs = any(),
-                        restingHrBaseline = any(),
-                        storedTrimp = any(),
                     )
                 } returns
-                    com.gregor.lauritz.healthdashboard.domain.model.Result
-                        .success(50f)
+                    WorkoutDisplayMetrics(
+                        preciseTrimp = 50f,
+                        computedTrimp = 50,
+                        trimpDisplay = "50",
+                        gainedStrain = 0.36f,
+                        gainedStrainDisplay = "0.36",
+                    )
             }
         foregroundSyncController =
             mockk {
@@ -124,7 +126,7 @@ class WorkoutsViewModelTest {
             selectedDateRepository = selectedDateRepository,
             scoringCalculator = scoringCalculator,
             settingsRepo = settingsRepo,
-            computeWorkoutTrimpUseCase = computeWorkoutTrimpUseCase,
+            getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
             foregroundSyncController = foregroundSyncController,
             savedStateHandle = savedStateHandle,
         )
@@ -287,5 +289,81 @@ class WorkoutsViewModelTest {
             assertEquals(1, viewModel.currentPage.value)
 
             collectJob.cancel()
+        }
+
+    @Test
+    fun `recent workout uses rounded load metrics from shared use case`() =
+        runTest {
+            val today = LocalDate.now()
+            val startMs =
+                today
+                    .atStartOfDay(java.time.ZoneId.systemDefault())
+                    .plusHours(8)
+                    .toInstant()
+                    .toEpochMilli()
+            val workout =
+                WorkoutData(
+                    id = "run-1",
+                    startTime = startMs,
+                    endTime = startMs + 60 * 60 * 1000L,
+                    exerciseType = "running",
+                    durationMinutes = 60,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 10f,
+                    zone3Minutes = 20f,
+                    zone4Minutes = 30f,
+                    zone5Minutes = 0f,
+                    trimp = 115.6f,
+                    avgHr = 134f,
+                )
+            workoutsFlow.value = listOf(workout)
+            summariesFlow.value = listOf(DailySummary(date = today, totalTrimp = 115.6f, rhrBpm = 52f))
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = workout,
+                    samples = emptyList(),
+                )
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 115.6f,
+                    computedTrimp = 116,
+                    trimpDisplay = "116",
+                    gainedStrain = 0.37f,
+                    gainedStrainDisplay = "0.37",
+                )
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            val state = viewModel.uiState.first { it.recentWorkouts.isNotEmpty() }
+
+            assertEquals(0.37f, state.recentWorkouts.single().gainedStrain)
+            assertEquals("0.37", state.recentWorkouts.single().gainedStrainDisplay)
+            assertEquals(116, state.recentWorkouts.single().computedTrimp)
+
+            collectJob.cancelAndJoin()
+        }
+
+    @Test
+    fun `stats state exposes canonical latest daily metrics`() =
+        runTest {
+            val today = LocalDate.now()
+            summariesFlow.value =
+                listOf(
+                    DailySummary(
+                        date = today,
+                        readinessScore = 72.5f,
+                        strainRatio = 0.365f,
+                    ),
+                )
+            every { dailySummaryRepository.observeLatest() } returns flowOf(summariesFlow.value.single())
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            val state = viewModel.uiState.first { it.latestMetrics != null }
+
+            assertEquals(73, state.latestMetrics?.readinessRounded)
+            assertEquals("0.37", state.latestMetrics?.strainRatioDisplay)
+
+            collectJob.cancelAndJoin()
         }
 }

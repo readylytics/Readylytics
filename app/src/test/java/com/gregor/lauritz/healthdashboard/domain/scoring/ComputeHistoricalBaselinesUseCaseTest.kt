@@ -4,6 +4,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.DailySummaryEntity
 import com.gregor.lauritz.healthdashboard.data.preferences.PhysiologyProfile
 import com.gregor.lauritz.healthdashboard.data.preferences.UserPreferences
 import com.gregor.lauritz.healthdashboard.domain.scoring.strategies.LoadScoringStrategy
+import com.gregor.lauritz.healthdashboard.domain.util.stdev
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -37,7 +38,13 @@ class ComputeHistoricalBaselinesUseCaseTest {
         mu: List<Float> = listOf(50f, 52f),
         sigma: List<Float> = listOf(5f),
         rhr: Float = 60f,
-    ) = BaselineComputer.BackfillBaseline(muHistory = mu, sigmaHistory = sigma, rhrBpm = rhr)
+        rhrHistory: List<Int> = emptyList(),
+    ) = BaselineComputer.BackfillBaseline(
+        muHistory = mu,
+        sigmaHistory = sigma,
+        rhrBpm = rhr,
+        rhrHistory = rhrHistory,
+    )
 
     @Test
     fun `all 5 dates processed — no 30-day cutoff`() =
@@ -100,6 +107,20 @@ class ComputeHistoricalBaselinesUseCaseTest {
 
             assertEquals(3, result.first().baselineObservationCount)
             assertEquals(57f, result.first().rhrBpm)
+        }
+
+    @Test
+    fun `rhr sigma is snapshotted from the same RHR history used by live scoring`() =
+        runTest {
+            val summary = fakeSummary(LocalDate.of(2026, 1, 1))
+            val rhrHistory = listOf(52, 54, 56, 58)
+            coEvery { baselineComputer.computeBackfillBaselines(any(), any()) } returns
+                mapOf(summary.dateMidnightMs to fakeBaseline(rhrHistory = rhrHistory))
+            every { loadScoringStrategy.hrvSigma(any(), any()) } returns 0.18f
+
+            val result = useCase.computeHistoricalBaselines(listOf(summary), UserPreferences())
+
+            assertEquals(rhrHistory.stdev(), result.first().rhrSigma)
         }
 
     @Test

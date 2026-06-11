@@ -5,13 +5,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gregor.lauritz.healthdashboard.data.preferences.SettingsRepository
 import com.gregor.lauritz.healthdashboard.data.repository.SelectedDateRepository
+import com.gregor.lauritz.healthdashboard.domain.model.DailyMetrics
+import com.gregor.lauritz.healthdashboard.domain.model.DailyMetricsMapper
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
-import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase
+import com.gregor.lauritz.healthdashboard.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
@@ -47,11 +49,13 @@ import javax.inject.Inject
 data class WorkoutDisplayItem(
     val workout: WorkoutData,
     val gainedStrain: Float,
-    val computedTrimp: Float,
+    val computedTrimp: Int,
+    val gainedStrainDisplay: String,
 )
 
 data class WorkoutsUiState(
     val latestSummary: DailySummary? = null,
+    val latestMetrics: DailyMetrics? = null,
     val dailyTrimp: List<DailyDataPoint> = emptyList(),
     val dailyStrainRatio: List<DailyDataPoint> = emptyList(),
     val recentWorkouts: List<WorkoutDisplayItem> = emptyList(),
@@ -90,8 +94,7 @@ class WorkoutsViewModel
         private val selectedDateRepository: SelectedDateRepository,
         private val scoringCalculator: ScoringCalculator,
         private val settingsRepo: SettingsRepository,
-        private val computeWorkoutTrimpUseCase:
-            com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase,
+        private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
         private val foregroundSyncController: ForegroundSyncController,
         private val savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
@@ -282,68 +285,19 @@ class WorkoutsViewModel
                             val recentItems =
                                 recentWorkouts
                                     .map { workout ->
-                                        val workoutDate =
-                                            Instant
-                                                .ofEpochMilli(
-                                                    workout.startTime,
-                                                ).atZone(zoneId)
-                                                .toLocalDate()
-                                        val rhrBaseline = summaryByDate[workoutDate]?.rhrBpm
                                         val samples = samplesByWorkoutId[workout.id] ?: emptyList()
 
-                                        val computedTrimpResult =
-                                            computeWorkoutTrimpUseCase.execute(
-                                                workoutStartTime = workout.startTime,
-                                                workoutEndTime = workout.endTime,
-                                                workoutAvgHr = workout.avgHr,
+                                        val displayMetrics =
+                                            getWorkoutDisplayMetricsUseCase.execute(
+                                                workout = workout,
                                                 samples = samples,
-                                                prefs = prefs,
-                                                restingHrBaseline = rhrBaseline,
-                                                storedTrimp = workout.trimp,
                                             )
-                                        val computedTrimp = computedTrimpResult.getOrNull() ?: 0f
-
-                                        val originalDayTrimp = trimpByDate[workoutDate] ?: 0f
-                                        val trimpWithoutWorkout = (originalDayTrimp - computedTrimp).coerceAtLeast(0f)
-                                        val trimpMapWith = trimpByDate.toMutableMap()
-                                        val trimpMapWithout =
-                                            trimpByDate.toMutableMap().apply {
-                                                put(
-                                                    workoutDate,
-                                                    trimpWithoutWorkout,
-                                                )
-                                            }
-
-                                        val atlWith =
-                                            scoringCalculator.computeAtlEmaWithDecay(
-                                                trimpMapWith,
-                                                workoutDate,
-                                            )
-                                        val ctlWith =
-                                            scoringCalculator.computeCtlEmaWithDecay(
-                                                trimpMapWith,
-                                                workoutDate,
-                                            )
-                                        val srWith = scoringCalculator.computeStrainRatio(atlWith, ctlWith)
-
-                                        val atlWithout =
-                                            scoringCalculator.computeAtlEmaWithDecay(
-                                                trimpMapWithout,
-                                                workoutDate,
-                                            )
-                                        val ctlWithout =
-                                            scoringCalculator.computeCtlEmaWithDecay(
-                                                trimpMapWithout,
-                                                workoutDate,
-                                            )
-                                        val srWithout = scoringCalculator.computeStrainRatio(atlWithout, ctlWithout)
-
-                                        val gainedStrainRatio = srWith - srWithout
 
                                         WorkoutDisplayItem(
                                             workout = workout,
-                                            gainedStrain = gainedStrainRatio.takeIf { it > 0f } ?: 0f,
-                                            computedTrimp = computedTrimp,
+                                            gainedStrain = displayMetrics.gainedStrain,
+                                            computedTrimp = displayMetrics.computedTrimp,
+                                            gainedStrainDisplay = displayMetrics.gainedStrainDisplay,
                                         )
                                     }
 
@@ -362,6 +316,7 @@ class WorkoutsViewModel
 
                             WorkoutsUiState(
                                 latestSummary = latest,
+                                latestMetrics = latest?.let { DailyMetricsMapper.toMetrics(it, prefs) },
                                 dailyTrimp = dailyTrimp,
                                 dailyStrainRatio = dailyStrainRatio,
                                 recentWorkouts = paginatedItems,

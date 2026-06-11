@@ -123,7 +123,6 @@ private fun WorkoutHistoryItem(
         shape = MaterialTheme.shapes.medium,
         onClick = onClick,
     ) {
-        val strainStr = String.format(java.util.Locale.US, "%.2f", item.gainedStrain)
         val bpmStr =
             if (workout.avgHr > 0) {
                 stringResource(R.string.workout_history_bpm_format, workout.avgHr.roundToInt())
@@ -143,7 +142,7 @@ private fun WorkoutHistoryItem(
                         stringResource(
                             R.string.workout_history_item_subtitle,
                             workout.durationMinutes,
-                            strainStr,
+                            item.gainedStrainDisplay,
                             bpmStr,
                         ),
                     style = MaterialTheme.typography.bodySmall,

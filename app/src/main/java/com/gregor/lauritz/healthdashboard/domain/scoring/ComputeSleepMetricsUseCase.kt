@@ -109,8 +109,9 @@ class ComputeSleepMetricsUseCase
                             prefs.restingHrPercentile,
                         )
                     val hrvWindows =
-                        baselineComputer.computeHrvWindows(
-                            dayMidnight = dayMidnight,
+                        baselineComputer.computeHrvWindowsBetween(
+                            fromMs = dayMidnight.toEpochMilli(),
+                            toMs = dayEndMs,
                             excludeSessionId = session.id,
                         ) ?: BaselineComputer.HrvWindows(
                             muHistory = emptyList(),
@@ -136,7 +137,7 @@ class ComputeSleepMetricsUseCase
                         .toEpochMilli()
                 val yesterdaySummary = dailySummaryDao.getByDate(yesterdayMidnightMs)
 
-                val hrvResult = hrvResolver.resolve(session, dayMidnight)
+                val hrvResult = hrvResolver.resolve(session)
                 val sessionHrvSamples = hrvResult.samples
                 val currentHrvMean = hrvResult.mean
                 logD("ComputeSleepMetrics") { "HRV resolved: samples=${sessionHrvSamples.size}, mean=$currentHrvMean" }
@@ -377,6 +378,44 @@ class ComputeSleepMetricsUseCase
                                 ),
                         )
                 }
+                val debugPayload =
+                    """
+                    {
+                        "targetDate": "$targetDate",
+                        "dayMidnightMs": ${dayMidnight.toEpochMilli()},
+                        "dayEndMs": $dayEndMs,
+                        "frozenBaseline": $frozenBaseline,
+                        "isCalibrating": $isCalibrating,
+                        "windows": {
+                            "hrvMuHistorySize": ${muHrvHistory.size},
+                            "rhrValuesSize": ${rhrValues.size}
+                        },
+                        "inputs": {
+                            "sessionId": "${session.id}",
+                            "currentHrvMean": $currentHrvMean,
+                            "currentNocturnalRhr": $currentNocturnalRhr,
+                            "durationMinutes": ${session.durationMinutes},
+                            "loadScore": $loadScore
+                        },
+                        "baselines": {
+                            "frozenHrvMu": $frozenHrvMu,
+                            "frozenHrvSigma": $frozenHrvSigma,
+                            "activeHrvMu": ${readinessResult.diagnostics.rollingMu},
+                            "activeHrvSigma": $hrvSigma,
+                            "frozenRhr": $frozenRhr,
+                            "effectiveRhrSigma": $effectiveRhrSigma
+                        },
+                        "scores": {
+                            "zHrv": $persistedZLnHrv,
+                            "zRhr": $persistedZRhr,
+                            "sRest": ${readinessResult.sRest},
+                            "sleepScore": $sleepScore,
+                            "readinessScore": $readinessScore,
+                            "recoveryFlags": "$persistedFlags"
+                        }
+                    }
+                    """.trimIndent()
+                logD("ScoringDebug") { "\n$debugPayload" }
 
                 Result.success(
                     summary.copy(
