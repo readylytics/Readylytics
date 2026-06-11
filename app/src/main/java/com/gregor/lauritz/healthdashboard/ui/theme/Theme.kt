@@ -2,6 +2,7 @@ package com.gregor.lauritz.healthdashboard.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -9,14 +10,16 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.material.color.MaterialColors
 import com.gregor.lauritz.healthdashboard.data.preferences.AppTheme
+import com.gregor.lauritz.healthdashboard.data.preferences.FallbackThemeColor
 
 data class StatusColors(
     val optimal: Color,
@@ -73,17 +76,18 @@ private val DarkColorScheme =
         tertiary = Pink80,
         primaryContainer = PrimaryContainerDark,
         onPrimaryContainer = OnPrimaryContainerDark,
-        surface = Color(0xFF141218),
-        onSurface = Color(0xFFE6E1E5),
-        surfaceContainerLowest = Color(0xFF0F0D13),
-        surfaceContainerLow = Color(0xFF1D1B20),
-        surfaceContainer = Color(0xFF211F26),
-        surfaceContainerHigh = Color(0xFF2B2930),
-        surfaceContainerHighest = Color(0xFF36343B),
-        surfaceVariant = Color(0xFF49454F),
-        onSurfaceVariant = Color(0xFFCAC4D0),
-        outline = Color(0xFF938F99),
-        outlineVariant = Color(0xFF49454F),
+        background = Color(0xFF121212),
+        surface = Color(0xFF121212),
+        onSurface = Color(0xFFE6E6E6),
+        surfaceContainerLowest = Color(0xFF0F0F0F),
+        surfaceContainerLow = Color(0xFF1A1A1A),
+        surfaceContainer = Color(0xFF1F1F1F),
+        surfaceContainerHigh = Color(0xFF262626),
+        surfaceContainerHighest = Color(0xFF303030),
+        surfaceVariant = Color(0xFF353535),
+        onSurfaceVariant = Color(0xFFCCCCCC),
+        outline = Color(0xFF8E8E8E),
+        outlineVariant = Color(0xFF444444),
     )
 
 private val LightColorScheme =
@@ -93,18 +97,209 @@ private val LightColorScheme =
         tertiary = Pink40,
         primaryContainer = PrimaryContainerLight,
         onPrimaryContainer = OnPrimaryContainerLight,
-        surface = Color(0xFFFEF7FF),
-        onSurface = Color(0xFF1D1B20),
+        background = Color(0xFFFFFFFF),
+        surface = Color(0xFFFFFFFF),
+        onSurface = Color(0xFF1A1A1A),
         surfaceContainerLowest = Color(0xFFFFFFFF),
-        surfaceContainerLow = Color(0xFFF7F2FA),
-        surfaceContainer = Color(0xFFF3EDF7),
-        surfaceContainerHigh = Color(0xFFECE6F0),
-        surfaceContainerHighest = Color(0xFFE6E0E9),
-        surfaceVariant = Color(0xFFE7E0EC),
-        onSurfaceVariant = Color(0xFF49454F),
-        outline = Color(0xFF79747E),
-        outlineVariant = Color(0xFFC4C7C5),
+        surfaceContainerLow = Color(0xFFF5F5F5),
+        surfaceContainer = Color(0xFFEEEEEE),
+        surfaceContainerHigh = Color(0xFFE5E5E5),
+        surfaceContainerHighest = Color(0xFFDCDCDC),
+        surfaceVariant = Color(0xFFE5E5E5),
+        onSurfaceVariant = Color(0xFF474747),
+        outline = Color(0xFF757575),
+        outlineVariant = Color(0xFFC6C6C6),
     )
+
+private fun onColorFor(seed: Color): Color = if (seed.luminance() > 0.179f) Color.Black else Color.White
+
+private fun fallbackLightScheme(seed: Color): ColorScheme = colorSchemeFromSeed(seed, isDark = false)
+
+private fun fallbackDarkScheme(seed: Color): ColorScheme = colorSchemeFromSeed(seed, isDark = true)
+
+private fun Color.toHsl(outHsl: FloatArray) {
+    val r = red
+    val g = green
+    val b = blue
+    val max = maxOf(r, maxOf(g, b))
+    val min = minOf(r, minOf(g, b))
+
+    var h: Float
+    val s: Float
+    val l = (max + min) / 2f
+
+    if (max == min) {
+        h = 0f
+        s = 0f
+    } else {
+        val d = max - min
+        s = if (l > 0.5f) d / (2f - max - min) else d / (max + min)
+        h =
+            when (max) {
+                r -> (g - b) / d + (if (g < b) 6f else 0f)
+                g -> (b - r) / d + 2f
+                else -> (r - g) / d + 4f
+            }
+        h /= 6f
+    }
+
+    outHsl[0] = h * 360f
+    outHsl[1] = s
+    outHsl[2] = l
+}
+
+private fun hslToColor(
+    h: Float,
+    s: Float,
+    l: Float,
+    alpha: Float = 1f,
+): Color {
+    val r: Float
+    val g: Float
+    val b: Float
+
+    if (s == 0f) {
+        r = l
+        g = l
+        b = l
+    } else {
+        val q = if (l < 0.5f) l * (1f + s) else l + s - l * s
+        val p = 2f * l - q
+        r = hueToRgb(p, q, h / 360f + 1f / 3f)
+        g = hueToRgb(p, q, h / 360f)
+        b = hueToRgb(p, q, h / 360f - 1f / 3f)
+    }
+
+    return Color(
+        red = r.coerceIn(0f, 1f),
+        green = g.coerceIn(0f, 1f),
+        blue = b.coerceIn(0f, 1f),
+        alpha = alpha,
+    )
+}
+
+private fun hueToRgb(
+    p: Float,
+    q: Float,
+    t: Float,
+): Float {
+    var varT = t
+    if (varT < 0f) varT += 1f
+    if (varT > 1f) varT -= 1f
+    if (varT < 1f / 6f) return p + (q - p) * 6f * varT
+    if (varT < 1f / 2f) return q
+    if (varT < 2f / 3f) return p + (q - p) * (2f / 3f - varT) * 6f
+    return p
+}
+
+private fun colorSchemeFromSeed(
+    seed: Color,
+    isDark: Boolean,
+): ColorScheme {
+    val hsl = FloatArray(3)
+    seed.toHsl(hsl)
+    val hue = hsl[0]
+
+    // Neutral palette: pure gray (0% saturation) for untinted backgrounds/surfaces
+    val nSat = 0f
+    // Neutral Variant palette: pure gray (0% saturation) for untinted surface variants/borders
+    val nvSat = 0f
+
+    fun n(tone: Int): Color = hslToColor(hue, nSat, tone / 100f)
+
+    fun nv(tone: Int): Color = hslToColor(hue, nvSat, tone / 100f)
+
+    val pSat = maxOf(0.40f, hsl[1])
+
+    fun p(tone: Int): Color = hslToColor(hue, pSat, tone / 100f)
+
+    val sSat = maxOf(0.16f, hsl[1] * 0.35f)
+
+    fun s(tone: Int): Color = hslToColor(hue, sSat, tone / 100f)
+
+    val tHue = (hue + 60f) % 360f
+    val tSat = maxOf(0.24f, hsl[1] * 0.5f)
+
+    fun t(tone: Int): Color = hslToColor(tHue, tSat, tone / 100f)
+
+    fun e(tone: Int): Color = hslToColor(0f, 0.85f, tone / 100f)
+
+    return if (isDark) {
+        val primaryColor = p(80)
+        darkColorScheme(
+            primary = primaryColor,
+            onPrimary = onColorFor(primaryColor),
+            primaryContainer = p(30),
+            onPrimaryContainer = p(90),
+            inversePrimary = p(40),
+            secondary = s(80),
+            onSecondary = s(20),
+            secondaryContainer = s(30),
+            onSecondaryContainer = s(90),
+            tertiary = t(80),
+            onTertiary = t(20),
+            tertiaryContainer = t(30),
+            onTertiaryContainer = t(90),
+            background = n(6),
+            onBackground = n(90),
+            surface = n(6),
+            onSurface = n(90),
+            surfaceVariant = nv(30),
+            onSurfaceVariant = nv(80),
+            surfaceTint = primaryColor,
+            inverseSurface = n(90),
+            inverseOnSurface = n(10),
+            outline = nv(50),
+            outlineVariant = nv(30),
+            error = e(80),
+            onError = e(20),
+            errorContainer = e(30),
+            onErrorContainer = e(90),
+            surfaceContainerLowest = n(4),
+            surfaceContainerLow = n(10),
+            surfaceContainer = n(12),
+            surfaceContainerHigh = n(17),
+            surfaceContainerHighest = n(22),
+        )
+    } else {
+        val primaryColor = p(40)
+        lightColorScheme(
+            primary = primaryColor,
+            onPrimary = onColorFor(primaryColor),
+            primaryContainer = p(90),
+            onPrimaryContainer = p(10),
+            inversePrimary = p(80),
+            secondary = s(40),
+            onSecondary = s(100),
+            secondaryContainer = s(90),
+            onSecondaryContainer = s(10),
+            tertiary = t(40),
+            onTertiary = t(100),
+            tertiaryContainer = t(90),
+            onTertiaryContainer = t(10),
+            background = n(98),
+            onBackground = n(10),
+            surface = n(98),
+            onSurface = n(10),
+            surfaceVariant = nv(90),
+            onSurfaceVariant = nv(30),
+            surfaceTint = primaryColor,
+            inverseSurface = n(20),
+            inverseOnSurface = n(95),
+            outline = nv(50),
+            outlineVariant = nv(80),
+            error = e(40),
+            onError = e(100),
+            errorContainer = e(90),
+            onErrorContainer = e(10),
+            surfaceContainerLowest = n(100),
+            surfaceContainerLow = n(96),
+            surfaceContainer = n(94),
+            surfaceContainerHigh = n(92),
+            surfaceContainerHighest = n(90),
+        )
+    }
+}
 
 @Composable
 fun FitDashboardTheme(
@@ -112,7 +307,12 @@ fun FitDashboardTheme(
     viewModel: ThemeViewModel = hiltViewModel(),
     content: @Composable () -> Unit,
 ) {
-    val dynamicColor = viewModel.dynamicColorFlow.collectAsState(initial = true).value
+    val dynamicColor = viewModel.dynamicColorFlow.collectAsStateWithLifecycle(initialValue = true).value
+    val fallbackThemeColor =
+        viewModel.fallbackThemeColorFlow
+            .collectAsStateWithLifecycle(
+                initialValue = FallbackThemeColor.BRAND_PURPLE,
+            ).value
     val darkTheme =
         when (appTheme) {
             AppTheme.LIGHT -> false
@@ -127,8 +327,8 @@ fun FitDashboardTheme(
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             }
 
-            darkTheme -> DarkColorScheme
-            else -> LightColorScheme
+            darkTheme -> fallbackDarkScheme(Color(fallbackThemeColor.seedColor))
+            else -> fallbackLightScheme(Color(fallbackThemeColor.seedColor))
         }
 
     val semanticColors =

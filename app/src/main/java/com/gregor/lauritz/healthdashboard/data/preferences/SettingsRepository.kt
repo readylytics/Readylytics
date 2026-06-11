@@ -43,6 +43,8 @@ class SettingsRepository
 
         val dynamicColorEnabled: Flow<Boolean> = userPreferences.map { it.dynamicColorEnabled }
 
+        val fallbackThemeColor: Flow<FallbackThemeColor> = userPreferences.map { it.fallbackThemeColor }
+
         val backupSchedule: Flow<BackupSchedule> = userPreferences.map { it.backupSchedule }
 
         val lastBackupTimestampFlow: Flow<Long> = userPreferences.map { it.lastBackupTimestamp }
@@ -166,6 +168,8 @@ class SettingsRepository
         suspend fun updateAppTheme(theme: AppTheme) = ui.updateAppTheme(theme)
 
         suspend fun updateDynamicColorEnabled(enabled: Boolean) = ui.updateDynamicColorEnabled(enabled)
+
+        suspend fun updateFallbackThemeColor(color: FallbackThemeColor) = ui.updateFallbackThemeColor(color)
 
         suspend fun updatePrimaryDevice(deviceName: String?) = ui.updatePrimaryDevice(deviceName)
 

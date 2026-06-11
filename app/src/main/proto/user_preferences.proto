@@ -37,6 +37,14 @@ enum UnitSystemProto {
     UNIT_IMPERIAL = 1;
 }
 
+enum FallbackThemeColorProto {
+    FALLBACK_BRAND_PURPLE = 0;
+    FALLBACK_BRAND_BLUE = 1;
+    FALLBACK_TURQUOISE = 2;
+    FALLBACK_GREEN = 3;
+    FALLBACK_RECOVERY_BLUE = 4;
+}
+
 message UserPreferencesProto {
     float goal_sleep_hours = 1;
     
@@ -150,6 +158,8 @@ message UserPreferencesProto {
     // value = device label (as produced by DeviceLabel). An absent key means
     // "All devices" (no source filtering) for that data type.
     map<string, string> device_by_data_type = 63;
+
+    FallbackThemeColorProto fallback_theme_color = 64;
 }
 
 enum TrimpMethodProto {

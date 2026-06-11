@@ -41,4 +41,11 @@ val WarningOrangeContainerLight = Color(0xFFFB8C00)
 val OnWarningOrangeLight = Color(0xFFFFFFFF)
 val OnWarningOrangeContainerLight = Color(0xFF4D2C00)
 
+// Fallback theme accent seed colors (used when Dynamic Color is disabled)
+val BrandPurpleSeed = Color(0xFFAA78FF)
+val BrandBlueSeed = Color(0xFF5AA0FF)
+val TurquoiseSeed = Color(0xFF006A60)
+val GreenSeed = Color(0xFF386A20)
+val RecoveryBlueSeed = Color(0xFF0061A4)
+
 fun Color.toHexCode(): String = String.format("#%06X", (0xFFFFFF and this.toArgb()))

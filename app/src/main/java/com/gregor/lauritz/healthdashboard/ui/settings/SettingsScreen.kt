@@ -3,6 +3,7 @@ package com.gregor.lauritz.healthdashboard.ui.settings
 import android.content.Intent
 import android.net.Uri
 import android.os.Parcelable
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -52,6 +53,7 @@ import com.gregor.lauritz.healthdashboard.ui.components.SectionHeader
 import com.gregor.lauritz.healthdashboard.ui.components.SettingsToggleItem
 import com.gregor.lauritz.healthdashboard.ui.settings.LocalBackupViewModel.SideEffect
 import com.gregor.lauritz.healthdashboard.ui.settings.backup.LocalBackupSection
+import com.gregor.lauritz.healthdashboard.ui.settings.common.FallbackThemeColorSelector
 import com.gregor.lauritz.healthdashboard.ui.settings.common.UnitSystemSelector
 import com.gregor.lauritz.healthdashboard.ui.settings.data.DataManagementSection
 import com.gregor.lauritz.healthdashboard.ui.settings.data.DataSourceSettingsSection
@@ -469,6 +471,13 @@ fun SettingsScreen(
                                 checked = uiState.dynamicColorEnabled,
                                 onCheckedChange = { onUIEvent(SettingsEvent.DynamicColorEnabledChanged(it)) },
                             )
+                            AnimatedVisibility(visible = !uiState.dynamicColorEnabled) {
+                                FallbackThemeColorSelector(
+                                    selectedColor = uiState.fallbackThemeColor,
+                                    onColorSelected = { onUIEvent(SettingsEvent.FallbackThemeColorChanged(it)) },
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                )
+                            }
                             Spacer(modifier = Modifier.height(16.dp))
                             UnitSystemSelector(
                                 selectedUnit = uiState.unitSystem,

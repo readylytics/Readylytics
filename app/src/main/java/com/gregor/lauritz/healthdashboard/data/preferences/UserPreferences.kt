@@ -57,6 +57,7 @@ data class UserPreferences(
     /** Encrypted ciphertext via EncryptionManager. DO NOT use as plaintext. Decrypt before reading. */
     val circadianThresholdOverride: String? = SettingsDefaults.CIRCADIAN_THRESHOLD_OVERRIDE,
     val dynamicColorEnabled: Boolean = SettingsDefaults.DYNAMIC_COLOR_ENABLED,
+    val fallbackThemeColor: FallbackThemeColor = SettingsDefaults.FALLBACK_THEME_COLOR,
     val trimpModel: TrimpModel = SettingsDefaults.TRIMP_MODEL,
     val banisterMultiplier: Float = PhysiologyProfile.GENERAL.banisterMultiplier,
     val chengBeta: Float = PhysiologyProfile.GENERAL.defaultChengBeta,
@@ -137,6 +138,15 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         installDate = installDate,
         circadianThresholdOverride = if (hasCircadianThresholdOverride()) circadianThresholdOverride else null,
         dynamicColorEnabled = dynamicColorEnabled,
+        fallbackThemeColor =
+            when (fallbackThemeColor) {
+                FallbackThemeColorProto.FALLBACK_BRAND_PURPLE -> FallbackThemeColor.BRAND_PURPLE
+                FallbackThemeColorProto.FALLBACK_BRAND_BLUE -> FallbackThemeColor.BRAND_BLUE
+                FallbackThemeColorProto.FALLBACK_TURQUOISE -> FallbackThemeColor.TURQUOISE
+                FallbackThemeColorProto.FALLBACK_GREEN -> FallbackThemeColor.GREEN
+                FallbackThemeColorProto.FALLBACK_RECOVERY_BLUE -> FallbackThemeColor.RECOVERY_BLUE
+                else -> SettingsDefaults.FALLBACK_THEME_COLOR
+            },
         trimpModel =
             when (trimpMethod) {
                 TrimpMethodProto.TRIMP_ITRIMP -> TrimpModel.I_TRIMP
