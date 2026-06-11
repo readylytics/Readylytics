@@ -77,6 +77,8 @@ data class UserPreferences(
     val backupPasswordHash: String? = null,
     val isBirthdayConfigured: Boolean = SettingsDefaults.IS_BIRTHDAY_CONFIGURED,
     val unitSystem: UnitSystem = SettingsDefaults.UNIT_SYSTEM,
+    val backgroundSyncEnabled: Boolean = SettingsDefaults.BACKGROUND_SYNC_ENABLED,
+    val backgroundSyncIntervalMinutes: Int = SettingsDefaults.BACKGROUND_SYNC_INTERVAL.minutes,
 )
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
@@ -166,6 +168,15 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
                 UnitSystemProto.UNIT_METRIC -> UnitSystem.METRIC
                 UnitSystemProto.UNIT_IMPERIAL -> UnitSystem.IMPERIAL
                 else -> SettingsDefaults.UNIT_SYSTEM
+            },
+        backgroundSyncEnabled = backgroundSyncEnabled,
+        backgroundSyncIntervalMinutes =
+            if (backgroundSyncIntervalMinutes ==
+                0
+            ) {
+                SettingsDefaults.BACKGROUND_SYNC_INTERVAL.minutes
+            } else {
+                backgroundSyncIntervalMinutes
             },
     )
 }

@@ -73,6 +73,8 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
 
     override val allPermissions: Set<String> = requiredPermissions + optionalPermissions
 
+    override val backgroundReadPermission: String = HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
+
     // ---- state knobs ----
 
     var sdkAvailable: Boolean = true

@@ -93,7 +93,8 @@ All paths are rooted at `app/src/main/java/com/gregor/lauritz/healthdashboard/`.
 | `ForegroundSyncController` | `domain/sync/ForegroundSyncController.kt` | Foreground state + progress bridge. `triggerDailySync()` = pull-to-refresh (current day only, `windowDays = 1`); `triggerImmediateSync()` = first-launch catch-up; `onBackgroundRecalc{Started,Progress,Finished}()` publish WorkManager job progress into `isSyncing` / `recalcProgress` StateFlows + `syncCompletedEvent`. |
 | `FullHistoricalResyncUseCase` | `domain/sync/FullHistoricalResyncUseCase.kt` | Resolves the retention-bounded start date via `RetentionBounds.resolveResyncStartDate()` and delegates to `HealthSyncUseCase.resyncRange(start, today)`. No math. |
 | `HealthResyncWorker` | `workers/HealthResyncWorker.kt` | `@HiltWorker` durable foreground service (`FOREGROUND_SERVICE_TYPE_DATA_SYNC`). Runs the resync use case, emits `WorkInfo` progress (`setProgressAsync`), posts a determinate "day X of Y" notification, bridges progress to `ForegroundSyncController`; `Result.retry()` on transient failure. |
-| `WorkerScheduler` | `workers/WorkerScheduler.kt` | Enqueues unique work. `scheduleResyncWorker()` (`RESYNC_WORK_NAME`, `ExistingWorkPolicy.KEEP`, expedited, exponential backoff) + `cancelResyncWorker()`; also backup / birthday / data-cleanup workers. |
+| `WorkerScheduler` | `workers/WorkerScheduler.kt` | Enqueues unique work. `scheduleResyncWorker()` (`RESYNC_WORK_NAME`, `ExistingWorkPolicy.KEEP`, expedited, exponential backoff) + `cancelResyncWorker()`; `schedulePeriodicSync(intervalMinutes)` (`PERIODIC_SYNC_WORK_NAME`, `ExistingPeriodicWorkPolicy.UPDATE`, exponential backoff) + `cancelPeriodicSync()`; also backup / birthday / data-cleanup workers. |
+| `PeriodicHealthSyncWorker` | `workers/PeriodicHealthSyncWorker.kt` | "Background Sync" toggle in Settings. `@HiltWorker` periodic **standard (non-foreground) worker** calling `HealthSyncUseCase.sync(windowDays = 2)` (shares `syncMutex` with the other two flows), bridges progress to `ForegroundSyncController`, shows/dismisses a silent transient notification (`SyncNotifications.BACKGROUND_SYNC_CHANNEL_ID`) via `NotificationManagerCompat` directly — no `setForeground()`, since `READ_HEALTH_DATA_IN_BACKGROUND` already permits background HC reads and starting a foreground service from a periodic background worker risks `ForegroundServiceStartNotAllowedException` on API 34+. `Result.retry()` on any sync failure (matches `HealthResyncWorker`'s pattern; `HealthSyncUseCase.sync()` already swallows transient errors like `RateLimitingException` internally and reports `Result.Failure`, so WorkManager's `BackoffPolicy.EXPONENTIAL` handles retries). Requires `READ_HEALTH_DATA_IN_BACKGROUND`. Uses a plain windowed read (no Changes Tokens yet — see note below). |
 | `DataCleanupWorker` | `workers/DataCleanupWorker.kt` | Daily retention enforcement; cutoff resolved via `RetentionBounds.resolveRetentionCutoffMs()` (shared with resync). No-op when retention disabled. |
 | `RetentionBounds` | `domain/util/RetentionBounds.kt` | Single source of truth for retention→date math: enabled → `today − retentionDays`; disabled → `today − ABSOLUTE_MAX_DAYS` (3650 / 10y). |
 | `RoomTransactionRunner` | `data/local/RoomTransactionRunner.kt` | Wraps `HealthDatabase.withTransaction { … }` so an entire ingest window upserts atomically. |
@@ -113,6 +114,14 @@ anchored to the resync start date — which depends on the user's retention sett
 made `currentNocturnalRhr`/`currentHrvMean`/workout TRIMP retention-dependent for the same
 underlying data. The reconcile pass re-derives tagging from the full session list, making
 the result a pure function of the data, independent of chunking.
+
+> **Three sync flows, one engine:** pull-to-refresh (`triggerDailySync`, 1 day), full historical
+> resync (`resyncRange`, retention-bounded, foreground service), and periodic background sync
+> (`PeriodicHealthSyncWorker`, 2 days, `ExistingPeriodicWorkPolicy.UPDATE`). All three call into
+> `HealthSyncUseCase` and share `syncMutex`; ingestion stays upsert-by-HC-id, so overlapping
+> windows are idempotent. Health Connect Changes Tokens are not used — the 2-day window read is
+> already idempotent and bounded; switching to differential Changes-Token reads is a possible
+> future optimization but would touch the ingestion pipeline and is out of scope here.
 
 ### 1.3 Mappers — HC record → Room entity
 
@@ -301,7 +310,8 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | `domain/sync/FullHistoricalResyncUseCase.kt` | Ingestion — resync orchestration | retention-bounded range |
 | `domain/util/RetentionBounds.kt` | Ingestion — retention math | `today − retentionDays` / `ABSOLUTE_MAX_DAYS` |
 | `workers/HealthResyncWorker.kt` | Ingestion — durable background resync | `WorkInfo` progress, foreground notification |
-| `workers/WorkerScheduler.kt` | Ingestion — work scheduling | unique resync work (KEEP) |
+| `workers/PeriodicHealthSyncWorker.kt` | Ingestion — periodic background sync (2-day window) | silent transient notification |
+| `workers/WorkerScheduler.kt` | Ingestion — work scheduling | unique resync (KEEP) + periodic sync (UPDATE) |
 | `workers/DataCleanupWorker.kt` | Ingestion — retention enforcement | retention cutoff (shared) |
 | `data/local/RoomTransactionRunner.kt` | Ingestion — atomic transaction | per-window upsert |
 | `domain/sync/link/SessionLinker.kt` | Ingestion — session linkage | pure `resolve()`: sleep > workout > resting precedence |

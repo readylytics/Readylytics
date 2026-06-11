@@ -59,6 +59,9 @@ class HealthConnectRepositoryImpl
         override val allPermissions: Set<String> =
             requiredPermissions + optionalPermissions
 
+        override val backgroundReadPermission: String =
+            HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
+
         private val client: HealthConnectClient by lazy {
             HealthConnectClient.getOrCreate(context)
         }

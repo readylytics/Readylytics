@@ -30,6 +30,14 @@ internal class SyncPreferences
             dataStore.updateData { it.toBuilder().setSyncIntervalHours(hours).build() }
         }
 
+        suspend fun updateBackgroundSyncEnabled(enabled: Boolean) {
+            dataStore.updateData { it.toBuilder().setBackgroundSyncEnabled(enabled).build() }
+        }
+
+        suspend fun updateBackgroundSyncIntervalMinutes(minutes: Int) {
+            dataStore.updateData { it.toBuilder().setBackgroundSyncIntervalMinutes(minutes).build() }
+        }
+
         suspend fun updateCircadianThresholdOverride(encryptedMinutes: String?) {
             dataStore.updateData { builder ->
                 if (encryptedMinutes != null) {

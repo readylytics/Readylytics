@@ -15,6 +15,20 @@
     <string name="resync_notification_preparing">Preparing…</string>
     <string name="resync_channel_name">Health resync</string>
     <string name="resync_channel_description">Progress while recalculating your full Health Connect history.</string>
+
+    <!-- Sync settings: app-open / background sync toggles -->
+    <string name="sync_on_app_open_label">Sync on app open</string>
+    <string name="background_sync_label">Background sync</string>
+    <string name="background_sync_description">Keep your data up to date in the background</string>
+    <string name="background_sync_interval_label">Sync interval</string>
+    <string name="background_sync_interval_15m">Every 15 minutes</string>
+    <string name="background_sync_interval_1h">Every hour</string>
+    <string name="background_sync_interval_4h">Every 4 hours</string>
+    <string name="background_sync_interval_12h">Every 12 hours</string>
+    <string name="background_sync_interval_daily">Daily</string>
+    <string name="background_sync_notification_title">Readylytics is syncing health data…</string>
+    <string name="background_sync_channel_name">Background sync</string>
+    <string name="background_sync_channel_description">Silent notification shown briefly while background Health Connect sync runs.</string>
     <string name="health_connect_unavailable_message">Health Connect is not installed on this device.\nInstall it from the Play Store.</string>
 
     <!-- Tooltips -->

@@ -32,6 +32,9 @@ interface HealthConnectRepository {
     val optionalPermissions: Set<String>
     val allPermissions: Set<String>
 
+    /** Permission required for [PeriodicHealthSyncWorker][com.gregor.lauritz.healthdashboard.workers.PeriodicHealthSyncWorker] to read data while the app is backgrounded. */
+    val backgroundReadPermission: String
+
     fun isAvailable(): Boolean
 
     suspend fun checkPermissions(): PermissionStatus

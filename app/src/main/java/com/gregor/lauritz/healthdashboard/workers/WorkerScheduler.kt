@@ -28,6 +28,7 @@ class WorkerScheduler
             const val BIRTHDAY_WORK_NAME = "birthday_check_periodic"
             const val DATA_CLEANUP_WORK_NAME = "data_cleanup_periodic"
             const val RESYNC_WORK_NAME = "health_resync_onetime"
+            const val PERIODIC_SYNC_WORK_NAME = "health_periodic_sync"
         }
 
         /**
@@ -103,6 +104,29 @@ class WorkerScheduler
                     request,
                 )
             }
+
+        /**
+         * Enqueues (or reschedules with a new interval) the periodic background Health Connect
+         * sync. [ExistingPeriodicWorkPolicy.UPDATE] applies the new interval immediately while
+         * preserving the unique work identity.
+         */
+        suspend fun schedulePeriodicSync(intervalMinutes: Long) =
+            withContext(Dispatchers.IO) {
+                val request =
+                    PeriodicWorkRequestBuilder<PeriodicHealthSyncWorker>(intervalMinutes, TimeUnit.MINUTES)
+                        .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
+                        .build()
+
+                workManager.get().enqueueUniquePeriodicWork(
+                    PERIODIC_SYNC_WORK_NAME,
+                    ExistingPeriodicWorkPolicy.UPDATE,
+                    request,
+                )
+            }
+
+        fun cancelPeriodicSync() {
+            workManager.get().cancelUniqueWork(PERIODIC_SYNC_WORK_NAME)
+        }
 
         suspend fun scheduleDataCleanupWorker() =
             withContext(Dispatchers.IO) {
