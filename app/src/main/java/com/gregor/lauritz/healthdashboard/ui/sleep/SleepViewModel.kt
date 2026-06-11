@@ -16,9 +16,12 @@ import com.gregor.lauritz.healthdashboard.domain.repository.SleepStageData
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
+import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
+import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -29,6 +32,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -45,6 +49,11 @@ data class SleepUiState(
     val stageTimeline: List<SleepStageData> = emptyList(),
     val selectedDate: LocalDate = LocalDate.now(),
     val isLoading: Boolean = false,
+    val selectedTrendRange: TimeRange = TimeRange.SEVEN_DAYS,
+    val trendStartOffsetPoints: List<DailyDataPoint> = emptyList(),
+    val trendDurationSpanPoints: List<DailyDataPoint> = emptyList(),
+    val trendActualDurationPoints: List<DailyDataPoint> = emptyList(),
+    val trendRangeStartMs: Long = 0,
 )
 
 @HiltViewModel
@@ -61,6 +70,8 @@ class SleepViewModel
         private val foregroundSyncController: ForegroundSyncController,
         private val savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
+        private val selectedTrendRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
+
         @OptIn(ExperimentalCoroutinesApi::class)
         val circadianConsistencyFlow =
             selectedDateRepository.selectedDate
@@ -74,8 +85,11 @@ class SleepViewModel
 
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState =
-            selectedDateRepository.selectedDate
-                .flatMapLatest { date ->
+            combine(
+                selectedDateRepository.selectedDate,
+                selectedTrendRangeFlow,
+            ) { date, range -> date to range }
+                .flatMapLatest { (date, range) ->
                     val zoneId = ZoneId.systemDefault()
                     val selectedMidnightMs =
                         date
@@ -85,6 +99,15 @@ class SleepViewModel
                     val nextDayMidnightMs =
                         date
                             .plusDays(1)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
+
+                    val rangeStart = date.minusDays((range.days - 1).toLong())
+                    val visibleRangeStartMs = rangeStart.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                    val queryStartMs =
+                        rangeStart
+                            .minusDays(2)
                             .atStartOfDay(zoneId)
                             .toInstant()
                             .toEpochMilli()
@@ -128,13 +151,73 @@ class SleepViewModel
 
                     val metricsFlow = dailyMetricsRepository.observeByDate(date)
 
+                    val trendSessionsFlow =
+                        sleepSessionRepository.observeSince(queryStartMs).map { list ->
+                            val filtered = list.filter { it.endTime <= nextDayMidnightMs }
+                            val sessionsByDay =
+                                filtered.groupBy { session ->
+                                    Instant.ofEpochMilli(session.endTime).atZone(zoneId).toLocalDate()
+                                }
+
+                            val startOffsetPoints = mutableListOf<DailyDataPoint>()
+                            val durationSpanPoints = mutableListOf<DailyDataPoint>()
+                            val actualDurationPoints = mutableListOf<DailyDataPoint>()
+
+                            for (dayOffset in 0 until range.days) {
+                                val targetDate = rangeStart.plusDays(dayOffset.toLong())
+                                val sessionsForDay = sessionsByDay[targetDate]
+                                val session = sessionsForDay?.firstOrNull()
+
+                                if (session != null) {
+                                    val baselineMs =
+                                        targetDate
+                                            .minusDays(
+                                                1,
+                                            ).atTime(12, 0)
+                                            .atZone(zoneId)
+                                            .toInstant()
+                                            .toEpochMilli()
+                                    val startOffset = (session.startTime - baselineMs) / 3_600_000f
+                                    val endOffset = (session.endTime - baselineMs) / 3_600_000f
+                                    val span = endOffset - startOffset
+                                    val actualDuration = (session.durationMinutes - session.awakeMinutes) / 60f
+
+                                    startOffsetPoints.add(DailyDataPoint(dayOffset, startOffset))
+                                    durationSpanPoints.add(DailyDataPoint(dayOffset, span))
+                                    actualDurationPoints.add(DailyDataPoint(dayOffset, actualDuration))
+                                } else {
+                                    startOffsetPoints.add(DailyDataPoint(dayOffset, null))
+                                    durationSpanPoints.add(DailyDataPoint(dayOffset, null))
+                                    actualDurationPoints.add(DailyDataPoint(dayOffset, null))
+                                }
+                            }
+                            Triple(startOffsetPoints, durationSpanPoints, actualDurationPoints)
+                        }
+
                     combine(
                         summaryFlow,
                         sessionFlow,
                         stagesFlow,
                         foregroundSyncController.isSyncing,
                         metricsFlow,
-                    ) { latestSummary, latestSession, stages, isSyncing, latestMetrics ->
+                        trendSessionsFlow,
+                    ) { array ->
+                        val latestSummary = array[0] as DailySummary?
+                        val latestSession = array[1] as SleepSessionData?
+
+                        @Suppress("UNCHECKED_CAST")
+                        val stages = array[2] as List<SleepStageData>
+                        val isSyncing = array[3] as Boolean
+                        val latestMetrics = array[4] as DailyMetrics?
+
+                        @Suppress("UNCHECKED_CAST")
+                        val trendData =
+                            array[5] as Triple<
+                                List<DailyDataPoint>,
+                                List<DailyDataPoint>,
+                                List<DailyDataPoint>,
+                            >
+
                         SleepUiState(
                             latestSummary = latestSummary,
                             latestMetrics = latestMetrics,
@@ -142,6 +225,11 @@ class SleepViewModel
                             stageTimeline = stages,
                             selectedDate = date,
                             isLoading = isSyncing,
+                            selectedTrendRange = range,
+                            trendStartOffsetPoints = trendData.first,
+                            trendDurationSpanPoints = trendData.second,
+                            trendActualDurationPoints = trendData.third,
+                            trendRangeStartMs = visibleRangeStartMs,
                         )
                     }
                 }.flowOn(Dispatchers.Default)
@@ -175,5 +263,9 @@ class SleepViewModel
             viewModelScope.launch {
                 selectedDateRepository.selectNextDay()
             }
+        }
+
+        fun onTrendRangeSelected(range: TimeRange) {
+            selectedTrendRangeFlow.value = range
         }
     }

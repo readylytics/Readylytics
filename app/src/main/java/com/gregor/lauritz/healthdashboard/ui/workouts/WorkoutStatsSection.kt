@@ -370,8 +370,8 @@ private fun AcwrChart(
         }
 
     // ── Colours & Vico style helpers ─────────────────────────────────────────
-    val ratioColor = MaterialTheme.colorScheme.primary
-    val trimpColor = MaterialTheme.colorScheme.outline
+    val ratioColor = MaterialTheme.colorScheme.tertiary
+    val trimpColor = MaterialTheme.colorScheme.primary
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()

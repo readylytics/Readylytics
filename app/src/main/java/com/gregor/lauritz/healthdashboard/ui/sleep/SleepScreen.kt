@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -32,6 +33,8 @@ import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
 import com.gregor.lauritz.healthdashboard.ui.common.MetricCardSkeleton
 import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
 import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
+import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
+import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.CircadianConsistencyCard
 import com.gregor.lauritz.healthdashboard.ui.components.M3ScoreDial
 import com.gregor.lauritz.healthdashboard.ui.components.MetricCard
@@ -54,6 +57,7 @@ fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
         onPreviousDay = viewModel::onPreviousDay,
         onNextDay = viewModel::onNextDay,
         onDateSelected = viewModel::onDateSelected,
+        onTrendRangeSelected = viewModel::onTrendRangeSelected,
         earliestDate = earliestDate,
     )
 }
@@ -65,10 +69,19 @@ fun SleepScreen(
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onDateSelected: (java.time.LocalDate) -> Unit = {},
+    onTrendRangeSelected: (TimeRange) -> Unit = {},
     earliestDate: java.time.LocalDate? = null,
     modifier: Modifier = Modifier,
 ) {
+    val listState = rememberLazyListState()
+    val (trendScrollState, trendZoomState) =
+        ChartDefaults.rememberChartState(
+            rangeDays = uiState.selectedTrendRange.days,
+            key = uiState.selectedTrendRange,
+        )
+
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 16.dp),
     ) {
@@ -158,6 +171,27 @@ fun SleepScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
+            }
+        }
+
+        item(key = "spacer_trend") { Spacer(Modifier.height(16.dp)) }
+
+        item(key = "sleep_trend") {
+            if (uiState.isLoading) {
+                SleepTrendSkeleton(modifier = Modifier.padding(horizontal = 16.dp))
+            } else {
+                SleepTrendCard(
+                    selectedRange = uiState.selectedTrendRange,
+                    startOffsetPoints = uiState.trendStartOffsetPoints,
+                    durationSpanPoints = uiState.trendDurationSpanPoints,
+                    actualDurationPoints = uiState.trendActualDurationPoints,
+                    rangeStartMs = uiState.trendRangeStartMs,
+                    onRangeSelected = onTrendRangeSelected,
+                    scrollState = trendScrollState,
+                    zoomState = trendZoomState,
+                    parentScrollInProgress = listState.isScrollInProgress,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
             }
         }
 

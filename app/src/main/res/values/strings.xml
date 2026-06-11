@@ -209,6 +209,13 @@
     <string name="sleep_breakdown_row_format">%1$s • %2$s</string>
     <string name="sleep_hypnogram_title">Hypnogram</string>
 
+    <!-- Sleep Trend Chart -->
+    <string name="sleep_trend_title">Sleep Trend</string>
+    <string name="sleep_trend_legend_window">Sleep window</string>
+    <string name="sleep_trend_legend_duration">Sleep duration</string>
+    <string name="sleep_trend_tooltip_duration_format">Duration: %1$.1fh</string>
+    <string name="sleep_trend_tooltip_bedtime_format">Bedtime: %1$s - %2$s</string>
+
     <!-- ACWR / Training Load Chart -->
     <string name="acwr_training_load">Training load</string>
     <string name="acwr_legend_daily_trimp">Daily TRIMP</string>
