@@ -1,9 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.workouts
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,13 +12,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.ui.common.CardLoader
-import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
 import com.gregor.lauritz.healthdashboard.ui.common.ScreenHeaderSection
 import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -83,9 +79,10 @@ fun WorkoutsScreen(
                 onDateSelected = onDateSelected,
                 earliestDate = earliestDate,
                 enabled = !isDisabled,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
             )
         }
 
@@ -95,18 +92,12 @@ fun WorkoutsScreen(
             contentPadding = PaddingValues(vertical = 16.dp),
         ) {
             item(key = "stats_section") {
-                CardLoader(
-                    isLoading = uiState.isLoading,
-                    skeleton = { WorkoutStatsSectionSkeleton() },
-                    content = {
-                        WorkoutStatsSection(
-                            uiState = uiState,
-                            onRangeSelected = onRangeSelected,
-                            scrollState = chartScrollState,
-                            zoomState = chartZoomState,
-                            parentScrollInProgress = listState.isScrollInProgress,
-                        )
-                    },
+                WorkoutStatsSection(
+                    uiState = uiState,
+                    onRangeSelected = onRangeSelected,
+                    scrollState = chartScrollState,
+                    zoomState = chartZoomState,
+                    parentScrollInProgress = listState.isScrollInProgress,
                 )
             }
 
@@ -131,24 +122,6 @@ fun WorkoutsScreen(
                 StatusLegend()
             }
         }
-    }
-}
-
-@Composable
-private fun WorkoutStatsSectionSkeleton() {
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ScoreDialSkeleton(height = 130.dp)
-            ScoreDialSkeleton(height = 130.dp)
-        }
-        SkeletonCard(height = 120.dp, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
-        SkeletonCard(height = 180.dp, modifier = Modifier.fillMaxWidth())
     }
 }
 

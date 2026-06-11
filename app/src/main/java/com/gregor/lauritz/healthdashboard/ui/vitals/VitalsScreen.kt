@@ -101,9 +101,10 @@ fun VitalsScreen(
                 onDateSelected = onDateSelected,
                 earliestDate = earliestDate,
                 enabled = !isDisabled,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
 
