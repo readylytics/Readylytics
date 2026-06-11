@@ -171,13 +171,14 @@ keep Android types out of `domain/scoring/**`.
 | `PaiCalculator` | `domain/scoring/PaiCalculator.kt` | `calculateDailyTrimp(..., trimpModel = TrimpModel.BANISTER)` switches per model — **BANISTER is the operational default** (default parameter value). `calculateDailyPai()` converts TRIMP → PAI via a profile scaling factor (capped at 75). |
 | `ComputeWorkoutTrimpUseCase` | `domain/scoring/ComputeWorkoutTrimpUseCase.kt` | Per-workout integration over HR samples; reads the user-selected model from `prefs.trimpModel`. |
 | `ComputeWorkoutLoadMetricsUseCase` | `domain/scoring/ComputeWorkoutLoadMetricsUseCase.kt` | Single per-workout load source for workout history/detail UI: resolves precise TRIMP + gained strain from DB-backed workout samples, then returns the rounded TRIMP/strain display values used by cards and rows. |
+| `GetWorkoutDisplayMetricsUseCase` | `domain/scoring/GetWorkoutDisplayMetricsUseCase.kt` | Unified display metrics provider for workouts. Orchestrates 42-day history fetching and delegates calculations to `ComputeWorkoutLoadMetricsUseCase` to return UI-ready preformatted values. |
 | `ScoringConfigFactory` | `domain/scoring/ScoringConfigFactory.kt` | Threads `userPreferences.trimpModel` into the scoring config. |
 
 Daily score display values are projected through `DailyMetricsMapper` /
 `DailyMetricsRepository`. UI screens may use raw `DailySummary` floats for chart
 geometry and dial progress, but visible Sleep Score, Readiness, Restoration, TRIMP,
 PAI, RHR/HRV baselines, SpO2, and Strain Ratio text must use `DailyMetrics`
-rounded/display fields or the workout-specific `ComputeWorkoutLoadMetricsUseCase`
+rounded/display fields or the workout-specific `GetWorkoutDisplayMetricsUseCase`
 result.
 
 **Variants (reference only — see `PaiCalculator.calculateDailyTrimp` for the implementation):**
@@ -302,6 +303,7 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | `domain/scoring/TrimpModel.kt` | Processing — TRIMP model enum | BANISTER / I_TRIMP / CHENG |
 | `domain/scoring/PaiCalculator.kt` | Processing — TRIMP/PAI | **TRIMP (default BANISTER)**; PAI = TRIMP × scaling (cap 75) |
 | `domain/scoring/ComputeWorkoutTrimpUseCase.kt` | Processing — per-workout TRIMP | model from `prefs.trimpModel` |
+| `domain/scoring/GetWorkoutDisplayMetricsUseCase.kt` | Processing — per-workout display metrics | orchestrates 42-day history fetching and delegates to `ComputeWorkoutLoadMetricsUseCase` |
 | `domain/scoring/BaselineComputer.kt` | Processing — baselines | hrMax / RHR / HRV mu·sigma / PAI factor; freeze + calibration |
 | `domain/scoring/strategies/SleepScoringStrategy.kt` | Processing — sleep score | Duration 50% / Architecture 25% / Restoration 25% |
 | `domain/scoring/strategies/LoadScoringStrategy.kt` | Processing — load/readiness | Strain Ratio (ATL/CTL); readiness composite |

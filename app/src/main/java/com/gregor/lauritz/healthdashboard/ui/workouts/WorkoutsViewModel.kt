@@ -12,8 +12,8 @@ import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryReposito
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutRepository
-import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutLoadMetricsUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase
+import com.gregor.lauritz.healthdashboard.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringConstants
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
@@ -94,7 +94,7 @@ class WorkoutsViewModel
         private val selectedDateRepository: SelectedDateRepository,
         private val scoringCalculator: ScoringCalculator,
         private val settingsRepo: SettingsRepository,
-        private val computeWorkoutLoadMetricsUseCase: ComputeWorkoutLoadMetricsUseCase,
+        private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
         private val foregroundSyncController: ForegroundSyncController,
         private val savedStateHandle: SavedStateHandle,
     ) : ViewModel() {
@@ -285,30 +285,19 @@ class WorkoutsViewModel
                             val recentItems =
                                 recentWorkouts
                                     .map { workout ->
-                                        val workoutDate =
-                                            Instant
-                                                .ofEpochMilli(
-                                                    workout.startTime,
-                                                ).atZone(zoneId)
-                                                .toLocalDate()
-                                        val rhrBaseline = summaryByDate[workoutDate]?.rhrBpm
                                         val samples = samplesByWorkoutId[workout.id] ?: emptyList()
 
-                                        val loadMetrics =
-                                            computeWorkoutLoadMetricsUseCase.execute(
+                                        val displayMetrics =
+                                            getWorkoutDisplayMetricsUseCase.execute(
                                                 workout = workout,
-                                                workoutDate = workoutDate,
                                                 samples = samples,
-                                                prefs = prefs,
-                                                restingHrBaseline = rhrBaseline,
-                                                trimpByDate = trimpByDate,
                                             )
 
                                         WorkoutDisplayItem(
                                             workout = workout,
-                                            gainedStrain = loadMetrics.roundedGainedStrain,
-                                            computedTrimp = loadMetrics.roundedTrimp,
-                                            gainedStrainDisplay = loadMetrics.gainedStrainDisplay,
+                                            gainedStrain = displayMetrics.gainedStrain,
+                                            computedTrimp = displayMetrics.computedTrimp,
+                                            gainedStrainDisplay = displayMetrics.gainedStrainDisplay,
                                         )
                                     }
 

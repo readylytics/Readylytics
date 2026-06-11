@@ -10,8 +10,9 @@ import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryReposito
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutRepository
-import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutLoadMetricsUseCase
+import com.gregor.lauritz.healthdashboard.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.ScoringCalculator
+import com.gregor.lauritz.healthdashboard.domain.scoring.WorkoutDisplayMetrics
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import io.mockk.coEvery
@@ -46,7 +47,7 @@ class WorkoutsViewModelTest {
     private lateinit var selectedDateRepository: SelectedDateRepository
     private lateinit var scoringCalculator: ScoringCalculator
     private lateinit var settingsRepo: SettingsRepository
-    private lateinit var computeWorkoutLoadMetricsUseCase: ComputeWorkoutLoadMetricsUseCase
+    private lateinit var getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase
     private lateinit var foregroundSyncController: ForegroundSyncController
     private lateinit var savedStateHandle: SavedStateHandle
     private lateinit var appScope: CoroutineScope
@@ -94,23 +95,19 @@ class WorkoutsViewModelTest {
             mockk {
                 every { userPreferences } returns MutableStateFlow(UserPreferences())
             }
-        computeWorkoutLoadMetricsUseCase =
+        getWorkoutDisplayMetricsUseCase =
             mockk(relaxed = true) {
-                every {
+                coEvery {
                     execute(
                         workout = any(),
-                        workoutDate = any(),
                         samples = any(),
-                        prefs = any(),
-                        restingHrBaseline = any(),
-                        trimpByDate = any(),
                     )
                 } returns
-                    ComputeWorkoutLoadMetricsUseCase.WorkoutLoadMetrics(
+                    WorkoutDisplayMetrics(
                         preciseTrimp = 50f,
-                        roundedTrimp = 50,
-                        preciseGainedStrain = 0.36f,
-                        roundedGainedStrain = 0.36f,
+                        computedTrimp = 50,
+                        trimpDisplay = "50",
+                        gainedStrain = 0.36f,
                         gainedStrainDisplay = "0.36",
                     )
             }
@@ -129,7 +126,7 @@ class WorkoutsViewModelTest {
             selectedDateRepository = selectedDateRepository,
             scoringCalculator = scoringCalculator,
             settingsRepo = settingsRepo,
-            computeWorkoutLoadMetricsUseCase = computeWorkoutLoadMetricsUseCase,
+            getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
             foregroundSyncController = foregroundSyncController,
             savedStateHandle = savedStateHandle,
         )
@@ -321,21 +318,17 @@ class WorkoutsViewModelTest {
                 )
             workoutsFlow.value = listOf(workout)
             summariesFlow.value = listOf(DailySummary(date = today, totalTrimp = 115.6f, rhrBpm = 52f))
-            every {
-                computeWorkoutLoadMetricsUseCase.execute(
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
                     workout = workout,
-                    workoutDate = today,
                     samples = emptyList(),
-                    prefs = any(),
-                    restingHrBaseline = 52f,
-                    trimpByDate = any(),
                 )
             } returns
-                ComputeWorkoutLoadMetricsUseCase.WorkoutLoadMetrics(
+                WorkoutDisplayMetrics(
                     preciseTrimp = 115.6f,
-                    roundedTrimp = 116,
-                    preciseGainedStrain = 0.365f,
-                    roundedGainedStrain = 0.37f,
+                    computedTrimp = 116,
+                    trimpDisplay = "116",
+                    gainedStrain = 0.37f,
                     gainedStrainDisplay = "0.37",
                 )
 

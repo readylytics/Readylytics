@@ -10,7 +10,8 @@ import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRecordData
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutRepository
-import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutLoadMetricsUseCase
+import com.gregor.lauritz.healthdashboard.domain.scoring.GetWorkoutDisplayMetricsUseCase
+import com.gregor.lauritz.healthdashboard.domain.scoring.WorkoutDisplayMetrics
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -44,7 +45,7 @@ class WorkoutDetailViewModelTest {
         mockk<SettingsRepository> {
             every { userPreferences } returns MutableStateFlow(UserPreferences())
         }
-    private val computeWorkoutLoadMetricsUseCase = mockk<ComputeWorkoutLoadMetricsUseCase>()
+    private val getWorkoutDisplayMetricsUseCase = mockk<GetWorkoutDisplayMetricsUseCase>()
 
     @Before
     fun setUp() {
@@ -56,7 +57,7 @@ class WorkoutDetailViewModelTest {
                 heartRateRepository = heartRateRepository,
                 dailySummaryRepository = dailySummaryRepository,
                 settingsRepo = settingsRepository,
-                computeWorkoutLoadMetricsUseCase = computeWorkoutLoadMetricsUseCase,
+                getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
             )
     }
 
@@ -110,21 +111,17 @@ class WorkoutDetailViewModelTest {
                 DailySummary(date = date, totalTrimp = 115.6f, rhrBpm = 52f, totalPai = 12f)
             coEvery { dailySummaryRepository.getSince(any()) } returns
                 listOf(DailySummary(date = date, totalTrimp = 115.6f, rhrBpm = 52f, paiScore = 12f))
-            every {
-                computeWorkoutLoadMetricsUseCase.execute(
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
                     workout = workout,
-                    workoutDate = date,
                     samples = any(),
-                    prefs = any(),
-                    restingHrBaseline = 52f,
-                    trimpByDate = any(),
                 )
             } returns
-                ComputeWorkoutLoadMetricsUseCase.WorkoutLoadMetrics(
+                WorkoutDisplayMetrics(
                     preciseTrimp = 115.6f,
-                    roundedTrimp = 116,
-                    preciseGainedStrain = 0.365f,
-                    roundedGainedStrain = 0.37f,
+                    computedTrimp = 116,
+                    trimpDisplay = "116",
+                    gainedStrain = 0.37f,
                     gainedStrainDisplay = "0.37",
                 )
 

@@ -8,7 +8,7 @@ import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectReposit
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutData
 import com.gregor.lauritz.healthdashboard.domain.repository.WorkoutRepository
-import com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutLoadMetricsUseCase
+import com.gregor.lauritz.healthdashboard.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import com.gregor.lauritz.healthdashboard.domain.scoring.PaiCalculator
 import com.gregor.lauritz.healthdashboard.ui.workouts.mappers.ChartDataMapper
 import com.gregor.lauritz.healthdashboard.ui.workouts.mappers.DailyPaiBreakdownMapper
@@ -55,7 +55,7 @@ class WorkoutDetailViewModel
         private val heartRateRepository: HeartRateRepository,
         private val dailySummaryRepository: DailySummaryRepository,
         private val settingsRepo: SettingsRepository,
-        private val computeWorkoutLoadMetricsUseCase: ComputeWorkoutLoadMetricsUseCase,
+        private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(WorkoutDetailUiState())
         val uiState = _uiState.asStateFlow()
@@ -106,7 +106,6 @@ class WorkoutDetailViewModel
                         .toInstant()
                         .toEpochMilli()
                 val thirtyDaySummaries = dailySummaryRepository.getSince(thirtyDaysAgo)
-                val trimpByDate = thirtyDaySummaries.associate { it.date to (it.totalTrimp ?: 0f) }
 
                 val paiBreakdown = DailyPaiBreakdownMapper.mapDailyBreakdown(workoutDate, thirtyDaySummaries)
 
@@ -114,10 +113,9 @@ class WorkoutDetailViewModel
 
                 val prefs = settingsRepo.userPreferences.first()
                 val workoutSamples = dbSamples.filter { it.timestamp <= workoutEndInstant }
-                val loadMetrics =
-                    computeWorkoutLoadMetricsUseCase.execute(
+                val displayMetrics =
+                    getWorkoutDisplayMetricsUseCase.execute(
                         workout = workout,
-                        workoutDate = workoutDate,
                         samples =
                             workoutSamples.map {
                                 com.gregor.lauritz.healthdashboard.domain.scoring.ComputeWorkoutTrimpUseCase
@@ -126,9 +124,6 @@ class WorkoutDetailViewModel
                                         it.bpm,
                                     )
                             },
-                        prefs = prefs,
-                        restingHrBaseline = summary?.rhrBpm,
-                        trimpByDate = trimpByDate,
                     )
 
                 _uiState.update {
@@ -142,10 +137,10 @@ class WorkoutDetailViewModel
                         hrr3Min = recoveryMetrics.hrr3Min,
                         totalPai = summary?.totalPai,
                         paiDailyBreakdown = paiBreakdown,
-                        computedTrimp = loadMetrics.roundedTrimp.takeIf { trimp -> trimp > 0 },
-                        gainedStrain = loadMetrics.roundedGainedStrain,
-                        gainedStrainDisplay = loadMetrics.gainedStrainDisplay,
-                        pai = PaiCalculator.calculateDailyPai(loadMetrics.preciseTrimp, prefs.paiScalingFactor),
+                        computedTrimp = displayMetrics.computedTrimp.takeIf { trimp -> trimp > 0 },
+                        gainedStrain = displayMetrics.gainedStrain,
+                        gainedStrainDisplay = displayMetrics.gainedStrainDisplay,
+                        pai = PaiCalculator.calculateDailyPai(displayMetrics.preciseTrimp, prefs.paiScalingFactor),
                         isLoading = false,
                     )
                 }
