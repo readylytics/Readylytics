@@ -147,7 +147,11 @@ private fun ZoneBreakdownCard(workout: WorkoutData) {
         shape = MaterialTheme.shapes.large,
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text(stringResource(R.string.workout_zones_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = stringResource(R.string.workout_zones_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
             Spacer(Modifier.height(12.dp))
             zones.forEach { (label, minutes, color) ->
                 ZoneRow(label, minutes, totalMinutes, color)
