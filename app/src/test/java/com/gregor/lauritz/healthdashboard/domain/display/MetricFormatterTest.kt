@@ -143,4 +143,39 @@ class MetricFormatterTest {
     fun `formatBmi negative returns dash`() {
         assertEquals("—", MetricFormatter.formatBmi(-1f))
     }
+
+    @Test
+    fun `formatStrain rounds half up to two decimals`() {
+        assertEquals("0.37", MetricFormatter.formatStrain(0.365f))
+    }
+
+    @Test
+    fun `formatStrain rounds down to two decimals`() {
+        assertEquals("0.36", MetricFormatter.formatStrain(0.364f))
+    }
+
+    @Test
+    fun `formatStrain null returns dash`() {
+        assertEquals("—", MetricFormatter.formatStrain(null))
+    }
+
+    @Test
+    fun `roundStrain returns rounded two decimal value`() {
+        assertEquals(0.37f, MetricFormatter.roundStrain(0.365f))
+    }
+
+    @Test
+    fun `formatTrimp rounds to nearest integer`() {
+        assertEquals("116", MetricFormatter.formatTrimp(115.6f))
+    }
+
+    @Test
+    fun `formatPai rounds to nearest integer`() {
+        assertEquals("73", MetricFormatter.formatPai(72.5f))
+    }
+
+    @Test
+    fun `formatPai null returns dash`() {
+        assertEquals("—", MetricFormatter.formatPai(null))
+    }
 }

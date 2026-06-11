@@ -80,6 +80,14 @@ interface WorkoutDao {
         toMs: Long,
     ): List<WorkoutRecordEntity>
 
+    @Query(
+        "SELECT * FROM workout_records WHERE endTime >= :fromMs AND startTime <= :toMs ORDER BY startTime ASC, id ASC",
+    )
+    suspend fun getOverlapping(
+        fromMs: Long,
+        toMs: Long,
+    ): List<WorkoutRecordEntity>
+
     @Query("SELECT MIN(startTime) FROM workout_records")
     suspend fun getEarliestWorkoutTimestamp(): Long?
 

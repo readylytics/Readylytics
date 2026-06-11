@@ -13,8 +13,8 @@ object HeartRateMapper {
         sleepSessions: List<SleepSessionEntity>,
         workoutSessions: List<WorkoutRecordEntity>,
     ): List<HeartRateRecordEntity> {
-        val sortedSleep = sleepSessions.sortedBy { it.startTime }
-        val sortedWorkouts = workoutSessions.sortedBy { it.startTime }
+        val sortedSleep = sleepSessions.sortedWith(compareBy({ it.startTime }, { it.id }))
+        val sortedWorkouts = workoutSessions.sortedWith(compareBy({ it.startTime }, { it.id }))
 
         // Flatten + sort chronologically before session matching.
         // Samsung delivers HeartRateRecord batches out of order; the forward-only
@@ -77,7 +77,7 @@ object HeartRateMapper {
         records: List<RestingHeartRateRecord>,
         sleepSessions: List<SleepSessionEntity>,
     ): List<HeartRateRecordEntity> {
-        val sortedSleep = sleepSessions.sortedBy { it.startTime }
+        val sortedSleep = sleepSessions.sortedWith(compareBy({ it.startTime }, { it.id }))
         val sortedRecords = records.sortedBy { it.time.toEpochMilli() }
         var sleepIdx = 0
 

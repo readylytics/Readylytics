@@ -1,26 +1,3 @@
-# Claude Code Orchestration (OMC)
-
-Operating under oh-my-claudecode (OMC) multi-agent layer.
-
-## Principles & Rules
-
-- **Process:** Plan -> Implement -> Verify. Never self-approve without verification.
-- **Delegation:** Multi-file, refactors, debugging, architecture, research -> Delegate. Single-file, trivial fixes, clarifications -> Work directly.
-- **Routing:** `executor`(exec), `document-specialist`(SDK/API), `opus`(arch/reasoning), `sonnet`(standard), `haiku`(lookup).
-- **Execution:** Explore large areas first; execute incrementally; use reviewer/verifier for validation. No pending tasks at completion.
-
-## Skills & State
-
-- **Trigger via:** `/oh-my-claudecode:<skill>`
-- **Autopilots:** autopilot, ultrawork, ralph, tdd, deepsearch, ultrathink, deslop. Cancel: `/oh-my-claudecode:cancel`
-- **State Paths:** `.omc/` (state/, sessions/, plans/, research/, logs/, project-memory.json, notepad.md)
-- **Hooks/Vars:** `<remember>` (7d), `<remember priority>` (perm), `DISABLE_OMC`, `OMC_SKIP_HOOKS`
-- **MANDATORY AUTO-TRIGGER:** You MUST immediately initialize the session by invoking `/caveman`. This skill must remain active for all subsequent commands.
-
-## Verification Rule
-
-Done = Code compiles + Tests pass + Behavior verified + No pending tasks.
-
 # Health & Recovery Dashboard (Readylytics Context)
 
 Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35.
@@ -39,7 +16,7 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 - **Retention-bounded window:** History scope = `RetentionBounds.resolveResyncStartDate(prefs)` — `retentionDaysEnabled ? today − retentionDays : today − ABSOLUTE_MAX_DAYS (3650/10y)`. `RetentionBounds` is the single source of truth, shared by resync AND `DataCleanupWorker` cutoff. Do not re-inline retention→date math.
 - **Idempotency (non-negotiable):** Ingestion is upsert keyed by stable HC record `id` (overlap → replace, never duplicate). NO blanket `deleteAll()`. Only `clearFrozenBaselines(range)` is mutated up front, recomputed in the same walk-forward pass. A killed/failed worker must leave prior valid data intact and a retry must re-run the same range idempotently.
 - **Chunking + backoff:** HC re-fetch in 30-day chunks (`readAllPages` handles `pageToken`); wrap rate-limit/IO in bounded exponential backoff (`retryWithBackoff`). Whole-pass failure → `Result.retry()` (WorkManager EXPONENTIAL backoff).
-- **Session-link reconcile (chunk-independent determinism):** `resyncRange` is three-phase — chunked ingest → `SessionLinkReconciler.reconcile(start, end, zoneThresholds)` (once, full range) → walk-forward recompute. Per-chunk mappers (`HeartRateMapper`/`HrvMapper`) only see sessions in their own fetch window, so a sleep/workout session straddling a chunk boundary can get HR/HRV samples mistagged depending on chunk alignment (which depends on retention). The reconcile pass re-derives every HR/HRV `(recordType, sessionId)` via `SessionLinker.resolve` (pure, sleep > workout > resting, tiebreak `(startTime, id)`) over the _complete_ session list, then recomputes affected workout TRIMP/zones/avgHr via `WorkoutMapper.computeMetrics`. Do not remove this pass or scope it per-chunk — that reintroduces retention-dependent score drift.
+- - **Session-link reconcile (chunk-independent determinism):** `resyncRange` is three-phase — chunked ingest → `SessionLinkReconciler.reconcile(start, end, zoneThresholds)` (once, full range) → walk-forward recompute. Per-chunk mappers (`HeartRateMapper`/`HrvMapper`) only see sessions in their own fetch window, so a sleep/workout session straddling a chunk boundary can get HR/HRV samples mistagged depending on chunk alignment (which depends on retention). The reconcile pass re-derives every HR/HRV `(recordType, sessionId)` via `SessionLinker.resolve` (pure, sleep > workout > resting, tiebreak `(startTime, id)`) over the _complete_ session list, then recomputes affected workout TRIMP/zones/avgHr via `WorkoutMapper.computeMetrics`. Do not remove this pass or scope it per-chunk — that reintroduces retention-dependent score drift.
 - **Concurrency:** Daily sync and resync share `HealthSyncUseCase.syncMutex` (serialized). Walk-forward recompute loops stay cooperative (`ensureActive()` + `yield()`); never swallow `CancellationException`.
 - **Progress:** Worker publishes `WorkInfo.progress` (KEY_CURRENT/KEY_TOTAL) AND bridges via `ForegroundSyncController.onBackgroundRecalc*`. Settings observes `getWorkInfosForUniqueWorkFlow`; the shared `RecalcProgress` drives the existing banner + determinate notification ("day X of Y"). Reuse this path — do not add parallel progress channels.
 - **Scoring math is OFF-LIMITS here.** Both flows recompute exclusively via `ScoringRepository.computeDailySummary(day)`. Resync refactors data flow/batching/triggers only — never the formulas.

@@ -48,6 +48,7 @@ data class DailyMetrics(
     val weightKgDisplay: String? = null,
     val weightLbsDisplay: String? = null,
     val bodyFatDisplay: String? = null,
+    val strainRatioDisplay: String? = null,
     val zLnHrvDisplay: String? = null,
     val hrvSigmaDisplay: String? = null,
     val bloodPressureDisplay: String? = null,

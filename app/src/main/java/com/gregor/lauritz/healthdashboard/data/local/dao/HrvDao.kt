@@ -83,6 +83,14 @@ interface HrvDao {
         toMs: Long,
     ): List<Float>
 
+    @Query(
+        "SELECT * FROM hrv_records WHERE timestampMs >= :fromMs AND timestampMs <= :toMs ORDER BY timestampMs ASC",
+    )
+    suspend fun getByTimeRange(
+        fromMs: Long,
+        toMs: Long,
+    ): List<HrvRecordEntity>
+
     @Upsert
     suspend fun upsertAll(records: List<HrvRecordEntity>)
 

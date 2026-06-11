@@ -37,7 +37,6 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.ln
 import kotlin.math.round
 
 @Singleton
@@ -301,12 +300,6 @@ class ScoringRepositoryImpl
 
                 summary = summary.copy(loadScore = loadScore, strainRatio = sr, totalTrimp = dailyTrimpRaw)
 
-                val hrvWindows =
-                    baselineComputer.computeHrvWindowsBetween(
-                        fromMs = dayMidnightMs,
-                        toMs = nextDayMidnightMs,
-                        excludeSessionId = session?.id,
-                    )
                 val computedHrvBaseline =
                     baselineComputer.computeHrvBaselineBetween(
                         fromMs = dayMidnightMs,
@@ -331,19 +324,11 @@ class ScoringRepositoryImpl
                     summary = sleepMetricsResult.getOrNull() ?: summary
                 }
 
-                val muHistory = hrvWindows?.muHistory ?: emptyList()
                 val hrvMuMssd =
                     if (frozenSnapshot != null) {
-                        // Frozen day: the HRV-window recompute is intentionally skipped
-                        // (computeHrvWindowsBetween returns null), so muHistory is empty here.
-                        // Preserve the stored frozen mu instead of clobbering it to null — otherwise
-                        // each recalculation wipes the baseline, collapsing the HRV z-score to 0 and
-                        // shifting sleep/readiness by several points on the next run.
                         frozenSnapshot.hrvMuMssd
-                    } else if (muHistory.isNotEmpty()) {
-                        muHistory.map { ln(it.coerceAtLeast(0.001f)) }.average().toFloat()
                     } else {
-                        null
+                        summary.hrvMuMssd
                     }
 
                 summary =
@@ -357,7 +342,7 @@ class ScoringRepositoryImpl
                         paiScalingFactor = summary.paiScalingFactor ?: scoringConfig.paiScalingFactor,
                         snapshotProfile = summary.snapshotProfile ?: prefs.physiologyProfile.name,
                         hrvSigmaPrior = summary.hrvSigmaPrior ?: prefs.physiologyProfile.lnSigmaPrior,
-                        baselineObservationCount = summary.baselineObservationCount ?: muHistory.size,
+                        baselineObservationCount = summary.baselineObservationCount,
                     )
 
                 // Final summary remains consistent with the pre-calculated dailyPai and totalPai7d.

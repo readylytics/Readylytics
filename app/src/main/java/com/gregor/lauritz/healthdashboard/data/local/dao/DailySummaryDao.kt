@@ -67,6 +67,7 @@ interface DailySummaryDao {
     @Query(
         "UPDATE daily_summaries SET hrv_mu_mssd = :hrvMuMssd, " +
             "hrv_sigma_mssd = :hrvSigmaMssd, rhr_bpm = :rhrBpm, " +
+            "rhr_sigma = :rhrSigma, " +
             "baseline_calculated_at_date = :baselineCalculatedAtDate, " +
             "hr_max = :hrMax, snapshot_profile = :snapshotProfile, " +
             "hrv_sigma_prior = :hrvSigmaPrior, pai_scaling_factor = :paiScalingFactor, " +
@@ -78,6 +79,7 @@ interface DailySummaryDao {
         hrvMuMssd: Float?,
         hrvSigmaMssd: Float?,
         rhrBpm: Float?,
+        rhrSigma: Float?,
         baselineCalculatedAtDate: java.time.LocalDate?,
         hrMax: Float? = null,
         snapshotProfile: String? = null,
@@ -99,6 +101,7 @@ interface DailySummaryDao {
             "hrv_mu_mssd = NULL, " +
             "hrv_sigma_mssd = NULL, " +
             "rhr_bpm = NULL, " +
+            "rhr_sigma = NULL, " +
             "baseline_calculated_at_date = NULL, " +
             "hr_max = NULL, " +
             "snapshot_profile = NULL, " +

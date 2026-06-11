@@ -49,3 +49,5 @@ docs/superpowers/
 # Downloaded tooling binaries
 ktlint
 .kotlin
+.codex/
+.agents/

@@ -72,6 +72,35 @@ class GetDashboardDataUseCaseTest {
     }
 
     @Test
+    fun invoke_scoreCardsUseCanonicalRoundedDisplayValues() {
+        val summary =
+            DailySummary(
+                date = LocalDate.of(2026, 6, 9),
+                sleepScore = 79.5f,
+                readinessScore = 72.5f,
+                strainRatio = 0.365f,
+            )
+        val prefs = UserPreferences()
+        every { getWorkoutMetricsUseCase(summary, any()) } answers {
+            GetWorkoutMetricsUseCase(resourceProvider)(summary, secondArg())
+        }
+
+        val result =
+            useCase(
+                summary = summary,
+                prefs = prefs,
+                date = summary.date,
+                lastSleepSession = null,
+                paiSummaries = emptyList(),
+            )
+
+        val cards = result.getOrNull()?.cardDataMap.orEmpty()
+        assertEquals("80", cards[CardId.SLEEP_SCORE]?.value)
+        assertEquals("73", cards[CardId.READINESS]?.value)
+        assertEquals("0.37", cards[CardId.STRAIN_RATIO]?.value)
+    }
+
+    @Test
     fun invoke_withOptimalSpo2_returnsOptimalSpo2Card() {
         val summary =
             mockk<DailySummary>(relaxed = true) {

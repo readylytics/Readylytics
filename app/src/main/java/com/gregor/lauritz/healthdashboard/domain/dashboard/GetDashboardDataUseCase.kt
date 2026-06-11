@@ -79,6 +79,8 @@ class GetDashboardDataUseCase
 
             val mapBuilder =
                 mutableMapOf<CardId, CardData>(
+                    CardId.SLEEP_SCORE to sleepScoreCard(summary, m),
+                    CardId.READINESS to readinessCard(summary, m),
                     CardId.SLEEP_RHR to sleepCard(summary, prefs, m),
                     CardId.HRV to hrvCard(summary, prefs, m),
                     CardId.PAI_DAILY to paiCard(summary, m),
@@ -87,7 +89,7 @@ class GetDashboardDataUseCase
                     CardId.SLEEP_EFFICIENCY to sleepEfficiencyCard(lastSleepSession),
                 )
 
-            val workoutMetricsResult = getWorkoutMetricsUseCase(summary)
+            val workoutMetricsResult = getWorkoutMetricsUseCase(summary, m)
             val workoutMetrics = workoutMetricsResult.getOrNull()
             workoutMetrics?.strainRatioCard?.let { mapBuilder[CardId.STRAIN_RATIO] = it }
 
@@ -99,6 +101,40 @@ class GetDashboardDataUseCase
 
             return mapBuilder.toMap()
         }
+
+        private fun sleepScoreCard(
+            summary: DailySummary,
+            m: DailyMetrics,
+        ): CardData =
+            CardData(
+                title = resourceProvider.getString(R.string.card_title_sleep_score),
+                value = m.sleepScoreRounded?.toString() ?: "—",
+                unit = "",
+                status = summary.sleepScore?.let { scoreStatus(it) } ?: MetricStatus.CALIBRATING,
+                action = DashboardAction.NAVIGATE_SLEEP,
+                tooltip = resourceProvider.getString(R.string.tooltip_sleep_score),
+            )
+
+        private fun readinessCard(
+            summary: DailySummary,
+            m: DailyMetrics,
+        ): CardData =
+            CardData(
+                title = resourceProvider.getString(R.string.card_title_readiness),
+                value = m.readinessRounded?.toString() ?: "—",
+                unit = "",
+                status = summary.readinessScore?.let { scoreStatus(it) } ?: MetricStatus.CALIBRATING,
+                action = DashboardAction.NAVIGATE_WORKOUTS,
+                tooltip = resourceProvider.getString(R.string.tooltip_readiness),
+            )
+
+        private fun scoreStatus(score: Float): MetricStatus =
+            when {
+                score >= 85f -> MetricStatus.OPTIMAL
+                score >= 60f -> MetricStatus.NEUTRAL
+                score >= 40f -> MetricStatus.WARNING
+                else -> MetricStatus.POOR
+            }
 
         private fun sleepEfficiencyCard(lastSleepSession: SleepSessionSummary?): CardData {
             val efficiencyStatus = lastSleepSession?.efficiencyStatus() ?: MetricStatus.CALIBRATING

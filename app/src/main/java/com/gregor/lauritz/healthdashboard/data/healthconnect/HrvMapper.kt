@@ -10,7 +10,7 @@ object HrvMapper {
         records: List<HeartRateVariabilityRmssdRecord>,
         sleepSessions: List<SleepSessionEntity>,
     ): List<HrvRecordEntity> {
-        val sortedSleep = sleepSessions.sortedBy { it.startTime }
+        val sortedSleep = sleepSessions.sortedWith(compareBy({ it.startTime }, { it.id }))
         val sortedRecords = records.sortedBy { it.time.toEpochMilli() }
         var sleepIdx = 0
 

@@ -32,9 +32,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.R
+import com.gregor.lauritz.healthdashboard.domain.display.MetricFormatter
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.strainRatioStatus
-import com.gregor.lauritz.healthdashboard.domain.util.roundToPercentInt
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
@@ -113,13 +113,14 @@ fun WorkoutStatsSection(
                 label = "Strain Ratio",
                 maxScore = 2.0f,
                 status = strainStatus,
-                displayText = strainRatio?.let { "%.2f".format(it) } ?: "—",
+                displayText = uiState.latestMetrics?.strainRatioDisplay ?: "—",
                 tooltipDescription = strainTooltip,
                 modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
             )
             M3ScoreDial(
                 score = uiState.latestSummary?.readinessScore,
                 label = "Readiness",
+                displayText = uiState.latestMetrics?.readinessRounded?.toString() ?: "—",
                 tooltipDescription = "Physical preparedness for strain today.",
                 modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
             )
@@ -142,10 +143,10 @@ fun WorkoutStatsSection(
                 ) {
                     Text(stringResource(R.string.workout_stats_pai_title), style = MaterialTheme.typography.titleSmall)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        uiState.todayPaiScore?.let { earned ->
-                            if (earned > 0f) {
+                        uiState.latestMetrics?.paiDayScoreRounded?.let { earned ->
+                            if (earned > 0) {
                                 Text(
-                                    text = stringResource(R.string.pai_earned_today, earned.roundToPercentInt()),
+                                    text = stringResource(R.string.pai_earned_today, earned),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -301,8 +302,8 @@ private fun AcwrChart(
             selectedState?.let { s ->
                 val date = ChartUtils.dayOffsetToLocalDate(s.dayOffset, rangeStartMs)
                 val anchorY = s.lineCanvasY ?: s.barCanvasYTop ?: 0f
-                val trimpText = s.trimpValue?.toInt()?.toString() ?: "—"
-                val strainText = s.strainRatioValue?.let { "%.2f".format(it) } ?: "—"
+                val trimpText = s.trimpValue?.let { MetricFormatter.roundTrimp(it).toString() } ?: "—"
+                val strainText = MetricFormatter.formatStrain(s.strainRatioValue)
                 DataPointTooltipData(
                     valueText = trimpFormat.format(trimpText),
                     dateText = strainFormat.format(strainText),
@@ -318,8 +319,26 @@ private fun AcwrChart(
     val labelComponent = ChartDefaults.labelTextComponent()
     val axisLabelComponent = ChartDefaults.axisLabelTextComponent()
     val guidelineComponent = ChartDefaults.guidelineComponent()
-    val trimpAxisFormatter = remember { CartesianValueFormatter { _, value, _ -> value.toInt().toString() } }
-    val ratioAxisFormatter = remember { CartesianValueFormatter { _, value, _ -> "%.2f".format(value) } }
+    val trimpAxisFormatter =
+        remember {
+            CartesianValueFormatter {
+                _,
+                value,
+                _,
+                ->
+                MetricFormatter.roundTrimp(value.toFloat()).toString()
+            }
+        }
+    val ratioAxisFormatter =
+        remember {
+            CartesianValueFormatter {
+                _,
+                value,
+                _,
+                ->
+                MetricFormatter.formatStrain(value.toFloat())
+            }
+        }
 
     val modelProducer = remember { CartesianChartModelProducer() }
 

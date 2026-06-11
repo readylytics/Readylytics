@@ -25,6 +25,7 @@ import com.gregor.lauritz.healthdashboard.domain.model.HealthDataType
 import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.repository.HealthConnectRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.ScoringRepository
+import com.gregor.lauritz.healthdashboard.domain.sync.link.SessionLinkReconciler
 import com.gregor.lauritz.healthdashboard.domain.util.HeartRateFormulas
 import com.gregor.lauritz.healthdashboard.domain.util.logD
 import com.gregor.lauritz.healthdashboard.domain.util.logE
@@ -67,6 +68,7 @@ class HealthSyncUseCase
         private val settingsRepo: SettingsRepository,
         private val scoringRepository: ScoringRepository,
         private val transactionRunner: com.gregor.lauritz.healthdashboard.domain.repository.TransactionRunner,
+        private val sessionLinkReconciler: SessionLinkReconciler,
     ) {
         private val syncMutex = Mutex()
 
@@ -224,52 +226,100 @@ class HealthSyncUseCase
                         val prefs = settingsRepo.userPreferences.first()
 
                         val totalDays = (ChronoUnit.DAYS.between(startDate, endDate) + 1).toInt().coerceAtLeast(0)
-                        // Two passes (ingest day-by-day + recompute day-by-day) → determinate 2× track.
-                        val totalSteps = totalDays * 2
-                        var processed = 0
-                        onProgress?.invoke(processed, totalSteps)
+                        onProgress?.invoke(0, totalDays)
 
                         // --- Ingestion phase: chunked HC re-fetch + idempotent upsert ---
                         val stepsMap = mutableMapOf<LocalDate, Long>()
+                        val deviceByType = prefs.deviceByDataType
+
+                        fun deviceFor(type: HealthDataType): String? =
+                            deviceByType[type.name]?.takeIf { it.isNotBlank() }
+
+                        val stepsDevice = deviceFor(HealthDataType.STEPS)
                         var chunkStart = startDate
-                        var firstChunk = true
                         while (!chunkStart.isAfter(endDate)) {
                             ensureActive()
                             // Exclusive upper bound, capped at the day after endDate.
                             val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
 
-                            // For the first chunk only, ingest from startDate.minusDays(1) to capture
-                            // overnight sleep sessions that began the previous evening.
-                            val ingestFromDate = if (firstChunk) chunkStart.minusDays(1) else chunkStart
+                            // Ingest from the previous day for every chunk to capture overnight sleep
+                            // sessions that began before this chunk's lower boundary.
+                            val ingestFromDate = chunkStart.minusDays(1)
                             val windowStart = ingestFromDate.atStartOfDay(zoneId).toInstant()
                             val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
 
-                            retryWithBackoff { ingestWindow(windowStart, windowEnd, prefs) }
+                            retryWithBackoff {
+                                ingestWindow(
+                                    windowStart = windowStart,
+                                    windowEnd = windowEnd,
+                                    prefs = prefs,
+                                )
+                            }
+                            if (stepsDevice != null) {
+                                val stepsWindowStart = chunkStart.atStartOfDay(zoneId).toInstant()
+                                val stepsRecords =
+                                    retryWithBackoff {
+                                        hcRepo.readStepsRecords(stepsWindowStart, windowEnd)
+                                    }
+                                val stepEntries =
+                                    DeviceSourceFilter.filterToDevice(
+                                        StepsMapper.toStepEntries(stepsRecords),
+                                        stepsDevice,
+                                    ) { it.deviceName }
+                                stepsMap.putAll(StepsMapper.sumByDay(stepEntries, zoneId))
+                            }
 
                             var day = chunkStart
                             while (day.isBefore(chunkEndExclusive)) {
                                 ensureActive()
-                                val dayStart = day.atStartOfDay(zoneId).toInstant()
-                                val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
-                                stepsMap[day] = retryWithBackoff { hcRepo.readSteps(dayStart, dayEnd) }
-                                processed++
-                                onProgress?.invoke(processed, totalSteps)
+                                if (stepsDevice == null) {
+                                    val dayStart = day.atStartOfDay(zoneId).toInstant()
+                                    val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
+                                    stepsMap[day] = retryWithBackoff { hcRepo.readSteps(dayStart, dayEnd) }
+                                }
                                 day = day.plusDays(1)
                                 yield()
                             }
                             chunkStart = chunkEndExclusive
-                            firstChunk = false
+                        }
+
+                        // --- Reconcile phase: chunk-independent session linkage ---
+                        // Re-derives (recordType, sessionId) for every HR/HRV sample in range from the
+                        // *complete* set of sleep + workout sessions, and recomputes affected workout
+                        // metrics. Without this, a night straddling a chunk boundary could have its
+                        // samples split across two Health Connect fetch windows, each tagging only the
+                        // subset it saw - making linkage (and everything derived from it) depend on
+                        // chunk alignment, which itself depends on the retention setting.
+                        run {
+                            val reconcileStartMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                            val reconcileEndMs =
+                                endDate
+                                    .plusDays(1)
+                                    .atStartOfDay(zoneId)
+                                    .toInstant()
+                                    .toEpochMilli() - 1
+                            val zoneThresholds =
+                                WorkoutMapper.zoneThresholds(
+                                    prefs.zone1MinBpm,
+                                    prefs.zone1MaxBpm,
+                                    prefs.zone2MaxBpm,
+                                    prefs.zone3MaxBpm,
+                                    prefs.zone4MaxBpm,
+                                )
+                            sessionLinkReconciler.reconcile(reconcileStartMs, reconcileEndMs, zoneThresholds)
                         }
 
                         // --- Recompute phase: walk-forward over the full range ---
                         // Clear freeze so the bounded baseline variants recompute per day.
                         dailySummaryDao.clearFrozenBaselines()
                         var day = startDate
+                        var recomputedDays = 0
                         while (!day.isAfter(endDate)) {
                             ensureActive()
-                            syncDayScoring(day, stepsMap[day])
-                            processed++
-                            onProgress?.invoke(processed, totalSteps)
+                            val stepsForDay = if (stepsDevice != null) stepsMap[day] ?: 0L else stepsMap[day]
+                            syncDayScoring(day, stepsForDay)
+                            recomputedDays++
+                            onProgress?.invoke(recomputedDays, totalDays)
                             day = day.plusDays(1)
                             yield()
                         }
