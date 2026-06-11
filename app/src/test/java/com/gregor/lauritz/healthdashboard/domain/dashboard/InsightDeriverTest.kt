@@ -41,22 +41,22 @@ class InsightDeriverTest {
         val result = InsightDeriver.derive(flags, emptySet())
         assertEquals(setOf(InsightType.LATE_NADIR, InsightType.SICK_INDICATOR, InsightType.OVERREACHING), result.active)
         assertEquals(
-            listOf(InsightType.LATE_NADIR, InsightType.SICK_INDICATOR, InsightType.OVERREACHING),
+            listOf(InsightType.SICK_INDICATOR, InsightType.OVERREACHING, InsightType.LATE_NADIR),
             result.visibleQueue,
         )
-        assertEquals(InsightType.LATE_NADIR, result.current)
+        assertEquals(InsightType.SICK_INDICATOR, result.current)
         assertEquals(0, result.dismissedCount)
     }
 
     @Test
     fun `dismissing current insight rotates to next queued insight`() {
         val flags = setOf(RecoveryFlag.NADIR_DELAYED, RecoveryFlag.ILLNESS_ONSET, RecoveryFlag.OVERREACHING)
-        val dismissed = setOf(InsightType.LATE_NADIR)
+        val dismissed = setOf(InsightType.SICK_INDICATOR)
         val result = InsightDeriver.derive(flags, dismissed)
 
         assertEquals(setOf(InsightType.LATE_NADIR, InsightType.SICK_INDICATOR, InsightType.OVERREACHING), result.active)
-        assertEquals(listOf(InsightType.SICK_INDICATOR, InsightType.OVERREACHING), result.visibleQueue)
-        assertEquals(InsightType.SICK_INDICATOR, result.current)
+        assertEquals(listOf(InsightType.OVERREACHING, InsightType.LATE_NADIR), result.visibleQueue)
+        assertEquals(InsightType.OVERREACHING, result.current)
         assertEquals(1, result.dismissedCount)
     }
 

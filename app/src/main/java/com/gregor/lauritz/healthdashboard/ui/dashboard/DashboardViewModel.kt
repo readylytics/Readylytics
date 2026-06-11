@@ -155,6 +155,7 @@ class DashboardViewModel
                 currentInsight = derived.current,
                 visibleInsightQueue = derived.visibleQueue,
                 dismissedInsightCount = derived.dismissedCount,
+                goalSleepHours = basicInputs.userPreferences.goalSleepHours,
             )
         }
 
@@ -300,6 +301,7 @@ data class DashboardUiState(
     val currentInsight: InsightType? = null,
     val visibleInsightQueue: List<InsightType> = emptyList(),
     val dismissedInsightCount: Int = 0,
+    val goalSleepHours: Float = 8f,
 )
 
 @Immutable

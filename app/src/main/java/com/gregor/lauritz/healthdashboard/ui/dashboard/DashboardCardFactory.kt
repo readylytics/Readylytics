@@ -133,6 +133,47 @@ fun buildCardDataMap(
                             onRestore = onRestoreInsights,
                             modifier = Modifier.fillMaxWidth(),
                         )
+
+                    InsightType.WORKOUT_IMPACT ->
+                        InsightCard(
+                            title = stringResource(R.string.insight_workout_impact_title),
+                            body = stringResource(R.string.insight_workout_impact_body),
+                            icon = Icons.Default.MonitorHeart,
+                            onDismiss = { onDismissInsight(InsightType.WORKOUT_IMPACT) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                    InsightType.REST_DAY_SUCCESS -> {
+                        val baseText = stringResource(R.string.insight_rest_day_success_body)
+                        val sleepScore = uiState.summary?.sleepScore ?: 0f
+                        val duration = uiState.summary?.sleepDurationMinutes ?: 0
+                        val isPerfectSleep = sleepScore >= 85f && duration >= (uiState.goalSleepHours * 60).toInt()
+
+                        val extraText =
+                            if (isPerfectSleep) {
+                                stringResource(
+                                    R.string.insight_rest_day_perfect_sleep,
+                                )
+                            } else {
+                                ""
+                            }
+                        InsightCard(
+                            title = stringResource(R.string.insight_rest_day_success_title),
+                            body = baseText + extraText,
+                            icon = Icons.AutoMirrored.Filled.TrendingUp,
+                            onDismiss = { onDismissInsight(InsightType.REST_DAY_SUCCESS) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    InsightType.REST_DAY_NO_IMPACT ->
+                        InsightCard(
+                            title = stringResource(R.string.insight_rest_day_no_impact_title),
+                            body = stringResource(R.string.insight_rest_day_no_impact_body),
+                            icon = Icons.Default.Schedule,
+                            onDismiss = { onDismissInsight(InsightType.REST_DAY_NO_IMPACT) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                 }
             }
         }

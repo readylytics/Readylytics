@@ -294,16 +294,20 @@ class ComputeSleepMetricsUseCase
 
                     val recoveryFlags =
                         scoringCalculator.computeRecoveryFlags(
-                            zHrv,
-                            zRhr,
-                            rhrDeltaBpm,
-                            yesterdaySummary?.zLnHrv,
-                            yesterdaySummary?.zRhr,
-                            sessionHrvSamples.isEmpty(),
-                            stagesSuspicious,
-                            nadirCtx.isLateNadir,
-                            isCalibrating,
-                            scoringConfig.emergencyFlags,
+                            zLnHrv = zHrv,
+                            zRhr = zRhr,
+                            rhrDeltaBpm = rhrDeltaBpm,
+                            yesterdayZLnHrv = yesterdaySummary?.zLnHrv,
+                            yesterdayZRhr = yesterdaySummary?.zRhr,
+                            hrvMissing = sessionHrvSamples.isEmpty(),
+                            stagesSuspicious = stagesSuspicious,
+                            isLateNadir = nadirCtx.isLateNadir,
+                            isCalibrating = isCalibrating,
+                            emergencyFlags = scoringConfig.emergencyFlags,
+                            yesterdayTrimp = yesterdaySummary?.totalTrimp,
+                            yesterdayHrv = yesterdaySummary?.nocturnalHrv?.toFloat(),
+                            currentHrv = currentHrvMean,
+                            hrvOptimalThreshold = prefs.hrvOptimalThreshold,
                         )
 
                     readinessScore =

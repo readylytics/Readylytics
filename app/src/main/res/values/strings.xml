@@ -841,4 +841,12 @@
     <string name="insight_restore_dismissed">Restore dismissed insights (%1$d)</string>
     <string name="insight_dismiss_description">Dismiss health insight</string>
     <string name="insight_rerun_description">Restore dismissed health insights</string>
+    <!-- Insights -->
+    <string name="insight_workout_impact_title">Workout Impact</string>
+    <string name="insight_workout_impact_body">Your high strain workout yesterday is impacting your recovery today.</string>
+    <string name="insight_rest_day_success_title">Rest Day Success</string>
+    <string name="insight_rest_day_success_body">Your dedicated rest day resulted in an optimal HRV rebound.</string>
+    <string name="insight_rest_day_perfect_sleep"> Your night\'s rest was perfect!</string>
+    <string name="insight_rest_day_no_impact_title">Rest Day</string>
+    <string name="insight_rest_day_no_impact_body">Your rest day did not lead to a significant HRV rebound.</string>
 </resources>

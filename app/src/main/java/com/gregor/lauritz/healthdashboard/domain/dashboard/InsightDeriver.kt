@@ -13,9 +13,12 @@ data class DerivedInsights(
 object InsightDeriver {
     private val displayPriority =
         listOf(
-            InsightType.LATE_NADIR,
             InsightType.SICK_INDICATOR,
             InsightType.OVERREACHING,
+            InsightType.WORKOUT_IMPACT,
+            InsightType.REST_DAY_SUCCESS,
+            InsightType.REST_DAY_NO_IMPACT,
+            InsightType.LATE_NADIR,
         )
 
     fun derive(

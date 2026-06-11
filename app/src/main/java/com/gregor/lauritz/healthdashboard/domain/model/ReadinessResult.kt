@@ -9,6 +9,9 @@ enum class RecoveryFlag {
     CALIBRATING,
     HRV_MISSING,
     STAGES_MISSING,
+    WORKOUT_IMPACT,
+    REST_DAY_SUCCESS,
+    REST_DAY_NO_IMPACT,
 }
 
 /**
