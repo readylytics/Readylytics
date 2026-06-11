@@ -1,7 +1,6 @@
 package com.gregor.lauritz.healthdashboard.ui.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -94,11 +93,11 @@ fun InsightRerunCard(
     modifier: Modifier = Modifier,
 ) {
     OutlinedCard(
+        onClick = onRestore,
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(48.dp)
-                .clickable(onClick = onRestore),
+                .height(48.dp),
         shape = MaterialTheme.shapes.large,
         colors =
             CardDefaults.outlinedCardColors(

@@ -225,26 +225,26 @@ class DashboardViewModel
                 DashboardEvent.Refresh -> onRefresh()
                 DashboardEvent.ToggleCardManagement -> toggleCardManagement()
                 is DashboardEvent.DismissInsight -> {
+                    val zoneId = ZoneId.systemDefault()
+                    val dateMs =
+                        selectedDateRepository.selectedDate.value
+                            .atStartOfDay(
+                                zoneId,
+                            ).toInstant()
+                            .toEpochMilli()
                     viewModelScope.launch {
-                        val zoneId = ZoneId.systemDefault()
-                        val dateMs =
-                            selectedDateRepository.selectedDate.value
-                                .atStartOfDay(
-                                    zoneId,
-                                ).toInstant()
-                                .toEpochMilli()
                         insightDismissalRepository.dismiss(dateMs, event.type)
                     }
                 }
                 DashboardEvent.RestoreInsights -> {
+                    val zoneId = ZoneId.systemDefault()
+                    val dateMs =
+                        selectedDateRepository.selectedDate.value
+                            .atStartOfDay(
+                                zoneId,
+                            ).toInstant()
+                            .toEpochMilli()
                     viewModelScope.launch {
-                        val zoneId = ZoneId.systemDefault()
-                        val dateMs =
-                            selectedDateRepository.selectedDate.value
-                                .atStartOfDay(
-                                    zoneId,
-                                ).toInstant()
-                                .toEpochMilli()
                         insightDismissalRepository.restoreAllForDate(dateMs)
                     }
                 }

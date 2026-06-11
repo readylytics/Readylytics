@@ -5,6 +5,7 @@ import com.gregor.lauritz.healthdashboard.data.local.entity.InsightDismissalEnti
 import com.gregor.lauritz.healthdashboard.domain.model.InsightType
 import com.gregor.lauritz.healthdashboard.domain.repository.InsightDismissalRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -27,10 +28,12 @@ class InsightDismissalRepositoryImpl
         }
 
         override fun observeForDate(dateMidnightMs: Long): Flow<Set<InsightType>> =
-            dao.observeForDate(dateMidnightMs).map { entities ->
-                entities
-                    .mapNotNull { entity ->
-                        runCatching { InsightType.valueOf(entity.type) }.getOrNull()
-                    }.toSet()
-            }
+            dao
+                .observeForDate(dateMidnightMs)
+                .map { entities ->
+                    entities
+                        .mapNotNull { entity ->
+                            runCatching { InsightType.valueOf(entity.type) }.getOrNull()
+                        }.toSet()
+                }.distinctUntilChanged()
     }
