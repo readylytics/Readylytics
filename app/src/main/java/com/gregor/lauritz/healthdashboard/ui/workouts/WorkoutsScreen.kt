@@ -1,9 +1,7 @@
 package com.gregor.lauritz.healthdashboard.ui.workouts
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,12 +12,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
+import com.gregor.lauritz.healthdashboard.ui.common.CardLoader
+import com.gregor.lauritz.healthdashboard.ui.common.ScreenHeaderSection
 import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
@@ -72,33 +70,28 @@ fun WorkoutsScreen(
             key = uiState.selectedRange,
         )
 
-    LazyColumn(
-        state = listState,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 16.dp),
-    ) {
-        item(key = "date_switcher") {
-            Column(
+    Column(modifier = modifier.fillMaxSize()) {
+        ScreenHeaderSection(isLoading = uiState.isLoading) { isDisabled ->
+            DateSwitcher(
+                selectedDate = uiState.selectedDate,
+                onPreviousDay = onPreviousDay,
+                onNextDay = onNextDay,
+                onDateSelected = onDateSelected,
+                earliestDate = earliestDate,
+                enabled = !isDisabled,
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-            ) {
-                DateSwitcher(
-                    selectedDate = uiState.selectedDate,
-                    onPreviousDay = onPreviousDay,
-                    onNextDay = onNextDay,
-                    onDateSelected = onDateSelected,
-                    earliestDate = earliestDate,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            )
         }
 
-        item(key = "stats_section") {
-            if (uiState.isLoading) {
-                WorkoutStatsSectionSkeleton()
-            } else {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = 16.dp),
+        ) {
+            item(key = "stats_section") {
                 WorkoutStatsSection(
                     uiState = uiState,
                     onRangeSelected = onRangeSelected,
@@ -107,44 +100,28 @@ fun WorkoutsScreen(
                     parentScrollInProgress = listState.isScrollInProgress,
                 )
             }
-        }
 
-        item(key = "list_section") {
-            if (uiState.isLoading) {
-                WorkoutListSectionSkeleton()
-            } else {
-                WorkoutListSection(
-                    workouts = uiState.recentWorkouts,
-                    currentPage = uiState.currentPage,
-                    totalPages = uiState.totalPages,
-                    onPreviousPage = onPreviousPage,
-                    onNextPage = onNextPage,
-                    onWorkoutClick = onWorkoutClick,
+            item(key = "list_section") {
+                CardLoader(
+                    isLoading = uiState.isLoading,
+                    skeleton = { WorkoutListSectionSkeleton() },
+                    content = {
+                        WorkoutListSection(
+                            workouts = uiState.recentWorkouts,
+                            currentPage = uiState.currentPage,
+                            totalPages = uiState.totalPages,
+                            onPreviousPage = onPreviousPage,
+                            onNextPage = onNextPage,
+                            onWorkoutClick = onWorkoutClick,
+                        )
+                    },
                 )
             }
-        }
 
-        item(key = "status_legend") {
-            StatusLegend()
+            item(key = "status_legend") {
+                StatusLegend()
+            }
         }
-    }
-}
-
-@Composable
-private fun WorkoutStatsSectionSkeleton() {
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ScoreDialSkeleton(height = 130.dp)
-            ScoreDialSkeleton(height = 130.dp)
-        }
-        SkeletonCard(height = 120.dp, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
-        SkeletonCard(height = 180.dp, modifier = Modifier.fillMaxWidth())
     }
 }
 

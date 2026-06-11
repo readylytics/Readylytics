@@ -15,11 +15,12 @@ fun SectionHeader(
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.titleMedium,
     color: Color = MaterialTheme.colorScheme.onSurface,
+    enabled: Boolean = true,
 ) {
     Text(
         text = title,
         style = style,
-        color = color,
+        color = if (enabled) color else color.copy(alpha = 0.5f),
         modifier = modifier.padding(horizontal = 16.dp, vertical = 4.dp),
     )
 }

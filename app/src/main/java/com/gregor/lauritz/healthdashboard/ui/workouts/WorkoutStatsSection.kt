@@ -35,8 +35,11 @@ import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.display.MetricFormatter
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.strainRatioStatus
+import com.gregor.lauritz.healthdashboard.ui.common.CardLoader
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
+import com.gregor.lauritz.healthdashboard.ui.common.ScoreDialSkeleton
+import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltip
@@ -97,77 +100,115 @@ fun WorkoutStatsSection(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val strainRatio = uiState.latestSummary?.strainRatio
-            val strainStatus = strainRatio?.strainRatioStatus() ?: MetricStatus.CALIBRATING
-            val strainTooltip = stringResource(R.string.tooltip_strain_ratio)
-            M3ScoreDial(
-                score = strainRatio,
-                label = "Strain Ratio",
-                maxScore = 2.0f,
-                status = strainStatus,
-                displayText = uiState.latestMetrics?.strainRatioDisplay ?: "—",
-                tooltipDescription = strainTooltip,
-                modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
-            )
-            M3ScoreDial(
-                score = uiState.latestSummary?.readinessScore,
-                label = "Readiness",
-                displayText = uiState.latestMetrics?.readinessRounded?.toString() ?: "—",
-                tooltipDescription = "Physical preparedness for strain today.",
-                modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
-            )
-        }
+        CardLoader(
+            isLoading = uiState.isLoading,
+            skeleton = {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ScoreDialSkeleton(height = 130.dp)
+                    ScoreDialSkeleton(height = 130.dp)
+                }
+            },
+            content = {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val strainRatio = uiState.latestSummary?.strainRatio
+                    val strainStatus = strainRatio?.strainRatioStatus() ?: MetricStatus.CALIBRATING
+                    val strainTooltip = stringResource(R.string.tooltip_strain_ratio)
+                    M3ScoreDial(
+                        score = strainRatio,
+                        label = "Strain Ratio",
+                        maxScore = 2.0f,
+                        status = strainStatus,
+                        displayText = uiState.latestMetrics?.strainRatioDisplay ?: "—",
+                        tooltipDescription = strainTooltip,
+                        modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
+                    )
+                    M3ScoreDial(
+                        score = uiState.latestSummary?.readinessScore,
+                        label = "Readiness",
+                        displayText = uiState.latestMetrics?.readinessRounded?.toString() ?: "—",
+                        tooltipDescription = "Physical preparedness for strain today.",
+                        modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
+                    )
+                }
+            },
+        )
 
         Spacer(Modifier.height(8.dp))
 
-        Card(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-            shape = MaterialTheme.shapes.large,
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top,
+        CardLoader(
+            isLoading = uiState.isLoading,
+            skeleton = {
+                SkeletonCard(
+                    height = 160.dp,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                )
+            },
+            content = {
+                Card(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    shape = MaterialTheme.shapes.large,
                 ) {
-                    Text(stringResource(R.string.workout_stats_pai_title), style = MaterialTheme.typography.titleSmall)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        uiState.latestMetrics?.paiDayScoreRounded?.let { earned ->
-                            if (earned > 0) {
-                                Text(
-                                    text = stringResource(R.string.pai_earned_today, earned),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            Text(
+                                stringResource(R.string.workout_stats_pai_title),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                uiState.latestMetrics?.paiDayScoreRounded?.let { earned ->
+                                    if (earned > 0) {
+                                        Text(
+                                            text = stringResource(R.string.pai_earned_today, earned),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                                MetricTooltip(
+                                    description = stringResource(R.string.tooltip_pai),
                                 )
                             }
                         }
-                        MetricTooltip(
-                            description = stringResource(R.string.tooltip_pai),
+                        Spacer(Modifier.height(12.dp))
+                        PaiWeeklyBar(
+                            dailyBreakdown = uiState.paiDailyBreakdown,
+                            totalPai = uiState.latestSummary?.totalPai ?: 0f,
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-                PaiWeeklyBar(
-                    dailyBreakdown = uiState.paiDailyBreakdown,
-                    totalPai = uiState.latestSummary?.totalPai ?: 0f,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
+            },
+        )
 
         Spacer(Modifier.height(8.dp))
-        SectionHeader(title = stringResource(R.string.workout_stats_acwr_title))
+        SectionHeader(
+            title = stringResource(R.string.workout_stats_acwr_title),
+            enabled = !uiState.isLoading,
+        )
         Spacer(Modifier.height(8.dp))
         SingleChoiceSegmentedButtonRow(
             modifier =
@@ -179,6 +220,7 @@ fun WorkoutStatsSection(
                 SegmentedButton(
                     selected = uiState.selectedRange == range,
                     onClick = { onRangeSelected(range) },
+                    enabled = !uiState.isLoading,
                     shape =
                         SegmentedButtonDefaults.itemShape(
                             index = index,
@@ -191,15 +233,29 @@ fun WorkoutStatsSection(
 
         Spacer(Modifier.height(16.dp))
 
-        AcwrChartCard(
-            trimpPoints = uiState.dailyTrimp,
-            ratioPoints = uiState.dailyStrainRatio,
-            rangeStartMs = uiState.rangeStartMs,
-            rangeDays = rangeDays,
-            scrollState = scrollState,
-            zoomState = zoomState,
-            parentScrollInProgress = parentScrollInProgress,
-            modifier = Modifier.padding(horizontal = 16.dp),
+        CardLoader(
+            isLoading = uiState.isLoading,
+            skeleton = {
+                SkeletonCard(
+                    height = 312.dp,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                )
+            },
+            content = {
+                AcwrChartCard(
+                    trimpPoints = uiState.dailyTrimp,
+                    ratioPoints = uiState.dailyStrainRatio,
+                    rangeStartMs = uiState.rangeStartMs,
+                    rangeDays = rangeDays,
+                    scrollState = scrollState,
+                    zoomState = zoomState,
+                    parentScrollInProgress = parentScrollInProgress,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            },
         )
 
         Spacer(Modifier.height(24.dp))
