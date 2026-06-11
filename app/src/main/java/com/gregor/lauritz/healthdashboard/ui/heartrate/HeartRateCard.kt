@@ -57,7 +57,7 @@ fun HeartRateCard(
                     Modifier
                         .fillMaxWidth()
                         .semantics { heading() },
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
             ) {
                 Text(
                     text = stringResource(R.string.heart_rate_title),

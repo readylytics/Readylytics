@@ -334,6 +334,12 @@
     <string name="onboarding_appearance_label">Appearance</string>
     <string name="onboarding_dynamic_color_label">Dynamic color</string>
     <string name="onboarding_dynamic_color_desc">Use colors derived from your wallpaper (Android 12+)</string>
+    <string name="fallback_theme_color_label">Accent color</string>
+    <string name="fallback_color_brand_purple">Brand purple</string>
+    <string name="fallback_color_brand_blue">Brand blue</string>
+    <string name="fallback_color_turquoise">Turquoise</string>
+    <string name="fallback_color_green">Green</string>
+    <string name="fallback_color_recovery_blue">Recovery blue</string>
     <string name="onboarding_units_label">Measurement units</string>
     <string name="onboarding_hc_permissions_label">Health Connect permissions</string>
     <string name="onboarding_hc_permissions_desc">This app needs access to Sleep, Heart Rate, HRV, and Exercise data from Health Connect to calculate your scores.</string>

@@ -38,6 +38,7 @@ object SettingsDefaults {
     const val RESTING_HR_PERCENTILE = 5
     val APP_THEME = AppTheme.SYSTEM
     const val DYNAMIC_COLOR_ENABLED = true
+    val FALLBACK_THEME_COLOR = FallbackThemeColor.BRAND_PURPLE
     val DRIVE_ACCOUNT_EMAIL: String? = null
     val BACKUP_SCHEDULE = BackupSchedule.MANUAL
     const val LAST_BACKUP_TIMESTAMP = 0L
