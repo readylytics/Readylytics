@@ -248,7 +248,7 @@ per-day UPDATEs are collapsed into a single transaction by the backfill use-case
 | Component                    | Path                                                | Output                                                                                                                      |
 | :--------------------------- | :-------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
 | `SleepScoringStrategy`       | `domain/scoring/strategies/SleepScoringStrategy.kt` | Sleep score = **Duration 50% + Architecture 25% + Restoration 25%** (Restoration from HRV & RHR z-scores).                  |
-| `LoadScoringStrategy`        | `domain/scoring/strategies/LoadScoringStrategy.kt`  | Load score from the **Strain Ratio** (ATL/CTL); readiness composite (restoration + sleep + load), capped by recovery flags. |
+| `LoadScoringStrategy`        | `domain/scoring/strategies/LoadScoringStrategy.kt`  | Load score from the **Strain Ratio** (ATL/CTL); readiness composite (restoration + sleep + load), capped by recovery flags (illness, overreaching, workout impact, rest day success). |
 | `PaiScoringStrategy`         | `domain/scoring/strategies/PaiScoringStrategy.kt`   | **CTL (42-day)** and **ATL (7-day)** exponential moving averages of daily TRIMP.                                            |
 | `ComputeSleepMetricsUseCase` | `domain/scoring/ComputeSleepMetricsUseCase.kt`      | Assembles sleep/readiness metrics for the day from the strategies + baselines.                                              |
 
