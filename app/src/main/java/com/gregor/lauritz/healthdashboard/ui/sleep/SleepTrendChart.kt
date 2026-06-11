@@ -6,22 +6,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,7 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -42,11 +33,11 @@ import androidx.compose.ui.unit.dp
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.ui.common.ChartUtils
 import com.gregor.lauritz.healthdashboard.ui.common.DailyDataPoint
+import com.gregor.lauritz.healthdashboard.ui.common.SkeletonCard
 import com.gregor.lauritz.healthdashboard.ui.common.TimeRange
 import com.gregor.lauritz.healthdashboard.ui.components.ChartDefaults
 import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltip
 import com.gregor.lauritz.healthdashboard.ui.components.DataPointTooltipData
-import com.gregor.lauritz.healthdashboard.ui.components.VicoChartTooltipOverlay
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -73,7 +64,6 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SleepTrendCard(
     selectedRange: TimeRange,
@@ -81,7 +71,6 @@ fun SleepTrendCard(
     durationSpanPoints: List<DailyDataPoint>,
     actualDurationPoints: List<DailyDataPoint>,
     rangeStartMs: Long,
-    onRangeSelected: (TimeRange) -> Unit,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     parentScrollInProgress: Boolean = false,
@@ -90,10 +79,6 @@ fun SleepTrendCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -101,25 +86,6 @@ fun SleepTrendCard(
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(Modifier.height(16.dp))
-
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                TimeRange.entries.forEachIndexed { index, range ->
-                    SegmentedButton(
-                        selected = selectedRange == range,
-                        onClick = { onRangeSelected(range) },
-                        shape =
-                            SegmentedButtonDefaults.itemShape(
-                                index = index,
-                                count = TimeRange.entries.size,
-                            ),
-                        label = { Text(range.label) },
-                    )
-                }
-            }
-
             Spacer(Modifier.height(16.dp))
 
             SleepTrendChart(
@@ -507,15 +473,6 @@ fun SleepTrendChart(
                 chartHeight = chartHeight,
             )
 
-            VicoChartTooltipOverlay(
-                selectedPointOffset =
-                    selectedState?.let { s ->
-                        Offset(s.canvasX, s.lineCanvasY ?: s.barCanvasYTop ?: 0f)
-                    },
-                pulseColor = lineColor,
-                modifier = Modifier.fillMaxWidth().height(chartHeight),
-            )
-
             if (tooltipState != null) {
                 DataPointTooltip(
                     isVisible = true,
@@ -579,55 +536,8 @@ fun SleepTrendChartLegends(
 
 @Composable
 fun SleepTrendSkeleton(modifier: Modifier = Modifier) {
-    val skeletonColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(40.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Box(
-                modifier =
-                    Modifier
-                        .weight(
-                            1f,
-                        ).fillMaxHeight()
-                        .background(skeletonColor, shape = RoundedCornerShape(20.dp)),
-            )
-            Box(
-                modifier =
-                    Modifier
-                        .weight(
-                            1f,
-                        ).fillMaxHeight()
-                        .background(skeletonColor, shape = RoundedCornerShape(20.dp)),
-            )
-            Box(
-                modifier =
-                    Modifier
-                        .weight(
-                            1f,
-                        ).fillMaxHeight()
-                        .background(skeletonColor, shape = RoundedCornerShape(20.dp)),
-            )
-        }
-        Spacer(Modifier.height(16.dp))
-        Card(
-            modifier = Modifier.fillMaxWidth().height(250.dp),
-            shape = MaterialTheme.shapes.large,
-            colors =
-                CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                ),
-        ) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(skeletonColor),
-            )
-        }
-    }
+    SkeletonCard(
+        height = 250.dp,
+        modifier = modifier.fillMaxWidth(),
+    )
 }

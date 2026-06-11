@@ -332,6 +332,7 @@
     <string name="sleep_hypnogram_title">Hypnogram</string>
 
     <!-- Sleep Trend Chart -->
+    <string name="sleep_trend_section_title">Sleep durations and bedtimes</string>
     <string name="sleep_trend_title">Sleep trend</string>
     <string name="sleep_trend_legend_window">Sleep window</string>
     <string name="sleep_trend_legend_duration">Sleep duration</string>

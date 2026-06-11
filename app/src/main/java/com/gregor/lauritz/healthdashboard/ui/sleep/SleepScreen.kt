@@ -14,6 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -62,6 +67,7 @@ fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SleepScreen(
     uiState: SleepUiState,
@@ -176,7 +182,39 @@ fun SleepScreen(
 
         item(key = "spacer_trend") { Spacer(Modifier.height(16.dp)) }
 
-        item(key = "sleep_trend") {
+        item(key = "sleep_trend_header") {
+            SectionHeader(
+                title = stringResource(R.string.sleep_trend_section_title),
+                enabled = !uiState.isLoading,
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+
+        item(key = "sleep_trend_range") {
+            SingleChoiceSegmentedButtonRow(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+            ) {
+                TimeRange.entries.forEachIndexed { index, range ->
+                    SegmentedButton(
+                        selected = uiState.selectedTrendRange == range,
+                        onClick = { onTrendRangeSelected(range) },
+                        enabled = !uiState.isLoading,
+                        shape =
+                            SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = TimeRange.entries.size,
+                            ),
+                        label = { Text(range.label) },
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+
+        item(key = "sleep_trend_card") {
             if (uiState.isLoading) {
                 SleepTrendSkeleton(modifier = Modifier.padding(horizontal = 16.dp))
             } else {
@@ -186,7 +224,6 @@ fun SleepScreen(
                     durationSpanPoints = uiState.trendDurationSpanPoints,
                     actualDurationPoints = uiState.trendActualDurationPoints,
                     rangeStartMs = uiState.trendRangeStartMs,
-                    onRangeSelected = onTrendRangeSelected,
                     scrollState = trendScrollState,
                     zoomState = trendZoomState,
                     parentScrollInProgress = listState.isScrollInProgress,
