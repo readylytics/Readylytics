@@ -85,5 +85,6 @@ object SettingsDefaults {
             CardConfiguration(CardId.BODY_FAT, isVisible = true, position = 13),
             CardConfiguration(CardId.BLOOD_PRESSURE, isVisible = true, position = 14),
             CardConfiguration(CardId.OXYGEN_SATURATION, isVisible = true, position = 15),
+            CardConfiguration(CardId.INSIGHTS, isVisible = true, position = 16),
         )
 }

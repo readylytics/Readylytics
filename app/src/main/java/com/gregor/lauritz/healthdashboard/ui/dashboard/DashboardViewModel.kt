@@ -12,13 +12,16 @@ import com.gregor.lauritz.healthdashboard.domain.dashboard.CardConfiguration
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardManagementDelegate
 import com.gregor.lauritz.healthdashboard.domain.dashboard.GetDashboardDataUseCase
+import com.gregor.lauritz.healthdashboard.domain.dashboard.InsightDeriver
 import com.gregor.lauritz.healthdashboard.domain.model.DailySummary
+import com.gregor.lauritz.healthdashboard.domain.model.InsightType
 import com.gregor.lauritz.healthdashboard.domain.model.MetricStatus
 import com.gregor.lauritz.healthdashboard.domain.model.Result
 import com.gregor.lauritz.healthdashboard.domain.model.SleepSessionSummary
 import com.gregor.lauritz.healthdashboard.domain.model.getOrNull
 import com.gregor.lauritz.healthdashboard.domain.repository.DailySummaryRepository
 import com.gregor.lauritz.healthdashboard.domain.repository.HeartRateRepository
+import com.gregor.lauritz.healthdashboard.domain.repository.InsightDismissalRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyRepository
 import com.gregor.lauritz.healthdashboard.domain.scoring.CircadianConsistencyResult
 import com.gregor.lauritz.healthdashboard.domain.sync.ForegroundSyncController
@@ -37,6 +40,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 @HiltViewModel
@@ -52,6 +56,7 @@ class DashboardViewModel
         private val circadianRepo: CircadianConsistencyRepository,
         private val dailyMetricCache: DailyMetricCache,
         private val heartRateRepository: HeartRateRepository,
+        private val insightDismissalRepository: InsightDismissalRepository,
     ) : BaseViewModel() {
         fun validateSelectedDate(date: LocalDate): Result<LocalDate> =
             if (date <= LocalDate.now()) {
@@ -71,6 +76,7 @@ class DashboardViewModel
                     dailySummaryRepository,
                     settingsRepo,
                     circadianRepo,
+                    insightDismissalRepository,
                 ),
                 createDashboardCardStateFlow(
                     selectedDateRepository.selectedDate,
@@ -122,6 +128,11 @@ class DashboardViewModel
                 )
 
             val cards = cardsResult.getOrNull()
+            val derived =
+                InsightDeriver.derive(
+                    recoveryFlags = basicInputs.summary?.recoveryFlags,
+                    dismissedTypes = basicInputs.dismissedInsightTypes,
+                )
             return DashboardUiState(
                 summary = basicInputs.summary,
                 selectedDate = selectedDate,
@@ -140,6 +151,10 @@ class DashboardViewModel
                 isCalibrating = basicInputs.summary?.isCalibrating ?: false,
                 errorMessage = if (cardsResult.isFailure) "Failed to load dashboard data" else null,
                 heartRateDaySummary = hrSummary,
+                activeInsightTypes = derived.active,
+                currentInsight = derived.current,
+                visibleInsightQueue = derived.visibleQueue,
+                dismissedInsightCount = derived.dismissedCount,
             )
         }
 
@@ -209,6 +224,30 @@ class DashboardViewModel
                 DashboardEvent.NextDay -> onNextDay()
                 DashboardEvent.Refresh -> onRefresh()
                 DashboardEvent.ToggleCardManagement -> toggleCardManagement()
+                is DashboardEvent.DismissInsight -> {
+                    viewModelScope.launch {
+                        val zoneId = ZoneId.systemDefault()
+                        val dateMs =
+                            selectedDateRepository.selectedDate.value
+                                .atStartOfDay(
+                                    zoneId,
+                                ).toInstant()
+                                .toEpochMilli()
+                        insightDismissalRepository.dismiss(dateMs, event.type)
+                    }
+                }
+                DashboardEvent.RestoreInsights -> {
+                    viewModelScope.launch {
+                        val zoneId = ZoneId.systemDefault()
+                        val dateMs =
+                            selectedDateRepository.selectedDate.value
+                                .atStartOfDay(
+                                    zoneId,
+                                ).toInstant()
+                                .toEpochMilli()
+                        insightDismissalRepository.restoreAllForDate(dateMs)
+                    }
+                }
             }
         }
 
@@ -257,6 +296,10 @@ data class DashboardUiState(
     val isCalibrating: Boolean = false,
     val errorMessage: String? = null,
     val heartRateDaySummary: HeartRateDaySummary? = null,
+    val activeInsightTypes: Set<InsightType> = emptySet(),
+    val currentInsight: InsightType? = null,
+    val visibleInsightQueue: List<InsightType> = emptyList(),
+    val dismissedInsightCount: Int = 0,
 )
 
 @Immutable

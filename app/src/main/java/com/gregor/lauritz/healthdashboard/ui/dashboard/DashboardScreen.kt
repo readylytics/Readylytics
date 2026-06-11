@@ -34,6 +34,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gregor.lauritz.healthdashboard.R
 import com.gregor.lauritz.healthdashboard.domain.dashboard.CardId
+import com.gregor.lauritz.healthdashboard.domain.model.InsightType
 import com.gregor.lauritz.healthdashboard.ui.common.resolveOrNull
 import com.gregor.lauritz.healthdashboard.ui.components.CardConfigurationsList
 import com.gregor.lauritz.healthdashboard.ui.components.CardDataMap
@@ -94,6 +95,8 @@ fun DashboardRoute(
         onCardVisibilityChanged = viewModel::onToggleCardVisibility,
         onReorderCards = viewModel::onReorderCards,
         onResetToDefaults = viewModel::onResetToDefaults,
+        onDismissInsight = { viewModel.onEvent(DashboardEvent.DismissInsight(it)) },
+        onRestoreInsights = { viewModel.onEvent(DashboardEvent.RestoreInsights) },
     )
 }
 
@@ -122,6 +125,8 @@ fun DashboardScreen(
     onResetToDefaults: () -> Unit = {},
     onDateSelected: (LocalDate) -> Unit = {},
     earliestDate: LocalDate? = null,
+    onDismissInsight: (InsightType) -> Unit = {},
+    onRestoreInsights: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val summary = uiState.summary
@@ -214,6 +219,8 @@ fun DashboardScreen(
                                     onNavigateToVitals = onNavigateToVitals,
                                     isEditing = uiState.isManagingCards,
                                     isLoading = uiState.isComputingMetrics,
+                                    onDismissInsight = onDismissInsight,
+                                    onRestoreInsights = onRestoreInsights,
                                 ),
                             ),
                         isEditing = uiState.isManagingCards,

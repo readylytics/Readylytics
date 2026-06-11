@@ -750,6 +750,7 @@
     <string name="card_title_body_fat">Body Fat</string>
     <string name="card_title_blood_pressure">Blood Pressure</string>
     <string name="card_title_oxygen_saturation">Oxygen saturation</string>
+    <string name="card_title_insights">Insights</string>
 
     <!-- Card Tooltips & Secondary Texts -->
     <string name="card_tooltip_sleep_efficiency">The percentage of time actually asleep while in
@@ -829,4 +830,15 @@
 
     <!-- Additional Duration Formats -->
     <string name="sleep_duration_hours_only">%1$dh</string>
+
+    <!-- Dashboard Insight Cards -->
+    <string name="insight_late_nadir_title">Late Heart Rate Nadir</string>
+    <string name="insight_late_nadir_body">Your heart rate nadir occurred later than usual last night, suggesting delayed recovery.</string>
+    <string name="insight_sick_indicator_title">Potential Illness Detected</string>
+    <string name="insight_sick_indicator_body">Elevated resting heart rate and suppressed HRV indicate your body may be fighting something off.</string>
+    <string name="insight_overreaching_title">Signs of Overreaching</string>
+    <string name="insight_overreaching_body">Your acute load is significantly higher than your chronic baseline. Consider a recovery day.</string>
+    <string name="insight_restore_dismissed">Restore dismissed insights (%1$d)</string>
+    <string name="insight_dismiss_description">Dismiss health insight</string>
+    <string name="insight_rerun_description">Restore dismissed health insights</string>
 </resources>

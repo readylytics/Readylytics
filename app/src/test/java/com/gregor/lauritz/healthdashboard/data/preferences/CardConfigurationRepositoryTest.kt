@@ -6,9 +6,11 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -72,5 +74,49 @@ class CardConfigurationRepositoryTest {
 
             assertEquals(1, updatedProto.dashboardCardsCount)
             assertEquals(CardId.READINESS.name, updatedProto.getDashboardCards(0).cardId)
+        }
+
+    @Test
+    fun defaultDashboardCards_includeSingleInsightsSlot() {
+        val insightCards =
+            SettingsDefaults.DEFAULT_DASHBOARD_CARDS
+                .filter { it.cardId.name.contains("INSIGHT") }
+
+        assertEquals(listOf(CardId.INSIGHTS), insightCards.map { it.cardId })
+    }
+
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun init_appendsMissingDefaultCardsToExistingConfigurations() =
+        runTest {
+            val capturedUpdate = slot<suspend (CardConfigurationsProto) -> CardConfigurationsProto>()
+            coEvery { dataStore.updateData(capture(capturedUpdate)) } returns
+                CardConfigurationsProto.getDefaultInstance()
+
+            val existingProto =
+                CardConfigurationsProto
+                    .newBuilder()
+                    .addDashboardCards(
+                        CardConfigurationProto
+                            .newBuilder()
+                            .setCardId(CardId.SLEEP_SCORE.name)
+                            .setIsVisible(true)
+                            .setPosition(0)
+                            .build(),
+                    ).build()
+
+            // Recreate repository to trigger init block with test scope
+            val testScope = TestScope(testScheduler)
+            val repo = CardConfigurationRepository(dataStore, testScope)
+            testScope.advanceUntilIdle()
+
+            val updatedProto = capturedUpdate.captured(existingProto)
+
+            assertEquals(SettingsDefaults.DEFAULT_DASHBOARD_CARDS.size, updatedProto.dashboardCardsCount)
+
+            val appendedCards = updatedProto.dashboardCardsList.filter { it.cardId != CardId.SLEEP_SCORE.name }
+            appendedCards.forEachIndexed { index, protoCard ->
+                assertEquals(1 + index, protoCard.position)
+            }
         }
 }

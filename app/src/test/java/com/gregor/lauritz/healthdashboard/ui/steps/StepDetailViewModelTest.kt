@@ -34,6 +34,7 @@ class StepDetailViewModelTest {
     private lateinit var repository: DailySummaryRepository
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var selectedDateRepo: SelectedDateRepository
+    private lateinit var appScope: CoroutineScope
 
     @Before
     fun setUp() {
@@ -52,10 +53,11 @@ class StepDetailViewModelTest {
             mockk<com.gregor.lauritz.healthdashboard.data.local.dao.DailySummaryDao> {
                 every { observeEarliestDateMs() } returns flowOf(null)
             }
+        appScope = CoroutineScope(testDispatcher)
         selectedDateRepo =
             SelectedDateRepository(
                 dao = mockDao,
-                appScope = CoroutineScope(testDispatcher),
+                appScope = appScope,
             )
     }
 
@@ -70,6 +72,9 @@ class StepDetailViewModelTest {
     fun tearDown() {
         if (::viewModel.isInitialized) {
             viewModel.viewModelScope.cancel()
+        }
+        if (::appScope.isInitialized) {
+            appScope.cancel()
         }
         Dispatchers.resetMain()
     }
