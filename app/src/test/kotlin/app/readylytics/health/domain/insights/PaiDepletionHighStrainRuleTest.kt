@@ -10,10 +10,10 @@ class PaiDepletionHighStrainRuleTest {
     private val rule = PaiDepletionHighStrainRule()
 
     private fun context(
-        paiScore: Float? = 30f,
+        totalPai: Float? = 30f,
         strainRatio: Float? = 1.2f,
     ) = InsightContext(
-        today = dailySummary(paiScore = paiScore, strainRatio = strainRatio),
+        today = dailySummary(totalPai = totalPai, strainRatio = strainRatio),
         circadianResult = CircadianConsistencyResult.MissingData,
         goalSleepMinutes = 480,
     )
@@ -23,17 +23,17 @@ class PaiDepletionHighStrainRuleTest {
         val finding = rule.evaluate(context())
 
         assertEquals(InsightType.PAI_DEPLETION_HIGH_STRAIN, finding?.type)
-        assertEquals(InsightParams.PaiDepletionStrain(paiScore = 30f, strainRatio = 1.2f), finding?.params)
+        assertEquals(InsightParams.PaiDepletionStrain(totalPai = 30f, strainRatio = 1.2f), finding?.params)
     }
 
     @Test
-    fun `does not fire when paiScore is null`() {
-        assertNull(rule.evaluate(context(paiScore = null)))
+    fun `does not fire when totalPai is null`() {
+        assertNull(rule.evaluate(context(totalPai = null)))
     }
 
     @Test
-    fun `does not fire when paiScore is at threshold`() {
-        assertNull(rule.evaluate(context(paiScore = 50f)))
+    fun `does not fire when totalPai is at threshold`() {
+        assertNull(rule.evaluate(context(totalPai = 50f)))
     }
 
     @Test
@@ -47,7 +47,7 @@ class PaiDepletionHighStrainRuleTest {
     }
 
     @Test
-    fun `does not fire when paiScore is above threshold even with high strain`() {
-        assertNull(rule.evaluate(context(paiScore = 75f, strainRatio = 2f)))
+    fun `does not fire when totalPai is above threshold even with high strain`() {
+        assertNull(rule.evaluate(context(totalPai = 75f, strainRatio = 2f)))
     }
 }

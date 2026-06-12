@@ -46,7 +46,7 @@ sealed class InsightParams {
     ) : InsightParams()
 
     data class PaiDepletionStrain(
-        val paiScore: Float,
+        val totalPai: Float,
         val strainRatio: Float,
     ) : InsightParams()
 

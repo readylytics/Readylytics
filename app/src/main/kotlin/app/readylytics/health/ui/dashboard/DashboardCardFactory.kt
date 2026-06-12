@@ -312,7 +312,7 @@ fun buildCardDataMap(
                                 UiText
                                     .StringResWithArgs(
                                         R.string.insight_pai_depletion_high_strain_body,
-                                        listOf(params?.paiScore ?: 0f, params?.strainRatio ?: 0f),
+                                        listOf(params?.totalPai ?: 0f, params?.strainRatio ?: 0f),
                                     ).resolveString(),
                             icon = Icons.Default.FitnessCenter,
                             onDismiss = { onDismissInsight(InsightType.PAI_DEPLETION_HIGH_STRAIN) },
