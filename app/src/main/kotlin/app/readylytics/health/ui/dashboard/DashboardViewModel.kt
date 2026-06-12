@@ -13,6 +13,9 @@ import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.domain.dashboard.GetDashboardDataUseCase
 import app.readylytics.health.domain.dashboard.InsightDeriver
+import app.readylytics.health.domain.insights.InsightContext
+import app.readylytics.health.domain.insights.InsightEngine
+import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.model.MetricStatus
@@ -40,6 +43,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import javax.inject.Inject
 
@@ -128,9 +132,23 @@ class DashboardViewModel
                 )
 
             val cards = cardsResult.getOrNull()
+            val engineFindings =
+                basicInputs.summary?.let { summary ->
+                    InsightEngine.evaluate(
+                        InsightContext(
+                            today = summary,
+                            circadianResult = basicInputs.circadianResult ?: CircadianConsistencyResult.MissingData,
+                            goalSleepMinutes = (basicInputs.userPreferences.goalSleepHours * 60).toInt(),
+                            stepGoal = basicInputs.userPreferences.stepGoal,
+                            recentDays = basicInputs.paiSummaries,
+                            nowMinutesOfDay = nowMinutesOfDayFor(selectedDate),
+                        ),
+                    )
+                } ?: emptyList()
             val derived =
                 InsightDeriver.derive(
                     recoveryFlags = basicInputs.summary?.recoveryFlags,
+                    engineFindings = engineFindings,
                     dismissedTypes = basicInputs.dismissedInsightTypes,
                 )
             return DashboardUiState(
@@ -153,11 +171,21 @@ class DashboardViewModel
                 heartRateDaySummary = hrSummary,
                 activeInsightTypes = derived.active,
                 currentInsight = derived.current,
+                currentInsightParams = derived.currentParams,
                 visibleInsightQueue = derived.visibleQueue,
                 dismissedInsightCount = derived.dismissedCount,
                 goalSleepHours = basicInputs.userPreferences.goalSleepHours,
             )
         }
+
+        // Time-of-day gating for insights only makes sense for the current day;
+        // for past days, treat as end-of-day so it never suppresses a finding.
+        private fun nowMinutesOfDayFor(selectedDate: LocalDate): Int =
+            if (selectedDate == LocalDate.now()) {
+                LocalTime.now().let { it.hour * 60 + it.minute }
+            } else {
+                1439
+            }
 
         fun formatSleepDuration(minutes: Int?): String = getDashboardDataUseCase.formatSleepDuration(minutes)
 
@@ -299,6 +327,7 @@ data class DashboardUiState(
     val heartRateDaySummary: HeartRateDaySummary? = null,
     val activeInsightTypes: Set<InsightType> = emptySet(),
     val currentInsight: InsightType? = null,
+    val currentInsightParams: InsightParams = InsightParams.None,
     val visibleInsightQueue: List<InsightType> = emptyList(),
     val dismissedInsightCount: Int = 0,
     val goalSleepHours: Float = 8f,

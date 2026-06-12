@@ -29,6 +29,7 @@ sealed class CircadianConsistencyResult {
         val medianBedtimeMinutes: Int,
         val medianWakeMinutes: Int,
         val thresholdMinutes: Int,
+        val latestBedtimeOffsetMinutes: Int,
     ) : CircadianConsistencyResult()
 }
 
@@ -122,11 +123,15 @@ class CircadianConsistencyRepository
                     (bedScore + wakeScore) / 2f
                 }
 
+            val rawBedtimeOffsetMinutes = normalizeMinutes(evalSessions.first().startTime) - medianBed
+            val latestBedtimeOffsetMinutes = ((rawBedtimeOffsetMinutes + 720) % 1440 + 1440) % 1440 - 720
+
             return CircadianConsistencyResult.Ready(
                 score = dailyScores.average().toFloat(),
                 medianBedtimeMinutes = medianBed,
                 medianWakeMinutes = medianWake,
                 thresholdMinutes = threshold,
+                latestBedtimeOffsetMinutes = latestBedtimeOffsetMinutes,
             )
         }
 
