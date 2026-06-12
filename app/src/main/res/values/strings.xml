@@ -495,11 +495,12 @@
     <string name="onboarding_dynamic_color_desc">Use colors derived from your wallpaper (Android
         12+)</string>
     <string name="fallback_theme_color_label">Accent color</string>
-    <string name="fallback_color_brand_purple">Brand purple</string>
-    <string name="fallback_color_brand_blue">Brand blue</string>
-    <string name="fallback_color_turquoise">Turquoise</string>
-    <string name="fallback_color_green">Green</string>
-    <string name="fallback_color_recovery_blue">Recovery blue</string>
+    <string name="fallback_color_green_performance">Green Performance</string>
+    <string name="fallback_color_blue_trust">Blue Trust</string>
+    <string name="fallback_color_purple_insight">Purple Insight</string>
+    <string name="fallback_color_icon_signature">Icon Signature</string>
+    <string name="fallback_color_icon_elements">Icon Elements</string>
+
     <string name="onboarding_units_label">Measurement units</string>
     <string name="onboarding_hc_permissions_label">Health Connect permissions</string>
     <string name="onboarding_hc_permissions_desc">This app needs access to Sleep, Heart Rate, HRV,
@@ -626,6 +627,11 @@
     <string name="settings_item_licenses">Open source licenses</string>
     <string name="settings_item_licenses_title">Open Source Licenses</string>
     <string name="settings_label_app_theme">App Theme</string>
+    <string name="settings_customize_palette_label">Customize secondary and tertiary colors</string>
+    <string name="settings_customize_palette_desc">Manually override color formulas with custom selections</string>
+    <string name="settings_secondary_color_label">Secondary color</string>
+    <string name="settings_tertiary_color_label">Tertiary color</string>
+    <string name="settings_reset_color_desc">Reset to calculated color</string>
 
     <string name="action_reset_to_default">Reset to default</string>
 

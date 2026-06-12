@@ -91,6 +91,10 @@ data class UIState(
     val chengBeta: Float = PhysiologyProfile.GENERAL.defaultChengBeta,
     val itrimB: Float = PhysiologyProfile.GENERAL.defaultItrimB,
     val unitSystem: app.readylytics.health.data.preferences.UnitSystem = SettingsDefaults.UNIT_SYSTEM,
+    val isCustomPaletteEnabled: Boolean = false,
+    val customSecondaryColor: Long = SettingsDefaults.CUSTOM_SECONDARY_COLOR,
+    val customTertiaryColor: Long = SettingsDefaults.CUSTOM_TERTIARY_COLOR,
+    val customPrimaryColor: Long = SettingsDefaults.CUSTOM_PRIMARY_COLOR,
 )
 
 data class SyncSettingsState(

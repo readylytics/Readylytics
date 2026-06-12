@@ -38,7 +38,7 @@ fun StepsCard(
         shape = MaterialTheme.shapes.large,
         colors =
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             ),
     ) {
         Column(
