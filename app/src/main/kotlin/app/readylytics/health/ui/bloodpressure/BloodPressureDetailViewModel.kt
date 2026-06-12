@@ -101,8 +101,8 @@ class BloodPressureDetailViewModel
                     val systolicStatus =
                         when (latestSystolic) {
                             null -> MetricStatus.CALIBRATING
-                            in 0..119 -> MetricStatus.OPTIMAL
-                            in 120..129 -> MetricStatus.NEUTRAL
+                            in 0..120 -> MetricStatus.OPTIMAL
+                            in 121..129 -> MetricStatus.NEUTRAL
                             in 130..139 -> MetricStatus.WARNING
                             else -> MetricStatus.POOR
                         }
@@ -118,8 +118,8 @@ class BloodPressureDetailViewModel
                     val statusLabel =
                         when {
                             latestSystolic == null || latestDiastolic == null -> null
-                            latestSystolic in 0..119 && latestDiastolic in 0..79 -> "Normal"
-                            latestSystolic in 120..129 && latestDiastolic in 0..79 -> "Elevated"
+                            latestSystolic in 0..120 && latestDiastolic in 0..79 -> "Normal"
+                            latestSystolic in 121..129 && latestDiastolic in 0..79 -> "Elevated"
                             latestSystolic >= 130 || latestDiastolic >= 80 -> "High"
                             else -> null
                         }

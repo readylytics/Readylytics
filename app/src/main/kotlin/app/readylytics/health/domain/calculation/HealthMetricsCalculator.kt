@@ -27,7 +27,7 @@ object HealthMetricsCalculator {
         diastolic: Int,
     ): BloodPressureStatus =
         when {
-            systolic < 120 && diastolic < 80 -> BloodPressureStatus.Optimal
+            systolic <= 120 && diastolic < 80 -> BloodPressureStatus.Optimal
             systolic <= 129 && diastolic < 80 -> BloodPressureStatus.Neutral
             systolic in 130..139 || diastolic in 80..89 -> BloodPressureStatus.HypertensionStage1
             else -> BloodPressureStatus.HypertensionStage2

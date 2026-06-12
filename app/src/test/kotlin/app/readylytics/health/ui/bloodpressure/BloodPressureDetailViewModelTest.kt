@@ -120,7 +120,18 @@ class BloodPressureDetailViewModelTest {
         }
 
     @Test
-    fun `systolicStatus is NEUTRAL for systolic 120 to 129`() =
+    fun `systolicStatus is OPTIMAL for systolic exactly 120`() =
+        runTest {
+            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 120, diastolic = 70)
+
+            viewModel = createViewModel()
+            val state = viewModel.uiState.first { it.latestSystolic != null }
+
+            assertEquals(MetricStatus.OPTIMAL, state.systolicStatus)
+        }
+
+    @Test
+    fun `systolicStatus is NEUTRAL for systolic 121 to 129`() =
         runTest {
             coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 125, diastolic = 70)
 
@@ -201,7 +212,18 @@ class BloodPressureDetailViewModelTest {
         }
 
     @Test
-    fun `statusLabel is Elevated when systolic 120 to 129 and diastolic below 80`() =
+    fun `statusLabel is Normal when systolic is exactly 120 and diastolic below 80`() =
+        runTest {
+            coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 120, diastolic = 75)
+
+            viewModel = createViewModel()
+            val state = viewModel.uiState.first { it.latestSystolic != null }
+
+            assertEquals("Normal", state.statusLabel)
+        }
+
+    @Test
+    fun `statusLabel is Elevated when systolic 121 to 129 and diastolic below 80`() =
         runTest {
             coEvery { repository.getLatest() } returns bloodPressureEntity(systolic = 125, diastolic = 75)
 
