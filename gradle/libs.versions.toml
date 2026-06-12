@@ -43,6 +43,7 @@ benchmarkMacro = "1.4.1"
 playServicesStats = "17.1.0"
 playServicesOssLicenses = "17.5.1"
 ossLicensesPlugin = "0.12.0"
+appcompat = "1.7.1"
 
 
 [libraries]
@@ -114,6 +115,7 @@ androidx-arch-core-testing = { group = "androidx.arch.core", name = "core-testin
 androidx-benchmark-macro = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmarkMacro" }
 play-services-stats = { group = "com.google.android.gms", name = "play-services-stats", version.ref = "playServicesStats" }
 play-services-oss-licenses = { group = "com.google.android.gms", name = "play-services-oss-licenses", version.ref = "playServicesOssLicenses" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 
 
 
