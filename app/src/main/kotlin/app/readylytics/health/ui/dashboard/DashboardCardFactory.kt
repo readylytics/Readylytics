@@ -192,11 +192,11 @@ fun buildCardDataMap(
                         InsightCard(
                             title = stringResource(R.string.insight_circadian_shift_title),
                             body =
-                                UiText.StringResWithArgs(
-                                    R.string.insight_circadian_shift_body,
-                                    listOf(offset),
-                                )
-                                    .resolveString(),
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_circadian_shift_body,
+                                        listOf(offset),
+                                    ).resolveString(),
                             icon = Icons.Default.Bedtime,
                             onDismiss = { onDismissInsight(InsightType.CIRCADIAN_SHIFT_RECOVERY_MISS) },
                             modifier = Modifier.fillMaxWidth(),
@@ -208,11 +208,11 @@ fun buildCardDataMap(
                         InsightCard(
                             title = stringResource(R.string.insight_high_strain_sleep_deficit_title),
                             body =
-                                UiText.StringResWithArgs(
-                                    R.string.insight_high_strain_sleep_deficit_body,
-                                    listOf(params?.strainRatio ?: 0f, params?.sleepDeficitMinutes ?: 0),
-                                )
-                                    .resolveString(),
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_high_strain_sleep_deficit_body,
+                                        listOf(params?.strainRatio ?: 0f, params?.sleepDeficitMinutes ?: 0),
+                                    ).resolveString(),
                             icon = Icons.Default.MonitorHeart,
                             onDismiss = { onDismissInsight(InsightType.HIGH_STRAIN_SLEEP_DEFICIT) },
                             modifier = Modifier.fillMaxWidth(),
@@ -224,14 +224,14 @@ fun buildCardDataMap(
                         InsightCard(
                             title = stringResource(R.string.insight_late_nadir_short_sleep_title),
                             body =
-                                UiText.StringResWithArgs(
-                                    R.string.insight_late_nadir_short_sleep_body,
-                                    listOf(
-                                        (params?.goalSleepMinutes ?: 0) - (params?.sleepDurationMinutes ?: 0),
-                                        params?.goalSleepMinutes ?: 0,
-                                    ),
-                                )
-                                    .resolveString(),
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_late_nadir_short_sleep_body,
+                                        listOf(
+                                            (params?.goalSleepMinutes ?: 0) - (params?.sleepDurationMinutes ?: 0),
+                                            params?.goalSleepMinutes ?: 0,
+                                        ),
+                                    ).resolveString(),
                             icon = Icons.Default.Schedule,
                             onDismiss = { onDismissInsight(InsightType.LATE_NADIR_SHORT_SLEEP) },
                             modifier = Modifier.fillMaxWidth(),
@@ -261,11 +261,11 @@ fun buildCardDataMap(
                         InsightCard(
                             title = stringResource(R.string.insight_hrv_drop_low_spo2_title),
                             body =
-                                UiText.StringResWithArgs(
-                                    R.string.insight_hrv_drop_low_spo2_body,
-                                    listOf(params?.zLnHrv ?: 0f, params?.spo2 ?: 0f),
-                                )
-                                    .resolveString(),
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_hrv_drop_low_spo2_body,
+                                        listOf(params?.zLnHrv ?: 0f, params?.spo2 ?: 0f),
+                                    ).resolveString(),
                             icon = Icons.Default.Air,
                             onDismiss = { onDismissInsight(InsightType.HRV_DROP_LOW_SPO2) },
                             modifier = Modifier.fillMaxWidth(),
@@ -277,11 +277,11 @@ fun buildCardDataMap(
                         InsightCard(
                             title = stringResource(R.string.insight_late_nadir_elevated_rhr_title),
                             body =
-                                UiText.StringResWithArgs(
-                                    R.string.insight_late_nadir_elevated_rhr_body,
-                                    listOf(params?.rhrDeltaBpm ?: 0f),
-                                )
-                                    .resolveString(),
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_late_nadir_elevated_rhr_body,
+                                        listOf(params?.rhrDeltaBpm ?: 0f),
+                                    ).resolveString(),
                             icon = Icons.Default.MonitorHeart,
                             onDismiss = { onDismissInsight(InsightType.LATE_NADIR_ELEVATED_RHR) },
                             modifier = Modifier.fillMaxWidth(),
@@ -293,11 +293,11 @@ fun buildCardDataMap(
                         InsightCard(
                             title = stringResource(R.string.insight_bp_elevated_high_strain_title),
                             body =
-                                UiText.StringResWithArgs(
-                                    R.string.insight_bp_elevated_high_strain_body,
-                                    listOf(params?.systolicDriftMmHg ?: 0, params?.strainRatio ?: 0f),
-                                )
-                                    .resolveString(),
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_bp_elevated_high_strain_body,
+                                        listOf(params?.systolicDriftMmHg ?: 0, params?.strainRatio ?: 0f),
+                                    ).resolveString(),
                             icon = Icons.Default.Bloodtype,
                             onDismiss = { onDismissInsight(InsightType.BP_ELEVATED_HIGH_STRAIN) },
                             modifier = Modifier.fillMaxWidth(),
@@ -309,11 +309,11 @@ fun buildCardDataMap(
                         InsightCard(
                             title = stringResource(R.string.insight_pai_depletion_high_strain_title),
                             body =
-                                UiText.StringResWithArgs(
-                                    R.string.insight_pai_depletion_high_strain_body,
-                                    listOf(params?.paiScore ?: 0f, params?.strainRatio ?: 0f),
-                                )
-                                    .resolveString(),
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_pai_depletion_high_strain_body,
+                                        listOf(params?.paiScore ?: 0f, params?.strainRatio ?: 0f),
+                                    ).resolveString(),
                             icon = Icons.Default.FitnessCenter,
                             onDismiss = { onDismissInsight(InsightType.PAI_DEPLETION_HIGH_STRAIN) },
                             modifier = Modifier.fillMaxWidth(),
@@ -325,11 +325,11 @@ fun buildCardDataMap(
                         InsightCard(
                             title = stringResource(R.string.insight_hrv_decline_streak_title),
                             body =
-                                UiText.StringResWithArgs(
-                                    R.string.insight_hrv_decline_streak_body,
-                                    listOf(params?.days ?: 0),
-                                )
-                                    .resolveString(),
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_hrv_decline_streak_body,
+                                        listOf(params?.days ?: 0),
+                                    ).resolveString(),
                             icon = Icons.Default.Warning,
                             onDismiss = { onDismissInsight(InsightType.HRV_DECLINE_STREAK) },
                             modifier = Modifier.fillMaxWidth(),
@@ -341,11 +341,11 @@ fun buildCardDataMap(
                         InsightCard(
                             title = stringResource(R.string.insight_step_shortfall_title),
                             body =
-                                UiText.StringResWithArgs(
-                                    R.string.insight_step_shortfall_body,
-                                    listOf(params?.stepCount ?: 0, params?.stepGoal ?: 0),
-                                )
-                                    .resolveString(),
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_step_shortfall_body,
+                                        listOf(params?.stepCount ?: 0, params?.stepGoal ?: 0),
+                                    ).resolveString(),
                             icon = Icons.Default.DirectionsWalk,
                             onDismiss = { onDismissInsight(InsightType.STEP_SHORTFALL) },
                             modifier = Modifier.fillMaxWidth(),
@@ -357,11 +357,11 @@ fun buildCardDataMap(
                         InsightCard(
                             title = stringResource(R.string.insight_pai_weekly_underperformance_title),
                             body =
-                                UiText.StringResWithArgs(
-                                    R.string.insight_pai_weekly_underperformance_body,
-                                    listOf(params?.weeklyPai ?: 0f, params?.target ?: 0f),
-                                )
-                                    .resolveString(),
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_pai_weekly_underperformance_body,
+                                        listOf(params?.weeklyPai ?: 0f, params?.target ?: 0f),
+                                    ).resolveString(),
                             icon = Icons.AutoMirrored.Filled.TrendingUp,
                             onDismiss = { onDismissInsight(InsightType.PAI_WEEKLY_UNDERPERFORMANCE) },
                             modifier = Modifier.fillMaxWidth(),
@@ -373,11 +373,11 @@ fun buildCardDataMap(
                         InsightCard(
                             title = stringResource(R.string.insight_weight_drift_training_load_title),
                             body =
-                                UiText.StringResWithArgs(
-                                    R.string.insight_weight_drift_training_load_body,
-                                    listOf(params?.deltaKg ?: 0f, (params?.percent ?: 0f) * 100f),
-                                )
-                                    .resolveString(),
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_weight_drift_training_load_body,
+                                        listOf(params?.deltaKg ?: 0f, (params?.percent ?: 0f) * 100f),
+                                    ).resolveString(),
                             icon = Icons.Default.MonitorWeight,
                             onDismiss = { onDismissInsight(InsightType.WEIGHT_DRIFT_TRAINING_LOAD) },
                             modifier = Modifier.fillMaxWidth(),
