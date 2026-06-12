@@ -372,8 +372,11 @@ private fun mcuColorScheme(
     val hue = 0f
     val nSat = 0f
     val nvSat = 0f
+
     fun n(tone: Int): Color = hslToColor(hue, nSat, tone / 100f)
+
     fun nv(tone: Int): Color = hslToColor(hue, nvSat, tone / 100f)
+
     fun e(tone: Int): Color = hslToColor(0f, 0.85f, tone / 100f)
 
     return if (isDark) {
@@ -450,7 +453,6 @@ private fun mcuColorScheme(
         )
     }
 }
-
 
 @Composable
 fun FitDashboardTheme(

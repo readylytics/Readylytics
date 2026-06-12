@@ -7,15 +7,30 @@ import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.strainRatioStatus
 import app.readylytics.health.ui.theme.LocalExtendedColors
 
+internal enum class MetricContainerTone {
+    DEFAULT_CARD,
+    PRIMARY,
+    WARNING,
+    ERROR,
+}
+
+internal fun MetricStatus.containerTone(): MetricContainerTone =
+    when (this) {
+        MetricStatus.NO_DATA -> MetricContainerTone.DEFAULT_CARD
+        MetricStatus.CALIBRATING -> MetricContainerTone.DEFAULT_CARD
+        MetricStatus.OPTIMAL -> MetricContainerTone.PRIMARY
+        MetricStatus.NEUTRAL -> MetricContainerTone.DEFAULT_CARD
+        MetricStatus.WARNING -> MetricContainerTone.WARNING
+        MetricStatus.POOR -> MetricContainerTone.ERROR
+    }
+
 @Composable
 fun MetricStatus.containerColor(): Color =
-    when (this) {
-        MetricStatus.NO_DATA -> MaterialTheme.colorScheme.surfaceContainerLow
-        MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.surfaceContainerLow
-        MetricStatus.OPTIMAL -> MaterialTheme.colorScheme.primaryContainer
-        MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.surfaceContainerLow
-        MetricStatus.WARNING -> LocalExtendedColors.current.warningContainer
-        MetricStatus.POOR -> MaterialTheme.colorScheme.errorContainer
+    when (containerTone()) {
+        MetricContainerTone.DEFAULT_CARD -> MaterialTheme.colorScheme.surfaceContainerHighest
+        MetricContainerTone.PRIMARY -> MaterialTheme.colorScheme.primaryContainer
+        MetricContainerTone.WARNING -> LocalExtendedColors.current.warningContainer
+        MetricContainerTone.ERROR -> MaterialTheme.colorScheme.errorContainer
     }
 
 @Composable

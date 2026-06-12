@@ -45,7 +45,7 @@ fun SleepArchitectureBar(
     val lightSleep = colorScheme.secondary
     val remColor = colorScheme.tertiary
     val awakeColor = colorScheme.error
-    val surfaceVariant = colorScheme.surfaceVariant
+    val defaultCardContainer = colorScheme.surfaceContainerHighest
     val outlineColor = colorScheme.outlineVariant
     val onSurfaceVariant = colorScheme.onSurfaceVariant
 
@@ -55,7 +55,7 @@ fun SleepArchitectureBar(
         } ?: 0
 
     if (session == null || totalMinutes == 0) {
-        CalibrationBar(modifier = modifier, color = surfaceVariant, onSurfaceVariant = onSurfaceVariant)
+        CalibrationBar(modifier = modifier, color = defaultCardContainer, onSurfaceVariant = onSurfaceVariant)
         return
     }
 
