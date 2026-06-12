@@ -117,23 +117,25 @@ private fun fallbackLightScheme(
     seed: Color,
     secondarySeed: Color? = null,
     tertiarySeed: Color? = null,
-): ColorScheme = colorSchemeFromSeed(
-    primarySeed = seed,
-    secondarySeed = secondarySeed,
-    tertiarySeed = tertiarySeed,
-    isDark = false,
-)
+): ColorScheme =
+    colorSchemeFromSeed(
+        primarySeed = seed,
+        secondarySeed = secondarySeed,
+        tertiarySeed = tertiarySeed,
+        isDark = false,
+    )
 
 private fun fallbackDarkScheme(
     seed: Color,
     secondarySeed: Color? = null,
     tertiarySeed: Color? = null,
-): ColorScheme = colorSchemeFromSeed(
-    primarySeed = seed,
-    secondarySeed = secondarySeed,
-    tertiarySeed = tertiarySeed,
-    isDark = true,
-)
+): ColorScheme =
+    colorSchemeFromSeed(
+        primarySeed = seed,
+        secondarySeed = secondarySeed,
+        tertiarySeed = tertiarySeed,
+        isDark = true,
+    )
 
 fun calculateSecondarySeedColor(primary: Color): Color {
     val hsl = FloatArray(3)

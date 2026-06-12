@@ -39,6 +39,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -55,12 +56,15 @@ import app.readylytics.health.ui.components.SectionHeader
 import app.readylytics.health.ui.components.SettingsToggleItem
 import app.readylytics.health.ui.settings.LocalBackupViewModel.SideEffect
 import app.readylytics.health.ui.settings.backup.LocalBackupSection
+import app.readylytics.health.ui.settings.common.CustomColorPicker
 import app.readylytics.health.ui.settings.common.FallbackThemeColorSelector
 import app.readylytics.health.ui.settings.common.UnitSystemSelector
 import app.readylytics.health.ui.settings.data.DataManagementSection
 import app.readylytics.health.ui.settings.data.DataSourceSettingsSection
 import app.readylytics.health.ui.settings.data.SyncSettingsSection
 import app.readylytics.health.ui.settings.physiologyprofile.HeartRateZoneSection
+import app.readylytics.health.ui.theme.calculateSecondarySeedColor
+import app.readylytics.health.ui.theme.calculateTertiarySeedColor
 import com.google.android.gms.oss.licenses.OssLicensesMenuActivity
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.parcelize.Parcelize
@@ -487,11 +491,54 @@ fun SettingsScreen(
                                 onCheckedChange = { onUIEvent(SettingsEvent.DynamicColorEnabledChanged(it)) },
                             )
                             AnimatedVisibility(visible = !uiState.dynamicColorEnabled) {
-                                FallbackThemeColorSelector(
-                                    selectedColor = uiState.fallbackThemeColor,
-                                    onColorSelected = { onUIEvent(SettingsEvent.FallbackThemeColorChanged(it)) },
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                                )
+                                Column {
+                                    FallbackThemeColorSelector(
+                                        selectedColor = uiState.fallbackThemeColor,
+                                        onColorSelected = { onUIEvent(SettingsEvent.FallbackThemeColorChanged(it)) },
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                    )
+                                    SettingsToggleItem(
+                                        label = stringResource(R.string.settings_customize_palette_label),
+                                        description = stringResource(R.string.settings_customize_palette_desc),
+                                        checked = uiState.isCustomPaletteEnabled,
+                                        onCheckedChange = { onUIEvent(SettingsEvent.CustomPaletteEnabledChanged(it)) },
+                                    )
+                                    val primarySeed = Color(uiState.fallbackThemeColor.seedColor)
+                                    val currentSecondary =
+                                        if (uiState.isCustomPaletteEnabled) {
+                                            Color(uiState.customSecondaryColor)
+                                        } else {
+                                            calculateSecondarySeedColor(primarySeed)
+                                        }
+                                    val currentTertiary =
+                                        if (uiState.isCustomPaletteEnabled) {
+                                            Color(uiState.customTertiaryColor)
+                                        } else {
+                                            calculateTertiarySeedColor(primarySeed)
+                                        }
+                                    CustomColorPicker(
+                                        label = stringResource(R.string.settings_secondary_color_label),
+                                        selectedColor = currentSecondary,
+                                        onColorSelected = {
+                                            onUIEvent(
+                                                SettingsEvent.CustomSecondaryColorChanged(it.toArgb().toLong()),
+                                            )
+                                        },
+                                        enabled = uiState.isCustomPaletteEnabled,
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                    )
+                                    CustomColorPicker(
+                                        label = stringResource(R.string.settings_tertiary_color_label),
+                                        selectedColor = currentTertiary,
+                                        onColorSelected = {
+                                            onUIEvent(
+                                                SettingsEvent.CustomTertiaryColorChanged(it.toArgb().toLong()),
+                                            )
+                                        },
+                                        enabled = uiState.isCustomPaletteEnabled,
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                    )
+                                }
                             }
                             Spacer(modifier = Modifier.height(16.dp))
                             UnitSystemSelector(
