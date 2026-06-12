@@ -10,7 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bloodtype
-import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MonitorHeart
@@ -346,7 +346,7 @@ fun buildCardDataMap(
                                         R.string.insight_step_shortfall_body,
                                         listOf(params?.stepCount ?: 0, params?.stepGoal ?: 0),
                                     ).resolveString(),
-                            icon = Icons.Default.DirectionsWalk,
+                            icon = Icons.AutoMirrored.Filled.DirectionsWalk,
                             onDismiss = { onDismissInsight(InsightType.STEP_SHORTFALL) },
                             modifier = Modifier.fillMaxWidth(),
                         )
