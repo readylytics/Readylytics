@@ -8,6 +8,8 @@ import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.bodyFatStatus
 import app.readylytics.health.domain.repository.BodyFatRepository
+import app.readylytics.health.domain.repository.WeightRepository
+import app.readylytics.health.ui.common.BodyFatHistoryItem
 import app.readylytics.health.ui.common.DailyDataPoint
 import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.common.padToRange
@@ -39,6 +41,7 @@ data class BodyFatDetailUiState(
     val rangeStartMs: Long = 0,
     val bodyFatDisplay: String? = null,
     val optimalRangeDisplay: String? = null,
+    val historyItems: List<BodyFatHistoryItem> = emptyList(),
     val isLoading: Boolean = true,
 )
 
@@ -47,6 +50,7 @@ class BodyFatDetailViewModel
     @Inject
     constructor(
         private val bodyFatRepository: BodyFatRepository,
+        private val weightRepository: WeightRepository,
         private val settingsRepo: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
     ) : ViewModel() {
@@ -90,6 +94,26 @@ class BodyFatDetailViewModel
                             userPrefs.gender?.name ?: "Unknown",
                         )
                     val status = latest?.bodyFatPercent?.let { bodyFatStatus(it, optimalMax) }
+
+                    val weightByDay =
+                        weightRepository
+                            .getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
+                            .groupBy { Instant.ofEpochMilli(it.timestampMs).atZone(zoneId).toLocalDate() }
+                            .mapValues { (_, dayRecords) -> dayRecords.maxBy { it.timestampMs } }
+
+                    val historyItems =
+                        records
+                            .sortedByDescending { it.timestampMs }
+                            .map { record ->
+                                val recordDate = Instant.ofEpochMilli(record.timestampMs).atZone(zoneId).toLocalDate()
+                                val weightKg = weightByDay[recordDate]?.weightKg
+                                BodyFatHistoryItem(
+                                    timestampMs = record.timestampMs,
+                                    bodyFatPercent = record.bodyFatPercent,
+                                    leanMassKg = weightKg?.let { it * (1f - record.bodyFatPercent / 100f) },
+                                    status = bodyFatStatus(record.bodyFatPercent, optimalMax),
+                                )
+                            }
                     val average =
                         if (records.isNotEmpty()) {
                             records
@@ -119,6 +143,7 @@ class BodyFatDetailViewModel
                             } else {
                                 null
                             },
+                        historyItems = historyItems,
                         isLoading = false,
                     )
                 }

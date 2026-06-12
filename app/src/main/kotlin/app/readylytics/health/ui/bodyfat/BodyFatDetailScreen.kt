@@ -203,6 +203,12 @@ fun BodyFatDetailScreen(
                 }
             }
 
+            if (uiState.historyItems.isNotEmpty()) {
+                item(key = "history") {
+                    BodyFatHistorySection(items = uiState.historyItems)
+                }
+            }
+
             item(key = "spacer_bottom") { Spacer(Modifier.height(16.dp)) }
         }
     }

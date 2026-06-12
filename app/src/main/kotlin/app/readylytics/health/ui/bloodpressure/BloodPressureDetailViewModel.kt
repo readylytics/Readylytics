@@ -3,9 +3,11 @@ package app.readylytics.health.ui.bloodpressure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.BloodPressureRepository
+import app.readylytics.health.ui.common.BloodPressureHistoryItem
 import app.readylytics.health.ui.common.DailyDataPoint
 import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.common.padToRange
@@ -35,6 +37,7 @@ data class BloodPressureDetailUiState(
     val systolicStatus: MetricStatus = MetricStatus.CALIBRATING,
     val diastolicStatus: MetricStatus = MetricStatus.CALIBRATING,
     val statusLabel: String? = null,
+    val historyItems: List<BloodPressureHistoryItem> = emptyList(),
     val isLoading: Boolean = true,
 )
 
@@ -128,6 +131,22 @@ class BloodPressureDetailViewModel
                             null
                         }
 
+                    val historyItems =
+                        records
+                            .sortedByDescending { it.timestampMs }
+                            .map { record ->
+                                BloodPressureHistoryItem(
+                                    timestampMs = record.timestampMs,
+                                    systolic = record.systolicMmHg,
+                                    diastolic = record.diastolicMmHg,
+                                    status =
+                                        HealthMetricsCalculator.assessBloodPressure(
+                                            record.systolicMmHg,
+                                            record.diastolicMmHg,
+                                        ),
+                                )
+                            }
+
                     BloodPressureDetailUiState(
                         latestSystolic = latestSystolic,
                         latestDiastolic = latestDiastolic,
@@ -140,6 +159,7 @@ class BloodPressureDetailViewModel
                         systolicStatus = systolicStatus,
                         diastolicStatus = diastolicStatus,
                         statusLabel = statusLabel,
+                        historyItems = historyItems,
                         isLoading = false,
                     )
                 }

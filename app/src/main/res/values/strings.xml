@@ -544,6 +544,7 @@
     <string name="label_timeline">Timeline</string>
     <string name="label_zone_breakdown">Zone Breakdown</string>
     <string name="label_trends">Trends</string>
+    <string name="label_history">History</string>
     <string name="label_minutes">Minutes</string>
     <string name="label_physiological_trends">Physiological trends</string>
     <string name="label_systolic_ref">Systolic (Ref: &lt;120)</string>
@@ -572,12 +573,28 @@
     <string name="tooltip_bmi">Body Mass Index (Normal: 18.5–24.9)\n\nUnder 25: Normal\n25-30:
         Overweight\n30+: Obese</string>
     <string name="label_weight_trend">Weight Trend</string>
+    <string name="weight_history_title_format">Weight (%1$s)</string>
+    <string name="weight_history_subtitle_with_delta">%1$s %2$s · %3$s %2$s</string>
+    <string name="weight_history_subtitle_no_delta">%1$s %2$s</string>
+    <string name="weight_status_normal">Normal</string>
+    <string name="weight_status_overweight">Overweight</string>
+    <string name="weight_status_obese_1">Obese Class I</string>
+    <string name="weight_status_obese_2">Obese Class II+</string>
+    <string name="weight_status_calibrating">Calibrating</string>
 
     <!-- Body Fat Detail -->
     <string name="label_body_fat_percentage">Body Fat Percentage</string>
     <string name="label_body_fat">Body Fat</string>
     <string name="tooltip_body_fat_current">Current: %1$s%%\nOptimal: %2$s\n\n%3$s, Age %4$d</string>
     <string name="label_body_fat_trend">Body Fat Trend</string>
+    <string name="body_fat_history_title_format">Body Fat (%1$s)</string>
+    <string name="body_fat_history_subtitle_with_lean_mass">%1$s%% · %2$s kg lean mass</string>
+    <string name="body_fat_history_subtitle_no_lean_mass">%1$s%%</string>
+    <string name="body_fat_status_optimal">Athletic</string>
+    <string name="body_fat_status_fitness">Fitness</string>
+    <string name="body_fat_status_average">Average</string>
+    <string name="body_fat_status_above_range">Above Range</string>
+    <string name="body_fat_status_calibrating">Calibrating</string>
 
     <!-- Blood Pressure Detail -->
     <string name="label_blood_pressure">Blood Pressure</string>
@@ -588,6 +605,12 @@
     <string name="tooltip_blood_pressure_diastolic">Latest diastolic blood pressure
         measurement.\n\nOptimal: &lt;80\nStage 1: 80–89\nStage 2: ≥90</string>
     <string name="label_blood_pressure_trend">Blood Pressure Trend</string>
+    <string name="bp_history_title_format">Blood Pressure (%1$s)</string>
+    <string name="bp_history_subtitle_format">%1$d/%2$d mmHg</string>
+    <string name="bp_status_normal">Normal</string>
+    <string name="bp_status_elevated">Elevated</string>
+    <string name="bp_status_stage1">Stage 1</string>
+    <string name="bp_status_stage2">Stage 2</string>
 
     <!-- Vitals Screen -->
     <string name="label_hrv_rmssd">HRV (RMSSD)</string>

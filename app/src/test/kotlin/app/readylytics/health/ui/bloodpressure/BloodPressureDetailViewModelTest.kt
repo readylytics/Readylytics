@@ -3,6 +3,7 @@ package app.readylytics.health.ui.bloodpressure
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.BloodPressureRepository
 import app.readylytics.health.ui.common.TimeRange
@@ -243,6 +244,33 @@ class BloodPressureDetailViewModelTest {
             assertNull(state.statusLabel)
         }
 
+    // --- historyItems ---
+
+    @Test
+    fun `historyItems is empty when no records`() =
+        runTest {
+            viewModel = createViewModel()
+            val state = viewModel.uiState.value
+            assertEquals(emptyList<Any>(), state.historyItems)
+        }
+
+    @Test
+    fun `historyItems are sorted newest first with correct status mapping`() =
+        runTest {
+            val older = bloodPressureEntity(systolic = 115, diastolic = 75, timestampMs = 1_000L)
+            val newer = bloodPressureEntity(systolic = 135, diastolic = 88, timestampMs = 2_000L)
+            coEvery { repository.getByDateRange(any(), any()) } returns listOf(older, newer)
+
+            viewModel = createViewModel()
+            val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
+
+            assertEquals(2, state.historyItems.size)
+            assertEquals(2_000L, state.historyItems[0].timestampMs)
+            assertEquals(BloodPressureStatus.HypertensionStage1, state.historyItems[0].status)
+            assertEquals(1_000L, state.historyItems[1].timestampMs)
+            assertEquals(BloodPressureStatus.Optimal, state.historyItems[1].status)
+        }
+
     // --- onRangeSelected ---
 
     @Test
@@ -259,10 +287,11 @@ class BloodPressureDetailViewModelTest {
     private fun bloodPressureEntity(
         systolic: Int,
         diastolic: Int,
+        timestampMs: Long = System.currentTimeMillis(),
     ): BloodPressureRecordEntity =
         BloodPressureRecordEntity(
-            id = "test-id",
-            timestampMs = System.currentTimeMillis(),
+            id = "test-id-$timestampMs",
+            timestampMs = timestampMs,
             systolicMmHg = systolic,
             diastolicMmHg = diastolic,
         )

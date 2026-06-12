@@ -264,6 +264,12 @@ fun WeightDetailScreen(
                 }
             }
 
+            if (uiState.historyItems.isNotEmpty()) {
+                item(key = "history") {
+                    WeightHistorySection(items = uiState.historyItems)
+                }
+            }
+
             item(key = "spacer_bottom") { Spacer(Modifier.height(16.dp)) }
         }
     }
