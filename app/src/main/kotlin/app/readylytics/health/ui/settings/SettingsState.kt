@@ -108,3 +108,11 @@ data class SyncSettingsState(
     val backgroundSyncEnabled: Boolean = SettingsDefaults.BACKGROUND_SYNC_ENABLED,
     val backgroundSyncIntervalMinutes: Int = SettingsDefaults.BACKGROUND_SYNC_INTERVAL.minutes,
 )
+
+data class DataSourceSettingsState(
+    val availableDevices: List<String> = emptyList(),
+    val deviceByDataType: Map<String, String> = emptyMap(),
+    val hasPendingChanges: Boolean = false,
+    val isResyncing: Boolean = false,
+    val showDeviceChangeNotice: Boolean = false,
+)

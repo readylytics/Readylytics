@@ -35,6 +35,10 @@ internal class UIPreferences
             dataStore.updateData { it.toBuilder().setAboutDismissed(dismissed).build() }
         }
 
+        suspend fun updateDeviceChangeNoticeDismissed(dismissed: Boolean) {
+            dataStore.updateData { it.toBuilder().setDeviceChangeNoticeDismissed(dismissed).build() }
+        }
+
         suspend fun updateAppTheme(theme: AppTheme) {
             dataStore.updateData {
                 it

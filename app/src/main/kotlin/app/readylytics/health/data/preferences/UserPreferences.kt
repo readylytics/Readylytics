@@ -83,6 +83,7 @@ data class UserPreferences(
     val customSecondaryColor: Long = SettingsDefaults.CUSTOM_SECONDARY_COLOR,
     val customTertiaryColor: Long = SettingsDefaults.CUSTOM_TERTIARY_COLOR,
     val customPrimaryColor: Long = SettingsDefaults.CUSTOM_PRIMARY_COLOR,
+    val deviceChangeNoticeDismissed: Boolean = SettingsDefaults.DEVICE_CHANGE_NOTICE_DISMISSED,
 )
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
@@ -207,6 +208,7 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
             } else {
                 customPrimaryColor
             },
+        deviceChangeNoticeDismissed = deviceChangeNoticeDismissed,
     )
 }
 

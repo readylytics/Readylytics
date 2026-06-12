@@ -167,6 +167,10 @@ message UserPreferencesProto {
     int64 custom_secondary_color = 68;
     int64 custom_tertiary_color = 69;
     int64 custom_primary_color = 70;
+
+    // Permanent dismissal of the "press Apply to resync" info dialog shown
+    // when the user changes a Data Sources device selection.
+    bool device_change_notice_dismissed = 71;
 }
 
 enum TrimpMethodProto {

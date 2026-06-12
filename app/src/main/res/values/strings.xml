@@ -105,6 +105,14 @@
     <string name="data_sources_all_devices">All devices</string>
     <string name="data_sources_calibrating">Calibrating…</string>
     <string name="device_this_phone">This Phone</string>
+    <string name="data_sources_apply_button">Apply</string>
+    <string name="data_sources_apply_description">Save your device selection and resync your Health Connect
+        data so it reflects the new selection.</string>
+    <string name="device_change_notice_title">Apply your device selection</string>
+    <string name="device_change_notice_body">Press Apply at the bottom of this section to save your device
+        selection. Applying will resync your Health Connect data using the new selection.</string>
+    <string name="device_change_notice_dont_show_again">Don\'t show this again</string>
+    <string name="device_change_notice_confirm">Got it</string>
 
     <!-- Health Data Categories -->
     <string name="category_activity">Activity</string>

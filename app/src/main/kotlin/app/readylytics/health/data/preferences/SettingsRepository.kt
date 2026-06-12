@@ -67,6 +67,8 @@ class SettingsRepository
 
         val deviceByDataType: Flow<Map<String, String>> = userPreferences.map { it.deviceByDataType }
 
+        val deviceChangeNoticeDismissed: Flow<Boolean> = userPreferences.map { it.deviceChangeNoticeDismissed }
+
         // --- Update Methods (delegated to preference modules) ---
 
         suspend fun updateGoalSleepHours(hours: Float) = sleep.updateGoalSleepHours(hours)
@@ -204,6 +206,9 @@ class SettingsRepository
         ) = ui.updateDeviceForDataType(dataTypeKey, deviceLabel)
 
         suspend fun migrateDeviceSelectionIfNeeded() = ui.migrateDeviceSelectionIfNeeded()
+
+        suspend fun updateDeviceChangeNoticeDismissed(dismissed: Boolean) =
+            ui.updateDeviceChangeNoticeDismissed(dismissed)
 
         suspend fun getAvailableDevices(): List<String> = ui.getAvailableDevices()
 
