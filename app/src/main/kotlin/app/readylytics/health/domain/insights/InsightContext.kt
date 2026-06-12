@@ -11,4 +11,6 @@ data class InsightContext(
     val today: DailySummary,
     val circadianResult: CircadianConsistencyResult,
     val goalSleepMinutes: Int,
+    val stepGoal: Int = 10000,
+    val recentDays: List<DailySummary> = emptyList(),
 )

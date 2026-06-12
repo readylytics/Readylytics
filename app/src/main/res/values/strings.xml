@@ -859,4 +859,24 @@
     <string name="insight_high_strain_sleep_deficit_body">Your acute strain ratio of %1$.1f combined with %2$d minutes less sleep than your goal is suppressing your recovery.</string>
     <string name="insight_late_nadir_short_sleep_title">Late Recovery and Short Sleep</string>
     <string name="insight_late_nadir_short_sleep_body">Your heart rate nadir occurred late in the night, and you slept %1$d minutes less than your %2$d minute goal, limiting overnight restoration.</string>
+    <string name="insight_recovery_hrv_missing_title">HRV Data Missing</string>
+    <string name="insight_recovery_hrv_missing_body">Today\'s readiness score is based on resting heart rate and sleep only because no HRV reading was recorded last night.</string>
+    <string name="insight_recovery_stages_missing_title">Sleep Stage Data Missing</string>
+    <string name="insight_recovery_stages_missing_body">Sleep stage data wasn\'t recorded last night, so your sleep score reflects duration and restoration only, not architecture.</string>
+    <string name="insight_hrv_drop_low_spo2_title">Possible Illness or Breathing Disruption</string>
+    <string name="insight_hrv_drop_low_spo2_body">Your HRV dropped sharply to a z-score of %1$.1f and your average sleeping blood oxygen fell to %2$.0f%%, which can indicate the onset of illness or a breathing disruption such as sleep apnea.</string>
+    <string name="insight_late_nadir_elevated_rhr_title">Delayed Recovery with Elevated Resting Heart Rate</string>
+    <string name="insight_late_nadir_elevated_rhr_body">Your heart rate nadir was delayed and your resting heart rate was %1$.1f bpm above baseline, suggesting your body is still working to recover.</string>
+    <string name="insight_bp_elevated_high_strain_title">Elevated Blood Pressure Under High Strain</string>
+    <string name="insight_bp_elevated_high_strain_body">Your systolic blood pressure is %1$d mmHg above your recent baseline while your strain ratio of %2$.1f indicates high training load.</string>
+    <string name="insight_pai_depletion_high_strain_title">PAI Depleted Despite Training Load</string>
+    <string name="insight_pai_depletion_high_strain_body">Your PAI score of %1$.0f is low even though your strain ratio of %2$.1f shows a high training load, suggesting your effort isn\'t translating into PAI gains.</string>
+    <string name="insight_hrv_decline_streak_title">HRV Below Baseline Multiple Nights</string>
+    <string name="insight_hrv_decline_streak_body">Your HRV has been below your baseline for %1$d consecutive nights, which can signal accumulating fatigue.</string>
+    <string name="insight_step_shortfall_title">Low Daily Activity</string>
+    <string name="insight_step_shortfall_body">You took %1$d steps today, well short of your %2$d step goal.</string>
+    <string name="insight_pai_weekly_underperformance_title">Weekly PAI Below Target</string>
+    <string name="insight_pai_weekly_underperformance_body">Your rolling weekly PAI total of %1$.0f is below the recommended target of %2$.0f.</string>
+    <string name="insight_weight_drift_training_load_title">Weight Change Under High Training Load</string>
+    <string name="insight_weight_drift_training_load_body">Your weight has changed by %1$.1f kg (%2$.1f%%) over the past week while your training load is high, which can indicate fluid shifts or under-fueling.</string>
 </resources>

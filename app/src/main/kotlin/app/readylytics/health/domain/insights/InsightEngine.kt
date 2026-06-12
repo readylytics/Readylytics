@@ -10,6 +10,16 @@ object InsightEngine {
             CircadianShiftRecoveryMissRule(),
             HighStrainSleepDeficitRule(),
             LateNadirShortSleepRule(),
+            HrvDropLowSpo2Rule(),
+            LateNadirElevatedRhrRule(),
+            BpElevatedHighStrainRule(),
+            PaiDepletionHighStrainRule(),
+            HrvDeclineStreakRule(),
+            StepShortfallRule(),
+            PaiWeeklyUnderperformanceRule(),
+            WeightDriftTrainingLoadRule(),
+            HrvMissingCaveatRule(),
+            StagesMissingCaveatRule(),
         )
 
     fun evaluate(context: InsightContext): List<InsightFinding> = rules.mapNotNull { it.evaluate(context) }

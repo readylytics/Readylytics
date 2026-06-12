@@ -138,6 +138,8 @@ class DashboardViewModel
                             today = summary,
                             circadianResult = basicInputs.circadianResult ?: CircadianConsistencyResult.MissingData,
                             goalSleepMinutes = (basicInputs.userPreferences.goalSleepHours * 60).toInt(),
+                            stepGoal = basicInputs.userPreferences.stepGoal,
+                            recentDays = basicInputs.paiSummaries,
                         ),
                     )
                 } ?: emptyList()

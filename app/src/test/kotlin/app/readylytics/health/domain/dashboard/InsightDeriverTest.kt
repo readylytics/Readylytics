@@ -142,4 +142,34 @@ class InsightDeriverTest {
         assertEquals(InsightType.LATE_NADIR, result.current)
         assertEquals(InsightParams.None, result.currentParams)
     }
+
+    @Test
+    fun `HRV drop with low SpO2 finding suppresses sick indicator`() {
+        val flags = setOf(RecoveryFlag.ILLNESS_ONSET)
+        val finding =
+            InsightFinding(
+                InsightType.HRV_DROP_LOW_SPO2,
+                InsightParams.HrvSpo2(zLnHrv = -1.8f, spo2 = 92f),
+            )
+        val result = InsightDeriver.derive(flags, listOf(finding), dismissedTypes = emptySet())
+
+        assertEquals(setOf(InsightType.HRV_DROP_LOW_SPO2), result.active)
+        assertEquals(InsightType.HRV_DROP_LOW_SPO2, result.current)
+        assertEquals(InsightParams.HrvSpo2(zLnHrv = -1.8f, spo2 = 92f), result.currentParams)
+    }
+
+    @Test
+    fun `late nadir elevated RHR finding suppresses late nadir`() {
+        val flags = setOf(RecoveryFlag.NADIR_DELAYED)
+        val finding =
+            InsightFinding(
+                InsightType.LATE_NADIR_ELEVATED_RHR,
+                InsightParams.LateNadirElevatedRhr(rhrDeltaBpm = 7f),
+            )
+        val result = InsightDeriver.derive(flags, listOf(finding), dismissedTypes = emptySet())
+
+        assertEquals(setOf(InsightType.LATE_NADIR_ELEVATED_RHR), result.active)
+        assertEquals(InsightType.LATE_NADIR_ELEVATED_RHR, result.current)
+        assertEquals(InsightParams.LateNadirElevatedRhr(rhrDeltaBpm = 7f), result.currentParams)
+    }
 }

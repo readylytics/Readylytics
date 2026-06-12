@@ -16,6 +16,7 @@ data class DerivedInsights(
 object InsightDeriver {
     private val displayPriority =
         listOf(
+            InsightType.HRV_DROP_LOW_SPO2,
             InsightType.SICK_INDICATOR,
             InsightType.HIGH_STRAIN_SLEEP_DEFICIT,
             InsightType.OVERREACHING,
@@ -24,7 +25,16 @@ object InsightDeriver {
             InsightType.CIRCADIAN_SHIFT_RECOVERY_MISS,
             InsightType.REST_DAY_NO_IMPACT,
             InsightType.LATE_NADIR_SHORT_SLEEP,
+            InsightType.LATE_NADIR_ELEVATED_RHR,
             InsightType.LATE_NADIR,
+            InsightType.BP_ELEVATED_HIGH_STRAIN,
+            InsightType.PAI_DEPLETION_HIGH_STRAIN,
+            InsightType.HRV_DECLINE_STREAK,
+            InsightType.STEP_SHORTFALL,
+            InsightType.PAI_WEEKLY_UNDERPERFORMANCE,
+            InsightType.WEIGHT_DRIFT_TRAINING_LOAD,
+            InsightType.RECOVERY_HRV_MISSING,
+            InsightType.RECOVERY_STAGES_MISSING,
         )
 
     // When a more specific, causal insight fires, it replaces the generic
@@ -34,6 +44,8 @@ object InsightDeriver {
             InsightType.CIRCADIAN_SHIFT_RECOVERY_MISS to InsightType.REST_DAY_NO_IMPACT,
             InsightType.HIGH_STRAIN_SLEEP_DEFICIT to InsightType.SICK_INDICATOR,
             InsightType.LATE_NADIR_SHORT_SLEEP to InsightType.LATE_NADIR,
+            InsightType.HRV_DROP_LOW_SPO2 to InsightType.SICK_INDICATOR,
+            InsightType.LATE_NADIR_ELEVATED_RHR to InsightType.LATE_NADIR,
         )
 
     fun derive(
