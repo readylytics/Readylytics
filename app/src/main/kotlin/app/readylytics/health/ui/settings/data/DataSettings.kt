@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -373,9 +374,13 @@ private fun DeviceChangeNoticeDialog(onAcknowledged: (dismissPermanently: Boolea
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = SettingsConstants.VERTICAL_SPACER),
+                    modifier =
+                        Modifier
+                            .clickable { dontShowAgain = !dontShowAgain }
+                            .padding(top = SettingsConstants.VERTICAL_SPACER),
                 ) {
                     Checkbox(checked = dontShowAgain, onCheckedChange = { dontShowAgain = it })
+                    Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER_SMALL))
                     Text(
                         text = stringResource(R.string.device_change_notice_dont_show_again),
                         style = MaterialTheme.typography.bodyMedium,

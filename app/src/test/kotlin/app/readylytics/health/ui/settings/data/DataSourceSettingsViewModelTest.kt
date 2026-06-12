@@ -2,6 +2,7 @@ package app.readylytics.health.ui.settings.data
 
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.preferences.UserPreferencesProto
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.workers.WorkerScheduler
 import io.mockk.coEvery
@@ -11,6 +12,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -34,12 +36,13 @@ class DataSourceSettingsViewModelTest {
                 every { this@mockk.deviceByDataType } returns deviceByDataType
                 every { this@mockk.deviceChangeNoticeDismissed } returns flowOf(deviceChangeNoticeDismissed)
                 coEvery { getAvailableDevices() } returns listOf("Watch A", "Watch B")
-                coEvery { updateDeviceForDataType(any(), any()) } answers {
-                    val type = it.invocation.args[0] as String
-                    val label = it.invocation.args[1] as String?
-                    val current = deviceByDataType.value.toMutableMap()
-                    if (label == null) current.remove(type) else current[type] = label
-                    deviceByDataType.value = current
+                coEvery { batchUpdate(any()) } coAnswers {
+                    @Suppress("UNCHECKED_CAST")
+                    val block = it.invocation.args[0] as UserPreferencesProto.Builder.() -> Unit
+                    val builder = UserPreferencesProto.newBuilder()
+                    deviceByDataType.value.forEach { (key, value) -> builder.putDeviceByDataType(key, value) }
+                    builder.block()
+                    deviceByDataType.value = builder.deviceByDataTypeMap.toMap()
                 }
             }
         val workManager =

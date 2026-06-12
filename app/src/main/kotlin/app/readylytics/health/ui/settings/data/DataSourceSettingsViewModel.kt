@@ -60,8 +60,8 @@ class DataSourceSettingsViewModel
                 pending.forEach { (type, label) ->
                     if (label == null) effective.remove(type.name) else effective[type.name] = label
                 }
-                val info = workInfos.firstOrNull()
-                val running = info?.state == WorkInfo.State.RUNNING || info?.state == WorkInfo.State.ENQUEUED
+                val running =
+                    workInfos.any { it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED }
                 DataSourceSettingsState(
                     availableDevices = availableDevices,
                     deviceByDataType = effective,
@@ -115,8 +115,14 @@ class DataSourceSettingsViewModel
             viewModelScope.launch {
                 val overrides = pendingOverrides.value
                 if (overrides.isEmpty()) return@launch
-                overrides.forEach { (type, label) ->
-                    settingsRepo.updateDeviceForDataType(type.name, label)
+                settingsRepo.batchUpdate {
+                    overrides.forEach { (type, label) ->
+                        if (label.isNullOrBlank()) {
+                            removeDeviceByDataType(type.name)
+                        } else {
+                            putDeviceByDataType(type.name, label)
+                        }
+                    }
                 }
                 pendingOverrides.value = emptyMap()
                 workerScheduler.scheduleResyncWorker()
