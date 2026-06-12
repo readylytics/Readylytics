@@ -60,9 +60,7 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideTransactionRunner(
-        db: HealthDatabase,
-    ): app.readylytics.health.domain.repository.TransactionRunner =
+    fun provideTransactionRunner(db: HealthDatabase): app.readylytics.health.domain.repository.TransactionRunner =
         app.readylytics.health.data.local
             .RoomTransactionRunner(db)
 

@@ -17,9 +17,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.android.material.color.MaterialColors
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.preferences.FallbackThemeColor
+import com.google.android.material.color.MaterialColors
 
 data class StatusColors(
     val optimal: Color,

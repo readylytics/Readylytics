@@ -9,11 +9,11 @@ class CanonicalMetricDisplayAuditTest {
     fun `score surfaces do not locally format canonical display metrics`() {
         val auditedFiles =
             listOf(
-                "app/src/main/java/com/gregor/lauritz/healthdashboard/ui/dashboard/DashboardCardFactory.kt",
-                "app/src/main/java/com/gregor/lauritz/healthdashboard/ui/sleep/SleepScreen.kt",
-                "app/src/main/java/com/gregor/lauritz/healthdashboard/ui/workouts/WorkoutStatsSection.kt",
-                "app/src/main/java/com/gregor/lauritz/healthdashboard/ui/workouts/WorkoutMetricsDisplay.kt",
-                "app/src/main/java/com/gregor/lauritz/healthdashboard/domain/dashboard/GetWorkoutMetricsUseCase.kt",
+                "app/src/main/kotlin/app/readylytics/health/ui/dashboard/DashboardCardFactory.kt",
+                "app/src/main/kotlin/app/readylytics/health/ui/sleep/SleepScreen.kt",
+                "app/src/main/kotlin/app/readylytics/health/ui/workouts/WorkoutStatsSection.kt",
+                "app/src/main/kotlin/app/readylytics/health/ui/workouts/WorkoutMetricsDisplay.kt",
+                "app/src/main/kotlin/app/readylytics/health/domain/dashboard/GetWorkoutMetricsUseCase.kt",
             ).map(::resolveAuditedFile)
 
         val missingFiles = auditedFiles.filterNot { it.exists() }
