@@ -113,11 +113,44 @@ private val LightColorScheme =
 
 private fun onColorFor(seed: Color): Color = if (seed.luminance() > 0.179f) Color.Black else Color.White
 
-private fun fallbackLightScheme(seed: Color): ColorScheme = colorSchemeFromSeed(seed, isDark = false)
+private fun fallbackLightScheme(
+    seed: Color,
+    secondarySeed: Color? = null,
+    tertiarySeed: Color? = null,
+): ColorScheme = colorSchemeFromSeed(
+    primarySeed = seed,
+    secondarySeed = secondarySeed,
+    tertiarySeed = tertiarySeed,
+    isDark = false,
+)
 
-private fun fallbackDarkScheme(seed: Color): ColorScheme = colorSchemeFromSeed(seed, isDark = true)
+private fun fallbackDarkScheme(
+    seed: Color,
+    secondarySeed: Color? = null,
+    tertiarySeed: Color? = null,
+): ColorScheme = colorSchemeFromSeed(
+    primarySeed = seed,
+    secondarySeed = secondarySeed,
+    tertiarySeed = tertiarySeed,
+    isDark = true,
+)
 
-private fun Color.toHsl(outHsl: FloatArray) {
+fun calculateSecondarySeedColor(primary: Color): Color {
+    val hsl = FloatArray(3)
+    primary.toHsl(hsl)
+    val sSat = maxOf(0.16f, hsl[1] * 0.35f)
+    return hslToColor(hsl[0], sSat, hsl[2])
+}
+
+fun calculateTertiarySeedColor(primary: Color): Color {
+    val hsl = FloatArray(3)
+    primary.toHsl(hsl)
+    val tHue = (hsl[0] + 60f) % 360f
+    val tSat = maxOf(0.24f, hsl[1] * 0.5f)
+    return hslToColor(tHue, tSat, hsl[2])
+}
+
+internal fun Color.toHsl(outHsl: FloatArray) {
     val r = red
     val g = green
     val b = blue
@@ -148,7 +181,7 @@ private fun Color.toHsl(outHsl: FloatArray) {
     outHsl[2] = l
 }
 
-private fun hslToColor(
+internal fun hslToColor(
     h: Float,
     s: Float,
     l: Float,
@@ -193,11 +226,13 @@ private fun hueToRgb(
 }
 
 private fun colorSchemeFromSeed(
-    seed: Color,
+    primarySeed: Color,
+    secondarySeed: Color?,
+    tertiarySeed: Color?,
     isDark: Boolean,
 ): ColorScheme {
     val hsl = FloatArray(3)
-    seed.toHsl(hsl)
+    primarySeed.toHsl(hsl)
     val hue = hsl[0]
 
     // Neutral palette: pure gray (0% saturation) for untinted backgrounds/surfaces
@@ -213,14 +248,33 @@ private fun colorSchemeFromSeed(
 
     fun p(tone: Int): Color = hslToColor(hue, pSat, tone / 100f)
 
-    val sSat = maxOf(0.16f, hsl[1] * 0.35f)
+    val sHue: Float
+    val sSat: Float
+    if (secondarySeed != null) {
+        val sHsl = FloatArray(3)
+        secondarySeed.toHsl(sHsl)
+        sHue = sHsl[0]
+        sSat = sHsl[1]
+    } else {
+        sHue = hue
+        sSat = maxOf(0.16f, hsl[1] * 0.35f)
+    }
 
-    fun s(tone: Int): Color = hslToColor(hue, sSat, tone / 100f)
+    fun s(tone: Int): Color = hslToColor(sHue, sSat, tone / 100f)
 
-    val tHue = (hue + 60f) % 360f
-    val tSat = maxOf(0.24f, hsl[1] * 0.5f)
+    val tHueVal: Float
+    val tSatVal: Float
+    if (tertiarySeed != null) {
+        val tHsl = FloatArray(3)
+        tertiarySeed.toHsl(tHsl)
+        tHueVal = tHsl[0]
+        tSatVal = tHsl[1]
+    } else {
+        tHueVal = (hue + 60f) % 360f
+        tSatVal = maxOf(0.24f, hsl[1] * 0.5f)
+    }
 
-    fun t(tone: Int): Color = hslToColor(tHue, tSat, tone / 100f)
+    fun t(tone: Int): Color = hslToColor(tHueVal, tSatVal, tone / 100f)
 
     fun e(tone: Int): Color = hslToColor(0f, 0.85f, tone / 100f)
 
@@ -240,9 +294,9 @@ private fun colorSchemeFromSeed(
             onTertiary = t(20),
             tertiaryContainer = t(30),
             onTertiaryContainer = t(90),
-            background = n(6),
+            background = Color(0xFF0A0A0A),
             onBackground = n(90),
-            surface = n(6),
+            surface = Color(0xFF0A0A0A),
             onSurface = n(90),
             surfaceVariant = nv(30),
             onSurfaceVariant = nv(80),
@@ -277,9 +331,9 @@ private fun colorSchemeFromSeed(
             onTertiary = t(100),
             tertiaryContainer = t(90),
             onTertiaryContainer = t(10),
-            background = n(98),
+            background = Color(0xFFF5F5F5),
             onBackground = n(10),
-            surface = n(98),
+            surface = Color(0xFFF5F5F5),
             onSurface = n(10),
             surfaceVariant = nv(90),
             onSurfaceVariant = nv(30),
@@ -313,12 +367,31 @@ fun FitDashboardTheme(
             .collectAsStateWithLifecycle(
                 initialValue = FallbackThemeColor.BRAND_PURPLE,
             ).value
+    val isCustomPaletteEnabled =
+        viewModel.isCustomPaletteEnabledFlow
+            .collectAsStateWithLifecycle(
+                initialValue = false,
+            ).value
+    val customSecondaryColor =
+        viewModel.customSecondaryColorFlow
+            .collectAsStateWithLifecycle(
+                initialValue = 0L,
+            ).value
+    val customTertiaryColor =
+        viewModel.customTertiaryColorFlow
+            .collectAsStateWithLifecycle(
+                initialValue = 0L,
+            ).value
+
     val darkTheme =
         when (appTheme) {
             AppTheme.LIGHT -> false
             AppTheme.DARK -> true
             AppTheme.SYSTEM -> isSystemInDarkTheme()
         }
+
+    val secondarySeed = if (isCustomPaletteEnabled) Color(customSecondaryColor) else null
+    val tertiarySeed = if (isCustomPaletteEnabled) Color(customTertiaryColor) else null
 
     val colorScheme =
         when {
@@ -327,8 +400,18 @@ fun FitDashboardTheme(
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             }
 
-            darkTheme -> fallbackDarkScheme(Color(fallbackThemeColor.seedColor))
-            else -> fallbackLightScheme(Color(fallbackThemeColor.seedColor))
+            darkTheme ->
+                fallbackDarkScheme(
+                    seed = Color(fallbackThemeColor.seedColor),
+                    secondarySeed = secondarySeed,
+                    tertiarySeed = tertiarySeed,
+                )
+            else ->
+                fallbackLightScheme(
+                    seed = Color(fallbackThemeColor.seedColor),
+                    secondarySeed = secondarySeed,
+                    tertiarySeed = tertiarySeed,
+                )
         }
 
     val semanticColors =

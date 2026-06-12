@@ -15,4 +15,7 @@ class ThemeViewModel
     ) : ViewModel() {
         val dynamicColorFlow: Flow<Boolean> = settingsRepo.dynamicColorEnabled
         val fallbackThemeColorFlow: Flow<FallbackThemeColor> = settingsRepo.fallbackThemeColor
+        val isCustomPaletteEnabledFlow: Flow<Boolean> = settingsRepo.isCustomPaletteEnabled
+        val customSecondaryColorFlow: Flow<Long> = settingsRepo.customSecondaryColor
+        val customTertiaryColorFlow: Flow<Long> = settingsRepo.customTertiaryColor
     }
