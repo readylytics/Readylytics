@@ -169,7 +169,8 @@ private fun openOssLicenses(
     context: android.content.Context,
     licensesTitle: String,
 ) {
-    com.google.android.gms.oss.licenses.OssLicensesMenuActivity.setActivityTitle(licensesTitle)
+    com.google.android.gms.oss.licenses.OssLicensesMenuActivity
+        .setActivityTitle(licensesTitle)
     context.startActivity(
         Intent(context, com.google.android.gms.oss.licenses.OssLicensesMenuActivity::class.java),
     )
