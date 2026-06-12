@@ -82,6 +82,7 @@ data class UserPreferences(
     val isCustomPaletteEnabled: Boolean = SettingsDefaults.IS_CUSTOM_PALETTE_ENABLED,
     val customSecondaryColor: Long = SettingsDefaults.CUSTOM_SECONDARY_COLOR,
     val customTertiaryColor: Long = SettingsDefaults.CUSTOM_TERTIARY_COLOR,
+    val customPrimaryColor: Long = SettingsDefaults.CUSTOM_PRIMARY_COLOR,
 )
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
@@ -197,6 +198,14 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
                 SettingsDefaults.CUSTOM_TERTIARY_COLOR
             } else {
                 customTertiaryColor
+            },
+        customPrimaryColor =
+            if (customPrimaryColor ==
+                0L
+            ) {
+                SettingsDefaults.CUSTOM_PRIMARY_COLOR
+            } else {
+                customPrimaryColor
             },
     )
 }

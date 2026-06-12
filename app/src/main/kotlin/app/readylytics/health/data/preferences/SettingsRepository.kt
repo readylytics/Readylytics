@@ -55,6 +55,8 @@ class SettingsRepository
 
         val customTertiaryColor: Flow<Long> = userPreferences.map { it.customTertiaryColor }
 
+        val customPrimaryColor: Flow<Long> = userPreferences.map { it.customPrimaryColor }
+
         val backupSchedule: Flow<BackupSchedule> = userPreferences.map { it.backupSchedule }
 
         val lastBackupTimestampFlow: Flow<Long> = userPreferences.map { it.lastBackupTimestamp }
@@ -191,6 +193,8 @@ class SettingsRepository
         suspend fun updateCustomSecondaryColor(color: Long) = ui.updateCustomSecondaryColor(color)
 
         suspend fun updateCustomTertiaryColor(color: Long) = ui.updateCustomTertiaryColor(color)
+
+        suspend fun updateCustomPrimaryColor(color: Long) = ui.updateCustomPrimaryColor(color)
 
         suspend fun updatePrimaryDevice(deviceName: String?) = ui.updatePrimaryDevice(deviceName)
 

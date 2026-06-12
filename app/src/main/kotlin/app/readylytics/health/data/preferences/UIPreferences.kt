@@ -124,6 +124,10 @@ internal class UIPreferences
             dataStore.updateData { it.toBuilder().setCustomTertiaryColor(color).build() }
         }
 
+        suspend fun updateCustomPrimaryColor(color: Long) {
+            dataStore.updateData { it.toBuilder().setCustomPrimaryColor(color).build() }
+        }
+
         suspend fun updateUnitSystem(unitSystem: UnitSystem) {
             dataStore.updateData {
                 it

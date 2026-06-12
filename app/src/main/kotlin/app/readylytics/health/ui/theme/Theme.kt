@@ -19,6 +19,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.preferences.FallbackThemeColor
+import app.readylytics.health.data.preferences.SettingsDefaults
 import com.google.android.material.color.MaterialColors
 
 data class StatusColors(
@@ -384,6 +385,11 @@ fun FitDashboardTheme(
             .collectAsStateWithLifecycle(
                 initialValue = 0L,
             ).value
+    val customPrimaryColor =
+        viewModel.customPrimaryColorFlow
+            .collectAsStateWithLifecycle(
+                initialValue = SettingsDefaults.CUSTOM_PRIMARY_COLOR,
+            ).value
 
     val darkTheme =
         when (appTheme) {
@@ -404,13 +410,13 @@ fun FitDashboardTheme(
 
             darkTheme ->
                 fallbackDarkScheme(
-                    seed = Color(fallbackThemeColor.seedColor),
+                    seed = Color(customPrimaryColor),
                     secondarySeed = secondarySeed,
                     tertiarySeed = tertiarySeed,
                 )
             else ->
                 fallbackLightScheme(
-                    seed = Color(fallbackThemeColor.seedColor),
+                    seed = Color(customPrimaryColor),
                     secondarySeed = secondarySeed,
                     tertiarySeed = tertiarySeed,
                 )

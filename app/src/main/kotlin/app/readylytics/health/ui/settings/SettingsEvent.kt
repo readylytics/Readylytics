@@ -231,4 +231,8 @@ sealed interface SettingsEvent {
     data class CustomTertiaryColorChanged(
         val color: Long,
     ) : SettingsEvent
+
+    data class CustomPrimaryColorChanged(
+        val color: Long,
+    ) : SettingsEvent
 }

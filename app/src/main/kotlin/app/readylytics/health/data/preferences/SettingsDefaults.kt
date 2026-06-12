@@ -69,8 +69,9 @@ object SettingsDefaults {
     val BACKGROUND_SYNC_INTERVAL = BackgroundSyncInterval.HOUR_1
 
     const val IS_CUSTOM_PALETTE_ENABLED = false
-    const val CUSTOM_SECONDARY_COLOR = 0xFFCCC2DC.toLong()
-    const val CUSTOM_TERTIARY_COLOR = 0xFFEFB8C8.toLong()
+    const val CUSTOM_SECONDARY_COLOR = 0xFFCCC2DC
+    const val CUSTOM_TERTIARY_COLOR = 0xFFEFB8C8
+    const val CUSTOM_PRIMARY_COLOR = 0xFFAA78FF
 
     val DEFAULT_DASHBOARD_CARDS =
         listOf(

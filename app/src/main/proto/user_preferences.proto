@@ -165,6 +165,7 @@ message UserPreferencesProto {
     bool is_custom_palette_enabled = 67;
     int64 custom_secondary_color = 68;
     int64 custom_tertiary_color = 69;
+    int64 custom_primary_color = 70;
 }
 
 enum TrimpMethodProto {

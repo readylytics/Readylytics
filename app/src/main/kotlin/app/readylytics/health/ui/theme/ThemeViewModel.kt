@@ -18,4 +18,5 @@ class ThemeViewModel
         val isCustomPaletteEnabledFlow: Flow<Boolean> = settingsRepo.isCustomPaletteEnabled
         val customSecondaryColorFlow: Flow<Long> = settingsRepo.customSecondaryColor
         val customTertiaryColorFlow: Flow<Long> = settingsRepo.customTertiaryColor
+        val customPrimaryColorFlow: Flow<Long> = settingsRepo.customPrimaryColor
     }

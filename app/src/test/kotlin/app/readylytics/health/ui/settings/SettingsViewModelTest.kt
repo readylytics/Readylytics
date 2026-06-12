@@ -176,6 +176,11 @@ class SettingsViewModelTest {
             val state3 = viewModel.uiState.first { it.customTertiaryColor == 0xFF445566L }
             assertEquals(0xFF445566L, state3.customTertiaryColor)
 
+            viewModel.onEvent(SettingsEvent.CustomPrimaryColorChanged(0xFF556677L))
+            advanceUntilIdle()
+            val state4 = viewModel.uiState.first { it.customPrimaryColor == 0xFF556677L }
+            assertEquals(0xFF556677L, state4.customPrimaryColor)
+
             viewModel.viewModelScope.cancel()
         }
 

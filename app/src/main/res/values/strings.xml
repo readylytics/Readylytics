@@ -630,6 +630,7 @@
     <string name="settings_customize_palette_desc">Manually override color formulas with custom selections</string>
     <string name="settings_secondary_color_label">Secondary color</string>
     <string name="settings_tertiary_color_label">Tertiary color</string>
+    <string name="settings_reset_color_desc">Reset to calculated color</string>
 
     <string name="action_reset_to_default">Reset to default</string>
 

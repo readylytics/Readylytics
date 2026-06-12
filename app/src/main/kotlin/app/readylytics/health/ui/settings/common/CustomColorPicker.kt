@@ -17,7 +17,9 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -76,6 +78,7 @@ fun CustomColorPicker(
     onColorSelected: (Color) -> Unit,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    onReset: (() -> Unit)? = null,
 ) {
     val contentAlpha = if (enabled) 1.0f else 0.38f
 
@@ -198,6 +201,15 @@ fun CustomColorPicker(
                             shape = MaterialTheme.shapes.medium,
                         ),
             )
+
+            if (onReset != null && enabled) {
+                IconButton(onClick = onReset) {
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = stringResource(R.string.settings_reset_color_desc),
+                    )
+                }
+            }
         }
     }
 }

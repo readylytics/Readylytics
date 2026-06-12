@@ -57,7 +57,6 @@ import app.readylytics.health.ui.components.SettingsToggleItem
 import app.readylytics.health.ui.settings.LocalBackupViewModel.SideEffect
 import app.readylytics.health.ui.settings.backup.LocalBackupSection
 import app.readylytics.health.ui.settings.common.CustomColorPicker
-import app.readylytics.health.ui.settings.common.FallbackThemeColorSelector
 import app.readylytics.health.ui.settings.common.UnitSystemSelector
 import app.readylytics.health.ui.settings.data.DataManagementSection
 import app.readylytics.health.ui.settings.data.DataSourceSettingsSection
@@ -492,9 +491,15 @@ fun SettingsScreen(
                             )
                             AnimatedVisibility(visible = !uiState.dynamicColorEnabled) {
                                 Column {
-                                    FallbackThemeColorSelector(
-                                        selectedColor = uiState.fallbackThemeColor,
-                                        onColorSelected = { onUIEvent(SettingsEvent.FallbackThemeColorChanged(it)) },
+                                    CustomColorPicker(
+                                        label = stringResource(R.string.fallback_theme_color_label),
+                                        selectedColor = Color(uiState.customPrimaryColor),
+                                        onColorSelected = {
+                                            onUIEvent(
+                                                SettingsEvent.CustomPrimaryColorChanged(it.toArgb().toLong()),
+                                            )
+                                        },
+                                        enabled = true,
                                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                                     )
                                     SettingsToggleItem(
@@ -503,7 +508,7 @@ fun SettingsScreen(
                                         checked = uiState.isCustomPaletteEnabled,
                                         onCheckedChange = { onUIEvent(SettingsEvent.CustomPaletteEnabledChanged(it)) },
                                     )
-                                    val primarySeed = Color(uiState.fallbackThemeColor.seedColor)
+                                    val primarySeed = Color(uiState.customPrimaryColor)
                                     val currentSecondary =
                                         if (uiState.isCustomPaletteEnabled) {
                                             Color(uiState.customSecondaryColor)
@@ -526,6 +531,13 @@ fun SettingsScreen(
                                         },
                                         enabled = uiState.isCustomPaletteEnabled,
                                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                        onReset = {
+                                            onUIEvent(
+                                                SettingsEvent.CustomSecondaryColorChanged(
+                                                    calculateSecondarySeedColor(primarySeed).toArgb().toLong(),
+                                                ),
+                                            )
+                                        },
                                     )
                                     CustomColorPicker(
                                         label = stringResource(R.string.settings_tertiary_color_label),
@@ -537,6 +549,13 @@ fun SettingsScreen(
                                         },
                                         enabled = uiState.isCustomPaletteEnabled,
                                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                        onReset = {
+                                            onUIEvent(
+                                                SettingsEvent.CustomTertiaryColorChanged(
+                                                    calculateTertiarySeedColor(primarySeed).toArgb().toLong(),
+                                                ),
+                                            )
+                                        },
                                     )
                                 }
                             }

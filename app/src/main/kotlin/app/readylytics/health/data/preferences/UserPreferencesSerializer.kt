@@ -61,6 +61,7 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
             .setIsCustomPaletteEnabled(SettingsDefaults.IS_CUSTOM_PALETTE_ENABLED)
             .setCustomSecondaryColor(SettingsDefaults.CUSTOM_SECONDARY_COLOR)
             .setCustomTertiaryColor(SettingsDefaults.CUSTOM_TERTIARY_COLOR)
+            .setCustomPrimaryColor(SettingsDefaults.CUSTOM_PRIMARY_COLOR)
             .build()
 
     override suspend fun readFrom(input: InputStream): UserPreferencesProto {
@@ -160,6 +161,7 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         .setIsCustomPaletteEnabled(domain.isCustomPaletteEnabled)
         .setCustomSecondaryColor(domain.customSecondaryColor)
         .setCustomTertiaryColor(domain.customTertiaryColor)
+        .setCustomPrimaryColor(domain.customPrimaryColor)
 
     domain.hrvBaselineOverride?.let { builder.setHrvBaselineOverride(it) }
     domain.rhrBaselineOverride?.let { builder.setRhrBaselineOverride(it) }
