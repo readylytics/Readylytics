@@ -6,7 +6,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
@@ -376,10 +377,14 @@ private fun DeviceChangeNoticeDialog(onAcknowledged: (dismissPermanently: Boolea
                     verticalAlignment = Alignment.CenterVertically,
                     modifier =
                         Modifier
-                            .clickable { dontShowAgain = !dontShowAgain }
+                            .toggleable(
+                                value = dontShowAgain,
+                                role = Role.Checkbox,
+                                onValueChange = { dontShowAgain = it },
+                            )
                             .padding(top = SettingsConstants.VERTICAL_SPACER),
                 ) {
-                    Checkbox(checked = dontShowAgain, onCheckedChange = { dontShowAgain = it })
+                    Checkbox(checked = dontShowAgain, onCheckedChange = null)
                     Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER_SMALL))
                     Text(
                         text = stringResource(R.string.device_change_notice_dont_show_again),

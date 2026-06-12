@@ -9,6 +9,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,14 +18,30 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DataSourceSettingsViewModelTest {
+    private val testDispatcher = UnconfinedTestDispatcher()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     private fun buildViewModel(
         initialPrefs: UserPreferences = UserPreferences(),
         deviceChangeNoticeDismissed: Boolean = false,
@@ -57,7 +74,7 @@ class DataSourceSettingsViewModelTest {
 
     @Test
     fun `changing a device stages the value without persisting`() =
-        runTest {
+        runTest(testDispatcher) {
             val (viewModel, deviceByDataType, scheduler) = buildViewModel()
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
@@ -74,7 +91,7 @@ class DataSourceSettingsViewModelTest {
 
     @Test
     fun `apply persists staged changes and triggers resync`() =
-        runTest {
+        runTest(testDispatcher) {
             val (viewModel, deviceByDataType, scheduler) = buildViewModel()
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
@@ -92,7 +109,7 @@ class DataSourceSettingsViewModelTest {
 
     @Test
     fun `device change notice shows when not dismissed and can be dismissed for this session`() =
-        runTest {
+        runTest(testDispatcher) {
             val (viewModel, _, _) = buildViewModel(deviceChangeNoticeDismissed = false)
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
@@ -109,7 +126,7 @@ class DataSourceSettingsViewModelTest {
 
     @Test
     fun `device change notice stays hidden once permanently dismissed`() =
-        runTest {
+        runTest(testDispatcher) {
             val (viewModel, _, _) = buildViewModel(deviceChangeNoticeDismissed = true)
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
 
@@ -123,7 +140,7 @@ class DataSourceSettingsViewModelTest {
 
     @Test
     fun `reverting a device back to its persisted value clears pending changes`() =
-        runTest {
+        runTest(testDispatcher) {
             val initialPrefs = UserPreferences(deviceByDataType = mapOf(HealthDataType.HEART_RATE.name to "Watch A"))
             val (viewModel, _, _) = buildViewModel(initialPrefs = initialPrefs)
             val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
