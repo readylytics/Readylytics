@@ -58,6 +58,9 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
             .setInstallDate(SettingsDefaults.INSTALL_DATE)
             .setBackgroundSyncEnabled(SettingsDefaults.BACKGROUND_SYNC_ENABLED)
             .setBackgroundSyncIntervalMinutes(SettingsDefaults.BACKGROUND_SYNC_INTERVAL.minutes)
+            .setIsCustomPaletteEnabled(SettingsDefaults.IS_CUSTOM_PALETTE_ENABLED)
+            .setCustomSecondaryColor(SettingsDefaults.CUSTOM_SECONDARY_COLOR)
+            .setCustomTertiaryColor(SettingsDefaults.CUSTOM_TERTIARY_COLOR)
             .build()
 
     override suspend fun readFrom(input: InputStream): UserPreferencesProto {
@@ -154,6 +157,9 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         .setItrimpB(domain.itrimB)
         .setBackgroundSyncEnabled(domain.backgroundSyncEnabled)
         .setBackgroundSyncIntervalMinutes(domain.backgroundSyncIntervalMinutes)
+        .setIsCustomPaletteEnabled(domain.isCustomPaletteEnabled)
+        .setCustomSecondaryColor(domain.customSecondaryColor)
+        .setCustomTertiaryColor(domain.customTertiaryColor)
 
     domain.hrvBaselineOverride?.let { builder.setHrvBaselineOverride(it) }
     domain.rhrBaselineOverride?.let { builder.setRhrBaselineOverride(it) }

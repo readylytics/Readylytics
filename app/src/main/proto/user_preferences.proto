@@ -162,6 +162,9 @@ message UserPreferencesProto {
     FallbackThemeColorProto fallback_theme_color = 64;
     bool background_sync_enabled = 65;
     int32 background_sync_interval_minutes = 66;
+    bool is_custom_palette_enabled = 67;
+    int64 custom_secondary_color = 68;
+    int64 custom_tertiary_color = 69;
 }
 
 enum TrimpMethodProto {

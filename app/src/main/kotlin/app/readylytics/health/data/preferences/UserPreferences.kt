@@ -79,6 +79,9 @@ data class UserPreferences(
     val unitSystem: UnitSystem = SettingsDefaults.UNIT_SYSTEM,
     val backgroundSyncEnabled: Boolean = SettingsDefaults.BACKGROUND_SYNC_ENABLED,
     val backgroundSyncIntervalMinutes: Int = SettingsDefaults.BACKGROUND_SYNC_INTERVAL.minutes,
+    val isCustomPaletteEnabled: Boolean = SettingsDefaults.IS_CUSTOM_PALETTE_ENABLED,
+    val customSecondaryColor: Long = SettingsDefaults.CUSTOM_SECONDARY_COLOR,
+    val customTertiaryColor: Long = SettingsDefaults.CUSTOM_TERTIARY_COLOR,
 )
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
@@ -177,6 +180,23 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
                 SettingsDefaults.BACKGROUND_SYNC_INTERVAL.minutes
             } else {
                 backgroundSyncIntervalMinutes
+            },
+        isCustomPaletteEnabled = isCustomPaletteEnabled,
+        customSecondaryColor =
+            if (customSecondaryColor ==
+                0L
+            ) {
+                SettingsDefaults.CUSTOM_SECONDARY_COLOR
+            } else {
+                customSecondaryColor
+            },
+        customTertiaryColor =
+            if (customTertiaryColor ==
+                0L
+            ) {
+                SettingsDefaults.CUSTOM_TERTIARY_COLOR
+            } else {
+                customTertiaryColor
             },
     )
 }
