@@ -1,0 +1,25 @@
+package app.readylytics.health.domain.dashboard
+
+fun CardId.displayName(): String =
+    when (this) {
+        CardId.SLEEP_SCORE -> "Sleep Score"
+        CardId.READINESS -> "Readiness"
+        CardId.STEPS -> "Steps"
+        CardId.HRV -> "Heart Rate Variability"
+        CardId.SLEEP_RHR -> "Sleep RHR"
+        CardId.SLEEP_DURATION -> "Sleep Duration"
+        CardId.SLEEP_ARCHITECTURE -> "Sleep Architecture"
+        CardId.STRAIN_RATIO -> "Strain Ratio"
+        CardId.PAI_DAILY -> "PAI Daily"
+        CardId.CIRCADIAN_CONSISTENCY -> "Circadian Consistency"
+        CardId.RESTING_HR -> "Resting Heart Rate"
+        CardId.RECOVERY_INDEX -> "Recovery Index"
+        CardId.ACUTE_CHRONIC_RATIO -> "Acute/Chronic Ratio"
+        CardId.SLEEP_EFFICIENCY -> "Sleep Efficiency"
+        CardId.HEART_RATE -> "Heart Rate"
+        CardId.WEIGHT -> "Weight"
+        CardId.BODY_FAT -> "Body Fat"
+        CardId.BLOOD_PRESSURE -> "Blood Pressure"
+        CardId.OXYGEN_SATURATION -> "Oxygen Saturation"
+        CardId.INSIGHTS -> "Insights"
+    }
