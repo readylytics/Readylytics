@@ -13,8 +13,9 @@ class BpElevatedHighStrainRule : InsightRule {
         val baselineReadings =
             context.recentDays
                 .filter { it.date != context.today.date }
-                .take(7)
+                .sortedByDescending { it.date }
                 .mapNotNull { it.bloodPressureSystolic }
+                .take(7)
         if (baselineReadings.size < InsightConstants.MIN_BP_BASELINE_SAMPLES) return null
 
         val baseline = baselineReadings.sum() / baselineReadings.size.toFloat()

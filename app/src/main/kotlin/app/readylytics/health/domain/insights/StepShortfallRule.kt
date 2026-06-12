@@ -23,7 +23,7 @@ class StepShortfallRule : InsightRule {
         val circadian = context.circadianResult
         if (circadian is CircadianConsistencyResult.Ready) {
             val earliestMinutes = circadian.medianBedtimeMinutes - InsightConstants.STEP_SHORTFALL_LEAD_TIME_MINUTES
-            if (normalizeTimeOfDay(context.nowMinutesOfDay) < earliestMinutes) return null
+            if (context.nowMinutesOfDay < earliestMinutes) return null
         }
 
         return InsightFinding(
@@ -31,10 +31,4 @@ class StepShortfallRule : InsightRule {
             params = InsightParams.StepShortfall(stepCount = stepCount, stepGoal = context.stepGoal),
         )
     }
-
-    // Mirrors CircadianConsistencyRepository's normalization: times before
-    // noon are treated as "past midnight" (e.g., 1:00 AM -> 25:00) so they
-    // compare correctly against a median bedtime that crosses midnight.
-    private fun normalizeTimeOfDay(minutesOfDay: Int): Int =
-        if (minutesOfDay < 12 * 60) minutesOfDay + 1440 else minutesOfDay
 }

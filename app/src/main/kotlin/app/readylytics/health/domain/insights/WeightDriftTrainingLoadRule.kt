@@ -12,7 +12,11 @@ class WeightDriftTrainingLoadRule : InsightRule {
     override fun evaluate(context: InsightContext): InsightFinding? {
         val todayWeight = context.today.weightKg ?: return null
 
-        val days = (listOf(context.today) + context.recentDays).distinctBy { it.date }.sortedByDescending { it.date }
+        val days =
+            (listOf(context.today) + context.recentDays)
+                .distinctBy { it.date }
+                .sortedByDescending { it.date }
+                .take(7)
         val oldestWeight =
             days
                 .filter { it.date != context.today.date }

@@ -97,15 +97,15 @@ class StepShortfallRuleTest {
     }
 
     @Test
-    fun `handles a median bedtime past midnight when checking the current time`() {
+    fun `does not fire just after midnight with a median bedtime past midnight`() {
         // median bedtime 01:00 (normalized 25:00 = 1500), lead time 180 -> earliest 22:00 (1320);
-        // now 00:30 (normalized 24:30 = 1470) is within the window
+        // now 00:30 (30) is before the window since "now" is not normalized
         val finding =
             rule.evaluate(
                 context(circadianResult = circadianReady(medianBedtimeMinutes = 1500), nowMinutesOfDay = 30),
             )
 
-        assertEquals(InsightType.STEP_SHORTFALL, finding?.type)
+        assertNull(finding)
     }
 
     @Test
@@ -118,5 +118,17 @@ class StepShortfallRuleTest {
             )
 
         assertNull(finding)
+    }
+
+    @Test
+    fun `fires within the lead time window with a median bedtime past midnight`() {
+        // median bedtime 01:00 (normalized 25:00 = 1500), lead time 180 -> earliest 22:00 (1320);
+        // now 23:00 (1380) is within the window
+        val finding =
+            rule.evaluate(
+                context(circadianResult = circadianReady(medianBedtimeMinutes = 1500), nowMinutesOfDay = 23 * 60),
+            )
+
+        assertEquals(InsightType.STEP_SHORTFALL, finding?.type)
     }
 }

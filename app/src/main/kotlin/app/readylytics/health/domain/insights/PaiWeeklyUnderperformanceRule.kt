@@ -8,7 +8,11 @@ import app.readylytics.health.domain.model.InsightType
  */
 class PaiWeeklyUnderperformanceRule : InsightRule {
     override fun evaluate(context: InsightContext): InsightFinding? {
-        val days = (listOf(context.today) + context.recentDays).distinctBy { it.date }
+        val days =
+            (listOf(context.today) + context.recentDays)
+                .distinctBy { it.date }
+                .sortedByDescending { it.date }
+                .take(7)
         if (days.none { it.totalPai != null }) return null
 
         val weeklyPai = days.sumOf { (it.totalPai ?: 0f).toDouble() }.toFloat()
