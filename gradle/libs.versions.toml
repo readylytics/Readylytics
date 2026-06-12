@@ -41,7 +41,7 @@ archCore = "2.2.0"
 documentfile = "1.1.0"
 benchmarkMacro = "1.4.1"
 playServicesStats = "17.1.0"
-playServicesOssLicenses = "17.1.0"
+playServicesOssLicenses = "17.5.1"
 ossLicensesPlugin = "0.12.0"
 
 
