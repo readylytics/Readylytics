@@ -79,6 +79,7 @@ fun CustomColorPicker(
     enabled: Boolean,
     modifier: Modifier = Modifier,
     onReset: (() -> Unit)? = null,
+    showPresets: Boolean = true,
 ) {
     val contentAlpha = if (enabled) 1.0f else 0.38f
 
@@ -94,64 +95,66 @@ fun CustomColorPicker(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Presets Row
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .selectableGroup()
-                    .alpha(contentAlpha),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            FallbackThemeColor.entries.forEach { option ->
-                val optionColor = Color(option.seedColor)
-                val isSelected = optionColor.toArgb() == selectedColor.toArgb()
-                val desc = stringResource(option.labelRes())
-                Box(
-                    modifier =
-                        Modifier
-                            .size(48.dp)
-                            .selectable(
-                                selected = isSelected && enabled,
-                                onClick = {
-                                    if (enabled) {
-                                        onColorSelected(optionColor)
-                                    }
-                                },
-                                enabled = enabled,
-                                role = Role.RadioButton,
-                            ).semantics {
-                                contentDescription = desc
-                            },
-                    contentAlignment = Alignment.Center,
-                ) {
+        if (showPresets) {
+            // Presets Row
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .selectableGroup()
+                        .alpha(contentAlpha),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                FallbackThemeColor.entries.forEach { option ->
+                    val optionColor = Color(option.seedColor)
+                    val isSelected = optionColor.toArgb() == selectedColor.toArgb()
+                    val desc = stringResource(option.labelRes())
                     Box(
                         modifier =
                             Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(optionColor)
-                                .border(
-                                    width = if (isSelected) 3.dp else 0.dp,
-                                    color = MaterialTheme.colorScheme.outline,
-                                    shape = CircleShape,
-                                ),
+                                .size(48.dp)
+                                .selectable(
+                                    selected = isSelected && enabled,
+                                    onClick = {
+                                        if (enabled) {
+                                            onColorSelected(optionColor)
+                                        }
+                                    },
+                                    enabled = enabled,
+                                    role = Role.RadioButton,
+                                ).semantics {
+                                    contentDescription = desc
+                                },
                         contentAlignment = Alignment.Center,
                     ) {
-                        if (isSelected) {
-                            Icon(
-                                imageVector = Icons.Filled.Check,
-                                contentDescription = null,
-                                tint = contentColorFor(optionColor),
-                            )
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(optionColor)
+                                    .border(
+                                        width = if (isSelected) 3.dp else 0.dp,
+                                        color = MaterialTheme.colorScheme.outline,
+                                        shape = CircleShape,
+                                    ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = contentColorFor(optionColor),
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
         // Hex Input Row
         Row(

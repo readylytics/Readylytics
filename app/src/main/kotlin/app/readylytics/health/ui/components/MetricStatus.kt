@@ -10,10 +10,10 @@ import app.readylytics.health.ui.theme.LocalExtendedColors
 @Composable
 fun MetricStatus.containerColor(): Color =
     when (this) {
-        MetricStatus.NO_DATA -> MaterialTheme.colorScheme.surfaceVariant
-        MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.surfaceVariant
+        MetricStatus.NO_DATA -> MaterialTheme.colorScheme.surfaceContainerLow
+        MetricStatus.CALIBRATING -> MaterialTheme.colorScheme.surfaceContainerLow
         MetricStatus.OPTIMAL -> MaterialTheme.colorScheme.primaryContainer
-        MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.surfaceContainerHighest
+        MetricStatus.NEUTRAL -> MaterialTheme.colorScheme.surfaceContainerLow
         MetricStatus.WARNING -> LocalExtendedColors.current.warningContainer
         MetricStatus.POOR -> MaterialTheme.colorScheme.errorContainer
     }

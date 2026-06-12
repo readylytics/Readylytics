@@ -538,6 +538,7 @@ fun SettingsScreen(
                                                 ),
                                             )
                                         },
+                                        showPresets = false,
                                     )
                                     CustomColorPicker(
                                         label = stringResource(R.string.settings_tertiary_color_label),
@@ -556,6 +557,7 @@ fun SettingsScreen(
                                                 ),
                                             )
                                         },
+                                        showPresets = false,
                                     )
                                 }
                             }
