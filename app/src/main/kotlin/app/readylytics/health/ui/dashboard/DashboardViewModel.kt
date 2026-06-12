@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import javax.inject.Inject
 
@@ -140,6 +141,7 @@ class DashboardViewModel
                             goalSleepMinutes = (basicInputs.userPreferences.goalSleepHours * 60).toInt(),
                             stepGoal = basicInputs.userPreferences.stepGoal,
                             recentDays = basicInputs.paiSummaries,
+                            nowMinutesOfDay = nowMinutesOfDayFor(selectedDate),
                         ),
                     )
                 } ?: emptyList()
@@ -175,6 +177,15 @@ class DashboardViewModel
                 goalSleepHours = basicInputs.userPreferences.goalSleepHours,
             )
         }
+
+        // Time-of-day gating for insights only makes sense for the current day;
+        // for past days, treat as end-of-day so it never suppresses a finding.
+        private fun nowMinutesOfDayFor(selectedDate: LocalDate): Int =
+            if (selectedDate == LocalDate.now()) {
+                LocalTime.now().let { it.hour * 60 + it.minute }
+            } else {
+                1439
+            }
 
         fun formatSleepDuration(minutes: Int?): String = getDashboardDataUseCase.formatSleepDuration(minutes)
 

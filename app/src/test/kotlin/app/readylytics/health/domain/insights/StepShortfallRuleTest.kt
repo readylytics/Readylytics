@@ -12,11 +12,14 @@ class StepShortfallRuleTest {
     private fun context(
         stepCount: Int? = 5000,
         stepGoal: Int = 10000,
+        circadianResult: CircadianConsistencyResult = CircadianConsistencyResult.MissingData,
+        nowMinutesOfDay: Int = 1439,
     ) = InsightContext(
         today = dailySummary(stepCount = stepCount),
-        circadianResult = CircadianConsistencyResult.MissingData,
+        circadianResult = circadianResult,
         goalSleepMinutes = 480,
         stepGoal = stepGoal,
+        nowMinutesOfDay = nowMinutesOfDay,
     )
 
     @Test
@@ -58,5 +61,62 @@ class StepShortfallRuleTest {
         val finding = rule.evaluate(context(stepCount = 6999))
 
         assertEquals(InsightType.STEP_SHORTFALL, finding?.type)
+    }
+
+    @Test
+    fun `does not fire before the lead time window when circadian result is ready`() {
+        // median bedtime 23:00 (1380), lead time 180 -> earliest 20:00 (1200); now 18:00 (1080)
+        val finding =
+            rule.evaluate(
+                context(circadianResult = circadianReady(medianBedtimeMinutes = 1380), nowMinutesOfDay = 18 * 60),
+            )
+
+        assertNull(finding)
+    }
+
+    @Test
+    fun `fires once within the lead time window when circadian result is ready`() {
+        // median bedtime 23:00 (1380), lead time 180 -> earliest 20:00 (1200); now 21:00 (1260)
+        val finding =
+            rule.evaluate(
+                context(circadianResult = circadianReady(medianBedtimeMinutes = 1380), nowMinutesOfDay = 21 * 60),
+            )
+
+        assertEquals(InsightType.STEP_SHORTFALL, finding?.type)
+    }
+
+    @Test
+    fun `fires exactly at the lead time boundary`() {
+        // median bedtime 23:00 (1380), lead time 180 -> earliest 20:00 (1200); now 20:00 (1200)
+        val finding =
+            rule.evaluate(
+                context(circadianResult = circadianReady(medianBedtimeMinutes = 1380), nowMinutesOfDay = 20 * 60),
+            )
+
+        assertEquals(InsightType.STEP_SHORTFALL, finding?.type)
+    }
+
+    @Test
+    fun `handles a median bedtime past midnight when checking the current time`() {
+        // median bedtime 01:00 (normalized 25:00 = 1500), lead time 180 -> earliest 22:00 (1320);
+        // now 00:30 (normalized 24:30 = 1470) is within the window
+        val finding =
+            rule.evaluate(
+                context(circadianResult = circadianReady(medianBedtimeMinutes = 1500), nowMinutesOfDay = 30),
+            )
+
+        assertEquals(InsightType.STEP_SHORTFALL, finding?.type)
+    }
+
+    @Test
+    fun `does not fire before lead time even with a median bedtime past midnight`() {
+        // median bedtime 01:00 (normalized 25:00 = 1500), lead time 180 -> earliest 22:00 (1320);
+        // now 19:00 (1140) is before the window
+        val finding =
+            rule.evaluate(
+                context(circadianResult = circadianReady(medianBedtimeMinutes = 1500), nowMinutesOfDay = 19 * 60),
+            )
+
+        assertNull(finding)
     }
 }

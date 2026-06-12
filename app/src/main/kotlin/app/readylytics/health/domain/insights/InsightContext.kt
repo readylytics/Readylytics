@@ -13,4 +13,8 @@ data class InsightContext(
     val goalSleepMinutes: Int,
     val stepGoal: Int = 10000,
     val recentDays: List<DailySummary> = emptyList(),
+    // Current local time of day in minutes since midnight (0..1439), only
+    // meaningful when `today` is the actual current day. Defaults to the end
+    // of the day so time-of-day gating is a no-op for past days.
+    val nowMinutesOfDay: Int = 1439,
 )

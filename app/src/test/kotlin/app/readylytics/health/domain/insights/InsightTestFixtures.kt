@@ -43,10 +43,13 @@ internal fun dailySummary(
             ),
     )
 
-internal fun circadianReady(latestBedtimeOffsetMinutes: Int): CircadianConsistencyResult.Ready =
+internal fun circadianReady(
+    latestBedtimeOffsetMinutes: Int = 0,
+    medianBedtimeMinutes: Int = 1410,
+): CircadianConsistencyResult.Ready =
     CircadianConsistencyResult.Ready(
         score = 80f,
-        medianBedtimeMinutes = 1410,
+        medianBedtimeMinutes = medianBedtimeMinutes,
         medianWakeMinutes = 420,
         thresholdMinutes = 30,
         latestBedtimeOffsetMinutes = latestBedtimeOffsetMinutes,

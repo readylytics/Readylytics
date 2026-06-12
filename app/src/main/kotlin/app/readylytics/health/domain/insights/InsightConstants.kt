@@ -24,4 +24,8 @@ object InsightConstants {
     const val PAI_WEEKLY_TARGET = 150f
     const val WEIGHT_DRIFT_PERCENT_THRESHOLD = 0.02f
     const val MIN_BP_BASELINE_SAMPLES = 3
+
+    // The step shortfall insight only fires once we're within this many
+    // minutes of the user's median bedtime, so it isn't shown too early.
+    const val STEP_SHORTFALL_LEAD_TIME_MINUTES = 180
 }
