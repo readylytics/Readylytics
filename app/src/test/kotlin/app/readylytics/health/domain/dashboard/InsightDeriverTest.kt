@@ -114,7 +114,10 @@ class InsightDeriverTest {
 
         assertEquals(setOf(InsightType.HIGH_STRAIN_SLEEP_DEFICIT), result.active)
         assertEquals(InsightType.HIGH_STRAIN_SLEEP_DEFICIT, result.current)
-        assertEquals(InsightParams.HighStrainSleepDeficit(strainRatio = 1.5f, sleepDeficitMinutes = 60), result.currentParams)
+        assertEquals(
+            InsightParams.HighStrainSleepDeficit(strainRatio = 1.5f, sleepDeficitMinutes = 60),
+            result.currentParams,
+        )
     }
 
     @Test

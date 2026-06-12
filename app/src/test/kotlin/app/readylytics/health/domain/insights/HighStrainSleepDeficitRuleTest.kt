@@ -16,7 +16,12 @@ class HighStrainSleepDeficitRuleTest {
         sleepDurationMinutes: Int? = 360,
         goalSleepMinutes: Int = 480,
     ) = InsightContext(
-        today = dailySummary(recoveryFlags = recoveryFlags, strainRatio = strainRatio, sleepDurationMinutes = sleepDurationMinutes),
+        today =
+            dailySummary(
+                recoveryFlags = recoveryFlags,
+                strainRatio = strainRatio,
+                sleepDurationMinutes = sleepDurationMinutes,
+            ),
         circadianResult = CircadianConsistencyResult.MissingData,
         goalSleepMinutes = goalSleepMinutes,
     )
@@ -26,7 +31,10 @@ class HighStrainSleepDeficitRuleTest {
         val finding = rule.evaluate(context())
 
         assertEquals(InsightType.HIGH_STRAIN_SLEEP_DEFICIT, finding?.type)
-        assertEquals(InsightParams.HighStrainSleepDeficit(strainRatio = 1.5f, sleepDeficitMinutes = 120), finding?.params)
+        assertEquals(
+            InsightParams.HighStrainSleepDeficit(strainRatio = 1.5f, sleepDeficitMinutes = 120),
+            finding?.params,
+        )
     }
 
     @Test

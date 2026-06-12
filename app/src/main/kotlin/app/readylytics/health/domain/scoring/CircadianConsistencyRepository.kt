@@ -123,7 +123,8 @@ class CircadianConsistencyRepository
                     (bedScore + wakeScore) / 2f
                 }
 
-            val latestBedtimeOffsetMinutes = normalizeMinutes(evalSessions.first().startTime) - medianBed
+            val rawBedtimeOffsetMinutes = normalizeMinutes(evalSessions.first().startTime) - medianBed
+            val latestBedtimeOffsetMinutes = ((rawBedtimeOffsetMinutes + 720) % 1440 + 1440) % 1440 - 720
 
             return CircadianConsistencyResult.Ready(
                 score = dailyScores.average().toFloat(),

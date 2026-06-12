@@ -148,12 +148,9 @@ tasks.register<JacocoReport>("jacocoTestReport") {
 
 tasks.register("jacocoCoverageVerification") {
     dependsOn("jacocoTestReport")
+    val reportFileProvider = layout.buildDirectory.file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
     doLast {
-        val reportFile =
-            layout.buildDirectory
-                .file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
-                .get()
-                .asFile
+        val reportFile = reportFileProvider.get().asFile
         if (!reportFile.exists()) {
             throw GradleException("Coverage report not found: ${reportFile.absolutePath}")
         }

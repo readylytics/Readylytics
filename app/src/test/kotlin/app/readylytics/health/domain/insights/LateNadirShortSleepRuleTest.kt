@@ -24,7 +24,10 @@ class LateNadirShortSleepRuleTest {
         val finding = rule.evaluate(context())
 
         assertEquals(InsightType.LATE_NADIR_SHORT_SLEEP, finding?.type)
-        assertEquals(InsightParams.LateNadirShortSleep(sleepDurationMinutes = 360, goalSleepMinutes = 480), finding?.params)
+        assertEquals(
+            InsightParams.LateNadirShortSleep(sleepDurationMinutes = 360, goalSleepMinutes = 480),
+            finding?.params,
+        )
     }
 
     @Test
