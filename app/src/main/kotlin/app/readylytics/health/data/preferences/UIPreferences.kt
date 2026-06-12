@@ -112,6 +112,22 @@ internal class UIPreferences
             healthDeviceRepository.invalidateCache()
         }
 
+        suspend fun updateCustomPaletteEnabled(enabled: Boolean) {
+            dataStore.updateData { it.toBuilder().setIsCustomPaletteEnabled(enabled).build() }
+        }
+
+        suspend fun updateCustomSecondaryColor(color: Long) {
+            dataStore.updateData { it.toBuilder().setCustomSecondaryColor(color).build() }
+        }
+
+        suspend fun updateCustomTertiaryColor(color: Long) {
+            dataStore.updateData { it.toBuilder().setCustomTertiaryColor(color).build() }
+        }
+
+        suspend fun updateCustomPrimaryColor(color: Long) {
+            dataStore.updateData { it.toBuilder().setCustomPrimaryColor(color).build() }
+        }
+
         suspend fun updateUnitSystem(unitSystem: UnitSystem) {
             dataStore.updateData {
                 it

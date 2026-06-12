@@ -57,7 +57,7 @@ fun SkeletonCard(
         colors =
             CardDefaults.cardColors(
                 containerColor =
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
             ),
     ) {
         Box(
@@ -86,7 +86,7 @@ fun MetricCardSkeleton(
         colors =
             CardDefaults.cardColors(
                 containerColor =
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
             ),
     ) {
         Column(
@@ -136,7 +136,7 @@ fun ScoreDialSkeleton(
         colors =
             CardDefaults.cardColors(
                 containerColor =
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
             ),
     ) {
         Box(

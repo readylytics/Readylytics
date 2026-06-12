@@ -79,6 +79,10 @@ data class UserPreferences(
     val unitSystem: UnitSystem = SettingsDefaults.UNIT_SYSTEM,
     val backgroundSyncEnabled: Boolean = SettingsDefaults.BACKGROUND_SYNC_ENABLED,
     val backgroundSyncIntervalMinutes: Int = SettingsDefaults.BACKGROUND_SYNC_INTERVAL.minutes,
+    val isCustomPaletteEnabled: Boolean = SettingsDefaults.IS_CUSTOM_PALETTE_ENABLED,
+    val customSecondaryColor: Long = SettingsDefaults.CUSTOM_SECONDARY_COLOR,
+    val customTertiaryColor: Long = SettingsDefaults.CUSTOM_TERTIARY_COLOR,
+    val customPrimaryColor: Long = SettingsDefaults.CUSTOM_PRIMARY_COLOR,
 )
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
@@ -142,11 +146,11 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         dynamicColorEnabled = dynamicColorEnabled,
         fallbackThemeColor =
             when (fallbackThemeColor) {
-                FallbackThemeColorProto.FALLBACK_BRAND_PURPLE -> FallbackThemeColor.BRAND_PURPLE
-                FallbackThemeColorProto.FALLBACK_BRAND_BLUE -> FallbackThemeColor.BRAND_BLUE
-                FallbackThemeColorProto.FALLBACK_TURQUOISE -> FallbackThemeColor.TURQUOISE
-                FallbackThemeColorProto.FALLBACK_GREEN -> FallbackThemeColor.GREEN
-                FallbackThemeColorProto.FALLBACK_RECOVERY_BLUE -> FallbackThemeColor.RECOVERY_BLUE
+                FallbackThemeColorProto.FALLBACK_GREEN_PERFORMANCE -> FallbackThemeColor.GREEN_PERFORMANCE
+                FallbackThemeColorProto.FALLBACK_BLUE_TRUST -> FallbackThemeColor.BLUE_TRUST
+                FallbackThemeColorProto.FALLBACK_PURPLE_INSIGHT -> FallbackThemeColor.PURPLE_INSIGHT
+                FallbackThemeColorProto.FALLBACK_ICON_SIGNATURE -> FallbackThemeColor.ICON_SIGNATURE
+                FallbackThemeColorProto.FALLBACK_ICON_ELEMENTS -> FallbackThemeColor.ICON_ELEMENTS
                 else -> SettingsDefaults.FALLBACK_THEME_COLOR
             },
         trimpModel =
@@ -177,6 +181,31 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
                 SettingsDefaults.BACKGROUND_SYNC_INTERVAL.minutes
             } else {
                 backgroundSyncIntervalMinutes
+            },
+        isCustomPaletteEnabled = isCustomPaletteEnabled,
+        customSecondaryColor =
+            if (customSecondaryColor ==
+                0L
+            ) {
+                SettingsDefaults.CUSTOM_SECONDARY_COLOR
+            } else {
+                customSecondaryColor
+            },
+        customTertiaryColor =
+            if (customTertiaryColor ==
+                0L
+            ) {
+                SettingsDefaults.CUSTOM_TERTIARY_COLOR
+            } else {
+                customTertiaryColor
+            },
+        customPrimaryColor =
+            if (customPrimaryColor ==
+                0L
+            ) {
+                SettingsDefaults.CUSTOM_PRIMARY_COLOR
+            } else {
+                customPrimaryColor
             },
     )
 }

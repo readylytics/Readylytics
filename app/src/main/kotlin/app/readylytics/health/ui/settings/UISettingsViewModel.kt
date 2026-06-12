@@ -2,6 +2,7 @@ package app.readylytics.health.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.data.preferences.FallbackThemeColor
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.scoring.TrimpModel
 import app.readylytics.health.domain.sync.HealthSyncUseCase
@@ -42,6 +43,10 @@ class UISettingsViewModel
                         chengBeta = prefs.chengBeta,
                         itrimB = prefs.itrimB,
                         unitSystem = prefs.unitSystem,
+                        isCustomPaletteEnabled = prefs.isCustomPaletteEnabled,
+                        customSecondaryColor = prefs.customSecondaryColor,
+                        customTertiaryColor = prefs.customTertiaryColor,
+                        customPrimaryColor = prefs.customPrimaryColor,
                     )
                 }.stateIn(
                     scope = viewModelScope,
@@ -57,7 +62,10 @@ class UISettingsViewModel
                 is SettingsEvent.DynamicColorEnabledChanged ->
                     viewModelScope.launch { settingsRepo.updateDynamicColorEnabled(enabled = event.enabled) }
                 is SettingsEvent.FallbackThemeColorChanged ->
-                    viewModelScope.launch { settingsRepo.updateFallbackThemeColor(color = event.color) }
+                    viewModelScope.launch {
+                        settingsRepo.updateFallbackThemeColor(color = event.color)
+                        settingsRepo.updateCustomPrimaryColor(color = event.color.seedColor)
+                    }
                 is SettingsEvent.PaiScalingFactorChanged -> {
                     val validation = SettingsValidators.PAI_SCALING_FACTOR_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
@@ -127,6 +135,19 @@ class UISettingsViewModel
                     }
                 is SettingsEvent.UnitSystemChanged ->
                     viewModelScope.launch { settingsRepo.updateUnitSystem(unitSystem = event.unitSystem) }
+                is SettingsEvent.CustomPaletteEnabledChanged ->
+                    viewModelScope.launch { settingsRepo.updateCustomPaletteEnabled(enabled = event.enabled) }
+                is SettingsEvent.CustomSecondaryColorChanged ->
+                    viewModelScope.launch { settingsRepo.updateCustomSecondaryColor(color = event.color) }
+                is SettingsEvent.CustomTertiaryColorChanged ->
+                    viewModelScope.launch { settingsRepo.updateCustomTertiaryColor(color = event.color) }
+                is SettingsEvent.CustomPrimaryColorChanged ->
+                    viewModelScope.launch {
+                        settingsRepo.updateCustomPrimaryColor(color = event.color)
+                        FallbackThemeColor.entries.find { it.seedColor == event.color }?.let {
+                            settingsRepo.updateFallbackThemeColor(it)
+                        }
+                    }
                 else -> {}
             }
         }

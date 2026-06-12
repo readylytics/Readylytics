@@ -193,7 +193,7 @@ fun SleepStagesChart(
     if (session == null) {
         CalibrationBar(
             modifier = modifier,
-            color = MaterialTheme.colorScheme.surfaceVariant,
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
             onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         return

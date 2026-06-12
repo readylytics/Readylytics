@@ -38,7 +38,7 @@ object SettingsDefaults {
     const val RESTING_HR_PERCENTILE = 5
     val APP_THEME = AppTheme.SYSTEM
     const val DYNAMIC_COLOR_ENABLED = true
-    val FALLBACK_THEME_COLOR = FallbackThemeColor.BRAND_PURPLE
+    val FALLBACK_THEME_COLOR = FallbackThemeColor.GREEN_PERFORMANCE
     val DRIVE_ACCOUNT_EMAIL: String? = null
     val BACKUP_SCHEDULE = BackupSchedule.MANUAL
     const val LAST_BACKUP_TIMESTAMP = 0L
@@ -67,6 +67,11 @@ object SettingsDefaults {
     val UNIT_SYSTEM = UnitSystem.METRIC
     const val BACKGROUND_SYNC_ENABLED = false
     val BACKGROUND_SYNC_INTERVAL = BackgroundSyncInterval.HOUR_1
+
+    const val IS_CUSTOM_PALETTE_ENABLED = false
+    const val CUSTOM_SECONDARY_COLOR = 0xFFCCC2DCL
+    const val CUSTOM_TERTIARY_COLOR = 0xFFEFB8C8L
+    const val CUSTOM_PRIMARY_COLOR = 0xFF2ECC71L
 
     val DEFAULT_DASHBOARD_CARDS =
         listOf(

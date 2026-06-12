@@ -58,6 +58,10 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
             .setInstallDate(SettingsDefaults.INSTALL_DATE)
             .setBackgroundSyncEnabled(SettingsDefaults.BACKGROUND_SYNC_ENABLED)
             .setBackgroundSyncIntervalMinutes(SettingsDefaults.BACKGROUND_SYNC_INTERVAL.minutes)
+            .setIsCustomPaletteEnabled(SettingsDefaults.IS_CUSTOM_PALETTE_ENABLED)
+            .setCustomSecondaryColor(SettingsDefaults.CUSTOM_SECONDARY_COLOR)
+            .setCustomTertiaryColor(SettingsDefaults.CUSTOM_TERTIARY_COLOR)
+            .setCustomPrimaryColor(SettingsDefaults.CUSTOM_PRIMARY_COLOR)
             .build()
 
     override suspend fun readFrom(input: InputStream): UserPreferencesProto {
@@ -78,11 +82,11 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
 
 fun FallbackThemeColor.toProto(): FallbackThemeColorProto =
     when (this) {
-        FallbackThemeColor.BRAND_PURPLE -> FallbackThemeColorProto.FALLBACK_BRAND_PURPLE
-        FallbackThemeColor.BRAND_BLUE -> FallbackThemeColorProto.FALLBACK_BRAND_BLUE
-        FallbackThemeColor.TURQUOISE -> FallbackThemeColorProto.FALLBACK_TURQUOISE
-        FallbackThemeColor.GREEN -> FallbackThemeColorProto.FALLBACK_GREEN
-        FallbackThemeColor.RECOVERY_BLUE -> FallbackThemeColorProto.FALLBACK_RECOVERY_BLUE
+        FallbackThemeColor.GREEN_PERFORMANCE -> FallbackThemeColorProto.FALLBACK_GREEN_PERFORMANCE
+        FallbackThemeColor.BLUE_TRUST -> FallbackThemeColorProto.FALLBACK_BLUE_TRUST
+        FallbackThemeColor.PURPLE_INSIGHT -> FallbackThemeColorProto.FALLBACK_PURPLE_INSIGHT
+        FallbackThemeColor.ICON_SIGNATURE -> FallbackThemeColorProto.FALLBACK_ICON_SIGNATURE
+        FallbackThemeColor.ICON_ELEMENTS -> FallbackThemeColorProto.FALLBACK_ICON_ELEMENTS
     }
 
 fun UserPreferences.toProto(): UserPreferencesProto {
@@ -154,6 +158,10 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         .setItrimpB(domain.itrimB)
         .setBackgroundSyncEnabled(domain.backgroundSyncEnabled)
         .setBackgroundSyncIntervalMinutes(domain.backgroundSyncIntervalMinutes)
+        .setIsCustomPaletteEnabled(domain.isCustomPaletteEnabled)
+        .setCustomSecondaryColor(domain.customSecondaryColor)
+        .setCustomTertiaryColor(domain.customTertiaryColor)
+        .setCustomPrimaryColor(domain.customPrimaryColor)
 
     domain.hrvBaselineOverride?.let { builder.setHrvBaselineOverride(it) }
     domain.rhrBaselineOverride?.let { builder.setRhrBaselineOverride(it) }
