@@ -853,4 +853,10 @@
     <string name="insight_rest_day_perfect_sleep"> Your night\'s rest was perfect!</string>
     <string name="insight_rest_day_no_impact_title">Rest Day</string>
     <string name="insight_rest_day_no_impact_body">Your rest day did not lead to a significant HRV rebound.</string>
+    <string name="insight_circadian_shift_title">Circadian Shift Delayed Recovery</string>
+    <string name="insight_circadian_shift_body">No recovery signal triggered despite a rest day. This correlates with a bedtime %1$d min later than your average, which shifted your circadian rhythm and impacted overnight recovery.</string>
+    <string name="insight_high_strain_sleep_deficit_title">High Strain and Sleep Deficit</string>
+    <string name="insight_high_strain_sleep_deficit_body">Your acute strain ratio of %1$.1f combined with %2$d minutes less sleep than your goal is suppressing your recovery.</string>
+    <string name="insight_late_nadir_short_sleep_title">Late Recovery and Short Sleep</string>
+    <string name="insight_late_nadir_short_sleep_body">Your heart rate nadir occurred late in the night, and you slept %1$d minutes less than your %2$d minute goal, limiting overnight restoration.</string>
 </resources>
