@@ -152,6 +152,34 @@ class SettingsViewModelTest {
         }
 
     @Test
+    fun `UISettingsViewModel custom color events update state`() =
+        runTest {
+            val viewModel = UISettingsViewModel(settingsRepo, healthSyncUseCase)
+            viewModel.sharingStarted = SharingStarted.Lazily
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.uiState.collect()
+            }
+
+            viewModel.onEvent(SettingsEvent.CustomPaletteEnabledChanged(true))
+            advanceUntilIdle()
+            val state1 = viewModel.uiState.first { it.isCustomPaletteEnabled }
+            assertTrue(state1.isCustomPaletteEnabled)
+
+            viewModel.onEvent(SettingsEvent.CustomSecondaryColorChanged(0xFF112233L))
+            advanceUntilIdle()
+            val state2 = viewModel.uiState.first { it.customSecondaryColor == 0xFF112233L }
+            assertEquals(0xFF112233L, state2.customSecondaryColor)
+
+            viewModel.onEvent(SettingsEvent.CustomTertiaryColorChanged(0xFF445566L))
+            advanceUntilIdle()
+            val state3 = viewModel.uiState.first { it.customTertiaryColor == 0xFF445566L }
+            assertEquals(0xFF445566L, state3.customTertiaryColor)
+
+            viewModel.viewModelScope.cancel()
+        }
+
+    @Test
     fun `SyncSettingsViewModel resync event enqueues worker`() =
         runTest {
             val mockSettingsRepo =

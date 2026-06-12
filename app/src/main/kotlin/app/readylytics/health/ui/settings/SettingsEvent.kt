@@ -219,4 +219,16 @@ sealed interface SettingsEvent {
     data class UnitSystemChanged(
         val unitSystem: app.readylytics.health.data.preferences.UnitSystem,
     ) : SettingsEvent
+
+    data class CustomPaletteEnabledChanged(
+        val enabled: Boolean,
+    ) : SettingsEvent
+
+    data class CustomSecondaryColorChanged(
+        val color: Long,
+    ) : SettingsEvent
+
+    data class CustomTertiaryColorChanged(
+        val color: Long,
+    ) : SettingsEvent
 }

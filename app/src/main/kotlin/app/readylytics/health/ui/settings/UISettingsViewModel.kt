@@ -42,6 +42,9 @@ class UISettingsViewModel
                         chengBeta = prefs.chengBeta,
                         itrimB = prefs.itrimB,
                         unitSystem = prefs.unitSystem,
+                        isCustomPaletteEnabled = prefs.isCustomPaletteEnabled,
+                        customSecondaryColor = prefs.customSecondaryColor,
+                        customTertiaryColor = prefs.customTertiaryColor,
                     )
                 }.stateIn(
                     scope = viewModelScope,
@@ -127,6 +130,12 @@ class UISettingsViewModel
                     }
                 is SettingsEvent.UnitSystemChanged ->
                     viewModelScope.launch { settingsRepo.updateUnitSystem(unitSystem = event.unitSystem) }
+                is SettingsEvent.CustomPaletteEnabledChanged ->
+                    viewModelScope.launch { settingsRepo.updateCustomPaletteEnabled(enabled = event.enabled) }
+                is SettingsEvent.CustomSecondaryColorChanged ->
+                    viewModelScope.launch { settingsRepo.updateCustomSecondaryColor(color = event.color) }
+                is SettingsEvent.CustomTertiaryColorChanged ->
+                    viewModelScope.launch { settingsRepo.updateCustomTertiaryColor(color = event.color) }
                 else -> {}
             }
         }
