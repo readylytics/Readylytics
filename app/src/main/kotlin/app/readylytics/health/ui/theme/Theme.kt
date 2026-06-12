@@ -369,6 +369,13 @@ private fun mcuColorScheme(
     val hct = Hct.fromInt(seedColor.toArgb())
     val scheme = SchemeTonalSpot(hct, isDark, 0.0)
 
+    val hue = 0f
+    val nSat = 0f
+    val nvSat = 0f
+    fun n(tone: Int): Color = hslToColor(hue, nSat, tone / 100f)
+    fun nv(tone: Int): Color = hslToColor(hue, nvSat, tone / 100f)
+    fun e(tone: Int): Color = hslToColor(0f, 0.85f, tone / 100f)
+
     return if (isDark) {
         darkColorScheme(
             primary = Color(scheme.primary),
@@ -384,26 +391,26 @@ private fun mcuColorScheme(
             onTertiary = Color(scheme.onTertiary),
             tertiaryContainer = Color(scheme.tertiaryContainer),
             onTertiaryContainer = Color(scheme.onTertiaryContainer),
-            background = Color(scheme.background),
-            onBackground = Color(scheme.onBackground),
-            surface = Color(scheme.surface),
-            onSurface = Color(scheme.onSurface),
-            surfaceVariant = Color(scheme.surfaceVariant),
-            onSurfaceVariant = Color(scheme.onSurfaceVariant),
-            surfaceTint = Color(scheme.surfaceTint),
-            inverseSurface = Color(scheme.inverseSurface),
-            inverseOnSurface = Color(scheme.inverseOnSurface),
-            outline = Color(scheme.outline),
-            outlineVariant = Color(scheme.outlineVariant),
-            error = Color(scheme.error),
-            onError = Color(scheme.onError),
-            errorContainer = Color(scheme.errorContainer),
-            onErrorContainer = Color(scheme.onErrorContainer),
-            surfaceContainerLowest = Color(scheme.surfaceContainerLowest),
-            surfaceContainerLow = Color(scheme.surfaceContainerLow),
-            surfaceContainer = Color(scheme.surfaceContainer),
-            surfaceContainerHigh = Color(scheme.surfaceContainerHigh),
-            surfaceContainerHighest = Color(scheme.surfaceContainerHighest),
+            background = Color(0xFF0A0A0A),
+            onBackground = n(90),
+            surface = Color(0xFF0A0A0A),
+            onSurface = n(90),
+            surfaceVariant = nv(30),
+            onSurfaceVariant = nv(80),
+            surfaceTint = Color(scheme.primary),
+            inverseSurface = n(90),
+            inverseOnSurface = n(10),
+            outline = nv(50),
+            outlineVariant = nv(30),
+            error = e(80),
+            onError = e(20),
+            errorContainer = e(30),
+            onErrorContainer = e(90),
+            surfaceContainerLowest = n(4),
+            surfaceContainerLow = n(10),
+            surfaceContainer = n(12),
+            surfaceContainerHigh = n(17),
+            surfaceContainerHighest = n(22),
         )
     } else {
         lightColorScheme(
@@ -420,29 +427,30 @@ private fun mcuColorScheme(
             onTertiary = Color(scheme.onTertiary),
             tertiaryContainer = Color(scheme.tertiaryContainer),
             onTertiaryContainer = Color(scheme.onTertiaryContainer),
-            background = Color(scheme.background),
-            onBackground = Color(scheme.onBackground),
-            surface = Color(scheme.surface),
-            onSurface = Color(scheme.onSurface),
-            surfaceVariant = Color(scheme.surfaceVariant),
-            onSurfaceVariant = Color(scheme.onSurfaceVariant),
-            surfaceTint = Color(scheme.surfaceTint),
-            inverseSurface = Color(scheme.inverseSurface),
-            inverseOnSurface = Color(scheme.inverseOnSurface),
-            outline = Color(scheme.outline),
-            outlineVariant = Color(scheme.outlineVariant),
-            error = Color(scheme.error),
-            onError = Color(scheme.onError),
-            errorContainer = Color(scheme.errorContainer),
-            onErrorContainer = Color(scheme.onErrorContainer),
-            surfaceContainerLowest = Color(scheme.surfaceContainerLowest),
-            surfaceContainerLow = Color(scheme.surfaceContainerLow),
-            surfaceContainer = Color(scheme.surfaceContainer),
-            surfaceContainerHigh = Color(scheme.surfaceContainerHigh),
-            surfaceContainerHighest = Color(scheme.surfaceContainerHighest),
+            background = Color(0xFFF5F5F5),
+            onBackground = n(10),
+            surface = Color(0xFFF5F5F5),
+            onSurface = n(10),
+            surfaceVariant = nv(90),
+            onSurfaceVariant = nv(30),
+            surfaceTint = Color(scheme.primary),
+            inverseSurface = n(20),
+            inverseOnSurface = n(95),
+            outline = nv(50),
+            outlineVariant = nv(80),
+            error = e(40),
+            onError = e(100),
+            errorContainer = e(90),
+            onErrorContainer = e(10),
+            surfaceContainerLowest = n(100),
+            surfaceContainerLow = n(96),
+            surfaceContainer = n(94),
+            surfaceContainerHigh = n(92),
+            surfaceContainerHighest = n(90),
         )
     }
 }
+
 
 @Composable
 fun FitDashboardTheme(
