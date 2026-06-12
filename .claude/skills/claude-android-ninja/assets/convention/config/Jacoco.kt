@@ -84,7 +84,7 @@ internal fun Project.configureJacoco(
                     allJars,
                     allDirectories.map { dirs ->
                         dirs.map { dir ->
-                            myObjFactory.fileTree().setDir(dir).exclude(coverageExclusions)
+                            project.fileTree(dir).exclude(coverageExclusions)
                         }
                     },
                 )

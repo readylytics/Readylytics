@@ -32,7 +32,7 @@ class FirebaseConventionPlugin : Plugin<Project> {
             extensions.configure<ApplicationExtension> {
                 buildTypes {
                     getByName("debug") {
-                        configure<CrashlyticsExtension> {
+                        configure<com.google.firebase.crashlytics.gradle.FirebaseCrashlyticsExtension> {
                             mappingFileUploadEnabled = false
                         }
                     }

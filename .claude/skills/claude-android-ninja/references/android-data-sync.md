@@ -1894,9 +1894,6 @@ class TaskRepositoryImpl @Inject constructor(
     } catch (e: Exception) {
         handleSyncError(task, e)
     }
-
-    private suspend fun syncUpdate(task: TaskEntity): SyncItemResult = try {
-        retryStrategy.retry {
     private suspend fun syncUpdate(task: TaskEntity): SyncItemResult = try {
         retryStrategy.retry {
             val response = taskApi.updateTask(task.serverId!!, task.toApiModel())

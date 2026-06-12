@@ -12,7 +12,7 @@ class HiltConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
             apply(plugin = "com.google.devtools.ksp")
-            apply(plugin = "dagger.hilt.android.plugin")
+            apply(plugin = "com.google.dagger.hilt.android")
 
             val hiltCompiler = libs.findLibrary("hilt.compiler").get()
             val hiltTesting = libs.findLibrary("hilt.android.testing").get()

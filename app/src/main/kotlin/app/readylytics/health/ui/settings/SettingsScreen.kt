@@ -61,6 +61,7 @@ import app.readylytics.health.ui.settings.data.DataManagementSection
 import app.readylytics.health.ui.settings.data.DataSourceSettingsSection
 import app.readylytics.health.ui.settings.data.SyncSettingsSection
 import app.readylytics.health.ui.settings.physiologyprofile.HeartRateZoneSection
+import com.google.android.gms.oss.licenses.OssLicensesMenuActivity
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.parcelize.Parcelize
 
@@ -219,6 +220,10 @@ fun SettingsRoute(
         onSyncEvent = syncViewModel::onEvent,
         onUIEvent = uiViewModel::onEvent,
         onNavigateToAbout = onNavigateToAbout,
+        onNavigateToLicenses = {
+            OssLicensesMenuActivity.setActivityTitle(context.getString(R.string.settings_item_licenses_title))
+            context.startActivity(Intent(context, OssLicensesMenuActivity::class.java))
+        },
     )
 
     // Determinate, non-blocking progress dialog during resync. The work runs durably in WorkManager
@@ -281,6 +286,7 @@ fun SettingsScreen(
     onUIEvent: (SettingsEvent) -> Unit,
     modifier: Modifier = Modifier,
     onNavigateToAbout: () -> Unit = {},
+    onNavigateToLicenses: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
@@ -555,18 +561,7 @@ fun SettingsScreen(
                                         style = MaterialTheme.typography.bodyLarge,
                                     )
                                 },
-                                modifier =
-                                    Modifier.clickable {
-                                        com.google.android.gms.oss.licenses.OssLicensesMenuActivity.setActivityTitle(
-                                            context.getString(R.string.settings_item_licenses_title),
-                                        )
-                                        context.startActivity(
-                                            Intent(
-                                                context,
-                                                com.google.android.gms.oss.licenses.OssLicensesMenuActivity::class.java,
-                                            ),
-                                        )
-                                    },
+                                modifier = Modifier.clickable { onNavigateToLicenses() },
                             )
                         }
                     }

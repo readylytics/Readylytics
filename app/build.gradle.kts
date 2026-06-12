@@ -7,7 +7,7 @@ plugins {
     alias(libs.plugins.androidx.room)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.protobuf)
-    id("com.google.android.gms.oss-licenses-plugin")
+    alias(libs.plugins.google.oss.licenses)
     id("kotlin-parcelize")
     id("jacoco")
 }

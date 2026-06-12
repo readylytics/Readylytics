@@ -18,7 +18,7 @@ class SpotlessConventionPlugin : Plugin<Project> {
             extensions.configure<SpotlessExtension> {
                 kotlin {
                     target("src/**/*.kt")
-                    ktlint(libs.findVersion("ktlint").get().requiredVersion)
+                    ktlint("1.0.1")
                         .editorConfigOverride(
                             mapOf(
                                 "android" to "true",
