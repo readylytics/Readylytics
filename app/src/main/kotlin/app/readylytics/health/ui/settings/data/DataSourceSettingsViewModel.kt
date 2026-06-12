@@ -58,7 +58,7 @@ class DataSourceSettingsViewModel
         private val deviceChangeNoticeDismissed =
             settingsRepo.deviceChangeNoticeDismissed.stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
+                started = SharingStarted.Eagerly,
                 initialValue = false,
             )
 
