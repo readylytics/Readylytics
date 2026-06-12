@@ -146,11 +146,11 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         dynamicColorEnabled = dynamicColorEnabled,
         fallbackThemeColor =
             when (fallbackThemeColor) {
-                FallbackThemeColorProto.FALLBACK_BRAND_PURPLE -> FallbackThemeColor.BRAND_PURPLE
-                FallbackThemeColorProto.FALLBACK_BRAND_BLUE -> FallbackThemeColor.BRAND_BLUE
-                FallbackThemeColorProto.FALLBACK_TURQUOISE -> FallbackThemeColor.TURQUOISE
-                FallbackThemeColorProto.FALLBACK_GREEN -> FallbackThemeColor.GREEN
-                FallbackThemeColorProto.FALLBACK_RECOVERY_BLUE -> FallbackThemeColor.RECOVERY_BLUE
+                FallbackThemeColorProto.FALLBACK_GREEN_PERFORMANCE -> FallbackThemeColor.GREEN_PERFORMANCE
+                FallbackThemeColorProto.FALLBACK_BLUE_TRUST -> FallbackThemeColor.BLUE_TRUST
+                FallbackThemeColorProto.FALLBACK_PURPLE_INSIGHT -> FallbackThemeColor.PURPLE_INSIGHT
+                FallbackThemeColorProto.FALLBACK_ICON_SIGNATURE -> FallbackThemeColor.ICON_SIGNATURE
+                FallbackThemeColorProto.FALLBACK_ICON_ELEMENTS -> FallbackThemeColor.ICON_ELEMENTS
                 else -> SettingsDefaults.FALLBACK_THEME_COLOR
             },
         trimpModel =

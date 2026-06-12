@@ -21,6 +21,8 @@ import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.preferences.FallbackThemeColor
 import app.readylytics.health.data.preferences.SettingsDefaults
 import com.google.android.material.color.MaterialColors
+import com.materialkolor.hct.Hct
+import com.materialkolor.scheme.SchemeTonalSpot
 
 data class StatusColors(
     val optimal: Color,
@@ -358,6 +360,90 @@ private fun colorSchemeFromSeed(
     }
 }
 
+private fun mcuColorScheme(
+    seedColor: Color,
+    secondaryColor: Color?,
+    tertiaryColor: Color?,
+    isDark: Boolean,
+): ColorScheme {
+    val hct = Hct.fromInt(seedColor.toArgb())
+    val scheme = SchemeTonalSpot(hct, isDark, 0.0)
+
+    return if (isDark) {
+        darkColorScheme(
+            primary = Color(scheme.primary),
+            onPrimary = Color(scheme.onPrimary),
+            primaryContainer = Color(scheme.primaryContainer),
+            onPrimaryContainer = Color(scheme.onPrimaryContainer),
+            inversePrimary = Color(scheme.inversePrimary),
+            secondary = secondaryColor ?: Color(scheme.secondary),
+            onSecondary = Color(scheme.onSecondary),
+            secondaryContainer = Color(scheme.secondaryContainer),
+            onSecondaryContainer = Color(scheme.onSecondaryContainer),
+            tertiary = tertiaryColor ?: Color(scheme.tertiary),
+            onTertiary = Color(scheme.onTertiary),
+            tertiaryContainer = Color(scheme.tertiaryContainer),
+            onTertiaryContainer = Color(scheme.onTertiaryContainer),
+            background = Color(scheme.background),
+            onBackground = Color(scheme.onBackground),
+            surface = Color(scheme.surface),
+            onSurface = Color(scheme.onSurface),
+            surfaceVariant = Color(scheme.surfaceVariant),
+            onSurfaceVariant = Color(scheme.onSurfaceVariant),
+            surfaceTint = Color(scheme.surfaceTint),
+            inverseSurface = Color(scheme.inverseSurface),
+            inverseOnSurface = Color(scheme.inverseOnSurface),
+            outline = Color(scheme.outline),
+            outlineVariant = Color(scheme.outlineVariant),
+            error = Color(scheme.error),
+            onError = Color(scheme.onError),
+            errorContainer = Color(scheme.errorContainer),
+            onErrorContainer = Color(scheme.onErrorContainer),
+            surfaceContainerLowest = Color(scheme.surfaceContainerLowest),
+            surfaceContainerLow = Color(scheme.surfaceContainerLow),
+            surfaceContainer = Color(scheme.surfaceContainer),
+            surfaceContainerHigh = Color(scheme.surfaceContainerHigh),
+            surfaceContainerHighest = Color(scheme.surfaceContainerHighest),
+        )
+    } else {
+        lightColorScheme(
+            primary = Color(scheme.primary),
+            onPrimary = Color(scheme.onPrimary),
+            primaryContainer = Color(scheme.primaryContainer),
+            onPrimaryContainer = Color(scheme.onPrimaryContainer),
+            inversePrimary = Color(scheme.inversePrimary),
+            secondary = secondaryColor ?: Color(scheme.secondary),
+            onSecondary = Color(scheme.onSecondary),
+            secondaryContainer = Color(scheme.secondaryContainer),
+            onSecondaryContainer = Color(scheme.onSecondaryContainer),
+            tertiary = tertiaryColor ?: Color(scheme.tertiary),
+            onTertiary = Color(scheme.onTertiary),
+            tertiaryContainer = Color(scheme.tertiaryContainer),
+            onTertiaryContainer = Color(scheme.onTertiaryContainer),
+            background = Color(scheme.background),
+            onBackground = Color(scheme.onBackground),
+            surface = Color(scheme.surface),
+            onSurface = Color(scheme.onSurface),
+            surfaceVariant = Color(scheme.surfaceVariant),
+            onSurfaceVariant = Color(scheme.onSurfaceVariant),
+            surfaceTint = Color(scheme.surfaceTint),
+            inverseSurface = Color(scheme.inverseSurface),
+            inverseOnSurface = Color(scheme.inverseOnSurface),
+            outline = Color(scheme.outline),
+            outlineVariant = Color(scheme.outlineVariant),
+            error = Color(scheme.error),
+            onError = Color(scheme.onError),
+            errorContainer = Color(scheme.errorContainer),
+            onErrorContainer = Color(scheme.onErrorContainer),
+            surfaceContainerLowest = Color(scheme.surfaceContainerLowest),
+            surfaceContainerLow = Color(scheme.surfaceContainerLow),
+            surfaceContainer = Color(scheme.surfaceContainer),
+            surfaceContainerHigh = Color(scheme.surfaceContainerHigh),
+            surfaceContainerHighest = Color(scheme.surfaceContainerHighest),
+        )
+    }
+}
+
 @Composable
 fun FitDashboardTheme(
     appTheme: AppTheme = AppTheme.SYSTEM,
@@ -368,7 +454,7 @@ fun FitDashboardTheme(
     val fallbackThemeColor =
         viewModel.fallbackThemeColorFlow
             .collectAsStateWithLifecycle(
-                initialValue = FallbackThemeColor.BRAND_PURPLE,
+                initialValue = FallbackThemeColor.GREEN_PERFORMANCE,
             ).value
     val isCustomPaletteEnabled =
         viewModel.isCustomPaletteEnabledFlow
@@ -401,6 +487,8 @@ fun FitDashboardTheme(
     val secondarySeed = if (isCustomPaletteEnabled) Color(customSecondaryColor) else null
     val tertiarySeed = if (isCustomPaletteEnabled) Color(customTertiaryColor) else null
 
+    val matchingPreset = FallbackThemeColor.entries.find { it.primaryColor == customPrimaryColor }
+
     val colorScheme =
         when {
             dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
@@ -408,18 +496,38 @@ fun FitDashboardTheme(
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             }
 
-            darkTheme ->
-                fallbackDarkScheme(
-                    seed = Color(customPrimaryColor),
-                    secondarySeed = secondarySeed,
-                    tertiarySeed = tertiarySeed,
+            matchingPreset != null -> {
+                if (darkTheme) {
+                    fallbackDarkScheme(
+                        seed = Color(matchingPreset.primaryColor),
+                        secondarySeed = Color(matchingPreset.secondaryColor),
+                        tertiarySeed = Color(matchingPreset.tertiaryColor),
+                    ).copy(
+                        primary = Color(matchingPreset.primaryColor),
+                        secondary = Color(matchingPreset.secondaryColor),
+                        tertiary = Color(matchingPreset.tertiaryColor),
+                    )
+                } else {
+                    fallbackLightScheme(
+                        seed = Color(matchingPreset.primaryColor),
+                        secondarySeed = Color(matchingPreset.secondaryColor),
+                        tertiarySeed = Color(matchingPreset.tertiaryColor),
+                    ).copy(
+                        primary = Color(matchingPreset.primaryColor),
+                        secondary = Color(matchingPreset.secondaryColor),
+                        tertiary = Color(matchingPreset.tertiaryColor),
+                    )
+                }
+            }
+
+            else -> {
+                mcuColorScheme(
+                    seedColor = Color(customPrimaryColor),
+                    secondaryColor = secondarySeed,
+                    tertiaryColor = tertiarySeed,
+                    isDark = darkTheme,
                 )
-            else ->
-                fallbackLightScheme(
-                    seed = Color(customPrimaryColor),
-                    secondarySeed = secondarySeed,
-                    tertiarySeed = tertiarySeed,
-                )
+            }
         }
 
     val semanticColors =

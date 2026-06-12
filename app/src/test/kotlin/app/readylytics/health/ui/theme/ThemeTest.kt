@@ -1,8 +1,11 @@
 package app.readylytics.health.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.data.preferences.FallbackThemeColor
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -48,5 +51,52 @@ class ThemeTest {
             println("Assertion failed: ${e.message}")
             throw e
         }
+    }
+
+    @Test
+    fun testPresetThemesExplicitMapping() {
+        // Preset theme 1: Green Performance
+        val gp = FallbackThemeColor.GREEN_PERFORMANCE
+        assertEquals(0xFF2ECC71L, gp.primaryColor)
+        assertEquals(0xFF3498DBL, gp.secondaryColor)
+        assertEquals(0xFFF1C40FL, gp.tertiaryColor)
+
+        // Preset theme 2: Blue Trust
+        val bt = FallbackThemeColor.BLUE_TRUST
+        assertEquals(0xFF4A90E2L, bt.primaryColor)
+        assertEquals(0xFFF5A623L, bt.secondaryColor)
+        assertEquals(0xFF50E3C2L, bt.tertiaryColor)
+
+        // Preset theme 3: Purple Insight
+        val pi = FallbackThemeColor.PURPLE_INSIGHT
+        assertEquals(0xFF8E44ADL, pi.primaryColor)
+        assertEquals(0xFFF39C12L, pi.secondaryColor)
+        assertEquals(0xFFE91E63L, pi.tertiaryColor)
+
+        // Preset theme 4: Icon Signature
+        val isig = FallbackThemeColor.ICON_SIGNATURE
+        assertEquals(0xFF9D6FFFL, isig.primaryColor)
+        assertEquals(0xFF409FFFL, isig.secondaryColor)
+        assertEquals(0xFFC1A2F5L, isig.tertiaryColor)
+
+        // Preset theme 5: Icon Elements
+        val ielem = FallbackThemeColor.ICON_ELEMENTS
+        assertEquals(0xFF409FFFL, ielem.primaryColor)
+        assertEquals(0xFF9D6FFFL, ielem.secondaryColor)
+        assertEquals(0xFFFFB74DL, ielem.tertiaryColor)
+    }
+
+    @Test
+    fun testMcuDerivation() {
+        val seedColor = Color(0xFF2ECC71)
+        val hct =
+            com.materialkolor.hct.Hct
+                .fromInt(seedColor.toArgb())
+        val scheme = com.materialkolor.scheme.SchemeTonalSpot(hct, false, 0.0)
+
+        // Ensure MCU derived colors are valid and not empty/zero
+        assertNotEquals(0, scheme.primary)
+        assertNotEquals(0, scheme.secondary)
+        assertNotEquals(0, scheme.tertiary)
     }
 }

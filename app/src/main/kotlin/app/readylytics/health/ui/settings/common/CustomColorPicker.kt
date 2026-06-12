@@ -46,11 +46,11 @@ import app.readylytics.health.ui.theme.toHexCode
 
 private fun FallbackThemeColor.labelRes(): Int =
     when (this) {
-        FallbackThemeColor.BRAND_PURPLE -> R.string.fallback_color_brand_purple
-        FallbackThemeColor.BRAND_BLUE -> R.string.fallback_color_brand_blue
-        FallbackThemeColor.TURQUOISE -> R.string.fallback_color_turquoise
-        FallbackThemeColor.GREEN -> R.string.fallback_color_green
-        FallbackThemeColor.RECOVERY_BLUE -> R.string.fallback_color_recovery_blue
+        FallbackThemeColor.GREEN_PERFORMANCE -> R.string.fallback_color_green_performance
+        FallbackThemeColor.BLUE_TRUST -> R.string.fallback_color_blue_trust
+        FallbackThemeColor.PURPLE_INSIGHT -> R.string.fallback_color_purple_insight
+        FallbackThemeColor.ICON_SIGNATURE -> R.string.fallback_color_icon_signature
+        FallbackThemeColor.ICON_ELEMENTS -> R.string.fallback_color_icon_elements
     }
 
 private fun contentColorFor(background: Color): Color =

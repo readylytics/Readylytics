@@ -38,12 +38,13 @@ enum UnitSystemProto {
 }
 
 enum FallbackThemeColorProto {
-    FALLBACK_BRAND_PURPLE = 0;
-    FALLBACK_BRAND_BLUE = 1;
-    FALLBACK_TURQUOISE = 2;
-    FALLBACK_GREEN = 3;
-    FALLBACK_RECOVERY_BLUE = 4;
+    FALLBACK_GREEN_PERFORMANCE = 0;
+    FALLBACK_BLUE_TRUST = 1;
+    FALLBACK_PURPLE_INSIGHT = 2;
+    FALLBACK_ICON_SIGNATURE = 3;
+    FALLBACK_ICON_ELEMENTS = 4;
 }
+
 
 message UserPreferencesProto {
     float goal_sleep_hours = 1;
