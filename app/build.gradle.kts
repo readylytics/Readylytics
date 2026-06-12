@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.androidx.room)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.protobuf)
+    alias(libs.plugins.google.oss.licenses)
     id("kotlin-parcelize")
     id("jacoco")
 }
@@ -215,6 +216,7 @@ protobuf {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -273,6 +275,7 @@ dependencies {
     implementation(libs.androidx.credentials.play.services)
     implementation(libs.google.identity.googleid)
     implementation(libs.play.services.auth)
+    implementation(libs.play.services.oss.licenses)
     implementation(libs.retrofit)
     implementation(libs.retrofit.kotlinx.serialization)
     implementation(libs.okhttp)

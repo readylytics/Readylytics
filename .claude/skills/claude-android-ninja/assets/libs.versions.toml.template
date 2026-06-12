@@ -158,11 +158,11 @@ retrofit2 = { group = "com.squareup.retrofit2", name = "retrofit", version.ref =
 retrofit2-kotlinx-serialization-converter = { group = "com.squareup.retrofit2", name = "converter-kotlinx-serialization", version.ref = "retrofit2" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 screenshot-validation-api = { group = "com.android.tools.screenshot", name = "screenshot-validation-api", version.ref = "screenshot" }
-room3-compiler = { group = "androidx.room3", name = "room3-compiler", version.ref = "room3" }
-room3-gradlePlugin = { group = "androidx.room3", name = "room3-gradle-plugin", version.ref = "room3" }
-room3-paging = { group = "androidx.room3", name = "room3-paging", version.ref = "room3" }
-room3-runtime = { group = "androidx.room3", name = "room3-runtime", version.ref = "room3" }
-room3-testing = { group = "androidx.room3", name = "room3-testing", version.ref = "room3" }
+room3-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room3" }
+room3-gradlePlugin = { group = "androidx.room", name = "room-gradle-plugin", version.ref = "room3" }
+room3-paging = { group = "androidx.room", name = "room-paging", version.ref = "room3" }
+room3-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room3" }
+room3-testing = { group = "androidx.room", name = "room-testing", version.ref = "room3" }
 sentry-android = { group = "io.sentry", name = "sentry-android", version.ref = "sentry" }
 sentry-compose-android = { group = "io.sentry", name = "sentry-compose-android", version.ref = "sentry" }
 sentry-kotlin-compiler-plugin = { group = "io.sentry", name = "sentry-kotlin-compiler-plugin", version.ref = "sentryPlugin" }

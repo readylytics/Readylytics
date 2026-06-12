@@ -622,7 +622,11 @@
     <string name="settings_section_display">Display</string>
     <string name="settings_section_advanced">Advanced</string>
     <string name="settings_about_button">About Readylytics</string>
+    <string name="settings_section_miscellaneous">Miscellaneous</string>
+    <string name="settings_item_licenses">Open source licenses</string>
+    <string name="settings_item_licenses_title">Open Source Licenses</string>
     <string name="settings_label_app_theme">App Theme</string>
+
     <string name="action_reset_to_default">Reset to default</string>
 
     <!-- Data Management & Sync Settings -->
