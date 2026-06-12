@@ -41,6 +41,9 @@ archCore = "2.2.0"
 documentfile = "1.1.0"
 benchmarkMacro = "1.4.1"
 playServicesStats = "17.1.0"
+playServicesOssLicenses = "17.1.0"
+ossLicensesPlugin = "0.12.0"
+
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -110,6 +113,10 @@ zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 androidx-arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "archCore" }
 androidx-benchmark-macro = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmarkMacro" }
 play-services-stats = { group = "com.google.android.gms", name = "play-services-stats", version.ref = "playServicesStats" }
+play-services-oss-licenses = { group = "com.google.android.gms", name = "play-services-oss-licenses", version.ref = "playServicesOssLicenses" }
+google-oss-licenses-plugin = { group = "com.google.android.gms", name = "oss-licenses-plugin", version.ref = "ossLicensesPlugin" }
+
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -120,3 +127,4 @@ hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 androidx-room = { id = "androidx.room", version.ref = "room" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 protobuf = { id = "com.google.protobuf", version.ref = "protobufPlugin" }
+

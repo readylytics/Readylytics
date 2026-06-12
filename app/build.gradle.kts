@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.androidx.room)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.protobuf)
+    id("com.google.android.gms.oss-licenses-plugin")
     id("kotlin-parcelize")
     id("jacoco")
 }
@@ -273,6 +274,7 @@ dependencies {
     implementation(libs.androidx.credentials.play.services)
     implementation(libs.google.identity.googleid)
     implementation(libs.play.services.auth)
+    implementation(libs.play.services.oss.licenses)
     implementation(libs.retrofit)
     implementation(libs.retrofit.kotlinx.serialization)
     implementation(libs.okhttp)
