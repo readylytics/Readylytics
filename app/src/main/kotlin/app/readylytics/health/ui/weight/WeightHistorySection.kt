@@ -53,7 +53,7 @@ fun WeightHistoryCard(
     val weightStr = "%.1f".format(item.weightDisplay)
     val subtitle =
         item.deltaDisplay?.let { delta ->
-            val deltaStr = String.format(Locale.US, "%+.1f", delta)
+            val deltaStr = "%+.1f".format(delta)
             stringResource(R.string.weight_history_subtitle_with_delta, weightStr, unitLabel, deltaStr)
         } ?: stringResource(R.string.weight_history_subtitle_no_delta, weightStr, unitLabel)
 

@@ -9,6 +9,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
+import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.ui.common.BodyFatHistoryItem
 import app.readylytics.health.ui.components.HistoryCardLayout
@@ -17,6 +18,7 @@ import app.readylytics.health.ui.theme.FitDashboardTheme
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun BodyFatHistorySection(
@@ -45,10 +47,16 @@ fun BodyFatHistoryCard(
             Instant.ofEpochMilli(item.timestampMs).atZone(ZoneId.systemDefault()).toLocalDate().format(fmt)
         }
 
+    val unitLabel = if (item.unitSystem == UnitSystem.METRIC) "kg" else "lbs"
     val bodyFatStr = "%.1f".format(item.bodyFatPercent)
     val subtitle =
-        item.leanMassKg?.let { leanMass ->
-            stringResource(R.string.body_fat_history_subtitle_with_lean_mass, bodyFatStr, "%.1f".format(leanMass))
+        item.leanMassDisplay?.let { leanMass ->
+            stringResource(
+                R.string.body_fat_history_subtitle_with_lean_mass,
+                bodyFatStr,
+                "%.1f".format(leanMass),
+                unitLabel,
+            )
         } ?: stringResource(R.string.body_fat_history_subtitle_no_lean_mass, bodyFatStr)
 
     val pillLabelRes =
@@ -79,7 +87,8 @@ private fun BodyFatHistoryCardPreview() {
                     BodyFatHistoryItem(
                         timestampMs = System.currentTimeMillis(),
                         bodyFatPercent = 14.2f,
-                        leanMassKg = 67.3f,
+                        leanMassDisplay = 67.3f,
+                        unitSystem = UnitSystem.METRIC,
                         status = MetricStatus.OPTIMAL,
                     ),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -89,7 +98,8 @@ private fun BodyFatHistoryCardPreview() {
                     BodyFatHistoryItem(
                         timestampMs = System.currentTimeMillis(),
                         bodyFatPercent = 22.5f,
-                        leanMassKg = 64.1f,
+                        leanMassDisplay = 64.1f,
+                        unitSystem = UnitSystem.METRIC,
                         status = MetricStatus.NEUTRAL,
                     ),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -99,7 +109,8 @@ private fun BodyFatHistoryCardPreview() {
                     BodyFatHistoryItem(
                         timestampMs = System.currentTimeMillis(),
                         bodyFatPercent = 28.0f,
-                        leanMassKg = null,
+                        leanMassDisplay = null,
+                        unitSystem = UnitSystem.METRIC,
                         status = MetricStatus.POOR,
                     ),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),

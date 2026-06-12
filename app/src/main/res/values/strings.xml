@@ -588,7 +588,7 @@
     <string name="tooltip_body_fat_current">Current: %1$s%%\nOptimal: %2$s\n\n%3$s, Age %4$d</string>
     <string name="label_body_fat_trend">Body Fat Trend</string>
     <string name="body_fat_history_title_format">Body Fat (%1$s)</string>
-    <string name="body_fat_history_subtitle_with_lean_mass">%1$s%% · %2$s kg lean mass</string>
+    <string name="body_fat_history_subtitle_with_lean_mass">%1$s%% · %2$s %3$s lean mass</string>
     <string name="body_fat_history_subtitle_no_lean_mass">%1$s%%</string>
     <string name="body_fat_status_optimal">Athletic</string>
     <string name="body_fat_status_fitness">Fitness</string>

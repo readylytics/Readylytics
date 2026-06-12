@@ -23,6 +23,7 @@ data class WeightHistoryItem(
 data class BodyFatHistoryItem(
     val timestampMs: Long,
     val bodyFatPercent: Float,
-    val leanMassKg: Float?,
+    val leanMassDisplay: Float?,
+    val unitSystem: UnitSystem,
     val status: MetricStatus,
 )

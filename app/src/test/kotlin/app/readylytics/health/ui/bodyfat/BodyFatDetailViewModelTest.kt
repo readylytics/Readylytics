@@ -2,10 +2,11 @@ package app.readylytics.health.ui.bodyfat
 
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.BodyFatRepository
@@ -173,14 +174,19 @@ class BodyFatDetailViewModelTest {
             val item = state.historyItems[0]
             assertEquals(14.2f, item.bodyFatPercent, 0.01f)
             // 78.4 * (1 - 14.2/100) = 67.2752
-            assertEquals(67.2752f, item.leanMassKg!!, 0.01f)
+            assertEquals(67.2752f, item.leanMassDisplay!!, 0.01f)
             assertEquals(MetricStatus.OPTIMAL, item.status)
         }
 
     @Test
     fun `historyItems leanMass is null when no same-day weight record`() =
         runTest {
-            val bodyFatRecord = BodyFatRecordEntity(id = "1", timestampMs = System.currentTimeMillis(), bodyFatPercent = 18f)
+            val bodyFatRecord =
+                BodyFatRecordEntity(
+                    id = "1",
+                    timestampMs = System.currentTimeMillis(),
+                    bodyFatPercent = 18f,
+                )
             coEvery { bodyFatRepository.getByDateRange(any(), any()) } returns listOf(bodyFatRecord)
             coEvery { weightRepository.getByDateRange(any(), any()) } returns emptyList()
 
@@ -190,7 +196,28 @@ class BodyFatDetailViewModelTest {
             viewModel = createViewModel()
             val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
-            assertNull(state.historyItems[0].leanMassKg)
+            assertNull(state.historyItems[0].leanMassDisplay)
+        }
+
+    @Test
+    fun `historyItems lean mass converts to imperial units`() =
+        runTest {
+            val now = System.currentTimeMillis()
+            val bodyFatRecord = BodyFatRecordEntity(id = "1", timestampMs = now, bodyFatPercent = 14.2f)
+            val weightRecord = WeightRecordEntity(id = "1", timestampMs = now, weightKg = 78.4f)
+            coEvery { bodyFatRepository.getByDateRange(any(), any()) } returns listOf(bodyFatRecord)
+            coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(weightRecord)
+
+            every { settingsRepo.userPreferences } returns
+                MutableStateFlow(UserPreferences(age = 30, gender = Gender.MALE, unitSystem = UnitSystem.IMPERIAL))
+
+            viewModel = createViewModel()
+            val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
+
+            val item = state.historyItems[0]
+            // 67.2752 kg * 2.20462 = 148.3 lbs
+            assertEquals(148.3f, item.leanMassDisplay!!, 0.1f)
+            assertEquals(UnitSystem.IMPERIAL, item.unitSystem)
         }
 
     @Test

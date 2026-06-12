@@ -135,7 +135,7 @@ class WeightDetailViewModel
                                     unitSystem = userPrefs.unitSystem,
                                     bmiStatus = bmiStatus,
                                 )
-                            }.sortedByDescending { it.timestampMs }
+                            }.reversed()
 
                     val rawAverage = if (records.isNotEmpty()) records.map { it.weightKg }.average().toFloat() else null
                     val averageWeight =
