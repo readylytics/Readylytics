@@ -64,7 +64,7 @@ class LocalBackupManager
                     val password =
                         prefs.backupPasswordHash?.let { hash ->
                             encryptionManager.decrypt(hash)
-                        }
+                        } ?: throw IllegalStateException("Backup password not set")
 
                     // 3. Create ZIP file
                     val finalFile: File?
@@ -81,29 +81,14 @@ class LocalBackupManager
                         createZip(tempJsonFile, tempZipFile, password)
 
                         context.contentResolver.openOutputStream(file.uri)?.use { os ->
-                            if (password == null) {
-                                val plaintextBytes = tempZipFile.readBytes()
-                                val encryptedBytes = encryptionManager.encryptBytes(plaintextBytes)
-                                os.write(encryptedBytes)
-                            } else {
-                                tempZipFile.inputStream().use { it.copyTo(os) }
-                            }
+                            tempZipFile.inputStream().use { it.copyTo(os) }
                         }
                         tempZipFile.delete()
                         finalFile = null
                     } else {
                         defaultBackupDir.mkdirs()
                         val file = File(defaultBackupDir, zipFilename)
-                        if (password == null) {
-                            val tempZipFile = File(context.cacheDir, zipFilename)
-                            createZip(tempJsonFile, tempZipFile, null)
-                            val plaintextBytes = tempZipFile.readBytes()
-                            val encryptedBytes = encryptionManager.encryptBytes(plaintextBytes)
-                            file.writeBytes(encryptedBytes)
-                            tempZipFile.delete()
-                        } else {
-                            createZip(tempJsonFile, file, password)
-                        }
+                        createZip(tempJsonFile, file, password)
                         finalFile = file
                     }
 
@@ -157,7 +142,7 @@ class LocalBackupManager
                             val tempJson = File(tempDir, info.name.replace(".zip", ".json"))
                             val newZipPath = File(tempDir, "reencrypt_new_${System.currentTimeMillis()}.zip")
 
-                            // 1. Copy to temp zip and decrypt if Tink-encrypted
+                            // 1. Copy to temp zip
                             val rawBytes =
                                 if (info.uri.scheme == "content") {
                                     context.contentResolver.openInputStream(info.uri)?.use { it.readBytes() }
@@ -165,18 +150,7 @@ class LocalBackupManager
                                 } else {
                                     File(info.uri.path!!).readBytes()
                                 }
-
-                            val zipBytes =
-                                if (oldPassword == null) {
-                                    try {
-                                        encryptionManager.decryptBytes(rawBytes)
-                                    } catch (e: Exception) {
-                                        rawBytes
-                                    }
-                                } else {
-                                    rawBytes
-                                }
-                            tempZip.writeBytes(zipBytes)
+                            tempZip.writeBytes(rawBytes)
 
                             // 2. Extract
                             val zipFile = ZipFile(tempZip, oldPassword?.toCharArray())
@@ -196,12 +170,7 @@ class LocalBackupManager
                             newZip.addFile(tempJson, parameters)
                             newZip.close()
 
-                            val finalBytes =
-                                if (newPassword == null) {
-                                    encryptionManager.encryptBytes(tempZipForNew.readBytes())
-                                } else {
-                                    tempZipForNew.readBytes()
-                                }
+                            val finalBytes = tempZipForNew.readBytes()
                             tempZipForNew.delete()
                             newZipPath.writeBytes(finalBytes)
 

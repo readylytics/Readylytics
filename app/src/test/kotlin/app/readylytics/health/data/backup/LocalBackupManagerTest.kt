@@ -45,6 +45,7 @@ class LocalBackupManagerTest {
                 .build()
 
         encryptionManager = mockk<EncryptionManager>(relaxed = true)
+        io.mockk.every { encryptionManager.decrypt(any()) } returns "test_password"
 
         settingsRepo =
             mockk<SettingsRepository>().apply {
@@ -57,7 +58,7 @@ class LocalBackupManagerTest {
                             coEvery { backupSchedule } returns BackupSchedule.DAILY
                             coEvery { birthDate } returns "2000-01-01"
                             coEvery { backupDirectoryUri } returns null
-                            coEvery { backupPasswordHash } returns null
+                            coEvery { backupPasswordHash } returns "hashed_password"
                         },
                     )
             }

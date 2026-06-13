@@ -1,5 +1,6 @@
 package app.readylytics.health.ui.onboarding
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -57,24 +59,41 @@ fun OnboardingScreen(
         heightCm: Float?,
     ) -> Unit,
     onOpenSettingsClick: () -> Unit,
+    restoreState: OnboardingRestoreState,
+    onRestoreBackupClick: (uri: Uri, password: String) -> Unit,
+    onDismissRestoreError: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var step by remember { mutableIntStateOf(0) }
 
     Surface(modifier = modifier.fillMaxSize()) {
-        if (step == 0) {
-            WelcomeScreen(onNext = { step = 1 })
-        } else {
-            ProfileSetupScreen(
-                onGrantPermissionsClick = onGrantPermissionsClick,
-                onOpenSettingsClick = onOpenSettingsClick,
-            )
+        when (step) {
+            0 ->
+                WelcomeScreen(
+                    onNext = { step = 1 },
+                    onRestoreFromBackupClick = { step = 2 },
+                )
+            2 ->
+                RestoreBackupScreen(
+                    state = restoreState,
+                    onRestoreClick = onRestoreBackupClick,
+                    onDismissError = onDismissRestoreError,
+                    onBack = { step = 0 },
+                )
+            else ->
+                ProfileSetupScreen(
+                    onGrantPermissionsClick = onGrantPermissionsClick,
+                    onOpenSettingsClick = onOpenSettingsClick,
+                )
         }
     }
 }
 
 @Composable
-private fun WelcomeScreen(onNext: () -> Unit) {
+private fun WelcomeScreen(
+    onNext: () -> Unit,
+    onRestoreFromBackupClick: () -> Unit,
+) {
     Column(
         modifier =
             Modifier
@@ -157,6 +176,31 @@ private fun WelcomeScreen(onNext: () -> Unit) {
         ) {
             Text(stringResource(R.string.onboarding_get_started))
         }
+
+        Spacer(Modifier.height(8.dp))
+
+        TextButton(
+            onClick = onRestoreFromBackupClick,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.onboarding_restore_backup_button))
+        }
+    }
+}
+
+@Composable
+fun FinishingSetupScreen(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        CircularProgressIndicator()
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.onboarding_finishing_setup),
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 

@@ -54,7 +54,10 @@ class LocalRestoreManager
             ) : RestoreResult()
         }
 
-        suspend fun validate(backupUri: Uri): Result<BackupManifest> =
+        suspend fun validate(
+            backupUri: Uri,
+            password: String? = null,
+        ): Result<BackupManifest> =
             withContext(Dispatchers.IO) {
                 runCatching {
                     val tempZipFile = File(context.cacheDir, "validate_temp.zip")
@@ -62,7 +65,7 @@ class LocalRestoreManager
 
                     try {
                         val zipFile = ZipFile(tempZipFile)
-                        val password = getDecryptedPassword()
+                        val password = password ?: getDecryptedPassword()
 
                         if (zipFile.isEncrypted) {
                             if (password == null) throw WrongBackupPasswordException()
@@ -112,7 +115,10 @@ class LocalRestoreManager
                 }
             }
 
-        suspend fun applyRestore(backupUri: Uri): RestoreResult =
+        suspend fun applyRestore(
+            backupUri: Uri,
+            password: String? = null,
+        ): RestoreResult =
             withContext(Dispatchers.IO) {
                 runCatching {
                     val tempZipFile = File(context.cacheDir, "restore_temp.zip")
@@ -120,7 +126,7 @@ class LocalRestoreManager
 
                     try {
                         val zipFile = ZipFile(tempZipFile)
-                        val password = getDecryptedPassword()
+                        val password = password ?: getDecryptedPassword()
 
                         if (zipFile.isEncrypted) {
                             if (password == null) throw WrongBackupPasswordException()
@@ -318,15 +324,7 @@ class LocalRestoreManager
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     input.readBytes()
                 } ?: throw IllegalStateException("Could not open backup URI")
-
-            val decryptedBytes =
-                try {
-                    encryptionManager.decryptBytes(bytes)
-                } catch (e: Exception) {
-                    // Fallback to raw bytes if Tink decryption fails (e.g. it is not Tink-encrypted)
-                    bytes
-                }
-            tempFile.writeBytes(decryptedBytes)
+            tempFile.writeBytes(bytes)
         }
 
         private suspend fun getDecryptedPassword(): String? {
