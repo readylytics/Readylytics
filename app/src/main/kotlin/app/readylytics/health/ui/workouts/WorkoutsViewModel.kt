@@ -186,6 +186,10 @@ class WorkoutsViewModel
                                     it.startTime <
                                         selectedMidnightMs + TimeUnit.DAYS.toMillis(1)
                                 }
+                            val trimpOf = { summary: DailySummary ->
+                                if (prefs.allDayHrStrainEnabled) summary.dailyHrTrimp ?: 0f else summary.totalTrimp ?: 0f
+                            }
+
                             val trimpByDay: Map<Long, Float> =
                                 trimpSummaries
                                     .associate { summary ->
@@ -194,13 +198,13 @@ class WorkoutsViewModel
                                                 .atStartOfDay(zoneId)
                                                 .toInstant()
                                                 .toEpochMilli()
-                                        dayMs to (summary.totalTrimp ?: 0f)
+                                        dayMs to trimpOf(summary)
                                     }
 
                             val trimpByDate: Map<LocalDate, Float> =
                                 trimpSummaries
                                     .associate { summary ->
-                                        summary.date to (summary.totalTrimp ?: 0f)
+                                        summary.date to trimpOf(summary)
                                     }
 
                             val displayDayMidnights =
@@ -323,8 +327,9 @@ class WorkoutsViewModel
                                 selectedRange = range,
                                 selectedDate = date,
                                 rangeStartMs = displayStartDayMs,
-                                paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries),
-                                todayPaiScore = latest?.paiScore,
+                                paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries, prefs),
+                                todayPaiScore =
+                                    if (prefs.allDayHrStrainEnabled) latest?.dailyHrPai else latest?.paiScore,
                                 isLoading = isSyncing,
                                 currentPage = clampedPage,
                                 totalPages = totalPages,
@@ -341,12 +346,14 @@ class WorkoutsViewModel
         private fun buildPaiBreakdown(
             endDate: LocalDate,
             summaries: List<DailySummary>,
+            prefs: app.readylytics.health.data.preferences.UserPreferences,
         ): List<Pair<String, Float>> {
             val fmt = DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
             return (6 downTo 0).map { daysBack ->
                 val day = endDate.minusDays(daysBack.toLong())
                 val entry = summaries.firstOrNull { it.date == day }
-                day.format(fmt) to (entry?.paiScore ?: 0f)
+                val pai = if (prefs.allDayHrStrainEnabled) entry?.dailyHrPai else entry?.paiScore
+                day.format(fmt) to (pai ?: 0f)
             }
         }
 

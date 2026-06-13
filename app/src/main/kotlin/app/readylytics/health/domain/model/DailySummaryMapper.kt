@@ -69,6 +69,12 @@ object DailySummaryMapper {
             hrvSigmaPrior = entity.hrvSigmaPrior,
             paiScalingFactor = entity.paiScalingFactor,
             baselineObservationCount = entity.baselineObservationCount,
+            dailyHrTrimp = entity.dailyHrTrimp,
+            dailyHrPai = entity.dailyHrPai,
+            dailyHrAtl = entity.dailyHrAtl,
+            dailyHrCtl = entity.dailyHrCtl,
+            dailyHrLoadScore = entity.dailyHrLoadScore,
+            dailyHrReadinessScore = entity.dailyHrReadinessScore,
         )
     }
 
@@ -124,6 +130,12 @@ object DailySummaryMapper {
             hrvSigmaPrior = domain.hrvSigmaPrior,
             paiScalingFactor = domain.paiScalingFactor,
             baselineObservationCount = domain.baselineObservationCount,
+            dailyHrTrimp = domain.dailyHrTrimp,
+            dailyHrPai = domain.dailyHrPai,
+            dailyHrAtl = domain.dailyHrAtl,
+            dailyHrCtl = domain.dailyHrCtl,
+            dailyHrLoadScore = domain.dailyHrLoadScore,
+            dailyHrReadinessScore = domain.dailyHrReadinessScore,
         )
     }
 }

@@ -601,6 +601,7 @@ fun SettingsScreen(
                             banisterMultiplier = uiState.banisterMultiplier,
                             chengBeta = uiState.chengBeta,
                             itrimB = uiState.itrimB,
+                            allDayHrStrainEnabled = uiState.allDayHrStrainEnabled,
                             onEvent = onSleepEvent,
                             onPhysiologyEvent = onPhysiologyEvent,
                             onUIEvent = onUIEvent,

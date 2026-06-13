@@ -158,4 +158,18 @@ interface DailySummaryDao {
 
     @Query("SELECT strainRatio FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
     suspend fun getPreciseStrainRatio(dateMidnightMs: Long): Double?
+
+    @Query(
+        "SELECT dateMidnightMs, dailyHrTrimp FROM daily_summaries " +
+            "WHERE dateMidnightMs >= :fromMs AND dateMidnightMs < :toMs ORDER BY dateMidnightMs ASC",
+    )
+    suspend fun getDailyHrTrimpSince(
+        fromMs: Long,
+        toMs: Long,
+    ): List<DailyHrTrimpRow>
 }
+
+data class DailyHrTrimpRow(
+    val dateMidnightMs: Long,
+    val dailyHrTrimp: Float?,
+)

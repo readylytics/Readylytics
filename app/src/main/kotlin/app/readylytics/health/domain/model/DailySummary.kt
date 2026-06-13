@@ -42,4 +42,10 @@ data class DailySummary(
     val hrvSigmaPrior: Float? = null,
     val paiScalingFactor: Float? = null,
     val baselineObservationCount: Int? = null,
+    val dailyHrTrimp: Float? = null,
+    val dailyHrPai: Float? = null,
+    val dailyHrAtl: Float? = null,
+    val dailyHrCtl: Float? = null,
+    val dailyHrLoadScore: Float? = null,
+    val dailyHrReadinessScore: Float? = null,
 )

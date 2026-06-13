@@ -53,7 +53,7 @@ class GetDashboardDataUseCase
         ): Result<DashboardCards> =
             try {
                 val cardDataMap = calculateCardData(summary, prefs, date, lastSleepSession)
-                val paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries)
+                val paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries, prefs)
 
                 Result.success(
                     DashboardCards(
@@ -123,7 +123,7 @@ class GetDashboardDataUseCase
                 title = resourceProvider.getString(R.string.card_title_readiness),
                 value = m.readinessRounded?.toString() ?: "—",
                 unit = "",
-                status = summary.readinessScore?.let { scoreStatus(it) } ?: MetricStatus.CALIBRATING,
+                status = m.readinessRounded?.let { scoreStatus(it.toFloat()) } ?: MetricStatus.CALIBRATING,
                 action = DashboardAction.NAVIGATE_WORKOUTS,
                 tooltip = resourceProvider.getString(R.string.tooltip_readiness),
             )
@@ -178,12 +178,14 @@ class GetDashboardDataUseCase
         private fun buildPaiBreakdown(
             endDate: LocalDate,
             summaries: List<DailySummary>,
+            prefs: UserPreferences,
         ): List<Pair<String, Float>> {
             val fmt = DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
             return (6 downTo 0).map { daysBack ->
                 val day = endDate.minusDays(daysBack.toLong())
                 val entry = summaries.firstOrNull { it.date == day }
-                day.format(fmt) to (entry?.paiScore ?: 0f)
+                val pai = if (prefs.allDayHrStrainEnabled) entry?.dailyHrPai else entry?.paiScore
+                day.format(fmt) to (pai ?: 0f)
             }
         }
 

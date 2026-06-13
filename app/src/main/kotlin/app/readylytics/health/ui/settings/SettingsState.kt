@@ -90,6 +90,7 @@ data class UIState(
     val banisterMultiplier: Float = PhysiologyProfile.GENERAL.banisterMultiplier,
     val chengBeta: Float = PhysiologyProfile.GENERAL.defaultChengBeta,
     val itrimB: Float = PhysiologyProfile.GENERAL.defaultItrimB,
+    val allDayHrStrainEnabled: Boolean = SettingsDefaults.ALL_DAY_HR_STRAIN_ENABLED,
     val unitSystem: app.readylytics.health.data.preferences.UnitSystem = SettingsDefaults.UNIT_SYSTEM,
     val isCustomPaletteEnabled: Boolean = false,
     val customSecondaryColor: Long = SettingsDefaults.CUSTOM_SECONDARY_COLOR,

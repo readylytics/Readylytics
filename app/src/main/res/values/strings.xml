@@ -679,6 +679,9 @@
     <string name="advanced_itrimp_b_factor_label">iTRIMP B Factor</string>
     <string name="advanced_itrimp_b_factor_desc">Sedentary=1.5, Active=2.1, Athlete=2.9.</string>
 
+    <string name="advanced_all_day_hr_strain_label">All-day HR strain track</string>
+    <string name="advanced_all_day_hr_strain_desc">Calculate PAI, load, and readiness from continuous all-day heart rate instead of workouts only.</string>
+
     <!-- Threshold Settings Sliders -->
     <string name="threshold_hrv_optimal_label">HRV Optimal</string>
     <string name="threshold_hrv_optimal_desc">HRV ratio to baseline to be considered Optimal (e.g.

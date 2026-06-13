@@ -42,7 +42,7 @@ All paths are rooted at `app/src/main/java/com/gregor/lauritz/healthdashboard/`.
                │ @Upsert by stable HC id (idempotent; overlap → replace)
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v28) │   11 entities — single source of truth
+│  HealthDatabase (SQLite v29) │   11 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -51,6 +51,9 @@ All paths are rooted at `app/src/main/java/com/gregor/lauritz/healthdashboard/`.
 │   raw metrics → TRIMP/PAI → baselines → sleep/load/readiness → persist    │
 │   delegates to pure-Kotlin domain/scoring/** (BaselineComputer,           │
 │   PaiCalculator, strategies/*, sleep/*)                                    │
+│   computes BOTH Track A (workout-tagged HR) and Track B (all-day HR)      │
+│   scores every sync; the `allDayHrStrainEnabled` preference only selects  │
+│   which precomputed columns the UI reads (DailyMetricsMapper)             │
 └──────────────┬─────────────────────────────────────────────────────────────┘
                │ DailySummaryEntity persisted back to Room
                ▼
@@ -140,7 +143,7 @@ deterministic composite IDs (`${hcRecordId}_${timestampMs}`) so re-ingestion is 
 | `BloodPressureDataMapper`    | `data/mapper/BloodPressureDataMapper.kt`    | `BloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg).                                                                     |
 | `OxygenSaturationDataMapper` | `data/mapper/OxygenSaturationDataMapper.kt` | `OxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                                     |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 28)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 29)`)
 
 Defined in `data/local/HealthDatabase.kt`; entities in `data/local/entity/`, DAOs in
 `data/local/dao/`. **The database is the single source of truth; the UI never reads Health
@@ -157,7 +160,7 @@ Connect directly.**
 | `BodyFatRecordEntity`          | `body_fat_records`          | `id: String` (composite)               | %, `timestampMs`, `deviceName`                                                                                                                            |
 | `BloodPressureRecordEntity`    | `blood_pressure_records`    | `id: String` (composite)               | systolic/diastolic, `timestampMs`, `deviceName`                                                                                                           |
 | `OxygenSaturationRecordEntity` | `oxygen_saturation_records` | `id: String` (composite)               | %, `timestampMs`, `deviceName`                                                                                                                            |
-| `DailySummaryEntity`           | `daily_summaries`           | `dateMidnightMs: Long`                 | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hrv_sigma_mssd`, `rhr_bpm`, `rhr_sigma`, `hr_max`, …), weight/BP/SpO2 snapshots |
+| `DailySummaryEntity`           | `daily_summaries`           | `dateMidnightMs: Long`                 | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hrv_sigma_mssd`, `rhr_bpm`, `rhr_sigma`, `hr_max`, …), weight/BP/SpO2 snapshots, all-day HR Track B scores (`dailyHrTrimp`, `dailyHrPai`, `dailyHrAtl`, `dailyHrCtl`, `dailyHrLoadScore`, `dailyHrReadinessScore`, nullable) |
 | `InsightDismissalEntity`       | `insight_dismissals`        | `(dateMidnightMs: Long, type: String)` | `type: String` (LATE_NADIR, SICK_INDICATOR, OVERREACHING) — represents dismissed dashboard insights                                                       |
 
 **Idempotency contract:** every DAO uses `@Upsert` keyed on the stable primary key, so
@@ -190,7 +193,7 @@ keep Android types out of`domain/scoring/\*\*`.
 | Component                       | Path                                       | Responsibility                                                                                                                                                                                                                                                                                                                                                                                          |
 | :------------------------------ | :----------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `ScoringRepository` (interface) | `domain/repository/ScoringRepository.kt`   | Contract for daily computation.                                                                                                                                                                                                                                                                                                                                                                         |
-| `ScoringRepositoryImpl`         | `data/repository/ScoringRepositoryImpl.kt` | `computeDailySummary(day)` (mutex-locked) orchestrates: raw DAO fetch → daily TRIMP/PAI → baseline resolve/freeze → sleep + load + readiness → persist `DailySummaryEntity`. Hosts the "Calibrating" gate (< 7 sleep sessions in the last 42 days → tentative scores, no load score). **Both sync flows recompute exclusively through this method — formulas are never duplicated in the sync engine.** |
+| `ScoringRepositoryImpl`         | `data/repository/ScoringRepositoryImpl.kt` | `computeDailySummary(day)` (mutex-locked) orchestrates: raw DAO fetch → daily TRIMP/PAI → baseline resolve/freeze → sleep + load + readiness → persist `DailySummaryEntity`. Hosts the "Calibrating" gate (< 7 sleep sessions in the last 42 days → tentative scores, no load score). **Both sync flows recompute exclusively through this method — formulas are never duplicated in the sync engine.** Alongside the existing workout-tagged ("Track A") TRIMP/PAI/CTL/ATL/load/readiness computation, the same method computes a parallel **"Track B"** set from the continuous all-day HR stream (`dailyHrTrimp`, `dailyHrPai`, `dailyHrAtl`, `dailyHrCtl`, `dailyHrLoadScore`, `dailyHrReadinessScore`) using the same `PaiScoringStrategy`/`LoadScoringStrategy` strategies, fed by `PaiCalculator.calculateAllDayTrimp`. Both tracks persist on every sync/resync; Track B fields stay `null` while `isCalibrating`. |
 
 ### 2.2 Resting Heart Rate (RHR) — percentile "nocturnal floor"
 
@@ -204,7 +207,7 @@ keep Android types out of`domain/scoring/\*\*`.
 | Component                          | Path                                                 | Model / default                                                                                                                                                                                                                              |
 | :--------------------------------- | :--------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `TrimpModel` (enum)                | `domain/scoring/TrimpModel.kt`                       | `BANISTER`, `I_TRIMP`, `CHENG`.                                                                                                                                                                                                              |
-| `PaiCalculator`                    | `domain/scoring/PaiCalculator.kt`                    | `calculateDailyTrimp(..., trimpModel = TrimpModel.BANISTER)` switches per model — **BANISTER is the operational default** (default parameter value). `calculateDailyPai()` converts TRIMP → PAI via a profile scaling factor (capped at 75). |
+| `PaiCalculator`                    | `domain/scoring/PaiCalculator.kt`                    | `calculateDailyTrimp(..., trimpModel = TrimpModel.BANISTER)` switches per model — **BANISTER is the operational default** (default parameter value). `calculateDailyPai()` converts TRIMP → PAI via a profile scaling factor (capped at 75). `calculateAllDayTrimp(samples, ...)` ("Track B") integrates TRIMP over the continuous all-day HR stream (all non-`SLEEP` `HeartRateRecordEntity` rows for the day, sorted ascending) using the same step-wise per-interval `calculateDailyTrimp` call as `ComputeWorkoutTrimpUseCase`, with each sample's BPM representing the interval up to the next sample; intervals longer than the 5-minute max-gap cap (off-wrist) contribute 0. |
 | `ComputeWorkoutTrimpUseCase`       | `domain/scoring/ComputeWorkoutTrimpUseCase.kt`       | Per-workout integration over HR samples; reads the user-selected model from `prefs.trimpModel`.                                                                                                                                              |
 | `ComputeWorkoutLoadMetricsUseCase` | `domain/scoring/ComputeWorkoutLoadMetricsUseCase.kt` | Single per-workout load source for workout history/detail UI: resolves precise TRIMP + gained strain from DB-backed workout samples, then returns the rounded TRIMP/strain display values used by cards and rows.                            |
 | `GetWorkoutDisplayMetricsUseCase`  | `domain/scoring/GetWorkoutDisplayMetricsUseCase.kt`  | Unified display metrics provider for workouts. Orchestrates 42-day history fetching and delegates calculations to `ComputeWorkoutLoadMetricsUseCase` to return UI-ready preformatted values.                                                 |
@@ -216,6 +219,19 @@ geometry and dial progress, but visible Sleep Score, Readiness, Restoration, TRI
 PAI, RHR/HRV baselines, SpO2, and Strain Ratio text must use `DailyMetrics`
 rounded/display fields or the workout-specific `GetWorkoutDisplayMetricsUseCase`
 result.
+
+**Dual-track display (all-day HR strain toggle):** `DailyMetricsMapper.toMetrics()` is
+the single branching point for the `allDayHrStrainEnabled` user preference (Settings →
+Advanced). When enabled, `readinessRounded`, `loadScoreRounded`, `trimpRounded`,
+`paiDayScoreRounded`, `strainRatioRaw`/`strainRatioDisplay` are sourced from the
+Track B columns (`dailyHrReadinessScore`, `dailyHrLoadScore`, `dailyHrTrimp`,
+`dailyHrPai`, `dailyHrAtl`/`dailyHrCtl`) instead of the Track A columns
+(`readinessScore`, `loadScore`, `totalTrimp`, `paiScore`, `strainRatio`). Both tracks
+are always persisted, so toggling the preference switches the displayed values
+instantly with no recompute. `paiRounded` (cumulative `totalPai`) has no Track B
+equivalent and is unbranched. Dashboard PAI-breakdown bars
+(`GetDashboardDataUseCase.buildPaiBreakdown`, `WorkoutsViewModel.buildPaiBreakdown`,
+`DailyPaiBreakdownMapper`) branch the same way between `dailyHrPai` and `paiScore`.
 
 **Variants (reference only — see `PaiCalculator.calculateDailyTrimp` for the implementation):**
 
@@ -334,8 +350,8 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | `data/healthconnect/HrvMapper.kt`                                          | Ingestion — mapper                                  | RMSSD samples                                                                            |
 | `data/healthconnect/WorkoutMapper.kt`                                      | Ingestion — mapper                                  | zone minutes + workout TRIMP                                                             |
 | `data/mapper/{Weight,BodyFat,BloodPressure,OxygenSaturation}DataMapper.kt` | Ingestion — mappers                                 | weight / body fat / BP / SpO2                                                            |
-| `data/local/HealthDatabase.kt`                                             | Storage — Room DB (v28)                             | 11 entities, migrations                                                                  |
-| `data/local/entity/DailySummaryEntity.kt`                                  | Storage — computed-day snapshot                     | scores + frozen baselines                                                                |
+| `data/local/HealthDatabase.kt`                                             | Storage — Room DB (v29)                             | 11 entities, migrations                                                                  |
+| `data/local/entity/DailySummaryEntity.kt`                                  | Storage — computed-day snapshot                     | scores + frozen baselines + Track B all-day HR scores                                   |
 | `data/local/entity/InsightDismissalEntity.kt`                              | Storage — insight dismissal                         | dateMidnightMs + type                                                                    |
 | `data/local/entity/*.kt` (sleep, HR, HRV, workout, weight, …)              | Storage — raw metric entities                       | upsert by stable HC id                                                                   |
 | `data/local/dao/InsightDismissalDao.kt`                                    | Storage — insight dismissal DAO                     | observe / dismiss / restore                                                              |
@@ -346,7 +362,7 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | `data/repository/ScoringRepositoryImpl.kt`                                 | Processing — scoring orchestrator                   | TRIMP/PAI → baselines → scores; "Calibrating" gate                                       |
 | `domain/scoring/sleep/SleepPercentileRhrCalculator.kt`                     | Processing — RHR                                    | **RHR nocturnal-floor percentile** (default 5th, 30-day window)                          |
 | `domain/scoring/TrimpModel.kt`                                             | Processing — TRIMP model enum                       | BANISTER / I_TRIMP / CHENG                                                               |
-| `domain/scoring/PaiCalculator.kt`                                          | Processing — TRIMP/PAI                              | **TRIMP (default BANISTER)**; PAI = TRIMP × scaling (cap 75)                             |
+| `domain/scoring/PaiCalculator.kt`                                          | Processing — TRIMP/PAI                              | **TRIMP (default BANISTER)**; PAI = TRIMP × scaling (cap 75); `calculateAllDayTrimp` (Track B, all-day non-SLEEP HR, 5-min gap cap) |
 | `domain/scoring/ComputeWorkoutTrimpUseCase.kt`                             | Processing — per-workout TRIMP                      | model from `prefs.trimpModel`                                                            |
 | `domain/scoring/GetWorkoutDisplayMetricsUseCase.kt`                        | Processing — per-workout display metrics            | orchestrates 42-day history fetching and delegates to `ComputeWorkoutLoadMetricsUseCase` |
 | `domain/scoring/BaselineComputer.kt`                                       | Processing — baselines                              | hrMax / RHR / HRV mu·sigma / PAI factor; freeze + calibration                            |

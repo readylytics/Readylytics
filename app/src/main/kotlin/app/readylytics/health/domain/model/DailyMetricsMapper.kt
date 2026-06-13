@@ -28,6 +28,20 @@ object DailyMetricsMapper {
         val rhrBaselineRounded = rhrBaselineRaw?.roundToInt()
         val hrvBaselineRounded = summary.hrvBaseline ?: prefs.hrvBaselineOverride?.roundToInt()
 
+        val useAllDayHrStrain = prefs.allDayHrStrainEnabled
+        val readinessScore = if (useAllDayHrStrain) summary.dailyHrReadinessScore else summary.readinessScore
+        val loadScore = if (useAllDayHrStrain) summary.dailyHrLoadScore else summary.loadScore
+        val totalTrimp = if (useAllDayHrStrain) summary.dailyHrTrimp else summary.totalTrimp
+        val paiDayScore = if (useAllDayHrStrain) summary.dailyHrPai else summary.paiScore
+        val strainRatio =
+            if (useAllDayHrStrain) {
+                val atl = summary.dailyHrAtl
+                val ctl = summary.dailyHrCtl
+                if (atl != null && ctl != null) (if (ctl > 0f) atl / ctl else 0f) else null
+            } else {
+                summary.strainRatio
+            }
+
         return DailyMetrics(
             date = summary.date,
             // Raw passthrough
@@ -37,6 +51,7 @@ object DailyMetricsMapper {
             hrvBaselineMeanRaw = summary.hrvMuMssd,
             hrvBaselineSdRaw = summary.hrvSigmaMssd,
             rhrSnapshotRaw = summary.rhrBpm,
+            strainRatioRaw = strainRatio,
             // Rounded display ints
             nocturnalRhrRounded = summary.restingHeartRate,
             nocturnalHrvRounded = summary.nocturnalHrv,
@@ -44,12 +59,12 @@ object DailyMetricsMapper {
             rhrBaselineRounded = rhrBaselineRounded,
             hrvBaselineRounded = hrvBaselineRounded,
             sleepScoreRounded = summary.sleepScore?.roundToInt(),
-            readinessRounded = summary.readinessScore?.roundToInt(),
-            loadScoreRounded = summary.loadScore?.roundToInt(),
+            readinessRounded = readinessScore?.roundToInt(),
+            loadScoreRounded = loadScore?.roundToInt(),
             restorationRounded = summary.sRest?.roundToInt(),
-            trimpRounded = summary.totalTrimp?.roundToInt(),
+            trimpRounded = totalTrimp?.roundToInt(),
             paiRounded = summary.totalPai?.roundToInt(),
-            paiDayScoreRounded = summary.paiScore?.roundToInt(),
+            paiDayScoreRounded = paiDayScore?.roundToInt(),
             spo2Rounded = summary.avgSleepingSpo2?.roundToInt(),
             // Baseline diffs + arrows
             rhrBaselineDiff = diff(summary.restingHeartRate, rhrBaselineRounded),
@@ -63,7 +78,7 @@ object DailyMetricsMapper {
             weightKgDisplay = summary.weightKg?.let { format1(it) },
             weightLbsDisplay = summary.weightKg?.let { format1(it * UnitConverter.KG_TO_LBS) },
             bodyFatDisplay = summary.bodyFatPercent?.let { "${format1(it)}%" },
-            strainRatioDisplay = summary.strainRatio?.let { MetricFormatter.formatStrain(it) },
+            strainRatioDisplay = strainRatio?.let { MetricFormatter.formatStrain(it) },
             zLnHrvDisplay = summary.zLnHrv?.let { format2(it) },
             hrvSigmaDisplay = summary.hrvSigma?.let { format3(it) },
             bloodPressureDisplay = formatBloodPressure(summary.bloodPressureSystolic, summary.bloodPressureDiastolic),

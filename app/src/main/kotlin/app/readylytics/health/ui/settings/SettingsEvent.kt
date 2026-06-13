@@ -216,6 +216,10 @@ sealed interface SettingsEvent {
 
     data object ResetTrimpToProfileDefaults : SettingsEvent
 
+    data class AllDayHrStrainEnabledChanged(
+        val enabled: Boolean,
+    ) : SettingsEvent
+
     data class UnitSystemChanged(
         val unitSystem: app.readylytics.health.data.preferences.UnitSystem,
     ) : SettingsEvent

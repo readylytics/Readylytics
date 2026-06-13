@@ -16,9 +16,12 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -48,6 +52,7 @@ fun AdvancedSettingsSection(
     banisterMultiplier: Float,
     chengBeta: Float,
     itrimB: Float,
+    allDayHrStrainEnabled: Boolean,
     onEvent: (SettingsEvent) -> Unit,
     onPhysiologyEvent: (SettingsEvent) -> Unit,
     onUIEvent: (SettingsEvent) -> Unit,
@@ -290,5 +295,29 @@ fun AdvancedSettingsSection(
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
+        ListItem(
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            headlineContent = {
+                Text(
+                    stringResource(R.string.advanced_all_day_hr_strain_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            supportingContent = {
+                Text(
+                    stringResource(R.string.advanced_all_day_hr_strain_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            trailingContent = {
+                Switch(
+                    checked = allDayHrStrainEnabled,
+                    onCheckedChange = { onUIEvent(SettingsEvent.AllDayHrStrainEnabledChanged(it)) },
+                )
+            },
+        )
     }
 }

@@ -167,6 +167,8 @@ message UserPreferencesProto {
     int64 custom_secondary_color = 68;
     int64 custom_tertiary_color = 69;
     int64 custom_primary_color = 70;
+
+    bool all_day_hr_strain_enabled = 71;
 }
 
 enum TrimpMethodProto {

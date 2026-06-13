@@ -42,6 +42,7 @@ class UISettingsViewModel
                         banisterMultiplier = prefs.banisterMultiplier,
                         chengBeta = prefs.chengBeta,
                         itrimB = prefs.itrimB,
+                        allDayHrStrainEnabled = prefs.allDayHrStrainEnabled,
                         unitSystem = prefs.unitSystem,
                         isCustomPaletteEnabled = prefs.isCustomPaletteEnabled,
                         customSecondaryColor = prefs.customSecondaryColor,
@@ -133,6 +134,8 @@ class UISettingsViewModel
                         settingsRepo.updateItrimB(profile.defaultItrimB)
                         healthSyncUseCase.sync()
                     }
+                is SettingsEvent.AllDayHrStrainEnabledChanged ->
+                    viewModelScope.launch { settingsRepo.updateAllDayHrStrainEnabled(enabled = event.enabled) }
                 is SettingsEvent.UnitSystemChanged ->
                     viewModelScope.launch { settingsRepo.updateUnitSystem(unitSystem = event.unitSystem) }
                 is SettingsEvent.CustomPaletteEnabledChanged ->

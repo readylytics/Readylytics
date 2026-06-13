@@ -80,4 +80,18 @@ data class DailySummaryEntity(
     val paiScalingFactor: Float? = null,
     @ColumnInfo(name = "baseline_observation_count")
     val baselineObservationCount: Int? = null,
+    // All-day HR strain track (Track B): computed in parallel with the workout-based
+    // track on every sync, gated by the same isCalibrating logic.
+    @ColumnInfo(defaultValue = "NULL")
+    val dailyHrTrimp: Float? = null,
+    @ColumnInfo(defaultValue = "NULL")
+    val dailyHrPai: Float? = null,
+    @ColumnInfo(defaultValue = "NULL")
+    val dailyHrAtl: Float? = null,
+    @ColumnInfo(defaultValue = "NULL")
+    val dailyHrCtl: Float? = null,
+    @ColumnInfo(defaultValue = "NULL")
+    val dailyHrLoadScore: Float? = null,
+    @ColumnInfo(defaultValue = "NULL")
+    val dailyHrReadinessScore: Float? = null,
 )

@@ -68,6 +68,8 @@ object SettingsDefaults {
     const val BACKGROUND_SYNC_ENABLED = false
     val BACKGROUND_SYNC_INTERVAL = BackgroundSyncInterval.HOUR_1
 
+    const val ALL_DAY_HR_STRAIN_ENABLED = false
+
     const val IS_CUSTOM_PALETTE_ENABLED = false
     const val CUSTOM_SECONDARY_COLOR = 0xFFCCC2DCL
     const val CUSTOM_TERTIARY_COLOR = 0xFFEFB8C8L

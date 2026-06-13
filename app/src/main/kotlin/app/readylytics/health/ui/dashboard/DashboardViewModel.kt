@@ -16,6 +16,8 @@ import app.readylytics.health.domain.dashboard.InsightDeriver
 import app.readylytics.health.domain.insights.InsightContext
 import app.readylytics.health.domain.insights.InsightEngine
 import app.readylytics.health.domain.insights.InsightParams
+import app.readylytics.health.domain.model.DailyMetrics
+import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.model.MetricStatus
@@ -132,6 +134,10 @@ class DashboardViewModel
                 )
 
             val cards = cardsResult.getOrNull()
+            val metrics =
+                basicInputs.summary?.let {
+                    DailyMetricsMapper.toMetrics(it, basicInputs.userPreferences)
+                }
             val engineFindings =
                 basicInputs.summary?.let { summary ->
                     InsightEngine.evaluate(
@@ -153,6 +159,7 @@ class DashboardViewModel
                 )
             return DashboardUiState(
                 summary = basicInputs.summary,
+                metrics = metrics,
                 selectedDate = selectedDate,
                 cardDataMap = cards?.cardDataMap ?: emptyMap(),
                 circadianConsistency = basicInputs.circadianResult,
@@ -309,6 +316,7 @@ class DashboardViewModel
 @Immutable
 data class DashboardUiState(
     val summary: DailySummary? = null,
+    val metrics: DailyMetrics? = null,
     val selectedDate: LocalDate = LocalDate.now(),
     val cardDataMap: Map<CardId, CardData> = emptyMap(),
     val circadianConsistency: CircadianConsistencyResult? = null,

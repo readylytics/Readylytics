@@ -259,6 +259,53 @@ class ScoringRepositoryImplTest {
         }
 
     @Test
+    fun `computeDailySummary persists all-day HR Track B fields when calibrated`() =
+        runTest {
+            val today = LocalDate.now()
+
+            coEvery {
+                computeSleepMetricsUseCase(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                )
+            } returns Result.success(DailySummaryEntity(0L))
+
+            val result = repo.computeDailySummary(today)
+
+            kotlin.test.assertFalse(result.isCalibrating)
+            kotlin.test.assertNotNull(result.dailyHrTrimp)
+            kotlin.test.assertNotNull(result.dailyHrPai)
+            kotlin.test.assertNotNull(result.dailyHrAtl)
+            kotlin.test.assertNotNull(result.dailyHrCtl)
+            kotlin.test.assertNotNull(result.dailyHrLoadScore)
+            kotlin.test.assertNotNull(result.dailyHrReadinessScore)
+        }
+
+    @Test
+    fun `computeDailySummary leaves Track B EMA fields null while calibrating but still computes daily HR PAI`() =
+        runTest {
+            val today = LocalDate.now()
+            coEvery { sleepSessionDao.countSince(any()) } returns 2
+
+            val result = repo.computeDailySummary(today)
+
+            kotlin.test.assertTrue(result.isCalibrating)
+            kotlin.test.assertNotNull(result.dailyHrTrimp)
+            kotlin.test.assertNotNull(result.dailyHrPai)
+            kotlin.test.assertNull(result.dailyHrAtl)
+            kotlin.test.assertNull(result.dailyHrCtl)
+            kotlin.test.assertNull(result.dailyHrLoadScore)
+            kotlin.test.assertNull(result.dailyHrReadinessScore)
+        }
+
+    @Test
     fun `wakeHrCollector with null fields does not crash`() =
         runTest {
             val today = LocalDate.now()

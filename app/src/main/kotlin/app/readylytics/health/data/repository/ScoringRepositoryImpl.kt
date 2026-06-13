@@ -149,6 +149,39 @@ class ScoringRepositoryImpl
                     dailyTrimpRaw += workoutTrimp
                 }
 
+                // All-Day HR Strain Track (Track B): integrate TRIMP over the continuous
+                // non-sleep HR stream for the day, independent of workout boundaries.
+                val allDaySamples =
+                    heartRateDao
+                        .getByTimeRange(dayMidnightMs, nextDayMidnightMs)
+                        .filter { it.recordType != RecordType.SLEEP.name }
+                        .sortedBy { it.timestampMs }
+                        .map { sample ->
+                            ComputeWorkoutTrimpUseCase.HeartRateSample(
+                                Instant.ofEpochMilli(sample.timestampMs),
+                                sample.beatsPerMinute,
+                            )
+                        }
+                val dailyHrTrimpRaw =
+                    PaiCalculator.calculateAllDayTrimp(
+                        samples = allDaySamples,
+                        hrMax = hrMax,
+                        rhrBaseline = rhrBaselineValue,
+                        gender = prefs.gender,
+                        trimpModel = prefs.trimpModel,
+                        banisterMultiplier = prefs.banisterMultiplier,
+                        chengBeta = prefs.chengBeta,
+                        itrimB = prefs.itrimB,
+                        ltBpm = prefs.zone3MaxBpm.toFloat(),
+                    )
+                val dailyHrPai =
+                    round(
+                        PaiCalculator.calculateDailyPai(
+                            dailyHrTrimpRaw,
+                            frozenPaiScalingFactor ?: scoringConfig.paiScalingFactor,
+                        ) * 10f,
+                    ) / 10f
+
                 // Enforce 75-point daily cap. Standard PAI is pure load, no readiness penalty.
                 // Round daily PAI to 1 decimal place to ensure display consistency.
                 val dailyPaiRaw =
@@ -177,6 +210,8 @@ class ScoringRepositoryImpl
                     ).copy(
                         paiScore = dailyPai,
                         totalPai = totalPai7d,
+                        dailyHrTrimp = dailyHrTrimpRaw,
+                        dailyHrPai = dailyHrPai,
                         weightKg = latestWeight?.weightKg,
                         bodyFatPercent = latestBodyFat?.bodyFatPercent,
                         bloodPressureSystolic = latestBP?.systolicMmHg,
@@ -300,6 +335,23 @@ class ScoringRepositoryImpl
 
                 summary = summary.copy(loadScore = loadScore, strainRatio = sr, totalTrimp = dailyTrimpRaw)
 
+                // Track B (All-Day HR) ATL/CTL/Load: history comes from previously persisted
+                // dailyHrTrimp values, with today's freshly computed value layered on top.
+                val dailyHrTrimpHistory = dailySummaryDao.getDailyHrTrimpSince(ctlFetchFrom, nextDayMidnightMs)
+                val dailyHrTrimpByDate =
+                    dailyHrTrimpHistory
+                        .associate { row ->
+                            Instant.ofEpochMilli(row.dateMidnightMs).atZone(zoneId).toLocalDate() to (row.dailyHrTrimp ?: 0f)
+                        }.toMutableMap()
+                dailyHrTrimpByDate[targetDate] = dailyHrTrimpRaw
+
+                val ctlHr = scoringCalculator.computeCtlEmaWithDecay(dailyHrTrimpByDate, targetDate)
+                val atlHr = scoringCalculator.computeAtlEmaWithDecay(dailyHrTrimpByDate, targetDate)
+                val srHr = scoringCalculator.computeStrainRatio(atlHr, ctlHr)
+                val loadScoreHr = scoringCalculator.computeLoadScore(srHr)
+
+                summary = summary.copy(dailyHrAtl = atlHr, dailyHrCtl = ctlHr, dailyHrLoadScore = loadScoreHr)
+
                 val computedHrvBaseline =
                     baselineComputer.computeHrvBaselineBetween(
                         fromMs = dayMidnightMs,
@@ -323,6 +375,23 @@ class ScoringRepositoryImpl
                         )
                     summary = sleepMetricsResult.getOrNull() ?: summary
                 }
+
+                // Track B readiness reuses the same sRest/sleepScore/recovery flags as Track A
+                // (no all-day variant of HRV/RHR/sleep architecture exists); only loadScore differs.
+                val recoveryFlagsForHr =
+                    summary.recoveryFlags
+                        ?.split(',')
+                        ?.mapNotNull { token -> runCatching { RecoveryFlag.valueOf(token.trim()) }.getOrNull() }
+                        ?.toSet()
+                        ?: emptySet()
+                val readinessScoreHr =
+                    scoringCalculator.computeReadinessScore(
+                        sRest = summary.sRest ?: 0f,
+                        sleepScore = summary.sleepScore ?: 0f,
+                        loadScore = loadScoreHr,
+                        recoveryFlags = recoveryFlagsForHr,
+                    )
+                summary = summary.copy(dailyHrReadinessScore = readinessScoreHr)
 
                 val hrvMuMssd =
                     if (frozenSnapshot != null) {

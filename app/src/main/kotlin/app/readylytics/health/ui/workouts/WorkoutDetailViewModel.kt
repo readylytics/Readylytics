@@ -107,11 +107,11 @@ class WorkoutDetailViewModel
                         .toEpochMilli()
                 val thirtyDaySummaries = dailySummaryRepository.getSince(thirtyDaysAgo)
 
-                val paiBreakdown = DailyPaiBreakdownMapper.mapDailyBreakdown(workoutDate, thirtyDaySummaries)
+                val prefs = settingsRepo.userPreferences.first()
+
+                val paiBreakdown = DailyPaiBreakdownMapper.mapDailyBreakdown(workoutDate, thirtyDaySummaries, prefs)
 
                 val recoveryMetrics = RecoveryMetricsMapper.mapRecoveryMetrics(allSamples, workout.endTime, endHr)
-
-                val prefs = settingsRepo.userPreferences.first()
                 val workoutSamples = dbSamples.filter { it.timestamp <= workoutEndInstant }
                 val displayMetrics =
                     getWorkoutDisplayMetricsUseCase.execute(

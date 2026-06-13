@@ -4,6 +4,7 @@ import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.time.Instant
 
 class PaiCalculatorTest {
     private val duration = 40f
@@ -194,6 +195,52 @@ class PaiCalculatorTest {
             )
         assertEquals(0f, result, 0.001f)
     }
+
+    @Test
+    fun `calculateAllDayTrimp returns 0 for fewer than 2 samples`() {
+        val empty = emptyList<ComputeWorkoutTrimpUseCase.HeartRateSample>()
+        val single = listOf(sample(0, 160))
+        assertEquals(0f, PaiCalculator.calculateAllDayTrimp(empty, hrMax, rhr, gender), 0.001f)
+        assertEquals(0f, PaiCalculator.calculateAllDayTrimp(single, hrMax, rhr, gender), 0.001f)
+    }
+
+    @Test
+    fun `calculateAllDayTrimp sums contiguous intervals within gap cap`() {
+        // Two 4-minute intervals at 160 bpm, each interval contributes
+        // calculateDailyTrimp(durationMinutes = 4, hrAvg = 160, ...)
+        val samples =
+            listOf(
+                sample(0, 160),
+                sample(4, 160),
+                sample(8, 160),
+            )
+        val expectedPerInterval = PaiCalculator.calculateDailyTrimp(4f, 160f, rhr, hrMax, gender)
+        val result = PaiCalculator.calculateAllDayTrimp(samples, hrMax, rhr, gender)
+        assertEquals(expectedPerInterval * 2f, result, 0.01f)
+    }
+
+    @Test
+    fun `calculateAllDayTrimp excludes intervals longer than the gap cap`() {
+        // First interval is 4 minutes (counts), second is 10 minutes (off-wrist, excluded)
+        val samples =
+            listOf(
+                sample(0, 160),
+                sample(4, 160),
+                sample(14, 160),
+            )
+        val expectedPerInterval = PaiCalculator.calculateDailyTrimp(4f, 160f, rhr, hrMax, gender)
+        val result = PaiCalculator.calculateAllDayTrimp(samples, hrMax, rhr, gender)
+        assertEquals(expectedPerInterval, result, 0.01f)
+    }
+
+    private fun sample(
+        minuteOffset: Long,
+        bpm: Int,
+    ): ComputeWorkoutTrimpUseCase.HeartRateSample =
+        ComputeWorkoutTrimpUseCase.HeartRateSample(
+            timestamp = Instant.EPOCH.plusSeconds(minuteOffset * 60),
+            bpm = bpm,
+        )
 
     @Test
     fun `calculateDailyTrimp HRr clamped to 1 when HR exceeds HRmax`() {

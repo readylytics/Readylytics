@@ -194,4 +194,8 @@ internal class PhysiologyPreferences
         suspend fun updateItrimB(value: Float) {
             dataStore.updateData { it.toBuilder().setItrimpB(value.toValidItrimB()).build() }
         }
+
+        suspend fun updateAllDayHrStrainEnabled(enabled: Boolean) {
+            dataStore.updateData { it.toBuilder().setAllDayHrStrainEnabled(enabled).build() }
+        }
     }

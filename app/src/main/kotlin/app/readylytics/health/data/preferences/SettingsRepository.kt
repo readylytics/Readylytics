@@ -129,6 +129,8 @@ class SettingsRepository
 
         suspend fun updateRetentionDays(days: Int) = sleep.updateRetentionDays(days)
 
+        suspend fun updateAllDayHrStrainEnabled(enabled: Boolean) = physiology.updateAllDayHrStrainEnabled(enabled)
+
         suspend fun updateCollapseCloudData(collapsed: Boolean) = ui.updateCollapseCloudData(collapsed)
 
         suspend fun updateCollapseHealthConnect(collapsed: Boolean) = ui.updateCollapseHealthConnect(collapsed)

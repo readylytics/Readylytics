@@ -88,7 +88,7 @@ fun buildCardDataMap(
                 val readinessCard = uiState.cardDataMap[CardId.READINESS]
                 M3ScoreDial(
                     label = "Readiness",
-                    score = summary?.readinessScore,
+                    score = uiState.metrics?.readinessRounded?.toFloat(),
                     displayText = readinessCard?.value ?: "—",
                     status = readinessCard?.status,
                     onClick = if (isEditing) ({}) else onNavigateToWorkouts,

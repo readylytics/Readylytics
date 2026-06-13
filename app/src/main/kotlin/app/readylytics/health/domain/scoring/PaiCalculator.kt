@@ -4,6 +4,9 @@ import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import kotlin.math.exp
 
+/** Max gap between consecutive all-day HR samples that still contributes TRIMP (off-wrist periods beyond this are treated as zero strain). */
+private const val ALL_DAY_MAX_GAP_MINUTES = 5f
+
 object PaiCalculator {
     fun getDefaultPaiScalingFactor(profile: PhysiologyProfile): Float =
         when (profile) {
@@ -72,6 +75,48 @@ object PaiCalculator {
                 durationMinutes * hrR * exp(itrimB * hrR)
             }
         }
+    }
+
+    /**
+     * All-Day HR Strain Track: integrates TRIMP across the continuous (non-sleep) HR
+     * stream for a day. Each sample's BPM represents the interval up to the next
+     * sample (same step-wise convention as [ComputeWorkoutTrimpUseCase]). Intervals
+     * longer than [maxGapMinutes] are treated as off-wrist gaps and contribute 0.
+     */
+    fun calculateAllDayTrimp(
+        samples: List<ComputeWorkoutTrimpUseCase.HeartRateSample>,
+        hrMax: Float,
+        rhrBaseline: Float,
+        gender: Gender?,
+        trimpModel: TrimpModel = TrimpModel.BANISTER,
+        banisterMultiplier: Float = 1.0f,
+        chengBeta: Float = 0.09f,
+        itrimB: Float = 2.1f,
+        ltBpm: Float = 0f,
+        maxGapMinutes: Float = ALL_DAY_MAX_GAP_MINUTES,
+    ): Float {
+        if (samples.size < 2) return 0f
+        var total = 0f
+        for (i in 0 until samples.size - 1) {
+            val cur = samples[i]
+            val next = samples[i + 1]
+            val durMin = (next.timestamp.toEpochMilli() - cur.timestamp.toEpochMilli()) / 60_000f
+            if (durMin <= 0f || durMin > maxGapMinutes) continue
+            total +=
+                calculateDailyTrimp(
+                    durationMinutes = durMin,
+                    hrAvg = cur.bpm.toFloat(),
+                    rhrBaseline = rhrBaseline,
+                    hrMax = hrMax,
+                    gender = gender,
+                    trimpModel = trimpModel,
+                    banisterMultiplier = banisterMultiplier,
+                    chengBeta = chengBeta,
+                    itrimB = itrimB,
+                    ltBpm = ltBpm,
+                )
+        }
+        return total
     }
 
     /**

@@ -83,6 +83,7 @@ data class UserPreferences(
     val customSecondaryColor: Long = SettingsDefaults.CUSTOM_SECONDARY_COLOR,
     val customTertiaryColor: Long = SettingsDefaults.CUSTOM_TERTIARY_COLOR,
     val customPrimaryColor: Long = SettingsDefaults.CUSTOM_PRIMARY_COLOR,
+    val allDayHrStrainEnabled: Boolean = SettingsDefaults.ALL_DAY_HR_STRAIN_ENABLED,
 )
 
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
@@ -207,6 +208,7 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
             } else {
                 customPrimaryColor
             },
+        allDayHrStrainEnabled = allDayHrStrainEnabled,
     )
 }
 
