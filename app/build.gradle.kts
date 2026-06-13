@@ -147,6 +147,7 @@ tasks.register<JacocoReport>("jacocoTestReport") {
 }
 
 tasks.register("jacocoCoverageVerification") {
+    notCompatibleWithConfigurationCache("Task accesses Project object and file system dynamically")
     dependsOn("jacocoTestReport")
     doLast {
         val reportFile =
