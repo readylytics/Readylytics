@@ -279,7 +279,7 @@ class ScoringRepositoryImplTest {
 
             val result = repo.computeDailySummary(today)
 
-            kotlin.test.assertFalse(result.isCalibrating)
+            assertNotEquals(true, result.isCalibrating)
             kotlin.test.assertNotNull(result.dailyHrTrimp)
             kotlin.test.assertNotNull(result.dailyHrPai)
             kotlin.test.assertNotNull(result.dailyHrAtl)
@@ -296,7 +296,7 @@ class ScoringRepositoryImplTest {
 
             val result = repo.computeDailySummary(today)
 
-            kotlin.test.assertTrue(result.isCalibrating)
+            kotlin.test.assertEquals(true, result.isCalibrating)
             kotlin.test.assertNotNull(result.dailyHrTrimp)
             kotlin.test.assertNotNull(result.dailyHrPai)
             kotlin.test.assertNull(result.dailyHrAtl)

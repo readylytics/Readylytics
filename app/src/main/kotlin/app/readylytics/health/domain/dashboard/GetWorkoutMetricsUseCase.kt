@@ -33,7 +33,7 @@ class GetWorkoutMetricsUseCase
                 }
 
                 val strainRatioCard =
-                    (metrics?.strainRatioRaw ?: summary.strainRatio)?.let { strainRatio ->
+                    (if (metrics != null) metrics.strainRatioRaw else summary.strainRatio)?.let { strainRatio ->
                         createStrainRatioCard(
                             strainRatio = strainRatio,
                             displayValue = metrics?.strainRatioDisplay ?: MetricFormatter.formatStrain(strainRatio),
