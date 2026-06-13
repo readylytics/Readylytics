@@ -20,7 +20,10 @@ import app.readylytics.health.ui.common.DailyDataPoint
 import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.common.padToRange
 import app.readylytics.health.ui.sleep.Baselines
+import app.readylytics.health.di.DefaultDispatcher
+import app.readylytics.health.di.IoDispatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,6 +73,8 @@ class VitalsViewModel
         private val savedStateHandle: SavedStateHandle,
         private val hrvBaselineProvider: HrvBaselineProvider,
         private val rhrBaselineProvider: RhrBaselineProvider,
+        @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val _selectedRange =
             MutableStateFlow(
@@ -84,7 +89,7 @@ class VitalsViewModel
                         hrv = hrvBaselineProvider.getRoundedHrvBaseline(date)?.toFloat(),
                         rhr = rhrBaselineProvider.getRoundedRhrBaseline(date),
                     )
-                }.flowOn(Dispatchers.IO)
+                }.flowOn(ioDispatcher)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
@@ -213,7 +218,7 @@ class VitalsViewModel
                             rhrOptimalThreshold = prefs.rhrOptimalThreshold,
                             rhrWarningThreshold = prefs.rhrWarningThreshold,
                         )
-                    }.flowOn(Dispatchers.Default)
+                    }.flowOn(defaultDispatcher)
                 }.stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),

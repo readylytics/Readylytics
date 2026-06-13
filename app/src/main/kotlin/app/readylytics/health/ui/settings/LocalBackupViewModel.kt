@@ -10,7 +10,9 @@ import app.readylytics.health.domain.backup.BackupService
 import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.backup.RestoreService
 import app.readylytics.health.ui.common.UiText
+import app.readylytics.health.di.IoDispatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -40,6 +42,7 @@ class LocalBackupViewModel
         private val backupService: BackupService,
         private val restoreService: RestoreService,
         private val encryptionManager: EncryptionManager,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         sealed interface SideEffect {
             data object RestartApp : SideEffect
@@ -60,7 +63,7 @@ class LocalBackupViewModel
                 .distinctUntilChanged()
                 .flatMapLatest {
                     flow { emit(backupService.listBackups()) }
-                        .flowOn(Dispatchers.IO)
+                        .flowOn(ioDispatcher)
                 }.stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5000),

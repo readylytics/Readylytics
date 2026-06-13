@@ -29,7 +29,9 @@ import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.ui.common.BaseViewModel
 import app.readylytics.health.ui.common.UiText
 import app.readylytics.health.ui.heartrate.HeartRateDaySummary
+import app.readylytics.health.di.DefaultDispatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -57,6 +59,7 @@ class DashboardViewModel
         private val dailyMetricCache: DailyMetricCache,
         private val heartRateRepository: HeartRateRepository,
         private val insightDismissalRepository: InsightDismissalRepository,
+        @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : BaseViewModel() {
         fun validateSelectedDate(date: LocalDate): Result<LocalDate> =
             if (date <= LocalDate.now()) {
@@ -94,7 +97,7 @@ class DashboardViewModel
                         realtimeState = realtimeState,
                     )
                 transformToUiState(combined, basicInputs.selectedDate, hrSummary)
-            }.flowOn(Dispatchers.Default).stateIn(
+            }.flowOn(defaultDispatcher).stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = DashboardUiState(),

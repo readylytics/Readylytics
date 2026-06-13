@@ -11,11 +11,20 @@ import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModelTest {
+    private val testDispatcher = StandardTestDispatcher()
+
     private lateinit var dailySummaryRepository: DailySummaryRepository
     private lateinit var getDashboardDataUseCase: GetDashboardDataUseCase
     private lateinit var foregroundSyncController: ForegroundSyncController
@@ -30,6 +39,7 @@ class DashboardViewModelTest {
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
         dailySummaryRepository = mockk(relaxed = true)
         getDashboardDataUseCase = mockk(relaxed = true)
         foregroundSyncController = mockk(relaxed = true)
@@ -53,7 +63,13 @@ class DashboardViewModelTest {
                 dailyMetricCache = dailyMetricCache,
                 heartRateRepository = heartRateRepository,
                 insightDismissalRepository = insightDismissalRepository,
+                defaultDispatcher = testDispatcher,
             )
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
