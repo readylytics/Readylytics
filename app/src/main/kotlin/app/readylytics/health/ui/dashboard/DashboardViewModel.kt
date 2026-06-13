@@ -7,6 +7,7 @@ import app.readylytics.health.R
 import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.cache.DailyMetricCache
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
@@ -29,10 +30,8 @@ import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.ui.common.BaseViewModel
 import app.readylytics.health.ui.common.UiText
 import app.readylytics.health.ui.heartrate.HeartRateDaySummary
-import app.readylytics.health.di.DefaultDispatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

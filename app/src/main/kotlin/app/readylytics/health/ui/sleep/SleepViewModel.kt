@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.DailyMetricsRepository
@@ -18,10 +19,8 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.ui.common.DailyDataPoint
 import app.readylytics.health.ui.common.TimeRange
-import app.readylytics.health.di.DefaultDispatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

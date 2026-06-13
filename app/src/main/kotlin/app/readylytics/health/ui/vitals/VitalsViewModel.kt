@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.di.DefaultDispatcher
+import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.ZoneBand
 import app.readylytics.health.domain.model.hrvZoneBands
@@ -20,11 +22,8 @@ import app.readylytics.health.ui.common.DailyDataPoint
 import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.common.padToRange
 import app.readylytics.health.ui.sleep.Baselines
-import app.readylytics.health.di.DefaultDispatcher
-import app.readylytics.health.di.IoDispatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
