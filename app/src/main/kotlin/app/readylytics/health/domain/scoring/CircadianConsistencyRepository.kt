@@ -2,6 +2,7 @@ package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
@@ -65,7 +66,7 @@ class CircadianConsistencyRepository
                 val anchorMs =
                     anchorDate
                         .plusDays(1)
-                        .atStartOfDay(ZoneId.systemDefault())
+                        .atStartOfDay(prefs.scoringZone())
                         .toInstant()
                         .toEpochMilli()
                 val fromMs = anchorMs - 60L * 24 * 60 * 60 * 1000L
@@ -83,6 +84,7 @@ class CircadianConsistencyRepository
             val threshold = prefs.consistencyThresholdMinutes
             val evalCount = prefs.consistencyEvaluationDays
             val baselineCount = prefs.consistencyBaselineDays
+            val zone = prefs.scoringZone()
 
             val validSessions =
                 sessions
@@ -97,7 +99,7 @@ class CircadianConsistencyRepository
 
             val startOfDayMs =
                 anchorDate
-                    .atStartOfDay(ZoneId.systemDefault())
+                    .atStartOfDay(zone)
                     .toInstant()
                     .toEpochMilli()
             val latestSessionEndTime = validSessions.firstOrNull()?.endTime
@@ -105,8 +107,8 @@ class CircadianConsistencyRepository
                 return CircadianConsistencyResult.MissingData
             }
 
-            val medianBed = baselineSessions.map { normalizeMinutes(it.startTime) }.median()
-            val medianWake = baselineSessions.map { normalizeMinutes(it.endTime) }.median()
+            val medianBed = baselineSessions.map { normalizeMinutes(it.startTime, zone) }.median()
+            val medianWake = baselineSessions.map { normalizeMinutes(it.endTime, zone) }.median()
 
             val evalSessions = validSessions.take(evalCount)
             if (evalSessions.isEmpty()) {
@@ -115,8 +117,8 @@ class CircadianConsistencyRepository
 
             val dailyScores =
                 evalSessions.map { session ->
-                    val bedDev = abs(normalizeMinutes(session.startTime) - medianBed).toFloat()
-                    val wakeDev = abs(normalizeMinutes(session.endTime) - medianWake).toFloat()
+                    val bedDev = abs(normalizeMinutes(session.startTime, zone) - medianBed).toFloat()
+                    val wakeDev = abs(normalizeMinutes(session.endTime, zone) - medianWake).toFloat()
                     val bedScore = scoreDeviation(bedDev, threshold.toFloat())
                     val wakeScore = scoreDeviation(wakeDev, threshold.toFloat())
                     (bedScore + wakeScore) / 2f
@@ -142,8 +144,11 @@ class CircadianConsistencyRepository
 
         // Times before noon are treated as "past midnight" (e.g., 1:00 AM → 25:00)
         // so that sorting and median work correctly across the midnight boundary.
-        private fun normalizeMinutes(epochMs: Long): Int {
-            val zdt = Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault())
+        private fun normalizeMinutes(
+            epochMs: Long,
+            zone: ZoneId,
+        ): Int {
+            val zdt = Instant.ofEpochMilli(epochMs).atZone(zone)
             val minutes = zdt.hour * 60 + zdt.minute
             return if (minutes < 12 * 60) minutes + 1440 else minutes
         }

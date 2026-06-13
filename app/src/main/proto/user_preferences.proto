@@ -167,6 +167,11 @@ message UserPreferencesProto {
     int64 custom_secondary_color = 68;
     int64 custom_tertiary_color = 69;
     int64 custom_primary_color = 70;
+
+    // IANA timezone id used for all scoring day-boundary math. Stored so scores are
+    // reproducible across devices for identical data + preferences. Empty = un-seeded
+    // (falls back to the device zone until the seed migration / first run sets it).
+    string scoring_zone_id = 71;
 }
 
 enum TrimpMethodProto {
