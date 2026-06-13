@@ -1,5 +1,6 @@
 package app.readylytics.health.ui.dashboard
 
+import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.repository.SelectedDateRepository
