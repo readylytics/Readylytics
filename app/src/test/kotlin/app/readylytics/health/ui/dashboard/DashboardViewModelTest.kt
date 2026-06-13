@@ -13,6 +13,7 @@ import app.readylytics.health.domain.sync.ForegroundSyncController
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -69,6 +70,10 @@ class DashboardViewModelTest {
 
     @After
     fun tearDown() {
+        if (::viewModel.isInitialized) {
+            viewModel.viewModelScope.cancel()
+        }
+        testDispatcher.scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
     }
 
