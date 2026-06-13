@@ -7,7 +7,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.health.connect.client.HealthConnectClient
@@ -28,6 +28,8 @@ fun OnboardingRoute(
     val restoreState by restoreViewModel.state.collectAsStateWithLifecycle()
     val permissions = remember { syncViewModel.allPermissions }
 
+    var permissionsDenied by rememberSaveable { mutableStateOf(false) }
+
     val permissionLauncher =
         rememberLauncherForActivityResult(
             contract = PermissionController.createRequestPermissionResultContract(),
@@ -39,12 +41,14 @@ fun OnboardingRoute(
                 app.readylytics.health.domain.util.logD(
                     "OnboardingRoute",
                 ) { "All required permissions granted by user" }
+                permissionsDenied = false
                 syncViewModel.onPermissionsGranted()
             } else {
                 val missing = syncViewModel.requiredPermissions - granted
                 app.readylytics.health.domain.util.logD(
                     "OnboardingRoute",
                 ) { "User denied some required permissions: $missing" }
+                permissionsDenied = true
                 syncViewModel.onPermissionsDenied()
             }
         }
@@ -76,7 +80,17 @@ fun OnboardingRoute(
                 permissionLauncher.launch(permissions)
             }
         }
-        FinishingSetupScreen()
+        if (permissionsDenied) {
+            PermissionsRequiredScreen(
+                onGrantPermissionsClick = { permissionLauncher.launch(permissions) },
+                onOpenSettingsClick = {
+                    val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
+                    runCatching { context.startActivity(intent) }
+                },
+            )
+        } else {
+            FinishingSetupScreen()
+        }
         return
     }
 

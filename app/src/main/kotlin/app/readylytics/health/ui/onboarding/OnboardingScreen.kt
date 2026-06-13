@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,7 +65,7 @@ fun OnboardingScreen(
     onDismissRestoreError: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var step by remember { mutableIntStateOf(0) }
+    var step by rememberSaveable { mutableIntStateOf(0) }
 
     Surface(modifier = modifier.fillMaxSize()) {
         when (step) {
@@ -201,6 +202,53 @@ fun FinishingSetupScreen(modifier: Modifier = Modifier) {
             text = stringResource(R.string.onboarding_finishing_setup),
             style = MaterialTheme.typography.bodyMedium,
         )
+    }
+}
+
+@Composable
+fun PermissionsRequiredScreen(
+    onGrantPermissionsClick: () -> Unit,
+    onOpenSettingsClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.onboarding_permissions_required_title),
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = stringResource(R.string.onboarding_permissions_required_message),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        Button(
+            onClick = onGrantPermissionsClick,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.onboarding_grant_permissions_retry))
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        TextButton(onClick = onOpenSettingsClick) {
+            Text(stringResource(R.string.onboarding_open_hc_settings))
+        }
     }
 }
 

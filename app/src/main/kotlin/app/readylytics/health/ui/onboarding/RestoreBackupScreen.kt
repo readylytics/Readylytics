@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,7 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,10 +58,10 @@ fun RestoreBackupScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var selectedUri by remember { mutableStateOf<Uri?>(null) }
-    var selectedFileName by remember { mutableStateOf<String?>(null) }
-    var password by remember { mutableStateOf("") }
-    var showPassword by remember { mutableStateOf(false) }
+    var selectedUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    var selectedFileName by rememberSaveable { mutableStateOf<String?>(null) }
+    var password by rememberSaveable { mutableStateOf("") }
+    var showPassword by rememberSaveable { mutableStateOf(false) }
 
     val filePickerLauncher =
         rememberLauncherForActivityResult(
@@ -128,6 +129,14 @@ fun RestoreBackupScreen(
                     keyboardType = KeyboardType.Password,
                     autoCorrectEnabled = false,
                     imeAction = ImeAction.Done,
+                ),
+            keyboardActions =
+                KeyboardActions(
+                    onDone = {
+                        selectedUri?.takeIf { password.isNotEmpty() && !isBusy }?.let {
+                            onRestoreClick(it, password)
+                        }
+                    },
                 ),
             trailingIcon = {
                 IconButton(onClick = { showPassword = !showPassword }) {

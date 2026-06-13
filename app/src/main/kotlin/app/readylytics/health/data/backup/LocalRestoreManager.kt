@@ -56,7 +56,7 @@ class LocalRestoreManager
 
         suspend fun validate(
             backupUri: Uri,
-            password: String? = null,
+            providedPassword: String? = null,
         ): Result<BackupManifest> =
             withContext(Dispatchers.IO) {
                 runCatching {
@@ -65,7 +65,7 @@ class LocalRestoreManager
 
                     try {
                         val zipFile = ZipFile(tempZipFile)
-                        val password = password ?: getDecryptedPassword()
+                        val password = providedPassword ?: getDecryptedPassword()
 
                         if (zipFile.isEncrypted) {
                             if (password == null) throw WrongBackupPasswordException()
@@ -117,7 +117,7 @@ class LocalRestoreManager
 
         suspend fun applyRestore(
             backupUri: Uri,
-            password: String? = null,
+            providedPassword: String? = null,
         ): RestoreResult =
             withContext(Dispatchers.IO) {
                 runCatching {
@@ -126,7 +126,7 @@ class LocalRestoreManager
 
                     try {
                         val zipFile = ZipFile(tempZipFile)
-                        val password = password ?: getDecryptedPassword()
+                        val password = providedPassword ?: getDecryptedPassword()
 
                         if (zipFile.isEncrypted) {
                             if (password == null) throw WrongBackupPasswordException()

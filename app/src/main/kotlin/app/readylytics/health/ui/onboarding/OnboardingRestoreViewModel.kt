@@ -9,12 +9,12 @@ import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.backup.RestoreService
 import app.readylytics.health.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -35,8 +35,8 @@ class OnboardingRestoreViewModel
             data object RestartApp : SideEffect
         }
 
-        private val _sideEffect = MutableSharedFlow<SideEffect>()
-        val sideEffect: SharedFlow<SideEffect> = _sideEffect.asSharedFlow()
+        private val _sideEffect = Channel<SideEffect>(Channel.BUFFERED)
+        val sideEffect: Flow<SideEffect> = _sideEffect.receiveAsFlow()
 
         private val _state = MutableStateFlow(OnboardingRestoreState())
         val state: StateFlow<OnboardingRestoreState> = _state.asStateFlow()
@@ -52,7 +52,7 @@ class OnboardingRestoreViewModel
                     .onSuccess {
                         _state.update { it.copy(isValidating = false, isRestoring = true) }
                         when (val result = restoreService.applyRestore(uri, password)) {
-                            RestoreResult.SuccessRequiresRestart -> _sideEffect.emit(SideEffect.RestartApp)
+                            RestoreResult.SuccessRequiresRestart -> _sideEffect.send(SideEffect.RestartApp)
                             RestoreResult.Success -> _state.update { it.copy(isRestoring = false) }
                             is RestoreResult.Failure ->
                                 _state.update { it.copy(isRestoring = false, error = result.cause.toUiText()) }

@@ -143,14 +143,15 @@ class LocalBackupManager
                             val newZipPath = File(tempDir, "reencrypt_new_${System.currentTimeMillis()}.zip")
 
                             // 1. Copy to temp zip
-                            val rawBytes =
-                                if (info.uri.scheme == "content") {
-                                    context.contentResolver.openInputStream(info.uri)?.use { it.readBytes() }
-                                        ?: throw IllegalStateException("Could not read backup")
-                                } else {
-                                    File(info.uri.path!!).readBytes()
+                            if (info.uri.scheme == "content") {
+                                context.contentResolver.openInputStream(info.uri)?.use { input ->
+                                    tempZip.outputStream().use { output -> input.copyTo(output) }
+                                } ?: throw IllegalStateException("Could not read backup")
+                            } else {
+                                File(info.uri.path!!).inputStream().use { input ->
+                                    tempZip.outputStream().use { output -> input.copyTo(output) }
                                 }
-                            tempZip.writeBytes(rawBytes)
+                            }
 
                             // 2. Extract
                             val zipFile = ZipFile(tempZip, oldPassword?.toCharArray())
@@ -170,9 +171,10 @@ class LocalBackupManager
                             newZip.addFile(tempJson, parameters)
                             newZip.close()
 
-                            val finalBytes = tempZipForNew.readBytes()
-                            tempZipForNew.delete()
-                            newZipPath.writeBytes(finalBytes)
+                            if (!tempZipForNew.renameTo(newZipPath)) {
+                                tempZipForNew.copyTo(newZipPath, overwrite = true)
+                                tempZipForNew.delete()
+                            }
 
                             // 4. Overwrite original (atomic rename-swap)
                             if (info.uri.scheme == "content") {

@@ -515,6 +515,10 @@
     <string name="onboarding_restore_password_label">Backup password</string>
     <string name="onboarding_restore_button">Restore</string>
     <string name="onboarding_finishing_setup">Finishing setup…</string>
+    <string name="onboarding_permissions_required_title">Permissions needed</string>
+    <string name="onboarding_permissions_required_message">Readylytics needs Health Connect
+        permissions to continue. Grant access to finish setting up your restored data.</string>
+    <string name="onboarding_grant_permissions_retry">Grant Permissions</string>
 
     <!-- Heart Rate Settings -->
     <string name="hr_auto_calculate_label">Auto-calculate Max HR</string>
