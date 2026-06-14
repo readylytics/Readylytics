@@ -105,7 +105,7 @@ class ScoringConfigFactory
                     )
             }
 
-        private fun hrvSaturationZForProfile(profile: PhysiologyProfile): Float =
+        internal fun hrvSaturationZForProfile(profile: PhysiologyProfile): Float =
             when (profile) {
                 PhysiologyProfile.ATHLETE -> 1.2f
                 PhysiologyProfile.ACTIVE -> 1.5f

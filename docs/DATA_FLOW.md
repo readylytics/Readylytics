@@ -11,7 +11,7 @@ and out to the **Jetpack Compose** UI.
 > When you change the pipeline, schema, use-cases, or scoring formulas, update this file in
 > the same change (see the constraint in `.claude/CLAUDE.md`).
 
-All paths are rooted at `app/src/main/java/com/gregor/lauritz/healthdashboard/`.
+All paths are rooted at `app/src/main/kotlin/app/readylytics/health/`.
 
 ---
 
@@ -273,7 +273,7 @@ per-day UPDATEs are collapsed into a single transaction by the backfill use-case
 | Component                    | Path                                                | Output                                                                                                                      |
 | :--------------------------- | :-------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
 | `SleepScoringStrategy`       | `domain/scoring/strategies/SleepScoringStrategy.kt` | Sleep score = **Duration 50% + Architecture 25% + Restoration 25%** (Restoration from HRV & RHR z-scores).                  |
-| `LoadScoringStrategy`        | `domain/scoring/strategies/LoadScoringStrategy.kt`  | Load score from the **Strain Ratio** (ATL/CTL); readiness composite (restoration + sleep + load), capped by recovery flags (illness, overreaching, workout impact, rest day success). |
+| `LoadScoringStrategy`        | `domain/scoring/strategies/LoadScoringStrategy.kt`  | Load score from the **Strain Ratio** (ATL/CTL): `sr ≤ 1.3 → 100`, `sr > 1.3 → 100·exp(−2.5·(sr−1.3)²)`. Feeds the readiness composite (0.4 restoration + 0.3 sleep + 0.3 load). Only `OVERREACHING` (cap 70) and `ILLNESS_ONSET` (cap 50) flags cap the readiness number, each requiring two consecutive nights; workout-impact and rest-day flags are informational only and do not cap the score. |
 | `PaiScoringStrategy`         | `domain/scoring/strategies/PaiScoringStrategy.kt`   | **CTL (42-day)** and **ATL (7-day)** exponential moving averages of daily TRIMP.                                            |
 | `ComputeSleepMetricsUseCase` | `domain/scoring/ComputeSleepMetricsUseCase.kt`      | Assembles sleep/readiness metrics for the day from the strategies + baselines.                                              |
 | `CircadianConsistencyRepository` | `domain/scoring/CircadianConsistencyRepository.kt` | Live bed/wake-time consistency score. The allowed deviation **threshold** resolves through the single `CircadianThresholdDefaults.resolveThreshold(profile, override)` (Athlete 20 / Active 30 / Sedentary 45 min; override wins). The encrypted `circadianThresholdOverride` is the user knob; a legacy non-default flat `consistencyThresholdMinutes` is honored as an override for back-compat. The former per-profile strategy classes are deleted — there is now one resolver. |

@@ -33,6 +33,14 @@ fun ContributorsSection() {
         BulletItem(stringResource(R.string.about_tooltip_rem))
         BulletItem(stringResource(R.string.about_tooltip_efficiency))
 
+        Spacer(Modifier.height(8.dp))
+        BodyText(stringResource(R.string.about_hrv_sensitivity_label))
+        BodyText(stringResource(R.string.about_hrv_sensitivity_intro))
+        BulletItem(stringResource(R.string.about_hrv_sensitivity_athlete))
+        BulletItem(stringResource(R.string.about_hrv_sensitivity_active))
+        BulletItem(stringResource(R.string.about_hrv_sensitivity_sedentary))
+        BodyText(stringResource(R.string.about_hrv_sensitivity_outro))
+
         SectionDivider()
 
         SubHeader(stringResource(R.string.about_header_circadian))
@@ -41,6 +49,9 @@ fun ContributorsSection() {
 
         Spacer(Modifier.height(8.dp))
         BodyText(stringResource(R.string.about_threshold_label))
+        BulletItem(stringResource(R.string.about_threshold_athlete))
+        BulletItem(stringResource(R.string.about_threshold_active))
+        BulletItem(stringResource(R.string.about_threshold_sedentary))
         BulletItem(stringResource(R.string.about_threshold_30))
         BulletItem(stringResource(R.string.about_threshold_30_90))
         BulletItem(stringResource(R.string.about_threshold_90))
@@ -54,6 +65,7 @@ fun ContributorsSection() {
 
         SubHeader(stringResource(R.string.about_header_readiness))
         BodyText(stringResource(R.string.about_readiness_intro))
+        BodyText(stringResource(R.string.about_readiness_formula))
         BodyText(stringResource(R.string.about_readiness_averages))
         BulletItem(stringResource(R.string.about_atl_bullet))
         BulletItem(stringResource(R.string.about_ctl_bullet))
@@ -62,7 +74,6 @@ fun ContributorsSection() {
         Spacer(Modifier.height(8.dp))
         BodyText(stringResource(R.string.about_ratio_scoring_label))
         BulletItem(stringResource(R.string.about_ratio_sweet_spot))
-        BulletItem(stringResource(R.string.about_ratio_decay))
         BulletItem(stringResource(R.string.about_ratio_quadratic))
 
         Spacer(Modifier.height(8.dp))
@@ -71,6 +82,10 @@ fun ContributorsSection() {
         BulletItem(stringResource(R.string.about_tooltip_maintain))
         BulletItem(stringResource(R.string.about_tooltip_caution))
         BulletItem(stringResource(R.string.about_tooltip_fatigue))
+
+        Spacer(Modifier.height(8.dp))
+        BodyText(stringResource(R.string.about_readiness_emergency_label))
+        BodyText(stringResource(R.string.about_readiness_emergency_text))
 
         Spacer(Modifier.height(8.dp))
         BodyText(stringResource(R.string.about_readiness_no_penalty))
