@@ -14,11 +14,13 @@ import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.data.preferences.AppThemeProto
 import app.readylytics.health.data.preferences.BackupScheduleProto
+import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.PhysiologyProfileProto
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.SyncPreferenceProto
 import app.readylytics.health.data.preferences.TrimpMethodProto
 import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -40,6 +42,8 @@ class LocalRestoreManager
         @ApplicationContext private val context: Context,
         private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
+        private val cardConfigurationRepository: CardConfigurationRepository,
+        private val workerScheduler: WorkerScheduler,
         private val encryptionManager: EncryptionManager,
     ) {
         private val json = Json { ignoreUnknownKeys = true }
@@ -54,7 +58,10 @@ class LocalRestoreManager
             ) : RestoreResult()
         }
 
-        suspend fun validate(backupUri: Uri): Result<BackupManifest> =
+        suspend fun validate(
+            backupUri: Uri,
+            providedPassword: String? = null,
+        ): Result<BackupManifest> =
             withContext(Dispatchers.IO) {
                 runCatching {
                     val tempZipFile = File(context.cacheDir, "validate_temp.zip")
@@ -62,7 +69,7 @@ class LocalRestoreManager
 
                     try {
                         val zipFile = ZipFile(tempZipFile)
-                        val password = getDecryptedPassword()
+                        val password = providedPassword ?: getDecryptedPassword()
 
                         if (zipFile.isEncrypted) {
                             if (password == null) throw WrongBackupPasswordException()
@@ -112,7 +119,10 @@ class LocalRestoreManager
                 }
             }
 
-        suspend fun applyRestore(backupUri: Uri): RestoreResult =
+        suspend fun applyRestore(
+            backupUri: Uri,
+            providedPassword: String? = null,
+        ): RestoreResult =
             withContext(Dispatchers.IO) {
                 runCatching {
                     val tempZipFile = File(context.cacheDir, "restore_temp.zip")
@@ -120,7 +130,7 @@ class LocalRestoreManager
 
                     try {
                         val zipFile = ZipFile(tempZipFile)
-                        val password = getDecryptedPassword()
+                        val password = providedPassword ?: getDecryptedPassword()
 
                         if (zipFile.isEncrypted) {
                             if (password == null) throw WrongBackupPasswordException()
@@ -131,12 +141,16 @@ class LocalRestoreManager
                             zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
                                 ?: throw IllegalStateException("No JSON file found in backup ZIP")
 
+                        var prefsBackup: UserPreferencesBackup? = null
                         healthDatabase.withTransaction {
                             zipFile.getInputStream(header).use { inputStream ->
                                 val reader = JsonReader(InputStreamReader(inputStream, "UTF-8"))
-                                performStreamingRestore(reader)
+                                performStreamingRestore(reader) { parsedPreferences ->
+                                    prefsBackup = parsedPreferences
+                                }
                             }
                         }
+                        prefsBackup?.let { restorePreferences(it, providedPassword) }
 
                         RestoreResult.SuccessRequiresRestart
                     } finally {
@@ -151,7 +165,10 @@ class LocalRestoreManager
                 }
             }
 
-        private suspend fun performStreamingRestore(reader: JsonReader) {
+        private suspend fun performStreamingRestore(
+            reader: JsonReader,
+            onPreferencesParsed: (UserPreferencesBackup) -> Unit,
+        ) {
             val sleepSessionDao = healthDatabase.sleepSessionDao()
             val heartRateDao = healthDatabase.heartRateDao()
             val hrvDao = healthDatabase.hrvDao()
@@ -171,7 +188,7 @@ class LocalRestoreManager
                     "preferences" -> {
                         val prefsString = readNextObjectAsString(reader)
                         val prefsBackup = json.decodeFromString<UserPreferencesBackup>(prefsString)
-                        restorePreferences(prefsBackup)
+                        onPreferencesParsed(prefsBackup)
                     }
                     "sleepSessions" -> {
                         reader.beginArray()
@@ -314,19 +331,11 @@ class LocalRestoreManager
             uri: Uri,
             tempFile: File,
         ) {
-            val bytes =
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    input.readBytes()
-                } ?: throw IllegalStateException("Could not open backup URI")
-
-            val decryptedBytes =
-                try {
-                    encryptionManager.decryptBytes(bytes)
-                } catch (e: Exception) {
-                    // Fallback to raw bytes if Tink decryption fails (e.g. it is not Tink-encrypted)
-                    bytes
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                tempFile.outputStream().use { output ->
+                    input.copyTo(output)
                 }
-            tempFile.writeBytes(decryptedBytes)
+            } ?: throw IllegalStateException("Could not open backup URI")
         }
 
         private suspend fun getDecryptedPassword(): String? {
@@ -336,7 +345,14 @@ class LocalRestoreManager
             }
         }
 
-        private suspend fun restorePreferences(backup: UserPreferencesBackup) {
+        private suspend fun restorePreferences(
+            backup: UserPreferencesBackup,
+            providedPassword: String?,
+        ) {
+            val encryptedProvidedPassword =
+                providedPassword
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { encryptionManager.encrypt(it) }
             settingsRepository.batchUpdate {
                 backup.goalSleepHours?.let { goalSleepHours = it }
                 if (backup.hrvBaselineOverride !=
@@ -362,6 +378,8 @@ class LocalRestoreManager
                     }
                 }
                 backup.syncIntervalHours?.let { syncIntervalHours = it }
+                backup.backgroundSyncEnabled?.let { backgroundSyncEnabled = it }
+                backup.backgroundSyncIntervalMinutes?.let { backgroundSyncIntervalMinutes = it }
                 backup.lastSyncTimestamp?.let { lastSyncTimestamp = it }
                 backup.maxHeartRate?.let { maxHeartRate = it }
                 backup.autoCalculateMaxHr?.let { autoCalculateMaxHr = it }
@@ -416,6 +434,7 @@ class LocalRestoreManager
                 }
 
                 backup.gender?.let { gender = it } ?: clearGender()
+                backup.heightCm?.let { heightCm = it } ?: clearHeightCm()
                 backup.hrvOptimalThreshold?.let { hrvOptimalThreshold = it }
                 backup.hrvWarningThreshold?.let { hrvWarningThreshold = it }
                 backup.rhrOptimalThreshold?.let { rhrOptimalThreshold = it }
@@ -482,6 +501,29 @@ class LocalRestoreManager
                 backup.primaryDeviceName?.let { primaryDeviceName = it }
                 backup.deviceByDataType?.let { putAllDeviceByDataType(it) }
                 backup.backupDirectoryUri?.let { backupDirectoryUri = it }
+                encryptedProvidedPassword?.let { backupPasswordHash = it }
+            }
+            backup.dashboardCards?.let {
+                cardConfigurationRepository.updateDashboardCardConfigurations(it)
+            }
+            backup.backgroundSyncEnabled?.let { enabled ->
+                if (enabled) {
+                    backup.backgroundSyncIntervalMinutes?.let { workerScheduler.schedulePeriodicSync(it.toLong()) }
+                } else {
+                    workerScheduler.cancelPeriodicSync()
+                }
+            }
+            backup.backupSchedule?.let {
+                runCatching { BackupScheduleProto.valueOf(it) }
+                    .onSuccess { schedule -> workerScheduler.scheduleBackupWorker(schedule.toDomain()) }
             }
         }
+
+        private fun BackupScheduleProto.toDomain() =
+            when (this) {
+                BackupScheduleProto.BACKUP_MANUAL -> app.readylytics.health.data.preferences.BackupSchedule.MANUAL
+                BackupScheduleProto.BACKUP_DAILY -> app.readylytics.health.data.preferences.BackupSchedule.DAILY
+                BackupScheduleProto.BACKUP_WEEKLY -> app.readylytics.health.data.preferences.BackupSchedule.WEEKLY
+                BackupScheduleProto.UNRECOGNIZED -> app.readylytics.health.data.preferences.BackupSchedule.MANUAL
+            }
     }

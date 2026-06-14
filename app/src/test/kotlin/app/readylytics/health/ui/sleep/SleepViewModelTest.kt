@@ -17,7 +17,8 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -65,13 +66,13 @@ class SleepViewModelTest {
     }
 
     @After
-    fun tearDown() {
-        if (::viewModel.isInitialized) {
-            viewModel.viewModelScope.cancel()
+    fun tearDown() =
+        runTest(testDispatcher) {
+            if (::viewModel.isInitialized) {
+                viewModel.viewModelScope.coroutineContext[Job]?.cancelAndJoin()
+            }
+            Dispatchers.resetMain()
         }
-        testDispatcher.scheduler.advanceUntilIdle()
-        Dispatchers.resetMain()
-    }
 
     private fun createViewModel() =
         SleepViewModel(

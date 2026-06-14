@@ -1,3 +1,12 @@
+import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
+import java.util.Locale
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -10,6 +19,54 @@ plugins {
     alias(libs.plugins.google.oss.licenses)
     id("kotlin-parcelize")
     id("jacoco")
+}
+
+abstract class JacocoCoverageVerificationTask : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val reportFile: RegularFileProperty
+
+    @TaskAction
+    fun verifyCoverage() {
+        val report = reportFile.get().asFile
+        if (!report.exists()) {
+            throw GradleException("Coverage report not found: ${report.absolutePath}")
+        }
+        val xml = report.readText()
+        // Find the last INSTRUCTION counter element (bundle-level); handles any attribute order/whitespace
+        val counterElement =
+            Regex("<counter[^>]*type=\"INSTRUCTION\"[^>]*/>")
+                .findAll(xml)
+                .lastOrNull()
+                ?.value
+                ?: throw GradleException(
+                    "Could not parse coverage report (report size: ${xml.length} bytes)",
+                )
+        val missed =
+            Regex("missed=\"(\\d+)\"")
+                .find(counterElement)
+                ?.groupValues
+                ?.get(1)
+                ?.toLong()
+                ?: throw GradleException("Could not parse missed count from: $counterElement")
+        val covered =
+            Regex("covered=\"(\\d+)\"")
+                .find(counterElement)
+                ?.groupValues
+                ?.get(1)
+                ?.toLong()
+                ?: throw GradleException("Could not parse covered count from: $counterElement")
+        val total = missed + covered
+        val pct = if (total > 0) covered.toDouble() / total.toDouble() * 100.0 else 0.0
+        val formatted = String.format(Locale.US, "%.2f", pct)
+        println("Coverage: $formatted% ($covered/$total instructions)")
+        if (pct < 4.0) {
+            throw GradleException(
+                "Coverage gate FAILED: $formatted% < 4% minimum required.",
+            )
+        }
+        println("Coverage gate PASSED: $formatted% >= 4%")
+    }
 }
 
 kotlin {
@@ -146,51 +203,9 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     )
 }
 
-tasks.register("jacocoCoverageVerification") {
+tasks.register<JacocoCoverageVerificationTask>("jacocoCoverageVerification") {
     dependsOn("jacocoTestReport")
-    doLast {
-        val reportFile =
-            layout.buildDirectory
-                .file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
-                .get()
-                .asFile
-        if (!reportFile.exists()) {
-            throw GradleException("Coverage report not found: ${reportFile.absolutePath}")
-        }
-        val xml = reportFile.readText()
-        // Find the last INSTRUCTION counter element (bundle-level); handles any attribute order/whitespace
-        val counterElement =
-            Regex("<counter[^>]*type=\"INSTRUCTION\"[^>]*/>")
-                .findAll(xml)
-                .lastOrNull()
-                ?.value
-                ?: throw GradleException(
-                    "Could not parse coverage report (report size: ${xml.length} bytes)",
-                )
-        val missed =
-            Regex("missed=\"(\\d+)\"")
-                .find(counterElement)
-                ?.groupValues
-                ?.get(1)
-                ?.toLong()
-                ?: throw GradleException("Could not parse missed count from: $counterElement")
-        val covered =
-            Regex("covered=\"(\\d+)\"")
-                .find(counterElement)
-                ?.groupValues
-                ?.get(1)
-                ?.toLong()
-                ?: throw GradleException("Could not parse covered count from: $counterElement")
-        val total = missed + covered
-        val pct = if (total > 0) covered.toDouble() / total.toDouble() * 100.0 else 0.0
-        println("Coverage: ${"%.2f".format(pct)}% ($covered/$total instructions)")
-        if (pct < 4.0) {
-            throw GradleException(
-                "Coverage gate FAILED: ${"%.2f".format(pct)}% < 4% minimum required.",
-            )
-        }
-        println("Coverage gate PASSED: ${"%.2f".format(pct)}% >= 4%")
-    }
+    reportFile.set(layout.buildDirectory.file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml"))
 }
 
 protobuf {
