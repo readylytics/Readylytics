@@ -141,12 +141,16 @@ class LocalRestoreManager
                             zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
                                 ?: throw IllegalStateException("No JSON file found in backup ZIP")
 
+                        var prefsBackup: UserPreferencesBackup? = null
                         healthDatabase.withTransaction {
                             zipFile.getInputStream(header).use { inputStream ->
                                 val reader = JsonReader(InputStreamReader(inputStream, "UTF-8"))
-                                performStreamingRestore(reader, providedPassword)
+                                performStreamingRestore(reader) { parsedPreferences ->
+                                    prefsBackup = parsedPreferences
+                                }
                             }
                         }
+                        prefsBackup?.let { restorePreferences(it, providedPassword) }
 
                         RestoreResult.SuccessRequiresRestart
                     } finally {
@@ -163,7 +167,7 @@ class LocalRestoreManager
 
         private suspend fun performStreamingRestore(
             reader: JsonReader,
-            providedPassword: String?,
+            onPreferencesParsed: (UserPreferencesBackup) -> Unit,
         ) {
             val sleepSessionDao = healthDatabase.sleepSessionDao()
             val heartRateDao = healthDatabase.heartRateDao()
@@ -184,7 +188,7 @@ class LocalRestoreManager
                     "preferences" -> {
                         val prefsString = readNextObjectAsString(reader)
                         val prefsBackup = json.decodeFromString<UserPreferencesBackup>(prefsString)
-                        restorePreferences(prefsBackup, providedPassword)
+                        onPreferencesParsed(prefsBackup)
                     }
                     "sleepSessions" -> {
                         reader.beginArray()
@@ -327,11 +331,11 @@ class LocalRestoreManager
             uri: Uri,
             tempFile: File,
         ) {
-            val bytes =
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    input.readBytes()
-                } ?: throw IllegalStateException("Could not open backup URI")
-            tempFile.writeBytes(bytes)
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                tempFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            } ?: throw IllegalStateException("Could not open backup URI")
         }
 
         private suspend fun getDecryptedPassword(): String? {
