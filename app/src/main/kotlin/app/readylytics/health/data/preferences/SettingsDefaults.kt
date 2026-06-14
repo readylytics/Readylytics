@@ -62,6 +62,7 @@ object SettingsDefaults {
     const val ABOUT_DISMISSED = false
     val PHYSIOLOGY_PROFILE = PhysiologyProfile.GENERAL
     const val INSTALL_DATE = 0L // Set to System.currentTimeMillis() on first app run
+
     // Empty = un-seeded; UserPreferences.scoringZone() falls back to the device zone until
     // the seed migration captures the IANA zone id. Stored to make scores timezone-deterministic.
     const val SCORING_ZONE_ID = ""

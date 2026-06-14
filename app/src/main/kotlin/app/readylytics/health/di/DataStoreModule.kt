@@ -24,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import java.time.Clock
+import java.time.ZoneId
 import javax.inject.Singleton
 
 @Module
@@ -253,11 +254,13 @@ object DataStoreModule {
                         override suspend fun shouldMigrate(currentData: UserPreferencesProto): Boolean =
                             currentData.scoringZoneId.isBlank()
 
-                        override suspend fun migrate(currentData: UserPreferencesProto): UserPreferencesProto =
-                            currentData
+                        override suspend fun migrate(currentData: UserPreferencesProto): UserPreferencesProto {
+                            val zoneId = ZoneId.systemDefault().id
+                            return currentData
                                 .toBuilder()
-                                .setScoringZoneId(java.time.ZoneId.systemDefault().id)
+                                .setScoringZoneId(zoneId)
                                 .build()
+                        }
 
                         override suspend fun cleanUp() {}
                     },
