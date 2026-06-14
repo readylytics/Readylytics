@@ -251,9 +251,12 @@ per-day UPDATEs are collapsed into a single transaction by the backfill use-case
 | `LoadScoringStrategy`        | `domain/scoring/strategies/LoadScoringStrategy.kt`  | Load score from the **Strain Ratio** (ATL/CTL); readiness composite (restoration + sleep + load), capped by recovery flags (illness, overreaching, workout impact, rest day success). |
 | `PaiScoringStrategy`         | `domain/scoring/strategies/PaiScoringStrategy.kt`   | **CTL (42-day)** and **ATL (7-day)** exponential moving averages of daily TRIMP.                                            |
 | `ComputeSleepMetricsUseCase` | `domain/scoring/ComputeSleepMetricsUseCase.kt`      | Assembles sleep/readiness metrics for the day from the strategies + baselines.                                              |
+| `CircadianConsistencyRepository` | `domain/scoring/CircadianConsistencyRepository.kt` | Live bed/wake-time consistency score. The allowed deviation **threshold** resolves through the single `CircadianThresholdDefaults.resolveThreshold(profile, override)` (Athlete 20 / Active 30 / Sedentary 45 min; override wins). The encrypted `circadianThresholdOverride` is the user knob; a legacy non-default flat `consistencyThresholdMinutes` is honored as an override for back-compat. The former per-profile strategy classes are deleted — there is now one resolver. |
 
 Supporting helpers live in `domain/scoring/components/` and `domain/scoring/sleep/`
 (architecture targets, restoration weights, nadir analysis, HR coverage validation).
+`CircadianThresholdDefaults` (`domain/circadian/`) is the single threshold source, consumed
+by both the live repository above and the diagnostic config built in `ScoringConfigFactory`.
 
 ---
 

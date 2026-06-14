@@ -1,8 +1,11 @@
 package app.readylytics.health.domain.scoring
 
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.preferences.scoringZone
+import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
@@ -59,6 +62,7 @@ class CircadianConsistencyRepository
     constructor(
         private val sleepSessionRepository: SleepSessionRepository,
         private val settingsRepo: SettingsRepository,
+        private val encryptionManager: EncryptionManager,
     ) {
         @OptIn(ExperimentalCoroutinesApi::class)
         fun resultFor(anchorDate: LocalDate): Flow<CircadianConsistencyResult> =
@@ -81,7 +85,8 @@ class CircadianConsistencyRepository
             prefs: UserPreferences,
             anchorDate: LocalDate,
         ): CircadianConsistencyResult {
-            val threshold = prefs.consistencyThresholdMinutes
+            val threshold =
+                CircadianThresholdDefaults.resolveThreshold(prefs.physiologyProfile, resolveOverride(prefs))
             val evalCount = prefs.consistencyEvaluationDays
             val baselineCount = prefs.consistencyBaselineDays
             val zone = prefs.scoringZone()
@@ -130,6 +135,21 @@ class CircadianConsistencyRepository
                 medianWakeMinutes = medianWake,
                 thresholdMinutes = threshold,
             )
+        }
+
+        // Resolves the effective user override fed into [CircadianThresholdDefaults.resolveThreshold].
+        // Priority: the encrypted `circadianThresholdOverride` (the live user knob), else a legacy
+        // non-default flat `consistencyThresholdMinutes` (preserved so users who tuned the old slider
+        // keep their intent), else null → the profile default applies.
+        private fun resolveOverride(prefs: UserPreferences): Int? {
+            val decrypted =
+                prefs.circadianThresholdOverride?.let { encrypted ->
+                    runCatching { encryptionManager.decrypt(encrypted)?.toInt() }.getOrNull()
+                }
+            return decrypted
+                ?: prefs.consistencyThresholdMinutes.takeIf {
+                    it != SettingsDefaults.CONSISTENCY_THRESHOLD_MINUTES
+                }
         }
 
         private fun scoreDeviation(

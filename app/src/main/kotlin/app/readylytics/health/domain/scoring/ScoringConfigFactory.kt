@@ -2,7 +2,7 @@ package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.circadian.CircadianStrategyFactory
+import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
 import app.readylytics.health.domain.scoring.components.AuditTrail
 import app.readylytics.health.domain.scoring.components.AuditTrailFactory
 import app.readylytics.health.domain.scoring.components.CircadianConsistencyConfig
@@ -122,8 +122,7 @@ class ScoringConfigFactory
             evaluationDays: Int,
             baselineDays: Int,
         ): CircadianConsistencyConfig {
-            val strategy = CircadianStrategyFactory.getStrategy(profile)
-            val threshold = strategy.determineThreshold(profile, circadianOverride)
+            val threshold = CircadianThresholdDefaults.resolveThreshold(profile, circadianOverride)
 
             return CircadianConsistencyConfig(
                 thresholdMinutes = threshold,
