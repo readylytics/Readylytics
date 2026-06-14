@@ -39,7 +39,7 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 ## Commands & Testing
 
 - **Tests:** Mirror source package structure. Must test boundary conditions and calculation logic. Zero Android dependencies in unit tests.
-- **Pre-Commit (Mandatory):** `./gradlew ktlintFormat && ./gradlew testDebugUnitTest`
+- **Pre-Commit (Mandatory):** `./gradlew ktlintFormat && ./gradlew testDebugUnitTest` (and run `./gradlew lint` at the end after resolving all coding tasks)
 - **Build Utilities:** `./gradlew installDebug`, `./gradlew assembleDebug`, `./gradlew clean`
 
 ## Documentation Sync
