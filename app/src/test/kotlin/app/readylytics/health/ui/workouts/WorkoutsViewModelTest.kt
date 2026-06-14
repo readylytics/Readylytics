@@ -18,7 +18,6 @@ import app.readylytics.health.ui.common.TimeRange
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -50,11 +49,11 @@ class WorkoutsViewModelTest {
     private lateinit var getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase
     private lateinit var foregroundSyncController: ForegroundSyncController
     private lateinit var savedStateHandle: SavedStateHandle
-    private lateinit var appScope: CoroutineScope
 
     private lateinit var viewModel: WorkoutsViewModel
 
     private val selectedDateFlow = MutableStateFlow(LocalDate.now())
+    private val earliestDateFlow = MutableStateFlow<LocalDate?>(null)
     private val isSyncingFlow = MutableStateFlow(false)
     private val workoutsFlow = MutableStateFlow<List<WorkoutData>>(emptyList())
     private val summariesFlow = MutableStateFlow<List<DailySummary>>(emptyList())
@@ -79,16 +78,20 @@ class WorkoutsViewModelTest {
                 coEvery { getByTimeRange(any(), any()) } returns emptyList()
             }
 
-        val mockDao =
-            mockk<app.readylytics.health.data.local.dao.DailySummaryDao> {
-                every { observeEarliestDateMs() } returns flowOf(null)
-            }
-        appScope = CoroutineScope(testDispatcher)
         selectedDateRepository =
-            SelectedDateRepository(
-                dao = mockDao,
-                appScope = appScope,
-            )
+            mockk {
+                every { selectedDate } returns selectedDateFlow
+                every { earliestDate } returns earliestDateFlow
+                coEvery { updateSelectedDate(any()) } answers {
+                    selectedDateFlow.value = firstArg()
+                }
+                coEvery { selectPreviousDay() } answers {
+                    selectedDateFlow.value = selectedDateFlow.value.minusDays(1)
+                }
+                coEvery { selectNextDay() } answers {
+                    selectedDateFlow.value = selectedDateFlow.value.plusDays(1)
+                }
+            }
 
         scoringCalculator = mockk(relaxed = true)
         settingsRepo =
@@ -136,7 +139,6 @@ class WorkoutsViewModelTest {
         if (::viewModel.isInitialized) {
             viewModel.viewModelScope.cancel()
         }
-        appScope.cancel()
         testDispatcher.scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
     }

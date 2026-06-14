@@ -9,12 +9,11 @@ import app.readylytics.health.ui.common.TimeRange
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -24,6 +23,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BloodPressureDetailViewModelTest {
@@ -32,6 +32,9 @@ class BloodPressureDetailViewModelTest {
     private lateinit var viewModel: BloodPressureDetailViewModel
     private lateinit var repository: BloodPressureRepository
     private lateinit var selectedDateRepo: SelectedDateRepository
+
+    private val selectedDateFlow = MutableStateFlow(LocalDate.now())
+    private val earliestDateFlow = MutableStateFlow<LocalDate?>(null)
 
     @Before
     fun setUp() {
@@ -42,15 +45,14 @@ class BloodPressureDetailViewModelTest {
                 coEvery { getByDateRange(any(), any()) } returns emptyList()
                 coEvery { getLatest() } returns null
             }
-        val mockDao =
-            mockk<app.readylytics.health.data.local.dao.DailySummaryDao> {
-                every { observeEarliestDateMs() } returns flowOf(null)
-            }
         selectedDateRepo =
-            SelectedDateRepository(
-                dao = mockDao,
-                appScope = CoroutineScope(testDispatcher),
-            )
+            mockk {
+                every { selectedDate } returns selectedDateFlow
+                every { earliestDate } returns earliestDateFlow
+                coEvery { updateSelectedDate(any()) } answers {
+                    selectedDateFlow.value = firstArg()
+                }
+            }
     }
 
     private fun createViewModel(): BloodPressureDetailViewModel =
