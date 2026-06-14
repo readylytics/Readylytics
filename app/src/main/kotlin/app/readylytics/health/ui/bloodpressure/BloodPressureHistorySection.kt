@@ -43,7 +43,7 @@ fun BloodPressureHistoryCard(
 ) {
     val dateStr =
         remember(item.timestampMs) {
-            val fmt = DateTimeFormatter.ofPattern("(dd.MM)", Locale.getDefault())
+            val fmt = DateTimeFormatter.ofPattern("dd.MM", Locale.getDefault())
             Instant
                 .ofEpochMilli(item.timestampMs)
                 .atZone(ZoneId.systemDefault())
