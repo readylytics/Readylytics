@@ -1,10 +1,11 @@
 package app.readylytics.health.domain.scoring.components
 
 object PhaseCalculator {
-    fun calculatePhase(daysSinceInstall: Int): Phase =
+    fun calculatePhase(totalValidHrvNights: Int): Phase =
         when {
-            daysSinceInstall < Phase.CALIBRATION_DAYS -> Phase.CALIBRATION
-            daysSinceInstall < Phase.PROVISIONAL_DAYS -> Phase.PROVISIONAL
+            totalValidHrvNights <= Phase.CALIBRATION_MAX_SESSIONS -> Phase.CALIBRATION
+            totalValidHrvNights <= Phase.EARLY_BASELINE_MAX_SESSIONS -> Phase.EARLY_BASELINE
+            totalValidHrvNights <= Phase.MATURING_MAX_SESSIONS -> Phase.MATURING
             else -> Phase.MATURE
         }
 }

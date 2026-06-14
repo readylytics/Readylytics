@@ -26,7 +26,6 @@ private const val THRESHOLD_SLIDER_STEPS = 8 // Results in: 0, 10, 20, ..., 90 (
 fun CircadianThresholdSettingsSection(
     profile: PhysiologyProfile,
     currentOverride: Int?,
-    isShiftWorkerMode: Boolean,
     onOverrideChanged: (Int?) -> Unit,
     isLoading: Boolean = false,
     error: String? = null,
@@ -34,9 +33,6 @@ fun CircadianThresholdSettingsSection(
     modifier: Modifier = Modifier,
 ) {
     val profileDefault = CircadianThresholdDefaults.getProfileDefault(profile)
-    var useStandardRollingAnchor by rememberSaveable {
-        mutableStateOf(currentOverride != null || profile != PhysiologyProfile.SHIFT_WORKER)
-    }
     var thresholdValue by rememberSaveable(currentOverride) {
         mutableStateOf((currentOverride ?: profileDefault).toFloat())
     }
@@ -95,131 +91,21 @@ fun CircadianThresholdSettingsSection(
             }
         }
 
-        if (profile == PhysiologyProfile.SHIFT_WORKER) {
-            // Shift worker mode selection
-            ShiftWorkerModeSelector(
-                useStandardRollingAnchor = useStandardRollingAnchor,
-                profileDefault = profileDefault,
-                onModeChanged = { useStandard ->
-                    useStandardRollingAnchor = useStandard
-                    if (!useStandard) {
-                        // Clear override when switching to within-week mode
-                        onOverrideChanged(null)
-                        thresholdValue = profileDefault.toFloat()
-                    }
-                },
-                modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
-            )
-
-            // Show slider only if using standard rolling anchor
-            if (useStandardRollingAnchor) {
-                Spacer(modifier = Modifier.height(8.dp))
-                ThresholdSlider(
-                    value = thresholdValue,
-                    profileDefault = profileDefault,
-                    onValueChanged = { newValue ->
-                        thresholdValue = newValue
-                        onOverrideChanged(newValue.toInt())
-                    },
-                    onReset = {
-                        thresholdValue = profileDefault.toFloat()
-                        onOverrideChanged(null)
-                    },
-                    modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
-                )
-            }
-        } else {
-            // Regular user mode - show slider with profile default
-            ThresholdSlider(
-                value = thresholdValue,
-                profileDefault = profileDefault,
-                onValueChanged = { newValue ->
-                    thresholdValue = newValue
-                    onOverrideChanged(newValue.toInt())
-                },
-                onReset = {
-                    thresholdValue = profileDefault.toFloat()
-                    onOverrideChanged(null)
-                },
-                modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ShiftWorkerModeSelector(
-    useStandardRollingAnchor: Boolean,
-    profileDefault: Int,
-    onModeChanged: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        // Within-week mode option
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Checkbox(
-                checked = !useStandardRollingAnchor,
-                onCheckedChange = { onModeChanged(!it) },
-                modifier =
-                    Modifier.semantics {
-                        contentDescription =
-                            if (!useStandardRollingAnchor) {
-                                "Within-week regularity mode enabled. Compares sleep consistency on same day-of-week across different weeks."
-                            } else {
-                                "Within-week regularity mode disabled"
-                            }
-                    },
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.circadian_within_week_mode_label),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    stringResource(R.string.circadian_within_week_mode_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        // Standard rolling anchor option
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Checkbox(
-                checked = useStandardRollingAnchor,
-                onCheckedChange = onModeChanged,
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.circadian_rolling_anchor_label),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    stringResource(R.string.circadian_rolling_anchor_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        // The override slider, defaulting to the active profile's threshold. Selecting a
+        // profile implicitly sets the threshold; this is the only user knob.
+        ThresholdSlider(
+            value = thresholdValue,
+            profileDefault = profileDefault,
+            onValueChanged = { newValue ->
+                thresholdValue = newValue
+                onOverrideChanged(newValue.toInt())
+            },
+            onReset = {
+                thresholdValue = profileDefault.toFloat()
+                onOverrideChanged(null)
+            },
+            modifier = Modifier.padding(horizontal = SettingsConstants.HORIZONTAL_PADDING),
+        )
     }
 }
 
@@ -338,21 +224,19 @@ fun CircadianThresholdSettingsSectionPreview() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(stringResource(R.string.profile_title_general), style = MaterialTheme.typography.titleSmall)
+            Text("Active", style = MaterialTheme.typography.titleSmall)
             CircadianThresholdSettingsSection(
-                profile = PhysiologyProfile.GENERAL,
+                profile = PhysiologyProfile.ACTIVE,
                 currentOverride = null,
-                isShiftWorkerMode = false,
                 onOverrideChanged = {},
             )
 
             HorizontalDivider()
 
-            Text(stringResource(R.string.profile_title_shift_worker), style = MaterialTheme.typography.titleSmall)
+            Text("Athlete", style = MaterialTheme.typography.titleSmall)
             CircadianThresholdSettingsSection(
-                profile = PhysiologyProfile.SHIFT_WORKER,
+                profile = PhysiologyProfile.ATHLETE,
                 currentOverride = 30,
-                isShiftWorkerMode = true,
                 onOverrideChanged = {},
             )
         }

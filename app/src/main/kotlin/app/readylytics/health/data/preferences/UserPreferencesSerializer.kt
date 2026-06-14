@@ -156,6 +156,7 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         ).setPaiCalibration(domain.banisterMultiplier)
         .setChengBeta(domain.chengBeta)
         .setItrimpB(domain.itrimB)
+        .setScoringZoneId(domain.scoringZoneId)
         .setBackgroundSyncEnabled(domain.backgroundSyncEnabled)
         .setBackgroundSyncIntervalMinutes(domain.backgroundSyncIntervalMinutes)
         .setIsCustomPaletteEnabled(domain.isCustomPaletteEnabled)

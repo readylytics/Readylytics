@@ -6,15 +6,14 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.repository.HeartRateRecordData
 import app.readylytics.health.domain.repository.HeartRateRepository
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -34,6 +33,9 @@ class HeartRateDetailViewModelTest {
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var selectedDateRepo: SelectedDateRepository
 
+    private val selectedDateFlow = MutableStateFlow(LocalDate.now())
+    private val earliestDateFlow = MutableStateFlow<LocalDate?>(null)
+
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
@@ -46,15 +48,14 @@ class HeartRateDetailViewModelTest {
             mockk {
                 every { userPreferences } returns MutableStateFlow(UserPreferences())
             }
-        val mockDao =
-            mockk<app.readylytics.health.data.local.dao.DailySummaryDao> {
-                every { observeEarliestDateMs() } returns flowOf(null)
-            }
         selectedDateRepo =
-            SelectedDateRepository(
-                dao = mockDao,
-                appScope = CoroutineScope(testDispatcher),
-            )
+            mockk {
+                every { selectedDate } returns selectedDateFlow
+                every { earliestDate } returns earliestDateFlow
+                coEvery { updateSelectedDate(any()) } answers {
+                    selectedDateFlow.value = firstArg()
+                }
+            }
     }
 
     private fun createViewModel(): HeartRateDetailViewModel =

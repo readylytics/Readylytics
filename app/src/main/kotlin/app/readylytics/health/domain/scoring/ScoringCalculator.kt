@@ -44,14 +44,14 @@ interface ScoringCalculator {
 
     fun hrvSigma(
         lnHrvValues: List<Float>,
-        sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior,
+        sigmaPrior: Float = PhysiologyProfile.ACTIVE.lnSigmaPrior,
     ): Float
 
     fun computeHrvZScore(
         currentRmssdMs: Float,
         muHistory: List<Float>,
         sigmaHistory: List<Float>,
-        sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior,
+        sigmaPrior: Float = PhysiologyProfile.ACTIVE.lnSigmaPrior,
         baselineOverride: Float? = null,
         frozenLnMu: Float? = null,
         frozenLnSigma: Float? = null,
@@ -73,7 +73,7 @@ interface ScoringCalculator {
         currentHrvMean: Float,
         muHrvHistory: List<Float>,
         sigmaHrvHistory: List<Float>,
-        sigmaPrior: Float = PhysiologyProfile.GENERAL.lnSigmaPrior,
+        sigmaPrior: Float = PhysiologyProfile.ACTIVE.lnSigmaPrior,
         currentNocturnalRhr: Float,
         rhrValues: List<Int>,
         rhrBaselineOverride: Float?,

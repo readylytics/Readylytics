@@ -1,7 +1,9 @@
 package app.readylytics.health.domain.scoring
 
+import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import io.mockk.every
@@ -57,13 +59,16 @@ class CircadianConsistencyRepositoryTest {
     private fun buildRepo(
         sessions: List<SleepSessionData>,
         prefs: UserPreferences = defaultPrefs,
+        decryptedOverride: Int? = null,
     ): CircadianConsistencyRepository {
         val sessionFlow = MutableStateFlow(sessions)
         val repository = mockk<SleepSessionRepository>()
         every { repository.observeSince(any()) } returns sessionFlow
         val settingsRepo = mockk<SettingsRepository>()
         every { settingsRepo.userPreferences } returns MutableStateFlow(prefs)
-        return CircadianConsistencyRepository(repository, settingsRepo)
+        val encryptionManager = mockk<EncryptionManager>()
+        every { encryptionManager.decrypt(any()) } returns decryptedOverride?.toString()
+        return CircadianConsistencyRepository(repository, settingsRepo, encryptionManager)
     }
 
     @Test
@@ -126,15 +131,49 @@ class CircadianConsistencyRepositoryTest {
             assertTrue("Score should be < 80 for inconsistent schedule, was ${ready.score}", ready.score < 80f)
         }
 
+    private fun consistentSessions() =
+        (0 until 14).map { i ->
+            fakeSleepSession(id = "s$i", bedHour = 23, wakeHour = 7, daysAgo = i)
+        }
+
     @Test
-    fun `Ready result contains correct threshold from preferences`() =
+    fun `threshold derives from physiology profile when no override is set`() =
         runTest {
-            val sessions =
-                (0 until 14).map { i ->
-                    fakeSleepSession(id = "s$i", bedHour = 23, wakeHour = 7, daysAgo = i)
-                }
-            val prefs = defaultPrefs.copy(consistencyThresholdMinutes = 45)
-            val repo = buildRepo(sessions, prefs)
+            // Athlete → 20, Sedentary → 45 (CircadianThresholdDefaults), flat pref left at default.
+            val athleteRepo =
+                buildRepo(consistentSessions(), defaultPrefs.copy(physiologyProfile = PhysiologyProfile.ATHLETE))
+            val athlete = athleteRepo.resultFor(LocalDate.now()).first() as CircadianConsistencyResult.Ready
+            assertEquals(20, athlete.thresholdMinutes)
+
+            val sedentaryRepo =
+                buildRepo(consistentSessions(), defaultPrefs.copy(physiologyProfile = PhysiologyProfile.SEDENTARY))
+            val sedentary = sedentaryRepo.resultFor(LocalDate.now()).first() as CircadianConsistencyResult.Ready
+            assertEquals(45, sedentary.thresholdMinutes)
+        }
+
+    @Test
+    fun `encrypted override wins over the profile default`() =
+        runTest {
+            val prefs =
+                defaultPrefs.copy(
+                    physiologyProfile = PhysiologyProfile.ATHLETE,
+                    circadianThresholdOverride = "cipher",
+                )
+            val repo = buildRepo(consistentSessions(), prefs, decryptedOverride = 55)
+            val result = repo.resultFor(LocalDate.now()).first() as CircadianConsistencyResult.Ready
+            assertEquals(55, result.thresholdMinutes)
+        }
+
+    @Test
+    fun `legacy non-default flat pref is preserved as an override`() =
+        runTest {
+            // No encrypted override, but a user who tuned the old flat slider to 45 keeps that intent.
+            val prefs =
+                defaultPrefs.copy(
+                    physiologyProfile = PhysiologyProfile.ATHLETE,
+                    consistencyThresholdMinutes = 45,
+                )
+            val repo = buildRepo(consistentSessions(), prefs)
             val result = repo.resultFor(LocalDate.now()).first() as CircadianConsistencyResult.Ready
             assertEquals(45, result.thresholdMinutes)
         }

@@ -21,7 +21,7 @@ class HrvSigmaTest {
 
     @Test
     fun `empty list returns prior when n is 0`() {
-        val sigma = calculator.hrvSigma(emptyList(), sigmaPrior = PhysiologyProfile.GENERAL.lnSigmaPrior)
+        val sigma = calculator.hrvSigma(emptyList(), sigmaPrior = 0.18f)
         // w=0 → blended = prior = 0.18; floor = 0.04; result = 0.18
         assertEquals(0.18f, sigma, DELTA)
     }
@@ -30,7 +30,7 @@ class HrvSigmaTest {
     fun `at n=7 w is zero, result is prior`() {
         // w = (7-7)/(60-7) = 0; blended = prior
         val lnList = uniformLnList(50f, 7)
-        val sigma = calculator.hrvSigma(lnList, sigmaPrior = PhysiologyProfile.GENERAL.lnSigmaPrior)
+        val sigma = calculator.hrvSigma(lnList, sigmaPrior = 0.18f)
         assertEquals(0.18f, sigma, DELTA)
     }
 
@@ -45,7 +45,7 @@ class HrvSigmaTest {
     fun `at n=60 w is 1 and personal sigma dominates`() {
         // Build 60 values with known stdev. Using same value → stdev=0; blended = w*0 + (1-w)*prior → floor
         val lnList = uniformLnList(50f, 60)
-        val sigma = calculator.hrvSigma(lnList, sigmaPrior = PhysiologyProfile.GENERAL.lnSigmaPrior)
+        val sigma = calculator.hrvSigma(lnList, sigmaPrior = 0.18f)
         // personal stdev = 0, floor applies
         assertEquals(ScoringConstants.Restoration.MIN_LN_SIGMA, sigma, DELTA)
     }
@@ -54,7 +54,7 @@ class HrvSigmaTest {
     fun `sigma floor is always respected`() {
         for (n in 0..65) {
             val lnList = uniformLnList(50f, n)
-            val sigma = calculator.hrvSigma(lnList, sigmaPrior = PhysiologyProfile.GENERAL.lnSigmaPrior)
+            val sigma = calculator.hrvSigma(lnList, sigmaPrior = 0.18f)
             assertTrue("Sigma floor violated at n=$n: sigma=$sigma", sigma >= ScoringConstants.Restoration.MIN_LN_SIGMA)
         }
     }

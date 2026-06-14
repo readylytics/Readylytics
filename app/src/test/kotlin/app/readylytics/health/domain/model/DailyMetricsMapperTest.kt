@@ -4,6 +4,9 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.ScoringConstants
 import org.junit.Test
 import java.time.LocalDate
+import kotlin.math.exp
+import kotlin.math.ln
+import kotlin.math.roundToInt
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -171,5 +174,39 @@ class DailyMetricsMapperTest {
         val metrics = DailyMetricsMapper.toMetrics(above, prefs)
         assertEquals(BaselineArrow.UP, metrics.rhrBaselineArrow)
         assertEquals(5, metrics.rhrBaselineDiff)
+    }
+
+    // --- Phase 5: HRV baseline display alignment (geometric exp(mu), not arithmetic median) ---
+
+    @Test
+    fun `hrv baseline rounded uses geometric mean exp(mu), not the arithmetic median`() {
+        // ln(40) ~= 3.6889 -> exp(mu) ~= 40, while the arithmetic median is a different value (45)
+        val mu = ln(40.0).toFloat()
+        val summary = DailySummary(date = date, hrvMuMssd = mu, hrvBaseline = 45)
+        val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
+        assertEquals(exp(mu.toDouble()).roundToInt(), metrics.hrvBaselineRounded)
+        assertEquals(40, metrics.hrvBaselineRounded)
+    }
+
+    @Test
+    fun `hrv baseline rounded falls back to prefs override when hrvMuMssd is null`() {
+        val overridePrefs = UserPreferences(hrvBaselineOverride = 35f)
+        val summary = DailySummary(date = date, hrvMuMssd = null, hrvBaseline = 45)
+        val metrics = DailyMetricsMapper.toMetrics(summary, overridePrefs)
+        assertEquals(35, metrics.hrvBaselineRounded)
+    }
+
+    @Test
+    fun `hrv baseline rounded falls back to arithmetic baseline when no mu and no override`() {
+        val summary = DailySummary(date = date, hrvMuMssd = null, hrvBaseline = 45)
+        val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
+        assertEquals(45, metrics.hrvBaselineRounded)
+    }
+
+    @Test
+    fun `hrv baseline rounded is null when no mu, override, or arithmetic baseline available`() {
+        val summary = DailySummary(date = date, hrvMuMssd = null, hrvBaseline = null)
+        val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
+        assertNull(metrics.hrvBaselineRounded)
     }
 }

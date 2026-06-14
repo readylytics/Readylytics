@@ -133,9 +133,7 @@ object ScoringConstants {
         // PAI scaling factors by physiology profile — REF: Whoop PAI model
         const val PAI_SCALING_ATHLETE = 0.15f
         const val PAI_SCALING_ACTIVE = 0.18f
-        const val PAI_SCALING_GENERAL = 0.20f
         const val PAI_SCALING_SEDENTARY = 0.25f
-        const val PAI_SCALING_SHIFT_WORKER = 0.20f
 
         // Readiness integration divisor
         const val READINESS_SCALE = 100f

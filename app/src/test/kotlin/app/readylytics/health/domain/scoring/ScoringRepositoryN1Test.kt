@@ -89,7 +89,7 @@ class ScoringRepositoryN1Test {
         coEvery { bloodPressureRecordDao.getLatestUpTo(any()) } returns null
 
         every { settingsRepo.userPreferences } returns
-            MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.GENERAL))
+            MutableStateFlow(UserPreferences(physiologyProfile = PhysiologyProfile.ACTIVE))
 
         coEvery { sleepSessionDao.countSince(any()) } returns 10
         val historicSessions = (1..9).map { makeSleepSession("historic_$it", it) }

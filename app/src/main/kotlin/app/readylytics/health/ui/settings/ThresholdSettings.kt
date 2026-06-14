@@ -75,20 +75,9 @@ fun ThresholdSettingsSection(
             description = stringResource(R.string.threshold_rhr_warning_desc),
         )
 
-        var consistencyWindow by remember(uiState.consistencyThresholdMinutes) {
-            mutableFloatStateOf(uiState.consistencyThresholdMinutes.toFloat())
-        }
-        ThresholdSliderItem(
-            label = stringResource(R.string.threshold_consistency_window_label),
-            value = consistencyWindow,
-            onValueChange = { consistencyWindow = it },
-            onValueChangeFinished = { onEvent(SettingsEvent.ConsistencyThresholdChanged(consistencyWindow.toInt())) },
-            valueRange = 0f..90f,
-            steps = 17,
-            displayValue = "${consistencyWindow.toInt()} min",
-            description = stringResource(R.string.threshold_consistency_window_desc),
-        )
-
+        // The circadian-consistency deviation threshold is no longer a flat slider here; it is
+        // derived from the physiology profile (+ optional override) in the dedicated
+        // "Circadian consistency" section (CircadianThresholdSettingsSection).
         var evaluationPeriod by remember(uiState.consistencyEvaluationDays) {
             mutableFloatStateOf(uiState.consistencyEvaluationDays.toFloat())
         }

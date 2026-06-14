@@ -24,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import java.time.Clock
+import java.time.ZoneId
 import javax.inject.Singleton
 
 @Module
@@ -244,6 +245,40 @@ object DataStoreModule {
                         override suspend fun cleanUp() {
                             oldFile.delete()
                         }
+                    },
+                    // Runs LAST (after the legacy proto rebuild, which would otherwise drop it):
+                    // seed the scoring timezone once, capturing the device zone the first time
+                    // preferences are read (new installs and existing users alike). After this,
+                    // scoring day boundaries are reproducible from stored preferences alone.
+                    object : DataMigration<UserPreferencesProto> {
+                        override suspend fun shouldMigrate(currentData: UserPreferencesProto): Boolean =
+                            currentData.scoringZoneId.isBlank()
+
+                        override suspend fun migrate(currentData: UserPreferencesProto): UserPreferencesProto {
+                            val zoneId = ZoneId.systemDefault().id
+                            return currentData
+                                .toBuilder()
+                                .setScoringZoneId(zoneId)
+                                .build()
+                        }
+
+                        override suspend fun cleanUp() {}
+                    },
+                    // Canonicalize removed profiles: stored PROFILE_GENERAL / PROFILE_SHIFT_WORKER are
+                    // rewritten to PROFILE_ACTIVE so persisted storage matches the supported set.
+                    // Reads are already safe via UserPreferences.toDomainProfile; this keeps storage canonical.
+                    object : DataMigration<UserPreferencesProto> {
+                        override suspend fun shouldMigrate(currentData: UserPreferencesProto): Boolean =
+                            currentData.physiologyProfile == PhysiologyProfileProto.PROFILE_GENERAL ||
+                                currentData.physiologyProfile == PhysiologyProfileProto.PROFILE_SHIFT_WORKER
+
+                        override suspend fun migrate(currentData: UserPreferencesProto): UserPreferencesProto =
+                            currentData
+                                .toBuilder()
+                                .setPhysiologyProfile(PhysiologyProfileProto.PROFILE_ACTIVE)
+                                .build()
+
+                        override suspend fun cleanUp() {}
                     },
                 ),
             produceFile = { context.dataStoreFile("user_preferences.pb") },

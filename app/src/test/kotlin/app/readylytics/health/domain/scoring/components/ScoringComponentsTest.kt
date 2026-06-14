@@ -4,24 +4,72 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class ScoringComponentsTest {
-    // PhaseCalculator tests
+    // PhaseCalculator tests (boundaries on baseline-usable session count)
 
     @Test
-    fun phaseCalculator_0daysSinceInstall_returnsCalibration() {
-        val phase = PhaseCalculator.calculatePhase(0)
+    fun phaseCalculator_6validNights_returnsCalibration() {
+        val phase = PhaseCalculator.calculatePhase(6)
         assertEquals(Phase.CALIBRATION, phase)
+        assertEquals(ConfidenceLevel.NOT_READY, phase.confidence)
     }
 
     @Test
-    fun phaseCalculator_7daysSinceInstall_returnsProvisional() {
+    fun phaseCalculator_7validNights_returnsEarlyBaseline() {
         val phase = PhaseCalculator.calculatePhase(7)
-        assertEquals(Phase.PROVISIONAL, phase)
+        assertEquals(Phase.EARLY_BASELINE, phase)
+        assertEquals(ConfidenceLevel.LOW, phase.confidence)
     }
 
     @Test
-    fun phaseCalculator_42daysSinceInstall_returnsMature() {
-        val phase = PhaseCalculator.calculatePhase(42)
+    fun phaseCalculator_20validNights_returnsEarlyBaseline() {
+        val phase = PhaseCalculator.calculatePhase(20)
+        assertEquals(Phase.EARLY_BASELINE, phase)
+        assertEquals(ConfidenceLevel.LOW, phase.confidence)
+    }
+
+    @Test
+    fun phaseCalculator_21validNights_returnsMaturing() {
+        val phase = PhaseCalculator.calculatePhase(21)
+        assertEquals(Phase.MATURING, phase)
+        assertEquals(ConfidenceLevel.MEDIUM, phase.confidence)
+    }
+
+    @Test
+    fun phaseCalculator_59validNights_returnsMaturing() {
+        val phase = PhaseCalculator.calculatePhase(59)
+        assertEquals(Phase.MATURING, phase)
+        assertEquals(ConfidenceLevel.MEDIUM, phase.confidence)
+    }
+
+    @Test
+    fun phaseCalculator_60validNights_returnsMature() {
+        val phase = PhaseCalculator.calculatePhase(60)
         assertEquals(Phase.MATURE, phase)
+        assertEquals(ConfidenceLevel.HIGH, phase.confidence)
+    }
+
+    // Negative test: a night with missing/invalid HRV must not count toward the
+    // baseline-usable session total, so it must not push the phase across a boundary.
+    @Test
+    fun phaseCalculator_invalidNightNotCountedTowardBaseline_staysEarlyBaseline() {
+        val validHistoricalSessionIds = 20
+        val canContributeToBaseline = false // e.g. HRV missing/invalid for current night
+
+        val totalValidHrvNights = validHistoricalSessionIds + (if (canContributeToBaseline) 1 else 0)
+
+        assertEquals(20, totalValidHrvNights)
+        assertEquals(Phase.EARLY_BASELINE, PhaseCalculator.calculatePhase(totalValidHrvNights))
+    }
+
+    @Test
+    fun phaseCalculator_validNightCountedTowardBaseline_crossesToMaturing() {
+        val validHistoricalSessionIds = 20
+        val canContributeToBaseline = true
+
+        val totalValidHrvNights = validHistoricalSessionIds + (if (canContributeToBaseline) 1 else 0)
+
+        assertEquals(21, totalValidHrvNights)
+        assertEquals(Phase.MATURING, PhaseCalculator.calculatePhase(totalValidHrvNights))
     }
 
     // SleepArchitectureTargetFactory tests
