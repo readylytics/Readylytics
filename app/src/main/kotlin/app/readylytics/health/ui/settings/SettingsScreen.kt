@@ -218,8 +218,6 @@ fun SettingsRoute(
         }
     }
 
-    val licensesTitle = stringResource(R.string.settings_item_licenses_title)
-
     SettingsScreen(
         thresholdState = thresholdState,
         sleepState = sleepState,
