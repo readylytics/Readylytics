@@ -48,7 +48,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.MainActivity
 import app.readylytics.health.R
 import app.readylytics.health.data.preferences.AppTheme
-import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.ui.common.resolveOrNull
 import app.readylytics.health.ui.components.DropdownPreferenceItem
 import app.readylytics.health.ui.components.PhysiologyProfilePicker
@@ -218,6 +217,8 @@ fun SettingsRoute(
             }
         }
     }
+
+    val licensesTitle = stringResource(R.string.settings_item_licenses_title)
 
     SettingsScreen(
         thresholdState = thresholdState,
@@ -463,7 +464,6 @@ fun SettingsScreen(
                             CircadianThresholdSettingsSection(
                                 profile = physiologyState.physiologyProfile,
                                 currentOverride = thresholdState.circadianThresholdOverride,
-                                isShiftWorkerMode = physiologyState.physiologyProfile == PhysiologyProfile.SHIFT_WORKER,
                                 onOverrideChanged = {
                                     onThresholdEvent(
                                         SettingsEvent.CircadianThresholdOverrideChanged(it),

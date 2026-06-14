@@ -11,7 +11,7 @@ and out to the **Jetpack Compose** UI.
 > When you change the pipeline, schema, use-cases, or scoring formulas, update this file in
 > the same change (see the constraint in `.claude/CLAUDE.md`).
 
-All paths are rooted at `app/src/main/java/com/gregor/lauritz/healthdashboard/`.
+All paths are rooted at `app/src/main/kotlin/app/readylytics/health/`.
 
 ---
 
@@ -190,7 +190,7 @@ keep Android types out of`domain/scoring/\*\*`.
 | Component                       | Path                                       | Responsibility                                                                                                                                                                                                                                                                                                                                                                                          |
 | :------------------------------ | :----------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `ScoringRepository` (interface) | `domain/repository/ScoringRepository.kt`   | Contract for daily computation.                                                                                                                                                                                                                                                                                                                                                                         |
-| `ScoringRepositoryImpl`         | `data/repository/ScoringRepositoryImpl.kt` | `computeDailySummary(day)` (mutex-locked) orchestrates: raw DAO fetch → daily TRIMP/PAI → baseline resolve/freeze → sleep + load + readiness → persist `DailySummaryEntity`. Hosts the "Calibrating" gate (< 7 sleep sessions in the last 42 days → tentative scores, no load score). **Both sync flows recompute exclusively through this method — formulas are never duplicated in the sync engine.** |
+| `ScoringRepositoryImpl`         | `data/repository/ScoringRepositoryImpl.kt` | `computeDailySummary(day)` (mutex-locked) orchestrates: raw DAO fetch → daily TRIMP/PAI → baseline resolve/freeze → sleep + load + readiness → persist `DailySummaryEntity`. Hosts the "Calibrating" gate (< 7 sleep sessions in the last 42 days → tentative scores, no load score). **Both sync flows recompute exclusively through this method — formulas are never duplicated in the sync engine.** Day boundaries (`dateMidnightMs`) and every scoring window resolve through the **stored scoring timezone** (`UserPreferences.scoringZoneId` → `scoringZone()`, seeded once from the device zone by a DataStore migration), not `ZoneId.systemDefault()`, so identical SQLite + preferences reproduce identical scores across devices/timezones. The same stored zone is threaded through `CircadianConsistencyRepository`, `HrvBaselineProvider`, `RhrBaselineProvider`, and `ComputeHistoricalBaselinesUseCase`. |
 
 ### 2.2 Resting Heart Rate (RHR) — percentile "nocturnal floor"
 
@@ -225,11 +225,36 @@ result.
 
 ### 2.4 Baselines & calibration
 
+**Physiology profiles** are now exactly **Athlete / Active / Sedentary**
+(`data/preferences/PhysiologyProfile.kt`); `Active` is the default. The removed
+`GENERAL` and `SHIFT_WORKER` profiles map to `ACTIVE` at the proto read boundary
+(`UserPreferences.toDomainProfile`) and are canonicalized in storage by a one-time
+`DataStoreModule` migration — the proto enumerators `PROFILE_GENERAL`/`PROFILE_SHIFT_WORKER`
+stay reserved (never reused) so old payloads/backups still deserialize.
+
 `domain/scoring/BaselineComputer.kt` computes and snapshots per-day frozen baselines:
 `hrMax`, `rhrBpm`, `rhrSigma`, HRV `mu`/`sigma` (with profile-prior blending for new users),
 `paiScalingFactor`, and physiology profile. Baselines freeze once
 calibrated (≥ 7 valid sessions); before that, `ScoringRepositoryImpl` reports
 **"Calibrating"** and emits tentative metrics only.
+
+**Displayed HRV Baseline (ms)** is the geometric statistic, `exp(mu)` where `mu` is the
+frozen `hrvMuMssd` (mean of `ln(nightly RMSSD)`) — this matches the statistic Restoration
+z-scores are computed against. `HrvBaselineProvider.getPreciseHrvBaseline`/
+`getRoundedHrvBaseline` and `DailyMetricsMapper.hrvBaselineRounded` both resolve
+`exp(hrvMuMssd)` first, falling back to `prefs.hrvBaselineOverride`, then to
+`BaselineComputer.computeHrvBaseline`'s arithmetic median (ms) only as a last resort when
+no geometric `mu` is available yet (e.g. very early calibration). The arithmetic median
+stored on `DailySummary.hrvBaseline` is never the primary display source.
+
+**Phase model** (`domain/scoring/components/Phase.kt` + `PhaseCalculator.kt`) classifies
+each day's `totalValidHrvNights` (baseline-usable session count, computed in
+`ComputeSleepMetricsUseCase`) into one of four phases, each carrying a `ConfidenceLevel`:
+Calibration 0-6 (Not Ready), Early Baseline 7-20 (Low), Maturing 21-59 (Medium), Mature 60+
+(High). The result is persisted per day as `snapshotCalibrationPhase` on
+`DailySummaryEntity`/`DailySummary` for dashboard + About display. This is independent of
+the diagnostic, days-since-install `phaseName` inlined in `AuditTrailFactory` (debug/audit
+trail only, not part of `computeConfigHash`).
 
 The historical backfill (`domain/scoring/BackfillHistoricalBaselinesUseCase` →
 `ComputeHistoricalBaselinesUseCase`) wipes derived baselines and recomputes the entire
@@ -248,12 +273,15 @@ per-day UPDATEs are collapsed into a single transaction by the backfill use-case
 | Component                    | Path                                                | Output                                                                                                                      |
 | :--------------------------- | :-------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
 | `SleepScoringStrategy`       | `domain/scoring/strategies/SleepScoringStrategy.kt` | Sleep score = **Duration 50% + Architecture 25% + Restoration 25%** (Restoration from HRV & RHR z-scores).                  |
-| `LoadScoringStrategy`        | `domain/scoring/strategies/LoadScoringStrategy.kt`  | Load score from the **Strain Ratio** (ATL/CTL); readiness composite (restoration + sleep + load), capped by recovery flags (illness, overreaching, workout impact, rest day success). |
+| `LoadScoringStrategy`        | `domain/scoring/strategies/LoadScoringStrategy.kt`  | Load score from the **Strain Ratio** (ATL/CTL): `sr ≤ 1.3 → 100`, `sr > 1.3 → 100·exp(−2.5·(sr−1.3)²)`. Feeds the readiness composite (0.4 restoration + 0.3 sleep + 0.3 load). Only `OVERREACHING` (cap 70) and `ILLNESS_ONSET` (cap 50) flags cap the readiness number, each requiring two consecutive nights; workout-impact and rest-day flags are informational only and do not cap the score. |
 | `PaiScoringStrategy`         | `domain/scoring/strategies/PaiScoringStrategy.kt`   | **CTL (42-day)** and **ATL (7-day)** exponential moving averages of daily TRIMP.                                            |
 | `ComputeSleepMetricsUseCase` | `domain/scoring/ComputeSleepMetricsUseCase.kt`      | Assembles sleep/readiness metrics for the day from the strategies + baselines.                                              |
+| `CircadianConsistencyRepository` | `domain/scoring/CircadianConsistencyRepository.kt` | Live bed/wake-time consistency score. The allowed deviation **threshold** resolves through the single `CircadianThresholdDefaults.resolveThreshold(profile, override)` (Athlete 20 / Active 30 / Sedentary 45 min; override wins). The encrypted `circadianThresholdOverride` is the user knob; a legacy non-default flat `consistencyThresholdMinutes` is honored as an override for back-compat. The former per-profile strategy classes are deleted — there is now one resolver. |
 
 Supporting helpers live in `domain/scoring/components/` and `domain/scoring/sleep/`
 (architecture targets, restoration weights, nadir analysis, HR coverage validation).
+`CircadianThresholdDefaults` (`domain/circadian/`) is the single threshold source, consumed
+by both the live repository above and the diagnostic config built in `ScoringConfigFactory`.
 
 ---
 

@@ -25,6 +25,9 @@ enum BackupScheduleProto {
 }
 
 enum PhysiologyProfileProto {
+    // PROFILE_GENERAL (the proto3 zero/default) and PROFILE_SHIFT_WORKER are removed product
+    // profiles. The enumerators are kept reserved (never reused) so older payloads/backups still
+    // deserialize; both map to ACTIVE at the domain read boundary (UserPreferences.toDomainProfile).
     PROFILE_GENERAL = 0;
     PROFILE_ATHLETE = 1;
     PROFILE_ACTIVE = 2;
@@ -168,9 +171,14 @@ message UserPreferencesProto {
     int64 custom_tertiary_color = 69;
     int64 custom_primary_color = 70;
 
+    // IANA timezone id used for all scoring day-boundary math. Stored so scores are
+    // reproducible across devices for identical data + preferences. Empty = un-seeded
+    // (falls back to the device zone until the seed migration / first run sets it).
+    string scoring_zone_id = 71;
+
     // Permanent dismissal of the "press Apply to resync" info dialog shown
     // when the user changes a Data Sources device selection.
-    bool device_change_notice_dismissed = 71;
+    bool device_change_notice_dismissed = 72;
 }
 
 enum TrimpMethodProto {

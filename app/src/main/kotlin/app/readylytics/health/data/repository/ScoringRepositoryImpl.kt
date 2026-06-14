@@ -11,6 +11,7 @@ import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.model.RecoveryFlag
@@ -23,6 +24,7 @@ import app.readylytics.health.domain.scoring.PaiCalculator
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.domain.scoring.components.Phase
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.logD
@@ -71,13 +73,12 @@ class ScoringRepositoryImpl
 
         override suspend fun computeDailySummary(targetDate: LocalDate): DailySummaryEntity =
             withContext(Dispatchers.Default) {
-                val zoneId = ZoneId.systemDefault()
+                val prefs = settingsRepo.userPreferences.first()
+                val zoneId = prefs.scoringZone()
                 val dayMidnight = targetDate.atStartOfDay(zoneId).toInstant()
                 val nextDayMidnight = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant()
                 val dayMidnightMs = dayMidnight.toEpochMilli()
                 val nextDayMidnightMs = nextDayMidnight.toEpochMilli()
-
-                val prefs = settingsRepo.userPreferences.first()
 
                 // Retrieve the nightly frozen HR_rest (nocturnal floor) from the daily summary if available
                 val dailySummary = dailySummaryDao.getByDate(dayMidnightMs)
@@ -158,7 +159,7 @@ class ScoringRepositoryImpl
                     )
                 val dailyPai = round(dailyPaiRaw * 10f) / 10f
 
-                val last6DaysPai = sumPaiScoreLastSixDays(targetDate)
+                val last6DaysPai = sumPaiScoreLastSixDays(targetDate, zoneId)
                 // Total PAI is rounded to nearest integer to match the UI's simple sum of rounded daily values.
                 val totalPai7d = round(dailyPai + last6DaysPai)
 
@@ -244,9 +245,15 @@ class ScoringRepositoryImpl
                                     },
                                 isCalibrating = true,
                                 avgSleepingSpo2 = avgSpo2,
+                                snapshotCalibrationPhase = Phase.CALIBRATION.name,
                             )
                     } else {
-                        summary = summary.copy(isCalibrating = true, avgSleepingSpo2 = avgSpo2)
+                        summary =
+                            summary.copy(
+                                isCalibrating = true,
+                                avgSleepingSpo2 = avgSpo2,
+                                snapshotCalibrationPhase = Phase.CALIBRATION.name,
+                            )
                     }
 
                     // Bounded baselines during calibration prevent default-50bpm display on dashboard.
@@ -379,13 +386,15 @@ class ScoringRepositoryImpl
             )
         }
 
-        private suspend fun sumPaiScoreLastSixDays(targetDate: LocalDate): Float {
-            val zoneIdSystem = ZoneId.systemDefault()
+        private suspend fun sumPaiScoreLastSixDays(
+            targetDate: LocalDate,
+            zoneId: ZoneId,
+        ): Float {
             val previousDaysMs =
                 (1..6).map { i ->
                     targetDate
                         .minusDays(i.toLong())
-                        .atStartOfDay(zoneIdSystem)
+                        .atStartOfDay(zoneId)
                         .toInstant()
                         .toEpochMilli()
                 }
