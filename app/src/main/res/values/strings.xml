@@ -258,7 +258,10 @@
     <string name="about_glossary_rmssd">**RMSSD** — the specific HRV measure most apps use. We work
         with the natural log of RMSSD (**lnRMSSD**) internally because it linearizes the naturally
         skewed distribution of heart rate variability, making statistical comparison (Z-scores)
-        valid (Plews 2013, Buchheit 2014).</string>
+        valid (Plews 2013, Buchheit 2014). The **HRV Baseline (ms)** shown on your dashboard is the
+        geometric mean of your recent nightly RMSSD — computed as exp(mean(lnRMSSD)) — not a simple
+        average, since a plain average would be skewed upward by occasional high outlier
+        nights.</string>
     <string name="about_glossary_rhr">**RHR (Resting Heart Rate)** — your nocturnal heart rate,
         averaged across deep portions of sleep.</string>
     <string name="about_glossary_deep">**Deep sleep / Slow-Wave Sleep / N3** — the deepest stage of

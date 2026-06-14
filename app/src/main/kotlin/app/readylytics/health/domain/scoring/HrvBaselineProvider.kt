@@ -32,16 +32,6 @@ class HrvBaselineProvider
             return calculated?.toDouble()
         }
 
-        suspend fun getRoundedHrvBaseline(date: LocalDate): Int? {
-            val prefs = settingsRepository.userPreferences.first()
-            val zone = prefs.scoringZone()
-            val dateMs = date.toMidnightEpochMilli(zone)
-            val rounded = dao.getRoundedHrvBaseline(dateMs)
-            if (rounded != null) return rounded
-
-            if (prefs.hrvBaselineOverride != null) return Math.round(prefs.hrvBaselineOverride)
-
-            val dayMidnight = date.atStartOfDay(zone).toInstant()
-            return baselineComputer.computeHrvBaseline(dayMidnight, null)
-        }
+        suspend fun getRoundedHrvBaseline(date: LocalDate): Int? =
+            getPreciseHrvBaseline(date)?.let { Math.round(it).toInt() }
     }

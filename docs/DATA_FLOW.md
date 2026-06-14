@@ -238,6 +238,15 @@ stay reserved (never reused) so old payloads/backups still deserialize.
 calibrated (≥ 7 valid sessions); before that, `ScoringRepositoryImpl` reports
 **"Calibrating"** and emits tentative metrics only.
 
+**Displayed HRV Baseline (ms)** is the geometric statistic, `exp(mu)` where `mu` is the
+frozen `hrvMuMssd` (mean of `ln(nightly RMSSD)`) — this matches the statistic Restoration
+z-scores are computed against. `HrvBaselineProvider.getPreciseHrvBaseline`/
+`getRoundedHrvBaseline` and `DailyMetricsMapper.hrvBaselineRounded` both resolve
+`exp(hrvMuMssd)` first, falling back to `prefs.hrvBaselineOverride`, then to
+`BaselineComputer.computeHrvBaseline`'s arithmetic median (ms) only as a last resort when
+no geometric `mu` is available yet (e.g. very early calibration). The arithmetic median
+stored on `DailySummary.hrvBaseline` is never the primary display source.
+
 **Phase model** (`domain/scoring/components/Phase.kt` + `PhaseCalculator.kt`) classifies
 each day's `totalValidHrvNights` (baseline-usable session count, computed in
 `ComputeSleepMetricsUseCase`) into one of four phases, each carrying a `ConfidenceLevel`:

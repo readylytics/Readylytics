@@ -670,9 +670,65 @@ final constants/strings produced by the behavioral phases.
 | **4. Phase model** | 4-state enum on baseline-usable count; ConfidenceLevel (Not Ready/Low/Medium/High); dashboard + About UI | Builds on stable profiles/determinism | Boundary + negative phase tests green |
 | **5. HRV display alignment** | Repoint HRV-baseline display consumers to `exp(mu)` in ms; retire/rename arithmetic baseline; methodology copy | Display correctness; feeds the doc/drift work | HRV-display regression test green; one baseline source |
 | **6. Documentation + governance + drift tests** | Apply §8/§9 corrections across all surfaces; CLAUDE.md/AGENTS.md rules; drift-detection + presence tests | Locks in the now-final constants/strings | Drift test green; no surface mentions Shift Worker/General; all numbers reconciled |
+| **7. Test stability — `WorkoutsViewModelTest` flake** | Fix `appScope`/`testDispatcher` scheduler mismatch with `SelectedDateRepository`'s eager `stateIn`/`collect` coroutine (see §14) | Pre-existing flake (`UncaughtExceptionsBeforeTest` on "initial page is 1") undermines CI signal for all other phases | `WorkoutsViewModelTest` green across 10 consecutive full-suite `testDebugUnitTest` runs |
 
 Behavior-independent doc fixes (e.g. the DATA_FLOW package-root path, L2) may ride along in
-any earlier phase, but the automated guardrail is established in Phase 6.
+any earlier phase, but the automated guardrail is established in Phase 6. Phase 7 is
+test-infrastructure-only and may be picked up whenever convenient (no formula/UI dependency
+on the other phases).
+
+---
+
+## 14. Test Stability — `WorkoutsViewModelTest` Flake (Phase 7)
+
+### 14.1 Symptom
+
+`WorkoutsViewModelTest."initial page is 1"` intermittently fails only when the **full**
+`testDebugUnitTest` suite runs (passes reliably in isolation), with:
+
+```
+kotlinx.coroutines.test.UncaughtExceptionsBeforeTest: There were uncaught exceptions
+before the test started.
+```
+
+### 14.2 Root cause (hypothesis, to be confirmed during implementation)
+
+`setUp()` builds `appScope = CoroutineScope(testDispatcher)` and a real
+`SelectedDateRepository`, whose `init` block does:
+
+```kotlin
+val earliestDate: StateFlow<LocalDate?> =
+    combine(...).stateIn(scope = appScope, started = SharingStarted.Eagerly, initialValue = null)
+
+init {
+    appScope.launch { earliestDate.collect { ... } }
+}
+```
+
+Both run on `testDispatcher`'s `TestCoroutineScheduler`. The test bodies use plain
+`runTest { ... }`, which creates its **own**, separate `TestCoroutineScheduler` — so
+`testScheduler.advanceUntilIdle()` inside the test never drives `appScope`'s coroutines.
+`tearDown()` calls `appScope.cancel()` then `testDispatcher.scheduler.advanceUntilIdle()`,
+but a `CancellationException`/mock-related exception surfacing asynchronously on
+`testDispatcher`'s scheduler can be reported against the **next** test instance that shares
+the dispatcher's uncaught-exception handler, producing `UncaughtExceptionsBeforeTest` on an
+unrelated, order-dependent test ("initial page is 1" happens to run first).
+
+### 14.3 Fix direction
+
+- Either run tests with `runTest(testDispatcher) { ... }` so `appScope` and the test body
+  share one scheduler (uncaught exceptions then surface on the correct test and
+  `advanceUntilIdle()` actually drains them), **or**
+- Stop constructing a real `SelectedDateRepository` in this ViewModel test — use a fake/mock
+  that exposes `selectedDate`/`earliestDate` as plain `StateFlow`s without the eager
+  `appScope.launch` side effect.
+- Audit other ViewModel tests that construct `SelectedDateRepository` the same way
+  (`grep -r "SelectedDateRepository(" app/src/test`) for the same pattern.
+
+### 14.4 Out of scope
+
+No production code changes — `domain/scoring/**` and `SelectedDateRepository` behavior are
+unaffected; this is test-harness-only.
 
 ---
 
