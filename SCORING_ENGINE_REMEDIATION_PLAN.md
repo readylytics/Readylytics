@@ -247,10 +247,14 @@ MISMATCH; Q2; new product decision.)
 2. **Default profile:** change `SettingsDefaults.PHYSIOLOGY_PROFILE` from `GENERAL` to
    **`ACTIVE`**.
 3. **Proto compatibility (do not break the wire format):**
-   - **Keep both proto enumerators** `PROFILE_GENERAL = 0` and `PROFILE_SHIFT_WORKER = 4`;
-     never delete or reuse those ordinals. `PROFILE_GENERAL = 0` is the proto3 zero value, so
-     it must remain a valid enumerator (optionally rename to `PROFILE_UNSPECIFIED = 0` with a
-     reserved old name) — it cannot simply be removed.
+   - **Keep both proto enumerators, names unchanged** — `PROFILE_GENERAL = 0` and
+     `PROFILE_SHIFT_WORKER = 4` — never delete, rename, or reuse those ordinals.
+     `PROFILE_GENERAL = 0` is the proto3 zero value, so it must remain a valid enumerator,
+     and `LocalRestoreManager.kt:459`'s `PhysiologyProfileProto.valueOf(it)` round-trips
+     backups by enumerator **name**: renaming `PROFILE_GENERAL` (e.g. to
+     `PROFILE_UNSPECIFIED`) would make `valueOf("PROFILE_GENERAL")` throw
+     `IllegalArgumentException` on older backups. Keep the name as-is; the migration in step
+     4 below handles the value semantically.
    - **Map at the read boundary:** wherever proto → domain conversion happens
      (`UserPreferences.kt:89`, `DataStoreModule.kt:233`, `LocalRestoreManager.kt:459`),
      translate **`PROFILE_GENERAL` → `ACTIVE`** and **`PROFILE_SHIFT_WORKER` → `ACTIVE`**.
@@ -303,6 +307,14 @@ stored in `UserPreferences` or `DailySummaryEntity`. Determinism tests assume a 
 - Add **`scoringZoneId: String`** (IANA id, e.g. `"Europe/Berlin"`) to `UserPreferences`
   and `proto/user_preferences.proto`. This makes timezone part of "identical preferences" —
   an explicit, stored scoring input rather than an ambient device property.
+- **Safe resolution (`UserPreferences.scoringZone(): ZoneId`):** the proto field defaults to
+  `""` for any session before the seed migration or onboarding completes, and a stored id
+  could in principle be unsupported by the device's current tz database (varies across
+  Android versions / backup-restore). `scoringZone()` must therefore: return
+  `ZoneId.systemDefault()` when `scoringZoneId` is blank, and `runCatching { ZoneId.of(id) }`
+  with the same `systemDefault()` fallback on `DateTimeException`/`ZoneRulesException` for a
+  non-blank-but-invalid id. This guarantees scoring never crashes on startup or restore, and
+  preserves today's behavior (device zone) until a valid zone is seeded.
 - **Ownership:** the scoring timezone is a *preference*, set once and stable. The device's
   live zone (`systemDefault()`) may still drive UI navigation ("which date is today"), but
   **score computation for a given `LocalDate` always uses `scoringZoneId`.**
