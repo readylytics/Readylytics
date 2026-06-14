@@ -382,6 +382,7 @@ class LocalBackupManager
                             }
                         },
                     gender = prefs.gender?.name,
+                    heightCm = prefs.heightCm,
                     hrvOptimalThreshold = prefs.hrvOptimalThreshold,
                     hrvWarningThreshold = prefs.hrvWarningThreshold,
                     rhrOptimalThreshold = prefs.rhrOptimalThreshold,

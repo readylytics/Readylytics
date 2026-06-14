@@ -6,7 +6,6 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import app.readylytics.health.domain.model.ReadinessResult
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 
@@ -66,7 +65,7 @@ data class DailySummaryEntity(
     @ColumnInfo(name = "rhr_sigma", defaultValue = "NULL")
     val rhrSigma: Float? = null,
     @ColumnInfo(name = "baseline_calculated_at_date")
-    @Contextual
+    @Serializable(with = LocalDateSerializer::class)
     val baselineCalculatedAtDate: LocalDate? = null,
     @ColumnInfo(name = "hr_max")
     val hrMax: Float? = null,

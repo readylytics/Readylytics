@@ -414,6 +414,7 @@ class LocalRestoreManager
                 }
 
                 backup.gender?.let { gender = it } ?: clearGender()
+                backup.heightCm?.let { heightCm = it } ?: clearHeightCm()
                 backup.hrvOptimalThreshold?.let { hrvOptimalThreshold = it }
                 backup.hrvWarningThreshold?.let { hrvWarningThreshold = it }
                 backup.rhrOptimalThreshold?.let { rhrOptimalThreshold = it }

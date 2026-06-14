@@ -36,6 +36,7 @@ data class UserPreferencesBackup(
     val birthMonth: Int? = null,
     val birthYear: Int? = null,
     val gender: String? = null,
+    val heightCm: Float? = null,
     val hrvOptimalThreshold: Float? = null,
     val hrvWarningThreshold: Float? = null,
     val rhrOptimalThreshold: Float? = null,

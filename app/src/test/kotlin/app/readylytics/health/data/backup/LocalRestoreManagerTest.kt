@@ -130,6 +130,30 @@ class LocalRestoreManagerTest {
             zipFile.delete()
         }
 
+    @Test
+    fun applyRestore_restoresHeight() =
+        runTest {
+            val json = createValidBackupJson()
+            json.getJSONObject("preferences").put("heightCm", 182.5)
+            val zipFile = createBackupZipFile("height_backup.zip", json)
+
+            val builderSlot =
+                io.mockk
+                    .slot<app.readylytics.health.data.preferences.UserPreferencesProto.Builder.() -> Unit>()
+            coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+
+            val builder =
+                app.readylytics.health.data.preferences.UserPreferencesProto
+                    .newBuilder()
+            builderSlot.captured(builder)
+            assertEquals(182.5f, builder.heightCm)
+            zipFile.delete()
+        }
+
     private fun createValidBackupJson(): JSONObject {
         val sleepSessions =
             JSONArray().apply {
