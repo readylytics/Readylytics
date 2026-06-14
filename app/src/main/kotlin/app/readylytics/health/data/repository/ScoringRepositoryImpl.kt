@@ -24,6 +24,7 @@ import app.readylytics.health.domain.scoring.PaiCalculator
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.domain.scoring.components.Phase
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.logD
@@ -244,9 +245,15 @@ class ScoringRepositoryImpl
                                     },
                                 isCalibrating = true,
                                 avgSleepingSpo2 = avgSpo2,
+                                snapshotCalibrationPhase = Phase.CALIBRATION.name,
                             )
                     } else {
-                        summary = summary.copy(isCalibrating = true, avgSleepingSpo2 = avgSpo2)
+                        summary =
+                            summary.copy(
+                                isCalibrating = true,
+                                avgSleepingSpo2 = avgSpo2,
+                                snapshotCalibrationPhase = Phase.CALIBRATION.name,
+                            )
                     }
 
                     // Bounded baselines during calibration prevent default-50bpm display on dashboard.

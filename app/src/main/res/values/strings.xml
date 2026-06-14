@@ -233,22 +233,23 @@
     <string name="about_header_stabilise">## How long until your scores stabilise</string>
     <string name="about_baselines_intro">Biological baselines take time to learn. We are explicit
         about the phases:</string>
-    <string name="about_phase_calibration">**Days 1-7 (Calibration).** We collect data. Sleep Score
-        and Circadian Consistency are visible from the first night you log enough sleep, but
-        **HRV-based Restoration is hidden** because a single night of HRV is not interpretable on
-        its own. Readiness uses a placeholder fitness value based on the activity level you tell us
-        during onboarding.</string>
-    <string name="about_phase_provisional">**Days 8-21 (Provisional).** We start showing all three
-        scores, but Restoration uses a population-typical estimate of how much your HRV varies day
-        to day. Expect more variability than the mature score.</string>
-    <string name="about_phase_maturing">**Days 22-60 (Maturing).** Your personal HRV mean is
-        settled, and we begin blending your personal day-to-day variability with the population
-        estimate. Confidence indicator visible.</string>
-    <string name="about_phase_mature">**Day 60+ (Mature).** All scores use your own personal
-        baselines for both the average and the variability. This is when small day-to-day
-        differences become trustworthy.</string>
-    <string name="about_tracker_frequency">If you wear your tracker only 3-5 nights a week, the
-        timeline lengthens proportionally.</string>
+    <string name="about_phase_calibration">**Calibration (0-6 nights, confidence: Not Ready).** We
+        collect data. Sleep Score and Circadian Consistency are visible from the first night you
+        log enough sleep, but **HRV-based Restoration is hidden** because a single night of HRV is
+        not interpretable on its own. Readiness uses a placeholder fitness value based on the
+        activity level you tell us during onboarding.</string>
+    <string name="about_phase_provisional">**Early Baseline (7-20 nights, confidence: Low).** We
+        start showing all three scores, but Restoration uses a population-typical estimate of how
+        much your HRV varies night to night. Expect more variability than the mature score.</string>
+    <string name="about_phase_maturing">**Maturing (21-59 nights, confidence: Medium).** Your
+        personal HRV mean is settled, and we begin blending your personal night-to-night
+        variability with the population estimate. A confidence indicator becomes visible.</string>
+    <string name="about_phase_mature">**Mature (60+ nights, confidence: High).** All scores use
+        your own personal baselines for both the average and the variability. This is when small
+        day-to-day differences become trustworthy.</string>
+    <string name="about_tracker_frequency">Progress through these phases depends on the number of
+        nights with usable HRV/RHR data, not calendar age. If you wear your tracker only 3-5
+        nights a week, the timeline lengthens proportionally.</string>
 
     <string name="about_header_glossary">## A short glossary</string>
     <string name="about_glossary_hrv">**HRV (Heart Rate Variability)** — the millisecond-level

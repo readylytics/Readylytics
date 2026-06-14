@@ -238,6 +238,15 @@ stay reserved (never reused) so old payloads/backups still deserialize.
 calibrated (≥ 7 valid sessions); before that, `ScoringRepositoryImpl` reports
 **"Calibrating"** and emits tentative metrics only.
 
+**Phase model** (`domain/scoring/components/Phase.kt` + `PhaseCalculator.kt`) classifies
+each day's `totalValidHrvNights` (baseline-usable session count, computed in
+`ComputeSleepMetricsUseCase`) into one of four phases, each carrying a `ConfidenceLevel`:
+Calibration 0-6 (Not Ready), Early Baseline 7-20 (Low), Maturing 21-59 (Medium), Mature 60+
+(High). The result is persisted per day as `snapshotCalibrationPhase` on
+`DailySummaryEntity`/`DailySummary` for dashboard + About display. This is independent of
+the diagnostic, days-since-install `phaseName` inlined in `AuditTrailFactory` (debug/audit
+trail only, not part of `computeConfigHash`).
+
 The historical backfill (`domain/scoring/BackfillHistoricalBaselinesUseCase` →
 `ComputeHistoricalBaselinesUseCase`) wipes derived baselines and recomputes the entire
 history at app start. It resolves all per-day HRV/RHR windows via the **batched**
