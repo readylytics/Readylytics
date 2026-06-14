@@ -206,6 +206,8 @@ fun SettingsRoute(
         }
     }
 
+    val licensesTitle = stringResource(R.string.settings_item_licenses_title)
+
     SettingsScreen(
         thresholdState = thresholdState,
         sleepState = sleepState,
@@ -223,7 +225,7 @@ fun SettingsRoute(
         onUIEvent = uiViewModel::onEvent,
         onNavigateToAbout = onNavigateToAbout,
         onNavigateToLicenses = {
-            OssLicensesMenuActivity.setActivityTitle(context.getString(R.string.settings_item_licenses_title))
+            OssLicensesMenuActivity.setActivityTitle(licensesTitle)
             context.startActivity(Intent(context, OssLicensesMenuActivity::class.java))
         },
     )
