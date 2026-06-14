@@ -18,8 +18,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import app.readylytics.health.R
-import app.readylytics.health.ui.about.AboutScreen
-import app.readylytics.health.ui.about.AboutViewModel
 import app.readylytics.health.ui.onboarding.OnboardingRoute
 import app.readylytics.health.ui.scaffold.MainScaffold
 import app.readylytics.health.ui.sync.SyncUiState
@@ -34,20 +32,12 @@ fun AppNavHost(
     val userPrefs by viewModel.userPreferences.collectAsStateWithLifecycle(initialValue = null)
 
     LaunchedEffect(uiState, userPrefs) {
-        val prefs = userPrefs ?: return@LaunchedEffect
+        if (userPrefs == null) return@LaunchedEffect
         val currentDest = navController.currentDestination
         when (uiState) {
             SyncUiState.NeedsPermissions -> {
-                val targetDest =
-                    if (!prefs.aboutDismissed) {
-                        AppDestination.About
-                    } else {
-                        AppDestination.Onboarding
-                    }
-                if (currentDest?.hasRoute<AppDestination.Onboarding>() != true &&
-                    currentDest?.hasRoute<AppDestination.About>() != true
-                ) {
-                    navController.navigate(targetDest) {
+                if (currentDest?.hasRoute<AppDestination.Onboarding>() != true) {
+                    navController.navigate(AppDestination.Onboarding) {
                         popUpTo(AppDestination.MainShell) { inclusive = true }
                     }
                 }
@@ -62,7 +52,6 @@ fun AppNavHost(
                 if (currentDest?.hasRoute<AppDestination.MainShell>() != true) {
                     navController.navigate(AppDestination.MainShell) {
                         popUpTo(AppDestination.Onboarding) { inclusive = true }
-                        popUpTo(AppDestination.About) { inclusive = true }
                     }
                 }
             else -> Unit
@@ -75,19 +64,6 @@ fun AppNavHost(
     ) {
         composable<AppDestination.MainShell> {
             MainScaffold()
-        }
-
-        composable<AppDestination.About> {
-            val aboutViewModel: AboutViewModel = hiltViewModel()
-            AboutScreen(
-                onDismiss = {
-                    aboutViewModel.dismissAbout {
-                        navController.navigate(AppDestination.Onboarding) {
-                            popUpTo(AppDestination.About) { inclusive = true }
-                        }
-                    }
-                },
-            )
         }
 
         composable<AppDestination.Onboarding> {

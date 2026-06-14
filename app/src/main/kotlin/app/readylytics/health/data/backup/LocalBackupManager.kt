@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.backup.BackupFileInfo
@@ -35,6 +36,7 @@ class LocalBackupManager
         @ApplicationContext private val context: Context,
         private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
+        private val cardConfigurationRepository: CardConfigurationRepository,
         private val encryptionManager: EncryptionManager,
     ) {
         private val defaultBackupDir = File(context.filesDir, "backups")
@@ -64,7 +66,7 @@ class LocalBackupManager
                     val password =
                         prefs.backupPasswordHash?.let { hash ->
                             encryptionManager.decrypt(hash)
-                        }
+                        } ?: throw IllegalStateException("Backup password not set")
 
                     // 3. Create ZIP file
                     val finalFile: File?
@@ -81,29 +83,14 @@ class LocalBackupManager
                         createZip(tempJsonFile, tempZipFile, password)
 
                         context.contentResolver.openOutputStream(file.uri)?.use { os ->
-                            if (password == null) {
-                                val plaintextBytes = tempZipFile.readBytes()
-                                val encryptedBytes = encryptionManager.encryptBytes(plaintextBytes)
-                                os.write(encryptedBytes)
-                            } else {
-                                tempZipFile.inputStream().use { it.copyTo(os) }
-                            }
+                            tempZipFile.inputStream().use { it.copyTo(os) }
                         }
                         tempZipFile.delete()
                         finalFile = null
                     } else {
                         defaultBackupDir.mkdirs()
                         val file = File(defaultBackupDir, zipFilename)
-                        if (password == null) {
-                            val tempZipFile = File(context.cacheDir, zipFilename)
-                            createZip(tempJsonFile, tempZipFile, null)
-                            val plaintextBytes = tempZipFile.readBytes()
-                            val encryptedBytes = encryptionManager.encryptBytes(plaintextBytes)
-                            file.writeBytes(encryptedBytes)
-                            tempZipFile.delete()
-                        } else {
-                            createZip(tempJsonFile, file, password)
-                        }
+                        createZip(tempJsonFile, file, password)
                         finalFile = file
                     }
 
@@ -157,26 +144,16 @@ class LocalBackupManager
                             val tempJson = File(tempDir, info.name.replace(".zip", ".json"))
                             val newZipPath = File(tempDir, "reencrypt_new_${System.currentTimeMillis()}.zip")
 
-                            // 1. Copy to temp zip and decrypt if Tink-encrypted
-                            val rawBytes =
-                                if (info.uri.scheme == "content") {
-                                    context.contentResolver.openInputStream(info.uri)?.use { it.readBytes() }
-                                        ?: throw IllegalStateException("Could not read backup")
-                                } else {
-                                    File(info.uri.path!!).readBytes()
+                            // 1. Copy to temp zip
+                            if (info.uri.scheme == "content") {
+                                context.contentResolver.openInputStream(info.uri)?.use { input ->
+                                    tempZip.outputStream().use { output -> input.copyTo(output) }
+                                } ?: throw IllegalStateException("Could not read backup")
+                            } else {
+                                File(info.uri.path!!).inputStream().use { input ->
+                                    tempZip.outputStream().use { output -> input.copyTo(output) }
                                 }
-
-                            val zipBytes =
-                                if (oldPassword == null) {
-                                    try {
-                                        encryptionManager.decryptBytes(rawBytes)
-                                    } catch (e: Exception) {
-                                        rawBytes
-                                    }
-                                } else {
-                                    rawBytes
-                                }
-                            tempZip.writeBytes(zipBytes)
+                            }
 
                             // 2. Extract
                             val zipFile = ZipFile(tempZip, oldPassword?.toCharArray())
@@ -196,14 +173,10 @@ class LocalBackupManager
                             newZip.addFile(tempJson, parameters)
                             newZip.close()
 
-                            val finalBytes =
-                                if (newPassword == null) {
-                                    encryptionManager.encryptBytes(tempZipForNew.readBytes())
-                                } else {
-                                    tempZipForNew.readBytes()
-                                }
-                            tempZipForNew.delete()
-                            newZipPath.writeBytes(finalBytes)
+                            if (!tempZipForNew.renameTo(newZipPath)) {
+                                tempZipForNew.copyTo(newZipPath, overwrite = true)
+                                tempZipForNew.delete()
+                            }
 
                             // 4. Overwrite original (atomic rename-swap)
                             if (info.uri.scheme == "content") {
@@ -350,6 +323,7 @@ class LocalBackupManager
 
         private suspend fun writePreferences(writer: BufferedWriter) {
             val prefs = settingsRepository.userPreferences.first()
+            val cards = cardConfigurationRepository.dashboardCardConfigurations().first()
             val backup =
                 UserPreferencesBackup(
                     goalSleepHours = prefs.goalSleepHours,
@@ -357,6 +331,8 @@ class LocalBackupManager
                     rhrBaselineOverride = prefs.rhrBaselineOverride,
                     syncPreference = prefs.syncPreference.name,
                     syncIntervalHours = prefs.syncIntervalHours,
+                    backgroundSyncEnabled = prefs.backgroundSyncEnabled,
+                    backgroundSyncIntervalMinutes = prefs.backgroundSyncIntervalMinutes,
                     lastSyncTimestamp = prefs.lastSyncTimestamp,
                     maxHeartRate = prefs.maxHeartRate,
                     autoCalculateMaxHr = prefs.autoCalculateMaxHr,
@@ -411,6 +387,7 @@ class LocalBackupManager
                             }
                         },
                     gender = prefs.gender?.name,
+                    heightCm = prefs.heightCm,
                     hrvOptimalThreshold = prefs.hrvOptimalThreshold,
                     hrvWarningThreshold = prefs.hrvWarningThreshold,
                     rhrOptimalThreshold = prefs.rhrOptimalThreshold,
@@ -443,6 +420,7 @@ class LocalBackupManager
                     primaryDeviceName = prefs.primaryDeviceName,
                     deviceByDataType = prefs.deviceByDataType.takeIf { it.isNotEmpty() },
                     backupDirectoryUri = prefs.backupDirectoryUri,
+                    dashboardCards = cards,
                 )
             writer.write(json.encodeToString(backup))
         }

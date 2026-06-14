@@ -543,6 +543,18 @@
         and Exercise data from Health Connect to calculate your scores.</string>
     <string name="onboarding_grant_access">Grant Access &amp; Continue</string>
     <string name="onboarding_open_hc_settings">Open Health Connect Settings</string>
+    <string name="onboarding_restore_backup_button">Restore from Backup</string>
+    <string name="onboarding_restore_title">Restore from Backup</string>
+    <string name="onboarding_restore_subtitle">Select a backup file and enter its password to
+        restore your data.</string>
+    <string name="onboarding_restore_select_file_button">Select backup file</string>
+    <string name="onboarding_restore_password_label">Backup password</string>
+    <string name="onboarding_restore_button">Restore</string>
+    <string name="onboarding_finishing_setup">Finishing setup…</string>
+    <string name="onboarding_permissions_required_title">Permissions needed</string>
+    <string name="onboarding_permissions_required_message">Readylytics needs Health Connect
+        permissions to continue. Grant access to finish setting up your restored data.</string>
+    <string name="onboarding_grant_permissions_retry">Grant Permissions</string>
 
     <!-- Heart Rate Settings -->
     <string name="hr_auto_calculate_label">Auto-calculate Max HR</string>
@@ -664,6 +676,7 @@
     <string name="error_sync_failed">Sync failed</string>
     <string name="error_backup_restore_validation">Restore validation failed</string>
     <string name="error_backup_create_failed">Backup failed</string>
+    <string name="error_backup_wrong_password">Incorrect backup password</string>
     <string name="error_threshold_invalid_range">Invalid threshold value. Range: 0–90 minutes.</string>
     <string name="error_threshold_update_failed">Failed to update threshold settings. Changes rolled
         back.</string>
