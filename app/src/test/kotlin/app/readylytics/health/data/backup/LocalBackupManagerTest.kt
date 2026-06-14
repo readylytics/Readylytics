@@ -7,19 +7,26 @@ import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.preferences.BackupSchedule
+import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.domain.dashboard.CardId
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import net.lingala.zip4j.ZipFile
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import java.nio.charset.StandardCharsets
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -29,6 +36,7 @@ class LocalBackupManagerTest {
     private lateinit var db: HealthDatabase
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var encryptionManager: EncryptionManager
+    private lateinit var cardConfigRepo: CardConfigurationRepository
     private lateinit var manager: LocalBackupManager
     private lateinit var backupDir: File
 
@@ -54,6 +62,8 @@ class LocalBackupManagerTest {
                         mockk(relaxed = true) {
                             coEvery { goalSleepHours } returns 8.0f
                             coEvery { syncPreference } returns SyncPreference.ALWAYS
+                            coEvery { backgroundSyncEnabled } returns true
+                            coEvery { backgroundSyncIntervalMinutes } returns 180
                             coEvery { appTheme } returns AppTheme.DARK
                             coEvery { backupSchedule } returns BackupSchedule.DAILY
                             coEvery { birthDate } returns "2000-01-01"
@@ -63,7 +73,11 @@ class LocalBackupManagerTest {
                     )
             }
 
-        manager = LocalBackupManager(context, db, settingsRepo, encryptionManager)
+        cardConfigRepo =
+            mockk<CardConfigurationRepository>(relaxed = true).apply {
+                coEvery { dashboardCardConfigurations() } returns flowOf(emptyList())
+            }
+        manager = LocalBackupManager(context, db, settingsRepo, cardConfigRepo, encryptionManager)
     }
 
     @After
@@ -86,6 +100,72 @@ class LocalBackupManagerTest {
             assertTrue(file.exists())
             assertTrue(file.name.endsWith(".zip"))
             assertTrue(file.name.startsWith("backup_"))
+        }
+
+    @Test
+    fun createBackup_writesDashboardCardsToPreferences() =
+        runTest {
+            val cards =
+                listOf(
+                    CardConfiguration(
+                        cardId = CardId.READINESS,
+                        isVisible = true,
+                        position = 1,
+                    ),
+                    CardConfiguration(
+                        cardId = CardId.HRV,
+                        isVisible = false,
+                        position = 4,
+                    ),
+                )
+            coEvery { cardConfigRepo.dashboardCardConfigurations() } returns flowOf(cards)
+
+            val result = manager.createBackup()
+
+            assertTrue(result.isSuccess)
+            val file = result.getOrNull()
+            assertNotNull(file)
+
+            val zipFile = ZipFile(file, "test_password".toCharArray())
+            val header = zipFile.fileHeaders.single()
+            val backupJson =
+                zipFile.getInputStream(header).use { input ->
+                    input.readBytes().toString(StandardCharsets.UTF_8)
+                }
+            val dashboardCards =
+                JSONObject(backupJson)
+                    .getJSONObject("preferences")
+                    .getJSONArray("dashboardCards")
+
+            assertEquals(2, dashboardCards.length())
+            assertEquals("READINESS", dashboardCards.getJSONObject(0).getString("cardId"))
+            assertTrue(dashboardCards.getJSONObject(0).getBoolean("isVisible"))
+            assertEquals(1, dashboardCards.getJSONObject(0).getInt("position"))
+            assertEquals("HRV", dashboardCards.getJSONObject(1).getString("cardId"))
+            assertTrue(!dashboardCards.getJSONObject(1).getBoolean("isVisible"))
+            assertEquals(4, dashboardCards.getJSONObject(1).getInt("position"))
+        }
+
+    @Test
+    fun createBackup_writesBackgroundSyncAndBackupScheduleToPreferences() =
+        runTest {
+            val result = manager.createBackup()
+
+            assertTrue(result.isSuccess)
+            val file = result.getOrNull()
+            assertNotNull(file)
+
+            val zipFile = ZipFile(file, "test_password".toCharArray())
+            val header = zipFile.fileHeaders.single()
+            val backupJson =
+                zipFile.getInputStream(header).use { input ->
+                    input.readBytes().toString(StandardCharsets.UTF_8)
+                }
+            val preferences = JSONObject(backupJson).getJSONObject("preferences")
+
+            assertTrue(preferences.getBoolean("backgroundSyncEnabled"))
+            assertEquals(180, preferences.getInt("backgroundSyncIntervalMinutes"))
+            assertEquals("DAILY", preferences.getString("backupSchedule"))
         }
 
     @Test
@@ -133,7 +213,7 @@ class LocalBackupManagerTest {
                             },
                         )
                 }
-            manager = LocalBackupManager(context, db, settingsRepo, encryptionManager)
+            manager = LocalBackupManager(context, db, settingsRepo, cardConfigRepo, encryptionManager)
 
             val now = System.currentTimeMillis()
             val eightDaysAgo = now - (8L * 24 * 60 * 60 * 1000)

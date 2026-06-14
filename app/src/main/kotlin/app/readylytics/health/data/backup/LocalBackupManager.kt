@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.backup.BackupFileInfo
@@ -35,6 +36,7 @@ class LocalBackupManager
         @ApplicationContext private val context: Context,
         private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
+        private val cardConfigurationRepository: CardConfigurationRepository,
         private val encryptionManager: EncryptionManager,
     ) {
         private val defaultBackupDir = File(context.filesDir, "backups")
@@ -321,6 +323,7 @@ class LocalBackupManager
 
         private suspend fun writePreferences(writer: BufferedWriter) {
             val prefs = settingsRepository.userPreferences.first()
+            val cards = cardConfigurationRepository.dashboardCardConfigurations().first()
             val backup =
                 UserPreferencesBackup(
                     goalSleepHours = prefs.goalSleepHours,
@@ -328,6 +331,8 @@ class LocalBackupManager
                     rhrBaselineOverride = prefs.rhrBaselineOverride,
                     syncPreference = prefs.syncPreference.name,
                     syncIntervalHours = prefs.syncIntervalHours,
+                    backgroundSyncEnabled = prefs.backgroundSyncEnabled,
+                    backgroundSyncIntervalMinutes = prefs.backgroundSyncIntervalMinutes,
                     lastSyncTimestamp = prefs.lastSyncTimestamp,
                     maxHeartRate = prefs.maxHeartRate,
                     autoCalculateMaxHr = prefs.autoCalculateMaxHr,
@@ -415,6 +420,7 @@ class LocalBackupManager
                     primaryDeviceName = prefs.primaryDeviceName,
                     deviceByDataType = prefs.deviceByDataType.takeIf { it.isNotEmpty() },
                     backupDirectoryUri = prefs.backupDirectoryUri,
+                    dashboardCards = cards,
                 )
             writer.write(json.encodeToString(backup))
         }

@@ -5,11 +5,19 @@ import android.net.Uri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.preferences.BackupSchedule
+import app.readylytics.health.data.preferences.BackupScheduleProto
+import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.data.preferences.UserPreferencesProto
 import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.workers.WorkerScheduler
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
@@ -30,6 +38,8 @@ class LocalRestoreManagerTest {
     private lateinit var db: HealthDatabase
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var encryptionManager: EncryptionManager
+    private lateinit var cardConfigRepo: CardConfigurationRepository
+    private lateinit var workerScheduler: WorkerScheduler
     private lateinit var manager: LocalRestoreManager
 
     @Before
@@ -49,7 +59,10 @@ class LocalRestoreManagerTest {
                 },
             )
         encryptionManager = mockk<EncryptionManager>(relaxed = true)
-        manager = LocalRestoreManager(context, db, settingsRepo, encryptionManager)
+        every { encryptionManager.encrypt("restored_password") } returns "encrypted_restored_password"
+        cardConfigRepo = mockk<CardConfigurationRepository>(relaxed = true)
+        workerScheduler = mockk<WorkerScheduler>(relaxed = true)
+        manager = LocalRestoreManager(context, db, settingsRepo, cardConfigRepo, workerScheduler, encryptionManager)
     }
 
     @After
@@ -151,6 +164,130 @@ class LocalRestoreManagerTest {
                     .newBuilder()
             builderSlot.captured(builder)
             assertEquals(182.5f, builder.heightCm)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_restoresDashboardCards() =
+        runTest {
+            val json = createValidBackupJson()
+            val cardsJson =
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("cardId", "READINESS")
+                            put("isVisible", true)
+                            put("position", 2)
+                        },
+                    )
+                }
+            json.getJSONObject("preferences").put("dashboardCards", cardsJson)
+            val zipFile = createBackupZipFile("cards_backup.zip", json)
+
+            coEvery { cardConfigRepo.updateDashboardCardConfigurations(any()) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+
+            val expectedCards =
+                listOf(
+                    CardConfiguration(
+                        cardId = app.readylytics.health.domain.dashboard.CardId.READINESS,
+                        isVisible = true,
+                        position = 2,
+                    ),
+                )
+            coVerify(exactly = 1) {
+                cardConfigRepo.updateDashboardCardConfigurations(expectedCards)
+            }
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_restoresBackgroundSyncAndSchedulesPeriodicSync() =
+        runTest {
+            val json = createValidBackupJson()
+            json
+                .getJSONObject("preferences")
+                .put("backgroundSyncEnabled", true)
+                .put("backgroundSyncIntervalMinutes", 180)
+            val zipFile = createBackupZipFile("background_sync_backup.zip", json)
+
+            val builderSlot = io.mockk.slot<UserPreferencesProto.Builder.() -> Unit>()
+            coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+
+            val builder = UserPreferencesProto.newBuilder()
+            builderSlot.captured(builder)
+            assertTrue(builder.backgroundSyncEnabled)
+            assertEquals(180, builder.backgroundSyncIntervalMinutes)
+            coVerify(exactly = 1) { workerScheduler.schedulePeriodicSync(180L) }
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_disablesBackgroundSyncWhenBackupHadItDisabled() =
+        runTest {
+            val json = createValidBackupJson()
+            json
+                .getJSONObject("preferences")
+                .put("backgroundSyncEnabled", false)
+                .put("backgroundSyncIntervalMinutes", 360)
+            val zipFile = createBackupZipFile("background_sync_disabled_backup.zip", json)
+
+            val builderSlot = io.mockk.slot<UserPreferencesProto.Builder.() -> Unit>()
+            coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+
+            val builder = UserPreferencesProto.newBuilder().setBackgroundSyncEnabled(true)
+            builderSlot.captured(builder)
+            assertTrue(!builder.backgroundSyncEnabled)
+            verify(exactly = 1) { workerScheduler.cancelPeriodicSync() }
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_storesProvidedPasswordForFutureBackups() =
+        runTest {
+            val json = createValidBackupJson()
+            val zipFile = createBackupZipFile("provided_password_backup.zip", json)
+
+            val builderSlot = io.mockk.slot<UserPreferencesProto.Builder.() -> Unit>()
+            coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile), providedPassword = "restored_password")
+
+            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+
+            val builder = UserPreferencesProto.newBuilder()
+            builderSlot.captured(builder)
+            assertEquals("encrypted_restored_password", builder.backupPasswordHash)
+        }
+
+    @Test
+    fun applyRestore_restoresBackupScheduleAndSchedulesBackupWorker() =
+        runTest {
+            val json = createValidBackupJson()
+            json.getJSONObject("preferences").put("backupSchedule", "BACKUP_WEEKLY")
+            val zipFile = createBackupZipFile("backup_schedule_backup.zip", json)
+
+            val builderSlot = io.mockk.slot<UserPreferencesProto.Builder.() -> Unit>()
+            coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+
+            val builder = UserPreferencesProto.newBuilder()
+            builderSlot.captured(builder)
+            assertEquals(BackupScheduleProto.BACKUP_WEEKLY, builder.backupSchedule)
+            coVerify(exactly = 1) { workerScheduler.scheduleBackupWorker(BackupSchedule.WEEKLY) }
             zipFile.delete()
         }
 
