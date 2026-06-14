@@ -2,6 +2,7 @@ package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.stdev
@@ -37,7 +38,7 @@ class ComputeHistoricalBaselinesUseCase(
             val windows = baselines[summary.dateMidnightMs] ?: return@mapNotNull null
             if (windows.muHistory.isEmpty()) return@mapNotNull null
 
-            val date = summary.dateMidnightMs.toLocalDate()
+            val date = summary.dateMidnightMs.toLocalDate(prefs.scoringZone())
             val lnMuHistory = windows.muHistory.map { ln(it.coerceAtLeast(0.001f)) }
             val lnSigmaHistory = windows.sigmaHistory.map { ln(it.coerceAtLeast(0.001f)) }
 
@@ -64,9 +65,9 @@ class ComputeHistoricalBaselinesUseCase(
         }
     }
 
-    private fun Long.toLocalDate(): LocalDate =
+    private fun Long.toLocalDate(zone: ZoneId): LocalDate =
         Instant
             .ofEpochMilli(this)
-            .atZone(ZoneId.systemDefault())
+            .atZone(zone)
             .toLocalDate()
 }

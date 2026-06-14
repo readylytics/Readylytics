@@ -3,14 +3,22 @@ package app.readylytics.health.domain.scoring.components
 import java.time.LocalDate
 
 object AuditTrailFactory {
+    private const val CALIBRATION_DAYS = 7
+    private const val PROVISIONAL_DAYS = 42
+
     fun create(
         daysSinceInstall: Int,
         currentDate: LocalDate,
     ): AuditTrail {
-        val phase = PhaseCalculator.calculatePhase(daysSinceInstall)
+        val phaseName =
+            when {
+                daysSinceInstall < CALIBRATION_DAYS -> "Calibrating"
+                daysSinceInstall < PROVISIONAL_DAYS -> "Establishing Baseline"
+                else -> "Mature"
+            }
         return AuditTrail(
             configHashCode = 0, // Will be set by caller with actual config hash
-            phaseName = phase.displayName,
+            phaseName = phaseName,
             appliedAt = currentDate,
         )
     }

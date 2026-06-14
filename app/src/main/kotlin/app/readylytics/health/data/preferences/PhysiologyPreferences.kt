@@ -155,9 +155,7 @@ internal class PhysiologyPreferences
                         when (profile) {
                             PhysiologyProfile.ATHLETE -> PhysiologyProfileProto.PROFILE_ATHLETE
                             PhysiologyProfile.ACTIVE -> PhysiologyProfileProto.PROFILE_ACTIVE
-                            PhysiologyProfile.GENERAL -> PhysiologyProfileProto.PROFILE_GENERAL
                             PhysiologyProfile.SEDENTARY -> PhysiologyProfileProto.PROFILE_SEDENTARY
-                            PhysiologyProfile.SHIFT_WORKER -> PhysiologyProfileProto.PROFILE_SHIFT_WORKER
                         },
                     ).setPaiScalingFactor(newPaiFactor)
                     .setPaiCalibration(profile.banisterMultiplier)

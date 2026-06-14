@@ -45,7 +45,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
     private val targetDate: LocalDate = LocalDate.of(2026, 2, 15)
     private val prefs =
         UserPreferences(
-            physiologyProfile = PhysiologyProfile.GENERAL,
+            physiologyProfile = PhysiologyProfile.ACTIVE,
             goalSleepHours = 8f,
             maxHeartRate = 190,
             age = 32,

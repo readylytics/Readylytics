@@ -21,21 +21,7 @@ enum class PhysiologyProfile(
         defaultChengBeta = 0.09f,
         defaultItrimB = 2.1f,
     ),
-    GENERAL(
-        lnSigmaPrior = 0.18f,
-        defaultSleepGoalHours = 8.0f,
-        banisterMultiplier = 1.35f,
-        defaultChengBeta = 0.09f,
-        defaultItrimB = 2.1f,
-    ),
     SEDENTARY(
-        lnSigmaPrior = 0.20f,
-        defaultSleepGoalHours = 7.5f,
-        banisterMultiplier = 1.75f,
-        defaultChengBeta = 0.11f,
-        defaultItrimB = 1.5f,
-    ),
-    SHIFT_WORKER(
         lnSigmaPrior = 0.20f,
         defaultSleepGoalHours = 7.5f,
         banisterMultiplier = 1.75f,

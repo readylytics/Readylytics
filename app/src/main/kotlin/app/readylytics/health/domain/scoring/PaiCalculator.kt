@@ -9,9 +9,7 @@ object PaiCalculator {
         when (profile) {
             PhysiologyProfile.ATHLETE -> ScoringConstants.Pai.PAI_SCALING_ATHLETE
             PhysiologyProfile.ACTIVE -> ScoringConstants.Pai.PAI_SCALING_ACTIVE
-            PhysiologyProfile.GENERAL -> ScoringConstants.Pai.PAI_SCALING_GENERAL
             PhysiologyProfile.SEDENTARY -> ScoringConstants.Pai.PAI_SCALING_SEDENTARY
-            PhysiologyProfile.SHIFT_WORKER -> ScoringConstants.Pai.PAI_SCALING_SHIFT_WORKER
         }
 
     /**
