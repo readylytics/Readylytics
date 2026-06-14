@@ -729,8 +729,6 @@
     <string name="accessibility_circadian_threshold_adjustment">Circadian threshold adjustment.
         Range: 0 to 90 minutes</string>
     <string name="accessibility_circadian_threshold_state">Current value: %1$d minutes</string>
-    <string name="profile_title_general">General Profile</string>
-    <string name="profile_title_shift_worker">Shift Worker Profile</string>
     <string name="unit_system_label">Unit system</string>
     <string name="unit_system_metric_label">Metric (cm, kg)</string>
     <string name="unit_system_imperial_label">Imperial (ft/in, lbs)</string>

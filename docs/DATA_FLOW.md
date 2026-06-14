@@ -225,6 +225,13 @@ result.
 
 ### 2.4 Baselines & calibration
 
+**Physiology profiles** are now exactly **Athlete / Active / Sedentary**
+(`data/preferences/PhysiologyProfile.kt`); `Active` is the default. The removed
+`GENERAL` and `SHIFT_WORKER` profiles map to `ACTIVE` at the proto read boundary
+(`UserPreferences.toDomainProfile`) and are canonicalized in storage by a one-time
+`DataStoreModule` migration — the proto enumerators `PROFILE_GENERAL`/`PROFILE_SHIFT_WORKER`
+stay reserved (never reused) so old payloads/backups still deserialize.
+
 `domain/scoring/BaselineComputer.kt` computes and snapshots per-day frozen baselines:
 `hrMax`, `rhrBpm`, `rhrSigma`, HRV `mu`/`sigma` (with profile-prior blending for new users),
 `paiScalingFactor`, and physiology profile. Baselines freeze once

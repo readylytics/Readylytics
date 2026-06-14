@@ -264,6 +264,22 @@ object DataStoreModule {
 
                         override suspend fun cleanUp() {}
                     },
+                    // Canonicalize removed profiles: stored PROFILE_GENERAL / PROFILE_SHIFT_WORKER are
+                    // rewritten to PROFILE_ACTIVE so persisted storage matches the supported set.
+                    // Reads are already safe via UserPreferences.toDomainProfile; this keeps storage canonical.
+                    object : DataMigration<UserPreferencesProto> {
+                        override suspend fun shouldMigrate(currentData: UserPreferencesProto): Boolean =
+                            currentData.physiologyProfile == PhysiologyProfileProto.PROFILE_GENERAL ||
+                                currentData.physiologyProfile == PhysiologyProfileProto.PROFILE_SHIFT_WORKER
+
+                        override suspend fun migrate(currentData: UserPreferencesProto): UserPreferencesProto =
+                            currentData
+                                .toBuilder()
+                                .setPhysiologyProfile(PhysiologyProfileProto.PROFILE_ACTIVE)
+                                .build()
+
+                        override suspend fun cleanUp() {}
+                    },
                 ),
             produceFile = { context.dataStoreFile("user_preferences.pb") },
         )

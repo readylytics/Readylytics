@@ -15,9 +15,7 @@ fun PhysiologyProfilePicker(
         when (profile) {
             PhysiologyProfile.ATHLETE -> "Athlete (competitive / structured training)"
             PhysiologyProfile.ACTIVE -> "Active (regular exercise)"
-            PhysiologyProfile.GENERAL -> "General population"
             PhysiologyProfile.SEDENTARY -> "Sedentary / low activity"
-            PhysiologyProfile.SHIFT_WORKER -> "Shift worker / irregular schedule"
         }
     }
 

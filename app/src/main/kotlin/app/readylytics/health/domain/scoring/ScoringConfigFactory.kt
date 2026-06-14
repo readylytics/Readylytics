@@ -83,9 +83,7 @@ class ScoringConfigFactory
             when (profile) {
                 PhysiologyProfile.ATHLETE -> RestorationWeights(hrvWeight = 0.70f, rhrWeight = 0.30f)
                 PhysiologyProfile.ACTIVE -> RestorationWeights(hrvWeight = 0.60f, rhrWeight = 0.40f)
-                PhysiologyProfile.GENERAL -> RestorationWeights(hrvWeight = 0.50f, rhrWeight = 0.50f)
                 PhysiologyProfile.SEDENTARY -> RestorationWeights(hrvWeight = 0.50f, rhrWeight = 0.50f)
-                PhysiologyProfile.SHIFT_WORKER -> RestorationWeights(hrvWeight = 0.50f, rhrWeight = 0.50f)
             }
 
         private fun createEmergencyFlagThresholds(profile: PhysiologyProfile): EmergencyFlagThresholds =
@@ -95,12 +93,12 @@ class ScoringConfigFactory
                         overreachingZHrvThreshold = 1.2f,
                         illnessZHrvThreshold = -1.2f,
                     )
-                PhysiologyProfile.ACTIVE, PhysiologyProfile.GENERAL ->
+                PhysiologyProfile.ACTIVE ->
                     EmergencyFlagThresholds(
                         overreachingZHrvThreshold = 1.5f,
                         illnessZHrvThreshold = -1.5f,
                     )
-                PhysiologyProfile.SEDENTARY, PhysiologyProfile.SHIFT_WORKER ->
+                PhysiologyProfile.SEDENTARY ->
                     EmergencyFlagThresholds(
                         overreachingZHrvThreshold = 2.0f,
                         illnessZHrvThreshold = -2.0f,
@@ -111,9 +109,7 @@ class ScoringConfigFactory
             when (profile) {
                 PhysiologyProfile.ATHLETE -> 1.2f
                 PhysiologyProfile.ACTIVE -> 1.5f
-                PhysiologyProfile.GENERAL -> 1.5f
                 PhysiologyProfile.SEDENTARY -> 2.0f
-                PhysiologyProfile.SHIFT_WORKER -> 2.0f
             }
 
         private fun createCircadianConsistencyConfig(
@@ -126,7 +122,6 @@ class ScoringConfigFactory
 
             return CircadianConsistencyConfig(
                 thresholdMinutes = threshold,
-                useShiftWorkerMode = profile == PhysiologyProfile.SHIFT_WORKER,
                 evaluationDays = evaluationDays,
                 baselineDays = baselineDays,
             )
@@ -159,10 +154,6 @@ class ScoringConfigFactory
                 digest.update(buffer.array(), 0, 4)
             }
 
-            fun update(value: Boolean) {
-                digest.update(if (value) 1.toByte() else 0.toByte())
-            }
-
             // Schema version
             update(CONFIG_SCHEMA_VERSION)
 
@@ -183,7 +174,6 @@ class ScoringConfigFactory
 
             // CircadianConsistencyConfig
             update(circadianConsistency.thresholdMinutes)
-            update(circadianConsistency.useShiftWorkerMode)
             update(circadianConsistency.evaluationDays)
             update(circadianConsistency.baselineDays)
 

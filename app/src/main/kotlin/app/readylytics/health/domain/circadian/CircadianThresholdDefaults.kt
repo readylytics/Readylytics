@@ -10,19 +10,13 @@ import app.readylytics.health.data.preferences.PhysiologyProfile
  * uses: an explicit user override wins, otherwise the profile default applies. This replaces
  * the former strategy hierarchy (RegularUser/ShiftWorker strategies) and the flat
  * `consistencyThresholdMinutes` pref, neither of which reached the score.
- *
- * GENERAL and SHIFT_WORKER are transitional (removed in the profile-simplification phase);
- * both resolve to 30 here to preserve the pre-remediation live behaviour until they migrate
- * to ACTIVE.
  */
 object CircadianThresholdDefaults {
     fun getProfileDefault(profile: PhysiologyProfile): Int =
         when (profile) {
             PhysiologyProfile.ATHLETE -> 20
             PhysiologyProfile.ACTIVE -> 30
-            PhysiologyProfile.GENERAL -> 30
             PhysiologyProfile.SEDENTARY -> 45
-            PhysiologyProfile.SHIFT_WORKER -> 30
         }
 
     /**
