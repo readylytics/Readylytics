@@ -20,7 +20,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -135,17 +135,17 @@ class WorkoutsViewModelTest {
         )
 
     @After
-    fun tearDown() {
-        if (::viewModel.isInitialized) {
-            viewModel.viewModelScope.cancel()
+    fun tearDown() =
+        runTest(testDispatcher) {
+            if (::viewModel.isInitialized) {
+                viewModel.viewModelScope.coroutineContext[Job]?.cancelAndJoin()
+            }
+            Dispatchers.resetMain()
         }
-        testDispatcher.scheduler.advanceUntilIdle()
-        Dispatchers.resetMain()
-    }
 
     @Test
     fun `initial page is 1`() =
-        runTest {
+        runTest(testDispatcher) {
             viewModel = createViewModel()
             val collectJob = launch { viewModel.uiState.collect {} }
             testScheduler.advanceUntilIdle()
@@ -155,7 +155,7 @@ class WorkoutsViewModelTest {
 
     @Test
     fun `clamping behaves correctly when pages are updated`() =
-        runTest {
+        runTest(testDispatcher) {
             // Mock 25 workouts to create 3 pages (10 per page)
             val dummyWorkouts =
                 (1..25).map { id ->
@@ -211,7 +211,7 @@ class WorkoutsViewModelTest {
 
     @Test
     fun `page resets to 1 when range changes`() =
-        runTest {
+        runTest(testDispatcher) {
             val dummyWorkouts =
                 (1..25).map { id ->
                     WorkoutData(
@@ -253,7 +253,7 @@ class WorkoutsViewModelTest {
 
     @Test
     fun `page resets to 1 when date changes`() =
-        runTest {
+        runTest(testDispatcher) {
             val dummyWorkouts =
                 (1..25).map { id ->
                     WorkoutData(
@@ -295,7 +295,7 @@ class WorkoutsViewModelTest {
 
     @Test
     fun `recent workout uses rounded load metrics from shared use case`() =
-        runTest {
+        runTest(testDispatcher) {
             val today = LocalDate.now()
             val startMs =
                 today
@@ -347,7 +347,7 @@ class WorkoutsViewModelTest {
 
     @Test
     fun `stats state exposes canonical latest daily metrics`() =
-        runTest {
+        runTest(testDispatcher) {
             val today = LocalDate.now()
             summariesFlow.value =
                 listOf(
