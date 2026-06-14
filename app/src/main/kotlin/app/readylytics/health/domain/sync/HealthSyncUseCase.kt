@@ -215,7 +215,7 @@ class HealthSyncUseCase
             }
 
         suspend fun catchUpSync(onProgress: ((current: Int, total: Int) -> Unit)? = null): Result<Unit> =
-            sync(windowDays = 60, onProgress = onProgress)
+            sync(windowDays = 365, onProgress = onProgress)
 
         /**
          * Full historical resync over [startDate]..[endDate] (inclusive), bounded by the caller from

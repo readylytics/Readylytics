@@ -1,5 +1,6 @@
 package app.readylytics.health.data.backup
 
+import app.readylytics.health.domain.dashboard.CardConfiguration
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -16,6 +17,8 @@ data class UserPreferencesBackup(
     val rhrBaselineOverride: Float? = null,
     val syncPreference: String? = null,
     val syncIntervalHours: Int? = null,
+    val backgroundSyncEnabled: Boolean? = null,
+    val backgroundSyncIntervalMinutes: Int? = null,
     val lastSyncTimestamp: Long? = null,
     val maxHeartRate: Int? = null,
     val autoCalculateMaxHr: Boolean? = null,
@@ -36,6 +39,7 @@ data class UserPreferencesBackup(
     val birthMonth: Int? = null,
     val birthYear: Int? = null,
     val gender: String? = null,
+    val heightCm: Float? = null,
     val hrvOptimalThreshold: Float? = null,
     val hrvWarningThreshold: Float? = null,
     val rhrOptimalThreshold: Float? = null,
@@ -70,4 +74,5 @@ data class UserPreferencesBackup(
     val primaryDeviceName: String? = null,
     val deviceByDataType: Map<String, String>? = null,
     val backupDirectoryUri: String? = null,
+    val dashboardCards: List<CardConfiguration>? = null,
 )

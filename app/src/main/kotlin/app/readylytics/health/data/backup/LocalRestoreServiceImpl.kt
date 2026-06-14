@@ -13,10 +13,16 @@ class LocalRestoreServiceImpl
     constructor(
         private val localRestoreManager: LocalRestoreManager,
     ) : RestoreService {
-        override suspend fun validate(uri: Uri): Result<Unit> = localRestoreManager.validate(uri).map { }
+        override suspend fun validate(
+            uri: Uri,
+            password: String?,
+        ): Result<Unit> = localRestoreManager.validate(uri, password).map { }
 
-        override suspend fun applyRestore(uri: Uri): RestoreResult =
-            when (val result = localRestoreManager.applyRestore(uri)) {
+        override suspend fun applyRestore(
+            uri: Uri,
+            password: String?,
+        ): RestoreResult =
+            when (val result = localRestoreManager.applyRestore(uri, password)) {
                 LocalRestoreManager.RestoreResult.Success -> RestoreResult.Success
                 LocalRestoreManager.RestoreResult.SuccessRequiresRestart -> RestoreResult.SuccessRequiresRestart
                 is LocalRestoreManager.RestoreResult.Failure -> RestoreResult.Failure(result.cause)
