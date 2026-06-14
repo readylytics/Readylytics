@@ -3,6 +3,7 @@ package app.readylytics.health.data.preferences
 import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZoneId
 
 enum class BackupSchedule { MANUAL, DAILY, WEEKLY }
 
@@ -59,9 +60,9 @@ data class UserPreferences(
     val dynamicColorEnabled: Boolean = SettingsDefaults.DYNAMIC_COLOR_ENABLED,
     val fallbackThemeColor: FallbackThemeColor = SettingsDefaults.FALLBACK_THEME_COLOR,
     val trimpModel: TrimpModel = SettingsDefaults.TRIMP_MODEL,
-    val banisterMultiplier: Float = PhysiologyProfile.GENERAL.banisterMultiplier,
-    val chengBeta: Float = PhysiologyProfile.GENERAL.defaultChengBeta,
-    val itrimB: Float = PhysiologyProfile.GENERAL.defaultItrimB,
+    val banisterMultiplier: Float = PhysiologyProfile.ACTIVE.banisterMultiplier,
+    val chengBeta: Float = PhysiologyProfile.ACTIVE.defaultChengBeta,
+    val itrimB: Float = PhysiologyProfile.ACTIVE.defaultItrimB,
     val primaryDeviceName: String? = null,
     /**
      * Per–data-type source device selection. Key = [app.readylytics.health.domain.model.HealthDataType]
@@ -83,10 +84,43 @@ data class UserPreferences(
     val customSecondaryColor: Long = SettingsDefaults.CUSTOM_SECONDARY_COLOR,
     val customTertiaryColor: Long = SettingsDefaults.CUSTOM_TERTIARY_COLOR,
     val customPrimaryColor: Long = SettingsDefaults.CUSTOM_PRIMARY_COLOR,
+    /**
+     * IANA timezone id used for all scoring day-boundary math. Stored so identical SQLite +
+     * identical preferences reproduce identical scores regardless of the device timezone.
+     * Empty = un-seeded; resolve via [scoringZone] which falls back to the device zone.
+     */
+    val scoringZoneId: String = SettingsDefaults.SCORING_ZONE_ID,
 )
 
+/**
+ * Resolves the timezone used for all scoring day-boundary computations. A blank or invalid
+ * [UserPreferences.scoringZoneId] falls back to the device zone, so behavior is unchanged
+ * until the seed migration captures a concrete zone. Once seeded, scoring is timezone-
+ * deterministic: the same data + preferences produce the same day windows on any device.
+ */
+fun UserPreferences.scoringZone(): ZoneId =
+    scoringZoneId
+        .takeIf { it.isNotBlank() }
+        ?.let { runCatching { ZoneId.of(it) }.getOrNull() }
+        ?: ZoneId.systemDefault()
+
+/**
+ * Maps a stored proto profile to the supported domain set. The removed legacy profiles
+ * (`PROFILE_GENERAL`, which is also the proto3 zero/default, and `PROFILE_SHIFT_WORKER`) plus any
+ * `UNRECOGNIZED` value resolve to [PhysiologyProfile.ACTIVE]. The proto enumerators are kept
+ * reserved (never reused) so old payloads/backups still deserialize.
+ */
+fun PhysiologyProfileProto.toDomainProfile(): PhysiologyProfile =
+    when (this) {
+        PhysiologyProfileProto.PROFILE_ATHLETE -> PhysiologyProfile.ATHLETE
+        PhysiologyProfileProto.PROFILE_SEDENTARY -> PhysiologyProfile.SEDENTARY
+        // PROFILE_ACTIVE plus the removed PROFILE_GENERAL (proto3 default) / PROFILE_SHIFT_WORKER
+        // and any UNRECOGNIZED value resolve to ACTIVE.
+        else -> PhysiologyProfile.ACTIVE
+    }
+
 fun UserPreferencesProto.toDomainModel(): UserPreferences {
-    val profile = PhysiologyProfile.valueOf(physiologyProfile.name.removePrefix("PROFILE_"))
+    val profile = physiologyProfile.toDomainProfile()
     return UserPreferences(
         goalSleepHours = goalSleepHours,
         hrvBaselineOverride = if (hasHrvBaselineOverride()) hrvBaselineOverride else null,
@@ -207,6 +241,7 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
             } else {
                 customPrimaryColor
             },
+        scoringZoneId = scoringZoneId,
     )
 }
 

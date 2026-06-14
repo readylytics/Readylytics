@@ -176,7 +176,7 @@ class BackfillBaselinesUseCaseTest {
 
             stubBackfill(baselineComputer, rmssdValues, rmssdValues, 60f)
             coEvery {
-                loadScoringStrategy.hrvSigma(capture(capturedLnSigmas), PhysiologyProfile.GENERAL.lnSigmaPrior)
+                loadScoringStrategy.hrvSigma(capture(capturedLnSigmas), PhysiologyProfile.ACTIVE.lnSigmaPrior)
             } returns 0.20f
 
             computeUseCase.computeHistoricalBaselines(listOf(makeSummary(daysAgo = 5)), UserPreferences())

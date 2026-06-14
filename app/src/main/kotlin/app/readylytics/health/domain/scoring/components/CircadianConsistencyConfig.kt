@@ -2,7 +2,6 @@ package app.readylytics.health.domain.scoring.components
 
 data class CircadianConsistencyConfig(
     val thresholdMinutes: Int,
-    val useShiftWorkerMode: Boolean = false,
     val evaluationDays: Int = 14,
     val baselineDays: Int = 7,
 ) {

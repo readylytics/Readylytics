@@ -281,7 +281,7 @@ private fun ProfileSetupScreen(
     var showBirthdatePicker by remember { mutableStateOf(false) }
     // Domain keys: these English strings are compared with stored/domain values — do NOT translate here
     var gender by remember { mutableStateOf("Other") }
-    var physiologyProfile by remember { mutableStateOf(PhysiologyProfile.GENERAL) }
+    var physiologyProfile by remember { mutableStateOf(PhysiologyProfile.ACTIVE) }
     var dynamicColorEnabled by remember { mutableStateOf(true) }
     var unitSystem by remember { mutableStateOf(UnitSystem.METRIC) }
     var heightCm: Float? by remember { mutableStateOf(null) }

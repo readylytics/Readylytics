@@ -8,6 +8,7 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.scoring.components.PhaseCalculator
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
@@ -234,6 +235,7 @@ class ComputeSleepMetricsUseCase
                 val totalValidHrvNights =
                     validHistoricalSessionIds.size + (if (validation.canContributeToBaseline) 1 else 0)
                 val isCalibrating = totalValidHrvNights < ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
+                val sessionPhase = PhaseCalculator.calculatePhase(totalValidHrvNights)
 
                 if (currentNocturnalRhr != null) {
                     val nadirCtx = nadirAnalyzer.analyze(session, historicalSessions)
@@ -515,6 +517,7 @@ class ComputeSleepMetricsUseCase
                         zRhr = persistedZRhr,
                         recoveryFlags = persistedFlags,
                         hrvSigma = hrvSigma,
+                        snapshotCalibrationPhase = sessionPhase.name,
                         diagnostics = readinessResult.diagnostics,
                         contributors = readinessResult.contributors,
                         sRest = readinessResult.sRest,

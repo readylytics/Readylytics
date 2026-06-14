@@ -6,6 +6,7 @@ import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.util.UnitConverter
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.roundToInt
 
 /**
@@ -26,7 +27,10 @@ object DailyMetricsMapper {
     ): DailyMetrics {
         val rhrBaselineRaw = deriveRhrBaselineRaw(summary, prefs)
         val rhrBaselineRounded = rhrBaselineRaw?.roundToInt()
-        val hrvBaselineRounded = summary.hrvBaseline ?: prefs.hrvBaselineOverride?.roundToInt()
+        val hrvBaselineRounded =
+            summary.hrvMuMssd?.let { exp(it).roundToInt() }
+                ?: prefs.hrvBaselineOverride?.roundToInt()
+                ?: summary.hrvBaseline
 
         return DailyMetrics(
             date = summary.date,

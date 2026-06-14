@@ -7,15 +7,14 @@ import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.ui.common.TimeRange
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -34,7 +33,9 @@ class StepDetailViewModelTest {
     private lateinit var repository: DailySummaryRepository
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var selectedDateRepo: SelectedDateRepository
-    private lateinit var appScope: CoroutineScope
+
+    private val selectedDateFlow = MutableStateFlow(LocalDate.now())
+    private val earliestDateFlow = MutableStateFlow<LocalDate?>(null)
 
     @Before
     fun setUp() {
@@ -49,16 +50,14 @@ class StepDetailViewModelTest {
             mockk {
                 every { userPreferences } returns MutableStateFlow(UserPreferences())
             }
-        val mockDao =
-            mockk<app.readylytics.health.data.local.dao.DailySummaryDao> {
-                every { observeEarliestDateMs() } returns flowOf(null)
-            }
-        appScope = CoroutineScope(testDispatcher)
         selectedDateRepo =
-            SelectedDateRepository(
-                dao = mockDao,
-                appScope = appScope,
-            )
+            mockk {
+                every { selectedDate } returns selectedDateFlow
+                every { earliestDate } returns earliestDateFlow
+                coEvery { updateSelectedDate(any()) } answers {
+                    selectedDateFlow.value = firstArg()
+                }
+            }
     }
 
     private fun createViewModel(): StepDetailViewModel =
@@ -72,9 +71,6 @@ class StepDetailViewModelTest {
     fun tearDown() {
         if (::viewModel.isInitialized) {
             viewModel.viewModelScope.cancel()
-        }
-        if (::appScope.isInitialized) {
-            appScope.cancel()
         }
         Dispatchers.resetMain()
     }

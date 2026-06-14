@@ -167,6 +167,19 @@
     <string name="about_tooltip_efficiency">*Sleep efficiency above 85%* is considered good
         (American Academy of Sleep Medicine consensus).</string>
 
+    <string name="about_hrv_sensitivity_label">**HRV sensitivity by profile**</string>
+    <string name="about_hrv_sensitivity_intro">Heart rate variability (HRV) is noisy on any single
+        night. To avoid false positives, we only flag HRV as notably \"high\" or \"low\" once it
+        crosses a Z-score threshold. While your personal baseline is still being learned (the Early
+        Baseline phase), we estimate your day-to-day variability from a population value tiered by
+        profile, so the threshold shifts with it.</string>
+    <string name="about_hrv_sensitivity_athlete">**Athlete** — Z beyond ±1.2 is notable.</string>
+    <string name="about_hrv_sensitivity_active">**Active** — Z beyond ±1.5 is notable.</string>
+    <string name="about_hrv_sensitivity_sedentary">**Sedentary** — Z beyond ±2.0 is notable.</string>
+    <string name="about_hrv_sensitivity_outro">Once your personal baseline matures (60+ nights), the
+        Z-score is computed against *your own* standard deviation, which already accounts for your
+        individual variability.</string>
+
     <string name="about_header_circadian">## Circadian Consistency</string>
     <string name="about_circadian_intro">This score asks: **do you go to bed and wake up at roughly
         the same times each day?** Schedule regularity is independently linked to better metabolic,
@@ -176,32 +189,41 @@
         *typical* (median) bedtime and wake time over the last 14 days. The bigger the deviation,
         the lower the daily score. The number you see is a 7-day rolling average so a single late
         night doesn\'t tank it.</string>
-    <string name="about_threshold_label">**Tunable threshold (default 30 min)**</string>
-    <string name="about_threshold_30">Within ±30 minutes of your typical times → full score.</string>
-    <string name="about_threshold_30_90">30-90 minutes off → score decays linearly.</string>
-    <string name="about_threshold_90">More than 90 minutes off → score is 0 for that day.</string>
-    <string name="about_threshold_tuning">You can tighten the threshold to 15 minutes if you\'re
-        aiming for athlete-grade regularity, or relax it up to 90 minutes.</string>
-    <string name="about_circadian_caveat">**A caveat for shift workers and biphasic sleepers.** This
-        metric is calibrated for people with one main sleep period per day. If you work rotating
-        shifts or sleep in two segments by choice, the score may misclassify your schedule. We
-        exclude any single sleep period under 3 hours from the median calculation so naps don\'t
-        pull your \"typical\" times around — but this rule has imperfect coverage of every sleep
-        pattern.</string>
+    <string name="about_threshold_label">**Profile-specific thresholds**</string>
+    <string name="about_threshold_athlete">**Athlete** — ±20 minutes: tight control for performance.</string>
+    <string name="about_threshold_active">**Active** — ±30 minutes: standard regularity.</string>
+    <string name="about_threshold_sedentary">**Sedentary** — ±45 minutes: relaxed; normal life
+        variation OK.</string>
+    <string name="about_threshold_30">Within your profile\'s threshold → full score.</string>
+    <string name="about_threshold_30_90">Threshold to threshold+60 minutes off → score decays
+        linearly.</string>
+    <string name="about_threshold_90">Beyond threshold+60 minutes → score is 0 for that day.</string>
+    <string name="about_threshold_tuning">You can override the resolved threshold with your own
+        value in Settings if the profile default doesn\'t fit your schedule.</string>
+    <string name="about_circadian_caveat">**A caveat for biphasic sleepers.** This metric is
+        calibrated for people with one main sleep period per day. If you sleep in two segments by
+        choice, the score may misclassify your schedule. We exclude any single sleep period under 3
+        hours from the median calculation so naps don\'t pull your \"typical\" times around — but
+        this rule has imperfect coverage of every sleep pattern.</string>
 
     <string name="about_header_readiness">## Readiness</string>
-    <string name="about_readiness_intro">A daily 0-100 number reflecting whether your recent
-        training load is in a healthy range.</string>
-    <string name="about_readiness_averages">We compute two rolling averages of your training load:</string>
+    <string name="about_readiness_intro">A daily 0-100 composite number summarising three signals.</string>
+    <string name="about_readiness_formula">**Readiness = 0.4 × Restoration + 0.3 × Sleep Score +
+        0.3 × Load Score.** Restoration carries the largest single weight, so your overnight
+        recovery markers are the biggest lever — but a significant load spike or poor sleep will
+        also pull the score down.</string>
+    <string name="about_readiness_averages">The Load Score component is based on your training load
+        ratio. We compute two rolling averages of your training load:</string>
     <string name="about_atl_bullet">**Acute load (ATL)** — roughly the last week</string>
     <string name="about_ctl_bullet">**Chronic load (CTL)** — roughly the last 6 weeks</string>
     <string name="about_readiness_ratio">The ratio (ATL ÷ CTL) tells us whether you\'ve recently
         spiked above your recent norm. Around 1.0 means you\'re training in line with your fitness;
         substantially above 1.0 means a relative spike.</string>
     <string name="about_ratio_scoring_label">**How we score the ratio**</string>
-    <string name="about_ratio_sweet_spot">0.8-1.3 → 100 (in your normal range — \"sweet spot\")</string>
-    <string name="about_ratio_decay">1.3-1.5 → linearly decays</string>
-    <string name="about_ratio_quadratic">Above 1.5 → smooth quadratic decay (Gabbett 2016)</string>
+    <string name="about_ratio_sweet_spot">sr ≤ 1.3 → 100 (in your normal range — \"sweet spot\")</string>
+    <string name="about_ratio_quadratic">sr &gt; 1.3 → 100 × exp(−2.5 × (sr − 1.3)²) — a smooth
+        Gaussian decay that starts gently and accelerates as the spike grows (approximating
+        Gabbett 2016\'s elevated-risk zone)</string>
     <string name="about_readiness_tooltips_label">**Tooltips**</string>
     <string name="about_tooltip_peak">*Peak (85-100)* — your recent load is consistent with your
         fitness.</string>
@@ -209,6 +231,13 @@
     <string name="about_tooltip_caution">*Caution (30-59)* — meaningful load spike; consider an
         easier day.</string>
     <string name="about_tooltip_fatigue">*High Fatigue (&lt;30)* — large spike vs. your norm.</string>
+    <string name="about_readiness_emergency_label">**Emergency signals**</string>
+    <string name="about_readiness_emergency_text">If your HRV and RHR patterns suggest possible
+        physiological stress (such as early illness or functional overreaching), we apply a soft
+        cap to Readiness to give you a heads-up: overreaching caps the score at 70, and possible
+        illness onset caps it at 50. To filter out acute noise (e.g., alcohol or minor stress), the
+        thresholds must be breached on **two consecutive nights** (Mishra 2020, Le Meur 2013). This
+        is informational only, not medical advice.</string>
     <string name="about_readiness_no_penalty">**What we don\'t do.** We don\'t penalize you for
         resting. A week of light activity will *not* drop Readiness; the score is designed for load
         *spikes*, not undertraining.</string>
@@ -233,22 +262,23 @@
     <string name="about_header_stabilise">## How long until your scores stabilise</string>
     <string name="about_baselines_intro">Biological baselines take time to learn. We are explicit
         about the phases:</string>
-    <string name="about_phase_calibration">**Days 1-7 (Calibration).** We collect data. Sleep Score
-        and Circadian Consistency are visible from the first night you log enough sleep, but
-        **HRV-based Restoration is hidden** because a single night of HRV is not interpretable on
-        its own. Readiness uses a placeholder fitness value based on the activity level you tell us
-        during onboarding.</string>
-    <string name="about_phase_provisional">**Days 8-21 (Provisional).** We start showing all three
-        scores, but Restoration uses a population-typical estimate of how much your HRV varies day
-        to day. Expect more variability than the mature score.</string>
-    <string name="about_phase_maturing">**Days 22-60 (Maturing).** Your personal HRV mean is
-        settled, and we begin blending your personal day-to-day variability with the population
-        estimate. Confidence indicator visible.</string>
-    <string name="about_phase_mature">**Day 60+ (Mature).** All scores use your own personal
-        baselines for both the average and the variability. This is when small day-to-day
-        differences become trustworthy.</string>
-    <string name="about_tracker_frequency">If you wear your tracker only 3-5 nights a week, the
-        timeline lengthens proportionally.</string>
+    <string name="about_phase_calibration">**Calibration (0-6 nights, confidence: Not Ready).** We
+        collect data. Sleep Score and Circadian Consistency are visible from the first night you
+        log enough sleep, but **HRV-based Restoration is hidden** because a single night of HRV is
+        not interpretable on its own. Readiness uses a placeholder fitness value based on the
+        activity level you tell us during onboarding.</string>
+    <string name="about_phase_provisional">**Early Baseline (7-20 nights, confidence: Low).** We
+        start showing all three scores, but Restoration uses a population-typical estimate of how
+        much your HRV varies night to night. Expect more variability than the mature score.</string>
+    <string name="about_phase_maturing">**Maturing (21-59 nights, confidence: Medium).** Your
+        personal HRV mean is settled, and we begin blending your personal night-to-night
+        variability with the population estimate. A confidence indicator becomes visible.</string>
+    <string name="about_phase_mature">**Mature (60+ nights, confidence: High).** All scores use
+        your own personal baselines for both the average and the variability. This is when small
+        day-to-day differences become trustworthy.</string>
+    <string name="about_tracker_frequency">Progress through these phases depends on the number of
+        nights with usable HRV/RHR data, not calendar age. If you wear your tracker only 3-5
+        nights a week, the timeline lengthens proportionally.</string>
 
     <string name="about_header_glossary">## A short glossary</string>
     <string name="about_glossary_hrv">**HRV (Heart Rate Variability)** — the millisecond-level
@@ -257,9 +287,15 @@
     <string name="about_glossary_rmssd">**RMSSD** — the specific HRV measure most apps use. We work
         with the natural log of RMSSD (**lnRMSSD**) internally because it linearizes the naturally
         skewed distribution of heart rate variability, making statistical comparison (Z-scores)
-        valid (Plews 2013, Buchheit 2014).</string>
-    <string name="about_glossary_rhr">**RHR (Resting Heart Rate)** — your nocturnal heart rate,
-        averaged across deep portions of sleep.</string>
+        valid (Plews 2013, Buchheit 2014). The **HRV Baseline (ms)** shown on your dashboard is the
+        geometric mean of your recent nightly RMSSD — computed as exp(mean(lnRMSSD)) — not a simple
+        average, since a plain average would be skewed upward by occasional high outlier
+        nights.</string>
+    <string name="about_glossary_rhr">**RHR (Resting Heart Rate)** — your true resting heart rate,
+        calculated as a user-defined low percentile (default 5%) of your heart rate samples across
+        the detected sleep period. This sits below your *average* overnight heart rate, which is
+        pushed up by REM and brief awakenings — using the low percentile gives a more stable
+        night-to-night baseline.</string>
     <string name="about_glossary_deep">**Deep sleep / Slow-Wave Sleep / N3** — the deepest stage of
         NREM sleep; growth-hormone release is concentrated here.</string>
     <string name="about_glossary_rem">**REM** — the dreaming stage, important for memory and
@@ -742,8 +778,6 @@
     <string name="accessibility_circadian_threshold_adjustment">Circadian threshold adjustment.
         Range: 0 to 90 minutes</string>
     <string name="accessibility_circadian_threshold_state">Current value: %1$d minutes</string>
-    <string name="profile_title_general">General Profile</string>
-    <string name="profile_title_shift_worker">Shift Worker Profile</string>
     <string name="unit_system_label">Unit system</string>
     <string name="unit_system_metric_label">Metric (cm, kg)</string>
     <string name="unit_system_imperial_label">Imperial (ft/in, lbs)</string>

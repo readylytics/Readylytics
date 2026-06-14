@@ -16,9 +16,7 @@ class PaiCalculatorTest {
     fun `getDefaultPaiScalingFactor returns correct values for all profiles`() {
         assertEquals(0.15f, PaiCalculator.getDefaultPaiScalingFactor(PhysiologyProfile.ATHLETE), 0.001f)
         assertEquals(0.18f, PaiCalculator.getDefaultPaiScalingFactor(PhysiologyProfile.ACTIVE), 0.001f)
-        assertEquals(0.20f, PaiCalculator.getDefaultPaiScalingFactor(PhysiologyProfile.GENERAL), 0.001f)
         assertEquals(0.25f, PaiCalculator.getDefaultPaiScalingFactor(PhysiologyProfile.SEDENTARY), 0.001f)
-        assertEquals(0.20f, PaiCalculator.getDefaultPaiScalingFactor(PhysiologyProfile.SHIFT_WORKER), 0.001f)
     }
 
     @Test
