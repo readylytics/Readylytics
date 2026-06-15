@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,6 +34,7 @@ fun InsightCard(
     icon: ImageVector,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    onShowDetails: (() -> Unit)? = null,
 ) {
     OutlinedCard(
         modifier = modifier.fillMaxWidth(),
@@ -71,9 +73,25 @@ fun InsightCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            if (onShowDetails != null) {
+                IconButton(
+                    onClick = onShowDetails,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription =
+                            stringResource(
+                                R.string.insight_detail_show_explanation_format,
+                                title,
+                            ),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(32.dp),
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,

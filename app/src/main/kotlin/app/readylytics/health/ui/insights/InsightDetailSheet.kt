@@ -1,0 +1,122 @@
+package app.readylytics.health.ui.insights
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import app.readylytics.health.R
+import app.readylytics.health.domain.insights.detail.InsightDetailContent
+import app.readylytics.health.domain.insights.detail.InsightDetailType
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun InsightDetailSheet(
+    content: InsightDetailContent,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = content.title,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.semantics { heading() },
+            )
+            Text(
+                text = content.cardDescription,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Section(content.observedSignalTitle, content.observedSignal)
+            if (content.meaningTitle != null && content.meaning != null) {
+                Section(content.meaningTitle, content.meaning)
+            }
+            if (content.type == InsightDetailType.PHYSIOLOGY && content.confidence != null) {
+                Section(
+                    title = stringResource(R.string.insight_detail_confidence),
+                    body =
+                        content.confidence.name
+                            .replace('_', ' ')
+                            .lowercase()
+                            .replaceFirstChar(Char::titlecase),
+                )
+            }
+            if (content.causes.isNotEmpty()) {
+                CauseSection(content.causesTitle, content.causes.map { "${it.title}: ${it.description}" })
+            }
+            if (content.recommendations.isNotEmpty()) {
+                ListSection(content.recommendationsTitle, content.recommendations)
+            }
+            if (content.caveatsTitle != null && content.caveats.isNotEmpty()) {
+                ListSection(content.caveatsTitle, content.caveats)
+            }
+            if (!content.safetyNote.isNullOrBlank()) {
+                Section(stringResource(R.string.insight_detail_safety_note), content.safetyNote)
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun Section(
+    title: String,
+    body: String,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics { heading() },
+        )
+        Text(text = body, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun ListSection(
+    title: String,
+    values: List<String>,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics { heading() },
+        )
+        values.forEach { value ->
+            Text(text = "• $value", style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+@Composable
+private fun CauseSection(
+    title: String,
+    values: List<String>,
+) {
+    ListSection(title = title, values = values)
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+}
