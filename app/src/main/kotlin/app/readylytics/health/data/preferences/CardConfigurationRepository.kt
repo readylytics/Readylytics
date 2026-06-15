@@ -61,7 +61,21 @@ class CardConfigurationRepository
                         throw exception
                     }
                 }.map { proto ->
-                    proto.dashboardCardsList.mapNotNull { CardConfigurationMapper.toDomain(it) }
+                    val stored = proto.dashboardCardsList.mapNotNull { CardConfigurationMapper.toDomain(it) }
+                    val defaults = SettingsDefaults.DEFAULT_DASHBOARD_CARDS
+                    val storedIds = stored.map { it.cardId }.toSet()
+                    val missingDefaults = defaults.filter { it.cardId !in storedIds }
+
+                    if (missingDefaults.isEmpty()) {
+                        stored
+                    } else {
+                        val maxPos = (stored.maxOfOrNull { it.position } ?: -1)
+                        val appended =
+                            missingDefaults.mapIndexed { index, config ->
+                                config.copy(position = maxPos + 1 + index)
+                            }
+                        stored + appended
+                    }
                 }
 
         suspend fun updateDashboardCardConfigurations(cards: List<CardConfiguration>) {

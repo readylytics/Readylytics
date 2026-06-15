@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class CardConfigurationRepositoryTest {
@@ -45,10 +46,11 @@ class CardConfigurationRepositoryTest {
 
             val result = repository.dashboardCardConfigurations().first()
 
-            assertEquals(1, result.size)
-            assertEquals(CardId.SLEEP_SCORE, result[0].cardId)
-            assertTrue(result[0].isVisible)
-            assertEquals(0, result[0].position)
+            val sleepScoreCard = result.find { it.cardId == CardId.SLEEP_SCORE }
+            assertNotNull(sleepScoreCard)
+            assertEquals(CardId.SLEEP_SCORE, sleepScoreCard.cardId)
+            assertTrue(sleepScoreCard.isVisible)
+            assertEquals(0, sleepScoreCard.position)
         }
 
     @Test

@@ -87,7 +87,7 @@ fun ReorderableCardGrid(
 
     // Visible + renderable configs, keyed for O(1) lookup at render and drop time.
     val configByCardId: Map<CardId, CardConfiguration> =
-        remember(items, dataMap) {
+        remember(items, dataMap.keys) {
             items
                 .filter { it.isVisible && dataMap.containsKey(it.cardId) }
                 .associateBy { it.cardId }
@@ -105,7 +105,7 @@ fun ReorderableCardGrid(
 
     // Sync controller from upstream when not actively dragging. Only the filtered + sorted
     // ids enter the controller so pendingOrder always matches what we actually render.
-    LaunchedEffect(items) {
+    LaunchedEffect(items, dataMap.keys) {
         val upstreamOrder =
             items
                 .filter { it.isVisible && dataMap.containsKey(it.cardId) }

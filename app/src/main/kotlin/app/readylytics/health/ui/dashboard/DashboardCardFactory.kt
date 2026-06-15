@@ -104,7 +104,7 @@ fun buildCardDataMap(
         )
     }
 
-    if (uiState.activeInsightTypes.isNotEmpty()) {
+    if (uiState.activeInsightTypes.isNotEmpty() || isEditing) {
         cardMap[CardId.INSIGHTS] = {
             var selectedInsightForDetails by remember { mutableStateOf<InsightType?>(null) }
             val context = LocalContext.current
@@ -146,12 +146,16 @@ fun buildCardDataMap(
                 } else {
                     InsightRerunCard(
                         text =
-                            stringResource(
-                                R.string.insight_restore_dismissed,
-                                uiState.dismissedInsightCount,
-                            ),
-                        icon = Icons.Default.Refresh,
-                        onRestore = onRestoreInsights,
+                            if (isEditing) {
+                                stringResource(R.string.card_title_insights)
+                            } else {
+                                stringResource(
+                                    R.string.insight_restore_dismissed,
+                                    uiState.dismissedInsightCount,
+                                )
+                            },
+                        icon = if (isEditing) Icons.Default.Info else Icons.Default.Refresh,
+                        onRestore = if (isEditing) ({}) else onRestoreInsights,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
