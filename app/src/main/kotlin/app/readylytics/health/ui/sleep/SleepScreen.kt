@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -20,7 +21,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -34,6 +34,7 @@ import app.readylytics.health.domain.model.efficiencyStatus
 import app.readylytics.health.domain.model.remSleepStatus
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.util.roundToPercentInt
+import app.readylytics.health.ui.common.DateFormatUtils
 import app.readylytics.health.ui.common.MetricCardSkeleton
 import app.readylytics.health.ui.common.ScoreDialSkeleton
 import app.readylytics.health.ui.common.SkeletonCard
@@ -108,30 +109,44 @@ fun SleepScreen(
             )
         }
 
-        Box(
+        Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-            contentAlignment = Alignment.Center,
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             if (uiState.isLoading) {
-                ScoreDialSkeleton()
+                ScoreDialSkeleton(
+                    modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
+                )
+                ScoreDialSkeleton(
+                    modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
+                )
             } else {
-                val sleepScoreTooltip =
-                    remember {
-                        buildString {
-                            append("Total quality of rest based on duration and cycles.\n\n")
-                            append("• 80–100: Optimal\n")
-                            append("• 60–79: Fair\n")
-                            append("• < 60: Poor")
-                        }
-                    }
                 M3ScoreDial(
                     score = uiState.latestSummary?.sleepScore,
-                    label = "Sleep Score",
+                    label = stringResource(R.string.sleep_score_gauge_title),
                     displayText = uiState.latestMetrics?.sleepScoreRounded?.toString() ?: "—",
-                    tooltipDescription = sleepScoreTooltip,
+                    tooltipDescription = stringResource(R.string.tooltip_sleep_score),
+                    modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
+                )
+
+                val sleepTimeGaugeData = uiState.sleepTimeGaugeData
+                val goalText =
+                    DateFormatUtils.formatSleepDuration(
+                        (uiState.goalSleepHours * 60f).toInt().coerceAtLeast(0),
+                    )
+
+                M3ScoreDial(
+                    score = sleepTimeGaugeData.progress,
+                    label = stringResource(R.string.sleep_time_gauge_title),
+                    maxScore = 1f,
+                    status = sleepTimeGaugeData.status,
+                    displayText = sleepTimeGaugeData.displayText,
+                    tooltipDescription = stringResource(R.string.tooltip_sleep_duration, goalText),
+                    modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
                 )
             }
         }

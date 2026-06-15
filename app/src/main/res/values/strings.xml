@@ -819,6 +819,8 @@
 
     <!-- Card Titles -->
     <string name="card_title_sleep_score">Sleep score</string>
+    <string name="sleep_score_gauge_title">Sleep Score</string>
+    <string name="sleep_time_gauge_title">Sleep Time</string>
     <string name="card_title_readiness">Readiness</string>
     <string name="card_title_steps">Steps</string>
     <string name="card_title_hrv">HRV</string>
