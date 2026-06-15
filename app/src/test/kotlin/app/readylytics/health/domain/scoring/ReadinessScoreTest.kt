@@ -40,7 +40,20 @@ class ReadinessScoreTest {
     }
 
     @Test
-    fun `overreaching flag caps readiness score`() {
+    fun `strong recovery signal does not cap readiness score`() {
+        // Base score = 100
+        val score =
+            calculator.computeReadinessScore(
+                100f,
+                100f,
+                100f,
+                setOf(RecoveryFlag.STRONG_RECOVERY_SIGNAL),
+            )
+        assertEquals(100f, score, DELTA)
+    }
+
+    @Test
+    fun `legacy overreaching flag does not cap readiness score`() {
         // Base score = 100
         val score =
             calculator.computeReadinessScore(
@@ -49,7 +62,7 @@ class ReadinessScoreTest {
                 100f,
                 setOf(RecoveryFlag.OVERREACHING),
             )
-        assertEquals(ScoringConstants.Readiness.OVERREACHING_MAX_SCORE, score, DELTA)
+        assertEquals(100f, score, DELTA)
     }
 
     @Test

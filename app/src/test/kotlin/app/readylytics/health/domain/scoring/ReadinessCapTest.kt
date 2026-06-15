@@ -8,8 +8,8 @@ import org.junit.Test
 
 private const val DELTA = 0.01f
 
-// computeReadinessScore: recovery flags can cap the final readiness score.
-// OVERREACHING → cap 70; ILLNESS_ONSET → cap 50; both → min cap (50); empty → no cap.
+// computeReadinessScore: only illness onset caps the final readiness score.
+// ILLNESS_ONSET → cap 50; empty/legacy strong recovery flags → no cap.
 // REF: Le Meur 2013 Med Sci Sports Exerc; Mishra 2020 Nat Biomed Eng
 class ReadinessCapTest {
     private val calculator = LoadScoringStrategy()
@@ -30,9 +30,9 @@ class ReadinessCapTest {
     }
 
     @Test
-    fun `overreaching flag caps score at 70`() {
-        val score = readiness(flags = setOf(RecoveryFlag.OVERREACHING))
-        assertEquals(70f, score, DELTA)
+    fun `strong recovery signal does not cap readiness`() {
+        val score = readiness(flags = setOf(RecoveryFlag.STRONG_RECOVERY_SIGNAL))
+        assertEquals(baseUncapped, score, DELTA)
     }
 
     @Test
@@ -42,22 +42,28 @@ class ReadinessCapTest {
     }
 
     @Test
-    fun `both flags apply most restrictive cap (50)`() {
+    fun `legacy overreaching flag does not cap readiness`() {
+        val score = readiness(flags = setOf(RecoveryFlag.OVERREACHING))
+        assertEquals(baseUncapped, score, DELTA)
+    }
+
+    @Test
+    fun `illness onset caps score even with legacy overreaching flag`() {
         val score = readiness(flags = setOf(RecoveryFlag.OVERREACHING, RecoveryFlag.ILLNESS_ONSET))
         assertEquals(50f, score, DELTA)
     }
 
     @Test
     fun `score already below cap is not lifted`() {
-        // If the raw score is 30, overreaching cap of 70 must not raise it
+        // If the raw score is 20, illness cap of 50 must not raise it
         val score =
             readiness(
                 sRest = 20f,
                 sleepScore = 20f,
                 loadScore = 20f,
-                flags = setOf(RecoveryFlag.OVERREACHING),
+                flags = setOf(RecoveryFlag.ILLNESS_ONSET),
             )
-        assertTrue("Cap must not lift a low score, was $score", score <= 70f)
+        assertTrue("Cap must not lift a low score, was $score", score <= 50f)
         // 0.4*20+0.3*20+0.3*20 = 20 → still 20 after cap
         assertEquals(20f, score, DELTA)
     }
@@ -70,6 +76,8 @@ class ReadinessCapTest {
                 RecoveryFlag.HRV_MISSING,
                 RecoveryFlag.STAGES_MISSING,
                 RecoveryFlag.NADIR_DELAYED,
+                RecoveryFlag.STRONG_RECOVERY_SIGNAL,
+                RecoveryFlag.OVERREACHING,
             )
         assertEquals(baseUncapped, readiness(flags = flagsOnly), DELTA)
     }

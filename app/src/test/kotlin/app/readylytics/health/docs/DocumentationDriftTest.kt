@@ -41,7 +41,6 @@ class DocumentationDriftTest {
         assertEquals(0.4f, ScoringConstants.Readiness.WEIGHT_RESTORATION)
         assertEquals(0.3f, ScoringConstants.Readiness.WEIGHT_SLEEP)
         assertEquals(0.3f, ScoringConstants.Readiness.WEIGHT_LOAD)
-        assertEquals(70f, ScoringConstants.Readiness.OVERREACHING_MAX_SCORE)
         assertEquals(50f, ScoringConstants.Readiness.ILLNESS_MAX_SCORE)
 
         assertTrue(aboutMd.contains("0.4 × Restoration"))
@@ -51,10 +50,10 @@ class DocumentationDriftTest {
         assertTrue(stringsXml.contains("0.3 × Sleep Score"))
         assertTrue(stringsXml.contains("0.3 × Load Score"))
 
-        assertTrue(aboutMd.contains("caps the score at 70"))
         assertTrue(aboutMd.contains("caps it at 50"))
-        assertTrue(stringsXml.contains("caps the score at 70"))
         assertTrue(stringsXml.contains("caps it at 50"))
+        assertTrue(aboutMd.contains("Strong recovery signals do not cap Readiness"))
+        assertTrue(stringsXml.contains("Strong recovery signals do not cap Readiness"))
     }
 
     @Test

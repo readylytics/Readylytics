@@ -241,11 +241,12 @@
     <string name="about_tooltip_fatigue">*High Fatigue (&lt;30)* — large spike vs. your norm.</string>
     <string name="about_readiness_emergency_label">**Emergency signals**</string>
     <string name="about_readiness_emergency_text">If your HRV and RHR patterns suggest possible
-        physiological stress (such as early illness or functional overreaching), we apply a soft
-        cap to Readiness to give you a heads-up: overreaching caps the score at 70, and possible
-        illness onset caps it at 50. To filter out acute noise (e.g., alcohol or minor stress), the
-        thresholds must be breached on **two consecutive nights** (Mishra 2020, Le Meur 2013). This
-        is informational only, not medical advice.</string>
+        physiological stress, possible illness onset caps it at 50. A two-night pattern of
+        unusually favorable HRV and resting heart rate is shown as a strong recovery signal instead.
+        Strong recovery signals do not cap Readiness or automatically mean you should train harder
+        than planned. To filter out acute noise (e.g., alcohol or minor stress), the thresholds must
+        be breached on **two consecutive nights** (Mishra 2020, Le Meur 2013). This is informational
+        only, not medical advice.</string>
     <string name="about_readiness_no_penalty">**What we don\'t do.** We don\'t penalize you for
         resting. A week of light activity will *not* drop Readiness; the score is designed for load
         *spikes*, not undertraining.</string>
@@ -330,10 +331,10 @@
         model but present it strictly as a **load change indicator** to help you visualize spikes in
         training intensity, not as a diagnostic injury risk score.</string>
     <string name="about_limit_4">**4. Recovery flag.** When your HRV and RHR patterns suggest
-        possible physiological stress (such as early illness or functional overreaching), we surface
-        a soft notification. To ensure accuracy and filter out acute noise, the algorithm requires
-        the thresholds to be breached on **two consecutive nights** (Mishra 2020, Le Meur 2013).
-        This is informational only, not medical advice.</string>
+        possible physiological stress or unusually favorable recovery, we surface a soft
+        notification. To ensure accuracy and filter out acute noise, the algorithm requires the
+        thresholds to be breached on **two consecutive nights** (Mishra 2020, Le Meur 2013). This is
+        informational only, not medical advice.</string>
     <string name="about_limit_5">**5. One night is noise; trends are signal.** Treat any single
         day\'s score as a data point, not a verdict. Look at the 7-day trend.</string>
     <string name="about_limit_6">**6. This app does not diagnose anything.** If you suspect sleep
@@ -926,6 +927,10 @@
     <string name="insight_sick_indicator_body">Elevated resting heart rate and suppressed HRV indicate your body may be fighting something off.</string>
     <string name="insight_overreaching_title">Signs of Overreaching</string>
     <string name="insight_overreaching_body">Your acute load is significantly higher than your chronic baseline. Consider a recovery day.</string>
+    <string name="insight_strong_recovery_signal_title">Strong Recovery Signal</string>
+    <string name="insight_strong_recovery_signal_body">Your HRV and resting heart rate were unusually favorable compared with your baseline.</string>
+    <string name="insight_load_spike_recovery_strain_title">Training Load May Be Affecting Recovery</string>
+    <string name="insight_load_spike_recovery_strain_body">Your recent training load is high, and your recovery markers show signs of strain.</string>
     <string name="insight_restore_dismissed">Restore dismissed insights (%1$d)</string>
     <string name="insight_dismiss_description">Dismiss health insight</string>
     <string name="insight_rerun_description">Restore dismissed health insights</string>

@@ -124,12 +124,21 @@ fun buildCardDataMap(
                             modifier = Modifier.fillMaxWidth(),
                         )
 
-                    InsightType.OVERREACHING ->
+                    InsightType.STRONG_RECOVERY_SIGNAL ->
                         InsightCard(
-                            title = stringResource(R.string.insight_overreaching_title),
-                            body = stringResource(R.string.insight_overreaching_body),
+                            title = stringResource(R.string.insight_strong_recovery_signal_title),
+                            body = stringResource(R.string.insight_strong_recovery_signal_body),
                             icon = Icons.AutoMirrored.Filled.TrendingUp,
-                            onDismiss = { onDismissInsight(InsightType.OVERREACHING) },
+                            onDismiss = { onDismissInsight(InsightType.STRONG_RECOVERY_SIGNAL) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                    InsightType.LOAD_SPIKE_RECOVERY_STRAIN ->
+                        InsightCard(
+                            title = stringResource(R.string.insight_load_spike_recovery_strain_title),
+                            body = stringResource(R.string.insight_load_spike_recovery_strain_body),
+                            icon = Icons.Default.MonitorHeart,
+                            onDismiss = { onDismissInsight(InsightType.LOAD_SPIKE_RECOVERY_STRAIN) },
                             modifier = Modifier.fillMaxWidth(),
                         )
 

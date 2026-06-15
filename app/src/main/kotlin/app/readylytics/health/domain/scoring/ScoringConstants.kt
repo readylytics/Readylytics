@@ -110,11 +110,10 @@ object ScoringConstants {
         const val WEIGHT_SLEEP = 0.3f
         const val WEIGHT_LOAD = 0.3f
 
-        // Functional overreaching: HRV↑ + RHR↓
+        // Strong recovery signal: HRV↑ + RHR↓
         // REF: Le Meur 2013 Med Sci Sports Exerc; Bellenger 2017 Front Physiol
-        const val OVERREACHING_Z_HRV_THRESHOLD = 1.5f
-        const val OVERREACHING_Z_RHR_THRESHOLD = -2.0f
-        const val OVERREACHING_MAX_SCORE = 70f
+        const val STRONG_RECOVERY_Z_HRV_THRESHOLD = 1.5f
+        const val STRONG_RECOVERY_Z_RHR_THRESHOLD = -2.0f
 
         // Illness onset: HRV↓ + RHR↑
         // REF: Mishra 2020 Nat Biomed Eng; Quer 2021 Nat Med

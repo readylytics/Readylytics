@@ -18,9 +18,10 @@ object InsightDeriver {
         listOf(
             InsightType.HRV_DROP_LOW_SPO2,
             InsightType.SICK_INDICATOR,
+            InsightType.LOAD_SPIKE_RECOVERY_STRAIN,
             InsightType.HIGH_STRAIN_SLEEP_DEFICIT,
-            InsightType.OVERREACHING,
             InsightType.WORKOUT_IMPACT,
+            InsightType.STRONG_RECOVERY_SIGNAL,
             InsightType.REST_DAY_SUCCESS,
             InsightType.CIRCADIAN_SHIFT_RECOVERY_MISS,
             InsightType.REST_DAY_NO_IMPACT,
@@ -42,6 +43,7 @@ object InsightDeriver {
     private val suppresses: Map<InsightType, InsightType> =
         mapOf(
             InsightType.CIRCADIAN_SHIFT_RECOVERY_MISS to InsightType.REST_DAY_NO_IMPACT,
+            InsightType.LOAD_SPIKE_RECOVERY_STRAIN to InsightType.WORKOUT_IMPACT,
             InsightType.HIGH_STRAIN_SLEEP_DEFICIT to InsightType.SICK_INDICATOR,
             InsightType.LATE_NADIR_SHORT_SLEEP to InsightType.LATE_NADIR,
             InsightType.HRV_DROP_LOW_SPO2 to InsightType.SICK_INDICATOR,
