@@ -6,19 +6,30 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.Air
+import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Bloodtype
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.R
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.ui.common.CardLoader
 import app.readylytics.health.ui.common.MetricCardSkeleton
 import app.readylytics.health.ui.common.ScoreDialSkeleton
+import app.readylytics.health.ui.common.UiText
+import app.readylytics.health.ui.common.resolveString
 import app.readylytics.health.ui.components.CircadianConsistencyCard
 import app.readylytics.health.ui.components.InsightCard
 import app.readylytics.health.ui.components.InsightRerunCard
@@ -174,6 +185,204 @@ fun buildCardDataMap(
                             onDismiss = { onDismissInsight(InsightType.REST_DAY_NO_IMPACT) },
                             modifier = Modifier.fillMaxWidth(),
                         )
+
+                    InsightType.CIRCADIAN_SHIFT_RECOVERY_MISS -> {
+                        val offset =
+                            (uiState.currentInsightParams as? InsightParams.CircadianShift)?.bedtimeOffsetMinutes ?: 0
+                        InsightCard(
+                            title = stringResource(R.string.insight_circadian_shift_title),
+                            body =
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_circadian_shift_body,
+                                        listOf(offset),
+                                    ).resolveString(),
+                            icon = Icons.Default.Bedtime,
+                            onDismiss = { onDismissInsight(InsightType.CIRCADIAN_SHIFT_RECOVERY_MISS) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    InsightType.HIGH_STRAIN_SLEEP_DEFICIT -> {
+                        val params = uiState.currentInsightParams as? InsightParams.HighStrainSleepDeficit
+                        InsightCard(
+                            title = stringResource(R.string.insight_high_strain_sleep_deficit_title),
+                            body =
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_high_strain_sleep_deficit_body,
+                                        listOf(params?.strainRatio ?: 0f, params?.sleepDeficitMinutes ?: 0),
+                                    ).resolveString(),
+                            icon = Icons.Default.MonitorHeart,
+                            onDismiss = { onDismissInsight(InsightType.HIGH_STRAIN_SLEEP_DEFICIT) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    InsightType.LATE_NADIR_SHORT_SLEEP -> {
+                        val params = uiState.currentInsightParams as? InsightParams.LateNadirShortSleep
+                        InsightCard(
+                            title = stringResource(R.string.insight_late_nadir_short_sleep_title),
+                            body =
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_late_nadir_short_sleep_body,
+                                        listOf(
+                                            (params?.goalSleepMinutes ?: 0) - (params?.sleepDurationMinutes ?: 0),
+                                            params?.goalSleepMinutes ?: 0,
+                                        ),
+                                    ).resolveString(),
+                            icon = Icons.Default.Schedule,
+                            onDismiss = { onDismissInsight(InsightType.LATE_NADIR_SHORT_SLEEP) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    InsightType.RECOVERY_HRV_MISSING ->
+                        InsightCard(
+                            title = stringResource(R.string.insight_recovery_hrv_missing_title),
+                            body = stringResource(R.string.insight_recovery_hrv_missing_body),
+                            icon = Icons.Default.Info,
+                            onDismiss = { onDismissInsight(InsightType.RECOVERY_HRV_MISSING) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                    InsightType.RECOVERY_STAGES_MISSING ->
+                        InsightCard(
+                            title = stringResource(R.string.insight_recovery_stages_missing_title),
+                            body = stringResource(R.string.insight_recovery_stages_missing_body),
+                            icon = Icons.Default.Info,
+                            onDismiss = { onDismissInsight(InsightType.RECOVERY_STAGES_MISSING) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                    InsightType.HRV_DROP_LOW_SPO2 -> {
+                        val params = uiState.currentInsightParams as? InsightParams.HrvSpo2
+                        InsightCard(
+                            title = stringResource(R.string.insight_hrv_drop_low_spo2_title),
+                            body =
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_hrv_drop_low_spo2_body,
+                                        listOf(params?.zLnHrv ?: 0f, params?.spo2 ?: 0f),
+                                    ).resolveString(),
+                            icon = Icons.Default.Air,
+                            onDismiss = { onDismissInsight(InsightType.HRV_DROP_LOW_SPO2) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    InsightType.LATE_NADIR_ELEVATED_RHR -> {
+                        val params = uiState.currentInsightParams as? InsightParams.LateNadirElevatedRhr
+                        InsightCard(
+                            title = stringResource(R.string.insight_late_nadir_elevated_rhr_title),
+                            body =
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_late_nadir_elevated_rhr_body,
+                                        listOf(params?.rhrDeltaBpm ?: 0f),
+                                    ).resolveString(),
+                            icon = Icons.Default.MonitorHeart,
+                            onDismiss = { onDismissInsight(InsightType.LATE_NADIR_ELEVATED_RHR) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    InsightType.BP_ELEVATED_HIGH_STRAIN -> {
+                        val params = uiState.currentInsightParams as? InsightParams.BpElevatedStrain
+                        InsightCard(
+                            title = stringResource(R.string.insight_bp_elevated_high_strain_title),
+                            body =
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_bp_elevated_high_strain_body,
+                                        listOf(params?.systolicDriftMmHg ?: 0, params?.strainRatio ?: 0f),
+                                    ).resolveString(),
+                            icon = Icons.Default.Bloodtype,
+                            onDismiss = { onDismissInsight(InsightType.BP_ELEVATED_HIGH_STRAIN) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    InsightType.PAI_DEPLETION_HIGH_STRAIN -> {
+                        val params = uiState.currentInsightParams as? InsightParams.PaiDepletionStrain
+                        InsightCard(
+                            title = stringResource(R.string.insight_pai_depletion_high_strain_title),
+                            body =
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_pai_depletion_high_strain_body,
+                                        listOf(params?.totalPai ?: 0f, params?.strainRatio ?: 0f),
+                                    ).resolveString(),
+                            icon = Icons.Default.FitnessCenter,
+                            onDismiss = { onDismissInsight(InsightType.PAI_DEPLETION_HIGH_STRAIN) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    InsightType.HRV_DECLINE_STREAK -> {
+                        val params = uiState.currentInsightParams as? InsightParams.HrvDeclineStreak
+                        InsightCard(
+                            title = stringResource(R.string.insight_hrv_decline_streak_title),
+                            body =
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_hrv_decline_streak_body,
+                                        listOf(params?.days ?: 0),
+                                    ).resolveString(),
+                            icon = Icons.Default.Warning,
+                            onDismiss = { onDismissInsight(InsightType.HRV_DECLINE_STREAK) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    InsightType.STEP_SHORTFALL -> {
+                        val params = uiState.currentInsightParams as? InsightParams.StepShortfall
+                        InsightCard(
+                            title = stringResource(R.string.insight_step_shortfall_title),
+                            body =
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_step_shortfall_body,
+                                        listOf(params?.stepCount ?: 0, params?.stepGoal ?: 0),
+                                    ).resolveString(),
+                            icon = Icons.AutoMirrored.Filled.DirectionsWalk,
+                            onDismiss = { onDismissInsight(InsightType.STEP_SHORTFALL) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    InsightType.PAI_WEEKLY_UNDERPERFORMANCE -> {
+                        val params = uiState.currentInsightParams as? InsightParams.PaiWeeklyShortfall
+                        InsightCard(
+                            title = stringResource(R.string.insight_pai_weekly_underperformance_title),
+                            body =
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_pai_weekly_underperformance_body,
+                                        listOf(params?.weeklyPai ?: 0f, params?.target ?: 0f),
+                                    ).resolveString(),
+                            icon = Icons.AutoMirrored.Filled.TrendingUp,
+                            onDismiss = { onDismissInsight(InsightType.PAI_WEEKLY_UNDERPERFORMANCE) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    InsightType.WEIGHT_DRIFT_TRAINING_LOAD -> {
+                        val params = uiState.currentInsightParams as? InsightParams.WeightDrift
+                        InsightCard(
+                            title = stringResource(R.string.insight_weight_drift_training_load_title),
+                            body =
+                                UiText
+                                    .StringResWithArgs(
+                                        R.string.insight_weight_drift_training_load_body,
+                                        listOf(params?.deltaKg ?: 0f, (params?.percent ?: 0f) * 100f),
+                                    ).resolveString(),
+                            icon = Icons.Default.MonitorWeight,
+                            onDismiss = { onDismissInsight(InsightType.WEIGHT_DRIFT_TRAINING_LOAD) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             }
         }

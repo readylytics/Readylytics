@@ -63,7 +63,6 @@ import app.readylytics.health.ui.settings.data.SyncSettingsSection
 import app.readylytics.health.ui.settings.physiologyprofile.HeartRateZoneSection
 import app.readylytics.health.ui.theme.calculateSecondarySeedColor
 import app.readylytics.health.ui.theme.calculateTertiarySeedColor
-import com.google.android.gms.oss.licenses.OssLicensesMenuActivity
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.parcelize.Parcelize
 
@@ -164,6 +163,18 @@ fun sectionMatches(
         section.keywords.any { it.contains(lowerQuery) }
 }
 
+@Suppress("DEPRECATION")
+private fun openOssLicenses(
+    context: android.content.Context,
+    licensesTitle: String,
+) {
+    com.google.android.gms.oss.licenses.OssLicensesMenuActivity
+        .setActivityTitle(licensesTitle)
+    context.startActivity(
+        Intent(context, com.google.android.gms.oss.licenses.OssLicensesMenuActivity::class.java),
+    )
+}
+
 @Composable
 fun SettingsRoute(
     thresholdViewModel: ThresholdSettingsViewModel = hiltViewModel(),
@@ -184,6 +195,7 @@ fun SettingsRoute(
     val uiState by uiViewModel.uiState.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+    val licensesTitle = stringResource(R.string.settings_item_licenses_title)
 
     LaunchedEffect(localBackupViewModel.sideEffect) {
         localBackupViewModel.sideEffect.collectLatest { effect ->
@@ -206,8 +218,6 @@ fun SettingsRoute(
         }
     }
 
-    val licensesTitle = stringResource(R.string.settings_item_licenses_title)
-
     SettingsScreen(
         thresholdState = thresholdState,
         sleepState = sleepState,
@@ -225,8 +235,7 @@ fun SettingsRoute(
         onUIEvent = uiViewModel::onEvent,
         onNavigateToAbout = onNavigateToAbout,
         onNavigateToLicenses = {
-            OssLicensesMenuActivity.setActivityTitle(licensesTitle)
-            context.startActivity(Intent(context, OssLicensesMenuActivity::class.java))
+            openOssLicenses(context, licensesTitle)
         },
     )
 

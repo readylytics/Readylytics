@@ -120,8 +120,12 @@ class AssessBloodPressureTest {
         assertEquals(BloodPressureStatus.Optimal, HealthMetricsCalculator.assessBloodPressure(119, 79))
 
     @Test
-    fun `systolic 120 diastolic 75 is Neutral`() =
-        assertEquals(BloodPressureStatus.Neutral, HealthMetricsCalculator.assessBloodPressure(120, 75))
+    fun `systolic 120 diastolic 75 is Optimal`() =
+        assertEquals(BloodPressureStatus.Optimal, HealthMetricsCalculator.assessBloodPressure(120, 75))
+
+    @Test
+    fun `systolic 121 diastolic 75 is Neutral`() =
+        assertEquals(BloodPressureStatus.Neutral, HealthMetricsCalculator.assessBloodPressure(121, 75))
 
     @Test
     fun `systolic 129 diastolic 79 is Neutral`() =

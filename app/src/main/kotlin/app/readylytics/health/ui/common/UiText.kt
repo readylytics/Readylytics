@@ -8,6 +8,11 @@ sealed class UiText {
         @androidx.annotation.StringRes val id: Int,
     ) : UiText()
 
+    data class StringResWithArgs(
+        @androidx.annotation.StringRes val id: Int,
+        val args: List<Any>,
+    ) : UiText()
+
     data class RawString(
         val value: String,
     ) : UiText()
@@ -17,6 +22,7 @@ sealed class UiText {
 fun UiText.resolveString(): String =
     when (this) {
         is UiText.StringRes -> stringResource(id)
+        is UiText.StringResWithArgs -> stringResource(id, *args.toTypedArray())
         is UiText.RawString -> value
     }
 
