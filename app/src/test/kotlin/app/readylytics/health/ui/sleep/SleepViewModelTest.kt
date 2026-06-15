@@ -3,6 +3,7 @@ package app.readylytics.health.ui.sleep
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
@@ -59,6 +60,7 @@ class SleepViewModelTest {
         every { circadianRepo.resultFor(any()) } returns flowOf(CircadianConsistencyResult.Calibrating)
         every { foregroundSyncController.isSyncing } returns MutableStateFlow(false)
         every { dailyMetricsRepository.observeByDate(any()) } returns flowOf(null)
+        every { settingsRepo.userPreferences } returns flowOf(UserPreferences(goalSleepHours = 8f))
 
         every { dailySummaryRepository.observeSince(any()) } returns flowOf(emptyList())
         every { sleepSessionRepository.observeSince(any()) } returns flowOf(emptyList())
@@ -95,9 +97,29 @@ class SleepViewModelTest {
 
             val state = viewModel.uiState.first { !it.isLoading }
             assertEquals(TimeRange.SEVEN_DAYS, state.selectedTrendRange)
+            assertEquals(8f, state.goalSleepHours, 0.001f)
             assertEquals(7, state.trendStartOffsetPoints.size)
             assertEquals(7, state.trendDurationSpanPoints.size)
             assertEquals(7, state.trendActualDurationPoints.size)
+        }
+
+    @Test
+    fun `ui state updates when sleep goal preference changes`() =
+        runTest(testDispatcher) {
+            val prefsFlow = MutableStateFlow(UserPreferences(goalSleepHours = 7.5f))
+            every { settingsRepo.userPreferences } returns prefsFlow
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            var state = viewModel.uiState.first { !it.isLoading }
+            assertEquals(7.5f, state.goalSleepHours, 0.001f)
+
+            prefsFlow.value = UserPreferences(goalSleepHours = 9f)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            state = viewModel.uiState.first { !it.isLoading && it.goalSleepHours == 9f }
+            assertEquals(9f, state.goalSleepHours, 0.001f)
         }
 
     @Test
