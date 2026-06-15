@@ -110,7 +110,8 @@ fun VitalsScreen(
         Column(
             modifier =
                 Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .weight(1f)
                     .verticalScroll(scrollState)
                     .padding(vertical = 16.dp),
         ) {
