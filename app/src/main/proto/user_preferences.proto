@@ -175,6 +175,10 @@ message UserPreferencesProto {
     // reproducible across devices for identical data + preferences. Empty = un-seeded
     // (falls back to the device zone until the seed migration / first run sets it).
     string scoring_zone_id = 71;
+
+    // Permanent dismissal of the "press Apply to resync" info dialog shown
+    // when the user changes a Data Sources device selection.
+    bool device_change_notice_dismissed = 72;
 }
 
 enum TrimpMethodProto {

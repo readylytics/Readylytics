@@ -90,6 +90,7 @@ data class UserPreferences(
      * Empty = un-seeded; resolve via [scoringZone] which falls back to the device zone.
      */
     val scoringZoneId: String = SettingsDefaults.SCORING_ZONE_ID,
+    val deviceChangeNoticeDismissed: Boolean = SettingsDefaults.DEVICE_CHANGE_NOTICE_DISMISSED,
 )
 
 /**
@@ -242,6 +243,7 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
                 customPrimaryColor
             },
         scoringZoneId = scoringZoneId,
+        deviceChangeNoticeDismissed = deviceChangeNoticeDismissed,
     )
 }
 

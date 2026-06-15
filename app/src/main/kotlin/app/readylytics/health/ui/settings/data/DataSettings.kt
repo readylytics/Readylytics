@@ -13,7 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -21,9 +24,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
@@ -254,8 +260,9 @@ fun DataManagementSection(
  */
 @Composable
 fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewModel()) {
-    val availableDevices by viewModel.availableDevices.collectAsStateWithLifecycle()
-    val deviceByDataType by viewModel.deviceByDataType.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val availableDevices = uiState.availableDevices
+    val deviceByDataType = uiState.deviceByDataType
     val hasDevices = availableDevices.isNotEmpty()
     val allDevicesLabel = stringResource(R.string.data_sources_all_devices)
     val calibratingLabel = stringResource(R.string.data_sources_calibrating)
@@ -318,7 +325,79 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
                     )
                 }
             }
+
+        Column(
+            modifier =
+                Modifier.padding(
+                    horizontal = SettingsConstants.HORIZONTAL_PADDING,
+                    vertical = SettingsConstants.VERTICAL_SPACER_LARGE,
+                ),
+        ) {
+            Button(
+                onClick = { viewModel.onApply() },
+                enabled = uiState.hasPendingChanges && !uiState.isResyncing,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (uiState.isResyncing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER))
+                }
+                Text(stringResource(R.string.data_sources_apply_button))
+            }
+            Text(
+                text = stringResource(R.string.data_sources_apply_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = SettingsConstants.VERTICAL_SPACER_SMALL),
+            )
+        }
     }
+
+    if (uiState.showDeviceChangeNotice) {
+        DeviceChangeNoticeDialog(onAcknowledged = viewModel::onNoticeAcknowledged)
+    }
+}
+
+@Composable
+private fun DeviceChangeNoticeDialog(onAcknowledged: (dismissPermanently: Boolean) -> Unit) {
+    var dontShowAgain by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = { onAcknowledged(dontShowAgain) },
+        title = { Text(stringResource(R.string.device_change_notice_title)) },
+        text = {
+            Column {
+                Text(
+                    text = stringResource(R.string.device_change_notice_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .toggleable(
+                                value = dontShowAgain,
+                                role = Role.Checkbox,
+                                onValueChange = { dontShowAgain = it },
+                            ).padding(top = SettingsConstants.VERTICAL_SPACER),
+                ) {
+                    Checkbox(checked = dontShowAgain, onCheckedChange = null)
+                    Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER_SMALL))
+                    Text(
+                        text = stringResource(R.string.device_change_notice_dont_show_again),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onAcknowledged(dontShowAgain) }) {
+                Text(stringResource(R.string.device_change_notice_confirm))
+            }
+        },
+    )
 }
 
 @StringRes
