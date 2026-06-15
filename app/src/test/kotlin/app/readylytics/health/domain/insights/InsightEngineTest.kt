@@ -30,6 +30,7 @@ class InsightEngineTest {
                         strainRatio = 1.5f,
                         sleepDurationMinutes = 360,
                         lateNadir = true,
+                        zLnHrv = -1.2f,
                     ),
                 circadianResult = circadianReady(latestBedtimeOffsetMinutes = 105),
                 goalSleepMinutes = 480,
@@ -37,10 +38,11 @@ class InsightEngineTest {
 
         val findings = InsightEngine.evaluate(context)
 
-        assertEquals(3, findings.size)
+        assertEquals(4, findings.size)
         assertEquals(
             setOf(
                 InsightType.CIRCADIAN_SHIFT_RECOVERY_MISS,
+                InsightType.LOAD_SPIKE_RECOVERY_STRAIN,
                 InsightType.HIGH_STRAIN_SLEEP_DEFICIT,
                 InsightType.LATE_NADIR_SHORT_SLEEP,
             ),
@@ -49,7 +51,7 @@ class InsightEngineTest {
     }
 
     @Test
-    fun `all twelve registered rules can fire together`() {
+    fun `all registered rules can fire together`() {
         val today =
             dailySummary(
                 recoveryFlags =
@@ -78,13 +80,14 @@ class InsightEngineTest {
                 goalSleepMinutes = 480,
                 stepGoal = 10000,
                 recentDays =
-                    (1..6).map { offset ->
+                    (1..21).map { offset ->
                         dailySummary(
                             date = today.date.minusDays(offset.toLong()),
                             zLnHrv = -1f,
                             bloodPressureSystolic = 110,
                             totalPai = 5f,
                             weightKg = 80f,
+                            totalTrimp = 60f,
                         )
                     },
             )
@@ -95,6 +98,7 @@ class InsightEngineTest {
         assertEquals(
             setOf(
                 InsightType.CIRCADIAN_SHIFT_RECOVERY_MISS,
+                InsightType.LOAD_SPIKE_RECOVERY_STRAIN,
                 InsightType.HIGH_STRAIN_SLEEP_DEFICIT,
                 InsightType.LATE_NADIR_SHORT_SLEEP,
                 InsightType.RECOVERY_HRV_MISSING,

@@ -28,4 +28,13 @@ object InsightConstants {
     // The step shortfall insight only fires once we're within this many
     // minutes of the user's median bedtime, so it isn't shown too early.
     const val STEP_SHORTFALL_LEAD_TIME_MINUTES = 180
+
+    const val LOAD_SPIKE_STRAIN_RATIO_THRESHOLD = 1.3f
+    const val LOAD_SPIKE_TRIMP_THRESHOLD = 120f
+    const val LOAD_SPIKE_ACWR_THRESHOLD = 1.5f
+    const val LOAD_HISTORY_MIN_VALID_DAYS = 21
+    const val RECOVERY_STRAIN_LOW_HRV_Z = -1.0f
+    const val RECOVERY_STRAIN_ELEVATED_RHR_Z = 1.0f
+    const val RECOVERY_STRAIN_RHR_DELTA_BPM = 3f
+    const val RECOVERY_STRAIN_READINESS_THRESHOLD = 60f
 }

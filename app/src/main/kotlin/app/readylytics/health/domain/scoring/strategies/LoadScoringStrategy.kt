@@ -122,16 +122,6 @@ class LoadScoringStrategy
             val thresholds = emergencyFlags ?: EmergencyFlagThresholds()
 
             if (zLnHrv != null && zRhr != null) {
-                val todayOverreaching =
-                    zLnHrv > thresholds.overreachingZHrvThreshold &&
-                        zRhr < thresholds.overreachingZRhrThreshold
-                val prevOverreaching =
-                    yesterdayZLnHrv != null &&
-                        yesterdayZRhr != null &&
-                        yesterdayZLnHrv > thresholds.overreachingZHrvThreshold &&
-                        yesterdayZRhr < thresholds.overreachingZRhrThreshold
-                if (todayOverreaching && prevOverreaching) flags += RecoveryFlag.OVERREACHING
-
                 val todayIllness =
                     zLnHrv < thresholds.illnessZHrvThreshold &&
                         (
@@ -145,6 +135,18 @@ class LoadScoringStrategy
                         yesterdayZLnHrv < thresholds.illnessZHrvThreshold &&
                         yesterdayZRhr >= thresholds.illnessZRhrThreshold
                 if (todayIllness && prevIllness) flags += RecoveryFlag.ILLNESS_ONSET
+
+                val todayStrongRecovery =
+                    zLnHrv > thresholds.strongRecoveryZHrvThreshold &&
+                        zRhr < thresholds.strongRecoveryZRhrThreshold
+                val prevStrongRecovery =
+                    yesterdayZLnHrv != null &&
+                        yesterdayZRhr != null &&
+                        yesterdayZLnHrv > thresholds.strongRecoveryZHrvThreshold &&
+                        yesterdayZRhr < thresholds.strongRecoveryZRhrThreshold
+                if (todayStrongRecovery && prevStrongRecovery && RecoveryFlag.ILLNESS_ONSET !in flags) {
+                    flags += RecoveryFlag.STRONG_RECOVERY_SIGNAL
+                }
             }
 
             // Workout Impact & Rest Day Insight Logic
@@ -175,9 +177,6 @@ class LoadScoringStrategy
                     Readiness.WEIGHT_SLEEP * sleepScore +
                     Readiness.WEIGHT_LOAD * loadScore
 
-            if (RecoveryFlag.OVERREACHING in recoveryFlags) {
-                rs = rs.coerceAtMost(Readiness.OVERREACHING_MAX_SCORE)
-            }
             if (RecoveryFlag.ILLNESS_ONSET in recoveryFlags) {
                 rs = rs.coerceAtMost(Readiness.ILLNESS_MAX_SCORE)
             }

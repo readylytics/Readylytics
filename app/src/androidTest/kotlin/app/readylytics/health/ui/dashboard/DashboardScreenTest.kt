@@ -5,9 +5,12 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.model.InsightType
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,6 +24,8 @@ class DashboardScreenTest {
     private fun createTestUiState(
         isManagingCards: Boolean = false,
         selectedDate: LocalDate = LocalDate.now(),
+        activeInsightTypes: Set<InsightType> = emptySet(),
+        currentInsight: InsightType? = null,
     ): DashboardUiState =
         DashboardUiState(
             summary = null,
@@ -31,11 +36,13 @@ class DashboardScreenTest {
             cardConfigurations =
                 listOf(
                     CardConfiguration(
-                        cardId = CardId.STEPS,
+                        cardId = CardId.INSIGHTS,
                         isVisible = true,
                         position = 0,
                     ),
                 ),
+            activeInsightTypes = activeInsightTypes,
+            currentInsight = currentInsight,
         )
 
     @Test
@@ -115,5 +122,74 @@ class DashboardScreenTest {
         composeRule
             .onNodeWithContentDescription("Done editing")
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun infoButtonOpensStrongRecoverySignalDetails() {
+        val uiState =
+            createTestUiState(
+                activeInsightTypes = setOf(InsightType.STRONG_RECOVERY_SIGNAL),
+                currentInsight = InsightType.STRONG_RECOVERY_SIGNAL,
+            )
+        composeRule.setContent {
+            DashboardScreen(
+                uiState = uiState,
+                snackbarHostState = SnackbarHostState(),
+                onRefresh = {},
+                onPreviousDay = {},
+                onNextDay = {},
+                onNavigateToSleep = {},
+                onNavigateToWorkouts = {},
+                onNavigateToRhr = {},
+                onNavigateToSteps = {},
+                onToggleCardManagement = {},
+                onCardVisibilityChanged = { _, _ -> },
+                onReorderCards = {},
+                onResetToDefaults = {},
+            )
+        }
+
+        composeRule
+            .onNodeWithContentDescription("Show explanation for Strong Recovery Signal")
+            .performClick()
+
+        composeRule.onNodeWithText("Strong Recovery Signal").assertIsDisplayed()
+        composeRule.onNodeWithText("Observed Signal").assertIsDisplayed()
+        composeRule.onNodeWithText("What This Might Mean").assertIsDisplayed()
+        composeRule.onNodeWithText("What Not To Infer").assertIsDisplayed()
+    }
+
+    @Test
+    fun infoButtonOpensHrvDataMissingDetails() {
+        val uiState =
+            createTestUiState(
+                activeInsightTypes = setOf(InsightType.RECOVERY_HRV_MISSING),
+                currentInsight = InsightType.RECOVERY_HRV_MISSING,
+            )
+        composeRule.setContent {
+            DashboardScreen(
+                uiState = uiState,
+                snackbarHostState = SnackbarHostState(),
+                onRefresh = {},
+                onPreviousDay = {},
+                onNextDay = {},
+                onNavigateToSleep = {},
+                onNavigateToWorkouts = {},
+                onNavigateToRhr = {},
+                onNavigateToSteps = {},
+                onToggleCardManagement = {},
+                onCardVisibilityChanged = { _, _ -> },
+                onReorderCards = {},
+                onResetToDefaults = {},
+            )
+        }
+
+        composeRule
+            .onNodeWithContentDescription("Show explanation for HRV Data Missing")
+            .performClick()
+
+        composeRule.onNodeWithText("What Data Is Missing").assertIsDisplayed()
+        composeRule.onNodeWithText("How This Affects Your Score").assertIsDisplayed()
+        composeRule.onNodeWithText("What You Can Check").assertIsDisplayed()
     }
 }

@@ -140,7 +140,7 @@ The ratio (ATL ÷ CTL) tells us whether you've recently spiked above your recent
 
 **Emergency signals**
 
-If your HRV and RHR patterns suggest possible physiological stress (such as early illness or functional overreaching), we apply a soft cap to Readiness to give you a heads-up: overreaching caps the score at 70, and possible illness onset caps it at 50. To ensure accuracy and filter out acute noise (e.g., alcohol or minor stress), the algorithm requires the thresholds to be breached on **two consecutive nights** (Mishra 2020, Le Meur 2013). This is informational only, not medical advice. Workout-impact and rest-day flags shown elsewhere are informational only and do not cap your Readiness number.
+When HRV is much lower than usual and resting heart rate is elevated for more than one day, readiness may be capped as a cautious possible-illness signal (which caps it at 50). When HRV is much higher than usual and resting heart rate is much lower than usual, the app treats this as an encouraging recovery signal rather than overreaching. Strong recovery signals do not cap Readiness. To ensure accuracy and filter out acute noise (e.g., alcohol or minor stress), the algorithm requires the thresholds to be breached on **two consecutive nights** (Mishra 2020, Le Meur 2013). This is informational only, not medical advice. Workout-impact and rest-day flags shown elsewhere are informational only and do not cap your Readiness number.
 
 **What we don't do.** We don't penalise you for resting. A week of light activity will _not_ drop Readiness; the score is designed for load _spikes_, not undertraining.
 

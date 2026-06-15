@@ -39,11 +39,14 @@ class InsightDeriverTest {
 
     @Test
     fun `active insights without dismissals are queued in display priority`() {
-        val flags = setOf(RecoveryFlag.OVERREACHING, RecoveryFlag.ILLNESS_ONSET, RecoveryFlag.NADIR_DELAYED)
+        val flags = setOf(RecoveryFlag.STRONG_RECOVERY_SIGNAL, RecoveryFlag.ILLNESS_ONSET, RecoveryFlag.NADIR_DELAYED)
         val result = InsightDeriver.derive(flags, dismissedTypes = emptySet())
-        assertEquals(setOf(InsightType.LATE_NADIR, InsightType.SICK_INDICATOR, InsightType.OVERREACHING), result.active)
         assertEquals(
-            listOf(InsightType.SICK_INDICATOR, InsightType.OVERREACHING, InsightType.LATE_NADIR),
+            setOf(InsightType.LATE_NADIR, InsightType.SICK_INDICATOR, InsightType.STRONG_RECOVERY_SIGNAL),
+            result.active,
+        )
+        assertEquals(
+            listOf(InsightType.SICK_INDICATOR, InsightType.STRONG_RECOVERY_SIGNAL, InsightType.LATE_NADIR),
             result.visibleQueue,
         )
         assertEquals(InsightType.SICK_INDICATOR, result.current)
@@ -52,14 +55,26 @@ class InsightDeriverTest {
 
     @Test
     fun `dismissing current insight rotates to next queued insight`() {
-        val flags = setOf(RecoveryFlag.NADIR_DELAYED, RecoveryFlag.ILLNESS_ONSET, RecoveryFlag.OVERREACHING)
+        val flags = setOf(RecoveryFlag.NADIR_DELAYED, RecoveryFlag.ILLNESS_ONSET, RecoveryFlag.STRONG_RECOVERY_SIGNAL)
         val dismissed = setOf(InsightType.SICK_INDICATOR)
         val result = InsightDeriver.derive(flags, dismissedTypes = dismissed)
 
-        assertEquals(setOf(InsightType.LATE_NADIR, InsightType.SICK_INDICATOR, InsightType.OVERREACHING), result.active)
-        assertEquals(listOf(InsightType.OVERREACHING, InsightType.LATE_NADIR), result.visibleQueue)
-        assertEquals(InsightType.OVERREACHING, result.current)
+        assertEquals(
+            setOf(InsightType.LATE_NADIR, InsightType.SICK_INDICATOR, InsightType.STRONG_RECOVERY_SIGNAL),
+            result.active,
+        )
+        assertEquals(listOf(InsightType.STRONG_RECOVERY_SIGNAL, InsightType.LATE_NADIR), result.visibleQueue)
+        assertEquals(InsightType.STRONG_RECOVERY_SIGNAL, result.current)
         assertEquals(1, result.dismissedCount)
+    }
+
+    @Test
+    fun `legacy overreaching flag does not produce a visible insight`() {
+        val result = InsightDeriver.derive(setOf(RecoveryFlag.OVERREACHING), dismissedTypes = emptySet())
+
+        assertTrue(result.active.isEmpty())
+        assertTrue(result.visibleQueue.isEmpty())
+        assertEquals(null, result.current)
     }
 
     @Test
@@ -118,6 +133,21 @@ class InsightDeriverTest {
             InsightParams.HighStrainSleepDeficit(strainRatio = 1.5f, sleepDeficitMinutes = 60),
             result.currentParams,
         )
+    }
+
+    @Test
+    fun `load spike recovery strain finding suppresses workout impact`() {
+        val flags = setOf(RecoveryFlag.WORKOUT_IMPACT)
+        val finding =
+            InsightFinding(
+                InsightType.LOAD_SPIKE_RECOVERY_STRAIN,
+                InsightParams.None,
+            )
+        val result = InsightDeriver.derive(flags, listOf(finding), dismissedTypes = emptySet())
+
+        assertEquals(setOf(InsightType.LOAD_SPIKE_RECOVERY_STRAIN), result.active)
+        assertEquals(listOf(InsightType.LOAD_SPIKE_RECOVERY_STRAIN), result.visibleQueue)
+        assertEquals(InsightType.LOAD_SPIKE_RECOVERY_STRAIN, result.current)
     }
 
     @Test

@@ -3,7 +3,8 @@ package app.readylytics.health.domain.model
 import kotlinx.serialization.Serializable
 
 enum class RecoveryFlag {
-    OVERREACHING,
+    OVERREACHING, // Legacy persisted value only. New scoring code must not emit this.
+    STRONG_RECOVERY_SIGNAL,
     ILLNESS_ONSET,
     NADIR_DELAYED,
     CALIBRATING,

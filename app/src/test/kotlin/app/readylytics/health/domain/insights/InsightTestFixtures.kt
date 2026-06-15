@@ -14,12 +14,15 @@ internal fun dailySummary(
     lateNadir: Boolean = false,
     rhrDeltaBpm: Float? = null,
     zLnHrv: Float? = null,
+    zRhr: Float? = null,
     avgSleepingSpo2: Float? = null,
     bloodPressureSystolic: Int? = null,
     paiScore: Float? = null,
     totalPai: Float? = null,
     stepCount: Int? = null,
     weightKg: Float? = null,
+    totalTrimp: Float? = null,
+    readinessScore: Float? = null,
 ): DailySummary =
     DailySummary(
         date = date,
@@ -27,12 +30,15 @@ internal fun dailySummary(
         strainRatio = strainRatio,
         sleepDurationMinutes = sleepDurationMinutes,
         zLnHrv = zLnHrv,
+        zRhr = zRhr,
         avgSleepingSpo2 = avgSleepingSpo2,
         bloodPressureSystolic = bloodPressureSystolic,
         paiScore = paiScore,
         totalPai = totalPai,
         stepCount = stepCount,
         weightKg = weightKg,
+        totalTrimp = totalTrimp,
+        readinessScore = readinessScore,
         readinessResult =
             ReadinessResult.EMPTY.copy(
                 diagnostics =

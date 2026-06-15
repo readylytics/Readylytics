@@ -90,17 +90,17 @@ class ScoringConfigFactory
             when (profile) {
                 PhysiologyProfile.ATHLETE ->
                     EmergencyFlagThresholds(
-                        overreachingZHrvThreshold = 1.2f,
+                        strongRecoveryZHrvThreshold = 1.2f,
                         illnessZHrvThreshold = -1.2f,
                     )
                 PhysiologyProfile.ACTIVE ->
                     EmergencyFlagThresholds(
-                        overreachingZHrvThreshold = 1.5f,
+                        strongRecoveryZHrvThreshold = 1.5f,
                         illnessZHrvThreshold = -1.5f,
                     )
                 PhysiologyProfile.SEDENTARY ->
                     EmergencyFlagThresholds(
-                        overreachingZHrvThreshold = 2.0f,
+                        strongRecoveryZHrvThreshold = 2.0f,
                         illnessZHrvThreshold = -2.0f,
                     )
             }
@@ -166,8 +166,8 @@ class ScoringConfigFactory
             update(sleepTargets.remPercentage)
 
             // EmergencyFlagThresholds
-            update(emergencyFlags.overreachingZHrvThreshold)
-            update(emergencyFlags.overreachingZRhrThreshold)
+            update(emergencyFlags.strongRecoveryZHrvThreshold)
+            update(emergencyFlags.strongRecoveryZRhrThreshold)
             update(emergencyFlags.illnessZHrvThreshold)
             update(emergencyFlags.illnessZRhrThreshold)
             update(emergencyFlags.illnessRhrDeltaBpm)
