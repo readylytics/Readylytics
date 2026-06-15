@@ -68,6 +68,20 @@ class SleepTimeGaugeDataTest {
         assertEquals(MetricStatus.CALIBRATING, data.status)
     }
 
+    @Test
+    fun `missing sleep session keeps calibrating status even when summary has duration`() {
+        val data =
+            buildSleepTimeGaugeData(
+                session = null,
+                summary = DailySummary(date = LocalDate.of(2026, 6, 11), sleepDurationMinutes = 480),
+                goalSleepHours = 8f,
+            )
+
+        assertNull(data.progress)
+        assertEquals("—", data.displayText)
+        assertEquals(MetricStatus.CALIBRATING, data.status)
+    }
+
     private fun sleepSession(
         durationMinutes: Int,
         awakeMinutes: Int,

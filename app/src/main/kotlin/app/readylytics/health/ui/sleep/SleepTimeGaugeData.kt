@@ -8,7 +8,7 @@ import app.readylytics.health.ui.common.DateFormatUtils
 
 private const val SLEEP_TIME_GOAL_FILL_RATIO = 0.5f
 
-internal data class SleepTimeGaugeData(
+data class SleepTimeGaugeData(
     val progress: Float?,
     val displayText: String,
     val status: MetricStatus,
@@ -27,7 +27,7 @@ internal fun buildSleepTimeGaugeData(
         progress = actualMinutes?.let { sleepTimeGaugeProgress(it, maxMinutes) },
         displayText = DateFormatUtils.formatSleepDuration(actualMinutes),
         status =
-            if (goalMinutes > 0) {
+            if (actualMinutes != null && goalMinutes > 0) {
                 summary?.sleepDurationStatus(goalMinutes) ?: MetricStatus.CALIBRATING
             } else {
                 MetricStatus.CALIBRATING

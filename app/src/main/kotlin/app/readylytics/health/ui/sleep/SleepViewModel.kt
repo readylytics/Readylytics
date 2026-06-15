@@ -57,6 +57,12 @@ data class SleepUiState(
     val trendActualDurationPoints: List<DailyDataPoint> = emptyList(),
     val trendRangeStartMs: Long = 0,
     val goalSleepHours: Float = SettingsDefaults.GOAL_SLEEP_HOURS,
+    val sleepTimeGaugeData: SleepTimeGaugeData =
+        buildSleepTimeGaugeData(
+            session = null,
+            summary = null,
+            goalSleepHours = SettingsDefaults.GOAL_SLEEP_HOURS,
+        ),
 )
 
 @HiltViewModel
@@ -236,6 +242,12 @@ class SleepViewModel
                             trendActualDurationPoints = trendData.third,
                             trendRangeStartMs = visibleRangeStartMs,
                             goalSleepHours = prefs.goalSleepHours,
+                            sleepTimeGaugeData =
+                                buildSleepTimeGaugeData(
+                                    session = latestSession,
+                                    summary = latestSummary,
+                                    goalSleepHours = prefs.goalSleepHours,
+                                ),
                         )
                     }
                 }.flowOn(Dispatchers.Default)

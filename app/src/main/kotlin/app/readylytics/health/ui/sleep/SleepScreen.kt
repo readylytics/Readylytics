@@ -133,13 +133,11 @@ fun SleepScreen(
                     modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
                 )
 
-                val sleepTimeGaugeData =
-                    buildSleepTimeGaugeData(
-                        session = uiState.latestSession,
-                        summary = uiState.latestSummary,
-                        goalSleepHours = uiState.goalSleepHours,
+                val sleepTimeGaugeData = uiState.sleepTimeGaugeData
+                val goalText =
+                    DateFormatUtils.formatSleepDuration(
+                        (uiState.goalSleepHours * 60f).toInt().coerceAtLeast(0),
                     )
-                val goalText = DateFormatUtils.formatSleepDuration((uiState.goalSleepHours * 60f).toInt())
 
                 M3ScoreDial(
                     score = sleepTimeGaugeData.progress,

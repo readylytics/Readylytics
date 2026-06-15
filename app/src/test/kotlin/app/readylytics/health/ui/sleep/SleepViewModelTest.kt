@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
@@ -14,6 +15,7 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.ui.common.TimeRange
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -120,6 +122,57 @@ class SleepViewModelTest {
 
             state = viewModel.uiState.first { !it.isLoading && it.goalSleepHours == 9f }
             assertEquals(9f, state.goalSleepHours, 0.001f)
+        }
+
+    @Test
+    fun `ui state exposes sleep time gauge data from current session and sleep goal`() =
+        runTest(testDispatcher) {
+            val zoneId = ZoneId.systemDefault()
+            val selectedDate = LocalDate.of(2026, 6, 11)
+            val selectedMidnightMs =
+                selectedDate
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toEpochMilli()
+            val session =
+                SleepSessionData(
+                    id = "session_1",
+                    deviceName = "SmartRing",
+                    startTime =
+                        selectedDate
+                            .minusDays(1)
+                            .atTime(22, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    endTime =
+                        selectedDate
+                            .atTime(6, 0)
+                            .atZone(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                    durationMinutes = 510,
+                    efficiency = 0.93f,
+                    deepSleepMinutes = 90,
+                    lightSleepMinutes = 300,
+                    remSleepMinutes = 90,
+                    awakeMinutes = 30,
+                    sleepScore = 85f,
+                )
+
+            coEvery { dailySummaryRepository.getByDate(selectedMidnightMs) } returns
+                DailySummary(date = selectedDate, sleepDurationMinutes = 480)
+            every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(session)
+            every { sleepSessionRepository.observeSessionStages(session.id) } returns flowOf(emptyList())
+            every { settingsRepo.userPreferences } returns flowOf(UserPreferences(goalSleepHours = 8f))
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val state = viewModel.uiState.first { !it.isLoading && it.latestSession != null }
+            val gaugeData = state.sleepTimeGaugeData
+            assertEquals(0.5f, gaugeData.progress!!, 0.001f)
+            assertEquals("8h", gaugeData.displayText)
         }
 
     @Test
