@@ -85,4 +85,29 @@ internal class SyncPreferences
                 }
             }
         }
+
+        /**
+         * One-time bootstrap for existing users' `pai_source_mode` preference.
+         *
+         * If the field was never explicitly set (proto3 default [LoadSourceModeProto.LOAD_SOURCE_UNSET])
+         * and pre-existing workout-only TRIMP history exists, persist [LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY]
+         * so existing users keep their prior behavior. Otherwise persist
+         * [LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE] explicitly so the field is no longer
+         * unset and this bootstrap never re-runs.
+         */
+        suspend fun bootstrapPaiSourceModeIfUnset(hasWorkoutOnlyHistory: Boolean) {
+            dataStore.updateData { proto ->
+                if (proto.paiSourceMode == LoadSourceModeProto.LOAD_SOURCE_UNSET) {
+                    val resolved =
+                        if (hasWorkoutOnlyHistory) {
+                            LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
+                        } else {
+                            LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
+                        }
+                    proto.toBuilder().setPaiSourceMode(resolved).build()
+                } else {
+                    proto
+                }
+            }
+        }
     }

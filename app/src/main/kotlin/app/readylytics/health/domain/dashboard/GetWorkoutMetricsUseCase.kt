@@ -1,7 +1,6 @@
 package app.readylytics.health.domain.dashboard
 
 import app.readylytics.health.R
-import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
@@ -32,14 +31,17 @@ class GetWorkoutMetricsUseCase
                     return@invoke Result.success(WorkoutMetrics(null))
                 }
 
+                val strainRatio = metrics?.strainRatioRaw
+                val displayValue = metrics?.strainRatioDisplay
+
                 val strainRatioCard =
-                    summary.strainRatio?.let { strainRatio ->
+                    if (strainRatio != null && displayValue != null) {
                         createStrainRatioCard(
                             strainRatio = strainRatio,
-                            displayValue = metrics?.strainRatioDisplay ?: MetricFormatter.formatStrain(strainRatio),
+                            displayValue = displayValue,
                         )
-                    }
-                        ?: CardData(
+                    } else {
+                        CardData(
                             title = resourceProvider.getString(R.string.card_title_strain_ratio),
                             value = "—",
                             unit = "",
@@ -47,6 +49,7 @@ class GetWorkoutMetricsUseCase
                             action = DashboardAction.NAVIGATE_WORKOUTS,
                             tooltip = resourceProvider.getString(R.string.tooltip_strain_ratio),
                         )
+                    }
 
                 Result.success(WorkoutMetrics(strainRatioCard))
             } catch (e: Exception) {

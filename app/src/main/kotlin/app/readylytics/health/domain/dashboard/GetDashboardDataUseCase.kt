@@ -10,6 +10,7 @@ import app.readylytics.health.domain.model.BodyFatStatus
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.SleepSessionSummary
@@ -53,7 +54,7 @@ class GetDashboardDataUseCase
         ): Result<DashboardCards> =
             try {
                 val cardDataMap = calculateCardData(summary, prefs, date, lastSleepSession)
-                val paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries)
+                val paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries, prefs)
 
                 Result.success(
                     DashboardCards(
@@ -123,7 +124,7 @@ class GetDashboardDataUseCase
                 title = resourceProvider.getString(R.string.card_title_readiness),
                 value = m.readinessRounded?.toString() ?: "—",
                 unit = "",
-                status = summary.readinessScore?.let { scoreStatus(it) } ?: MetricStatus.CALIBRATING,
+                status = m.readinessRounded?.let { scoreStatus(it.toFloat()) } ?: MetricStatus.CALIBRATING,
                 action = DashboardAction.NAVIGATE_WORKOUTS,
                 tooltip = resourceProvider.getString(R.string.tooltip_readiness),
             )
@@ -178,12 +179,14 @@ class GetDashboardDataUseCase
         private fun buildPaiBreakdown(
             endDate: LocalDate,
             summaries: List<DailySummary>,
+            prefs: UserPreferences,
         ): List<Pair<String, Float>> {
             val fmt = DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
             return (6 downTo 0).map { daysBack ->
                 val day = endDate.minusDays(daysBack.toLong())
                 val entry = summaries.firstOrNull { it.date == day }
-                day.format(fmt) to (entry?.paiScore ?: 0f)
+                val pai = entry?.let { LoadSourceSelector.selectDailyPai(it, prefs.paiSourceMode) }
+                day.format(fmt) to (pai ?: 0f)
             }
         }
 

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.R
 import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.cache.DailyMetricCache
 import app.readylytics.health.domain.dashboard.CardConfiguration
@@ -142,6 +143,7 @@ class DashboardViewModel
                             stepGoal = basicInputs.userPreferences.stepGoal,
                             recentDays = basicInputs.paiSummaries,
                             nowMinutesOfDay = nowMinutesOfDayFor(selectedDate),
+                            prefs = basicInputs.userPreferences,
                         ),
                     )
                 } ?: emptyList()
@@ -175,6 +177,7 @@ class DashboardViewModel
                 visibleInsightQueue = derived.visibleQueue,
                 dismissedInsightCount = derived.dismissedCount,
                 goalSleepHours = basicInputs.userPreferences.goalSleepHours,
+                userPreferences = basicInputs.userPreferences,
             )
         }
 
@@ -331,6 +334,7 @@ data class DashboardUiState(
     val visibleInsightQueue: List<InsightType> = emptyList(),
     val dismissedInsightCount: Int = 0,
     val goalSleepHours: Float = 8f,
+    val userPreferences: UserPreferences = UserPreferences(),
 )
 
 @Immutable

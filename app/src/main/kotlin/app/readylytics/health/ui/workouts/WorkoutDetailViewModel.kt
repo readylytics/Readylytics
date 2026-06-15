@@ -3,6 +3,7 @@ package app.readylytics.health.ui.workouts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
@@ -107,11 +108,12 @@ class WorkoutDetailViewModel
                         .toEpochMilli()
                 val thirtyDaySummaries = dailySummaryRepository.getSince(thirtyDaysAgo)
 
-                val paiBreakdown = DailyPaiBreakdownMapper.mapDailyBreakdown(workoutDate, thirtyDaySummaries)
+                val prefs = settingsRepo.userPreferences.first()
+                val paiBreakdown =
+                    DailyPaiBreakdownMapper.mapDailyBreakdown(workoutDate, thirtyDaySummaries, prefs.paiSourceMode)
 
                 val recoveryMetrics = RecoveryMetricsMapper.mapRecoveryMetrics(allSamples, workout.endTime, endHr)
 
-                val prefs = settingsRepo.userPreferences.first()
                 val workoutSamples = dbSamples.filter { it.timestamp <= workoutEndInstant }
                 val displayMetrics =
                     getWorkoutDisplayMetricsUseCase.execute(
@@ -135,7 +137,7 @@ class WorkoutDetailViewModel
                         hrr1Min = recoveryMetrics.hrr1Min,
                         hrr2Min = recoveryMetrics.hrr2Min,
                         hrr3Min = recoveryMetrics.hrr3Min,
-                        totalPai = summary?.totalPai,
+                        totalPai = summary?.let { LoadSourceSelector.selectTotalPai(it, prefs.paiSourceMode) },
                         paiDailyBreakdown = paiBreakdown,
                         computedTrimp = displayMetrics.computedTrimp.takeIf { trimp -> trimp > 0 },
                         gainedStrain = displayMetrics.gainedStrain,

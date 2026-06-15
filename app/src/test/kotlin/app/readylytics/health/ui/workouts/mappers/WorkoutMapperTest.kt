@@ -1,6 +1,7 @@
 package app.readylytics.health.ui.workouts.mappers
 
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.ui.workouts.HeartRatePoint
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -101,7 +102,7 @@ class WorkoutMapperTest {
         val today = LocalDate.of(2026, 5, 16)
         val summaries = emptyList<DailySummary>()
 
-        val result = DailyPaiBreakdownMapper.mapDailyBreakdown(today, summaries)
+        val result = DailyPaiBreakdownMapper.mapDailyBreakdown(today, summaries, LoadSourceMode.WORKOUT_ONLY)
 
         assertEquals(7, result.size)
         assertEquals(0f, result[0].second)
@@ -113,10 +114,10 @@ class WorkoutMapperTest {
         val today = LocalDate.of(2026, 5, 16)
         val summaries =
             listOf(
-                DailySummary(date = today, paiScore = 85f, totalPai = 85f),
+                DailySummary(date = today, paiWorkoutOnly = 85f, totalPaiWorkoutOnly = 85f),
             )
 
-        val result = DailyPaiBreakdownMapper.mapDailyBreakdown(today, summaries)
+        val result = DailyPaiBreakdownMapper.mapDailyBreakdown(today, summaries, LoadSourceMode.WORKOUT_ONLY)
 
         assertEquals(7, result.size)
         assertEquals(85f, result[6].second)

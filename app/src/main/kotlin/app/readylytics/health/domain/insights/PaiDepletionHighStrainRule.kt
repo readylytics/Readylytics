@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.insights
 
 import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.domain.model.LoadSourceSelector
 
 /**
  * Flags a depleted rolling PAI total occurring alongside a high
@@ -9,10 +10,11 @@ import app.readylytics.health.domain.model.InsightType
  */
 class PaiDepletionHighStrainRule : InsightRule {
     override fun evaluate(context: InsightContext): InsightFinding? {
-        val totalPai = context.today.totalPai ?: return null
+        val totalPai = LoadSourceSelector.selectTotalPai(context.today, context.prefs.paiSourceMode) ?: return null
         if (totalPai >= InsightConstants.PAI_DEPLETION_THRESHOLD) return null
 
-        val strainRatio = context.today.strainRatio ?: 0f
+        val strainRatio =
+            LoadSourceSelector.selectStrainRatio(context.today, context.prefs.strainLoadSourceMode) ?: 0f
         if (strainRatio <= InsightConstants.PAI_DEPLETION_STRAIN_RATIO_THRESHOLD) return null
 
         return InsightFinding(

@@ -124,7 +124,7 @@ fun WorkoutStatsSection(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val strainRatio = uiState.latestSummary?.strainRatio
+                    val strainRatio = uiState.latestMetrics?.strainRatioRaw
                     val strainStatus = strainRatio?.strainRatioStatus() ?: MetricStatus.CALIBRATING
                     val strainTooltip = stringResource(R.string.tooltip_strain_ratio)
                     M3ScoreDial(
@@ -137,7 +137,7 @@ fun WorkoutStatsSection(
                         modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
                     )
                     M3ScoreDial(
-                        score = uiState.latestSummary?.readinessScore,
+                        score = uiState.latestMetrics?.readinessRounded?.toFloat(),
                         label = stringResource(R.string.card_title_readiness),
                         displayText = uiState.latestMetrics?.readinessRounded?.toString() ?: "—",
                         tooltipDescription = stringResource(R.string.tooltip_readiness),
@@ -197,7 +197,7 @@ fun WorkoutStatsSection(
                         Spacer(Modifier.height(12.dp))
                         PaiWeeklyBar(
                             dailyBreakdown = uiState.paiDailyBreakdown,
-                            totalPai = uiState.latestSummary?.totalPai ?: 0f,
+                            totalPai = uiState.latestMetrics?.paiRounded?.toFloat() ?: 0f,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

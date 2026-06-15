@@ -22,6 +22,7 @@ data class DailyMetrics(
     val hrvBaselineMeanRaw: Float? = null,
     val hrvBaselineSdRaw: Float? = null,
     val rhrSnapshotRaw: Float? = null,
+    val strainRatioRaw: Float? = null,
     // --- Rounded display integers ---
     val nocturnalRhrRounded: Int? = null,
     val nocturnalHrvRounded: Int? = null,
@@ -54,6 +55,9 @@ data class DailyMetrics(
     val bloodPressureDisplay: String? = null,
     val deepSleepPercentDisplay: String? = null,
     val remSleepPercentDisplay: String? = null,
+    // --- Load source selection flags ---
+    val needsRecalc: Boolean = false,
+    val readinessLowConfidence: Boolean = false,
 )
 
 /**

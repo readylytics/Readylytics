@@ -25,6 +25,7 @@ import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.scoring.PaiSourceModeBootstrapUseCase
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.logD
@@ -69,6 +70,7 @@ class HealthSyncUseCase
         private val scoringRepository: ScoringRepository,
         private val transactionRunner: app.readylytics.health.domain.repository.TransactionRunner,
         private val sessionLinkReconciler: SessionLinkReconciler,
+        private val paiSourceModeBootstrapUseCase: PaiSourceModeBootstrapUseCase,
     ) {
         private val syncMutex = Mutex()
 
@@ -96,6 +98,8 @@ class HealthSyncUseCase
                         val zoneId = ZoneId.systemDefault()
                         // Migrate any legacy global "primary device" into the per-data-type map.
                         settingsRepo.migrateDeviceSelectionIfNeeded()
+                        // One-time bootstrap of paiSourceMode for existing users (no-op after first run).
+                        paiSourceModeBootstrapUseCase()
                         val initialPrefs = settingsRepo.userPreferences.first()
 
                         updateCalculatedMetrics(initialPrefs)

@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.insights.detail
 
 import app.readylytics.health.domain.insights.InsightContext
-import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.LoadSourceSelector
 import java.time.LocalDate
 
 enum class WorkoutIntensityCategory {
@@ -37,12 +37,13 @@ data class DailyInsightContext(
 ) {
     companion object {
         fun from(context: InsightContext): DailyInsightContext {
+            val mode = context.prefs.strainLoadSourceMode
             val recentBeforeToday =
                 context.recentDays
                     .filter { it.date < context.today.date }
                     .sortedByDescending { it.date }
             val yesterday = recentBeforeToday.firstOrNull()
-            val validLoads = recentBeforeToday.mapNotNull(DailySummary::totalTrimp)
+            val validLoads = recentBeforeToday.mapNotNull { LoadSourceSelector.selectTrimp(it, mode) }
             val acute7dLoad =
                 validLoads
                     .take(7)
@@ -72,9 +73,9 @@ data class DailyInsightContext(
                 zLnHrv = context.today.zLnHrv,
                 zRhr = context.today.zRhr,
                 rhrDeltaBpm = context.today.readinessResult.diagnostics.rhrDeltaBpm,
-                readinessScore = context.today.readinessScore,
-                yesterdayTrimp = yesterday?.totalTrimp,
-                strainRatio = context.today.strainRatio,
+                readinessScore = LoadSourceSelector.selectReadiness(context.today, mode),
+                yesterdayTrimp = yesterday?.let { LoadSourceSelector.selectTrimp(it, mode) },
+                strainRatio = LoadSourceSelector.selectStrainRatio(context.today, mode),
                 acute7dLoad = acute7dLoad,
                 chronic28dLoad = chronic28dLoad,
                 stepCount = context.today.stepCount,

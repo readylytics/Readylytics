@@ -928,6 +928,7 @@
     <string name="insight_strong_recovery_signal_body">Your HRV and resting heart rate were unusually favorable compared with your baseline.</string>
     <string name="insight_load_spike_recovery_strain_title">Training Load May Be Affecting Recovery</string>
     <string name="insight_load_spike_recovery_strain_body">Your recent training load is high, and your recovery markers show signs of strain.</string>
+    <string name="insight_load_spike_recovery_strain_body_everyday">Your recent daily physiological load is high, and your recovery markers show signs of strain.</string>
     <string name="insight_restore_dismissed">Restore dismissed insights (%1$d)</string>
     <string name="insight_dismiss_description">Dismiss health insight</string>
     <string name="insight_rerun_description">Restore dismissed health insights</string>

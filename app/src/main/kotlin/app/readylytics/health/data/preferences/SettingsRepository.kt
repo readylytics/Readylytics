@@ -158,6 +158,9 @@ class SettingsRepository
 
         suspend fun initializeInstallDateIfUnset() = sync.initializeInstallDateIfUnset()
 
+        suspend fun bootstrapPaiSourceModeIfUnset(hasWorkoutOnlyHistory: Boolean) =
+            sync.bootstrapPaiSourceModeIfUnset(hasWorkoutOnlyHistory)
+
         suspend fun updateInstallDate(dateTimeMs: Long) = sync.updateInstallDate(dateTimeMs)
 
         suspend fun updateSyncPreference(pref: SyncPreference) = sync.updateSyncPreference(pref)

@@ -160,6 +160,9 @@ interface DailySummaryDao {
     @Query("SELECT strainRatio FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
     suspend fun getPreciseStrainRatio(dateMidnightMs: Long): Double?
 
+    @Query("SELECT EXISTS(SELECT 1 FROM daily_summaries WHERE trimpWorkoutOnly IS NOT NULL LIMIT 1)")
+    suspend fun hasAnyWorkoutOnlyTrimpData(): Boolean
+
     @Query(
         "SELECT (dateMidnightMs + :tzOffsetMs) / 86400000 AS epochDay, trimpEverydayHr AS dailyTrimp " +
             "FROM daily_summaries WHERE dateMidnightMs >= :fromMs AND dateMidnightMs < :toMs " +

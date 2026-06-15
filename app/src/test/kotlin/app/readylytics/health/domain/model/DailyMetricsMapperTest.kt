@@ -32,7 +32,8 @@ class DailyMetricsMapperTest {
 
     @Test
     fun `pai 74_6 rounds to 75 (not truncated)`() {
-        val summary = DailySummary(date = date, totalPai = 74.6f)
+        // Default paiSourceMode is EVERYDAY_HEART_RATE.
+        val summary = DailySummary(date = date, totalPaiEverydayHr = 74.6f)
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
         assertEquals(75, metrics.paiRounded)
     }
@@ -46,14 +47,16 @@ class DailyMetricsMapperTest {
 
     @Test
     fun `readiness is rounded to integer`() {
-        val summary = DailySummary(date = date, readinessScore = 81.5f)
+        // Default strainLoadSourceMode is WORKOUT_ONLY.
+        val summary = DailySummary(date = date, readinessWorkoutOnly = 81.5f)
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
         assertEquals(82, metrics.readinessRounded)
     }
 
     @Test
     fun `strain ratio display uses canonical two decimal formatting`() {
-        val summary = DailySummary(date = date, strainRatio = 0.365f)
+        // Default strainLoadSourceMode is WORKOUT_ONLY.
+        val summary = DailySummary(date = date, strainRatioWorkoutOnly = 0.365f)
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
         assertEquals("0.37", metrics.strainRatioDisplay)
     }

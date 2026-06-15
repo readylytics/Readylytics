@@ -1,6 +1,8 @@
 package app.readylytics.health.ui.insights
 
 import android.content.res.Resources
+import app.readylytics.health.R
+import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.CauseRankHint
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.insights.detail.InsightCause
@@ -15,14 +17,24 @@ class InsightDetailRepository(
     fun getDetail(
         id: InsightType,
         context: DailyInsightContext,
+        params: InsightParams = InsightParams.None,
     ): InsightDetailContent {
         val spec = requireNotNull(InsightDetailResourceSpec.forType(id)) { "Missing insight detail for $id" }
         val causes = resources.getStringArray(spec.causesArrayRes).map(::parseCause)
+        val cardDescriptionRes =
+            if (id == InsightType.LOAD_SPIKE_RECOVERY_STRAIN &&
+                params is InsightParams.LoadSpikeRecoveryStrain &&
+                params.everydayMode
+            ) {
+                R.string.insight_load_spike_recovery_strain_body_everyday
+            } else {
+                spec.cardDescriptionRes
+            }
         return InsightDetailContent(
             id = id,
             type = spec.type,
             title = resources.getString(spec.titleRes),
-            cardDescription = resources.getString(spec.cardDescriptionRes),
+            cardDescription = resources.getString(cardDescriptionRes),
             observedSignalTitle = resources.getString(spec.observedSignalTitleRes),
             observedSignal = resources.getString(spec.observedSignalRes),
             meaningTitle = spec.meaningTitleRes?.let(resources::getString),

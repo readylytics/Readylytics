@@ -41,6 +41,7 @@ object DailyMetricsMapper {
             hrvBaselineMeanRaw = summary.hrvMuMssd,
             hrvBaselineSdRaw = summary.hrvSigmaMssd,
             rhrSnapshotRaw = summary.rhrBpm,
+            strainRatioRaw = LoadSourceSelector.selectStrainRatio(summary, prefs.strainLoadSourceMode),
             // Rounded display ints
             nocturnalRhrRounded = summary.restingHeartRate,
             nocturnalHrvRounded = summary.nocturnalHrv,
@@ -48,12 +49,12 @@ object DailyMetricsMapper {
             rhrBaselineRounded = rhrBaselineRounded,
             hrvBaselineRounded = hrvBaselineRounded,
             sleepScoreRounded = summary.sleepScore?.roundToInt(),
-            readinessRounded = summary.readinessScore?.roundToInt(),
-            loadScoreRounded = summary.loadScore?.roundToInt(),
+            readinessRounded = LoadSourceSelector.selectReadiness(summary, prefs.strainLoadSourceMode)?.roundToInt(),
+            loadScoreRounded = LoadSourceSelector.selectLoadScore(summary, prefs.strainLoadSourceMode)?.roundToInt(),
             restorationRounded = summary.sRest?.roundToInt(),
-            trimpRounded = summary.totalTrimp?.roundToInt(),
-            paiRounded = summary.totalPai?.roundToInt(),
-            paiDayScoreRounded = summary.paiScore?.roundToInt(),
+            trimpRounded = LoadSourceSelector.selectTrimp(summary, prefs.strainLoadSourceMode)?.roundToInt(),
+            paiRounded = LoadSourceSelector.selectTotalPai(summary, prefs.paiSourceMode)?.roundToInt(),
+            paiDayScoreRounded = LoadSourceSelector.selectDailyPai(summary, prefs.paiSourceMode)?.roundToInt(),
             spo2Rounded = summary.avgSleepingSpo2?.roundToInt(),
             // Baseline diffs + arrows
             rhrBaselineDiff = diff(summary.restingHeartRate, rhrBaselineRounded),
@@ -67,12 +68,17 @@ object DailyMetricsMapper {
             weightKgDisplay = summary.weightKg?.let { format1(it) },
             weightLbsDisplay = summary.weightKg?.let { format1(it * UnitConverter.KG_TO_LBS) },
             bodyFatDisplay = summary.bodyFatPercent?.let { "${format1(it)}%" },
-            strainRatioDisplay = summary.strainRatio?.let { MetricFormatter.formatStrain(it) },
+            strainRatioDisplay =
+                LoadSourceSelector.selectStrainRatio(summary, prefs.strainLoadSourceMode)?.let {
+                    MetricFormatter.formatStrain(it)
+                },
             zLnHrvDisplay = summary.zLnHrv?.let { format2(it) },
             hrvSigmaDisplay = summary.hrvSigma?.let { format3(it) },
             bloodPressureDisplay = formatBloodPressure(summary.bloodPressureSystolic, summary.bloodPressureDiastolic),
             deepSleepPercentDisplay = summary.deepSleepPercent?.let { "${it.roundToInt()}%" },
             remSleepPercentDisplay = summary.remSleepPercent?.let { "${it.roundToInt()}%" },
+            needsRecalc = LoadSourceSelector.needsRecalc(summary, prefs),
+            readinessLowConfidence = LoadSourceSelector.readinessLowConfidence(summary, prefs),
         )
     }
 
