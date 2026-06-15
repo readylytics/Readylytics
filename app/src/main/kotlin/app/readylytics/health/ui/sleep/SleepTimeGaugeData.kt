@@ -38,8 +38,7 @@ internal fun buildSleepTimeGaugeData(
 internal fun actualSleepMinutes(session: SleepSessionData?): Int? =
     session?.let { (it.durationMinutes - it.awakeMinutes).coerceAtLeast(0) }
 
-private fun sleepGoalMinutes(goalSleepHours: Float): Int =
-    (goalSleepHours * 60f).toInt().coerceAtLeast(0)
+private fun sleepGoalMinutes(goalSleepHours: Float): Int = (goalSleepHours * 60f).toInt().coerceAtLeast(0)
 
 private fun sleepTimeGaugeMaxMinutes(goalMinutes: Int): Float =
     if (goalMinutes > 0) {
