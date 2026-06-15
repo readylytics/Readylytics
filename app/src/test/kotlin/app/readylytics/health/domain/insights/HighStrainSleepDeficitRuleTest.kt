@@ -1,7 +1,6 @@
 package app.readylytics.health.domain.insights
 
 import app.readylytics.health.domain.model.InsightType
-import app.readylytics.health.domain.model.RecoveryFlag
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -11,23 +10,23 @@ class HighStrainSleepDeficitRuleTest {
     private val rule = HighStrainSleepDeficitRule()
 
     private fun context(
-        recoveryFlags: Set<RecoveryFlag> = setOf(RecoveryFlag.ILLNESS_ONSET),
+        zLnHrv: Float? = -1.2f,
         strainRatio: Float? = 1.5f,
         sleepDurationMinutes: Int? = 360,
         goalSleepMinutes: Int = 480,
     ) = InsightContext(
         today =
             dailySummary(
-                recoveryFlags = recoveryFlags,
                 strainRatio = strainRatio,
                 sleepDurationMinutes = sleepDurationMinutes,
+                zLnHrv = zLnHrv,
             ),
         circadianResult = CircadianConsistencyResult.MissingData,
         goalSleepMinutes = goalSleepMinutes,
     )
 
     @Test
-    fun `fires when illness onset, high strain ratio and sleep deficit all hold`() {
+    fun `fires when high strain ratio, sleep deficit and recovery strain marker all hold`() {
         val finding = rule.evaluate(context())
 
         assertEquals(InsightType.HIGH_STRAIN_SLEEP_DEFICIT, finding?.type)
@@ -38,8 +37,8 @@ class HighStrainSleepDeficitRuleTest {
     }
 
     @Test
-    fun `does not fire without illness onset flag`() {
-        assertNull(rule.evaluate(context(recoveryFlags = emptySet())))
+    fun `does not fire without recovery strain marker`() {
+        assertNull(rule.evaluate(context(zLnHrv = 0.0f)))
     }
 
     @Test
@@ -61,5 +60,25 @@ class HighStrainSleepDeficitRuleTest {
     @Test
     fun `does not fire when sleep duration is null`() {
         assertNull(rule.evaluate(context(sleepDurationMinutes = null)))
+    }
+
+    @Test
+    fun `does not require illness onset when high strain short sleep and recovery strain are present`() {
+        val context =
+            InsightContext(
+                today =
+                    dailySummary(
+                        recoveryFlags = emptySet(),
+                        strainRatio = 1.4f,
+                        sleepDurationMinutes = 360,
+                        zLnHrv = -1.2f,
+                    ),
+                circadianResult = CircadianConsistencyResult.MissingData,
+                goalSleepMinutes = 480,
+            )
+
+        val finding = HighStrainSleepDeficitRule().evaluate(context)
+
+        assertEquals(InsightType.HIGH_STRAIN_SLEEP_DEFICIT, finding?.type)
     }
 }

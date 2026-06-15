@@ -8,6 +8,7 @@ object InsightEngine {
     private val rules: List<InsightRule> =
         listOf(
             CircadianShiftRecoveryMissRule(),
+            LoadSpikeRecoveryStrainRule(),
             HighStrainSleepDeficitRule(),
             LateNadirShortSleepRule(),
             HrvDropLowSpo2Rule(),
