@@ -3,6 +3,7 @@ package app.readylytics.health.domain.model
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import kotlin.test.assertFailsWith
 
 class InsightTypeTest {
     @Test
@@ -26,5 +27,12 @@ class InsightTypeTest {
     @Test
     fun `exposes load spike recovery strain insight type`() {
         assertEquals(InsightType.LOAD_SPIKE_RECOVERY_STRAIN, InsightType.valueOf("LOAD_SPIKE_RECOVERY_STRAIN"))
+    }
+
+    @Test
+    fun `does not expose overreaching insight type`() {
+        assertFailsWith<IllegalArgumentException> {
+            InsightType.valueOf("OVERREACHING")
+        }
     }
 }

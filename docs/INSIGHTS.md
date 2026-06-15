@@ -289,6 +289,29 @@ Generated when:
 
 ---
 
+## Training Load May Be Affecting Recovery
+
+Identifier:
+LOAD_SPIKE_RECOVERY_STRAIN
+
+Description:
+Your recent training load is high, and your recovery markers show signs of strain.
+
+Trigger:
+Generated when:
+- A load spike is present:
+  - `strainRatio` > `STRAIN_HIGH_RATIO_THRESHOLD` (1.3f), OR
+  - `yesterdayTrimp` >= `120.0f`, OR
+  - acute 7-day load / chronic 28-day load >= `1.5f` with enough history.
+- Recovery strain is also present through at least one recovery marker:
+  - low HRV compared with baseline,
+  - elevated resting heart rate,
+  - readiness score < `60.0f`, OR
+  - short sleep compared with goal.
+- This replaces overreaching-style user-visible behavior. It does not diagnose overtraining.
+
+---
+
 ## Workout Impact
 
 Identifier:

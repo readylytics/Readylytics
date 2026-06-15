@@ -925,8 +925,6 @@
     <string name="insight_late_nadir_body">Your heart rate nadir occurred later than usual last night, suggesting delayed recovery.</string>
     <string name="insight_sick_indicator_title">Potential Illness Detected</string>
     <string name="insight_sick_indicator_body">Elevated resting heart rate and suppressed HRV indicate your body may be fighting something off.</string>
-    <string name="insight_overreaching_title">Signs of Overreaching</string>
-    <string name="insight_overreaching_body">Your acute load is significantly higher than your chronic baseline. Consider a recovery day.</string>
     <string name="insight_strong_recovery_signal_title">Strong Recovery Signal</string>
     <string name="insight_strong_recovery_signal_body">Your HRV and resting heart rate were unusually favorable compared with your baseline.</string>
     <string name="insight_load_spike_recovery_strain_title">Training Load May Be Affecting Recovery</string>
