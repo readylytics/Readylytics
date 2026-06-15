@@ -110,7 +110,7 @@ class ScoringComponentsTest {
             app.readylytics.health.domain.scoring
                 .ScoringConfigFactory()
         val config = factory.build(prefs, java.time.LocalDate.now(), java.time.LocalDate.now())
-        assertEquals(1.2f, config.emergencyFlags.overreachingZHrvThreshold)
+        assertEquals(1.2f, config.emergencyFlags.strongRecoveryZHrvThreshold)
         assertEquals(-1.2f, config.emergencyFlags.illnessZHrvThreshold)
     }
 
@@ -124,7 +124,7 @@ class ScoringComponentsTest {
             app.readylytics.health.domain.scoring
                 .ScoringConfigFactory()
         val config = factory.build(prefs, java.time.LocalDate.now(), java.time.LocalDate.now())
-        assertEquals(1.5f, config.emergencyFlags.overreachingZHrvThreshold)
+        assertEquals(1.5f, config.emergencyFlags.strongRecoveryZHrvThreshold)
         assertEquals(-1.5f, config.emergencyFlags.illnessZHrvThreshold)
     }
 
@@ -138,7 +138,7 @@ class ScoringComponentsTest {
             app.readylytics.health.domain.scoring
                 .ScoringConfigFactory()
         val config = factory.build(prefs, java.time.LocalDate.now(), java.time.LocalDate.now())
-        assertEquals(2.0f, config.emergencyFlags.overreachingZHrvThreshold)
+        assertEquals(2.0f, config.emergencyFlags.strongRecoveryZHrvThreshold)
         assertEquals(-2.0f, config.emergencyFlags.illnessZHrvThreshold)
     }
 }

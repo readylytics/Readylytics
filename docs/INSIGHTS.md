@@ -130,19 +130,20 @@ Generated when:
 
 ---
 
-## Signs of Overreaching
+## Strong Recovery Signal
 
 Identifier:
-OVERREACHING
+STRONG_RECOVERY_SIGNAL
 
 Description:
-Your acute load is significantly higher than your chronic baseline. Consider a recovery day.
+Your HRV and resting heart rate were unusually favorable compared with your baseline.
 
 Trigger:
 Generated when:
-- `RecoveryFlag.OVERREACHING` is present in today's recovery flags.
-- Where `RecoveryFlag.OVERREACHING` is triggered when the overreaching condition is met on both **today and yesterday (two consecutive nights)**:
-  - `zLnHrv` > `overreachingZHrvThreshold` (1.5f) AND `zRhr` < `overreachingZRhrThreshold` (-2.0f).
+- `RecoveryFlag.STRONG_RECOVERY_SIGNAL` is present in today's recovery flags.
+- Where `RecoveryFlag.STRONG_RECOVERY_SIGNAL` is triggered when the favorable recovery condition is met on both **today and yesterday (two consecutive nights)**:
+  - `zLnHrv` > `strongRecoveryZHrvThreshold` (1.5f) AND `zRhr` < `strongRecoveryZRhrThreshold` (-2.0f).
+- This signal is informational only. It does not cap readiness and does not mean the app emits user-visible `OVERREACHING`.
 
 ---
 

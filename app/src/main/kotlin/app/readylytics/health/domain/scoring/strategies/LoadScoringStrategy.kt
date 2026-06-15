@@ -137,13 +137,13 @@ class LoadScoringStrategy
                 if (todayIllness && prevIllness) flags += RecoveryFlag.ILLNESS_ONSET
 
                 val todayStrongRecovery =
-                    zLnHrv > thresholds.overreachingZHrvThreshold &&
-                        zRhr < thresholds.overreachingZRhrThreshold
+                    zLnHrv > thresholds.strongRecoveryZHrvThreshold &&
+                        zRhr < thresholds.strongRecoveryZRhrThreshold
                 val prevStrongRecovery =
                     yesterdayZLnHrv != null &&
                         yesterdayZRhr != null &&
-                        yesterdayZLnHrv > thresholds.overreachingZHrvThreshold &&
-                        yesterdayZRhr < thresholds.overreachingZRhrThreshold
+                        yesterdayZLnHrv > thresholds.strongRecoveryZHrvThreshold &&
+                        yesterdayZRhr < thresholds.strongRecoveryZRhrThreshold
                 if (todayStrongRecovery && prevStrongRecovery && RecoveryFlag.ILLNESS_ONSET !in flags) {
                     flags += RecoveryFlag.STRONG_RECOVERY_SIGNAL
                 }
