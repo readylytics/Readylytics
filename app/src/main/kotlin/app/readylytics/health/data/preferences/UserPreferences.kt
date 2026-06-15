@@ -1,5 +1,6 @@
 package app.readylytics.health.data.preferences
 
+import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.LocalDate
 import java.time.YearMonth
@@ -91,6 +92,8 @@ data class UserPreferences(
      */
     val scoringZoneId: String = SettingsDefaults.SCORING_ZONE_ID,
     val deviceChangeNoticeDismissed: Boolean = SettingsDefaults.DEVICE_CHANGE_NOTICE_DISMISSED,
+    val strainLoadSourceMode: LoadSourceMode = SettingsDefaults.STRAIN_LOAD_SOURCE_MODE,
+    val paiSourceMode: LoadSourceMode = SettingsDefaults.PAI_SOURCE_MODE,
 )
 
 /**
@@ -244,6 +247,18 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
             },
         scoringZoneId = scoringZoneId,
         deviceChangeNoticeDismissed = deviceChangeNoticeDismissed,
+        strainLoadSourceMode =
+            when (strainLoadSourceMode) {
+                LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY -> LoadSourceMode.WORKOUT_ONLY
+                LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE -> LoadSourceMode.EVERYDAY_HEART_RATE
+                else -> SettingsDefaults.STRAIN_LOAD_SOURCE_MODE
+            },
+        paiSourceMode =
+            when (paiSourceMode) {
+                LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY -> LoadSourceMode.WORKOUT_ONLY
+                LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE -> LoadSourceMode.EVERYDAY_HEART_RATE
+                else -> SettingsDefaults.PAI_SOURCE_MODE
+            },
     )
 }
 

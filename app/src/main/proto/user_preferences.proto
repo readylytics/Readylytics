@@ -48,6 +48,12 @@ enum FallbackThemeColorProto {
     FALLBACK_ICON_ELEMENTS = 4;
 }
 
+enum LoadSourceModeProto {
+    LOAD_SOURCE_UNSET = 0;
+    LOAD_SOURCE_WORKOUT_ONLY = 1;
+    LOAD_SOURCE_EVERYDAY_HEART_RATE = 2;
+}
+
 
 message UserPreferencesProto {
     float goal_sleep_hours = 1;
@@ -179,6 +185,16 @@ message UserPreferencesProto {
     // Permanent dismissal of the "press Apply to resync" info dialog shown
     // when the user changes a Data Sources device selection.
     bool device_change_notice_dismissed = 72;
+
+    // Source of heart-rate data used for Strain Ratio (load score) computations.
+    // LOAD_SOURCE_UNSET (proto3 zero value) = never explicitly set; resolves to
+    // SettingsDefaults.STRAIN_LOAD_SOURCE_MODE at the domain read boundary.
+    LoadSourceModeProto strain_load_source_mode = 73;
+
+    // Source of heart-rate data used for PAI computations.
+    // LOAD_SOURCE_UNSET (proto3 zero value) = never explicitly set; resolves to
+    // SettingsDefaults.PAI_SOURCE_MODE at the domain read boundary.
+    LoadSourceModeProto pai_source_mode = 74;
 }
 
 enum TrimpMethodProto {

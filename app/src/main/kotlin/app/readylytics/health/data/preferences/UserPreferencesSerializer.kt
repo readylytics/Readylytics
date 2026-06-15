@@ -2,6 +2,7 @@ package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.Serializer
+import app.readylytics.health.domain.scoring.LoadSourceMode
 import com.google.protobuf.InvalidProtocolBufferException
 import java.io.InputStream
 import java.io.OutputStream
@@ -179,6 +180,18 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         when (domain.unitSystem) {
             UnitSystem.METRIC -> UnitSystemProto.UNIT_METRIC
             UnitSystem.IMPERIAL -> UnitSystemProto.UNIT_IMPERIAL
+        },
+    )
+    builder.setStrainLoadSourceMode(
+        when (domain.strainLoadSourceMode) {
+            LoadSourceMode.WORKOUT_ONLY -> LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
+            LoadSourceMode.EVERYDAY_HEART_RATE -> LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
+        },
+    )
+    builder.setPaiSourceMode(
+        when (domain.paiSourceMode) {
+            LoadSourceMode.WORKOUT_ONLY -> LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
+            LoadSourceMode.EVERYDAY_HEART_RATE -> LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
         },
     )
 

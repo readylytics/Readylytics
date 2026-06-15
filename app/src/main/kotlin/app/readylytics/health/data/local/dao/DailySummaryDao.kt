@@ -1,6 +1,7 @@
 package app.readylytics.health.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.MapColumn
 import androidx.room.Query
 import androidx.room.Upsert
 import app.readylytics.health.data.local.entity.DailySummaryEntity
@@ -158,4 +159,20 @@ interface DailySummaryDao {
 
     @Query("SELECT strainRatio FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
     suspend fun getPreciseStrainRatio(dateMidnightMs: Long): Double?
+
+    @Query(
+        "SELECT (dateMidnightMs + :tzOffsetMs) / 86400000 AS epochDay, trimpEverydayHr AS dailyTrimp " +
+            "FROM daily_summaries WHERE dateMidnightMs >= :fromMs AND dateMidnightMs < :toMs " +
+            "AND trimpEverydayHr IS NOT NULL ORDER BY epochDay ASC",
+    )
+    suspend fun getEverydayTrimpByEpochDay(
+        fromMs: Long,
+        toMs: Long,
+        tzOffsetMs: Long,
+    ): Map<
+        @MapColumn(columnName = "epochDay")
+        Long,
+        @MapColumn(columnName = "dailyTrimp")
+        Float,
+    >
 }

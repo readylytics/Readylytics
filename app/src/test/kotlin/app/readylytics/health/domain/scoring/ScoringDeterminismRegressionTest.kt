@@ -142,12 +142,27 @@ class ScoringDeterminismRegressionTest {
                 )
             val run2 = repo.computeDailySummary(today)
 
-            assertEquals(run1.paiScore, run2.paiScore, "paiScore must be reproducible")
-            assertEquals(run1.totalPai, run2.totalPai, "totalPai must be reproducible")
-            assertEquals(run1.loadScore, run2.loadScore, "loadScore must be reproducible")
-            assertEquals(run1.strainRatio, run2.strainRatio, "strainRatio must be reproducible")
+            // US-03: derived outputs now live in the freshly-recomputed variant columns. The legacy
+            // columns are frozen passthroughs of the stored snapshot and are intentionally NOT
+            // recomputed, so reproducibility is asserted on the active variant columns instead.
+            assertEquals(run1.paiWorkoutOnly, run2.paiWorkoutOnly, "paiWorkoutOnly must be reproducible")
+            assertEquals(run1.totalPaiWorkoutOnly, run2.totalPaiWorkoutOnly, "totalPaiWorkoutOnly must be reproducible")
+            assertEquals(
+                run1.loadScoreWorkoutOnly,
+                run2.loadScoreWorkoutOnly,
+                "loadScoreWorkoutOnly must be reproducible",
+            )
+            assertEquals(
+                run1.strainRatioWorkoutOnly,
+                run2.strainRatioWorkoutOnly,
+                "strainRatioWorkoutOnly must be reproducible",
+            )
             assertEquals(run1.sleepScore, run2.sleepScore, "sleepScore must be reproducible")
-            assertEquals(run1.readinessScore, run2.readinessScore, "readinessScore must be reproducible")
+            assertEquals(
+                run1.readinessWorkoutOnly,
+                run2.readinessWorkoutOnly,
+                "readinessWorkoutOnly must be reproducible",
+            )
         }
 
     @Test

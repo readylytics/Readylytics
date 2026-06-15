@@ -101,4 +101,22 @@ class SettingsRepositoryTest {
             val prefs = repository.userPreferences.first()
             assertEquals(true, prefs.retentionDaysEnabled)
         }
+
+    /**
+     * US-03 acceptance criterion: switching a load-source preference must never write to
+     * daily_summaries. SettingsRepository (the sole owner of preference setters) has no
+     * DailySummaryDao dependency, so no preference setter can possibly trigger a summary write.
+     * This structural assertion guards against a future setter being given such a dependency.
+     */
+    @Test
+    fun `SettingsRepository has no DailySummaryDao dependency so pref switches never write summaries`() {
+        val constructorParamTypes =
+            SettingsRepository::class.java.declaredConstructors
+                .flatMap { it.parameterTypes.toList() }
+                .map { it.name }
+        assertEquals(
+            true,
+            constructorParamTypes.none { it.contains("DailySummaryDao") || it.contains("ScoringRepository") },
+        )
+    }
 }

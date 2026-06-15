@@ -46,6 +46,7 @@ class ComputeSleepMetricsUseCase
             prefs: UserPreferences,
             summary: DailySummaryEntity,
             loadScore: Float,
+            loadScoreEverydayHr: Float?,
             zoneId: ZoneId,
             rhrBaselineValue: Float,
             dayEndMs: Long,
@@ -188,6 +189,7 @@ class ComputeSleepMetricsUseCase
 
                 var sleepScore: Float? = null
                 var readinessScore: Float? = null
+                var readinessEverydayHr: Float? = null
                 var persistedZLnHrv: Float? = null
                 var persistedZRhr: Float? = null
                 var persistedFlags: String? = null
@@ -314,6 +316,10 @@ class ComputeSleepMetricsUseCase
 
                     readinessScore =
                         scoringCalculator.computeReadinessScore(sRest, sleepScore, loadScore, recoveryFlags)
+                    readinessEverydayHr =
+                        loadScoreEverydayHr?.let {
+                            scoringCalculator.computeReadinessScore(sRest, sleepScore, it, recoveryFlags)
+                        }
                     persistedZLnHrv = zHrv
                     persistedZRhr = zRhr
                     persistedFlags =
@@ -426,7 +432,9 @@ class ComputeSleepMetricsUseCase
                 Result.success(
                     summary.copy(
                         sleepScore = sleepScore,
-                        readinessScore = readinessScore,
+                        readinessScore = summary.readinessScore,
+                        readinessWorkoutOnly = readinessScore,
+                        readinessEverydayHr = readinessEverydayHr,
                         nocturnalHrv = if (sessionHrvSamples.isNotEmpty()) currentHrvMean.roundToInt() else null,
                         sleepDurationMinutes = session.durationMinutes,
                         deepSleepPercent =

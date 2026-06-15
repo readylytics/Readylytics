@@ -922,6 +922,51 @@ object DatabaseMigrations {
             }
         }
 
+    val MIGRATION_28_29 =
+        object : Migration(28, 29) {
+            private val alterSql =
+                listOf(
+                    "ALTER TABLE daily_summaries ADD COLUMN trimpWorkoutOnly REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN trimpEverydayHr REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN paiWorkoutOnly REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN paiEverydayHr REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN totalPaiWorkoutOnly REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN totalPaiEverydayHr REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN atlWorkoutOnly REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN atlEverydayHr REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN ctlWorkoutOnly REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN ctlEverydayHr REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN strainRatioWorkoutOnly REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN strainRatioEverydayHr REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN loadScoreWorkoutOnly REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN loadScoreEverydayHr REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN readinessWorkoutOnly REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN readinessEverydayHr REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN everydayCoverageMinutes INTEGER DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN everydayLoadConfidence TEXT DEFAULT NULL",
+                )
+
+            private val copySql =
+                listOf(
+                    "UPDATE daily_summaries SET trimpWorkoutOnly = totalTrimp WHERE totalTrimp IS NOT NULL",
+                    "UPDATE daily_summaries SET paiWorkoutOnly = paiScore WHERE paiScore IS NOT NULL",
+                    "UPDATE daily_summaries SET totalPaiWorkoutOnly = totalPai WHERE totalPai IS NOT NULL",
+                    "UPDATE daily_summaries SET strainRatioWorkoutOnly = strainRatio WHERE strainRatio IS NOT NULL",
+                    "UPDATE daily_summaries SET loadScoreWorkoutOnly = loadScore WHERE loadScore IS NOT NULL",
+                    "UPDATE daily_summaries SET readinessWorkoutOnly = readinessScore WHERE readinessScore IS NOT NULL",
+                )
+
+            private val sql = alterSql + copySql
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                sql.forEach { db.execSQL(it) }
+            }
+
+            override fun migrate(connection: SQLiteConnection) {
+                sql.forEach { connection.execSQL(it) }
+            }
+        }
+
     val all =
         arrayOf(
             MIGRATION_1_2,
@@ -952,5 +997,6 @@ object DatabaseMigrations {
             MIGRATION_25_26,
             MIGRATION_26_27,
             MIGRATION_27_28,
+            MIGRATION_28_29,
         )
 }

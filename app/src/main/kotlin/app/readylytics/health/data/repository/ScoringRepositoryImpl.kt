@@ -20,6 +20,8 @@ import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.scoring.BaselineComputer
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
+import app.readylytics.health.domain.scoring.EverydayHeartRateLoadCalculator
+import app.readylytics.health.domain.scoring.EverydayHrLoadInput
 import app.readylytics.health.domain.scoring.PaiCalculator
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
@@ -150,21 +152,59 @@ class ScoringRepositoryImpl
                     dailyTrimpRaw += workoutTrimp
                 }
 
+                // Sleep session is fetched here (before the everyday-HR block) because it provides
+                // the sleep interval(s) that the everyday-HR load calculator must exclude.
+                val session = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
+
+                // Everyday-HR load variant: full-day HR samples bucketed into waking, non-workout,
+                // non-sleep minutes (interval exclusion handled inside the calculator).
+                val everydayHrSamples =
+                    heartRateDao
+                        .getByTimeRange(dayMidnightMs, nextDayMidnightMs)
+                        .map { sample ->
+                            ComputeWorkoutTrimpUseCase.HeartRateSample(
+                                Instant.ofEpochMilli(sample.timestampMs),
+                                sample.beatsPerMinute,
+                            )
+                        }
+                val sleepIntervalsMs =
+                    if (session != null) listOf(LongRange(session.startTime, session.endTime)) else emptyList()
+                val workoutIntervalsMs = workouts.map { LongRange(it.startTime, it.endTime) }
+                val everydayResult =
+                    EverydayHeartRateLoadCalculator.calculate(
+                        EverydayHrLoadInput(
+                            dayStartMs = dayMidnightMs,
+                            dayEndMs = nextDayMidnightMs,
+                            hrSamples = everydayHrSamples,
+                            sleepIntervalsMs = sleepIntervalsMs,
+                            workoutIntervalsMs = workoutIntervalsMs,
+                            workoutOnlyTrimp = dailyTrimpRaw,
+                            rhrBaseline = rhrBaselineValue,
+                            hrMax = hrMax,
+                            prefs = prefs,
+                        ),
+                    )
+                val trimpEverydayHr = everydayResult.totalEverydayTrimp
+                val everydayCoverageMinutes = everydayResult.coverageMinutes
+                val everydayLoadConfidence = everydayResult.confidence.name
+
                 // Enforce 75-point daily cap. Standard PAI is pure load, no readiness penalty.
                 // Round daily PAI to 1 decimal place to ensure display consistency.
-                val dailyPaiRaw =
-                    PaiCalculator.calculateDailyPai(
-                        dailyTrimpRaw,
-                        frozenPaiScalingFactor ?: scoringConfig.paiScalingFactor,
-                    )
+                val scalingFactor = frozenPaiScalingFactor ?: scoringConfig.paiScalingFactor
+                val dailyPaiRaw = PaiCalculator.calculateDailyPai(dailyTrimpRaw, scalingFactor)
                 val dailyPai = round(dailyPaiRaw * 10f) / 10f
+                val dailyPaiEverydayHr =
+                    round(PaiCalculator.calculateDailyPai(trimpEverydayHr, scalingFactor) * 10f) / 10f
 
-                val last6DaysPai = sumPaiScoreLastSixDays(targetDate, zoneId)
+                val last6DaysPaiWorkoutOnly = sumPaiLastSixDays(targetDate, zoneId) { it.paiWorkoutOnly }
+                val last6DaysPaiEverydayHr = sumPaiLastSixDays(targetDate, zoneId) { it.paiEverydayHr }
                 // Total PAI is rounded to nearest integer to match the UI's simple sum of rounded daily values.
-                val totalPai7d = round(dailyPai + last6DaysPai)
+                val totalPaiWorkoutOnly = round(dailyPai + last6DaysPaiWorkoutOnly)
+                val totalPaiEverydayHr = round(dailyPaiEverydayHr + last6DaysPaiEverydayHr)
 
                 logD("ScoringRepository") {
-                    "Result - DailyTrimp: $dailyTrimpRaw, DailyPai: $dailyPai, Last6d: $last6DaysPai, Total7d: $totalPai7d"
+                    "Result - DailyTrimp: $dailyTrimpRaw, DailyPai: $dailyPai, " +
+                        "Last6d: $last6DaysPaiWorkoutOnly, Total7d: $totalPaiWorkoutOnly"
                 }
 
                 val latestWeight = weightRecordDao.getLatestUpTo(nextDayMidnightMs)
@@ -176,8 +216,14 @@ class ScoringRepositoryImpl
                         dailySummaryDao.getByDate(dayMidnightMs)
                             ?: DailySummaryEntity(dateMidnightMs = dayMidnightMs)
                     ).copy(
-                        paiScore = dailyPai,
-                        totalPai = totalPai7d,
+                        trimpWorkoutOnly = dailyTrimpRaw,
+                        trimpEverydayHr = trimpEverydayHr,
+                        paiWorkoutOnly = dailyPai,
+                        paiEverydayHr = dailyPaiEverydayHr,
+                        totalPaiWorkoutOnly = totalPaiWorkoutOnly,
+                        totalPaiEverydayHr = totalPaiEverydayHr,
+                        everydayCoverageMinutes = everydayCoverageMinutes,
+                        everydayLoadConfidence = everydayLoadConfidence,
                         weightKg = latestWeight?.weightKg,
                         bodyFatPercent = latestBodyFat?.bodyFatPercent,
                         bloodPressureSystolic = latestBP?.systolicMmHg,
@@ -188,7 +234,6 @@ class ScoringRepositoryImpl
                 val isCalibrated =
                     sleepSessionDao.countSince(calibrationFrom) >= ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
 
-                val session = sleepSessionDao.getSessionEndingInRange(dayMidnightMs, nextDayMidnightMs)
                 val avgSpo2 =
                     if (session != null) {
                         val spo2Samples = oxygenSaturationRecordDao.getByTimeRange(session.startTime, session.endTime)
@@ -286,8 +331,8 @@ class ScoringRepositoryImpl
                         scoringConfig.auditTrail.copy(
                             appliedSf = scoringConfig.paiScalingFactor,
                             physiologyProfile = prefs.physiologyProfile.name,
-                            paiTotalPre = last6DaysPai,
-                            paiTotalPost = summary.totalPai,
+                            paiTotalPre = last6DaysPaiWorkoutOnly,
+                            paiTotalPost = summary.totalPaiWorkoutOnly,
                         )
                     logD("ScoringConfig") { "Telemetry: $updatedAudit" }
 
@@ -305,7 +350,33 @@ class ScoringRepositoryImpl
                 val sr = scoringCalculator.computeStrainRatio(atl, ctl)
                 val loadScore = scoringCalculator.computeLoadScore(sr)
 
-                summary = summary.copy(loadScore = loadScore, strainRatio = sr, totalTrimp = dailyTrimpRaw)
+                // Everyday-HR ATL/CTL: build the series from the persisted everyday TRIMP column, then
+                // inject the current day's freshly computed value (not yet persisted). A defensive copy
+                // (toMutableMap) ensures the workout-only series above is never mutated/contaminated.
+                val epochDayToTrimpEveryday =
+                    dailySummaryDao.getEverydayTrimpByEpochDay(ctlFetchFrom, nextDayMidnightMs, tzOffsetMs)
+                val everydayTrimpByDate =
+                    epochDayToTrimpEveryday
+                        .mapKeys { (epochDay, _) -> LocalDate.ofEpochDay(epochDay) }
+                        .toMutableMap()
+                        .apply { put(targetDate, trimpEverydayHr) }
+
+                val ctlEverydayHr = scoringCalculator.computeCtlEmaWithDecay(everydayTrimpByDate, targetDate)
+                val atlEverydayHr = scoringCalculator.computeAtlEmaWithDecay(everydayTrimpByDate, targetDate)
+                val srEverydayHr = scoringCalculator.computeStrainRatio(atlEverydayHr, ctlEverydayHr)
+                val loadScoreEverydayHr = scoringCalculator.computeLoadScore(srEverydayHr)
+
+                summary =
+                    summary.copy(
+                        atlWorkoutOnly = atl,
+                        ctlWorkoutOnly = ctl,
+                        strainRatioWorkoutOnly = sr,
+                        loadScoreWorkoutOnly = loadScore,
+                        atlEverydayHr = atlEverydayHr,
+                        ctlEverydayHr = ctlEverydayHr,
+                        strainRatioEverydayHr = srEverydayHr,
+                        loadScoreEverydayHr = loadScoreEverydayHr,
+                    )
 
                 val computedHrvBaseline =
                     baselineComputer.computeHrvBaselineBetween(
@@ -324,6 +395,7 @@ class ScoringRepositoryImpl
                             prefs = prefs,
                             summary = summary,
                             loadScore = loadScore,
+                            loadScoreEverydayHr = loadScoreEverydayHr,
                             zoneId = zoneId,
                             rhrBaselineValue = rhrBaselineValue,
                             dayEndMs = nextDayMidnightMs,
@@ -359,8 +431,8 @@ class ScoringRepositoryImpl
                     scoringConfig.auditTrail.copy(
                         appliedSf = scoringConfig.paiScalingFactor,
                         physiologyProfile = prefs.physiologyProfile.name,
-                        paiTotalPre = last6DaysPai,
-                        paiTotalPost = summary.totalPai,
+                        paiTotalPre = last6DaysPaiWorkoutOnly,
+                        paiTotalPost = summary.totalPaiWorkoutOnly,
                     )
                 logD("ScoringConfig") { "Telemetry: $updatedAudit" }
 
@@ -386,9 +458,10 @@ class ScoringRepositoryImpl
             )
         }
 
-        private suspend fun sumPaiScoreLastSixDays(
+        private suspend fun sumPaiLastSixDays(
             targetDate: LocalDate,
             zoneId: ZoneId,
+            selector: (DailySummaryEntity) -> Float?,
         ): Float {
             val previousDaysMs =
                 (1..6).map { i ->
@@ -399,6 +472,6 @@ class ScoringRepositoryImpl
                         .toEpochMilli()
                 }
             val summaries = dailySummaryDao.getByDates(previousDaysMs)
-            return summaries.mapNotNull { it.paiScore }.sum()
+            return summaries.mapNotNull(selector).sum()
         }
     }
