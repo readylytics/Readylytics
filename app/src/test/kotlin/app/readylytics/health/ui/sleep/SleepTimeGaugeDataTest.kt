@@ -31,6 +31,18 @@ class SleepTimeGaugeDataTest {
     }
 
     @Test
+    fun `sub hour sleep display omits zero hours`() {
+        val data =
+            buildSleepTimeGaugeData(
+                session = sleepSession(durationMinutes = 45, awakeMinutes = 0),
+                summary = DailySummary(date = LocalDate.of(2026, 6, 11), sleepDurationMinutes = 45),
+                goalSleepHours = 8f,
+            )
+
+        assertEquals("45m", data.displayText)
+    }
+
+    @Test
     fun `double goal sleep maps to full fill`() {
         val data =
             buildSleepTimeGaugeData(

@@ -25,7 +25,7 @@ internal fun buildSleepTimeGaugeData(
 
     return SleepTimeGaugeData(
         progress = actualMinutes?.let { sleepTimeGaugeProgress(it, maxMinutes) },
-        displayText = DateFormatUtils.formatSleepDuration(actualMinutes),
+        displayText = formatSleepTimeGaugeDuration(actualMinutes),
         status =
             if (actualMinutes != null && goalMinutes > 0) {
                 summary?.sleepDurationStatus(goalMinutes) ?: MetricStatus.CALIBRATING
@@ -37,6 +37,16 @@ internal fun buildSleepTimeGaugeData(
 
 internal fun actualSleepMinutes(session: SleepSessionData?): Int? =
     session?.let { (it.durationMinutes - it.awakeMinutes).coerceAtLeast(0) }
+
+private fun formatSleepTimeGaugeDuration(minutes: Int?): String {
+    if (minutes == null) return DateFormatUtils.formatSleepDuration(null)
+
+    return if (minutes < 60) {
+        "${minutes}m"
+    } else {
+        DateFormatUtils.formatSleepDuration(minutes)
+    }
+}
 
 private fun sleepGoalMinutes(goalSleepHours: Float): Int = (goalSleepHours * 60f).toInt().coerceAtLeast(0)
 
