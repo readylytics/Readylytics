@@ -5,11 +5,13 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.repository.WeightRepository
 import app.readylytics.health.domain.util.UnitConverter
 import app.readylytics.health.ui.common.DailyDataPoint
 import app.readylytics.health.ui.common.TimeRange
+import app.readylytics.health.ui.common.WeightHistoryItem
 import app.readylytics.health.ui.common.padToRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +39,7 @@ data class WeightDetailUiState(
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val weightDisplay: String? = null,
     val bmiDisplay: String? = null,
+    val historyItems: List<WeightHistoryItem> = emptyList(),
     val isLoading: Boolean = true,
 )
 
@@ -107,6 +110,33 @@ class WeightDetailViewModel
                             null
                         }
 
+                    val recordsAscending = records.sortedBy { it.timestampMs }
+                    val historyItems =
+                        recordsAscending
+                            .mapIndexed { index, record ->
+                                val previous = if (index > 0) recordsAscending[index - 1] else null
+                                val deltaKg = previous?.let { record.weightKg - it.weightKg }
+                                val toDisplayUnit = { kg: Float ->
+                                    if (userPrefs.unitSystem == UnitSystem.METRIC) {
+                                        kg
+                                    } else {
+                                        kg * UnitConverter.KG_TO_LBS
+                                    }
+                                }
+                                val bmiStatus =
+                                    userPrefs.heightCm?.let { heightCm ->
+                                        HealthMetricsCalculator
+                                            .assessBmi(HealthMetricsCalculator.calculateBmi(record.weightKg, heightCm))
+                                    }
+                                WeightHistoryItem(
+                                    timestampMs = record.timestampMs,
+                                    weightDisplay = toDisplayUnit(record.weightKg),
+                                    deltaDisplay = deltaKg?.let(toDisplayUnit),
+                                    unitSystem = userPrefs.unitSystem,
+                                    bmiStatus = bmiStatus,
+                                )
+                            }.reversed()
+
                     val rawAverage = if (records.isNotEmpty()) records.map { it.weightKg }.average().toFloat() else null
                     val averageWeight =
                         if (rawAverage != null) {
@@ -137,6 +167,7 @@ class WeightDetailViewModel
                                 )
                             },
                         bmiDisplay = bmi?.let { MetricFormatter.formatBmi(it) },
+                        historyItems = historyItems,
                         isLoading = false,
                     )
                 }

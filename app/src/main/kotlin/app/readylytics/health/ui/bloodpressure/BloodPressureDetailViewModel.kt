@@ -3,9 +3,11 @@ package app.readylytics.health.ui.bloodpressure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.BloodPressureRepository
+import app.readylytics.health.ui.common.BloodPressureHistoryItem
 import app.readylytics.health.ui.common.DailyDataPoint
 import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.common.padToRange
@@ -35,6 +37,7 @@ data class BloodPressureDetailUiState(
     val systolicStatus: MetricStatus = MetricStatus.CALIBRATING,
     val diastolicStatus: MetricStatus = MetricStatus.CALIBRATING,
     val statusLabel: String? = null,
+    val historyItems: List<BloodPressureHistoryItem> = emptyList(),
     val isLoading: Boolean = true,
 )
 
@@ -98,8 +101,8 @@ class BloodPressureDetailViewModel
                     val systolicStatus =
                         when (latestSystolic) {
                             null -> MetricStatus.CALIBRATING
-                            in 0..119 -> MetricStatus.OPTIMAL
-                            in 120..129 -> MetricStatus.NEUTRAL
+                            in 0..120 -> MetricStatus.OPTIMAL
+                            in 121..129 -> MetricStatus.NEUTRAL
                             in 130..139 -> MetricStatus.WARNING
                             else -> MetricStatus.POOR
                         }
@@ -115,8 +118,8 @@ class BloodPressureDetailViewModel
                     val statusLabel =
                         when {
                             latestSystolic == null || latestDiastolic == null -> null
-                            latestSystolic in 0..119 && latestDiastolic in 0..79 -> "Normal"
-                            latestSystolic in 120..129 && latestDiastolic in 0..79 -> "Elevated"
+                            latestSystolic in 0..120 && latestDiastolic in 0..79 -> "Normal"
+                            latestSystolic in 121..129 && latestDiastolic in 0..79 -> "Elevated"
                             latestSystolic >= 130 || latestDiastolic >= 80 -> "High"
                             else -> null
                         }
@@ -127,6 +130,22 @@ class BloodPressureDetailViewModel
                         } else {
                             null
                         }
+
+                    val historyItems =
+                        records
+                            .sortedByDescending { it.timestampMs }
+                            .map { record ->
+                                BloodPressureHistoryItem(
+                                    timestampMs = record.timestampMs,
+                                    systolic = record.systolicMmHg,
+                                    diastolic = record.diastolicMmHg,
+                                    status =
+                                        HealthMetricsCalculator.assessBloodPressure(
+                                            record.systolicMmHg,
+                                            record.diastolicMmHg,
+                                        ),
+                                )
+                            }
 
                     BloodPressureDetailUiState(
                         latestSystolic = latestSystolic,
@@ -140,6 +159,7 @@ class BloodPressureDetailViewModel
                         systolicStatus = systolicStatus,
                         diastolicStatus = diastolicStatus,
                         statusLabel = statusLabel,
+                        historyItems = historyItems,
                         isLoading = false,
                     )
                 }

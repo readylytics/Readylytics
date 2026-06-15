@@ -18,3 +18,11 @@ sealed class BmiStatus {
                 Poor -> "Obese Class II+"
             }
 }
+
+fun BmiStatus.toMetricStatus(): MetricStatus =
+    when (this) {
+        BmiStatus.Optimal -> MetricStatus.OPTIMAL
+        BmiStatus.Neutral -> MetricStatus.NEUTRAL
+        BmiStatus.Warning -> MetricStatus.WARNING
+        BmiStatus.Poor -> MetricStatus.POOR
+    }

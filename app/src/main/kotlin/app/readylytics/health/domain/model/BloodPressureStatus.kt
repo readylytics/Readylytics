@@ -18,3 +18,11 @@ sealed class BloodPressureStatus {
                 HypertensionStage2 -> "Hypertension Stage 2+"
             }
 }
+
+fun BloodPressureStatus.toMetricStatus(): MetricStatus =
+    when (this) {
+        BloodPressureStatus.Optimal -> MetricStatus.OPTIMAL
+        BloodPressureStatus.Neutral -> MetricStatus.NEUTRAL
+        BloodPressureStatus.HypertensionStage1 -> MetricStatus.WARNING
+        BloodPressureStatus.HypertensionStage2 -> MetricStatus.POOR
+    }
