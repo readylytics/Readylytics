@@ -1,7 +1,7 @@
 package app.readylytics.health.ui.weight
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -9,7 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -123,12 +124,14 @@ fun WeightDetailScreen(
             )
         },
     ) { innerPadding ->
-        LazyColumn(
+        val scrollState = rememberScrollState()
+        Column(
             modifier =
                 Modifier
                     .padding(innerPadding)
-                    .fillMaxSize(),
-            contentPadding = PaddingValues(vertical = 16.dp),
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(vertical = 16.dp),
         ) {
             val bmiStatus =
                 uiState.bmi?.let { bmi ->
@@ -140,137 +143,130 @@ fun WeightDetailScreen(
                     }
                 } ?: MetricStatus.CALIBRATING
 
-            item(key = "score_dials") {
-                if (uiState.isLoading) {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ScoreDialSkeleton()
-                        ScoreDialSkeleton()
-                    }
-                } else {
-                    val weightMaxScore = if (uiState.unitSystem == UnitSystem.METRIC) 150f else 330f
-                    val heightTooltip =
-                        uiState.heightCm?.let { cm ->
-                            if (uiState.unitSystem == UnitSystem.METRIC) {
-                                String.format(Locale.US, "%.0f cm", cm)
-                            } else {
-                                val totalInches = cm / 2.54f
-                                val feet = floor(totalInches / 12f).toInt()
-                                val inches = (totalInches % 12f).roundToInt()
-                                val (finalFeet, finalInches) =
-                                    if (inches ==
-                                        12
-                                    ) {
-                                        Pair(feet + 1, 0)
-                                    } else {
-                                        Pair(feet, inches)
-                                    }
-                                "$finalFeet'$finalInches\""
-                            }
-                        } ?: "—"
-
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        M3ScoreDial(
-                            score = uiState.latestWeight,
-                            label = stringResource(R.string.label_weight_unit_format, unitLabel),
-                            maxScore = weightMaxScore,
-                            status = bmiStatus,
-                            displayText = uiState.weightDisplay,
-                            tooltipDescription =
-                                stringResource(
-                                    R.string.tooltip_weight_current,
-                                    uiState.weightDisplay?.let { "$it $unitLabel" } ?: "—",
-                                    heightTooltip,
-                                ),
-                        )
-                        M3ScoreDial(
-                            score = uiState.bmi,
-                            label = stringResource(R.string.label_bmi),
-                            maxScore = 40f,
-                            status = bmiStatus,
-                            displayText = uiState.bmiDisplay,
-                            tooltipDescription = stringResource(R.string.tooltip_bmi),
-                        )
-                    }
-                }
-            }
-
-            item(key = "trends_header") {
-                SectionHeader(title = stringResource(R.string.label_trends))
-                Spacer(Modifier.height(8.dp))
-                SingleChoiceSegmentedButtonRow(
+            if (uiState.isLoading) {
+                Row(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TimeRange.entries.forEachIndexed { index, range ->
-                        SegmentedButton(
-                            selected = uiState.selectedRange == range,
-                            onClick = { onRangeSelected(range) },
-                            shape =
-                                SegmentedButtonDefaults.itemShape(
-                                    index = index,
-                                    count = TimeRange.entries.size,
-                                ),
-                            enabled = !uiState.isLoading,
-                            label = { Text(range.label) },
-                        )
-                    }
+                    ScoreDialSkeleton()
+                    ScoreDialSkeleton()
+                }
+            } else {
+                val weightMaxScore = if (uiState.unitSystem == UnitSystem.METRIC) 150f else 330f
+                val heightTooltip =
+                    uiState.heightCm?.let { cm ->
+                        if (uiState.unitSystem == UnitSystem.METRIC) {
+                            String.format(Locale.US, "%.0f cm", cm)
+                        } else {
+                            val totalInches = cm / 2.54f
+                            val feet = floor(totalInches / 12f).toInt()
+                            val inches = (totalInches % 12f).roundToInt()
+                            val (finalFeet, finalInches) =
+                                if (inches ==
+                                    12
+                                ) {
+                                    Pair(feet + 1, 0)
+                                } else {
+                                    Pair(feet, inches)
+                                }
+                            "$finalFeet'$finalInches\""
+                        }
+                    } ?: "—"
+
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    M3ScoreDial(
+                        score = uiState.latestWeight,
+                        label = stringResource(R.string.label_weight_unit_format, unitLabel),
+                        maxScore = weightMaxScore,
+                        status = bmiStatus,
+                        displayText = uiState.weightDisplay,
+                        tooltipDescription =
+                            stringResource(
+                                R.string.tooltip_weight_current,
+                                uiState.weightDisplay?.let { "$it $unitLabel" } ?: "—",
+                                heightTooltip,
+                            ),
+                    )
+                    M3ScoreDial(
+                        score = uiState.bmi,
+                        label = stringResource(R.string.label_bmi),
+                        maxScore = 40f,
+                        status = bmiStatus,
+                        displayText = uiState.bmiDisplay,
+                        tooltipDescription = stringResource(R.string.tooltip_bmi),
+                    )
                 }
             }
 
-            item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
-
-            item(key = "weight_chart") {
-                if (uiState.isLoading) {
-                    SkeletonCard(
-                        height = 250.dp,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+            SectionHeader(title = stringResource(R.string.label_trends))
+            Spacer(Modifier.height(8.dp))
+            SingleChoiceSegmentedButtonRow(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+            ) {
+                TimeRange.entries.forEachIndexed { index, range ->
+                    SegmentedButton(
+                        selected = uiState.selectedRange == range,
+                        onClick = { onRangeSelected(range) },
+                        shape =
+                            SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = TimeRange.entries.size,
+                            ),
+                        enabled = !uiState.isLoading,
+                        label = { Text(range.label) },
                     )
-                } else {
-                    TrendCard(
-                        title = stringResource(R.string.label_weight_trend),
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    ) {
-                        TrendChart(
-                            points = uiState.dailyWeights,
-                            rangeStartMs = uiState.rangeStartMs,
-                            rangeDays = uiState.selectedRange.days,
-                            metricName = "Weight",
-                            baselineUnit = unitLabel,
-                            baseline = uiState.averageWeight,
-                            baselineLabel = stringResource(R.string.label_average),
-                            baselineDecimalPlaces = 1,
-                            axisDecimalPlaces = 1,
-                            scrollState = chartScrollState,
-                            zoomState = chartZoomState,
-                            zoneBands = weightBands,
-                        )
-                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            if (uiState.isLoading) {
+                SkeletonCard(
+                    height = 250.dp,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            } else {
+                TrendCard(
+                    title = stringResource(R.string.label_weight_trend),
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                ) {
+                    TrendChart(
+                        points = uiState.dailyWeights,
+                        rangeStartMs = uiState.rangeStartMs,
+                        rangeDays = uiState.selectedRange.days,
+                        metricName = "Weight",
+                        baselineUnit = unitLabel,
+                        baseline = uiState.averageWeight,
+                        baselineLabel = stringResource(R.string.label_average),
+                        baselineDecimalPlaces = 1,
+                        axisDecimalPlaces = 1,
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
+                        zoneBands = weightBands,
+                        parentScrollInProgress = scrollState.isScrollInProgress,
+                    )
                 }
             }
 
             if (uiState.historyItems.isNotEmpty()) {
-                item(key = "history") {
-                    WeightHistorySection(items = uiState.historyItems)
-                }
+                WeightHistorySection(items = uiState.historyItems)
             }
 
-            item(key = "spacer_bottom") { Spacer(Modifier.height(16.dp)) }
+            Spacer(Modifier.height(16.dp))
         }
     }
 }

@@ -1,15 +1,15 @@
 package app.readylytics.health.ui.steps
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -68,7 +68,7 @@ fun StepDetailScreen(
             rangeDays = uiState.selectedRange.days,
             key = uiState.selectedRange,
         )
-    val listState = rememberLazyListState()
+    val scrollState = rememberScrollState()
 
     Scaffold(
         modifier = modifier,
@@ -85,98 +85,92 @@ fun StepDetailScreen(
             )
         },
     ) { innerPadding ->
-        LazyColumn(
-            state = listState,
+        Column(
             modifier =
                 Modifier
                     .padding(innerPadding)
-                    .fillMaxSize(),
-            contentPadding = PaddingValues(vertical = 16.dp),
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(vertical = 16.dp),
         ) {
-            item(key = "score_dial") {
-                if (uiState.isLoading) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        ScoreDialSkeleton()
-                    }
-                } else {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        M3ScoreDial(
-                            score = uiState.latestSummary?.stepCount?.toFloat(),
-                            label = stringResource(R.string.label_steps_today),
-                            maxScore = (uiState.stepGoal * 1.5f),
-                            status = uiState.latestSummary?.stepCount?.let { stepsStatus(it, uiState.stepGoal) },
-                            tooltipDescription = stringResource(R.string.tooltip_steps_today, uiState.stepGoal),
-                        )
-                    }
-                }
-            }
-
-            item(key = "trends_header") {
-                SectionHeader(title = stringResource(R.string.label_trends))
-                Spacer(Modifier.height(8.dp))
-                SingleChoiceSegmentedButtonRow(
+            if (uiState.isLoading) {
+                Box(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    TimeRange.entries.forEachIndexed { index, range ->
-                        SegmentedButton(
-                            selected = uiState.selectedRange == range,
-                            onClick = { onRangeSelected(range) },
-                            shape =
-                                SegmentedButtonDefaults.itemShape(
-                                    index = index,
-                                    count = TimeRange.entries.size,
-                                ),
-                            enabled = !uiState.isLoading,
-                            label = { Text(range.label) },
-                        )
-                    }
+                    ScoreDialSkeleton()
                 }
-            }
-
-            item(key = "spacer_trends") { Spacer(Modifier.height(8.dp)) }
-
-            item(key = "steps_chart") {
-                if (uiState.isLoading) {
-                    SkeletonCard(
-                        height = 250.dp,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+            } else {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    M3ScoreDial(
+                        score = uiState.latestSummary?.stepCount?.toFloat(),
+                        label = stringResource(R.string.label_steps_today),
+                        maxScore = (uiState.stepGoal * 1.5f),
+                        status = uiState.latestSummary?.stepCount?.let { stepsStatus(it, uiState.stepGoal) },
+                        tooltipDescription = stringResource(R.string.tooltip_steps_today, uiState.stepGoal),
                     )
-                } else {
-                    TrendCard(
-                        title = stringResource(R.string.label_daily_steps),
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    ) {
-                        TrendChart(
-                            points = uiState.dailySteps,
-                            rangeStartMs = uiState.rangeStartMs,
-                            rangeDays = uiState.selectedRange.days,
-                            metricName = "Steps",
-                            baselineUnit = "steps",
-                            baseline = uiState.stepGoal.toFloat(),
-                            scrollState = chartScrollState,
-                            zoomState = chartZoomState,
-                            parentScrollInProgress = listState.isScrollInProgress,
-                        )
-                    }
                 }
             }
 
-            item(key = "spacer_bottom") { Spacer(Modifier.height(16.dp)) }
+            SectionHeader(title = stringResource(R.string.label_trends))
+            Spacer(Modifier.height(8.dp))
+            SingleChoiceSegmentedButtonRow(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+            ) {
+                TimeRange.entries.forEachIndexed { index, range ->
+                    SegmentedButton(
+                        selected = uiState.selectedRange == range,
+                        onClick = { onRangeSelected(range) },
+                        shape =
+                            SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = TimeRange.entries.size,
+                            ),
+                        enabled = !uiState.isLoading,
+                        label = { Text(range.label) },
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            if (uiState.isLoading) {
+                SkeletonCard(
+                    height = 250.dp,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            } else {
+                TrendCard(
+                    title = stringResource(R.string.label_daily_steps),
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                ) {
+                    TrendChart(
+                        points = uiState.dailySteps,
+                        rangeStartMs = uiState.rangeStartMs,
+                        rangeDays = uiState.selectedRange.days,
+                        metricName = "Steps",
+                        baselineUnit = "steps",
+                        baseline = uiState.stepGoal.toFloat(),
+                        scrollState = chartScrollState,
+                        zoomState = chartZoomState,
+                        parentScrollInProgress = scrollState.isScrollInProgress,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
         }
     }
 }

@@ -1,17 +1,14 @@
 package app.readylytics.health.ui.workouts
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -58,11 +55,7 @@ fun WorkoutsScreen(
     earliestDate: java.time.LocalDate? = null,
     modifier: Modifier = Modifier,
 ) {
-    val listState = rememberLazyListState()
-
-    rememberSaveable(saver = androidx.compose.foundation.lazy.LazyListState.Saver) {
-        listState
-    }
+    val scrollState = rememberScrollState()
 
     val (chartScrollState, chartZoomState) =
         ChartDefaults.rememberChartState(
@@ -86,41 +79,37 @@ fun WorkoutsScreen(
             )
         }
 
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(vertical = 16.dp),
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(vertical = 16.dp),
         ) {
-            item(key = "stats_section") {
-                WorkoutStatsSection(
-                    uiState = uiState,
-                    onRangeSelected = onRangeSelected,
-                    scrollState = chartScrollState,
-                    zoomState = chartZoomState,
-                    parentScrollInProgress = listState.isScrollInProgress,
-                )
-            }
+            WorkoutStatsSection(
+                uiState = uiState,
+                onRangeSelected = onRangeSelected,
+                scrollState = chartScrollState,
+                zoomState = chartZoomState,
+                parentScrollInProgress = scrollState.isScrollInProgress,
+            )
 
-            item(key = "list_section") {
-                CardLoader(
-                    isLoading = uiState.isLoading,
-                    skeleton = { WorkoutListSectionSkeleton() },
-                    content = {
-                        WorkoutListSection(
-                            workouts = uiState.recentWorkouts,
-                            currentPage = uiState.currentPage,
-                            totalPages = uiState.totalPages,
-                            onPreviousPage = onPreviousPage,
-                            onNextPage = onNextPage,
-                            onWorkoutClick = onWorkoutClick,
-                        )
-                    },
-                )
-            }
+            CardLoader(
+                isLoading = uiState.isLoading,
+                skeleton = { WorkoutListSectionSkeleton() },
+                content = {
+                    WorkoutListSection(
+                        workouts = uiState.recentWorkouts,
+                        currentPage = uiState.currentPage,
+                        totalPages = uiState.totalPages,
+                        onPreviousPage = onPreviousPage,
+                        onNextPage = onNextPage,
+                        onWorkoutClick = onWorkoutClick,
+                    )
+                },
+            )
 
-            item(key = "status_legend") {
-                StatusLegend()
-            }
+            StatusLegend()
         }
     }
 }

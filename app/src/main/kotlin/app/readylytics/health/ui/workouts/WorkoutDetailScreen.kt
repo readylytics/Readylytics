@@ -2,12 +2,12 @@ package app.readylytics.health.ui.workouts
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
@@ -74,34 +74,30 @@ fun WorkoutDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     val workout = uiState.workout ?: return
-    val listState = rememberLazyListState()
+    val scrollState = rememberScrollState()
 
-    LazyColumn(
-        state = listState,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        item {
-            WorkoutMetricsDisplay(
-                workout = workout,
-                computedTrimp = uiState.computedTrimp,
-                gainedStrain = uiState.gainedStrain,
-                gainedStrainDisplay = uiState.gainedStrainDisplay,
-                pai = uiState.pai,
-            )
-        }
+        WorkoutMetricsDisplay(
+            workout = workout,
+            computedTrimp = uiState.computedTrimp,
+            gainedStrain = uiState.gainedStrain,
+            gainedStrainDisplay = uiState.gainedStrainDisplay,
+            pai = uiState.pai,
+        )
 
-        item {
-            TrimpBreakdownChart(
-                uiState.hrChartData,
-                uiState.durationMinutes,
-                parentScrollInProgress = listState.isScrollInProgress,
-            )
-        }
+        TrimpBreakdownChart(
+            uiState.hrChartData,
+            uiState.durationMinutes,
+            parentScrollInProgress = scrollState.isScrollInProgress,
+        )
 
-        item {
-            WorkoutRecoverySection(uiState)
-        }
+        WorkoutRecoverySection(uiState)
     }
 }
