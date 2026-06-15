@@ -969,6 +969,11 @@
     <string name="insight_detail_observed_signal">Observed Signal</string>
     <string name="insight_detail_what_this_might_mean">What This Might Mean</string>
     <string name="insight_detail_confidence">Confidence</string>
+    <string name="confidence_low">Low</string>
+    <string name="confidence_low_medium">Low-Medium</string>
+    <string name="confidence_medium">Medium</string>
+    <string name="confidence_medium_high">Medium-High</string>
+    <string name="confidence_high">High</string>
     <string name="insight_detail_why_this_might_have_happened">Why This Might Have Happened</string>
     <string name="insight_detail_what_you_can_do_today">What You Can Do Today</string>
     <string name="insight_detail_what_not_to_infer">What Not To Infer</string>

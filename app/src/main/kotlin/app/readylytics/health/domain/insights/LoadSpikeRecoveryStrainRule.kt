@@ -27,7 +27,11 @@ class LoadSpikeRecoveryStrainRule : InsightRule {
         val yesterdaySpike =
             (yesterdayTrimp ?: 0f) >= InsightConstants.LOAD_SPIKE_TRIMP_THRESHOLD
 
-        val validLoadDays = context.recentDays.mapNotNull(DailySummary::totalTrimp)
+        val validLoadDays =
+            context.recentDays
+                .filter { it.date < today.date }
+                .sortedByDescending { it.date }
+                .mapNotNull(DailySummary::totalTrimp)
         val hasEnoughLoadHistory = validLoadDays.size >= InsightConstants.LOAD_HISTORY_MIN_VALID_DAYS
         val chronic28dLoad =
             validLoadDays

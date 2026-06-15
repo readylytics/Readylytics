@@ -20,6 +20,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
+import app.readylytics.health.domain.insights.detail.InsightConfidence
 import app.readylytics.health.domain.insights.detail.InsightDetailContent
 import app.readylytics.health.domain.insights.detail.InsightDetailType
 
@@ -54,13 +55,17 @@ fun InsightDetailSheet(
                 Section(content.meaningTitle, content.meaning)
             }
             if (content.type == InsightDetailType.PHYSIOLOGY && content.confidence != null) {
+                val confidenceRes =
+                    when (content.confidence) {
+                        InsightConfidence.LOW -> R.string.confidence_low
+                        InsightConfidence.LOW_MEDIUM -> R.string.confidence_low_medium
+                        InsightConfidence.MEDIUM -> R.string.confidence_medium
+                        InsightConfidence.MEDIUM_HIGH -> R.string.confidence_medium_high
+                        InsightConfidence.HIGH -> R.string.confidence_high
+                    }
                 Section(
                     title = stringResource(R.string.insight_detail_confidence),
-                    body =
-                        content.confidence.name
-                            .replace('_', ' ')
-                            .lowercase()
-                            .replaceFirstChar(Char::titlecase),
+                    body = stringResource(confidenceRes),
                 )
             }
             if (content.causes.isNotEmpty()) {

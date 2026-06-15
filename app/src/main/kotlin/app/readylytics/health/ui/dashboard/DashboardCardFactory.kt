@@ -110,7 +110,7 @@ fun buildCardDataMap(
             val context = LocalContext.current
             val detailRepository = remember { InsightDetailRepository(context.resources) }
             val detailContext =
-                remember(uiState.summary, uiState.stepGoal, uiState.goalSleepHours) {
+                remember(uiState.summary, uiState.stepGoal, uiState.goalSleepHours, uiState.selectedDate) {
                     uiState.toDailyInsightContext()
                 }
 

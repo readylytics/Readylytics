@@ -40,10 +40,17 @@ class InsightDetailRepository(
 
     private fun parseCause(value: String): InsightCause {
         val parts = value.split("|", limit = 3)
+        val hintString = parts.getOrNull(2)
+        val rankHint =
+            if (hintString != null) {
+                runCatching { CauseRankHint.valueOf(hintString) }.getOrElse { CauseRankHint.GENERIC }
+            } else {
+                CauseRankHint.GENERIC
+            }
         return InsightCause(
             title = parts[0],
             description = parts.getOrElse(1) { "" },
-            rankHint = parts.getOrNull(2)?.let(CauseRankHint::valueOf) ?: CauseRankHint.GENERIC,
+            rankHint = rankHint,
         )
     }
 }

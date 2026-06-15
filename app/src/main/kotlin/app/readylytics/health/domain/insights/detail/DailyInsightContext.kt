@@ -37,8 +37,11 @@ data class DailyInsightContext(
 ) {
     companion object {
         fun from(context: InsightContext): DailyInsightContext {
-            val recentBeforeToday = context.recentDays.filter { it.date < context.today.date }
-            val yesterday = recentBeforeToday.maxByOrNull { it.date }
+            val recentBeforeToday =
+                context.recentDays
+                    .filter { it.date < context.today.date }
+                    .sortedByDescending { it.date }
+            val yesterday = recentBeforeToday.firstOrNull()
             val validLoads = recentBeforeToday.mapNotNull(DailySummary::totalTrimp)
             val acute7dLoad =
                 validLoads
