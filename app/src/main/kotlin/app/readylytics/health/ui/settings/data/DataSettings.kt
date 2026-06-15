@@ -381,8 +381,7 @@ private fun DeviceChangeNoticeDialog(onAcknowledged: (dismissPermanently: Boolea
                                 value = dontShowAgain,
                                 role = Role.Checkbox,
                                 onValueChange = { dontShowAgain = it },
-                            )
-                            .padding(top = SettingsConstants.VERTICAL_SPACER),
+                            ).padding(top = SettingsConstants.VERTICAL_SPACER),
                 ) {
                     Checkbox(checked = dontShowAgain, onCheckedChange = null)
                     Spacer(modifier = Modifier.width(SettingsConstants.VERTICAL_SPACER_SMALL))
