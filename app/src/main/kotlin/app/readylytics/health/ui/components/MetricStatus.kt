@@ -27,7 +27,7 @@ internal fun MetricStatus.containerTone(): MetricContainerTone =
 @Composable
 fun MetricStatus.containerColor(): Color =
     when (containerTone()) {
-        MetricContainerTone.DEFAULT_CARD -> MaterialTheme.colorScheme.surfaceContainerHighest
+        MetricContainerTone.DEFAULT_CARD -> MaterialTheme.colorScheme.surfaceContainerLow
         MetricContainerTone.PRIMARY -> MaterialTheme.colorScheme.primaryContainer
         MetricContainerTone.WARNING -> LocalExtendedColors.current.warningContainer
         MetricContainerTone.ERROR -> MaterialTheme.colorScheme.errorContainer
