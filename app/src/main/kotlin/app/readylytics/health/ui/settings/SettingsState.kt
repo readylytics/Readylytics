@@ -9,6 +9,7 @@ import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.backup.BackupFileInfo
+import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
 import app.readylytics.health.ui.common.UiText
 import java.time.LocalDate
@@ -31,6 +32,8 @@ data class SleepSettingsState(
     val hrvBaselineOverride: Float? = SettingsDefaults.HRV_BASELINE_OVERRIDE,
     val rhrBaselineOverride: Float? = SettingsDefaults.RHR_BASELINE_OVERRIDE,
     val restingHrPercentile: Int = SettingsDefaults.RESTING_HR_PERCENTILE,
+    val strainLoadSourceMode: LoadSourceMode = SettingsDefaults.STRAIN_LOAD_SOURCE_MODE,
+    val paiSourceMode: LoadSourceMode = SettingsDefaults.PAI_SOURCE_MODE,
 )
 
 data class PhysiologySettingsState(

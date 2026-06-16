@@ -1,6 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -178,6 +179,10 @@ class SettingsRepository
             sync.updateCircadianThresholdOverride(encryptedMinutes)
 
         suspend fun updateLastSyncTimestamp(timestamp: Long) = sync.updateLastSyncTimestamp(timestamp)
+
+        suspend fun updateStrainLoadSourceMode(mode: LoadSourceMode) = sync.updateStrainLoadSourceMode(mode)
+
+        suspend fun updatePaiSourceMode(mode: LoadSourceMode) = sync.updatePaiSourceMode(mode)
 
         suspend fun updateBackupSchedule(schedule: BackupSchedule) = backup.updateBackupSchedule(schedule)
 

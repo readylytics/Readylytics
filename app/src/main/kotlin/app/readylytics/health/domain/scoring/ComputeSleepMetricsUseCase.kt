@@ -308,7 +308,11 @@ class ComputeSleepMetricsUseCase
                             isLateNadir = nadirCtx.isLateNadir,
                             isCalibrating = isCalibrating,
                             emergencyFlags = scoringConfig.emergencyFlags,
-                            yesterdayTrimp = yesterdaySummary?.totalTrimp,
+                            yesterdayTrimp =
+                                when (prefs.strainLoadSourceMode) {
+                                    LoadSourceMode.WORKOUT_ONLY -> yesterdaySummary?.trimpWorkoutOnly
+                                    LoadSourceMode.EVERYDAY_HEART_RATE -> yesterdaySummary?.trimpEverydayHr
+                                },
                             yesterdayHrv = yesterdaySummary?.nocturnalHrv?.toFloat(),
                             currentHrv = currentHrvMean,
                             hrvOptimalThreshold = prefs.hrvOptimalThreshold,

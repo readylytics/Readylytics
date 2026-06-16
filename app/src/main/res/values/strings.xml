@@ -250,6 +250,46 @@
         resting. A week of light activity will *not* drop Readiness; the score is designed for load
         *spikes*, not undertraining.</string>
 
+    <string name="about_header_load_sources">## Load Sources</string>
+    <string name="about_load_sources_intro">Two independent settings control which heart-rate data
+        feeds your strain/training-load metrics versus your PAI score.</string>
+    <string name="about_load_sources_strain_bullet">**Strain / Training Load source** (default:
+        **Workout only**) — controls TRIMP, acute/chronic load (ATL/CTL), Strain Ratio, Load Score,
+        and **Readiness**. Readiness always uses this source; the PAI source never affects
+        Readiness.</string>
+    <string name="about_load_sources_pai_bullet">**PAI source** (default: **Everyday heart-rate
+        load**) — controls your daily and 7-day total PAI only, independent of the Strain /
+        Training Load source above.</string>
+    <string name="about_load_sources_workout_only">**Workout only** counts heart-rate load from
+        your logged exercise sessions only — the original behaviour.</string>
+    <string name="about_load_sources_everyday">**Everyday heart-rate load** also counts elevated
+        heart rate outside workouts (e.g. from stress, illness, or heat) on top of your workout
+        TRIMP. Your workout TRIMP is folded into this total **exactly once** — it is never
+        double-counted. Sleep is always excluded from the everyday calculation.</string>
+    <string name="about_load_sources_zones">For the everyday calculation, every waking, non-sleep,
+        non-workout minute with at least one heart-rate sample is classified into a heart-rate
+        zone using your configured zones/TRIMP settings — the same model used for workouts.
+        **Zone 0** minutes (below your Zone 1 threshold) are excluded from TRIMP but still counted
+        toward coverage. **Zone 1** and above minutes contribute TRIMP using the standard
+        per-minute formula.</string>
+    <string name="about_load_sources_coverage_bullet">**coverageMinutes** — waking, non-sleep,
+        non-workout minutes with ≥1 heart-rate sample (Zone 0 included).</string>
+    <string name="about_load_sources_valid_bucket_bullet">**validBucketCount** — the subset of
+        those minutes in Zone 1+ that actually contributed TRIMP.</string>
+    <string name="about_load_sources_confidence_bullet">**Confidence** is derived from
+        `coverageMinutes`: 0 → **None**, 1–179 → **Low**, 180–479 → **Medium**, 480+ → **High**. A
+        day needs at least 180 coverage minutes to be a valid everyday-load estimate; below that,
+        Readiness shows a low-confidence indicator whenever the Strain / Training Load source is
+        set to Everyday heart-rate load.</string>
+    <string name="about_load_sources_persistence">Both source variants are calculated and stored
+        for every day, so switching either setting is instant — no recalculation or history
+        rewrite is needed.</string>
+    <string name="about_load_sources_bootstrap">**New installs** default to Strain / Training Load
+        = Workout only and PAI = Everyday heart-rate load. **Existing users upgrading** keep their
+        prior behaviour automatically: the first time the app runs after upgrade, the PAI source
+        is set to Workout only as a one-time default if you already have workout history — you can
+        change it in Settings at any time.</string>
+
     <string name="about_header_needs">## What the app needs from you</string>
     <string name="about_hc_reads">We read from Android Health Connect:</string>
     <string name="about_bullet_sleep_sessions">**Sleep sessions** (with stages if your device
@@ -700,6 +740,17 @@
     <string name="label_sleep">Sleep</string>
     <string name="settings_sub_heart_rate_zones">Heart rate zones</string>
     <string name="settings_sub_thresholds">Thresholds</string>
+
+    <!-- Load Sources -->
+    <string name="load_sources_section_title">Load Sources</string>
+    <string name="load_sources_strain_label">Strain / Training Load Source</string>
+    <string name="load_sources_pai_label">PAI Source</string>
+    <string name="load_source_option_workout_only">Workout only</string>
+    <string name="load_source_option_everyday_hr">Everyday heart-rate load</string>
+    <string name="load_sources_strain_help">Controls TRIMP, acute/chronic load (ACWR), Strain Ratio, Load Score, and Readiness. \"Workout only\" counts only exercise sessions; \"Everyday heart-rate load\" also counts elevated heart rate outside workouts, such as from stress, illness, or heat.</string>
+    <string name="load_sources_pai_help">Controls PAI only, independent of the Strain / Training Load source above.</string>
+    <string name="load_sources_required_note">Readiness uses the Strain / Training Load source. PAI source affects PAI only.</string>
+    <string name="load_sources_zone_caveat">Zone 0 minutes are excluded from TRIMP and load even when counted toward coverage. Everyday heart-rate load is affected by your configured heart-rate zones and TRIMP model in Heart Rate Zones settings.</string>
     <string name="settings_section_display">Display</string>
     <string name="settings_section_advanced">Advanced</string>
     <string name="settings_about_button">About Readylytics</string>

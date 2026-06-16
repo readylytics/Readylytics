@@ -1,6 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.domain.scoring.LoadSourceMode
 import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
@@ -95,6 +96,32 @@ internal class SyncPreferences
          * [LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE] explicitly so the field is no longer
          * unset and this bootstrap never re-runs.
          */
+        suspend fun updateStrainLoadSourceMode(mode: LoadSourceMode) {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setStrainLoadSourceMode(
+                        when (mode) {
+                            LoadSourceMode.WORKOUT_ONLY -> LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
+                            LoadSourceMode.EVERYDAY_HEART_RATE -> LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
+                        },
+                    ).build()
+            }
+        }
+
+        suspend fun updatePaiSourceMode(mode: LoadSourceMode) {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setPaiSourceMode(
+                        when (mode) {
+                            LoadSourceMode.WORKOUT_ONLY -> LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
+                            LoadSourceMode.EVERYDAY_HEART_RATE -> LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
+                        },
+                    ).build()
+            }
+        }
+
         suspend fun bootstrapPaiSourceModeIfUnset(hasWorkoutOnlyHistory: Boolean) {
             dataStore.updateData { proto ->
                 if (proto.paiSourceMode == LoadSourceModeProto.LOAD_SOURCE_UNSET) {

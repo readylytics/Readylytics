@@ -148,6 +148,53 @@ _Implemented in: `LoadScoringStrategy.kt`, `PaiScoringStrategy.kt`, `ComputeSlee
 
 ---
 
+## Load Sources
+
+Two independent settings control which heart-rate data feeds your strain/training-load
+metrics versus your PAI score:
+
+- **Strain / Training Load source** (default: **Workout only**) — controls TRIMP,
+  acute/chronic load (ATL/CTL), Strain Ratio, Load Score, and **Readiness**. Readiness
+  always uses this source; the PAI source never affects Readiness.
+- **PAI source** (default: **Everyday heart-rate load**) — controls your daily and
+  7-day total PAI only, independent of the Strain / Training Load source above.
+
+**Workout only** counts heart-rate load from your logged exercise sessions only — the
+original behaviour.
+
+**Everyday heart-rate load** also counts elevated heart rate outside workouts (e.g. from
+stress, illness, or heat) on top of your workout TRIMP. Your workout TRIMP is folded into
+this total **exactly once** — it is never double-counted. Sleep is always excluded from
+the everyday calculation.
+
+For the everyday calculation, every waking, non-sleep, non-workout minute with at least
+one heart-rate sample is classified into a heart-rate zone using your configured
+zones/TRIMP settings — the same model used for workouts. **Zone 0** minutes (below your
+Zone 1 threshold) are excluded from TRIMP but still counted toward coverage. **Zone 1
+and above** minutes contribute TRIMP using the standard per-minute formula.
+
+- **coverageMinutes** — waking, non-sleep, non-workout minutes with ≥1 heart-rate sample
+  (Zone 0 included).
+- **validBucketCount** — the subset of those minutes in Zone 1+ that actually
+  contributed TRIMP.
+- **Confidence** is derived from `coverageMinutes`: 0 → **None**, 1–179 → **Low**,
+  180–479 → **Medium**, 480+ → **High**. A day needs at least 180 coverage minutes to be
+  a valid everyday-load estimate; below that, Readiness shows a low-confidence indicator
+  whenever the Strain / Training Load source is set to Everyday heart-rate load.
+
+Both source variants are calculated and stored for every day, so switching either
+setting is instant — no recalculation or history rewrite is needed.
+
+**New installs** default to Strain / Training Load = Workout only and PAI = Everyday
+heart-rate load. **Existing users upgrading** keep their prior behaviour automatically: the
+first time the app runs after upgrade, the PAI source is set to Workout only as a
+one-time default if you already have workout history — you can change it in Settings at
+any time.
+
+_Implemented in: `EverydayHeartRateLoadCalculator.kt`, `LoadSourceSelector.kt`, `LoadSourceMode.kt`_
+
+---
+
 ## What the app needs from you
 
 We read from Android Health Connect:

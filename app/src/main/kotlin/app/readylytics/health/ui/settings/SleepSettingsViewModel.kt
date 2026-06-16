@@ -32,6 +32,8 @@ class SleepSettingsViewModel
                         hrvBaselineOverride = prefs.hrvBaselineOverride,
                         rhrBaselineOverride = prefs.rhrBaselineOverride,
                         restingHrPercentile = prefs.restingHrPercentile,
+                        strainLoadSourceMode = prefs.strainLoadSourceMode,
+                        paiSourceMode = prefs.paiSourceMode,
                     )
                 }.stateIn(
                     scope = viewModelScope,
@@ -93,6 +95,12 @@ class SleepSettingsViewModel
                         }
                     }
                 }
+
+                is SettingsEvent.StrainLoadSourceModeChanged ->
+                    appScope.launch { settingsRepo.updateStrainLoadSourceMode(event.mode) }
+
+                is SettingsEvent.PaiSourceModeChanged ->
+                    appScope.launch { settingsRepo.updatePaiSourceMode(event.mode) }
 
                 else -> {}
             }

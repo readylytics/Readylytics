@@ -457,6 +457,9 @@ fun SettingsScreen(
                                 onProfileSelected = { onPhysiologyEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            SectionHeader(stringResource(R.string.load_sources_section_title))
+                            LoadSourcesSection(uiState = sleepState, onEvent = onSleepEvent)
                             Spacer(modifier = Modifier.height(16.dp))
                             SectionHeader(stringResource(R.string.label_circadian_consistency))
                             CircadianThresholdSettingsSection(

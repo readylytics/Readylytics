@@ -283,6 +283,21 @@ Supporting helpers live in `domain/scoring/components/` and `domain/scoring/slee
 `CircadianThresholdDefaults` (`domain/circadian/`) is the single threshold source, consumed
 by both the live repository above and the diagnostic config built in `ScoringConfigFactory`.
 
+### 2.6 Everyday Heart-Rate Load
+
+| Component | Path | Output |
+| :--- | :--- | :--- |
+| `EverydayHeartRateLoadCalculator` | `domain/scoring/EverydayHeartRateLoadCalculator.kt` | Pure Kotlin. Buckets a day's non-sleep, non-workout HR samples into 1-minute windows, classifies each via `HrZoneClassifier`, and accumulates per-minute TRIMP via `PaiCalculator.calculateDailyTrimp` (Zone 0 excluded from TRIMP, included in `coverageMinutes`). Returns `EverydayHrLoadResult` (`nonWorkoutTrimp`, `totalEverydayTrimp = workoutOnlyTrimp + nonWorkoutTrimp`, `coverageMinutes`, `validBucketCount`, `confidence: LoadCoverageConfidence`). |
+| `ScoringRepositoryImpl.computeDailySummary` | `domain/scoring/ScoringRepositoryImpl.kt` | Fetches the day's non-sleep, non-workout HR samples plus sleep/workout intervals, feeds `EverydayHeartRateLoadCalculator`, and persists both `*WorkoutOnly` and `*EverydayHr` variants (TRIMP, PAI, total PAI, ATL, CTL, Strain Ratio, Load Score, Readiness) plus `everydayCoverageMinutes`/`everydayLoadConfidence` on `DailySummaryEntity`. Legacy columns (`totalTrimp`, `paiScore`, `totalPai`, `strainRatio`, `loadScore`, `readinessScore`) are no longer written. |
+| `LoadSourceSelector` | `domain/model/LoadSourceSelector.kt` | Pure projection. Picks `*WorkoutOnly` or `*EverydayHr` per field from `UserPreferences.strainLoadSourceMode` (TRIMP/ATL/CTL/Strain Ratio/Load Score/Readiness) and `paiSourceMode` (daily/total PAI); also derives `needsRecalc` and `readinessLowConfidence`. |
+| `DailyMetricsMapper` | `domain/model/DailyMetricsMapper.kt` | Builds `DailyMetrics` exclusively through `LoadSourceSelector` for all user-visible strain/load/PAI/readiness fields, so switching either source preference re-projects already-stored data instantly with no recompute. |
+
+The two source preferences (`strainLoadSourceMode`, `paiSourceMode`, both on `UserPreferences`)
+are independent: Readiness always derives from `strainLoadSourceMode`, never from
+`paiSourceMode`. Coefficients and thresholds live solely in
+`EverydayHeartRateLoadCalculator.kt` / `ScoringConstants` — see ABOUT.md for the
+user-facing description of `coverageMinutes`, `validBucketCount`, and confidence tiers.
+
 ---
 
 ## 3. Presentation Layer (Calculated States → UI)

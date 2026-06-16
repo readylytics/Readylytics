@@ -89,5 +89,26 @@ fun ContributorsSection() {
 
         Spacer(Modifier.height(8.dp))
         BodyText(stringResource(R.string.about_readiness_no_penalty))
+
+        SectionDivider()
+
+        SubHeader(stringResource(R.string.about_header_load_sources))
+        BodyText(stringResource(R.string.about_load_sources_intro))
+        BulletItem(stringResource(R.string.about_load_sources_strain_bullet))
+        BulletItem(stringResource(R.string.about_load_sources_pai_bullet))
+
+        Spacer(Modifier.height(8.dp))
+        BodyText(stringResource(R.string.about_load_sources_workout_only))
+        BodyText(stringResource(R.string.about_load_sources_everyday))
+        BodyText(stringResource(R.string.about_load_sources_zones))
+
+        Spacer(Modifier.height(8.dp))
+        BulletItem(stringResource(R.string.about_load_sources_coverage_bullet))
+        BulletItem(stringResource(R.string.about_load_sources_valid_bucket_bullet))
+        BulletItem(stringResource(R.string.about_load_sources_confidence_bullet))
+
+        Spacer(Modifier.height(8.dp))
+        BodyText(stringResource(R.string.about_load_sources_persistence))
+        BodyText(stringResource(R.string.about_load_sources_bootstrap))
     }
 }
