@@ -91,8 +91,8 @@ class Migration28To29Test {
 
         db
             .query(
-                "SELECT trimpWorkoutOnly, rasWorkoutOnly, totalRasWorkoutOnly, strainRatioWorkoutOnly, " +
-                    "loadScoreWorkoutOnly, readinessWorkoutOnly, trimpEverydayHr, rasEverydayHr, " +
+                "SELECT trimpWorkoutOnly, paiWorkoutOnly, totalPaiWorkoutOnly, strainRatioWorkoutOnly, " +
+                    "loadScoreWorkoutOnly, readinessWorkoutOnly, trimpEverydayHr, paiEverydayHr, " +
                     "atlWorkoutOnly, atlEverydayHr, ctlWorkoutOnly, ctlEverydayHr, " +
                     "everydayCoverageMinutes, everydayLoadConfidence " +
                     "FROM daily_summaries WHERE dateMidnightMs = 1700000000000",
@@ -106,7 +106,7 @@ class Migration28To29Test {
                 assertEquals(80.0, cursor.getDouble(5), 0.001)
 
                 assertNull("trimpEverydayHr must be NULL", cursor.getString(6))
-                assertNull("rasEverydayHr must be NULL", cursor.getString(7))
+                assertNull("paiEverydayHr must be NULL", cursor.getString(7))
                 assertNull("atlWorkoutOnly must be NULL", cursor.getString(8))
                 assertNull("atlEverydayHr must be NULL", cursor.getString(9))
                 assertNull("ctlWorkoutOnly must be NULL", cursor.getString(10))
@@ -125,10 +125,10 @@ class Migration28To29Test {
             setOf(
                 "trimpWorkoutOnly",
                 "trimpEverydayHr",
-                "rasWorkoutOnly",
-                "rasEverydayHr",
-                "totalRasWorkoutOnly",
-                "totalRasEverydayHr",
+                "paiWorkoutOnly",
+                "paiEverydayHr",
+                "totalPaiWorkoutOnly",
+                "totalPaiEverydayHr",
                 "atlWorkoutOnly",
                 "atlEverydayHr",
                 "ctlWorkoutOnly",
@@ -141,9 +141,6 @@ class Migration28To29Test {
                 "readinessEverydayHr",
                 "everydayCoverageMinutes",
                 "everydayLoadConfidence",
-                "legacyRasScore",
-                "legacyTotalRas",
-                "ras_scaling_factor",
             )
 
         val actualColumns = mutableSetOf<String>()

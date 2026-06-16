@@ -140,7 +140,7 @@ deterministic composite IDs (`${hcRecordId}_${timestampMs}`) so re-ingestion is 
 | `BloodPressureDataMapper`    | `data/mapper/BloodPressureDataMapper.kt`    | `BloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg).                                                                     |
 | `OxygenSaturationDataMapper` | `data/mapper/OxygenSaturationDataMapper.kt` | `OxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                                     |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 28)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 30)`)
 
 Defined in `data/local/HealthDatabase.kt`; entities in `data/local/entity/`, DAOs in
 `data/local/dao/`. **The database is the single source of truth; the UI never reads Health

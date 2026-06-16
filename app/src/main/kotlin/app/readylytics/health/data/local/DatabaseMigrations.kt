@@ -928,10 +928,10 @@ object DatabaseMigrations {
                 listOf(
                     "ALTER TABLE daily_summaries ADD COLUMN trimpWorkoutOnly REAL DEFAULT NULL",
                     "ALTER TABLE daily_summaries ADD COLUMN trimpEverydayHr REAL DEFAULT NULL",
-                    "ALTER TABLE daily_summaries ADD COLUMN rasWorkoutOnly REAL DEFAULT NULL",
-                    "ALTER TABLE daily_summaries ADD COLUMN rasEverydayHr REAL DEFAULT NULL",
-                    "ALTER TABLE daily_summaries ADD COLUMN totalRasWorkoutOnly REAL DEFAULT NULL",
-                    "ALTER TABLE daily_summaries ADD COLUMN totalRasEverydayHr REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN paiWorkoutOnly REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN paiEverydayHr REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN totalPaiWorkoutOnly REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN totalPaiEverydayHr REAL DEFAULT NULL",
                     "ALTER TABLE daily_summaries ADD COLUMN atlWorkoutOnly REAL DEFAULT NULL",
                     "ALTER TABLE daily_summaries ADD COLUMN atlEverydayHr REAL DEFAULT NULL",
                     "ALTER TABLE daily_summaries ADD COLUMN ctlWorkoutOnly REAL DEFAULT NULL",
@@ -946,25 +946,18 @@ object DatabaseMigrations {
                     "ALTER TABLE daily_summaries ADD COLUMN everydayLoadConfidence TEXT DEFAULT NULL",
                 )
 
-            private val renameSql =
-                listOf(
-                    "ALTER TABLE daily_summaries RENAME COLUMN paiScore TO legacyRasScore",
-                    "ALTER TABLE daily_summaries RENAME COLUMN totalPai TO legacyTotalRas",
-                    "ALTER TABLE daily_summaries RENAME COLUMN pai_scaling_factor TO ras_scaling_factor",
-                )
-
             private val copySql =
                 listOf(
                     "UPDATE daily_summaries SET " +
                         "trimpWorkoutOnly = totalTrimp, " +
-                        "rasWorkoutOnly = legacyRasScore, " +
-                        "totalRasWorkoutOnly = legacyTotalRas, " +
+                        "paiWorkoutOnly = paiScore, " +
+                        "totalPaiWorkoutOnly = totalPai, " +
                         "strainRatioWorkoutOnly = strainRatio, " +
                         "loadScoreWorkoutOnly = loadScore, " +
                         "readinessWorkoutOnly = readinessScore",
                 )
 
-            private val sql = alterSql + renameSql + copySql
+            private val sql = alterSql + copySql
 
             override fun migrate(db: SupportSQLiteDatabase) {
                 sql.forEach { db.execSQL(it) }
@@ -972,6 +965,28 @@ object DatabaseMigrations {
 
             override fun migrate(connection: SQLiteConnection) {
                 sql.forEach { connection.execSQL(it) }
+            }
+        }
+
+    val MIGRATION_29_30 =
+        object : Migration(29, 30) {
+            private val renameSql =
+                listOf(
+                    "ALTER TABLE daily_summaries RENAME COLUMN paiScore TO legacyRasScore",
+                    "ALTER TABLE daily_summaries RENAME COLUMN totalPai TO legacyTotalRas",
+                    "ALTER TABLE daily_summaries RENAME COLUMN pai_scaling_factor TO ras_scaling_factor",
+                    "ALTER TABLE daily_summaries RENAME COLUMN paiWorkoutOnly TO rasWorkoutOnly",
+                    "ALTER TABLE daily_summaries RENAME COLUMN paiEverydayHr TO rasEverydayHr",
+                    "ALTER TABLE daily_summaries RENAME COLUMN totalPaiWorkoutOnly TO totalRasWorkoutOnly",
+                    "ALTER TABLE daily_summaries RENAME COLUMN totalPaiEverydayHr TO totalRasEverydayHr",
+                )
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                renameSql.forEach { db.execSQL(it) }
+            }
+
+            override fun migrate(connection: SQLiteConnection) {
+                renameSql.forEach { connection.execSQL(it) }
             }
         }
 
@@ -1006,5 +1021,6 @@ object DatabaseMigrations {
             MIGRATION_26_27,
             MIGRATION_27_28,
             MIGRATION_28_29,
+            MIGRATION_29_30,
         )
 }
