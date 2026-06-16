@@ -746,7 +746,7 @@
     <string name="load_sources_strain_label">Strain / Training Load Source</string>
     <string name="load_sources_pai_label">PAI Source</string>
     <string name="load_source_option_workout_only">Workout only</string>
-    <string name="load_source_option_everyday_hr">Everyday heart-rate load</string>
+    <string name="load_source_option_everyday_hr">Everyday HR load</string>
     <string name="load_sources_strain_help">Controls TRIMP, acute/chronic load (ACWR), Strain Ratio, Load Score, and Readiness. \"Workout only\" counts only exercise sessions; \"Everyday heart-rate load\" also counts elevated heart rate outside workouts, such as from stress, illness, or heat.</string>
     <string name="load_sources_pai_help">Controls PAI only, independent of the Strain / Training Load source above.</string>
     <string name="load_sources_required_note">Readiness uses the Strain / Training Load source. PAI source affects PAI only.</string>
