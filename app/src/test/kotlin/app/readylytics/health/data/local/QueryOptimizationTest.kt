@@ -135,7 +135,7 @@ class QueryOptimizationTest {
                         dateMidnightMs = baselineMs + (i * 24 * 3_600_000L),
                         loadScore = 50f + i,
                         sleepScore = 70f + i,
-                        paiScore = 40f + i,
+                        legacyRasScore = 40f + i,
                     )
                 }
             dailySummaryDao.upsertAll(summaries)

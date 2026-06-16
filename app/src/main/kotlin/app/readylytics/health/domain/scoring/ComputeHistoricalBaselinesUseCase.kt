@@ -23,7 +23,7 @@ class ComputeHistoricalBaselinesUseCase(
 
         val profile = prefs.physiologyProfile
         val hrMax = HeartRateFormulas.resolveMaxHeartRate(prefs)
-        val paiScalingFactor = prefs.paiScalingFactor
+        val rasScalingFactor = prefs.rasScalingFactor
         val sigmaPrior = profile.lnSigmaPrior
 
         // Batch all per-day baseline windows (HRV mu/sigma + RHR) in a fixed, small number of DB
@@ -57,7 +57,7 @@ class ComputeHistoricalBaselinesUseCase(
                 rhrSigma = rhrSigma,
                 hrMax = hrMax,
                 snapshotProfile = profile.name,
-                paiScalingFactor = paiScalingFactor,
+                rasScalingFactor = rasScalingFactor,
                 hrvSigmaPrior = sigmaPrior,
                 baselineCalculatedAtDate = date,
                 baselineObservationCount = windows.muHistory.size,

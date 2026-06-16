@@ -5,7 +5,7 @@ import app.readylytics.health.domain.scoring.components.EmergencyFlagThresholds
 import app.readylytics.health.domain.scoring.components.RestorationWeights
 import app.readylytics.health.domain.scoring.components.SleepArchitectureTargets
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
-import app.readylytics.health.domain.scoring.strategies.PaiScoringStrategy
+import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
 import java.time.LocalDate
 import javax.inject.Inject
@@ -16,25 +16,25 @@ class CompositeScoringCalculator
     @Inject
     constructor(
         private val sleepStrategy: SleepScoringStrategy,
-        private val paiStrategy: PaiScoringStrategy,
+        private val rasStrategy: RasScoringStrategy,
         private val loadStrategy: LoadScoringStrategy,
     ) : ScoringCalculator {
         override fun computeStrainRatio(
             atl: Float,
             ctl: Float,
-        ): Float = paiStrategy.computeStrainRatio(atl, ctl)
+        ): Float = rasStrategy.computeStrainRatio(atl, ctl)
 
         override fun computeCtlEma(
             dailyTrimpList: List<Float>,
             seedFitnessLevel: Float,
             windowDays: Long,
-        ): Float = paiStrategy.computeCtlEma(dailyTrimpList, seedFitnessLevel, windowDays)
+        ): Float = rasStrategy.computeCtlEma(dailyTrimpList, seedFitnessLevel, windowDays)
 
         override fun computeAtlEma(
             dailyTrimpList: List<Float>,
             seedFatigueLevel: Float,
             windowDays: Long,
-        ): Float = paiStrategy.computeAtlEma(dailyTrimpList, seedFatigueLevel, windowDays)
+        ): Float = rasStrategy.computeAtlEma(dailyTrimpList, seedFatigueLevel, windowDays)
 
         override fun computeLoadScore(sr: Float): Float = loadStrategy.computeLoadScore(sr)
 
@@ -193,13 +193,13 @@ class CompositeScoringCalculator
             dailyTrimpByDate: Map<LocalDate, Float>,
             rangeEnd: LocalDate,
             windowDays: Long,
-        ): Float = paiStrategy.computeCtlEmaWithDecay(dailyTrimpByDate, rangeEnd, windowDays)
+        ): Float = rasStrategy.computeCtlEmaWithDecay(dailyTrimpByDate, rangeEnd, windowDays)
 
         override fun computeAtlEmaWithDecay(
             dailyTrimpByDate: Map<LocalDate, Float>,
             rangeEnd: LocalDate,
             windowDays: Long,
-        ): Float = paiStrategy.computeAtlEmaWithDecay(dailyTrimpByDate, rangeEnd, windowDays)
+        ): Float = rasStrategy.computeAtlEmaWithDecay(dailyTrimpByDate, rangeEnd, windowDays)
 
         override fun validateNight(
             rmssdMs: Float?,

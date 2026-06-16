@@ -46,7 +46,7 @@ import app.readylytics.health.ui.components.DataPointTooltip
 import app.readylytics.health.ui.components.DataPointTooltipData
 import app.readylytics.health.ui.components.M3ScoreDial
 import app.readylytics.health.ui.components.MetricTooltip
-import app.readylytics.health.ui.components.PaiWeeklyBar
+import app.readylytics.health.ui.components.RasWeeklyBar
 import app.readylytics.health.ui.components.SectionHeader
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -175,29 +175,29 @@ fun WorkoutStatsSection(
                             verticalAlignment = Alignment.Top,
                         ) {
                             Text(
-                                text = stringResource(R.string.workout_stats_pai_title),
+                                text = stringResource(R.string.workout_stats_ras_title),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                uiState.latestMetrics?.paiDayScoreRounded?.let { earned ->
+                                uiState.latestMetrics?.rasDayScoreRounded?.let { earned ->
                                     if (earned > 0) {
                                         Text(
-                                            text = stringResource(R.string.pai_earned_today, earned),
+                                            text = stringResource(R.string.ras_earned_today, earned),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
                                 MetricTooltip(
-                                    description = stringResource(R.string.tooltip_pai),
+                                    description = stringResource(R.string.tooltip_ras),
                                 )
                             }
                         }
                         Spacer(Modifier.height(12.dp))
-                        PaiWeeklyBar(
-                            dailyBreakdown = uiState.paiDailyBreakdown,
-                            totalPai = uiState.latestMetrics?.paiRounded?.toFloat() ?: 0f,
+                        RasWeeklyBar(
+                            dailyBreakdown = uiState.rasDailyBreakdown,
+                            legacyTotalRas = uiState.latestMetrics?.rasRounded?.toFloat() ?: 0f,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

@@ -53,7 +53,7 @@ data class UserPreferencesBackup(
     val consistencyThresholdMinutes: Int? = null,
     val consistencyEvaluationDays: Int? = null,
     val consistencyBaselineDays: Int? = null,
-    val paiScalingFactor: Float? = null,
+    val rasScalingFactor: Float? = null,
     val stepGoal: Int? = null,
     val retentionDaysEnabled: Boolean? = null,
     val retentionDays: Int? = null,

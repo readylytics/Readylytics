@@ -144,20 +144,20 @@ When HRV is much lower than usual and resting heart rate is elevated for more th
 
 **What we don't do.** We don't penalise you for resting. A week of light activity will _not_ drop Readiness; the score is designed for load _spikes_, not undertraining.
 
-_Implemented in: `LoadScoringStrategy.kt`, `PaiScoringStrategy.kt`, `ComputeSleepMetricsUseCase.kt`, `LoadMetricsProvider.kt`, `PaiProvider.kt`_
+_Implemented in: `LoadScoringStrategy.kt`, `RasScoringStrategy.kt`, `ComputeSleepMetricsUseCase.kt`, `LoadMetricsProvider.kt`, `RasProvider.kt`_
 
 ---
 
 ## Load Sources
 
 Two independent settings control which heart-rate data feeds your strain/training-load
-metrics versus your PAI score:
+metrics versus your RAS score:
 
 - **Strain / Training Load source** (default: **Workout only**) — controls TRIMP,
   acute/chronic load (ATL/CTL), Strain Ratio, Load Score, and **Readiness**. Readiness
-  always uses this source; the PAI source never affects Readiness.
-- **PAI source** (default: **Everyday heart-rate load**) — controls your daily and
-  7-day total PAI only, independent of the Strain / Training Load source above.
+  always uses this source; the RAS source never affects Readiness.
+- **RAS source** (default: **Everyday heart-rate load**) — controls your daily and
+  7-day total RAS only, independent of the Strain / Training Load source above.
 
 **Workout only** counts heart-rate load from your logged exercise sessions only — the
 original behaviour.
@@ -185,9 +185,9 @@ and above** minutes contribute TRIMP using the standard per-minute formula.
 Both source variants are calculated and stored for every day, so switching either
 setting is instant — no recalculation or history rewrite is needed.
 
-**New installs** default to Strain / Training Load = Workout only and PAI = Everyday
+**New installs** default to Strain / Training Load = Workout only and RAS = Everyday
 heart-rate load. **Existing users upgrading** keep their prior behaviour automatically: the
-first time the app runs after upgrade, the PAI source is set to Workout only as a
+first time the app runs after upgrade, the RAS source is set to Workout only as a
 one-time default if you already have workout history — you can change it in Settings at
 any time.
 
@@ -240,7 +240,7 @@ _Implemented in: `Phase.kt`, `PhaseCalculator.kt`_
 
 - **TRIMP (Training Impulse)** — a single number summarising the intensity-weighted duration of an exercise session. Advanced models (such as LT-TRIMP) rely on the specific Heart Rate Zones configured in your app settings. These zones are always active; it is your responsibility to ensure they accurately reflect your current fitness level.
 
-  _Implemented in: `PaiCalculator.kt`, `ComputeWorkoutTrimpUseCase.kt`, `PaiScoringStrategy.kt`, `HrMaxProvider.kt`_
+  _Implemented in: `RasCalculator.kt`, `ComputeWorkoutTrimpUseCase.kt`, `RasScoringStrategy.kt`, `HrMaxProvider.kt`_
 
 - **ATL / CTL** — short-term and long-term rolling averages of TRIMP. Borrowed from Banister's training-load model and used by most cycling and running apps.
 - **Z-score** — a standardized number telling you how many standard deviations above or below your average a metric is. Z=0 is your average; Z=+2 is very high; Z=−2 is very low.
@@ -254,7 +254,7 @@ A few smaller modifiers shape the numbers behind the scenes. We list them here f
 - **HRV-score saturation.** Above a Z-score of 1.5, additional HRV improvement contributes less to your Restoration score (a 0.25 slope beyond that point) — so an extraordinarily high reading doesn't dominate the score the way a moderate one does.
 - **Late-nadir penalty.** If your lowest overnight heart rate occurs in the final third of your sleep period (after 67% of total sleep time has elapsed), we apply a small 0.95 multiplier to the restoration component. A very late RHR nadir often reflects a shortened or fragmented night rather than genuine recovery.
 - **Per-profile training-load multiplier.** Your Banister training-load model uses a profile-specific multiplier when converting heart-rate-reserve intensity into TRIMP: Athlete ×1.0, Active ×1.35, Sedentary ×1.75. This reflects that the same relative effort represents a larger physiological load for someone who trains less.
-- **PAI tiered accumulation.** Your daily Personal Activity Intelligence (PAI) points accumulate at full rate (×1.0) up to 50 points, at half rate (×0.5) from 50–100, and at a quarter rate (×0.25) beyond 100 — with a 75-point daily cap. This keeps one very long or intense session from disproportionately inflating your Load Score, and feeds into the Readiness load component.
+- **RAS tiered accumulation.** Your daily Readylytics Activity Score (RAS) points accumulate at full rate (×1.0) up to 50 points, at half rate (×0.5) from 50–100, and at a quarter rate (×0.25) beyond 100 — with a 75-point daily cap. This keeps one very long or intense session from disproportionately inflating your Load Score, and feeds into the Readiness load component.
 - **Suspicious sleep-stage reweight.** If your wearable's sleep-stage data for a night looks implausible (e.g., no deep or REM sleep detected at all), we reweight the Sleep Score: Duration rises to 75% and Architecture drops to 0%, while Restoration stays at 25%. This avoids penalising you for a wearable data glitch rather than your actual sleep.
 - **Missing-day handling in load averages.** Acute and chronic training-load averages (ATL/CTL) are exponential moving averages where a day with no logged exercise counts as zero TRIMP, not "no data". When you only have one day of history, that single day's value is used directly as the starting average.
 - **Estimated max heart rate.** If you haven't entered your own max heart rate, we estimate it from your age using the Tanaka formula (`208 − 0.7 × age`), which is more accurate across adult age ranges than the older "220 − age" rule of thumb.

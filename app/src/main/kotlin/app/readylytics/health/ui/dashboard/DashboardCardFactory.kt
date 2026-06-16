@@ -292,12 +292,12 @@ fun buildCardDataMap(
         )
     }
 
-    cardMap[CardId.PAI_DAILY] = {
+    cardMap[CardId.RAS_DAILY] = {
         CardLoader(
             isLoading = isLoading,
             skeleton = { MetricCardSkeleton() },
             content = {
-                val paiCard = uiState.cardDataMap[CardId.PAI_DAILY]
+                val paiCard = uiState.cardDataMap[CardId.RAS_DAILY]
                 if (paiCard != null) {
                     MetricCard(
                         title = paiCard.title,
@@ -489,9 +489,9 @@ private fun getInsightIcon(type: InsightType): ImageVector =
         InsightType.HRV_DROP_LOW_SPO2 -> Icons.Default.Air
         InsightType.LATE_NADIR_ELEVATED_RHR -> Icons.Default.MonitorHeart
         InsightType.BP_ELEVATED_HIGH_STRAIN -> Icons.Default.Bloodtype
-        InsightType.PAI_DEPLETION_HIGH_STRAIN -> Icons.Default.FitnessCenter
+        InsightType.RAS_DEPLETION_HIGH_STRAIN -> Icons.Default.FitnessCenter
         InsightType.HRV_DECLINE_STREAK -> Icons.Default.Warning
         InsightType.STEP_SHORTFALL -> Icons.AutoMirrored.Filled.DirectionsWalk
-        InsightType.PAI_WEEKLY_UNDERPERFORMANCE -> Icons.AutoMirrored.Filled.TrendingUp
+        InsightType.RAS_WEEKLY_UNDERPERFORMANCE -> Icons.AutoMirrored.Filled.TrendingUp
         InsightType.WEIGHT_DRIFT_TRAINING_LOAD -> Icons.Default.MonitorWeight
     }

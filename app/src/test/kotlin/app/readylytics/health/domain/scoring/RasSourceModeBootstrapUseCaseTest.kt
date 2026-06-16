@@ -9,15 +9,15 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 
-class PaiSourceModeBootstrapUseCaseTest {
+class RasSourceModeBootstrapUseCaseTest {
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
 
-    private lateinit var useCase: PaiSourceModeBootstrapUseCase
+    private lateinit var useCase: RasSourceModeBootstrapUseCase
 
     @Before
     fun setup() {
-        useCase = PaiSourceModeBootstrapUseCase(settingsRepo, dailySummaryDao)
+        useCase = RasSourceModeBootstrapUseCase(settingsRepo, dailySummaryDao)
     }
 
     @Test
@@ -27,7 +27,7 @@ class PaiSourceModeBootstrapUseCaseTest {
 
             useCase()
 
-            coVerify { settingsRepo.bootstrapPaiSourceModeIfUnset(true) }
+            coVerify { settingsRepo.bootstrapRasSourceModeIfUnset(true) }
         }
 
     @Test
@@ -37,6 +37,6 @@ class PaiSourceModeBootstrapUseCaseTest {
 
             useCase()
 
-            coVerify { settingsRepo.bootstrapPaiSourceModeIfUnset(false) }
+            coVerify { settingsRepo.bootstrapRasSourceModeIfUnset(false) }
         }
 }

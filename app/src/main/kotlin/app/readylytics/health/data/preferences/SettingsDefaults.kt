@@ -48,10 +48,10 @@ object SettingsDefaults {
     const val CONSISTENCY_BASELINE_DAYS = 14
 
     /**
-     * Authoritative runtime value for PAI scaling.
+     * Authoritative runtime value for RAS scaling.
      * Initialized from PhysiologyProfile default, but user overrides are persistent.
      */
-    const val PAI_SCALING_FACTOR = 0.20f
+    const val RAS_SCALING_FACTOR = 0.20f
     const val STEP_GOAL = 10000
     const val RETENTION_DAYS_ENABLED = true
     const val RETENTION_DAYS = 365
@@ -70,7 +70,7 @@ object SettingsDefaults {
     val CIRCADIAN_THRESHOLD_OVERRIDE: String? = null // null = use profile default
     val TRIMP_MODEL = TrimpModel.BANISTER
     val STRAIN_LOAD_SOURCE_MODE = LoadSourceMode.WORKOUT_ONLY
-    val PAI_SOURCE_MODE = LoadSourceMode.EVERYDAY_HEART_RATE
+    val RAS_SOURCE_MODE = LoadSourceMode.EVERYDAY_HEART_RATE
     val UNIT_SYSTEM = UnitSystem.METRIC
     const val BACKGROUND_SYNC_ENABLED = false
     val BACKGROUND_SYNC_INTERVAL = BackgroundSyncInterval.HOUR_1
@@ -88,7 +88,7 @@ object SettingsDefaults {
             CardConfiguration(CardId.STEPS, isVisible = true, position = 2),
             CardConfiguration(CardId.HRV, isVisible = true, position = 3),
             CardConfiguration(CardId.SLEEP_DURATION, isVisible = true, position = 5),
-            CardConfiguration(CardId.PAI_DAILY, isVisible = true, position = 6),
+            CardConfiguration(CardId.RAS_DAILY, isVisible = true, position = 6),
             CardConfiguration(CardId.RESTING_HR, isVisible = true, position = 7),
             CardConfiguration(CardId.CIRCADIAN_CONSISTENCY, isVisible = true, position = 8),
             CardConfiguration(CardId.STRAIN_RATIO, isVisible = true, position = 9),

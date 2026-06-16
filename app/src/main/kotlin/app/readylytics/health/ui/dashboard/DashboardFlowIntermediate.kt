@@ -77,7 +77,7 @@ data class DashboardRealtimeState(
  * - Daily summary for selected date
  * - User preferences
  * - Circadian consistency data
- * - 7-day PAI breakdown
+ * - 7-day RAS breakdown
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 fun createDashboardBasicInputsFlow(
@@ -101,7 +101,7 @@ fun createDashboardBasicInputsFlow(
                 dailySummaryRepository.observeByDate(midnightMs)
             }
 
-        // PAI breakdown is always 7-day window
+        // RAS breakdown is always 7-day window
         val paiFromMs =
             date
                 .minusDays(6)

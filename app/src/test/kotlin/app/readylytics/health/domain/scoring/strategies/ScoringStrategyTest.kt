@@ -99,19 +99,19 @@ class SleepScoringStrategyTest {
     }
 }
 
-class PaiScoringStrategyTest {
-    private val paiStrategy = PaiScoringStrategy()
+class RasScoringStrategyTest {
+    private val rasStrategy = RasScoringStrategy()
 
     @Test
     fun `strainRatio zero CTL returns 0`() {
-        val result = paiStrategy.computeStrainRatio(atl = 50f, ctl = 0f)
+        val result = rasStrategy.computeStrainRatio(atl = 50f, ctl = 0f)
         assertEquals(0f, result, DELTA)
     }
 
     @Test
     fun `ctlEma fewer than MIN_SESSIONS returns seed`() {
         val data = listOf(50f, 55f)
-        val result = paiStrategy.computeCtlEma(data, seedFitnessLevel = 40f, windowDays = 42)
+        val result = rasStrategy.computeCtlEma(data, seedFitnessLevel = 40f, windowDays = 42)
         assertEquals(40f, result, DELTA)
     }
 
@@ -119,13 +119,13 @@ class PaiScoringStrategyTest {
     fun `atlEma exact session count returns SMA`() {
         val minSessions = ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
         val data = List(minSessions) { 50f }
-        val result = paiStrategy.computeAtlEma(data, seedFatigueLevel = 40f, windowDays = 7)
+        val result = rasStrategy.computeAtlEma(data, seedFatigueLevel = 40f, windowDays = 7)
         assertEquals(50f, result, DELTA)
     }
 
     @Test
     fun `emaWithDecay empty map returns DEFAULT_FITNESS_LEVEL`() {
-        val result = paiStrategy.computeCtlEmaWithDecay(emptyMap(), LocalDate.now(), windowDays = 42)
+        val result = rasStrategy.computeCtlEmaWithDecay(emptyMap(), LocalDate.now(), windowDays = 42)
         assertEquals(ScoringConstants.DEFAULT_FITNESS_LEVEL, result, DELTA)
     }
 
@@ -133,7 +133,7 @@ class PaiScoringStrategyTest {
     fun `emaWithDecay single day returns TRIMP value`() {
         val today = LocalDate.now()
         val data = mapOf(today to 50f)
-        val result = paiStrategy.computeCtlEmaWithDecay(data, today, windowDays = 42)
+        val result = rasStrategy.computeCtlEmaWithDecay(data, today, windowDays = 42)
         assertEquals(50f, result, DELTA)
     }
 }

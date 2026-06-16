@@ -90,35 +90,35 @@ class LoadSourceSelectorTest {
     }
 
     @Test
-    fun `selectDailyPai returns variant value, never the legacy paiScore value`() {
+    fun `selectDailyRas returns variant value, never the legacy legacyRasScore value`() {
         val summary =
             DailySummary(
                 date = date,
-                paiScore = 999f,
-                paiWorkoutOnly = 5f,
-                paiEverydayHr = 6f,
+                legacyRasScore = 999f,
+                rasWorkoutOnly = 5f,
+                rasEverydayHr = 6f,
             )
-        assertEquals(5f, LoadSourceSelector.selectDailyPai(summary, LoadSourceMode.WORKOUT_ONLY))
-        assertEquals(6f, LoadSourceSelector.selectDailyPai(summary, LoadSourceMode.EVERYDAY_HEART_RATE))
+        assertEquals(5f, LoadSourceSelector.selectDailyRas(summary, LoadSourceMode.WORKOUT_ONLY))
+        assertEquals(6f, LoadSourceSelector.selectDailyRas(summary, LoadSourceMode.EVERYDAY_HEART_RATE))
     }
 
     @Test
-    fun `selectTotalPai returns variant value, never the legacy totalPai value`() {
+    fun `selectTotalRas returns variant value, never the legacy legacyTotalRas value`() {
         val summary =
             DailySummary(
                 date = date,
-                totalPai = 999f,
-                totalPaiWorkoutOnly = 70f,
-                totalPaiEverydayHr = 75f,
+                legacyTotalRas = 999f,
+                totalRasWorkoutOnly = 70f,
+                totalRasEverydayHr = 75f,
             )
-        assertEquals(70f, LoadSourceSelector.selectTotalPai(summary, LoadSourceMode.WORKOUT_ONLY))
-        assertEquals(75f, LoadSourceSelector.selectTotalPai(summary, LoadSourceMode.EVERYDAY_HEART_RATE))
+        assertEquals(70f, LoadSourceSelector.selectTotalRas(summary, LoadSourceMode.WORKOUT_ONLY))
+        assertEquals(75f, LoadSourceSelector.selectTotalRas(summary, LoadSourceMode.EVERYDAY_HEART_RATE))
     }
 
     // --- Toggle test: same summary, prefs differ only in mode ---
 
     @Test
-    fun `toMetrics output differs when strainLoadSourceMode and paiSourceMode toggle`() {
+    fun `toMetrics output differs when strainLoadSourceMode and rasSourceMode toggle`() {
         val summary =
             DailySummary(
                 date = date,
@@ -130,21 +130,21 @@ class LoadSourceSelectorTest {
                 readinessEverydayHr = 80f,
                 strainRatioWorkoutOnly = 0.5f,
                 strainRatioEverydayHr = 0.8f,
-                totalPaiWorkoutOnly = 70f,
-                totalPaiEverydayHr = 75f,
-                paiWorkoutOnly = 5f,
-                paiEverydayHr = 6f,
+                totalRasWorkoutOnly = 70f,
+                totalRasEverydayHr = 75f,
+                rasWorkoutOnly = 5f,
+                rasEverydayHr = 6f,
             )
 
         val workoutOnlyPrefs =
             UserPreferences(
                 strainLoadSourceMode = LoadSourceMode.WORKOUT_ONLY,
-                paiSourceMode = LoadSourceMode.WORKOUT_ONLY,
+                rasSourceMode = LoadSourceMode.WORKOUT_ONLY,
             )
         val everydayHrPrefs =
             UserPreferences(
                 strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE,
-                paiSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE,
+                rasSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE,
             )
 
         val workoutOnlyMetrics = DailyMetricsMapper.toMetrics(summary, workoutOnlyPrefs)
@@ -162,11 +162,11 @@ class LoadSourceSelectorTest {
         assertEquals("0.50", workoutOnlyMetrics.strainRatioDisplay)
         assertEquals("0.80", everydayHrMetrics.strainRatioDisplay)
 
-        assertEquals(70, workoutOnlyMetrics.paiRounded)
-        assertEquals(75, everydayHrMetrics.paiRounded)
+        assertEquals(70, workoutOnlyMetrics.rasRounded)
+        assertEquals(75, everydayHrMetrics.rasRounded)
 
-        assertEquals(5, workoutOnlyMetrics.paiDayScoreRounded)
-        assertEquals(6, everydayHrMetrics.paiDayScoreRounded)
+        assertEquals(5, workoutOnlyMetrics.rasDayScoreRounded)
+        assertEquals(6, everydayHrMetrics.rasDayScoreRounded)
     }
 
     // --- readinessLowConfidence matrix ---
@@ -221,7 +221,7 @@ class LoadSourceSelectorTest {
         val everydayHrPrefs =
             UserPreferences(
                 strainLoadSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE,
-                paiSourceMode = LoadSourceMode.WORKOUT_ONLY,
+                rasSourceMode = LoadSourceMode.WORKOUT_ONLY,
             )
 
         assertTrue(LoadSourceSelector.needsRecalc(notYetComputed, everydayHrPrefs))
@@ -229,18 +229,18 @@ class LoadSourceSelectorTest {
     }
 
     @Test
-    fun `needsRecalc is true when EVERYDAY_HEART_RATE pai variants are null, false when populated`() {
+    fun `needsRecalc is true when EVERYDAY_HEART_RATE ras variants are null, false when populated`() {
         val notYetComputed = DailySummary(date = date)
         val computed =
             DailySummary(
                 date = date,
-                paiEverydayHr = 6f,
-                totalPaiEverydayHr = 75f,
+                rasEverydayHr = 6f,
+                totalRasEverydayHr = 75f,
             )
         val everydayHrPrefs =
             UserPreferences(
                 strainLoadSourceMode = LoadSourceMode.WORKOUT_ONLY,
-                paiSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE,
+                rasSourceMode = LoadSourceMode.EVERYDAY_HEART_RATE,
             )
 
         assertTrue(LoadSourceSelector.needsRecalc(notYetComputed, everydayHrPrefs))
@@ -253,7 +253,7 @@ class LoadSourceSelectorTest {
         val workoutOnlyPrefs =
             UserPreferences(
                 strainLoadSourceMode = LoadSourceMode.WORKOUT_ONLY,
-                paiSourceMode = LoadSourceMode.WORKOUT_ONLY,
+                rasSourceMode = LoadSourceMode.WORKOUT_ONLY,
             )
         assertFalse(LoadSourceSelector.needsRecalc(summary, workoutOnlyPrefs))
     }

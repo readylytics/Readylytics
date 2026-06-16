@@ -36,7 +36,7 @@ import app.readylytics.health.ui.common.ChartUtils
 import java.text.NumberFormat
 import java.time.LocalDate
 
-// stepGoal fills bar to 75% width — mirrors PAI bar design
+// stepGoal fills bar to 75% width — mirrors RAS bar design
 private fun barMax(stepGoal: Int): Float = stepGoal / 0.75f
 
 @Composable

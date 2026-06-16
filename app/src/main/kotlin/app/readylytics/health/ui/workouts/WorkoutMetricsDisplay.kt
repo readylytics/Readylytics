@@ -82,11 +82,11 @@ fun WorkoutMetricsDisplay(
                     modifier = Modifier.weight(1f),
                 )
                 MetricCard(
-                    title = stringResource(R.string.workout_metric_pai),
-                    value = MetricFormatter.formatPai(pai),
+                    title = stringResource(R.string.workout_metric_ras),
+                    value = MetricFormatter.formatRas(pai),
                     secondaryText = stringResource(R.string.workout_metric_points),
                     status = MetricStatus.NEUTRAL,
-                    tooltip = stringResource(R.string.workout_tooltip_pai),
+                    tooltip = stringResource(R.string.workout_tooltip_ras),
                     modifier = Modifier.weight(1f),
                 )
             }

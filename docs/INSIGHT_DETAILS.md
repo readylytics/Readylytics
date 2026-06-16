@@ -248,49 +248,49 @@ This document defines the user-facing details, signal meanings, possible causes,
 
 ---
 
-## PAI_DEPLETION_HIGH_STRAIN
+## RAS_DEPLETION_HIGH_STRAIN
 
 - **Type**: `TRAINING_BEHAVIOR`
-- **Trigger**: PAI score is below target while strain ratio indicates recent training load.
-- **Card title**: Low PAI Despite Training Load
-- **Card description**: Your PAI is low even though recent training strain is elevated.
-- **Observed signal**: Your PAI score is below target while your strain ratio indicates recent training load.
-- **Meaning**: Some workouts may add training strain without raising PAI much, depending on heart-rate intensity and duration.
+- **Trigger**: RAS score is below target while strain ratio indicates recent training load.
+- **Card title**: Low RAS Despite Training Load
+- **Card description**: Your RAS is low even though recent training strain is elevated.
+- **Observed signal**: Your RAS score is below target while your strain ratio indicates recent training load.
+- **Meaning**: Some workouts may add training strain without raising RAS much, depending on heart-rate intensity and duration.
 - **Confidence**: None.
 - **Possible causes**:
-  - Strength training with lower sustained heart rate: PAI rewards sustained heart-rate activity more than brief spikes.
-  - Short workouts: Short sessions may not add much PAI even when they feel hard.
-  - Incomplete heart-rate data: Missing heart-rate samples can reduce PAI credit.
-  - Training intensity below PAI zones: Some work may be below zones that contribute strongly to PAI.
-  - Device measurement gaps: Wearable gaps can affect PAI calculation.
+  - Strength training with lower sustained heart rate: RAS rewards sustained heart-rate activity more than brief spikes.
+  - Short workouts: Short sessions may not add much RAS even when they feel hard.
+  - Incomplete heart-rate data: Missing heart-rate samples can reduce RAS credit.
+  - Training intensity below RAS zones: Some work may be below zones that contribute strongly to PAI.
+  - Device measurement gaps: Wearable gaps can affect RAS calculation.
 - **Recommendations**:
-  - If PAI is a goal, include some sustained aerobic work in appropriate heart-rate zones.
+  - If RAS is a goal, include some sustained aerobic work in appropriate heart-rate zones.
 - **Caveats**:
-  - Low PAI does not mean your training was useless.
+  - Low RAS does not mean your training was useless.
 - **Safety note**: None.
 - **Source notes / rationale**: Heart-rate intensity vs workout duration monitoring.
 
 ---
 
-## PAI_WEEKLY_UNDERPERFORMANCE
+## RAS_WEEKLY_UNDERPERFORMANCE
 
 - **Type**: `TRAINING_BEHAVIOR`
-- **Trigger**: Weekly rolling PAI total is below target.
-- **Card title**: Weekly PAI Below Target
-- **Card description**: Your rolling weekly PAI total is below your target.
-- **Observed signal**: Your 7-day PAI total is below the configured weekly target.
-- **Meaning**: PAI is designed to reward sustained heart-rate activity over the week.
+- **Trigger**: Weekly rolling RAS total is below target.
+- **Card title**: Weekly RAS Below Target
+- **Card description**: Your rolling weekly RAS total is below your target.
+- **Observed signal**: Your 7-day RAS total is below the configured weekly target.
+- **Meaning**: RAS is designed to reward sustained heart-rate activity over the week.
 - **Confidence**: None.
 - **Possible causes**:
-  - Too few aerobic sessions: Fewer sustained sessions can lower weekly PAI.
+  - Too few aerobic sessions: Fewer sustained sessions can lower weekly RAS.
   - Low heart-rate intensity: Lower-intensity sessions may add less PAI.
-  - Missing heart-rate data: Missing heart-rate samples can reduce PAI credit.
-  - Recovery week: A planned easier week can reduce weekly PAI.
-  - Strength-focused training: Strength work may add less PAI than sustained aerobic work.
+  - Missing heart-rate data: Missing heart-rate samples can reduce RAS credit.
+  - Recovery week: A planned easier week can reduce weekly RAS.
+  - Strength-focused training: Strength work may add less RAS than sustained aerobic work.
 - **Recommendations**:
   - Add easy or moderate aerobic sessions if this fits your training plan.
 - **Caveats**:
-  - A low PAI week is not automatically bad if you are intentionally recovering or focusing on strength.
+  - A low RAS week is not automatically bad if you are intentionally recovering or focusing on strength.
 - **Safety note**: None.
 - **Source notes / rationale**: Cardiovascular health metric tracking.
 

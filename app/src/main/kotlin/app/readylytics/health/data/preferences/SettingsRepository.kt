@@ -124,7 +124,7 @@ class SettingsRepository
 
         suspend fun updateConsistencyBaselineDays(days: Int) = sleep.updateConsistencyBaselineDays(days)
 
-        suspend fun updatePaiScalingFactor(value: Float) = sleep.updatePaiScalingFactor(value)
+        suspend fun updateRasScalingFactor(value: Float) = sleep.updateRasScalingFactor(value)
 
         suspend fun updateStepGoal(steps: Int) = sleep.updateStepGoal(steps)
 
@@ -159,8 +159,8 @@ class SettingsRepository
 
         suspend fun initializeInstallDateIfUnset() = sync.initializeInstallDateIfUnset()
 
-        suspend fun bootstrapPaiSourceModeIfUnset(hasWorkoutOnlyHistory: Boolean) =
-            sync.bootstrapPaiSourceModeIfUnset(hasWorkoutOnlyHistory)
+        suspend fun bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory: Boolean) =
+            sync.bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory)
 
         suspend fun updateInstallDate(dateTimeMs: Long) = sync.updateInstallDate(dateTimeMs)
 
@@ -182,7 +182,7 @@ class SettingsRepository
 
         suspend fun updateStrainLoadSourceMode(mode: LoadSourceMode) = sync.updateStrainLoadSourceMode(mode)
 
-        suspend fun updatePaiSourceMode(mode: LoadSourceMode) = sync.updatePaiSourceMode(mode)
+        suspend fun updateRasSourceMode(mode: LoadSourceMode) = sync.updateRasSourceMode(mode)
 
         suspend fun updateBackupSchedule(schedule: BackupSchedule) = backup.updateBackupSchedule(schedule)
 

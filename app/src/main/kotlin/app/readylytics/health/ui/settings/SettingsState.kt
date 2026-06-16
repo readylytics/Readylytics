@@ -33,7 +33,7 @@ data class SleepSettingsState(
     val rhrBaselineOverride: Float? = SettingsDefaults.RHR_BASELINE_OVERRIDE,
     val restingHrPercentile: Int = SettingsDefaults.RESTING_HR_PERCENTILE,
     val strainLoadSourceMode: LoadSourceMode = SettingsDefaults.STRAIN_LOAD_SOURCE_MODE,
-    val paiSourceMode: LoadSourceMode = SettingsDefaults.PAI_SOURCE_MODE,
+    val rasSourceMode: LoadSourceMode = SettingsDefaults.RAS_SOURCE_MODE,
 )
 
 data class PhysiologySettingsState(
@@ -85,7 +85,7 @@ data class UIState(
     val appTheme: AppTheme = SettingsDefaults.APP_THEME,
     val dynamicColorEnabled: Boolean = SettingsDefaults.DYNAMIC_COLOR_ENABLED,
     val fallbackThemeColor: FallbackThemeColor = SettingsDefaults.FALLBACK_THEME_COLOR,
-    val paiScalingFactor: Float = SettingsDefaults.PAI_SCALING_FACTOR,
+    val rasScalingFactor: Float = SettingsDefaults.RAS_SCALING_FACTOR,
     val stepGoal: Int = SettingsDefaults.STEP_GOAL,
     val retentionDaysEnabled: Boolean = SettingsDefaults.RETENTION_DAYS_ENABLED,
     val retentionDays: Int = SettingsDefaults.RETENTION_DAYS,

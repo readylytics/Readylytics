@@ -10,9 +10,9 @@ import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
-import app.readylytics.health.domain.scoring.PaiCalculator
+import app.readylytics.health.domain.scoring.RasCalculator
 import app.readylytics.health.ui.workouts.mappers.ChartDataMapper
-import app.readylytics.health.ui.workouts.mappers.DailyPaiBreakdownMapper
+import app.readylytics.health.ui.workouts.mappers.DailyRasBreakdownMapper
 import app.readylytics.health.ui.workouts.mappers.RecoveryMetricsMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,8 +38,8 @@ data class WorkoutDetailUiState(
     val hrr1Min: Int? = null,
     val hrr2Min: Int? = null,
     val hrr3Min: Int? = null,
-    val totalPai: Float? = null,
-    val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
+    val legacyTotalRas: Float? = null,
+    val rasDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val computedTrimp: Int? = null,
     val gainedStrain: Float? = null,
     val gainedStrainDisplay: String = "—",
@@ -109,8 +109,8 @@ class WorkoutDetailViewModel
                 val thirtyDaySummaries = dailySummaryRepository.getSince(thirtyDaysAgo)
 
                 val prefs = settingsRepo.userPreferences.first()
-                val paiBreakdown =
-                    DailyPaiBreakdownMapper.mapDailyBreakdown(workoutDate, thirtyDaySummaries, prefs.paiSourceMode)
+                val rasBreakdown =
+                    DailyRasBreakdownMapper.mapDailyBreakdown(workoutDate, thirtyDaySummaries, prefs.rasSourceMode)
 
                 val recoveryMetrics = RecoveryMetricsMapper.mapRecoveryMetrics(allSamples, workout.endTime, endHr)
 
@@ -137,12 +137,12 @@ class WorkoutDetailViewModel
                         hrr1Min = recoveryMetrics.hrr1Min,
                         hrr2Min = recoveryMetrics.hrr2Min,
                         hrr3Min = recoveryMetrics.hrr3Min,
-                        totalPai = summary?.let { LoadSourceSelector.selectTotalPai(it, prefs.paiSourceMode) },
-                        paiDailyBreakdown = paiBreakdown,
+                        legacyTotalRas = summary?.let { LoadSourceSelector.selectTotalRas(it, prefs.rasSourceMode) },
+                        rasDailyBreakdown = rasBreakdown,
                         computedTrimp = displayMetrics.computedTrimp.takeIf { trimp -> trimp > 0 },
                         gainedStrain = displayMetrics.gainedStrain,
                         gainedStrainDisplay = displayMetrics.gainedStrainDisplay,
-                        pai = PaiCalculator.calculateDailyPai(displayMetrics.preciseTrimp, prefs.paiScalingFactor),
+                        pai = RasCalculator.calculateDailyRas(displayMetrics.preciseTrimp, prefs.rasScalingFactor),
                         isLoading = false,
                     )
                 }

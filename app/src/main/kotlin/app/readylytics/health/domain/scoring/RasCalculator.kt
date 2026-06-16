@@ -4,12 +4,12 @@ import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import kotlin.math.exp
 
-object PaiCalculator {
-    fun getDefaultPaiScalingFactor(profile: PhysiologyProfile): Float =
+object RasCalculator {
+    fun getDefaultRasScalingFactor(profile: PhysiologyProfile): Float =
         when (profile) {
-            PhysiologyProfile.ATHLETE -> ScoringConstants.Pai.PAI_SCALING_ATHLETE
-            PhysiologyProfile.ACTIVE -> ScoringConstants.Pai.PAI_SCALING_ACTIVE
-            PhysiologyProfile.SEDENTARY -> ScoringConstants.Pai.PAI_SCALING_SEDENTARY
+            PhysiologyProfile.ATHLETE -> ScoringConstants.Ras.RAS_SCALING_ATHLETE
+            PhysiologyProfile.ACTIVE -> ScoringConstants.Ras.RAS_SCALING_ACTIVE
+            PhysiologyProfile.SEDENTARY -> ScoringConstants.Ras.RAS_SCALING_SEDENTARY
         }
 
     /**
@@ -46,7 +46,7 @@ object PaiCalculator {
             TrimpModel.CHENG -> {
                 // LT-TRIMP (Cheng 1992): piecewise on absolute HR vs lactate threshold (LT).
                 // Continuous at HR=LT: both branches yield weight=0.5.
-                // REF: Cheng et al. 1992; paiesque reference. LT from user HR zones; no fallback.
+                // REF: Cheng et al. 1992; rasesque reference. LT from user HR zones; no fallback.
                 if (ltBpm <= 0f) return 0f
                 val isMale = gender != Gender.FEMALE
                 val sexFactor =
@@ -65,52 +65,52 @@ object PaiCalculator {
                 durationMinutes * weight
             }
             TrimpModel.I_TRIMP -> {
-                // iTRIMP (Manzi et al. 2009): exponential weighting. No PAI calibration factor.
-                // REF: Manzi et al. 2009; paiesque reference
+                // iTRIMP (Manzi et al. 2009): exponential weighting. No RAS calibration factor.
+                // REF: Manzi et al. 2009; rasesque reference
                 durationMinutes * hrR * exp(itrimB * hrR)
             }
         }
     }
 
     /**
-     * Phase IV: PAI Point Conversion & Scaling
+     * Phase IV: RAS Point Conversion & Scaling
      */
-    fun calculateDailyPai(
+    fun calculateDailyRas(
         dailyTrimp: Float,
-        scalingFactor: Float,
+        rasScalingFactor: Float,
     ): Float {
-        val paiD = dailyTrimp * scalingFactor
-        return paiD.coerceAtMost(ScoringConstants.Pai.DAILY_CAP)
+        val rasD = dailyTrimp * rasScalingFactor
+        return rasD.coerceAtMost(ScoringConstants.Ras.DAILY_CAP)
     }
 
     /**
      * Phase IV.B: Non-Linear Accumulation (Logarithmic Decay)
-     * Splits daily PAI across tier boundaries instead of applying a single multiplier.
+     * Splits daily RAS across tier boundaries instead of applying a single multiplier.
      */
     fun applyAccumulationMultiplier(
-        dailyPai: Float,
-        totalPaiSoFar: Float,
+        dailyRas: Float,
+        totalRasSoFar: Float,
     ): Float {
-        if (dailyPai <= 0f) return 0f
-        var remaining = dailyPai
-        var accumulated = totalPaiSoFar
+        if (dailyRas <= 0f) return 0f
+        var remaining = dailyRas
+        var accumulated = totalRasSoFar
         var result = 0f
         // Tier 1: 0–50 → 1.0×
-        if (accumulated < ScoringConstants.Pai.TIER1_THRESHOLD) {
-            val used = remaining.coerceAtMost(ScoringConstants.Pai.TIER1_THRESHOLD - accumulated)
+        if (accumulated < ScoringConstants.Ras.TIER1_THRESHOLD) {
+            val used = remaining.coerceAtMost(ScoringConstants.Ras.TIER1_THRESHOLD - accumulated)
             result += used
             accumulated += used
             remaining -= used
         }
         // Tier 2: 50–100 → 0.5×
-        if (remaining > 0f && accumulated < ScoringConstants.Pai.TIER2_THRESHOLD) {
-            val used = remaining.coerceAtMost(ScoringConstants.Pai.TIER2_THRESHOLD - accumulated)
-            result += used * ScoringConstants.Pai.TIER2_MULTIPLIER
+        if (remaining > 0f && accumulated < ScoringConstants.Ras.TIER2_THRESHOLD) {
+            val used = remaining.coerceAtMost(ScoringConstants.Ras.TIER2_THRESHOLD - accumulated)
+            result += used * ScoringConstants.Ras.TIER2_MULTIPLIER
             accumulated += used
             remaining -= used
         }
         // Tier 3: 100+ → 0.25×
-        if (remaining > 0f) result += remaining * ScoringConstants.Pai.TIER3_MULTIPLIER
+        if (remaining > 0f) result += remaining * ScoringConstants.Ras.TIER3_MULTIPLIER
         return result
     }
 
@@ -118,10 +118,10 @@ object PaiCalculator {
      * Phase IV.C: Readiness Integration
      */
     fun adjustForReadiness(
-        paiD: Float,
+        rasD: Float,
         readinessScore: Float?,
     ): Float {
-        if (readinessScore == null) return paiD
-        return paiD * (readinessScore / ScoringConstants.Pai.READINESS_SCALE)
+        if (readinessScore == null) return rasD
+        return rasD * (readinessScore / ScoringConstants.Ras.READINESS_SCALE)
     }
 }

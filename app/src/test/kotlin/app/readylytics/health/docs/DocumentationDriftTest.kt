@@ -139,13 +139,13 @@ class DocumentationDriftTest {
     @Test
     fun `load source defaults match ABOUT md and strings`() {
         assertEquals(LoadSourceMode.WORKOUT_ONLY, SettingsDefaults.STRAIN_LOAD_SOURCE_MODE)
-        assertEquals(LoadSourceMode.EVERYDAY_HEART_RATE, SettingsDefaults.PAI_SOURCE_MODE)
+        assertEquals(LoadSourceMode.EVERYDAY_HEART_RATE, SettingsDefaults.RAS_SOURCE_MODE)
 
         for (text in listOf(aboutMd, stringsXml)) {
             val normalized = normalizeWhitespace(text)
             assertTrue(text.contains("Strain / Training Load source"), "expected strain source label in doc")
             assertTrue(normalized.contains("default: **Workout only**"), "expected strain default in doc")
-            assertTrue(normalized.contains("default: **Everyday heart-rate load**"), "expected PAI default in doc")
+            assertTrue(normalized.contains("default: **Everyday heart-rate load**"), "expected RAS default in doc")
             assertTrue(
                 normalized.contains("Readiness always uses this source"),
                 "expected Readiness-source link in doc",
@@ -153,7 +153,7 @@ class DocumentationDriftTest {
             assertTrue(text.contains("exactly once"), "expected workout-TRIMP-once rule in doc")
             assertTrue(
                 text.contains("Existing users upgrading") || text.contains("existing-user"),
-                "expected existing-user PAI bootstrap note in doc",
+                "expected existing-user RAS bootstrap note in doc",
             )
         }
     }

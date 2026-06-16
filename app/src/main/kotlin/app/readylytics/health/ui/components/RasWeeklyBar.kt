@@ -29,20 +29,20 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.util.roundToPercentInt
 
-// 100 PAI fills 75% of the bar width
+// 100 RAS fills 75% of the bar width
 private const val BAR_MAX = 100f / 0.75f
 
 @Composable
-fun PaiWeeklyBar(
+fun RasWeeklyBar(
     dailyBreakdown: List<Pair<String, Float>>,
-    totalPai: Float,
+    legacyTotalRas: Float,
     modifier: Modifier = Modifier,
 ) {
     val status =
         when {
-            totalPai >= 100f -> MetricStatus.OPTIMAL
-            totalPai >= 75f -> MetricStatus.NEUTRAL
-            totalPai >= 50f -> MetricStatus.WARNING
+            legacyTotalRas >= 100f -> MetricStatus.OPTIMAL
+            legacyTotalRas >= 75f -> MetricStatus.NEUTRAL
+            legacyTotalRas >= 50f -> MetricStatus.WARNING
             else -> MetricStatus.POOR
         }
     val fillColor = status.gaugeColor()
@@ -81,9 +81,9 @@ fun PaiWeeklyBar(
                 drawRect(color = trackColor, topLeft = Offset(0f, 0f), size = Size(totalWidth, barHeight))
 
                 var xOffset = 0f
-                for ((_, pai) in dailyBreakdown) {
-                    if (pai > 0f) {
-                        val segmentWidth = totalWidth * (pai / BAR_MAX)
+                for ((_, ras) in dailyBreakdown) {
+                    if (ras > 0f) {
+                        val segmentWidth = totalWidth * (ras / BAR_MAX)
                         drawRect(
                             color = fillColor,
                             topLeft = Offset(xOffset, 0f),
@@ -110,9 +110,9 @@ fun PaiWeeklyBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                // Allow-listed: chart-widget label for the passed-in PAI series (bar geometry
+                // Allow-listed: chart-widget label for the passed-in RAS series (bar geometry
                 // uses the raw Float above); not a DailySummary metric read.
-                text = "${totalPai.roundToPercentInt()} PAI",
+                text = "${legacyTotalRas.roundToPercentInt()} RAS",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = fillColor,
@@ -130,11 +130,11 @@ fun PaiWeeklyBar(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            dailyBreakdown.forEach { (label, pai) ->
-                PaiDayLegendItem(
-                    color = if (pai > 0f) fillColor else onSurfaceVariant.copy(alpha = 0.4f),
+            dailyBreakdown.forEach { (label, ras) ->
+                RasDayLegendItem(
+                    color = if (ras > 0f) fillColor else onSurfaceVariant.copy(alpha = 0.4f),
                     label = label,
-                    pai = pai,
+                    ras = ras,
                     onSurfaceVariant = onSurfaceVariant,
                 )
             }
@@ -143,10 +143,10 @@ fun PaiWeeklyBar(
 }
 
 @Composable
-private fun PaiDayLegendItem(
+private fun RasDayLegendItem(
     color: Color,
     label: String,
-    pai: Float,
+    ras: Float,
     onSurfaceVariant: Color,
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -160,8 +160,8 @@ private fun PaiDayLegendItem(
             color = onSurfaceVariant,
         )
         Text(
-            // Allow-listed: chart-widget per-day legend label for the passed-in PAI series.
-            text = if (pai > 0f) pai.roundToPercentInt().toString() else "-",
+            // Allow-listed: chart-widget per-day legend label for the passed-in RAS series.
+            text = if (ras > 0f) ras.roundToPercentInt().toString() else "-",
             style = MaterialTheme.typography.labelSmall,
             color = onSurfaceVariant,
         )

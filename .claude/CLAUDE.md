@@ -46,7 +46,7 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 
 ## Domain Rules & Engine
 
-- **Baselines:** Compute for all historical dates (no 30-day cutoff); snapshot frozen per day (hrMax, profile, PAI factor, HRV prior). If < 7 days data, show "Calibrating".
+- **Baselines:** Compute for all historical dates (no 30-day cutoff); snapshot frozen per day (hrMax, profile, RAS factor, HRV prior). If < 7 days data, show "Calibrating".
 - **Sleep Score:** Duration (50%), Architecture (25%), Restoration (25%).
 - **Load Score:** Acute (7-day TRIMP avg), Chronic (42-day TRIMP avg). Output = Strain Ratio (TRIMP default).
 

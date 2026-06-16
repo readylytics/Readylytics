@@ -10,7 +10,7 @@ fun CardId.displayName(): String =
         CardId.SLEEP_DURATION -> "Sleep Duration"
         CardId.SLEEP_ARCHITECTURE -> "Sleep Architecture"
         CardId.STRAIN_RATIO -> "Strain Ratio"
-        CardId.PAI_DAILY -> "PAI Daily"
+        CardId.RAS_DAILY -> "RAS Daily"
         CardId.CIRCADIAN_CONSISTENCY -> "Circadian Consistency"
         CardId.RESTING_HR -> "Resting Heart Rate"
         CardId.RECOVERY_INDEX -> "Recovery Index"

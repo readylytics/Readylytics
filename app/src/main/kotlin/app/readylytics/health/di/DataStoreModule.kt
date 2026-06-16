@@ -211,7 +211,7 @@ object DataStoreModule {
                                         consistencyBaselineDays =
                                             it
                                     }
-                                    prefs[floatPreferencesKey("pai_scaling_factor")]?.let { paiScalingFactor = it }
+                                    prefs[floatPreferencesKey("pai_scaling_factor")]?.let { rasScalingFactor = it }
                                     prefs[intPreferencesKey("step_goal")]?.let { stepGoal = it }
                                     prefs[booleanPreferencesKey("retention_days_enabled")]?.let {
                                         retentionDaysEnabled =

@@ -928,10 +928,10 @@ object DatabaseMigrations {
                 listOf(
                     "ALTER TABLE daily_summaries ADD COLUMN trimpWorkoutOnly REAL DEFAULT NULL",
                     "ALTER TABLE daily_summaries ADD COLUMN trimpEverydayHr REAL DEFAULT NULL",
-                    "ALTER TABLE daily_summaries ADD COLUMN paiWorkoutOnly REAL DEFAULT NULL",
-                    "ALTER TABLE daily_summaries ADD COLUMN paiEverydayHr REAL DEFAULT NULL",
-                    "ALTER TABLE daily_summaries ADD COLUMN totalPaiWorkoutOnly REAL DEFAULT NULL",
-                    "ALTER TABLE daily_summaries ADD COLUMN totalPaiEverydayHr REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN rasWorkoutOnly REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN rasEverydayHr REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN totalRasWorkoutOnly REAL DEFAULT NULL",
+                    "ALTER TABLE daily_summaries ADD COLUMN totalRasEverydayHr REAL DEFAULT NULL",
                     "ALTER TABLE daily_summaries ADD COLUMN atlWorkoutOnly REAL DEFAULT NULL",
                     "ALTER TABLE daily_summaries ADD COLUMN atlEverydayHr REAL DEFAULT NULL",
                     "ALTER TABLE daily_summaries ADD COLUMN ctlWorkoutOnly REAL DEFAULT NULL",
@@ -946,18 +946,25 @@ object DatabaseMigrations {
                     "ALTER TABLE daily_summaries ADD COLUMN everydayLoadConfidence TEXT DEFAULT NULL",
                 )
 
+            private val renameSql =
+                listOf(
+                    "ALTER TABLE daily_summaries RENAME COLUMN paiScore TO legacyRasScore",
+                    "ALTER TABLE daily_summaries RENAME COLUMN totalPai TO legacyTotalRas",
+                    "ALTER TABLE daily_summaries RENAME COLUMN pai_scaling_factor TO ras_scaling_factor",
+                )
+
             private val copySql =
                 listOf(
                     "UPDATE daily_summaries SET " +
                         "trimpWorkoutOnly = totalTrimp, " +
-                        "paiWorkoutOnly = paiScore, " +
-                        "totalPaiWorkoutOnly = totalPai, " +
+                        "rasWorkoutOnly = legacyRasScore, " +
+                        "totalRasWorkoutOnly = legacyTotalRas, " +
                         "strainRatioWorkoutOnly = strainRatio, " +
                         "loadScoreWorkoutOnly = loadScore, " +
                         "readinessWorkoutOnly = readinessScore",
                 )
 
-            private val sql = alterSql + copySql
+            private val sql = alterSql + renameSql + copySql
 
             override fun migrate(db: SupportSQLiteDatabase) {
                 sql.forEach { db.execSQL(it) }

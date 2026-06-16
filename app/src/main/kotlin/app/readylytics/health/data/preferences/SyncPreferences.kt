@@ -88,7 +88,7 @@ internal class SyncPreferences
         }
 
         /**
-         * One-time bootstrap for existing users' `pai_source_mode` preference.
+         * One-time bootstrap for existing users' `ras_source_mode` preference.
          *
          * If the field was never explicitly set (proto3 default [LoadSourceModeProto.LOAD_SOURCE_UNSET])
          * and pre-existing workout-only TRIMP history exists, persist [LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY]
@@ -109,11 +109,11 @@ internal class SyncPreferences
             }
         }
 
-        suspend fun updatePaiSourceMode(mode: LoadSourceMode) {
+        suspend fun updateRasSourceMode(mode: LoadSourceMode) {
             dataStore.updateData {
                 it
                     .toBuilder()
-                    .setPaiSourceMode(
+                    .setRasSourceMode(
                         when (mode) {
                             LoadSourceMode.WORKOUT_ONLY -> LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
                             LoadSourceMode.EVERYDAY_HEART_RATE -> LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
@@ -122,16 +122,16 @@ internal class SyncPreferences
             }
         }
 
-        suspend fun bootstrapPaiSourceModeIfUnset(hasWorkoutOnlyHistory: Boolean) {
+        suspend fun bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory: Boolean) {
             dataStore.updateData { proto ->
-                if (proto.paiSourceMode == LoadSourceModeProto.LOAD_SOURCE_UNSET) {
+                if (proto.rasSourceMode == LoadSourceModeProto.LOAD_SOURCE_UNSET) {
                     val resolved =
                         if (hasWorkoutOnlyHistory) {
                             LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
                         } else {
                             LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
                         }
-                    proto.toBuilder().setPaiSourceMode(resolved).build()
+                    proto.toBuilder().setRasSourceMode(resolved).build()
                 } else {
                     proto
                 }

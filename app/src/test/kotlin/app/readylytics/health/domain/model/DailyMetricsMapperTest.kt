@@ -31,11 +31,11 @@ class DailyMetricsMapperTest {
     }
 
     @Test
-    fun `pai 74_6 rounds to 75 (not truncated)`() {
-        // Default paiSourceMode is EVERYDAY_HEART_RATE.
-        val summary = DailySummary(date = date, totalPaiEverydayHr = 74.6f)
+    fun `ras 74_6 rounds to 75 (not truncated)`() {
+        // Default rasSourceMode is EVERYDAY_HEART_RATE.
+        val summary = DailySummary(date = date, totalRasEverydayHr = 74.6f)
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
-        assertEquals(75, metrics.paiRounded)
+        assertEquals(75, metrics.rasRounded)
     }
 
     @Test
@@ -88,7 +88,7 @@ class DailyMetricsMapperTest {
                 restingHeartRate = 50,
                 nocturnalHrv = 65,
                 rhrBpm = 52.6f,
-                totalPai = 74.6f,
+                legacyTotalRas = 74.6f,
                 avgSleepingSpo2 = 96.5f,
                 weightKg = 80.25f,
             )

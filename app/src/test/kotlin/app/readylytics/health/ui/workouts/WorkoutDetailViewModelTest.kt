@@ -108,9 +108,9 @@ class WorkoutDetailViewModelTest {
             coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
             coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns dbSamples
             coEvery { dailySummaryRepository.getByDate(any()) } returns
-                DailySummary(date = date, totalTrimp = 115.6f, rhrBpm = 52f, totalPai = 12f)
+                DailySummary(date = date, totalTrimp = 115.6f, rhrBpm = 52f, legacyTotalRas = 12f)
             coEvery { dailySummaryRepository.getSince(any()) } returns
-                listOf(DailySummary(date = date, totalTrimp = 115.6f, rhrBpm = 52f, paiScore = 12f))
+                listOf(DailySummary(date = date, totalTrimp = 115.6f, rhrBpm = 52f, legacyRasScore = 12f))
             coEvery {
                 getWorkoutDisplayMetricsUseCase.execute(
                     workout = workout,

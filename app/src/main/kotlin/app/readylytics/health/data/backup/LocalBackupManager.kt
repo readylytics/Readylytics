@@ -399,7 +399,7 @@ class LocalBackupManager
                     consistencyThresholdMinutes = prefs.consistencyThresholdMinutes,
                     consistencyEvaluationDays = prefs.consistencyEvaluationDays,
                     consistencyBaselineDays = prefs.consistencyBaselineDays,
-                    paiScalingFactor = prefs.paiScalingFactor,
+                    rasScalingFactor = prefs.rasScalingFactor,
                     stepGoal = prefs.stepGoal,
                     retentionDaysEnabled = prefs.retentionDaysEnabled,
                     retentionDays = prefs.retentionDays,

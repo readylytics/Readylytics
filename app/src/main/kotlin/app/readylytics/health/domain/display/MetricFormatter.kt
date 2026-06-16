@@ -71,5 +71,5 @@ object MetricFormatter {
         return roundTrimp(value).toString()
     }
 
-    fun formatPai(value: Float?): String = value?.roundToInt()?.toString() ?: "—"
+    fun formatRas(value: Float?): String = value?.roundToInt()?.toString() ?: "—"
 }

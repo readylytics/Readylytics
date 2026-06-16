@@ -14,7 +14,7 @@ import kotlin.math.roundToInt
  * baseline derivation for the [DailyMetrics] projection.
  *
  * Rounding rule is [kotlin.math.roundToInt] (half toward +∞) for every metric unless the
- * source is already an Int (passthrough). PAI is standardized to [roundToInt] here,
+ * source is already an Int (passthrough). RAS is standardized to [roundToInt] here,
  * replacing the prior inconsistent `toInt()` truncation vs `roundToPercentInt()`.
  *
  * Baseline display fields for date D derive only from D's stored row — frozen baseline
@@ -53,8 +53,8 @@ object DailyMetricsMapper {
             loadScoreRounded = LoadSourceSelector.selectLoadScore(summary, prefs.strainLoadSourceMode)?.roundToInt(),
             restorationRounded = summary.sRest?.roundToInt(),
             trimpRounded = LoadSourceSelector.selectTrimp(summary, prefs.strainLoadSourceMode)?.roundToInt(),
-            paiRounded = LoadSourceSelector.selectTotalPai(summary, prefs.paiSourceMode)?.roundToInt(),
-            paiDayScoreRounded = LoadSourceSelector.selectDailyPai(summary, prefs.paiSourceMode)?.roundToInt(),
+            rasRounded = LoadSourceSelector.selectTotalRas(summary, prefs.rasSourceMode)?.roundToInt(),
+            rasDayScoreRounded = LoadSourceSelector.selectDailyRas(summary, prefs.rasSourceMode)?.roundToInt(),
             spo2Rounded = summary.avgSleepingSpo2?.roundToInt(),
             // Baseline diffs + arrows
             rhrBaselineDiff = diff(summary.restingHeartRate, rhrBaselineRounded),

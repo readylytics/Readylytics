@@ -32,10 +32,10 @@ fun LoadSourcesSection(
         )
 
         LoadSourcePicker(
-            labelRes = R.string.load_sources_pai_label,
-            selectedMode = uiState.paiSourceMode,
-            helpRes = R.string.load_sources_pai_help,
-            onModeSelected = { onEvent(SettingsEvent.PaiSourceModeChanged(it)) },
+            labelRes = R.string.load_sources_ras_label,
+            selectedMode = uiState.rasSourceMode,
+            helpRes = R.string.load_sources_ras_help,
+            onModeSelected = { onEvent(SettingsEvent.RasSourceModeChanged(it)) },
         )
 
         Text(

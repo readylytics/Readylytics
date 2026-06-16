@@ -6,7 +6,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class PaiScoringStrategy
+class RasScoringStrategy
     @Inject
     constructor() {
         fun computeStrainRatio(

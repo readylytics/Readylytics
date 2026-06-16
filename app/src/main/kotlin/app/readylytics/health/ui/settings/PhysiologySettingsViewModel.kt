@@ -4,7 +4,7 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.getOrNull
-import app.readylytics.health.domain.scoring.PaiCalculator
+import app.readylytics.health.domain.scoring.RasCalculator
 import app.readylytics.health.domain.sync.HealthSyncUseCase
 import app.readylytics.health.domain.user.UserUseCase
 import app.readylytics.health.domain.validation.SettingsValidators
@@ -104,11 +104,11 @@ class PhysiologySettingsViewModel
                         settingsRepo.updatePhysiologyProfile(profile = event.profile)
                         healthSyncUseCase.sync()
                     }
-                SettingsEvent.ResetPaiScalingFactor ->
+                SettingsEvent.ResetRasScalingFactor ->
                     viewModelScope.launch {
                         val currentProfile = settingsRepo.userPreferences.first().physiologyProfile
-                        val defaultFactor = PaiCalculator.getDefaultPaiScalingFactor(currentProfile)
-                        settingsRepo.updatePaiScalingFactor(defaultFactor)
+                        val defaultFactor = RasCalculator.getDefaultRasScalingFactor(currentProfile)
+                        settingsRepo.updateRasScalingFactor(defaultFactor)
                         healthSyncUseCase.sync()
                     }
                 else -> {}

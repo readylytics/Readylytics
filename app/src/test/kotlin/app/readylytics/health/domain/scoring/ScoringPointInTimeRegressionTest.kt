@@ -76,7 +76,7 @@ class ScoringPointInTimeRegressionTest {
                     dateMidnightMs = dayMidnightMs,
                     baselineCalculatedAtDate = today,
                     hrMax = 190f,
-                    paiScalingFactor = 0.2f,
+                    rasScalingFactor = 0.2f,
                     rhrBpm = 60f,
                     baselineObservationCount = 10,
                 )
@@ -107,13 +107,13 @@ class ScoringPointInTimeRegressionTest {
                 UserPreferences(
                     physiologyProfile = PhysiologyProfile.ATHLETE,
                     maxHeartRate = 195,
-                    paiScalingFactor = 0.25f,
+                    rasScalingFactor = 0.25f,
                     rhrBaselineOverride = 55f,
                     gender = Gender.MALE,
                 )
             coEvery { settingsRepo.userPreferences } returns flowOf(initialPrefs)
             val mockConfig = mockk<ScoringConfig>(relaxed = true)
-            every { mockConfig.paiScalingFactor } returns 0.25f
+            every { mockConfig.rasScalingFactor } returns 0.25f
             every { scoringConfigFactory.build(any(), any(), any(), any()) } returns mockConfig
 
             // Compute daily summary under initial preferences
@@ -124,7 +124,7 @@ class ScoringPointInTimeRegressionTest {
                 UserPreferences(
                     physiologyProfile = PhysiologyProfile.SEDENTARY,
                     maxHeartRate = 170,
-                    paiScalingFactor = 0.15f,
+                    rasScalingFactor = 0.15f,
                     rhrBaselineOverride = 72f,
                     gender = Gender.FEMALE,
                 )
@@ -134,22 +134,22 @@ class ScoringPointInTimeRegressionTest {
             val result2 = repo.computeDailySummary(today)
 
             // Assert that the computed metrics on this historical day are unchanged.
-            // Reads target the new workout-only variant columns; legacy paiScore/totalPai are no
+            // Reads target the new workout-only variant columns; legacy legacyRasScore/legacyTotalRas are no
             // longer written by computeDailySummary (frozen at migration time per US-03).
             assertEquals(
-                result1.paiWorkoutOnly,
-                result2.paiWorkoutOnly,
-                "Workout-only PAI Score must remain unchanged",
+                result1.rasWorkoutOnly,
+                result2.rasWorkoutOnly,
+                "Workout-only RAS Score must remain unchanged",
             )
             assertEquals(
-                result1.totalPaiWorkoutOnly,
-                result2.totalPaiWorkoutOnly,
-                "Workout-only Total PAI must remain unchanged",
+                result1.totalRasWorkoutOnly,
+                result2.totalRasWorkoutOnly,
+                "Workout-only Total RAS must remain unchanged",
             )
 
             // Legacy columns are no longer written by computeDailySummary.
-            assertNull(result1.paiScore, "Legacy paiScore must not be written")
-            assertNull(result1.totalPai, "Legacy totalPai must not be written")
+            assertNull(result1.legacyRasScore, "Legacy legacyRasScore must not be written")
+            assertNull(result1.legacyTotalRas, "Legacy legacyTotalRas must not be written")
         }
 
     @Test
@@ -165,7 +165,7 @@ class ScoringPointInTimeRegressionTest {
                     dateMidnightMs = dayMidnightMs,
                     baselineCalculatedAtDate = today,
                     hrMax = 190f,
-                    paiScalingFactor = 0.2f,
+                    rasScalingFactor = 0.2f,
                     rhrBpm = 60f,
                     baselineObservationCount = 10,
                 )
@@ -195,13 +195,13 @@ class ScoringPointInTimeRegressionTest {
                 UserPreferences(
                     physiologyProfile = PhysiologyProfile.ATHLETE,
                     maxHeartRate = 195,
-                    paiScalingFactor = 0.25f,
+                    rasScalingFactor = 0.25f,
                     rhrBaselineOverride = 55f,
                     gender = Gender.MALE,
                 )
             coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
             val mockConfig = mockk<ScoringConfig>(relaxed = true)
-            every { mockConfig.paiScalingFactor } returns 0.25f
+            every { mockConfig.rasScalingFactor } returns 0.25f
             every { scoringConfigFactory.build(any(), any(), any(), any()) } returns mockConfig
 
             // Workout-only series for ATL/CTL; everyday series stays empty (no everyday HR present).
@@ -246,7 +246,7 @@ class ScoringPointInTimeRegressionTest {
                     dateMidnightMs = dayMidnightMs,
                     baselineCalculatedAtDate = today,
                     hrMax = 190f,
-                    paiScalingFactor = 0.2f,
+                    rasScalingFactor = 0.2f,
                     rhrBpm = 60f,
                     baselineObservationCount = 10,
                 )
@@ -260,13 +260,13 @@ class ScoringPointInTimeRegressionTest {
                 UserPreferences(
                     physiologyProfile = PhysiologyProfile.ATHLETE,
                     maxHeartRate = 195,
-                    paiScalingFactor = 0.25f,
+                    rasScalingFactor = 0.25f,
                     rhrBaselineOverride = 55f,
                     gender = Gender.MALE,
                 )
             coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
             val mockConfig = mockk<ScoringConfig>(relaxed = true)
-            every { mockConfig.paiScalingFactor } returns 0.25f
+            every { mockConfig.rasScalingFactor } returns 0.25f
             every { scoringConfigFactory.build(any(), any(), any(), any()) } returns mockConfig
 
             // Capture the maps passed to ATL/CTL to prove no cross-contamination of the workout-only series.

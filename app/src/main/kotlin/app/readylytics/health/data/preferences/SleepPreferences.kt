@@ -8,7 +8,7 @@ internal class SleepPreferences
     constructor(
         private val dataStore: DataStore<UserPreferencesProto>,
     ) {
-        private fun Float.toValidPaiScaling() = coerceIn(0.1f, 0.3f)
+        private fun Float.toValidRasScaling() = coerceIn(0.1f, 0.3f)
 
         private fun Int.toValidStepGoal() = coerceIn(1000, 30000)
 
@@ -43,8 +43,8 @@ internal class SleepPreferences
             }
         }
 
-        suspend fun updatePaiScalingFactor(value: Float) {
-            dataStore.updateData { it.toBuilder().setPaiScalingFactor(value.toValidPaiScaling()).build() }
+        suspend fun updateRasScalingFactor(value: Float) {
+            dataStore.updateData { it.toBuilder().setRasScalingFactor(value.toValidRasScaling()).build() }
         }
 
         suspend fun updateStepGoal(steps: Int) {

@@ -110,11 +110,11 @@ class WorkoutMapperTest {
     }
 
     @Test
-    fun dailyPaiBreakdownMapper_withSummaries_populatesPaiScores() {
+    fun dailyRasBreakdownMapper_withSummaries_populatesRasScores() {
         val today = LocalDate.of(2026, 5, 16)
         val summaries =
             listOf(
-                DailySummary(date = today, paiWorkoutOnly = 85f, totalPaiWorkoutOnly = 85f),
+                DailySummary(date = today, rasWorkoutOnly = 85f, totalRasWorkoutOnly = 85f),
             )
 
         val result = DailyPaiBreakdownMapper.mapDailyBreakdown(today, summaries, LoadSourceMode.WORKOUT_ONLY)

@@ -5,14 +5,14 @@ import app.readylytics.health.data.preferences.SettingsRepository
 import javax.inject.Inject
 
 /**
- * One-time bootstrap for existing users' `paiSourceMode` preference.
+ * One-time bootstrap for existing users' `rasSourceMode` preference.
  *
- * If `pai_source_mode` was never explicitly set and pre-existing workout-only TRIMP history
+ * If `ras_source_mode` was never explicitly set and pre-existing workout-only TRIMP history
  * exists, persists [LoadSourceMode.WORKOUT_ONLY] so existing users keep their prior behavior.
  * Otherwise persists [LoadSourceMode.EVERYDAY_HEART_RATE] explicitly so the proto field is no
  * longer unset and this bootstrap never re-runs.
  */
-class PaiSourceModeBootstrapUseCase
+class RasSourceModeBootstrapUseCase
     @Inject
     constructor(
         private val settingsRepo: SettingsRepository,
@@ -20,6 +20,6 @@ class PaiSourceModeBootstrapUseCase
     ) {
         suspend operator fun invoke() {
             val hasWorkoutOnlyHistory = dailySummaryDao.hasAnyWorkoutOnlyTrimpData()
-            settingsRepo.bootstrapPaiSourceModeIfUnset(hasWorkoutOnlyHistory)
+            settingsRepo.bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory)
         }
     }

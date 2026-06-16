@@ -90,8 +90,8 @@ class Migration28To29Test {
 
         db
             .query(
-                "SELECT trimpWorkoutOnly, paiWorkoutOnly, totalPaiWorkoutOnly, strainRatioWorkoutOnly, " +
-                    "loadScoreWorkoutOnly, readinessWorkoutOnly, trimpEverydayHr, paiEverydayHr, " +
+                "SELECT trimpWorkoutOnly, rasWorkoutOnly, totalRasWorkoutOnly, strainRatioWorkoutOnly, " +
+                    "loadScoreWorkoutOnly, readinessWorkoutOnly, trimpEverydayHr, rasEverydayHr, " +
                     "atlWorkoutOnly, atlEverydayHr, ctlWorkoutOnly, ctlEverydayHr, " +
                     "everydayCoverageMinutes, everydayLoadConfidence " +
                     "FROM daily_summaries WHERE dateMidnightMs = 1700000000000",
@@ -105,7 +105,7 @@ class Migration28To29Test {
                 assertEquals(80.0, cursor.getDouble(5), 0.001)
 
                 assertNull("trimpEverydayHr must be NULL", cursor.getString(6))
-                assertNull("paiEverydayHr must be NULL", cursor.getString(7))
+                assertNull("rasEverydayHr must be NULL", cursor.getString(7))
                 assertNull("atlWorkoutOnly must be NULL", cursor.getString(8))
                 assertNull("atlEverydayHr must be NULL", cursor.getString(9))
                 assertNull("ctlWorkoutOnly must be NULL", cursor.getString(10))
@@ -124,10 +124,10 @@ class Migration28To29Test {
             setOf(
                 "trimpWorkoutOnly",
                 "trimpEverydayHr",
-                "paiWorkoutOnly",
-                "paiEverydayHr",
-                "totalPaiWorkoutOnly",
-                "totalPaiEverydayHr",
+                "rasWorkoutOnly",
+                "rasEverydayHr",
+                "totalRasWorkoutOnly",
+                "totalRasEverydayHr",
                 "atlWorkoutOnly",
                 "atlEverydayHr",
                 "ctlWorkoutOnly",
