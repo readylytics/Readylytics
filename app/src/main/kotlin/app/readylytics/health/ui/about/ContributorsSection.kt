@@ -95,7 +95,7 @@ fun ContributorsSection() {
         SubHeader(stringResource(R.string.about_header_load_sources))
         BodyText(stringResource(R.string.about_load_sources_intro))
         BulletItem(stringResource(R.string.about_load_sources_strain_bullet))
-        BulletItem(stringResource(R.string.about_load_sources_pai_bullet))
+        BulletItem(stringResource(R.string.about_load_sources_ras_bullet))
 
         Spacer(Modifier.height(8.dp))
         BodyText(stringResource(R.string.about_load_sources_workout_only))

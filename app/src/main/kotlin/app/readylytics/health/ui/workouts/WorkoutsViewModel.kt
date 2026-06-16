@@ -160,7 +160,7 @@ class WorkoutsViewModel
                             }.flowOn(Dispatchers.IO)
                         }
 
-                    val paiFromMs =
+                    val rasFromMs =
                         date
                             .minusDays(6)
                             .atStartOfDay(zoneId)
@@ -172,7 +172,7 @@ class WorkoutsViewModel
                             summaryFlow,
                             workoutRepository.observeSince(fetchFromMs),
                             dailySummaryRepository.observeSince(fetchFromMs),
-                            dailySummaryRepository.observeSince(paiFromMs),
+                            dailySummaryRepository.observeSince(rasFromMs),
                             settingsRepo.userPreferences,
                         ) { latest, allWorkouts, trimpSummaries, rasSummaries, prefs ->
                             WorkoutFlowData(latest, allWorkouts, trimpSummaries, rasSummaries, prefs)

@@ -129,7 +129,7 @@ class DashboardViewModel
                     prefs = basicInputs.userPreferences,
                     date = selectedDate,
                     lastSleepSession = sessionSummary,
-                    paiSummaries = basicInputs.paiSummaries,
+                    rasSummaries = basicInputs.rasSummaries,
                 )
 
             val cards = cardsResult.getOrNull()
@@ -141,7 +141,7 @@ class DashboardViewModel
                             circadianResult = basicInputs.circadianResult ?: CircadianConsistencyResult.MissingData,
                             goalSleepMinutes = (basicInputs.userPreferences.goalSleepHours * 60).toInt(),
                             stepGoal = basicInputs.userPreferences.stepGoal,
-                            recentDays = basicInputs.paiSummaries,
+                            recentDays = basicInputs.rasSummaries,
                             nowMinutesOfDay = nowMinutesOfDayFor(selectedDate),
                             prefs = basicInputs.userPreferences,
                         ),

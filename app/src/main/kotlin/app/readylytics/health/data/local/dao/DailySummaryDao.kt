@@ -154,7 +154,9 @@ interface DailySummaryDao {
     @Query("SELECT totalRasWorkoutOnly FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
     suspend fun getPreciseRas(dateMidnightMs: Long): Double?
 
-    @Query("SELECT CAST(ROUND(totalRasWorkoutOnly) AS INTEGER) FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
+    @Query(
+        "SELECT CAST(ROUND(totalRasWorkoutOnly) AS INTEGER) FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs",
+    )
     suspend fun getRoundedRas(dateMidnightMs: Long): Int?
 
     @Query("SELECT strainRatio FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")

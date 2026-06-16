@@ -147,7 +147,7 @@ internal class PhysiologyPreferences
         }
 
         suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) {
-            val newPaiFactor = RasCalculator.getDefaultRasScalingFactor(profile)
+            val newRasFactor = RasCalculator.getDefaultRasScalingFactor(profile)
             dataStore.updateData {
                 it
                     .toBuilder()
@@ -157,7 +157,7 @@ internal class PhysiologyPreferences
                             PhysiologyProfile.ACTIVE -> PhysiologyProfileProto.PROFILE_ACTIVE
                             PhysiologyProfile.SEDENTARY -> PhysiologyProfileProto.PROFILE_SEDENTARY
                         },
-                    ).setRasScalingFactor(newPaiFactor)
+                    ).setRasScalingFactor(newRasFactor)
                     .setRasCalibration(profile.banisterMultiplier)
                     .setChengBeta(profile.defaultChengBeta)
                     .setItrimpB(profile.defaultItrimB)

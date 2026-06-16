@@ -68,8 +68,8 @@ class InsightEngineTest {
                 zLnHrv = -2f,
                 avgSleepingSpo2 = 90f,
                 bloodPressureSystolic = 140,
-                legacyRasScore = 10f,
-                legacyTotalRas = 5f,
+                rasScore = 10f,
+                totalRas = 5f,
                 stepCount = 1000,
                 weightKg = 85f,
             )

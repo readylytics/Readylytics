@@ -283,7 +283,7 @@ This document defines the user-facing details, signal meanings, possible causes,
 - **Confidence**: None.
 - **Possible causes**:
   - Too few aerobic sessions: Fewer sustained sessions can lower weekly RAS.
-  - Low heart-rate intensity: Lower-intensity sessions may add less PAI.
+  - Low heart-rate intensity: Lower-intensity sessions may add less RAS.
   - Missing heart-rate data: Missing heart-rate samples can reduce RAS credit.
   - Recovery week: A planned easier week can reduce weekly RAS.
   - Strength-focused training: Strength work may add less RAS than sustained aerobic work.

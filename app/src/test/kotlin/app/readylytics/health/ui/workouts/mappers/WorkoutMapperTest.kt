@@ -2,8 +2,8 @@ package app.readylytics.health.ui.workouts.mappers
 
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.scoring.LoadSourceMode
-import app.readylytics.health.ui.workouts.mappers.DailyRasBreakdownMapper
 import app.readylytics.health.ui.workouts.HeartRatePoint
+import app.readylytics.health.ui.workouts.mappers.DailyRasBreakdownMapper
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

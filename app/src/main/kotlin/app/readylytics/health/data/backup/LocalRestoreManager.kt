@@ -462,7 +462,7 @@ class LocalRestoreManager
                 backup.consistencyThresholdMinutes?.let { consistencyThresholdMinutes = it }
                 backup.consistencyEvaluationDays?.let { consistencyEvaluationDays = it }
                 backup.consistencyBaselineDays?.let { consistencyBaselineDays = it }
-                backup.rasScalingFactor?.let { rasScalingFactor = it }
+                (backup.rasScalingFactor ?: backup.paiScalingFactor)?.let { rasScalingFactor = it }
                 backup.stepGoal?.let { stepGoal = it }
                 backup.retentionDaysEnabled?.let { retentionDaysEnabled = it }
                 backup.retentionDays?.let { retentionDays = it }

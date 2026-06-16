@@ -125,7 +125,14 @@ class ScoringDeterminismRegressionTest {
 
             // Run 1: fresh derived state.
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns
-                frozenSnapshot(dayMidnightMs, today, legacyRasScore = 0f, legacyTotalRas = 0f, loadScore = 100f, strainRatio = 1f)
+                frozenSnapshot(
+                    dayMidnightMs,
+                    today,
+                    legacyRasScore = 0f,
+                    legacyTotalRas = 0f,
+                    loadScore = 100f,
+                    strainRatio = 1f,
+                )
             val run1 = repo.computeDailySummary(today)
 
             // Mutate the "live state" left behind by run 1: poison every derived output that the

@@ -33,6 +33,7 @@ class Migration28To29Test {
             `totalTrimp` REAL,
             `paiScore` REAL,
             `totalPai` REAL,
+            `pai_scaling_factor` REAL,
             PRIMARY KEY(`dateMidnightMs`)
         )
         """.trimIndent()
@@ -140,6 +141,9 @@ class Migration28To29Test {
                 "readinessEverydayHr",
                 "everydayCoverageMinutes",
                 "everydayLoadConfidence",
+                "legacyRasScore",
+                "legacyTotalRas",
+                "ras_scaling_factor",
             )
 
         val actualColumns = mutableSetOf<String>()
