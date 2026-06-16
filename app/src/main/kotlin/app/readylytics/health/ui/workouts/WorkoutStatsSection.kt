@@ -180,14 +180,12 @@ fun WorkoutStatsSection(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                uiState.latestMetrics?.rasDayScoreRounded?.let { earned ->
-                                    if (earned > 0) {
-                                        Text(
-                                            text = stringResource(R.string.ras_earned_today, earned),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
+                                uiState.latestMetrics?.rasRounded?.let { total ->
+                                    Text(
+                                        text = total.toString(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                 }
                                 MetricTooltip(
                                     description = stringResource(R.string.tooltip_ras),

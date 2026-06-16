@@ -24,7 +24,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.util.roundToPercentInt
@@ -99,23 +98,6 @@ fun RasWeeklyBar(
                 color = outlineColor,
                 cornerRadius = CornerRadius(radius),
                 style = Stroke(width = 1.dp.toPx()),
-            )
-        }
-
-        Spacer(Modifier.height(6.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                // Allow-listed: chart-widget label for the passed-in RAS series (bar geometry
-                // uses the raw Float above); not a DailySummary metric read.
-                text = "${totalRas.roundToPercentInt()}",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = fillColor,
             )
         }
 
