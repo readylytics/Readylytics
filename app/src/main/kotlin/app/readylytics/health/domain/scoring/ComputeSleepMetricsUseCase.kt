@@ -311,6 +311,7 @@ class ComputeSleepMetricsUseCase
                     val isCurrentHrvOptimal =
                         currentHrvBaseline != null &&
                             currentHrvMean != null &&
+                            currentHrvBaseline > 0f &&
                             currentHrvMean / currentHrvBaseline >= prefs.hrvOptimalThreshold
 
                     val recoveryFlags =
