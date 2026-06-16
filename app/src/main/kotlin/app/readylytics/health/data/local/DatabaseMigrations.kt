@@ -948,12 +948,13 @@ object DatabaseMigrations {
 
             private val copySql =
                 listOf(
-                    "UPDATE daily_summaries SET trimpWorkoutOnly = totalTrimp WHERE totalTrimp IS NOT NULL",
-                    "UPDATE daily_summaries SET paiWorkoutOnly = paiScore WHERE paiScore IS NOT NULL",
-                    "UPDATE daily_summaries SET totalPaiWorkoutOnly = totalPai WHERE totalPai IS NOT NULL",
-                    "UPDATE daily_summaries SET strainRatioWorkoutOnly = strainRatio WHERE strainRatio IS NOT NULL",
-                    "UPDATE daily_summaries SET loadScoreWorkoutOnly = loadScore WHERE loadScore IS NOT NULL",
-                    "UPDATE daily_summaries SET readinessWorkoutOnly = readinessScore WHERE readinessScore IS NOT NULL",
+                    "UPDATE daily_summaries SET " +
+                        "trimpWorkoutOnly = totalTrimp, " +
+                        "paiWorkoutOnly = paiScore, " +
+                        "totalPaiWorkoutOnly = totalPai, " +
+                        "strainRatioWorkoutOnly = strainRatio, " +
+                        "loadScoreWorkoutOnly = loadScore, " +
+                        "readinessWorkoutOnly = readinessScore",
                 )
 
             private val sql = alterSql + copySql

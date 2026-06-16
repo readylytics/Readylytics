@@ -24,6 +24,7 @@ import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.domain.scoring.EverydayHeartRateLoadCalculator
 import app.readylytics.health.domain.scoring.EverydayHrLoadInput
+import app.readylytics.health.domain.scoring.LongInterval
 import app.readylytics.health.domain.scoring.PaiCalculator
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
@@ -170,8 +171,8 @@ class ScoringRepositoryImpl
                             )
                         }
                 val sleepIntervalsMs =
-                    if (session != null) listOf(LongRange(session.startTime, session.endTime)) else emptyList()
-                val workoutIntervalsMs = workouts.map { LongRange(it.startTime, it.endTime) }
+                    if (session != null) listOf(LongInterval(session.startTime, session.endTime)) else emptyList()
+                val workoutIntervalsMs = workouts.map { LongInterval(it.startTime, it.endTime) }
                 val everydayResult =
                     EverydayHeartRateLoadCalculator.calculate(
                         EverydayHrLoadInput(

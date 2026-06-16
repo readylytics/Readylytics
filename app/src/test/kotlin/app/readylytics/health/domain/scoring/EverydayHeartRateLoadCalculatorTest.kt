@@ -3,6 +3,7 @@ package app.readylytics.health.domain.scoring
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase.HeartRateSample
+import app.readylytics.health.domain.scoring.LongInterval
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -38,8 +39,8 @@ class EverydayHeartRateLoadCalculatorTest {
 
     private fun baseInput(
         hrSamples: List<HeartRateSample>,
-        sleepIntervalsMs: List<LongRange> = emptyList(),
-        workoutIntervalsMs: List<LongRange> = emptyList(),
+        sleepIntervalsMs: List<LongInterval> = emptyList(),
+        workoutIntervalsMs: List<LongInterval> = emptyList(),
         workoutOnlyTrimp: Float = 0f,
     ) = EverydayHrLoadInput(
         dayStartMs = dayStartMs,
@@ -59,7 +60,7 @@ class EverydayHeartRateLoadCalculatorTest {
         val input =
             baseInput(
                 hrSamples = listOf(sample(0L, 130)),
-                sleepIntervalsMs = listOf(0L..60_000L),
+                sleepIntervalsMs = listOf(LongInterval(0L, 60_000L)),
             )
 
         val result = EverydayHeartRateLoadCalculator.calculate(input)
@@ -78,7 +79,7 @@ class EverydayHeartRateLoadCalculatorTest {
         val input =
             baseInput(
                 hrSamples = listOf(sample(0L, 160)),
-                workoutIntervalsMs = listOf(0L..60_000L),
+                workoutIntervalsMs = listOf(LongInterval(0L, 60_000L)),
                 workoutOnlyTrimp = workoutOnlyTrimp,
             )
 
@@ -232,7 +233,7 @@ class EverydayHeartRateLoadCalculatorTest {
         val input =
             baseInput(
                 hrSamples = listOf(sample(60_000L, 130)),
-                sleepIntervalsMs = listOf(0L..60_000L),
+                sleepIntervalsMs = listOf(LongInterval(0L, 60_000L)),
             )
 
         val result = EverydayHeartRateLoadCalculator.calculate(input)
@@ -249,7 +250,7 @@ class EverydayHeartRateLoadCalculatorTest {
         val input =
             baseInput(
                 hrSamples = listOf(sample(0L, 130), sample(60_000L, 130)),
-                sleepIntervalsMs = listOf(30_000L..90_000L),
+                sleepIntervalsMs = listOf(LongInterval(30_000L, 90_000L)),
             )
 
         val result = EverydayHeartRateLoadCalculator.calculate(input)

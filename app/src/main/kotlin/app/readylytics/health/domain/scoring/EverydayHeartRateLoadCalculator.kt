@@ -3,7 +3,6 @@ package app.readylytics.health.domain.scoring
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.heartrate.HrZoneClassifier
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase.HeartRateSample
-import kotlin.math.floor
 import kotlin.math.roundToInt
 
 /**
@@ -12,17 +11,18 @@ import kotlin.math.roundToInt
  */
 enum class LoadCoverageConfidence { NONE, LOW, MEDIUM, HIGH }
 
+/** Half-open interval `[start, end)` — `end` is exclusive. */
+data class LongInterval(
+    val start: Long,
+    val end: Long,
+)
+
 data class EverydayHrLoadInput(
     val dayStartMs: Long,
     val dayEndMs: Long,
     val hrSamples: List<HeartRateSample>,
-    /**
-     * Each range represents a half-open interval `[first, last)` — i.e. `last` is the
-     * exclusive end timestamp (construct as `LongRange(startMs, endMs)`, NOT `startMs until endMs`).
-     */
-    val sleepIntervalsMs: List<LongRange>,
-    /** See [sleepIntervalsMs] for the half-open `[first, last)` convention. */
-    val workoutIntervalsMs: List<LongRange>,
+    val sleepIntervalsMs: List<LongInterval>,
+    val workoutIntervalsMs: List<LongInterval>,
     val workoutOnlyTrimp: Float,
     val rhrBaseline: Float,
     val hrMax: Float,
@@ -60,9 +60,10 @@ object EverydayHeartRateLoadCalculator {
         val bucketCounts = mutableMapOf<Int, Int>()
         for (sample in input.hrSamples) {
             if (sample.bpm < MIN_PLAUSIBLE_BPM || sample.bpm > MAX_PLAUSIBLE_BPM) continue
-            val ts = sample.timestamp.toEpochMilli()
-            val bucketIndex = floor((ts - input.dayStartMs).toDouble() / BUCKET_MS).toInt()
-            if (bucketIndex < 0 || bucketIndex >= totalBuckets) continue
+            val diff = sample.timestamp.toEpochMilli() - input.dayStartMs
+            if (diff < 0) continue
+            val bucketIndex = (diff / BUCKET_MS).toInt()
+            if (bucketIndex >= totalBuckets) continue
             bucketSums[bucketIndex] = (bucketSums[bucketIndex] ?: 0f) + sample.bpm
             bucketCounts[bucketIndex] = (bucketCounts[bucketIndex] ?: 0) + 1
         }
@@ -120,8 +121,8 @@ object EverydayHeartRateLoadCalculator {
     private fun overlaps(
         rangeStartMs: Long,
         rangeEndMs: Long,
-        interval: LongRange,
-    ): Boolean = rangeStartMs < interval.last && interval.first < rangeEndMs
+        interval: LongInterval,
+    ): Boolean = rangeStartMs < interval.end && interval.start < rangeEndMs
 
     private fun confidenceFor(coverageMinutes: Int): LoadCoverageConfidence =
         when {
