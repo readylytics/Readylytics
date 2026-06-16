@@ -17,7 +17,7 @@ import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.efficiencyStatus
 import app.readylytics.health.domain.model.getOrNull
 import app.readylytics.health.domain.model.hrvStatus
-import app.readylytics.health.domain.model.paiStatus
+import app.readylytics.health.domain.model.rasStatus
 import app.readylytics.health.domain.model.restingHrStatus
 import app.readylytics.health.domain.model.rhrStatus
 import app.readylytics.health.domain.model.sleepDurationStatus
@@ -84,7 +84,7 @@ class GetDashboardDataUseCase
                     CardId.READINESS to readinessCard(summary, m),
                     CardId.SLEEP_RHR to sleepCard(summary, prefs, m),
                     CardId.HRV to hrvCard(summary, prefs, m),
-                    CardId.RAS_DAILY to paiCard(summary, m),
+                    CardId.RAS_DAILY to rasCard(m),
                     CardId.SLEEP_DURATION to sleepDurationCard(summary, prefs, lastSleepSession, m),
                     CardId.RESTING_HR to restingHrCard(summary, prefs, m),
                     CardId.SLEEP_EFFICIENCY to sleepEfficiencyCard(lastSleepSession),
@@ -159,11 +159,8 @@ class GetDashboardDataUseCase
             )
         }
 
-        private fun paiCard(
-            summary: DailySummary,
-            m: DailyMetrics,
-        ): CardData {
-            val status = summary.paiStatus()
+        private fun rasCard(m: DailyMetrics): CardData {
+            val status = m.rasRounded.rasStatus()
             val value = m.rasRounded?.toString() ?: "—"
 
             return CardData(

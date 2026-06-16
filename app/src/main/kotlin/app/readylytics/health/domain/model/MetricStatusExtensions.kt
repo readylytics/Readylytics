@@ -104,8 +104,8 @@ fun DailySummary.sleepDurationStatus(goalMinutes: Int): MetricStatus {
     }
 }
 
-fun DailySummary.rasStatus(): MetricStatus {
-    val ras = legacyTotalRas ?: return MetricStatus.CALIBRATING
+fun Float?.rasStatus(): MetricStatus {
+    val ras = this ?: return MetricStatus.CALIBRATING
     return when {
         ras >= 100f -> MetricStatus.OPTIMAL
         ras >= 75f -> MetricStatus.NEUTRAL

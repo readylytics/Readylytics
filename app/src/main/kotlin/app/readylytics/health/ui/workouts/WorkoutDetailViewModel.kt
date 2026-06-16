@@ -38,12 +38,12 @@ data class WorkoutDetailUiState(
     val hrr1Min: Int? = null,
     val hrr2Min: Int? = null,
     val hrr3Min: Int? = null,
-    val legacyTotalRas: Float? = null,
+    val totalRas: Float? = null,
     val rasDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val computedTrimp: Int? = null,
     val gainedStrain: Float? = null,
     val gainedStrainDisplay: String = "—",
-    val pai: Float? = null,
+    val ras: Float? = null,
     val isLoading: Boolean = true,
 )
 
@@ -137,12 +137,12 @@ class WorkoutDetailViewModel
                         hrr1Min = recoveryMetrics.hrr1Min,
                         hrr2Min = recoveryMetrics.hrr2Min,
                         hrr3Min = recoveryMetrics.hrr3Min,
-                        legacyTotalRas = summary?.let { LoadSourceSelector.selectTotalRas(it, prefs.rasSourceMode) },
+                        totalRas = summary?.let { LoadSourceSelector.selectTotalRas(it, prefs.rasSourceMode) },
                         rasDailyBreakdown = rasBreakdown,
                         computedTrimp = displayMetrics.computedTrimp.takeIf { trimp -> trimp > 0 },
                         gainedStrain = displayMetrics.gainedStrain,
                         gainedStrainDisplay = displayMetrics.gainedStrainDisplay,
-                        pai = RasCalculator.calculateDailyRas(displayMetrics.preciseTrimp, prefs.rasScalingFactor),
+                        ras = RasCalculator.calculateDailyRas(displayMetrics.preciseTrimp, prefs.rasScalingFactor),
                         isLoading = false,
                     )
                 }

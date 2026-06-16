@@ -434,7 +434,7 @@ class ScoringRepositoryImpl
                     scoringConfig.auditTrail.copy(
                         appliedSf = scoringConfig.rasScalingFactor,
                         physiologyProfile = prefs.physiologyProfile.name,
-                        paiTotalPre = last6DaysRasWorkoutOnly,
+                        rasTotalPre = last6DaysRasWorkoutOnly,
                         rasTotalPost = summary.totalRasWorkoutOnly,
                     )
                 logD("ScoringConfig") { "Telemetry: $updatedAudit" }

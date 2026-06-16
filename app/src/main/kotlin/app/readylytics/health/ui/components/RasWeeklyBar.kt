@@ -35,14 +35,14 @@ private const val BAR_MAX = 100f / 0.75f
 @Composable
 fun RasWeeklyBar(
     dailyBreakdown: List<Pair<String, Float>>,
-    legacyTotalRas: Float,
+    totalRas: Float,
     modifier: Modifier = Modifier,
 ) {
     val status =
         when {
-            legacyTotalRas >= 100f -> MetricStatus.OPTIMAL
-            legacyTotalRas >= 75f -> MetricStatus.NEUTRAL
-            legacyTotalRas >= 50f -> MetricStatus.WARNING
+            totalRas >= 100f -> MetricStatus.OPTIMAL
+            totalRas >= 75f -> MetricStatus.NEUTRAL
+            totalRas >= 50f -> MetricStatus.WARNING
             else -> MetricStatus.POOR
         }
     val fillColor = status.gaugeColor()
@@ -112,7 +112,7 @@ fun RasWeeklyBar(
             Text(
                 // Allow-listed: chart-widget label for the passed-in RAS series (bar geometry
                 // uses the raw Float above); not a DailySummary metric read.
-                text = "${legacyTotalRas.roundToPercentInt()} RAS",
+                text = "${totalRas.roundToPercentInt()} RAS",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = fillColor,

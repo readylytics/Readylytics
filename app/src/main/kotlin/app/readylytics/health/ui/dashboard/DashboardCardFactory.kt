@@ -297,15 +297,15 @@ fun buildCardDataMap(
             isLoading = isLoading,
             skeleton = { MetricCardSkeleton() },
             content = {
-                val paiCard = uiState.cardDataMap[CardId.RAS_DAILY]
-                if (paiCard != null) {
+                val rasCard = uiState.cardDataMap[CardId.RAS_DAILY]
+                if (rasCard != null) {
                     MetricCard(
-                        title = paiCard.title,
-                        value = paiCard.value,
-                        secondaryText = paiCard.unit,
-                        status = paiCard.status,
+                        title = rasCard.title,
+                        value = rasCard.value,
+                        secondaryText = rasCard.unit,
+                        status = rasCard.status,
                         onClick = if (isEditing) null else onNavigateToWorkouts,
-                        tooltip = paiCard.tooltip,
+                        tooltip = rasCard.tooltip,
                     )
                 }
             },

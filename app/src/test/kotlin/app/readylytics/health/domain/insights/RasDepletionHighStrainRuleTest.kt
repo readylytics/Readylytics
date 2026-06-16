@@ -13,7 +13,7 @@ class RasDepletionHighStrainRuleTest {
         totalRas: Float? = 30f,
         strainRatio: Float? = 1.2f,
     ) = InsightContext(
-        today = dailySummary(legacyTotalRas = totalRas, strainRatio = strainRatio),
+        today = dailySummary(totalRas = totalRas, strainRatio = strainRatio),
         circadianResult = CircadianConsistencyResult.MissingData,
         goalSleepMinutes = 480,
     )
@@ -28,12 +28,12 @@ class RasDepletionHighStrainRuleTest {
 
     @Test
     fun `does not fire when totalRas is null`() {
-        assertNull(rule.evaluate(context(legacyTotalRas = null)))
+        assertNull(rule.evaluate(context(totalRas = null)))
     }
 
     @Test
     fun `does not fire when totalRas is at threshold`() {
-        assertNull(rule.evaluate(context(legacyTotalRas = 50f)))
+        assertNull(rule.evaluate(context(totalRas = 50f)))
     }
 
     @Test
@@ -48,6 +48,6 @@ class RasDepletionHighStrainRuleTest {
 
     @Test
     fun `does not fire when totalRas is above threshold even with high strain`() {
-        assertNull(rule.evaluate(context(legacyTotalRas = 75f, strainRatio = 2f)))
+        assertNull(rule.evaluate(context(totalRas = 75f, strainRatio = 2f)))
     }
 }

@@ -197,7 +197,7 @@ fun WorkoutStatsSection(
                         Spacer(Modifier.height(12.dp))
                         RasWeeklyBar(
                             dailyBreakdown = uiState.rasDailyBreakdown,
-                            legacyTotalRas = uiState.latestMetrics?.rasRounded?.toFloat() ?: 0f,
+                            totalRas = uiState.latestMetrics?.rasRounded?.toFloat() ?: 0f,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

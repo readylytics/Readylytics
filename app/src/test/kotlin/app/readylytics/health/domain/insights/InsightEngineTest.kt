@@ -85,7 +85,7 @@ class InsightEngineTest {
                             date = today.date.minusDays(offset.toLong()),
                             zLnHrv = -1f,
                             bloodPressureSystolic = 110,
-                            legacyTotalRas = 5f,
+                            totalRas = 5f,
                             weightKg = 80f,
                             totalTrimp = 60f,
                         )
