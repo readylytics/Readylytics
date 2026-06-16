@@ -21,6 +21,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.roundToInt
 
@@ -294,6 +295,24 @@ class ComputeSleepMetricsUseCase
                             scoringConfig.sleepTargets,
                         )
 
+                    val currentHrvBaseline: Float? =
+                        when {
+                            prefs.hrvBaselineOverride != null -> prefs.hrvBaselineOverride
+                            frozenBaseline && frozenHrvMu != null -> exp(frozenHrvMu)
+                            muHrvHistory.isNotEmpty() ->
+                                exp(
+                                    muHrvHistory
+                                        .map { ln(it.coerceAtLeast(0.001f)) }
+                                        .average()
+                                        .toFloat(),
+                                )
+                            else -> null
+                        }
+                    val isCurrentHrvOptimal =
+                        currentHrvBaseline != null &&
+                            currentHrvMean != null &&
+                            currentHrvMean / currentHrvBaseline >= prefs.hrvOptimalThreshold
+
                     val recoveryFlags =
                         scoringCalculator.computeRecoveryFlags(
                             zLnHrv = zHrv,
@@ -310,6 +329,7 @@ class ComputeSleepMetricsUseCase
                             yesterdayHrv = yesterdaySummary?.nocturnalHrv?.toFloat(),
                             currentHrv = currentHrvMean,
                             hrvOptimalThreshold = prefs.hrvOptimalThreshold,
+                            isCurrentHrvOptimal = isCurrentHrvOptimal,
                         )
 
                     readinessScore =

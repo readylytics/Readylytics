@@ -183,4 +183,84 @@ class RecoveryFlagTest {
         assertFalse(RecoveryFlag.OVERREACHING in result)
         assertFalse(RecoveryFlag.ILLNESS_ONSET in result)
     }
+
+    // ─── Rest day insight ─────────────────────────────────────────────────────
+    private fun restDayFlags(
+        yesterdayTrimp: Float,
+        yesterdayHrv: Float,
+        currentHrv: Float,
+        hrvOptimalThreshold: Float = 1.10f,
+        isCurrentHrvOptimal: Boolean = false,
+    ) = calculator.computeRecoveryFlags(
+        zLnHrv = 0f,
+        zRhr = 0f,
+        rhrDeltaBpm = null,
+        yesterdayZLnHrv = null,
+        yesterdayZRhr = null,
+        hrvMissing = false,
+        stagesSuspicious = false,
+        isLateNadir = false,
+        isCalibrating = false,
+        emergencyFlags = null,
+        yesterdayTrimp = yesterdayTrimp,
+        yesterdayHrv = yesterdayHrv,
+        currentHrv = currentHrv,
+        hrvOptimalThreshold = hrvOptimalThreshold,
+        isCurrentHrvOptimal = isCurrentHrvOptimal,
+    )
+
+    @Test
+    fun `rest day no impact fires when hrv did not improve enough and not optimal`() {
+        val result = restDayFlags(yesterdayTrimp = 5f, yesterdayHrv = 50f, currentHrv = 50f)
+        assertTrue(RecoveryFlag.REST_DAY_NO_IMPACT in result)
+        assertFalse(RecoveryFlag.REST_DAY_SUCCESS in result)
+    }
+
+    @Test
+    fun `rest day success fires when hrv meets threshold`() {
+        val result = restDayFlags(yesterdayTrimp = 5f, yesterdayHrv = 50f, currentHrv = 56f)
+        assertTrue(RecoveryFlag.REST_DAY_SUCCESS in result)
+        assertFalse(RecoveryFlag.REST_DAY_NO_IMPACT in result)
+    }
+
+    @Test
+    fun `rest day success fires when hrv is already optimal even below threshold`() {
+        // currentHrv 52 < yesterdayHrv 50 * 1.10 = 55, but HRV is in optimal zone
+        val result =
+            restDayFlags(
+                yesterdayTrimp = 5f,
+                yesterdayHrv = 50f,
+                currentHrv = 52f,
+                isCurrentHrvOptimal = true,
+            )
+        assertTrue(RecoveryFlag.REST_DAY_SUCCESS in result)
+        assertFalse(RecoveryFlag.REST_DAY_NO_IMPACT in result)
+    }
+
+    @Test
+    fun `rest day no impact suppressed when optimal regardless of relative hrv`() {
+        // Even if HRV dropped from yesterday, optimal status suppresses NO_IMPACT
+        val result =
+            restDayFlags(
+                yesterdayTrimp = 5f,
+                yesterdayHrv = 60f,
+                currentHrv = 45f,
+                isCurrentHrvOptimal = true,
+            )
+        assertFalse(RecoveryFlag.REST_DAY_NO_IMPACT in result)
+        assertTrue(RecoveryFlag.REST_DAY_SUCCESS in result)
+    }
+
+    @Test
+    fun `workout impact takes precedence over rest day logic`() {
+        val result =
+            restDayFlags(
+                yesterdayTrimp = 150f,
+                yesterdayHrv = 50f,
+                currentHrv = 40f,
+            )
+        assertTrue(RecoveryFlag.WORKOUT_IMPACT in result)
+        assertFalse(RecoveryFlag.REST_DAY_NO_IMPACT in result)
+        assertFalse(RecoveryFlag.REST_DAY_SUCCESS in result)
+    }
 }

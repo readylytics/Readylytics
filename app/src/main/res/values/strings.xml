@@ -380,7 +380,7 @@
     <string name="sleep_trend_title">Sleep trend</string>
     <string name="sleep_trend_legend_window">Sleep window</string>
     <string name="sleep_trend_legend_duration">Sleep duration</string>
-    <string name="sleep_trend_tooltip_duration_format">Duration: %1$.1fh</string>
+    <string name="sleep_trend_tooltip_duration_format">Duration: %1$s</string>
     <string name="sleep_trend_tooltip_bedtime_format">Bedtime: %1$s - %2$s</string>
 
     <!-- ACWR / Training Load Chart -->

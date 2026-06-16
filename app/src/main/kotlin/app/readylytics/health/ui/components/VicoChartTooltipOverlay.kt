@@ -167,11 +167,14 @@ fun VicoChartTooltipOverlay(
                     selectedPointOffset.y
                 } else if (externalDataY != null && minY != null && maxY != null) {
                     val yRatio = ((maxY - externalDataY) / (maxY - minY)).coerceIn(0.0, 1.0).toFloat()
-                    // Approximate Vico layer bounds (top padding ~8dp, bottom axis ~24dp)
+                    // Approximate Vico layer bounds (top padding ~8dp, bottom axis ~24dp).
+                    // A +1dp correction compensates for the systematic upward shift observed
+                    // in the split-chart coordinated mode.
                     val density = androidx.compose.ui.platform.LocalDensity.current
                     val topPad = with(density) { 8.dp.toPx() }
                     val bottomPad = with(density) { 24.dp.toPx() }
-                    topPad + yRatio * (containerHeightPx - topPad - bottomPad)
+                    val correction = with(density) { 1.dp.toPx() }
+                    topPad + yRatio * (containerHeightPx - topPad - bottomPad) + correction
                 } else {
                     null
                 }
