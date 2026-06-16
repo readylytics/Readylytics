@@ -31,10 +31,11 @@ class DailyMetricsMapperTest {
     }
 
     @Test
-    fun `pai 74_6 rounds to 75 (not truncated)`() {
-        val summary = DailySummary(date = date, totalPai = 74.6f)
+    fun `ras 74_6 rounds to 75 (not truncated)`() {
+        // Default rasSourceMode is EVERYDAY_HEART_RATE.
+        val summary = DailySummary(date = date, totalRasEverydayHr = 74.6f)
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
-        assertEquals(75, metrics.paiRounded)
+        assertEquals(75, metrics.rasRounded)
     }
 
     @Test
@@ -46,14 +47,16 @@ class DailyMetricsMapperTest {
 
     @Test
     fun `readiness is rounded to integer`() {
-        val summary = DailySummary(date = date, readinessScore = 81.5f)
+        // Default strainLoadSourceMode is WORKOUT_ONLY.
+        val summary = DailySummary(date = date, readinessWorkoutOnly = 81.5f)
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
         assertEquals(82, metrics.readinessRounded)
     }
 
     @Test
     fun `strain ratio display uses canonical two decimal formatting`() {
-        val summary = DailySummary(date = date, strainRatio = 0.365f)
+        // Default strainLoadSourceMode is WORKOUT_ONLY.
+        val summary = DailySummary(date = date, strainRatioWorkoutOnly = 0.365f)
         val metrics = DailyMetricsMapper.toMetrics(summary, prefs)
         assertEquals("0.37", metrics.strainRatioDisplay)
     }
@@ -85,7 +88,7 @@ class DailyMetricsMapperTest {
                 restingHeartRate = 50,
                 nocturnalHrv = 65,
                 rhrBpm = 52.6f,
-                totalPai = 74.6f,
+                legacyTotalRas = 74.6f,
                 avgSleepingSpo2 = 96.5f,
                 weightKg = 80.25f,
             )

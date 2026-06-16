@@ -9,6 +9,7 @@ import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.backup.BackupFileInfo
+import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
 import app.readylytics.health.ui.common.UiText
 import java.time.LocalDate
@@ -31,6 +32,8 @@ data class SleepSettingsState(
     val hrvBaselineOverride: Float? = SettingsDefaults.HRV_BASELINE_OVERRIDE,
     val rhrBaselineOverride: Float? = SettingsDefaults.RHR_BASELINE_OVERRIDE,
     val restingHrPercentile: Int = SettingsDefaults.RESTING_HR_PERCENTILE,
+    val strainLoadSourceMode: LoadSourceMode = SettingsDefaults.STRAIN_LOAD_SOURCE_MODE,
+    val rasSourceMode: LoadSourceMode = SettingsDefaults.RAS_SOURCE_MODE,
 )
 
 data class PhysiologySettingsState(
@@ -82,7 +85,7 @@ data class UIState(
     val appTheme: AppTheme = SettingsDefaults.APP_THEME,
     val dynamicColorEnabled: Boolean = SettingsDefaults.DYNAMIC_COLOR_ENABLED,
     val fallbackThemeColor: FallbackThemeColor = SettingsDefaults.FALLBACK_THEME_COLOR,
-    val paiScalingFactor: Float = SettingsDefaults.PAI_SCALING_FACTOR,
+    val rasScalingFactor: Float = SettingsDefaults.RAS_SCALING_FACTOR,
     val stepGoal: Int = SettingsDefaults.STEP_GOAL,
     val retentionDaysEnabled: Boolean = SettingsDefaults.RETENTION_DAYS_ENABLED,
     val retentionDays: Int = SettingsDefaults.RETENTION_DAYS,
@@ -90,7 +93,7 @@ data class UIState(
     val banisterMultiplier: Float = PhysiologyProfile.ACTIVE.banisterMultiplier,
     val chengBeta: Float = PhysiologyProfile.ACTIVE.defaultChengBeta,
     val itrimB: Float = PhysiologyProfile.ACTIVE.defaultItrimB,
-    val unitSystem: app.readylytics.health.data.preferences.UnitSystem = SettingsDefaults.UNIT_SYSTEM,
+    val unitSystem: UnitSystem = SettingsDefaults.UNIT_SYSTEM,
     val isCustomPaletteEnabled: Boolean = false,
     val customSecondaryColor: Long = SettingsDefaults.CUSTOM_SECONDARY_COLOR,
     val customTertiaryColor: Long = SettingsDefaults.CUSTOM_TERTIARY_COLOR,

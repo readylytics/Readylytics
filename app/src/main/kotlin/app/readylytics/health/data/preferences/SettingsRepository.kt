@@ -1,6 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -123,7 +124,7 @@ class SettingsRepository
 
         suspend fun updateConsistencyBaselineDays(days: Int) = sleep.updateConsistencyBaselineDays(days)
 
-        suspend fun updatePaiScalingFactor(value: Float) = sleep.updatePaiScalingFactor(value)
+        suspend fun updateRasScalingFactor(value: Float) = sleep.updateRasScalingFactor(value)
 
         suspend fun updateStepGoal(steps: Int) = sleep.updateStepGoal(steps)
 
@@ -158,6 +159,9 @@ class SettingsRepository
 
         suspend fun initializeInstallDateIfUnset() = sync.initializeInstallDateIfUnset()
 
+        suspend fun bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory: Boolean) =
+            sync.bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory)
+
         suspend fun updateInstallDate(dateTimeMs: Long) = sync.updateInstallDate(dateTimeMs)
 
         suspend fun updateSyncPreference(pref: SyncPreference) = sync.updateSyncPreference(pref)
@@ -175,6 +179,10 @@ class SettingsRepository
             sync.updateCircadianThresholdOverride(encryptedMinutes)
 
         suspend fun updateLastSyncTimestamp(timestamp: Long) = sync.updateLastSyncTimestamp(timestamp)
+
+        suspend fun updateStrainLoadSourceMode(mode: LoadSourceMode) = sync.updateStrainLoadSourceMode(mode)
+
+        suspend fun updateRasSourceMode(mode: LoadSourceMode) = sync.updateRasSourceMode(mode)
 
         suspend fun updateBackupSchedule(schedule: BackupSchedule) = backup.updateBackupSchedule(schedule)
 

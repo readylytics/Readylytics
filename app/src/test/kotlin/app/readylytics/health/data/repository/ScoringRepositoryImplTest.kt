@@ -117,6 +117,7 @@ class ScoringRepositoryImplTest {
                     any(),
                     any(),
                     any(),
+                    any(),
                 )
             } returns
                 Result
@@ -127,6 +128,7 @@ class ScoringRepositoryImplTest {
                     any(),
                     any(),
                     eq(yesterday),
+                    any(),
                     any(),
                     any(),
                     any(),
@@ -164,6 +166,7 @@ class ScoringRepositoryImplTest {
             // Ensure use case returns success
             coEvery {
                 computeSleepMetricsUseCase(
+                    any(),
                     any(),
                     any(),
                     any(),
@@ -216,6 +219,7 @@ class ScoringRepositoryImplTest {
                     any(),
                     any(),
                     any(),
+                    any(),
                 )
             } returns
                 Result
@@ -238,6 +242,7 @@ class ScoringRepositoryImplTest {
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
             coEvery {
                 computeSleepMetricsUseCase(
+                    any(),
                     any(),
                     any(),
                     any(),
@@ -290,6 +295,7 @@ class ScoringRepositoryImplTest {
             coEvery { baselineComputer.computeHrvBaselineBetween(any(), any(), any()) } returns 45
             coEvery {
                 computeSleepMetricsUseCase(
+                    any(),
                     any(),
                     any(),
                     any(),

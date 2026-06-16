@@ -8,8 +8,9 @@ object CardConfigurationMapper {
         val cardId =
             try {
                 CardId.valueOf(proto.cardId)
-            } catch (e: IllegalArgumentException) {
-                return null
+            } catch (_: IllegalArgumentException) {
+                // Backward-compat: proto stored "PAI_DAILY" before RAS rename
+                if (proto.cardId == "PAI_DAILY") CardId.RAS_DAILY else return null
             }
         return CardConfiguration(
             cardId = cardId,

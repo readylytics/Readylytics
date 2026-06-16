@@ -3,15 +3,16 @@ package app.readylytics.health.ui.workouts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
-import app.readylytics.health.domain.scoring.PaiCalculator
+import app.readylytics.health.domain.scoring.RasCalculator
 import app.readylytics.health.ui.workouts.mappers.ChartDataMapper
-import app.readylytics.health.ui.workouts.mappers.DailyPaiBreakdownMapper
+import app.readylytics.health.ui.workouts.mappers.DailyRasBreakdownMapper
 import app.readylytics.health.ui.workouts.mappers.RecoveryMetricsMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,12 +38,12 @@ data class WorkoutDetailUiState(
     val hrr1Min: Int? = null,
     val hrr2Min: Int? = null,
     val hrr3Min: Int? = null,
-    val totalPai: Float? = null,
-    val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
+    val totalRas: Float? = null,
+    val rasDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val computedTrimp: Int? = null,
     val gainedStrain: Float? = null,
     val gainedStrainDisplay: String = "—",
-    val pai: Float? = null,
+    val ras: Float? = null,
     val isLoading: Boolean = true,
 )
 
@@ -107,11 +108,12 @@ class WorkoutDetailViewModel
                         .toEpochMilli()
                 val thirtyDaySummaries = dailySummaryRepository.getSince(thirtyDaysAgo)
 
-                val paiBreakdown = DailyPaiBreakdownMapper.mapDailyBreakdown(workoutDate, thirtyDaySummaries)
+                val prefs = settingsRepo.userPreferences.first()
+                val rasBreakdown =
+                    DailyRasBreakdownMapper.mapDailyBreakdown(workoutDate, thirtyDaySummaries, prefs.rasSourceMode)
 
                 val recoveryMetrics = RecoveryMetricsMapper.mapRecoveryMetrics(allSamples, workout.endTime, endHr)
 
-                val prefs = settingsRepo.userPreferences.first()
                 val workoutSamples = dbSamples.filter { it.timestamp <= workoutEndInstant }
                 val displayMetrics =
                     getWorkoutDisplayMetricsUseCase.execute(
@@ -135,12 +137,12 @@ class WorkoutDetailViewModel
                         hrr1Min = recoveryMetrics.hrr1Min,
                         hrr2Min = recoveryMetrics.hrr2Min,
                         hrr3Min = recoveryMetrics.hrr3Min,
-                        totalPai = summary?.totalPai,
-                        paiDailyBreakdown = paiBreakdown,
+                        totalRas = summary?.let { LoadSourceSelector.selectTotalRas(it, prefs.rasSourceMode) },
+                        rasDailyBreakdown = rasBreakdown,
                         computedTrimp = displayMetrics.computedTrimp.takeIf { trimp -> trimp > 0 },
                         gainedStrain = displayMetrics.gainedStrain,
                         gainedStrainDisplay = displayMetrics.gainedStrainDisplay,
-                        pai = PaiCalculator.calculateDailyPai(displayMetrics.preciseTrimp, prefs.paiScalingFactor),
+                        ras = RasCalculator.calculateDailyRas(displayMetrics.preciseTrimp, prefs.rasScalingFactor),
                         isLoading = false,
                     )
                 }

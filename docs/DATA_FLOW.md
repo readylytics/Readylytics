@@ -48,9 +48,9 @@ All paths are rooted at `app/src/main/kotlin/app/readylytics/health/`.
                ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
 │  data/repository/ScoringRepositoryImpl.computeDailySummary(day)           │
-│   raw metrics → TRIMP/PAI → baselines → sleep/load/readiness → persist    │
+│   raw metrics → TRIMP/RAS → baselines → sleep/load/readiness → persist    │
 │   delegates to pure-Kotlin domain/scoring/** (BaselineComputer,           │
-│   PaiCalculator, strategies/*, sleep/*)                                    │
+│   RasCalculator, strategies/*, sleep/*)                                    │
 └──────────────┬─────────────────────────────────────────────────────────────┘
                │ DailySummaryEntity persisted back to Room
                ▼
@@ -140,7 +140,7 @@ deterministic composite IDs (`${hcRecordId}_${timestampMs}`) so re-ingestion is 
 | `BloodPressureDataMapper`    | `data/mapper/BloodPressureDataMapper.kt`    | `BloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg).                                                                     |
 | `OxygenSaturationDataMapper` | `data/mapper/OxygenSaturationDataMapper.kt` | `OxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                                     |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 28)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 30)`)
 
 Defined in `data/local/HealthDatabase.kt`; entities in `data/local/entity/`, DAOs in
 `data/local/dao/`. **The database is the single source of truth; the UI never reads Health
@@ -190,7 +190,7 @@ keep Android types out of`domain/scoring/\*\*`.
 | Component                       | Path                                       | Responsibility                                                                                                                                                                                                                                                                                                                                                                                          |
 | :------------------------------ | :----------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `ScoringRepository` (interface) | `domain/repository/ScoringRepository.kt`   | Contract for daily computation.                                                                                                                                                                                                                                                                                                                                                                         |
-| `ScoringRepositoryImpl`         | `data/repository/ScoringRepositoryImpl.kt` | `computeDailySummary(day)` (mutex-locked) orchestrates: raw DAO fetch → daily TRIMP/PAI → baseline resolve/freeze → sleep + load + readiness → persist `DailySummaryEntity`. Hosts the "Calibrating" gate (< 7 sleep sessions in the last 42 days → tentative scores, no load score). **Both sync flows recompute exclusively through this method — formulas are never duplicated in the sync engine.** Day boundaries (`dateMidnightMs`) and every scoring window resolve through the **stored scoring timezone** (`UserPreferences.scoringZoneId` → `scoringZone()`, seeded once from the device zone by a DataStore migration), not `ZoneId.systemDefault()`, so identical SQLite + preferences reproduce identical scores across devices/timezones. The same stored zone is threaded through `CircadianConsistencyRepository`, `HrvBaselineProvider`, `RhrBaselineProvider`, and `ComputeHistoricalBaselinesUseCase`. |
+| `ScoringRepositoryImpl`         | `data/repository/ScoringRepositoryImpl.kt` | `computeDailySummary(day)` (mutex-locked) orchestrates: raw DAO fetch → daily TRIMP/RAS → baseline resolve/freeze → sleep + load + readiness → persist `DailySummaryEntity`. Hosts the "Calibrating" gate (< 7 sleep sessions in the last 42 days → tentative scores, no load score). **Both sync flows recompute exclusively through this method — formulas are never duplicated in the sync engine.** Day boundaries (`dateMidnightMs`) and every scoring window resolve through the **stored scoring timezone** (`UserPreferences.scoringZoneId` → `scoringZone()`, seeded once from the device zone by a DataStore migration), not `ZoneId.systemDefault()`, so identical SQLite + preferences reproduce identical scores across devices/timezones. The same stored zone is threaded through `CircadianConsistencyRepository`, `HrvBaselineProvider`, `RhrBaselineProvider`, and `ComputeHistoricalBaselinesUseCase`. |
 
 ### 2.2 Resting Heart Rate (RHR) — percentile "nocturnal floor"
 
@@ -204,7 +204,7 @@ keep Android types out of`domain/scoring/\*\*`.
 | Component                          | Path                                                 | Model / default                                                                                                                                                                                                                              |
 | :--------------------------------- | :--------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `TrimpModel` (enum)                | `domain/scoring/TrimpModel.kt`                       | `BANISTER`, `I_TRIMP`, `CHENG`.                                                                                                                                                                                                              |
-| `PaiCalculator`                    | `domain/scoring/PaiCalculator.kt`                    | `calculateDailyTrimp(..., trimpModel = TrimpModel.BANISTER)` switches per model — **BANISTER is the operational default** (default parameter value). `calculateDailyPai()` converts TRIMP → PAI via a profile scaling factor (capped at 75). |
+| `RasCalculator`                    | `domain/scoring/RasCalculator.kt`                    | `calculateDailyTrimp(..., trimpModel = TrimpModel.BANISTER)` switches per model — **BANISTER is the operational default** (default parameter value). `calculateDailyRas()` converts TRIMP → RAS via a profile scaling factor (capped at 75). |
 | `ComputeWorkoutTrimpUseCase`       | `domain/scoring/ComputeWorkoutTrimpUseCase.kt`       | Per-workout integration over HR samples; reads the user-selected model from `prefs.trimpModel`.                                                                                                                                              |
 | `ComputeWorkoutLoadMetricsUseCase` | `domain/scoring/ComputeWorkoutLoadMetricsUseCase.kt` | Single per-workout load source for workout history/detail UI: resolves precise TRIMP + gained strain from DB-backed workout samples, then returns the rounded TRIMP/strain display values used by cards and rows.                            |
 | `GetWorkoutDisplayMetricsUseCase`  | `domain/scoring/GetWorkoutDisplayMetricsUseCase.kt`  | Unified display metrics provider for workouts. Orchestrates 42-day history fetching and delegates calculations to `ComputeWorkoutLoadMetricsUseCase` to return UI-ready preformatted values.                                                 |
@@ -213,11 +213,11 @@ keep Android types out of`domain/scoring/\*\*`.
 Daily score display values are projected through `DailyMetricsMapper` /
 `DailyMetricsRepository`. UI screens may use raw `DailySummary` floats for chart
 geometry and dial progress, but visible Sleep Score, Readiness, Restoration, TRIMP,
-PAI, RHR/HRV baselines, SpO2, and Strain Ratio text must use `DailyMetrics`
+RAS, RHR/HRV baselines, SpO2, and Strain Ratio text must use `DailyMetrics`
 rounded/display fields or the workout-specific `GetWorkoutDisplayMetricsUseCase`
 result.
 
-**Variants (reference only — see `PaiCalculator.calculateDailyTrimp` for the implementation):**
+**Variants (reference only — see `RasCalculator.calculateDailyTrimp` for the implementation):**
 
 - **BANISTER** _(default)_ — classic exponential HR-reserve TRIMP (Banister / Morton), sex-specific weighting.
 - **CHENG** — LT-TRIMP, piecewise around the lactate-threshold zone (requires a zone-3 / LT bound).
@@ -234,7 +234,7 @@ stay reserved (never reused) so old payloads/backups still deserialize.
 
 `domain/scoring/BaselineComputer.kt` computes and snapshots per-day frozen baselines:
 `hrMax`, `rhrBpm`, `rhrSigma`, HRV `mu`/`sigma` (with profile-prior blending for new users),
-`paiScalingFactor`, and physiology profile. Baselines freeze once
+`rasScalingFactor`, and physiology profile. Baselines freeze once
 calibrated (≥ 7 valid sessions); before that, `ScoringRepositoryImpl` reports
 **"Calibrating"** and emits tentative metrics only.
 
@@ -274,7 +274,7 @@ per-day UPDATEs are collapsed into a single transaction by the backfill use-case
 | :--------------------------- | :-------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
 | `SleepScoringStrategy`       | `domain/scoring/strategies/SleepScoringStrategy.kt` | Sleep score = **Duration 50% + Architecture 25% + Restoration 25%** (Restoration from HRV & RHR z-scores).                  |
 | `LoadScoringStrategy`        | `domain/scoring/strategies/LoadScoringStrategy.kt`  | Load score from the **Strain Ratio** (ATL/CTL): `sr ≤ 1.3 → 100`, `sr > 1.3 → 100·exp(−2.5·(sr−1.3)²)`. Feeds the readiness composite (0.4 restoration + 0.3 sleep + 0.3 load). Only `ILLNESS_ONSET` (cap 50) caps the readiness number and requires two consecutive nights; strong recovery, workout-impact, and rest-day flags are informational only and do not cap the score. |
-| `PaiScoringStrategy`         | `domain/scoring/strategies/PaiScoringStrategy.kt`   | **CTL (42-day)** and **ATL (7-day)** exponential moving averages of daily TRIMP.                                            |
+| `RasScoringStrategy`         | `domain/scoring/strategies/RasScoringStrategy.kt`   | **CTL (42-day)** and **ATL (7-day)** exponential moving averages of daily TRIMP.                                            |
 | `ComputeSleepMetricsUseCase` | `domain/scoring/ComputeSleepMetricsUseCase.kt`      | Assembles sleep/readiness metrics for the day from the strategies + baselines.                                              |
 | `CircadianConsistencyRepository` | `domain/scoring/CircadianConsistencyRepository.kt` | Live bed/wake-time consistency score. The allowed deviation **threshold** resolves through the single `CircadianThresholdDefaults.resolveThreshold(profile, override)` (Athlete 20 / Active 30 / Sedentary 45 min; override wins). The encrypted `circadianThresholdOverride` is the user knob; a legacy non-default flat `consistencyThresholdMinutes` is honored as an override for back-compat. The former per-profile strategy classes are deleted — there is now one resolver. |
 
@@ -282,6 +282,21 @@ Supporting helpers live in `domain/scoring/components/` and `domain/scoring/slee
 (architecture targets, restoration weights, nadir analysis, HR coverage validation).
 `CircadianThresholdDefaults` (`domain/circadian/`) is the single threshold source, consumed
 by both the live repository above and the diagnostic config built in `ScoringConfigFactory`.
+
+### 2.6 Everyday Heart-Rate Load
+
+| Component | Path | Output |
+| :--- | :--- | :--- |
+| `EverydayHeartRateLoadCalculator` | `domain/scoring/EverydayHeartRateLoadCalculator.kt` | Pure Kotlin. Buckets a day's non-sleep, non-workout HR samples into 1-minute windows, classifies each via `HrZoneClassifier`, and accumulates per-minute TRIMP via `RasCalculator.calculateDailyTrimp` (Zone 0 excluded from TRIMP, included in `coverageMinutes`). Returns `EverydayHrLoadResult` (`nonWorkoutTrimp`, `totalEverydayTrimp = workoutOnlyTrimp + nonWorkoutTrimp`, `coverageMinutes`, `validBucketCount`, `confidence: LoadCoverageConfidence`). |
+| `ScoringRepositoryImpl.computeDailySummary` | `domain/scoring/ScoringRepositoryImpl.kt` | Fetches the day's non-sleep, non-workout HR samples plus sleep/workout intervals, feeds `EverydayHeartRateLoadCalculator`, and persists both `*WorkoutOnly` and `*EverydayHr` variants (TRIMP, RAS, total RAS, ATL, CTL, Strain Ratio, Load Score, Readiness) plus `everydayCoverageMinutes`/`everydayLoadConfidence` on `DailySummaryEntity`. Legacy columns (`totalTrimp`, `legacyRasScore`, `legacyTotalRas`, `strainRatio`, `loadScore`, `readinessScore`) are no longer written. |
+| `LoadSourceSelector` | `domain/model/LoadSourceSelector.kt` | Pure projection. Picks `*WorkoutOnly` or `*EverydayHr` per field from `UserPreferences.strainLoadSourceMode` (TRIMP/ATL/CTL/Strain Ratio/Load Score/Readiness) and `rasSourceMode` (daily/total RAS); also derives `needsRecalc` and `readinessLowConfidence`. |
+| `DailyMetricsMapper` | `domain/model/DailyMetricsMapper.kt` | Builds `DailyMetrics` exclusively through `LoadSourceSelector` for all user-visible strain/load/RAS/readiness fields, so switching either source preference re-projects already-stored data instantly with no recompute. |
+
+The two source preferences (`strainLoadSourceMode`, `rasSourceMode`, both on `UserPreferences`)
+are independent: Readiness always derives from `strainLoadSourceMode`, never from
+`rasSourceMode`. Coefficients and thresholds live solely in
+`EverydayHeartRateLoadCalculator.kt` / `ScoringConstants` — see ABOUT.md for the
+user-facing description of `coverageMinutes`, `validBucketCount`, and confidence tiers.
 
 ---
 
@@ -294,11 +309,11 @@ ViewModels collect repository flows, fuse them with `combine()`, and expose immu
 
 | ViewModel                                                                                                   | Path                                                          | Exposes                                                                                                                                                                                                                    |
 | :---------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DashboardViewModel`                                                                                        | `ui/dashboard/DashboardViewModel.kt`                          | `uiState: StateFlow<DashboardUiState>` (summary, card map, circadian, PAI, `recalcProgress`); `onRefresh()` → `foregroundSyncController.triggerDailySync()`.                                                               |
+| `DashboardViewModel`                                                                                        | `ui/dashboard/DashboardViewModel.kt`                          | `uiState: StateFlow<DashboardUiState>` (summary, card map, circadian, RAS, `recalcProgress`); `onRefresh()` → `foregroundSyncController.triggerDailySync()`.                                                               |
 | `SyncViewModel`                                                                                             | `ui/sync/SyncViewModel.kt`                                    | `uiState` (sealed sync state machine), `isSyncing`, `recalcProgress` (forwarded from `ForegroundSyncController`).                                                                                                          |
 | `VitalsViewModel`                                                                                           | `ui/vitals/VitalsViewModel.kt`                                | HRV / RHR / SpO2 daily trends + baseline bands.                                                                                                                                                                            |
 | `SleepViewModel`                                                                                            | `ui/sleep/SleepViewModel.kt`                                  | Sleep summary, stage timeline, circadian consistency, sleep window/duration trend data.                                                                                                                                    |
-| `WorkoutsViewModel` / `WorkoutDetailViewModel`                                                              | `ui/workouts/`                                                | Daily TRIMP/strain trends, PAI breakdown; per-workout TRIMP/strain/HRR. Per-workout load cards/rows consume `ComputeWorkoutLoadMetricsUseCase` so history and detail show the same rounded TRIMP and gained-strain values. |
+| `WorkoutsViewModel` / `WorkoutDetailViewModel`                                                              | `ui/workouts/`                                                | Daily TRIMP/strain trends, RAS breakdown; per-workout TRIMP/strain/HRR. Per-workout load cards/rows consume `ComputeWorkoutLoadMetricsUseCase` so history and detail show the same rounded TRIMP and gained-strain values. |
 | `HeartRateDetailViewModel`                                                                                  | `ui/heartrate/HeartRateDetailViewModel.kt`                    | Intra-day HR samples + zone totals.                                                                                                                                                                                        |
 | `StepDetailViewModel` / `WeightDetailViewModel` / `BloodPressureDetailViewModel` / `BodyFatDetailViewModel` | `ui/steps/`, `ui/weight/`, `ui/bloodpressure/`, `ui/bodyfat/` | Per-metric trends, statuses, formatted display.                                                                                                                                                                            |
 
@@ -319,7 +334,7 @@ progress).
 | `MetricCard` / `MetricTooltip`                                                                | `ui/components/MetricCard.kt`, `MetricTooltip.kt` | Status-colored metric cards with tooltips.                                                                                                 |
 | `TrendCharts`                                                                                 | `ui/components/TrendCharts.kt`                    | Vico line charts (`TrendChart`, `MultiSeriesTrendChart`) — Bezier curves, gradient fills, M3 tonal mapping.                                |
 | `SingleBloodPressureChart` / `BloodPressureSplitChart`                                        | `ui/components/`                                  | Vico dual-series synchronized BP charts.                                                                                                   |
-| `HrTimelineChart` / `SleepStagesChart` / `SleepArchitectureBar` / `PaiWeeklyBar` / `StepsBar` | `ui/components/`                                  | Custom `Canvas` visualizations.                                                                                                            |
+| `HrTimelineChart` / `SleepStagesChart` / `SleepArchitectureBar` / `RasWeeklyBar` / `StepsBar` | `ui/components/`                                  | Custom `Canvas` visualizations.                                                                                                            |
 | `VicoChartTooltipOverlay` / `DataPointTooltip`                                                | `ui/components/`                                  | Touch interception + floating tooltip overlay for Vico charts.                                                                             |
 | `ReorderableCardGrid` (+ `reorder/DragController`)                                            | `ui/components/`                                  | Drag-and-drop dashboard card grid.                                                                                                         |
 | `SleepTrendChart`                                                                             | `ui/sleep/SleepTrendChart.kt`                     | Vico stacked column & line dual-axis sleep window & duration chart.                                                                        |
@@ -371,22 +386,22 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | `domain/model/InsightType.kt`                                              | Domain — insight model                              | enum class and RecoveryFlag mapper                                                       |
 | `domain/dashboard/InsightDeriver.kt`                                       | Domain — insight logic                              | derives active set + ordered visible queue/current insight                               |
 | `domain/repository/ScoringRepository.kt`                                   | Processing — coordinator contract                   | `computeDailySummary(day)`                                                               |
-| `data/repository/ScoringRepositoryImpl.kt`                                 | Processing — scoring orchestrator                   | TRIMP/PAI → baselines → scores; "Calibrating" gate                                       |
+| `data/repository/ScoringRepositoryImpl.kt`                                 | Processing — scoring orchestrator                   | TRIMP/RAS → baselines → scores; "Calibrating" gate                                       |
 | `domain/scoring/sleep/SleepPercentileRhrCalculator.kt`                     | Processing — RHR                                    | **RHR nocturnal-floor percentile** (default 5th, 30-day window)                          |
 | `domain/scoring/TrimpModel.kt`                                             | Processing — TRIMP model enum                       | BANISTER / I_TRIMP / CHENG                                                               |
-| `domain/scoring/PaiCalculator.kt`                                          | Processing — TRIMP/PAI                              | **TRIMP (default BANISTER)**; PAI = TRIMP × scaling (cap 75)                             |
+| `domain/scoring/RasCalculator.kt`                                          | Processing — TRIMP/RAS                              | **TRIMP (default BANISTER)**; RAS = TRIMP × scaling (cap 75)                             |
 | `domain/scoring/ComputeWorkoutTrimpUseCase.kt`                             | Processing — per-workout TRIMP                      | model from `prefs.trimpModel`                                                            |
 | `domain/scoring/GetWorkoutDisplayMetricsUseCase.kt`                        | Processing — per-workout display metrics            | orchestrates 42-day history fetching and delegates to `ComputeWorkoutLoadMetricsUseCase` |
-| `domain/scoring/BaselineComputer.kt`                                       | Processing — baselines                              | hrMax / RHR / HRV mu·sigma / PAI factor; freeze + calibration                            |
+| `domain/scoring/BaselineComputer.kt`                                       | Processing — baselines                              | hrMax / RHR / HRV mu·sigma / RAS factor; freeze + calibration                            |
 | `domain/scoring/strategies/SleepScoringStrategy.kt`                        | Processing — sleep score                            | Duration 50% / Architecture 25% / Restoration 25%                                        |
 | `domain/scoring/strategies/LoadScoringStrategy.kt`                         | Processing — load/readiness                         | Strain Ratio (ATL/CTL); readiness composite                                              |
-| `domain/scoring/strategies/PaiScoringStrategy.kt`                          | Processing — training load                          | CTL (42-day) / ATL (7-day) EMA                                                           |
+| `domain/scoring/strategies/RasScoringStrategy.kt`                          | Processing — training load                          | CTL (42-day) / ATL (7-day) EMA                                                           |
 | `domain/scoring/ComputeSleepMetricsUseCase.kt`                             | Processing — sleep metrics assembly                 | sleep + restoration                                                                      |
-| `ui/dashboard/DashboardViewModel.kt`                                       | UI — dashboard state                                | summary, cards, PAI, recalc progress                                                     |
+| `ui/dashboard/DashboardViewModel.kt`                                       | UI — dashboard state                                | summary, cards, RAS, recalc progress                                                     |
 | `ui/sync/SyncViewModel.kt`                                                 | UI — sync state                                     | `recalcProgress` forward                                                                 |
 | `ui/vitals/VitalsViewModel.kt`                                             | UI — vitals state                                   | HRV / RHR / SpO2 trends + bands                                                          |
 | `ui/sleep/SleepViewModel.kt`                                               | UI — sleep state                                    | sleep score, stage timeline, sleep window/duration trend data                            |
-| `ui/workouts/WorkoutsViewModel.kt`                                         | UI — workouts state                                 | TRIMP / strain / PAI                                                                     |
+| `ui/workouts/WorkoutsViewModel.kt`                                         | UI — workouts state                                 | TRIMP / strain / RAS                                                                     |
 | `ui/settings/SettingsState.kt`                                             | UI — settings state                                 | `SyncSettingsState` resync progress                                                      |
 | `ui/scaffold/MainScaffold.kt`                                              | UI — scaffold + banner                              | "Recalculating day X of Y"                                                               |
 | `ui/components/InsightCard.kt`                                             | UI — component                                      | dismissible M3 health insight card + slim rerun restore state                            |
@@ -394,7 +409,7 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | `ui/components/TrendCharts.kt`                                             | UI — Vico charts                                    | line trends (Bezier, gradient)                                                           |
 | `ui/components/HrTimelineChart.kt`                                         | UI — Canvas chart                                   | intra-day HR + zones                                                                     |
 | `ui/components/SleepStagesChart.kt`                                        | UI — Canvas chart                                   | sleep stage timeline                                                                     |
-| `ui/components/PaiWeeklyBar.kt`                                            | UI — Canvas chart                                   | 7-day PAI breakdown                                                                      |
+| `ui/components/RasWeeklyBar.kt`                                            | UI — Canvas chart                                   | 7-day RAS breakdown                                                                      |
 | `ui/sleep/SleepTrendChart.kt`                                              | UI — Vico chart                                     | stacked column & line dual-axis sleep window & duration chart                            |
 
 ### 3.5 Dashboard Insight Card Derivation & Dismissal Flow

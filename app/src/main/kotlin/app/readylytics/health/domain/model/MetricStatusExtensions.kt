@@ -104,12 +104,12 @@ fun DailySummary.sleepDurationStatus(goalMinutes: Int): MetricStatus {
     }
 }
 
-fun DailySummary.paiStatus(): MetricStatus {
-    val pai = totalPai ?: return MetricStatus.CALIBRATING
+fun Float?.rasStatus(): MetricStatus {
+    val ras = this ?: return MetricStatus.CALIBRATING
     return when {
-        pai >= 100f -> MetricStatus.OPTIMAL
-        pai >= 75f -> MetricStatus.NEUTRAL
-        pai >= 50f -> MetricStatus.WARNING
+        ras >= 100f -> MetricStatus.OPTIMAL
+        ras >= 75f -> MetricStatus.NEUTRAL
+        ras >= 50f -> MetricStatus.WARNING
         else -> MetricStatus.POOR
     }
 }

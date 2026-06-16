@@ -16,7 +16,7 @@ val CardId.displayNameResId: Int
             CardId.SLEEP_DURATION -> R.string.card_title_sleep_duration
             CardId.SLEEP_ARCHITECTURE -> R.string.card_title_sleep_architecture
             CardId.STRAIN_RATIO -> R.string.card_title_strain_ratio
-            CardId.PAI_DAILY -> R.string.card_title_pai_daily
+            CardId.RAS_DAILY -> R.string.card_title_ras_daily
             CardId.CIRCADIAN_CONSISTENCY -> R.string.card_title_circadian_consistency
             CardId.RESTING_HR -> R.string.card_title_resting_hr
             CardId.RECOVERY_INDEX -> R.string.card_title_recovery_index

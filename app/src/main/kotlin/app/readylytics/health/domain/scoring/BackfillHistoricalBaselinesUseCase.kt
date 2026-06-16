@@ -33,7 +33,7 @@ class BackfillHistoricalBaselinesUseCase(
                     hrMax = summary.hrMax,
                     snapshotProfile = summary.snapshotProfile,
                     hrvSigmaPrior = summary.hrvSigmaPrior,
-                    paiScalingFactor = summary.paiScalingFactor,
+                    rasScalingFactor = summary.rasScalingFactor,
                     baselineObservationCount = summary.baselineObservationCount,
                 )
             }

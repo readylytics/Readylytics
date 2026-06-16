@@ -139,24 +139,24 @@ data class InsightDetailResourceSpec(
                     "Training Load May Be Affecting Recovery. This does not indicate overtraining.",
                 ),
                 training(
-                    InsightType.PAI_DEPLETION_HIGH_STRAIN,
-                    R.string.insight_pai_depletion_high_strain_title,
-                    R.string.insight_pai_depletion_high_strain_body,
-                    R.string.insight_detail_pai_depletion_high_strain_observed,
-                    R.array.insight_detail_pai_depletion_high_strain_causes,
-                    R.array.insight_detail_pai_depletion_high_strain_recommendations,
-                    R.array.insight_detail_pai_depletion_high_strain_caveats,
-                    "Low PAI Despite Training Load. Low PAI does not mean your training was useless.",
+                    InsightType.RAS_DEPLETION_HIGH_STRAIN,
+                    R.string.insight_ras_depletion_high_strain_title,
+                    R.string.insight_ras_depletion_high_strain_body,
+                    R.string.insight_detail_ras_depletion_high_strain_observed,
+                    R.array.insight_detail_ras_depletion_high_strain_causes,
+                    R.array.insight_detail_ras_depletion_high_strain_recommendations,
+                    R.array.insight_detail_ras_depletion_high_strain_caveats,
+                    "Low RAS Despite Training Load. Low RAS does not mean your training was useless.",
                 ),
                 training(
-                    InsightType.PAI_WEEKLY_UNDERPERFORMANCE,
-                    R.string.insight_pai_weekly_underperformance_title,
-                    R.string.insight_pai_weekly_underperformance_body,
-                    R.string.insight_detail_pai_weekly_underperformance_observed,
-                    R.array.insight_detail_pai_weekly_underperformance_causes,
-                    R.array.insight_detail_pai_weekly_underperformance_recommendations,
-                    R.array.insight_detail_pai_weekly_underperformance_caveats,
-                    "Weekly PAI Below Target. A low PAI week is not automatically bad.",
+                    InsightType.RAS_WEEKLY_UNDERPERFORMANCE,
+                    R.string.insight_ras_weekly_underperformance_title,
+                    R.string.insight_ras_weekly_underperformance_body,
+                    R.string.insight_detail_ras_weekly_underperformance_observed,
+                    R.array.insight_detail_ras_weekly_underperformance_causes,
+                    R.array.insight_detail_ras_weekly_underperformance_recommendations,
+                    R.array.insight_detail_ras_weekly_underperformance_caveats,
+                    "Weekly RAS Below Target. A low RAS week is not automatically bad.",
                 ),
                 dataQuality(
                     InsightType.RECOVERY_HRV_MISSING,
@@ -369,9 +369,9 @@ data class InsightDetailResourceSpec(
                 InsightType.LATE_NADIR_ELEVATED_RHR -> R.string.insight_detail_late_nadir_elevated_rhr_meaning
                 InsightType.LATE_NADIR_SHORT_SLEEP -> R.string.insight_detail_late_nadir_short_sleep_meaning
                 InsightType.LOAD_SPIKE_RECOVERY_STRAIN -> R.string.insight_detail_load_spike_recovery_strain_meaning
-                InsightType.PAI_DEPLETION_HIGH_STRAIN -> R.string.insight_detail_pai_depletion_high_strain_meaning
-                InsightType.PAI_WEEKLY_UNDERPERFORMANCE ->
-                    R.string.insight_detail_pai_weekly_underperformance_meaning
+                InsightType.RAS_DEPLETION_HIGH_STRAIN -> R.string.insight_detail_ras_depletion_high_strain_meaning
+                InsightType.RAS_WEEKLY_UNDERPERFORMANCE ->
+                    R.string.insight_detail_ras_weekly_underperformance_meaning
                 InsightType.RECOVERY_HRV_MISSING -> R.string.insight_detail_recovery_hrv_missing_meaning
                 InsightType.RECOVERY_STAGES_MISSING -> R.string.insight_detail_recovery_stages_missing_meaning
                 InsightType.REST_DAY_NO_IMPACT -> R.string.insight_detail_rest_day_no_impact_meaning

@@ -45,7 +45,7 @@ class ComputeWorkoutTrimpUseCase
                     val durationMinutes = (workoutEndTime - workoutStartTime) / 60_000f
                     return@execute Result.success(
                         if (durationMinutes > 0f) {
-                            PaiCalculator.calculateDailyTrimp(
+                            RasCalculator.calculateDailyTrimp(
                                 durationMinutes = durationMinutes,
                                 hrAvg = workoutAvgHr,
                                 rhrBaseline = rhrBaseline,
@@ -70,7 +70,7 @@ class ComputeWorkoutTrimpUseCase
                 val leadingGapMin = (firstSample.timestamp.toEpochMilli() - workoutStartTime) / 60_000f
                 if (leadingGapMin > 0f) {
                     computedTrimp +=
-                        PaiCalculator.calculateDailyTrimp(
+                        RasCalculator.calculateDailyTrimp(
                             durationMinutes = leadingGapMin,
                             hrAvg = firstSample.bpm.toFloat(),
                             rhrBaseline = rhrBaseline,
@@ -95,7 +95,7 @@ class ComputeWorkoutTrimpUseCase
                     val durMin = (nextMs - sample.timestamp.toEpochMilli()) / 60_000f
                     if (durMin > 0f) {
                         computedTrimp +=
-                            PaiCalculator.calculateDailyTrimp(
+                            RasCalculator.calculateDailyTrimp(
                                 durationMinutes = durMin,
                                 hrAvg = sample.bpm.toFloat(),
                                 rhrBaseline = rhrBaseline,

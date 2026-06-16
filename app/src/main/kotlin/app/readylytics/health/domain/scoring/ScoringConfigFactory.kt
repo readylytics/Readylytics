@@ -67,7 +67,7 @@ class ScoringConfigFactory
                     sleepTargets = sleepTargets,
                     emergencyFlags = emergencyFlags,
                     circadianConsistency = circadianConsistency,
-                    paiScalingFactor = userPreferences.paiScalingFactor,
+                    rasScalingFactor = userPreferences.rasScalingFactor,
                     auditTrail = auditTrail.copy(configHashCode = paramsHash),
                     trimpModel = userPreferences.trimpModel,
                     banisterMultiplier = userPreferences.banisterMultiplier,

@@ -45,8 +45,8 @@ sealed class InsightParams {
         val strainRatio: Float,
     ) : InsightParams()
 
-    data class PaiDepletionStrain(
-        val totalPai: Float,
+    data class RasDepletionStrain(
+        val totalRas: Float,
         val strainRatio: Float,
     ) : InsightParams()
 
@@ -59,13 +59,22 @@ sealed class InsightParams {
         val stepGoal: Int,
     ) : InsightParams()
 
-    data class PaiWeeklyShortfall(
-        val weeklyPai: Float,
+    data class RasWeeklyShortfall(
+        val weeklyRas: Float,
         val target: Float,
     ) : InsightParams()
 
     data class WeightDrift(
         val deltaKg: Float,
         val percent: Float,
+    ) : InsightParams()
+
+    /**
+     * @param everydayMode True when [app.readylytics.health.data.preferences.UserPreferences.strainLoadSourceMode]
+     * is [app.readylytics.health.domain.scoring.LoadSourceMode.EVERYDAY_HEART_RATE] at evaluation time, so the UI
+     * can render "daily physiological load" copy instead of "training load".
+     */
+    data class LoadSpikeRecoveryStrain(
+        val everydayMode: Boolean,
     ) : InsightParams()
 }

@@ -4,7 +4,7 @@ This document summarizes the rationale and guardrails behind Readylytics' non-di
 
 ## Wording Guardrails
 
-Wearable-derived HRV, resting heart rate, sleep, oxygen saturation, blood pressure, weight, steps, PAI, and training-load data are treated as contextual signals. Details use cautious phrases such as "may", "might", "can", "is consistent with", and "could be related to". 
+Wearable-derived HRV, resting heart rate, sleep, oxygen saturation, blood pressure, weight, steps, RAS, and training-load data are treated as contextual signals. Details use cautious phrases such as "may", "might", "can", "is consistent with", and "could be related to".
 
 Diagnostic and certainty language is strictly avoided:
 - No use of words like "proves", "diagnosed", "caused by", or similar direct causal/diagnostic linkages.

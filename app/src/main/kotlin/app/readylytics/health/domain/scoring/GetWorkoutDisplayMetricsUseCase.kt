@@ -2,6 +2,7 @@ package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.display.MetricFormatter
+import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
@@ -36,9 +37,11 @@ class GetWorkoutDisplayMetricsUseCase
                     .toEpochMilli()
 
             val historicalSummaries = dailySummaryRepository.getSince(fortyTwoDaysAgo)
-            val trimpByDate = historicalSummaries.associate { it.date to (it.totalTrimp ?: 0f) }
-
             val prefs = settingsRepo.userPreferences.first()
+            val trimpByDate =
+                historicalSummaries.associate {
+                    it.date to (LoadSourceSelector.selectTrimp(it, prefs.strainLoadSourceMode) ?: 0f)
+                }
 
             val hrSamples =
                 samples ?: heartRateRepository

@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.insights
 
 import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.domain.model.LoadSourceSelector
 import kotlin.math.abs
 
 /**
@@ -28,7 +29,8 @@ class WeightDriftTrainingLoadRule : InsightRule {
         val percent = abs(deltaKg) / oldestWeight
         if (percent <= InsightConstants.WEIGHT_DRIFT_PERCENT_THRESHOLD) return null
 
-        val strainRatio = context.today.strainRatio ?: 0f
+        val strainRatio =
+            LoadSourceSelector.selectStrainRatio(context.today, context.prefs.strainLoadSourceMode) ?: 0f
         if (strainRatio <= InsightConstants.STRAIN_HIGH_RATIO_THRESHOLD) return null
 
         return InsightFinding(

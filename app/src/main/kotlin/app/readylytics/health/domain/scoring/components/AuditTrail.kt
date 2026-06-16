@@ -8,6 +8,6 @@ data class AuditTrail(
     val appliedAt: LocalDate,
     val appliedSf: Float? = null,
     val physiologyProfile: String? = null,
-    val paiTotalPre: Float? = null,
-    val paiTotalPost: Float? = null,
+    val rasTotalPre: Float? = null,
+    val rasTotalPost: Float? = null,
 )

@@ -163,6 +163,7 @@ fun StepDetailScreen(
                         metricName = "Steps",
                         baselineUnit = "steps",
                         baseline = uiState.stepGoal.toFloat(),
+                        baselineLabel = stringResource(R.string.label_goal),
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         parentScrollInProgress = scrollState.isScrollInProgress,

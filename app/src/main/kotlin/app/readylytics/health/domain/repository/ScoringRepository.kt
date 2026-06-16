@@ -9,5 +9,5 @@ interface ScoringRepository {
 
     suspend fun computeDailySummary(targetDate: LocalDate = LocalDate.now()): DailySummaryEntity
 
-    fun toReadinessResult(summary: DailySummaryEntity): ReadinessResult
+    suspend fun toReadinessResult(summary: DailySummaryEntity): ReadinessResult
 }

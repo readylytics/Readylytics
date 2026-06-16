@@ -1,5 +1,6 @@
 package app.readylytics.health.domain.insights
 
+import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 
@@ -17,4 +18,7 @@ data class InsightContext(
     // meaningful when `today` is the actual current day. Defaults to the end
     // of the day so time-of-day gating is a no-op for past days.
     val nowMinutesOfDay: Int = 1439,
+    // User's selected load-source modes, used by rules to select strain/load/RAS
+    // values via LoadSourceSelector instead of reading legacy DailySummary columns.
+    val prefs: UserPreferences = UserPreferences(),
 )

@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.insights
 
 import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.domain.model.LoadSourceSelector
 
 /**
  * Flags an elevated systolic blood pressure reading, relative to the user's
@@ -22,7 +23,8 @@ class BpElevatedHighStrainRule : InsightRule {
         val drift = todaySystolic - baseline
         if (drift <= InsightConstants.BP_SYSTOLIC_DRIFT_THRESHOLD_MMHG) return null
 
-        val strainRatio = context.today.strainRatio ?: 0f
+        val strainRatio =
+            LoadSourceSelector.selectStrainRatio(context.today, context.prefs.strainLoadSourceMode) ?: 0f
         if (strainRatio <= InsightConstants.STRAIN_HIGH_RATIO_THRESHOLD) return null
 
         return InsightFinding(

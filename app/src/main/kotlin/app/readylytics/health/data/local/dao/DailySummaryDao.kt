@@ -1,6 +1,7 @@
 package app.readylytics.health.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.MapColumn
 import androidx.room.Query
 import androidx.room.Upsert
 import app.readylytics.health.data.local.entity.DailySummaryEntity
@@ -70,7 +71,7 @@ interface DailySummaryDao {
             "rhr_sigma = :rhrSigma, " +
             "baseline_calculated_at_date = :baselineCalculatedAtDate, " +
             "hr_max = :hrMax, snapshot_profile = :snapshotProfile, " +
-            "hrv_sigma_prior = :hrvSigmaPrior, pai_scaling_factor = :paiScalingFactor, " +
+            "hrv_sigma_prior = :hrvSigmaPrior, ras_scaling_factor = :rasScalingFactor, " +
             "baseline_observation_count = :baselineObservationCount " +
             "WHERE dateMidnightMs = :dateMidnightMs",
     )
@@ -84,7 +85,7 @@ interface DailySummaryDao {
         hrMax: Float? = null,
         snapshotProfile: String? = null,
         hrvSigmaPrior: Float? = null,
-        paiScalingFactor: Float? = null,
+        rasScalingFactor: Float? = null,
         baselineObservationCount: Int? = null,
     )
 
@@ -99,7 +100,7 @@ interface DailySummaryDao {
             "snapshot_profile = NULL, " +
             "snapshot_calibration_phase = NULL, " +
             "hrv_sigma_prior = NULL, " +
-            "pai_scaling_factor = NULL, " +
+            "ras_scaling_factor = NULL, " +
             "baseline_observation_count = NULL " +
             "WHERE dateMidnightMs >= :fromMs AND dateMidnightMs < :toExclusiveMs",
     )
@@ -119,7 +120,7 @@ interface DailySummaryDao {
             "snapshot_profile = NULL, " +
             "snapshot_calibration_phase = NULL, " +
             "hrv_sigma_prior = NULL, " +
-            "pai_scaling_factor = NULL, " +
+            "ras_scaling_factor = NULL, " +
             "baseline_observation_count = NULL",
     )
     suspend fun wipeDerivedBaselines()
@@ -150,12 +151,33 @@ interface DailySummaryDao {
     @Query("SELECT CAST(ROUND(hr_max) AS INTEGER) FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
     suspend fun getRoundedHrMax(dateMidnightMs: Long): Int?
 
-    @Query("SELECT totalPai FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
-    suspend fun getPrecisePai(dateMidnightMs: Long): Double?
+    @Query("SELECT totalRasWorkoutOnly FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
+    suspend fun getPreciseRas(dateMidnightMs: Long): Double?
 
-    @Query("SELECT CAST(ROUND(totalPai) AS INTEGER) FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
-    suspend fun getRoundedPai(dateMidnightMs: Long): Int?
+    @Query(
+        "SELECT CAST(ROUND(totalRasWorkoutOnly) AS INTEGER) FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs",
+    )
+    suspend fun getRoundedRas(dateMidnightMs: Long): Int?
 
     @Query("SELECT strainRatio FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
     suspend fun getPreciseStrainRatio(dateMidnightMs: Long): Double?
+
+    @Query("SELECT EXISTS(SELECT 1 FROM daily_summaries WHERE trimpWorkoutOnly IS NOT NULL LIMIT 1)")
+    suspend fun hasAnyWorkoutOnlyTrimpData(): Boolean
+
+    @Query(
+        "SELECT (dateMidnightMs + :tzOffsetMs) / 86400000 AS epochDay, trimpEverydayHr AS dailyTrimp " +
+            "FROM daily_summaries WHERE dateMidnightMs >= :fromMs AND dateMidnightMs < :toMs " +
+            "AND trimpEverydayHr IS NOT NULL ORDER BY epochDay ASC",
+    )
+    suspend fun getEverydayTrimpByEpochDay(
+        fromMs: Long,
+        toMs: Long,
+        tzOffsetMs: Long,
+    ): Map<
+        @MapColumn(columnName = "epochDay")
+        Long,
+        @MapColumn(columnName = "dailyTrimp")
+        Float,
+    >
 }
