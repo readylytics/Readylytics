@@ -190,9 +190,10 @@ fun SleepTrendChart(
                         },
                     )
 
-                val durationStr = DateFormatUtils.formatSleepDuration(
-                    ((s.actualDurationValue ?: 0f) * 60f).roundToInt(),
-                )
+                val durationStr =
+                    DateFormatUtils.formatSleepDuration(
+                        ((s.actualDurationValue ?: 0f) * 60f).roundToInt(),
+                    )
                 val valueText =
                     String.format(
                         Locale.getDefault(),
