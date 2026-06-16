@@ -59,21 +59,6 @@ fun StepsCard(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                val formattedCount =
-                    stepCount?.let {
-                        java.text.NumberFormat
-                            .getNumberInstance()
-                            .format(it)
-                    } ?: "--"
-                val formattedGoal =
-                    java.text.NumberFormat
-                        .getNumberInstance()
-                        .format(stepGoal)
-                Text(
-                    text = stringResource(R.string.steps_fraction_display, formattedCount, formattedGoal),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
             Spacer(modifier = Modifier.height(12.dp))
             StepsBar(
