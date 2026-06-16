@@ -7,6 +7,7 @@ import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.domain.backup.BackupFileInfo
+import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.LocalDate
 
@@ -115,11 +116,11 @@ sealed interface SettingsEvent {
         val days: Int,
     ) : SettingsEvent
 
-    data class PaiScalingFactorChanged(
+    data class RasScalingFactorChanged(
         val value: Float,
     ) : SettingsEvent
 
-    data object ResetPaiScalingFactor : SettingsEvent
+    data object ResetRasScalingFactor : SettingsEvent
 
     data class StepGoalChanged(
         val steps: Int,
@@ -234,5 +235,13 @@ sealed interface SettingsEvent {
 
     data class CustomPrimaryColorChanged(
         val color: Long,
+    ) : SettingsEvent
+
+    data class StrainLoadSourceModeChanged(
+        val mode: LoadSourceMode,
+    ) : SettingsEvent
+
+    data class RasSourceModeChanged(
+        val mode: LoadSourceMode,
     ) : SettingsEvent
 }

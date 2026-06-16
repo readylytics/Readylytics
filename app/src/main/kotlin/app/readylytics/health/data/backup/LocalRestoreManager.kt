@@ -462,7 +462,7 @@ class LocalRestoreManager
                 backup.consistencyThresholdMinutes?.let { consistencyThresholdMinutes = it }
                 backup.consistencyEvaluationDays?.let { consistencyEvaluationDays = it }
                 backup.consistencyBaselineDays?.let { consistencyBaselineDays = it }
-                backup.paiScalingFactor?.let { paiScalingFactor = it }
+                (backup.rasScalingFactor ?: backup.paiScalingFactor)?.let { rasScalingFactor = it }
                 backup.stepGoal?.let { stepGoal = it }
                 backup.retentionDaysEnabled?.let { retentionDaysEnabled = it }
                 backup.retentionDays?.let { retentionDays = it }
@@ -486,7 +486,7 @@ class LocalRestoreManager
                     ?: clearCircadianThresholdOverride()
                 backup.dynamicColorEnabled?.let { dynamicColorEnabled = it }
 
-                backup.banisterMultiplier?.let { paiCalibration = it }
+                backup.banisterMultiplier?.let { rasCalibration = it }
 
                 backup.trimpModel?.let {
                     try {

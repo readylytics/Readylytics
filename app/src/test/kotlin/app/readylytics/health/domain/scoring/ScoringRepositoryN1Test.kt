@@ -24,7 +24,7 @@ import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
-import app.readylytics.health.domain.scoring.strategies.PaiScoringStrategy
+import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -126,12 +126,13 @@ class ScoringRepositoryN1Test {
 
         coEvery { dailySummaryDao.getByDate(any()) } returns null
         coEvery { dailySummaryDao.getByDates(any()) } returns emptyList()
+        coEvery { dailySummaryDao.getEverydayTrimpByEpochDay(any(), any(), any()) } returns emptyMap()
         coEvery { dailySummaryDao.upsert(any()) } returns Unit
 
         scoringCalculator =
             CompositeScoringCalculator(
                 SleepScoringStrategy(LoadScoringStrategy()),
-                PaiScoringStrategy(),
+                RasScoringStrategy(),
                 LoadScoringStrategy(),
             )
 
@@ -181,7 +182,7 @@ class ScoringRepositoryN1Test {
     }
 
     @Test
-    fun `profile differentiation produces different PAI gains`() =
+    fun `profile differentiation produces different RAS gains`() =
         runTest {
             val today = LocalDate.now()
             val dayMidnight = today.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -229,7 +230,7 @@ class ScoringRepositoryN1Test {
                 MutableStateFlow(
                     UserPreferences(
                         physiologyProfile = PhysiologyProfile.ATHLETE,
-                        paiScalingFactor = 0.15f,
+                        rasScalingFactor = 0.15f,
                         maxHeartRate = 190,
                         age = 30,
                         gender = Gender.fromString("Male"),
@@ -242,7 +243,7 @@ class ScoringRepositoryN1Test {
                 MutableStateFlow(
                     UserPreferences(
                         physiologyProfile = PhysiologyProfile.SEDENTARY,
-                        paiScalingFactor = 0.25f,
+                        rasScalingFactor = 0.25f,
                         maxHeartRate = 190,
                         age = 30,
                         gender = Gender.fromString("Male"),
@@ -251,10 +252,10 @@ class ScoringRepositoryN1Test {
             repo.computeAndPersistDailySummary(today)
 
             coVerify(exactly = 2) { dailySummaryDao.upsert(any()) }
-            val athletePai = capturedSummaries[0].paiScore ?: 0f
-            val sedentaryPai = capturedSummaries[1].paiScore ?: 0f
-            assert(athletePai < sedentaryPai) {
-                "Athlete ($athletePai) should earn fewer points than Sedentary ($sedentaryPai)"
+            val athleteRas = capturedSummaries[0].rasWorkoutOnly ?: 0f
+            val sedentaryRas = capturedSummaries[1].rasWorkoutOnly ?: 0f
+            assert(athleteRas < sedentaryRas) {
+                "Athlete ($athleteRas) should earn fewer points than Sedentary ($sedentaryRas)"
             }
         }
 
@@ -314,7 +315,10 @@ class ScoringRepositoryN1Test {
     fun `batch fetch replaces per-session getMinHrInRange calls`() =
         runTest {
             repo.computeAndPersistDailySummary(LocalDate.now())
-            coVerify(exactly = 1) { heartRateDao.getByTimeRange(any(), any()) }
+            // Two batch fetches: one for the everyday-HR load window (full day) and one for the
+            // sleep-metrics wake-HR window. The key invariant is that no per-session getMinHrInRange
+            // calls are used.
+            coVerify(exactly = 2) { heartRateDao.getByTimeRange(any(), any()) }
             coVerify(exactly = 0) { heartRateDao.getMinHrInRange(any(), any()) }
         }
 

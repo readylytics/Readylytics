@@ -6,34 +6,34 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-class PaiDepletionHighStrainRuleTest {
-    private val rule = PaiDepletionHighStrainRule()
+class RasDepletionHighStrainRuleTest {
+    private val rule = RasDepletionHighStrainRule()
 
     private fun context(
-        totalPai: Float? = 30f,
+        totalRas: Float? = 30f,
         strainRatio: Float? = 1.2f,
     ) = InsightContext(
-        today = dailySummary(totalPai = totalPai, strainRatio = strainRatio),
+        today = dailySummary(totalRas = totalRas, strainRatio = strainRatio),
         circadianResult = CircadianConsistencyResult.MissingData,
         goalSleepMinutes = 480,
     )
 
     @Test
-    fun `fires when PAI is depleted and strain ratio is high`() {
+    fun `fires when RAS is depleted and strain ratio is high`() {
         val finding = rule.evaluate(context())
 
-        assertEquals(InsightType.PAI_DEPLETION_HIGH_STRAIN, finding?.type)
-        assertEquals(InsightParams.PaiDepletionStrain(totalPai = 30f, strainRatio = 1.2f), finding?.params)
+        assertEquals(InsightType.RAS_DEPLETION_HIGH_STRAIN, finding?.type)
+        assertEquals(InsightParams.RasDepletionStrain(totalRas = 30f, strainRatio = 1.2f), finding?.params)
     }
 
     @Test
-    fun `does not fire when totalPai is null`() {
-        assertNull(rule.evaluate(context(totalPai = null)))
+    fun `does not fire when totalRas is null`() {
+        assertNull(rule.evaluate(context(totalRas = null)))
     }
 
     @Test
-    fun `does not fire when totalPai is at threshold`() {
-        assertNull(rule.evaluate(context(totalPai = 50f)))
+    fun `does not fire when totalRas is at threshold`() {
+        assertNull(rule.evaluate(context(totalRas = 50f)))
     }
 
     @Test
@@ -47,7 +47,7 @@ class PaiDepletionHighStrainRuleTest {
     }
 
     @Test
-    fun `does not fire when totalPai is above threshold even with high strain`() {
-        assertNull(rule.evaluate(context(totalPai = 75f, strainRatio = 2f)))
+    fun `does not fire when totalRas is above threshold even with high strain`() {
+        assertNull(rule.evaluate(context(totalRas = 75f, strainRatio = 2f)))
     }
 }

@@ -48,6 +48,12 @@ enum FallbackThemeColorProto {
     FALLBACK_ICON_ELEMENTS = 4;
 }
 
+enum LoadSourceModeProto {
+    LOAD_SOURCE_UNSET = 0;
+    LOAD_SOURCE_WORKOUT_ONLY = 1;
+    LOAD_SOURCE_EVERYDAY_HEART_RATE = 2;
+}
+
 
 message UserPreferencesProto {
     float goal_sleep_hours = 1;
@@ -115,7 +121,7 @@ message UserPreferencesProto {
     int32 consistency_evaluation_days = 36;
     int32 consistency_baseline_days = 37;
     
-    float pai_scaling_factor = 38;
+    float ras_scaling_factor = 38;
     int32 step_goal = 39;
     
     bool retention_days_enabled = 40;
@@ -140,7 +146,7 @@ message UserPreferencesProto {
     TrimpMethodProto trimp_method = 52;
     float cheng_beta = 53;
     float itrimp_b = 54;
-    float pai_calibration = 55;
+    float ras_calibration = 55;
 
     oneof primary_device_name_oneof {
         string primary_device_name = 56;
@@ -179,6 +185,16 @@ message UserPreferencesProto {
     // Permanent dismissal of the "press Apply to resync" info dialog shown
     // when the user changes a Data Sources device selection.
     bool device_change_notice_dismissed = 72;
+
+    // Source of heart-rate data used for Strain Ratio (load score) computations.
+    // LOAD_SOURCE_UNSET (proto3 zero value) = never explicitly set; resolves to
+    // SettingsDefaults.STRAIN_LOAD_SOURCE_MODE at the domain read boundary.
+    LoadSourceModeProto strain_load_source_mode = 73;
+
+    // Source of heart-rate data used for RAS computations.
+    // LOAD_SOURCE_UNSET (proto3 zero value) = never explicitly set; resolves to
+    // SettingsDefaults.RAS_SOURCE_MODE at the domain read boundary.
+    LoadSourceModeProto ras_source_mode = 74;
 }
 
 enum TrimpMethodProto {

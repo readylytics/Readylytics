@@ -46,6 +46,7 @@ class ComputeSleepMetricsUseCase
             prefs: UserPreferences,
             summary: DailySummaryEntity,
             loadScore: Float,
+            loadScoreEverydayHr: Float?,
             zoneId: ZoneId,
             rhrBaselineValue: Float,
             dayEndMs: Long,
@@ -188,6 +189,7 @@ class ComputeSleepMetricsUseCase
 
                 var sleepScore: Float? = null
                 var readinessScore: Float? = null
+                var readinessEverydayHr: Float? = null
                 var persistedZLnHrv: Float? = null
                 var persistedZRhr: Float? = null
                 var persistedFlags: String? = null
@@ -306,7 +308,11 @@ class ComputeSleepMetricsUseCase
                             isLateNadir = nadirCtx.isLateNadir,
                             isCalibrating = isCalibrating,
                             emergencyFlags = scoringConfig.emergencyFlags,
-                            yesterdayTrimp = yesterdaySummary?.totalTrimp,
+                            yesterdayTrimp =
+                                when (prefs.strainLoadSourceMode) {
+                                    LoadSourceMode.WORKOUT_ONLY -> yesterdaySummary?.trimpWorkoutOnly
+                                    LoadSourceMode.EVERYDAY_HEART_RATE -> yesterdaySummary?.trimpEverydayHr
+                                },
                             yesterdayHrv = yesterdaySummary?.nocturnalHrv?.toFloat(),
                             currentHrv = currentHrvMean,
                             hrvOptimalThreshold = prefs.hrvOptimalThreshold,
@@ -314,6 +320,10 @@ class ComputeSleepMetricsUseCase
 
                     readinessScore =
                         scoringCalculator.computeReadinessScore(sRest, sleepScore, loadScore, recoveryFlags)
+                    readinessEverydayHr =
+                        loadScoreEverydayHr?.let {
+                            scoringCalculator.computeReadinessScore(sRest, sleepScore, it, recoveryFlags)
+                        }
                     persistedZLnHrv = zHrv
                     persistedZRhr = zRhr
                     persistedFlags =
@@ -426,7 +436,9 @@ class ComputeSleepMetricsUseCase
                 Result.success(
                     summary.copy(
                         sleepScore = sleepScore,
-                        readinessScore = readinessScore,
+                        readinessScore = summary.readinessScore,
+                        readinessWorkoutOnly = readinessScore,
+                        readinessEverydayHr = readinessEverydayHr,
                         nocturnalHrv = if (sessionHrvSamples.isNotEmpty()) currentHrvMean.roundToInt() else null,
                         sleepDurationMinutes = session.durationMinutes,
                         deepSleepPercent =
@@ -481,11 +493,11 @@ class ComputeSleepMetricsUseCase
                             } else {
                                 null
                             },
-                        paiScalingFactor =
+                        rasScalingFactor =
                             if (frozenBaseline) {
-                                summary.paiScalingFactor
+                                summary.rasScalingFactor
                             } else if (!isCalibrating) {
-                                scoringConfig.paiScalingFactor
+                                scoringConfig.rasScalingFactor
                             } else {
                                 null
                             },

@@ -20,20 +20,20 @@ class SpecificValidationRulesTest {
         assertEquals(ValidationResult.Invalid("error"), result)
     }
 
-    // PaiScalingFactorRule tests (0.1–0.3)
+    // RasScalingFactorRule tests (0.1–0.3)
 
     @Test
-    fun paiScalingFactorRule_validValue_0_2_returnsValid() {
-        val rule = PaiScalingFactorRule()
+    fun rasScalingFactorRule_validValue_0_2_returnsValid() {
+        val rule = RasScalingFactorRule()
         val result = rule.validate("0.2")
         assertEquals(ValidationResult.Valid, result)
     }
 
     @Test
-    fun paiScalingFactorRule_invalidValue_0_05_returnsInvalid() {
-        val rule = PaiScalingFactorRule()
+    fun rasScalingFactorRule_invalidValue_0_05_returnsInvalid() {
+        val rule = RasScalingFactorRule()
         val result = rule.validate("0.05")
-        assertEquals(ValidationResult.Invalid("PAI: 0.1–0.3"), result)
+        assertEquals(ValidationResult.Invalid("RAS: 0.1–0.3"), result)
     }
 
     // RetentionDaysRule tests (1–3650)

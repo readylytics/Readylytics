@@ -37,7 +37,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         assert(result.isSuccess) { "Should succeed with valid inputs" }
     }
@@ -51,7 +51,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         assert(result.isSuccess) { "Should handle null summary" }
     }
@@ -66,7 +66,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         assert(result.getOrNull()?.cardDataMap != null) { "Should return card data map" }
     }
@@ -77,8 +77,9 @@ class GetDashboardDataUseCaseTest {
             DailySummary(
                 date = LocalDate.of(2026, 6, 9),
                 sleepScore = 79.5f,
-                readinessScore = 72.5f,
-                strainRatio = 0.365f,
+                // Default strainLoadSourceMode is WORKOUT_ONLY.
+                readinessWorkoutOnly = 72.5f,
+                strainRatioWorkoutOnly = 0.365f,
             )
         val prefs = UserPreferences()
         every { getWorkoutMetricsUseCase(summary, any()) } answers {
@@ -91,7 +92,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = summary.date,
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
 
         val cards = result.getOrNull()?.cardDataMap.orEmpty()
@@ -113,7 +114,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)
@@ -134,7 +135,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)
@@ -155,7 +156,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)
@@ -176,7 +177,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)
@@ -197,7 +198,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)

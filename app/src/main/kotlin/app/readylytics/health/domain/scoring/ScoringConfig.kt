@@ -11,7 +11,7 @@ data class ScoringConfig(
     val sleepTargets: SleepArchitectureTargets,
     val emergencyFlags: EmergencyFlagThresholds,
     val circadianConsistency: CircadianConsistencyConfig,
-    val paiScalingFactor: Float,
+    val rasScalingFactor: Float,
     val auditTrail: AuditTrail,
     val trimpModel: TrimpModel,
     val banisterMultiplier: Float,

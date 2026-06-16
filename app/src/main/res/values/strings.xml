@@ -40,7 +40,7 @@
     <string name="tooltip_deep_sleep">Time in Stage 3 (Physical repair).</string>
     <string name="tooltip_rem_sleep">Time in Rapid Eye Movement.</string>
 
-    <string name="tooltip_pai">Your 7-day rolling heart health score.\nBased on how often and how
+    <string name="tooltip_ras">Your 7-day rolling Readylytics Activity Score (RAS).\nBased on how often and how
         hard you challenge your heart.\n\n• 100+: Optimal\n• 75-99: Neutral\n• 50-74: Warning\n•
         &lt; 50: Poor</string>
     <string name="tooltip_readiness">Preparation for stress based on recent load &amp;
@@ -249,6 +249,46 @@
     <string name="about_readiness_no_penalty">**What we don\'t do.** We don\'t penalize you for
         resting. A week of light activity will *not* drop Readiness; the score is designed for load
         *spikes*, not undertraining.</string>
+
+    <string name="about_header_load_sources">## Load Sources</string>
+    <string name="about_load_sources_intro">Two independent settings control which heart-rate data
+        feeds your strain/training-load metrics versus your Readylytics Activity Score (RAS).</string>
+    <string name="about_load_sources_strain_bullet">**Strain / Training Load source** (default:
+        **Workout only**) — controls TRIMP, acute/chronic load (ATL/CTL), Strain Ratio, Load Score,
+        and **Readiness**. Readiness always uses this source; the RAS source never affects
+        Readiness.</string>
+    <string name="about_load_sources_ras_bullet">**RAS source** (default: **Everyday heart-rate
+        load**) — controls your daily and 7-day total RAS only, independent of the Strain /
+        Training Load source above.</string>
+    <string name="about_load_sources_workout_only">**Workout only** counts heart-rate load from
+        your logged exercise sessions only — the original behaviour.</string>
+    <string name="about_load_sources_everyday">**Everyday heart-rate load** also counts elevated
+        heart rate outside workouts (e.g. from stress, illness, or heat) on top of your workout
+        TRIMP. Your workout TRIMP is folded into this total **exactly once** — it is never
+        double-counted. Sleep is always excluded from the everyday calculation.</string>
+    <string name="about_load_sources_zones">For the everyday calculation, every waking, non-sleep,
+        non-workout minute with at least one heart-rate sample is classified into a heart-rate
+        zone using your configured zones/TRIMP settings — the same model used for workouts.
+        **Zone 0** minutes (below your Zone 1 threshold) are excluded from TRIMP but still counted
+        toward coverage. **Zone 1** and above minutes contribute TRIMP using the standard
+        per-minute formula.</string>
+    <string name="about_load_sources_coverage_bullet">**coverageMinutes** — waking, non-sleep,
+        non-workout minutes with ≥1 heart-rate sample (Zone 0 included).</string>
+    <string name="about_load_sources_valid_bucket_bullet">**validBucketCount** — the subset of
+        those minutes in Zone 1+ that actually contributed TRIMP.</string>
+    <string name="about_load_sources_confidence_bullet">**Confidence** is derived from
+        `coverageMinutes`: 0 → **None**, 1–179 → **Low**, 180–479 → **Medium**, 480+ → **High**. A
+        day needs at least 180 coverage minutes to be a valid everyday-load estimate; below that,
+        Readiness shows a low-confidence indicator whenever the Strain / Training Load source is
+        set to Everyday heart-rate load.</string>
+    <string name="about_load_sources_persistence">Both source variants are calculated and stored
+        for every day, so switching either setting is instant — no recalculation or history
+        rewrite is needed.</string>
+    <string name="about_load_sources_bootstrap">**New installs** default to Strain / Training Load
+        = Workout only and RAS = Everyday heart-rate load. **Existing users upgrading** keep their
+        prior behaviour automatically: the first time the app runs after upgrade, the RAS source
+        is set to Workout only as a one-time default if you already have workout history — you can
+        change it in Settings at any time.</string>
 
     <string name="about_header_needs">## What the app needs from you</string>
     <string name="about_hc_reads">We read from Android Health Connect:</string>
@@ -609,6 +649,8 @@
     <!-- Steps -->
     <string name="label_daily_steps">Daily Steps</string>
     <string name="steps_goal_display">Goal: %1$s</string>
+    <string name="label_goal">Goal</string>
+    <string name="steps_fraction_display">%1$s / %2$s</string>
     <string name="label_steps_today">Steps Today</string>
     <string name="tooltip_steps_today">Total steps recorded today.\nGoal: %1$d steps.</string>
 
@@ -700,6 +742,17 @@
     <string name="label_sleep">Sleep</string>
     <string name="settings_sub_heart_rate_zones">Heart rate zones</string>
     <string name="settings_sub_thresholds">Thresholds</string>
+
+    <!-- Load Sources -->
+    <string name="load_sources_section_title">Load Sources</string>
+    <string name="load_sources_strain_label">Strain / Training Load Source</string>
+    <string name="load_sources_ras_label">RAS Source</string>
+    <string name="load_source_option_workout_only">Workout only</string>
+    <string name="load_source_option_everyday_hr">Everyday HR load</string>
+    <string name="load_sources_strain_help">Controls TRIMP, acute/chronic load (ACWR), Strain Ratio, Load Score, and Readiness. \"Workout only\" counts only exercise sessions; \"Everyday heart-rate load\" also counts elevated heart rate outside workouts, such as from stress, illness, or heat.</string>
+    <string name="load_sources_ras_help">Controls RAS only, independent of the Strain / Training Load source above.</string>
+    <string name="load_sources_required_note">Readiness uses the Strain / Training Load source. RAS source affects RAS only.</string>
+    <string name="load_sources_zone_caveat">Zone 0 minutes are excluded from TRIMP and load even when counted toward coverage. Everyday heart-rate load is affected by your configured heart-rate zones and TRIMP model in Heart Rate Zones settings.</string>
     <string name="settings_section_display">Display</string>
     <string name="settings_section_advanced">Advanced</string>
     <string name="settings_about_button">About Readylytics</string>
@@ -745,8 +798,8 @@
     <string name="advanced_resting_hr_percentile_tooltip">Use the Nth percentile lowest heart rate
         reading of the entire sleep period (e.g., 5%% = lowest 5%% threshold). Lower values = lower
         RHR estimate. Default: 5%%.</string>
-    <string name="advanced_pai_scaling_label">PAI Scaling Factor</string>
-    <string name="advanced_pai_scaling_tooltip">Adjusts how quickly you earn PAI points. Default:
+    <string name="advanced_ras_scaling_label">RAS Scaling Factor</string>
+    <string name="advanced_ras_scaling_tooltip">Adjusts how quickly you earn RAS points. Default:
         0.20.</string>
     <string name="advanced_training_load_label">Training Load Model</string>
     <string name="advanced_trimp_banister">Banister</string>
@@ -813,7 +866,7 @@
     <string name="unit_system_metric_label">Metric (cm, kg)</string>
     <string name="unit_system_imperial_label">Imperial (ft/in, lbs)</string>
     <string name="workout_zones_title">Heart rate zones</string>
-    <string name="workout_stats_pai_title">PAI</string>
+    <string name="workout_stats_ras_title">Readylytics Activity Score</string>
     <string name="workout_stats_history_title">History</string>
     <string name="sleep_metrics_title">Metrics</string>
 
@@ -828,8 +881,8 @@
     <string name="card_title_sleep_duration">Sleep duration</string>
     <string name="card_title_sleep_architecture">Sleep architecture</string>
     <string name="card_title_strain_ratio">Strain ratio</string>
-    <string name="card_title_pai_daily">PAI daily</string>
-    <string name="card_title_pai">PAI</string>
+    <string name="card_title_ras_daily">RAS daily</string>
+    <string name="card_title_ras">RAS</string>
     <string name="card_title_circadian_consistency">Circadian consistency</string>
     <string name="card_title_resting_hr">Resting heart rate</string>
     <string name="card_title_recovery_index">Recovery Index</string>
@@ -865,7 +918,7 @@
     <string name="workout_metric_training_load">Training load</string>
     <string name="workout_metric_avg_pulse">Avg Pulse</string>
     <string name="workout_metric_gained_strain">Gained Strain</string>
-    <string name="workout_metric_pai">PAI</string>
+    <string name="workout_metric_ras">RAS</string>
     <string name="workout_metric_trimp">TRIMP</string>
     <string name="workout_metric_bpm">bpm</string>
     <string name="workout_metric_strain">Strain</string>
@@ -874,9 +927,9 @@
         intensity and duration.</string>
     <string name="workout_tooltip_avg_pulse">Average heart rate during the workout.</string>
     <string name="workout_tooltip_gained_strain">Total strain gained from this workout.</string>
-    <string name="workout_tooltip_pai">Personal Activity Intelligence points gained from this
-        workout.</string>
-    <string name="pai_earned_today">+%1$d today</string>
+    <string name="workout_tooltip_ras">Readylytics Activity Score (RAS) points gained from this
+        workout. RAS summarizes meaningful cardiovascular activity.</string>
+    <string name="ras_earned_today">+%1$d today</string>
     <string name="workout_stats_acwr_title">Training Load &amp; Strain Ratio (ACWR)</string>
 
     <!-- Workout Intensities -->
@@ -930,6 +983,7 @@
     <string name="insight_strong_recovery_signal_body">Your HRV and resting heart rate were unusually favorable compared with your baseline.</string>
     <string name="insight_load_spike_recovery_strain_title">Training Load May Be Affecting Recovery</string>
     <string name="insight_load_spike_recovery_strain_body">Your recent training load is high, and your recovery markers show signs of strain.</string>
+    <string name="insight_load_spike_recovery_strain_body_everyday">Your recent daily physiological load is high, and your recovery markers show signs of strain.</string>
     <string name="insight_restore_dismissed">Restore dismissed insights (%1$d)</string>
     <string name="insight_dismiss_description">Dismiss health insight</string>
     <string name="insight_rerun_description">Restore dismissed health insights</string>
@@ -957,14 +1011,14 @@
     <string name="insight_late_nadir_elevated_rhr_body">Your heart rate nadir was delayed and your resting heart rate was %1$.1f bpm above baseline, suggesting your body is still working to recover.</string>
     <string name="insight_bp_elevated_high_strain_title">Elevated Blood Pressure Under High Strain</string>
     <string name="insight_bp_elevated_high_strain_body">Your systolic blood pressure is %1$d mmHg above your recent baseline while your strain ratio of %2$.1f indicates high training load.</string>
-    <string name="insight_pai_depletion_high_strain_title">PAI Depleted Despite Training Load</string>
-    <string name="insight_pai_depletion_high_strain_body">Your PAI score of %1$.0f is low even though your strain ratio of %2$.1f shows a high training load, suggesting your effort isn\'t translating into PAI gains.</string>
+    <string name="insight_ras_depletion_high_strain_title">RAS Depleted Despite Training Load</string>
+    <string name="insight_ras_depletion_high_strain_body">Your RAS score of %1$.0f is low even though your strain ratio of %2$.1f shows a high training load, suggesting your effort isn\'t translating into RAS gains.</string>
     <string name="insight_hrv_decline_streak_title">HRV Below Baseline Multiple Nights</string>
     <string name="insight_hrv_decline_streak_body">Your HRV has been below your baseline for %1$d consecutive nights, which can signal accumulating fatigue.</string>
     <string name="insight_step_shortfall_title">Low Daily Activity</string>
     <string name="insight_step_shortfall_body">You took %1$d steps today, well short of your %2$d step goal.</string>
-    <string name="insight_pai_weekly_underperformance_title">Weekly PAI Below Target</string>
-    <string name="insight_pai_weekly_underperformance_body">Your rolling weekly PAI total of %1$.0f is below the recommended target of %2$.0f.</string>
+    <string name="insight_ras_weekly_underperformance_title">Weekly RAS Below Target</string>
+    <string name="insight_ras_weekly_underperformance_body">Your rolling weekly RAS total of %1$.0f is below the recommended target of %2$.0f.</string>
     <string name="insight_weight_drift_training_load_title">Weight Change Under High Training Load</string>
     <string name="insight_weight_drift_training_load_body">Your weight has changed by %1$.1f kg (%2$.1f%%) over the past week while your training load is high, which can indicate fluid shifts or under-fueling.</string>
     <!-- General Insight Sheet Labels -->
@@ -1172,38 +1226,38 @@
         <item>This does not predict injury by itself.</item>
     </string-array>
 
-    <!-- PAI_DEPLETION_HIGH_STRAIN -->
-    <string name="insight_detail_pai_depletion_high_strain_observed">Your PAI score is below target while your strain ratio indicates recent training load.</string>
-    <string name="insight_detail_pai_depletion_high_strain_meaning">Some workouts may add training strain without raising PAI much, depending on heart-rate intensity and duration.</string>
-    <string-array name="insight_detail_pai_depletion_high_strain_causes">
-        <item>Strength training with lower sustained heart rate|PAI rewards sustained heart-rate activity more than brief spikes.|GENERIC</item>
-        <item>Short workouts|Short sessions may not add much PAI even when they feel hard.|GENERIC</item>
-        <item>Incomplete heart-rate data|Missing heart-rate samples can reduce PAI credit.|GENERIC</item>
-        <item>Training intensity below PAI zones|Some work may be below zones that contribute strongly to PAI.|GENERIC</item>
-        <item>Device measurement gaps|Wearable gaps can affect PAI calculation.|GENERIC</item>
+    <!-- RAS_DEPLETION_HIGH_STRAIN -->
+    <string name="insight_detail_ras_depletion_high_strain_observed">Your RAS score is below target while your strain ratio indicates recent training load.</string>
+    <string name="insight_detail_ras_depletion_high_strain_meaning">Some workouts may add training strain without raising RAS much, depending on heart-rate intensity and duration.</string>
+    <string-array name="insight_detail_ras_depletion_high_strain_causes">
+        <item>Strength training with lower sustained heart rate|RAS rewards sustained heart-rate activity more than brief spikes.|GENERIC</item>
+        <item>Short workouts|Short sessions may not add much RAS even when they feel hard.|GENERIC</item>
+        <item>Incomplete heart-rate data|Missing heart-rate samples can reduce RAS credit.|GENERIC</item>
+        <item>Training intensity below RAS zones|Some work may be below zones that contribute strongly to RAS.|GENERIC</item>
+        <item>Device measurement gaps|Wearable gaps can affect RAS calculation.|GENERIC</item>
     </string-array>
-    <string-array name="insight_detail_pai_depletion_high_strain_recommendations">
-        <item>If PAI is a goal, include some sustained aerobic work in appropriate heart-rate zones.</item>
+    <string-array name="insight_detail_ras_depletion_high_strain_recommendations">
+        <item>If RAS is a goal, include some sustained aerobic work in appropriate heart-rate zones.</item>
     </string-array>
-    <string-array name="insight_detail_pai_depletion_high_strain_caveats">
-        <item>Low PAI does not mean your training was useless.</item>
+    <string-array name="insight_detail_ras_depletion_high_strain_caveats">
+        <item>Low RAS does not mean your training was useless.</item>
     </string-array>
 
-    <!-- PAI_WEEKLY_UNDERPERFORMANCE -->
-    <string name="insight_detail_pai_weekly_underperformance_observed">Your 7-day PAI total is below the configured weekly target.</string>
-    <string name="insight_detail_pai_weekly_underperformance_meaning">PAI is designed to reward sustained heart-rate activity over the week.</string>
-    <string-array name="insight_detail_pai_weekly_underperformance_causes">
-        <item>Too few aerobic sessions|Fewer sustained sessions can lower weekly PAI.|GENERIC</item>
-        <item>Low heart-rate intensity|Lower-intensity sessions may add less PAI.|GENERIC</item>
-        <item>Missing heart-rate data|Missing heart-rate samples can reduce PAI credit.|GENERIC</item>
-        <item>Recovery week|A planned easier week can reduce weekly PAI.|GENERIC</item>
-        <item>Strength-focused training|Strength work may add less PAI than sustained aerobic work.|GENERIC</item>
+    <!-- RAS_WEEKLY_UNDERPERFORMANCE -->
+    <string name="insight_detail_ras_weekly_underperformance_observed">Your 7-day RAS total is below the configured weekly target.</string>
+    <string name="insight_detail_ras_weekly_underperformance_meaning">RAS is designed to reward sustained heart-rate activity over the week.</string>
+    <string-array name="insight_detail_ras_weekly_underperformance_causes">
+        <item>Too few aerobic sessions|Fewer sustained sessions can lower weekly RAS.|GENERIC</item>
+        <item>Low heart-rate intensity|Lower-intensity sessions may add less RAS.|GENERIC</item>
+        <item>Missing heart-rate data|Missing heart-rate samples can reduce RAS credit.|GENERIC</item>
+        <item>Recovery week|A planned easier week can reduce weekly RAS.|GENERIC</item>
+        <item>Strength-focused training|Strength work may add less RAS than sustained aerobic work.|GENERIC</item>
     </string-array>
-    <string-array name="insight_detail_pai_weekly_underperformance_recommendations">
+    <string-array name="insight_detail_ras_weekly_underperformance_recommendations">
         <item>Add easy or moderate aerobic sessions if this fits your training plan.</item>
     </string-array>
-    <string-array name="insight_detail_pai_weekly_underperformance_caveats">
-        <item>A low PAI week is not automatically bad if you are intentionally recovering or focusing on strength.</item>
+    <string-array name="insight_detail_ras_weekly_underperformance_caveats">
+        <item>A low RAS week is not automatically bad if you are intentionally recovering or focusing on strength.</item>
     </string-array>
 
     <!-- RECOVERY_HRV_MISSING -->

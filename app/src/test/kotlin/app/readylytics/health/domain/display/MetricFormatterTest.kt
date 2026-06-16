@@ -170,12 +170,12 @@ class MetricFormatterTest {
     }
 
     @Test
-    fun `formatPai rounds to nearest integer`() {
-        assertEquals("73", MetricFormatter.formatPai(72.5f))
+    fun `formatRas rounds to nearest integer`() {
+        assertEquals("73", MetricFormatter.formatRas(72.5f))
     }
 
     @Test
-    fun `formatPai null returns dash`() {
-        assertEquals("—", MetricFormatter.formatPai(null))
+    fun `formatRas null returns dash`() {
+        assertEquals("—", MetricFormatter.formatRas(null))
     }
 }

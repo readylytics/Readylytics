@@ -17,6 +17,7 @@ import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.TransactionRunner
+import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
 import io.mockk.coJustRun
@@ -50,6 +51,7 @@ class HealthSyncUseCaseTest {
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
     private val sessionLinkReconciler = mockk<SessionLinkReconciler>(relaxed = true)
+    private val rasSourceModeBootstrapUseCase = mockk<RasSourceModeBootstrapUseCase>(relaxed = true)
 
     private lateinit var useCase: HealthSyncUseCase
 
@@ -77,6 +79,7 @@ class HealthSyncUseCaseTest {
                 transactionRunner = transactionRunner,
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
                 sessionLinkReconciler = sessionLinkReconciler,
+                rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
     }

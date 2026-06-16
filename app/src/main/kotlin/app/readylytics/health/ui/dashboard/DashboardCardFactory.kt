@@ -31,6 +31,7 @@ import app.readylytics.health.R
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.ui.common.CardLoader
 import app.readylytics.health.ui.common.MetricCardSkeleton
 import app.readylytics.health.ui.common.ScoreDialSkeleton
@@ -94,7 +95,7 @@ fun buildCardDataMap(
                 val readinessCard = uiState.cardDataMap[CardId.READINESS]
                 M3ScoreDial(
                     label = "Readiness",
-                    score = summary?.readinessScore,
+                    score = readinessCard?.value?.toFloatOrNull(),
                     displayText = readinessCard?.value ?: "—",
                     status = readinessCard?.status,
                     onClick = if (isEditing) ({}) else onNavigateToWorkouts,
@@ -110,7 +111,13 @@ fun buildCardDataMap(
             val context = LocalContext.current
             val detailRepository = remember { InsightDetailRepository(context.resources) }
             val detailContext =
-                remember(uiState.summary, uiState.stepGoal, uiState.goalSleepHours, uiState.selectedDate) {
+                remember(
+                    uiState.summary,
+                    uiState.stepGoal,
+                    uiState.goalSleepHours,
+                    uiState.selectedDate,
+                    uiState.userPreferences,
+                ) {
                     uiState.toDailyInsightContext()
                 }
 
@@ -120,7 +127,7 @@ fun buildCardDataMap(
                 label = "dashboard_insight_card",
             ) { insight ->
                 if (insight != null) {
-                    val detail = detailRepository.getDetail(insight, detailContext)
+                    val detail = detailRepository.getDetail(insight, detailContext, uiState.currentInsightParams)
                     val bodyText =
                         if (insight == InsightType.REST_DAY_SUCCESS) {
                             val sleepScore = uiState.summary?.sleepScore ?: 0f
@@ -163,7 +170,7 @@ fun buildCardDataMap(
 
             selectedInsightForDetails?.let { selected ->
                 InsightDetailSheet(
-                    content = detailRepository.getDetail(selected, detailContext),
+                    content = detailRepository.getDetail(selected, detailContext, uiState.currentInsightParams),
                     onDismiss = { selectedInsightForDetails = null },
                 )
             }
@@ -285,20 +292,20 @@ fun buildCardDataMap(
         )
     }
 
-    cardMap[CardId.PAI_DAILY] = {
+    cardMap[CardId.RAS_DAILY] = {
         CardLoader(
             isLoading = isLoading,
             skeleton = { MetricCardSkeleton() },
             content = {
-                val paiCard = uiState.cardDataMap[CardId.PAI_DAILY]
-                if (paiCard != null) {
+                val rasCard = uiState.cardDataMap[CardId.RAS_DAILY]
+                if (rasCard != null) {
                     MetricCard(
-                        title = paiCard.title,
-                        value = paiCard.value,
-                        secondaryText = paiCard.unit,
-                        status = paiCard.status,
+                        title = rasCard.title,
+                        value = rasCard.value,
+                        secondaryText = rasCard.unit,
+                        status = rasCard.status,
                         onClick = if (isEditing) null else onNavigateToWorkouts,
-                        tooltip = paiCard.tooltip,
+                        tooltip = rasCard.tooltip,
                     )
                 }
             },
@@ -447,9 +454,9 @@ private fun DashboardUiState.toDailyInsightContext(): DailyInsightContext =
         zLnHrv = summary?.zLnHrv,
         zRhr = summary?.zRhr,
         rhrDeltaBpm = summary?.readinessResult?.diagnostics?.rhrDeltaBpm,
-        readinessScore = summary?.readinessScore,
+        readinessScore = summary?.let { LoadSourceSelector.selectReadiness(it, userPreferences.strainLoadSourceMode) },
         yesterdayTrimp = null,
-        strainRatio = summary?.strainRatio,
+        strainRatio = summary?.let { LoadSourceSelector.selectStrainRatio(it, userPreferences.strainLoadSourceMode) },
         acute7dLoad = null,
         chronic28dLoad = null,
         stepCount = summary?.stepCount,
@@ -482,9 +489,9 @@ private fun getInsightIcon(type: InsightType): ImageVector =
         InsightType.HRV_DROP_LOW_SPO2 -> Icons.Default.Air
         InsightType.LATE_NADIR_ELEVATED_RHR -> Icons.Default.MonitorHeart
         InsightType.BP_ELEVATED_HIGH_STRAIN -> Icons.Default.Bloodtype
-        InsightType.PAI_DEPLETION_HIGH_STRAIN -> Icons.Default.FitnessCenter
+        InsightType.RAS_DEPLETION_HIGH_STRAIN -> Icons.Default.FitnessCenter
         InsightType.HRV_DECLINE_STREAK -> Icons.Default.Warning
         InsightType.STEP_SHORTFALL -> Icons.AutoMirrored.Filled.DirectionsWalk
-        InsightType.PAI_WEEKLY_UNDERPERFORMANCE -> Icons.AutoMirrored.Filled.TrendingUp
+        InsightType.RAS_WEEKLY_UNDERPERFORMANCE -> Icons.AutoMirrored.Filled.TrendingUp
         InsightType.WEIGHT_DRIFT_TRAINING_LOAD -> Icons.Default.MonitorWeight
     }

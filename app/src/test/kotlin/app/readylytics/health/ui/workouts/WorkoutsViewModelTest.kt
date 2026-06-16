@@ -353,8 +353,9 @@ class WorkoutsViewModelTest {
                 listOf(
                     DailySummary(
                         date = today,
-                        readinessScore = 72.5f,
-                        strainRatio = 0.365f,
+                        // Default strainLoadSourceMode is WORKOUT_ONLY.
+                        readinessWorkoutOnly = 72.5f,
+                        strainRatioWorkoutOnly = 0.365f,
                     ),
                 )
             every { dailySummaryRepository.observeLatest() } returns flowOf(summariesFlow.value.single())

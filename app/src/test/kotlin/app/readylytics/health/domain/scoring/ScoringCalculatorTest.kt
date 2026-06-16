@@ -2,7 +2,7 @@ package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.domain.scoring.CompositeScoringCalculator
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
-import app.readylytics.health.domain.scoring.strategies.PaiScoringStrategy
+import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
 import app.readylytics.health.domain.util.median
 import app.readylytics.health.domain.util.stdev
@@ -18,7 +18,7 @@ private const val DELTA = 0.5f
 private val calculator =
     CompositeScoringCalculator(
         SleepScoringStrategy(LoadScoringStrategy()),
-        PaiScoringStrategy(),
+        RasScoringStrategy(),
         LoadScoringStrategy(),
     )
 

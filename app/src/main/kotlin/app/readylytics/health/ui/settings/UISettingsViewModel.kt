@@ -34,7 +34,7 @@ class UISettingsViewModel
                         appTheme = prefs.appTheme,
                         dynamicColorEnabled = prefs.dynamicColorEnabled,
                         fallbackThemeColor = prefs.fallbackThemeColor,
-                        paiScalingFactor = prefs.paiScalingFactor,
+                        rasScalingFactor = prefs.rasScalingFactor,
                         stepGoal = prefs.stepGoal,
                         retentionDaysEnabled = prefs.retentionDaysEnabled,
                         retentionDays = prefs.retentionDays,
@@ -66,11 +66,11 @@ class UISettingsViewModel
                         settingsRepo.updateFallbackThemeColor(color = event.color)
                         settingsRepo.updateCustomPrimaryColor(color = event.color.seedColor)
                     }
-                is SettingsEvent.PaiScalingFactorChanged -> {
-                    val validation = SettingsValidators.PAI_SCALING_FACTOR_RULE.validate(event.value)
+                is SettingsEvent.RasScalingFactorChanged -> {
+                    val validation = SettingsValidators.RAS_SCALING_FACTOR_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
-                            settingsRepo.updatePaiScalingFactor(value = event.value)
+                            settingsRepo.updateRasScalingFactor(value = event.value)
                             healthSyncUseCase.sync()
                         }
                     }

@@ -2,6 +2,7 @@ package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.Serializer
+import app.readylytics.health.domain.scoring.LoadSourceMode
 import com.google.protobuf.InvalidProtocolBufferException
 import java.io.InputStream
 import java.io.OutputStream
@@ -44,7 +45,7 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
             .setConsistencyThresholdMinutes(SettingsDefaults.CONSISTENCY_THRESHOLD_MINUTES)
             .setConsistencyEvaluationDays(SettingsDefaults.CONSISTENCY_EVALUATION_DAYS)
             .setConsistencyBaselineDays(SettingsDefaults.CONSISTENCY_BASELINE_DAYS)
-            .setPaiScalingFactor(SettingsDefaults.PAI_SCALING_FACTOR)
+            .setRasScalingFactor(SettingsDefaults.RAS_SCALING_FACTOR)
             .setStepGoal(SettingsDefaults.STEP_GOAL)
             .setRetentionDaysEnabled(SettingsDefaults.RETENTION_DAYS_ENABLED)
             .setRetentionDays(SettingsDefaults.RETENTION_DAYS)
@@ -135,7 +136,7 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         .setConsistencyThresholdMinutes(domain.consistencyThresholdMinutes)
         .setConsistencyEvaluationDays(domain.consistencyEvaluationDays)
         .setConsistencyBaselineDays(domain.consistencyBaselineDays)
-        .setPaiScalingFactor(domain.paiScalingFactor)
+        .setRasScalingFactor(domain.rasScalingFactor)
         .setStepGoal(domain.stepGoal)
         .setRetentionDaysEnabled(domain.retentionDaysEnabled)
         .setRetentionDays(domain.retentionDays)
@@ -153,7 +154,7 @@ fun UserPreferences.toProto(): UserPreferencesProto {
                 app.readylytics.health.domain.scoring.TrimpModel.I_TRIMP -> TrimpMethodProto.TRIMP_ITRIMP
                 app.readylytics.health.domain.scoring.TrimpModel.CHENG -> TrimpMethodProto.TRIMP_CHENG
             },
-        ).setPaiCalibration(domain.banisterMultiplier)
+        ).setRasCalibration(domain.banisterMultiplier)
         .setChengBeta(domain.chengBeta)
         .setItrimpB(domain.itrimB)
         .setScoringZoneId(domain.scoringZoneId)
@@ -179,6 +180,18 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         when (domain.unitSystem) {
             UnitSystem.METRIC -> UnitSystemProto.UNIT_METRIC
             UnitSystem.IMPERIAL -> UnitSystemProto.UNIT_IMPERIAL
+        },
+    )
+    builder.setStrainLoadSourceMode(
+        when (domain.strainLoadSourceMode) {
+            LoadSourceMode.WORKOUT_ONLY -> LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
+            LoadSourceMode.EVERYDAY_HEART_RATE -> LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
+        },
+    )
+    builder.setRasSourceMode(
+        when (domain.rasSourceMode) {
+            LoadSourceMode.WORKOUT_ONLY -> LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
+            LoadSourceMode.EVERYDAY_HEART_RATE -> LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
         },
     )
 

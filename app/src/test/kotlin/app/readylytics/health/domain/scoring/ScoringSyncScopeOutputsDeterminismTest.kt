@@ -24,7 +24,7 @@ import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
-import app.readylytics.health.domain.scoring.strategies.PaiScoringStrategy
+import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
 import io.mockk.coEvery
 import io.mockk.every
@@ -51,7 +51,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
             age = 32,
             gender = Gender.MALE,
             restingHrPercentile = 5,
-            paiScalingFactor = 0.2f,
+            rasScalingFactor = 0.2f,
         )
 
     @Test
@@ -247,7 +247,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val scoringCalculator =
             CompositeScoringCalculator(
                 SleepScoringStrategy(LoadScoringStrategy()),
-                PaiScoringStrategy(),
+                RasScoringStrategy(),
                 LoadScoringStrategy(),
             )
         val baselineComputer =
@@ -303,7 +303,11 @@ class ScoringSyncScopeOutputsDeterminismTest {
 
     private fun assertMatrixPopulated(summary: DailySummaryEntity) {
         assertNotNull(summary.sleepScore, "sleepScore should be populated by the determinism fixture")
-        assertNotNull(summary.readinessScore, "readinessScore should be populated by the determinism fixture")
+        // US-03: readiness now lives in the workout-only variant column; legacy readinessScore is frozen.
+        assertNotNull(
+            summary.readinessWorkoutOnly,
+            "readinessWorkoutOnly should be populated by the determinism fixture",
+        )
         assertNotNull(summary.rhrBpm, "rhrBpm should be populated by the determinism fixture")
         assertNotNull(summary.rhrSigma, "rhrSigma should be populated by the determinism fixture")
         assertNotNull(summary.hrvMuMssd, "hrvMuMssd should be populated by the determinism fixture")
@@ -320,7 +324,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val fields =
             listOf(
                 "sleepScore" to { it: DailySummaryEntity -> it.sleepScore },
-                "readinessScore" to { it: DailySummaryEntity -> it.readinessScore },
+                "readinessWorkoutOnly" to { it: DailySummaryEntity -> it.readinessWorkoutOnly },
                 "rhrBpm" to { it: DailySummaryEntity -> it.rhrBpm },
                 "rhrSigma" to { it: DailySummaryEntity -> it.rhrSigma },
                 "hrvMuMssd" to { it: DailySummaryEntity -> it.hrvMuMssd },

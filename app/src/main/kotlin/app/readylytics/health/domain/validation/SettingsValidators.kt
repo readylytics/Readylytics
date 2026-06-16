@@ -26,8 +26,8 @@ object SettingsValidators {
     // Sync interval hours (1–24)
     val SYNC_INTERVAL_HOURS_RULE = SyncIntervalHoursRule()
 
-    // PAI scaling factor (0.1–0.3)
-    val PAI_SCALING_FACTOR_RULE = PaiScalingFactorRule()
+    // RAS scaling factor (0.1–0.3)
+    val RAS_SCALING_FACTOR_RULE = RasScalingFactorRule()
 
     // HRV optimal/warning thresholds (0.8–1.2)
     val HRV_OPTIMAL_THRESHOLD_RULE = FloatRangeRule(1.0f, 1.2f, "HRV: 1.0–1.2")

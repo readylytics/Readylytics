@@ -3,6 +3,8 @@ package app.readylytics.health.docs
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
+import app.readylytics.health.domain.scoring.LoadCoverageConfidence
+import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.scoring.components.Phase
@@ -135,6 +137,59 @@ class DocumentationDriftTest {
     }
 
     @Test
+    fun `load source defaults match ABOUT md and strings`() {
+        assertEquals(LoadSourceMode.WORKOUT_ONLY, SettingsDefaults.STRAIN_LOAD_SOURCE_MODE)
+        assertEquals(LoadSourceMode.EVERYDAY_HEART_RATE, SettingsDefaults.RAS_SOURCE_MODE)
+
+        for (text in listOf(aboutMd, stringsXml)) {
+            val normalized = normalizeWhitespace(text)
+            assertTrue(text.contains("Strain / Training Load source"), "expected strain source label in doc")
+            assertTrue(normalized.contains("default: **Workout only**"), "expected strain default in doc")
+            assertTrue(normalized.contains("default: **Everyday heart-rate load**"), "expected RAS default in doc")
+            assertTrue(
+                normalized.contains("Readiness always uses this source"),
+                "expected Readiness-source link in doc",
+            )
+            assertTrue(text.contains("exactly once"), "expected workout-TRIMP-once rule in doc")
+            assertTrue(
+                text.contains("Existing users upgrading") || text.contains("existing-user"),
+                "expected existing-user RAS bootstrap note in doc",
+            )
+        }
+    }
+
+    @Test
+    fun `everyday load coverage confidence thresholds match ABOUT md and strings`() {
+        assertEquals(
+            listOf(
+                LoadCoverageConfidence.NONE,
+                LoadCoverageConfidence.LOW,
+                LoadCoverageConfidence.MEDIUM,
+                LoadCoverageConfidence.HIGH,
+            ),
+            LoadCoverageConfidence.values().toList(),
+        )
+
+        for (text in listOf(aboutMd, stringsXml)) {
+            assertTrue(text.contains("coverageMinutes"), "expected coverageMinutes terminology in doc")
+            assertTrue(text.contains("validBucketCount"), "expected validBucketCount terminology in doc")
+            assertTrue(text.contains("0 → **None**"), "expected None confidence boundary in doc")
+            assertTrue(text.contains("1–179 → **Low**"), "expected Low confidence boundary in doc")
+            assertTrue(text.contains("180–479 → **Medium**"), "expected Medium confidence boundary in doc")
+            assertTrue(text.contains("480+ → **High**"), "expected High confidence boundary in doc")
+            assertTrue(text.contains("at least 180 coverage minutes"), "expected 180-minute validity threshold in doc")
+            assertTrue(text.contains("Zone 0"), "expected Zone 0 exclusion-from-TRIMP rule in doc")
+        }
+    }
+
+    @Test
+    fun `everyday HR load path documented in DATA_FLOW md`() {
+        assertTrue(dataFlowMd.contains("EverydayHeartRateLoadCalculator"))
+        assertTrue(dataFlowMd.contains("LoadSourceSelector"))
+        assertTrue(dataFlowMd.contains("everydayCoverageMinutes"))
+    }
+
+    @Test
     fun `package root in DATA_FLOW md matches actual source root`() {
         assertTrue(dataFlowMd.contains("app/src/main/kotlin/app/readylytics/health/"))
         assertFalse(dataFlowMd.contains("com/gregor/lauritz/healthdashboard"))
@@ -155,6 +210,9 @@ class DocumentationDriftTest {
             assertTrue(stringsXml.contains(profile), "strings.xml should reference profile $profile")
         }
     }
+
+    /** Collapses whitespace runs (including line wraps) to a single space for wrap-tolerant matching. */
+    private fun normalizeWhitespace(text: String): String = text.replace(Regex("\\s+"), " ")
 
     private fun readRepoFile(pathFromRepoRoot: String): String {
         val candidates =

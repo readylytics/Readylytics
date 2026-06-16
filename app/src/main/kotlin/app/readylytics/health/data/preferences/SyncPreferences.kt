@@ -1,6 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.domain.scoring.LoadSourceMode
 import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
@@ -80,6 +81,57 @@ internal class SyncPreferences
             dataStore.updateData { proto ->
                 if (proto.installDate == 0L) {
                     proto.toBuilder().setInstallDate(clock.millis()).build()
+                } else {
+                    proto
+                }
+            }
+        }
+
+        /**
+         * One-time bootstrap for existing users' `ras_source_mode` preference.
+         *
+         * If the field was never explicitly set (proto3 default [LoadSourceModeProto.LOAD_SOURCE_UNSET])
+         * and pre-existing workout-only TRIMP history exists, persist [LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY]
+         * so existing users keep their prior behavior. Otherwise persist
+         * [LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE] explicitly so the field is no longer
+         * unset and this bootstrap never re-runs.
+         */
+        suspend fun updateStrainLoadSourceMode(mode: LoadSourceMode) {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setStrainLoadSourceMode(
+                        when (mode) {
+                            LoadSourceMode.WORKOUT_ONLY -> LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
+                            LoadSourceMode.EVERYDAY_HEART_RATE -> LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
+                        },
+                    ).build()
+            }
+        }
+
+        suspend fun updateRasSourceMode(mode: LoadSourceMode) {
+            dataStore.updateData {
+                it
+                    .toBuilder()
+                    .setRasSourceMode(
+                        when (mode) {
+                            LoadSourceMode.WORKOUT_ONLY -> LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
+                            LoadSourceMode.EVERYDAY_HEART_RATE -> LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
+                        },
+                    ).build()
+            }
+        }
+
+        suspend fun bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory: Boolean) {
+            dataStore.updateData { proto ->
+                if (proto.rasSourceMode == LoadSourceModeProto.LOAD_SOURCE_UNSET) {
+                    val resolved =
+                        if (hasWorkoutOnlyHistory) {
+                            LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY
+                        } else {
+                            LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE
+                        }
+                    proto.toBuilder().setRasSourceMode(resolved).build()
                 } else {
                     proto
                 }

@@ -14,7 +14,7 @@ import kotlin.math.roundToInt
  * baseline derivation for the [DailyMetrics] projection.
  *
  * Rounding rule is [kotlin.math.roundToInt] (half toward +∞) for every metric unless the
- * source is already an Int (passthrough). PAI is standardized to [roundToInt] here,
+ * source is already an Int (passthrough). RAS is standardized to [roundToInt] here,
  * replacing the prior inconsistent `toInt()` truncation vs `roundToPercentInt()`.
  *
  * Baseline display fields for date D derive only from D's stored row — frozen baseline
@@ -41,6 +41,7 @@ object DailyMetricsMapper {
             hrvBaselineMeanRaw = summary.hrvMuMssd,
             hrvBaselineSdRaw = summary.hrvSigmaMssd,
             rhrSnapshotRaw = summary.rhrBpm,
+            strainRatioRaw = LoadSourceSelector.selectStrainRatio(summary, prefs.strainLoadSourceMode),
             // Rounded display ints
             nocturnalRhrRounded = summary.restingHeartRate,
             nocturnalHrvRounded = summary.nocturnalHrv,
@@ -48,12 +49,12 @@ object DailyMetricsMapper {
             rhrBaselineRounded = rhrBaselineRounded,
             hrvBaselineRounded = hrvBaselineRounded,
             sleepScoreRounded = summary.sleepScore?.roundToInt(),
-            readinessRounded = summary.readinessScore?.roundToInt(),
-            loadScoreRounded = summary.loadScore?.roundToInt(),
+            readinessRounded = LoadSourceSelector.selectReadiness(summary, prefs.strainLoadSourceMode)?.roundToInt(),
+            loadScoreRounded = LoadSourceSelector.selectLoadScore(summary, prefs.strainLoadSourceMode)?.roundToInt(),
             restorationRounded = summary.sRest?.roundToInt(),
-            trimpRounded = summary.totalTrimp?.roundToInt(),
-            paiRounded = summary.totalPai?.roundToInt(),
-            paiDayScoreRounded = summary.paiScore?.roundToInt(),
+            trimpRounded = LoadSourceSelector.selectTrimp(summary, prefs.strainLoadSourceMode)?.roundToInt(),
+            rasRounded = LoadSourceSelector.selectTotalRas(summary, prefs.rasSourceMode)?.roundToInt(),
+            rasDayScoreRounded = LoadSourceSelector.selectDailyRas(summary, prefs.rasSourceMode)?.roundToInt(),
             spo2Rounded = summary.avgSleepingSpo2?.roundToInt(),
             // Baseline diffs + arrows
             rhrBaselineDiff = diff(summary.restingHeartRate, rhrBaselineRounded),
@@ -67,12 +68,17 @@ object DailyMetricsMapper {
             weightKgDisplay = summary.weightKg?.let { format1(it) },
             weightLbsDisplay = summary.weightKg?.let { format1(it * UnitConverter.KG_TO_LBS) },
             bodyFatDisplay = summary.bodyFatPercent?.let { "${format1(it)}%" },
-            strainRatioDisplay = summary.strainRatio?.let { MetricFormatter.formatStrain(it) },
+            strainRatioDisplay =
+                LoadSourceSelector.selectStrainRatio(summary, prefs.strainLoadSourceMode)?.let {
+                    MetricFormatter.formatStrain(it)
+                },
             zLnHrvDisplay = summary.zLnHrv?.let { format2(it) },
             hrvSigmaDisplay = summary.hrvSigma?.let { format3(it) },
             bloodPressureDisplay = formatBloodPressure(summary.bloodPressureSystolic, summary.bloodPressureDiastolic),
             deepSleepPercentDisplay = summary.deepSleepPercent?.let { "${it.roundToInt()}%" },
             remSleepPercentDisplay = summary.remSleepPercent?.let { "${it.roundToInt()}%" },
+            needsRecalc = LoadSourceSelector.needsRecalc(summary, prefs),
+            readinessLowConfidence = LoadSourceSelector.readinessLowConfidence(summary, prefs),
         )
     }
 

@@ -147,33 +147,33 @@ Generated when:
 
 ---
 
-## PAI Depleted Despite Training Load
+## RAS Depleted Despite Training Load
 
 Identifier:
-PAI_DEPLETION_HIGH_STRAIN
+RAS_DEPLETION_HIGH_STRAIN
 
 Description:
-Your PAI score of %1$.0f is low even though your strain ratio of %2$.1f shows a high training load, suggesting your effort isn't translating into PAI gains.
+Your RAS score of %1$.0f is low even though your strain ratio of %2$.1f shows a high training load, suggesting your effort isn't translating into RAS gains.
 
 Trigger:
 Generated when:
-- `totalPai` < `PAI_DEPLETION_THRESHOLD` (50.0f).
-- `strainRatio` > `PAI_DEPLETION_STRAIN_RATIO_THRESHOLD` (1.0f).
+- `totalRasWorkoutOnly` < `RAS_DEPLETION_THRESHOLD` (50.0f).
+- `strainRatio` > `RAS_DEPLETION_STRAIN_RATIO_THRESHOLD` (1.0f).
 
 ---
 
-## Weekly PAI Below Target
+## Weekly RAS Below Target
 
 Identifier:
-PAI_WEEKLY_UNDERPERFORMANCE
+RAS_WEEKLY_UNDERPERFORMANCE
 
 Description:
-Your rolling weekly PAI total of %1$.0f is below the recommended target of %2$.0f.
+Your rolling weekly RAS total of %1$.0f is below the recommended target of %2$.0f.
 
 Trigger:
 Generated when:
-- Sum of `totalPai` over the last 7 distinct days is < `PAI_WEEKLY_TARGET` (150.0f).
-- Note: Requires at least one day in the last 7 days to have a non-null `totalPai`.
+- Sum of `totalRasWorkoutOnly` over the last 7 distinct days is < `RAS_WEEKLY_TARGET` (150.0f).
+- Note: Requires at least one day in the last 7 days to have a non-null `totalRasWorkoutOnly`.
 
 ---
 

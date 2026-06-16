@@ -43,7 +43,7 @@ import app.readylytics.health.ui.settings.common.SettingsConstants
 @Composable
 fun AdvancedSettingsSection(
     sleepState: SleepSettingsState,
-    paiScalingFactor: Float,
+    rasScalingFactor: Float,
     trimpModel: TrimpModel,
     banisterMultiplier: Float,
     chengBeta: Float,
@@ -187,17 +187,17 @@ fun AdvancedSettingsSection(
         }
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))
 
-        var paiScaling by remember(paiScalingFactor) { mutableFloatStateOf(paiScalingFactor) }
+        var rasScaling by remember(rasScalingFactor) { mutableFloatStateOf(rasScalingFactor) }
         ThresholdSliderItem(
-            label = stringResource(R.string.advanced_pai_scaling_label),
-            value = paiScaling,
-            onValueChange = { paiScaling = it },
-            onValueChangeFinished = { onUIEvent(SettingsEvent.PaiScalingFactorChanged(paiScaling)) },
-            onReset = { onPhysiologyEvent(SettingsEvent.ResetPaiScalingFactor) },
+            label = stringResource(R.string.advanced_ras_scaling_label),
+            value = rasScaling,
+            onValueChange = { rasScaling = it },
+            onValueChangeFinished = { onUIEvent(SettingsEvent.RasScalingFactorChanged(rasScaling)) },
+            onReset = { onPhysiologyEvent(SettingsEvent.ResetRasScalingFactor) },
             valueRange = 0.1f..0.3f,
             steps = 20,
-            displayValue = "%.2f".format(paiScaling),
-            description = stringResource(R.string.advanced_pai_scaling_tooltip),
+            displayValue = "%.2f".format(rasScaling),
+            description = stringResource(R.string.advanced_ras_scaling_tooltip),
         )
 
         Spacer(modifier = Modifier.height(SettingsConstants.VERTICAL_SPACER_LARGE))

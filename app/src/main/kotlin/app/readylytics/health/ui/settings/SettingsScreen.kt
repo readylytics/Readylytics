@@ -144,7 +144,7 @@ val settingsSections =
         SettingsSectionMetadata(
             id = "advanced",
             name = "Advanced",
-            keywords = listOf("advanced", "override", "pai", "resting", "hr timing"),
+            keywords = listOf("advanced", "override", "ras", "resting", "hr timing"),
         ),
         SettingsSectionMetadata(
             id = "miscellaneous",
@@ -457,6 +457,9 @@ fun SettingsScreen(
                                 onProfileSelected = { onPhysiologyEvent(SettingsEvent.PhysiologyProfileChanged(it)) },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            SectionHeader(stringResource(R.string.load_sources_section_title))
+                            LoadSourcesSection(uiState = sleepState, onEvent = onSleepEvent)
                             Spacer(modifier = Modifier.height(16.dp))
                             SectionHeader(stringResource(R.string.label_circadian_consistency))
                             CircadianThresholdSettingsSection(
@@ -594,7 +597,7 @@ fun SettingsScreen(
                     ) {
                         AdvancedSettingsSection(
                             sleepState = sleepState,
-                            paiScalingFactor = uiState.paiScalingFactor,
+                            rasScalingFactor = uiState.rasScalingFactor,
                             trimpModel = uiState.trimpModel,
                             banisterMultiplier = uiState.banisterMultiplier,
                             chengBeta = uiState.chengBeta,
