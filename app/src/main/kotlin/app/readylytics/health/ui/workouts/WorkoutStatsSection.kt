@@ -46,7 +46,7 @@ import app.readylytics.health.ui.components.DataPointTooltip
 import app.readylytics.health.ui.components.DataPointTooltipData
 import app.readylytics.health.ui.components.M3ScoreDial
 import app.readylytics.health.ui.components.MetricTooltip
-import app.readylytics.health.ui.components.PaiWeeklyBar
+import app.readylytics.health.ui.components.RasWeeklyBar
 import app.readylytics.health.ui.components.SectionHeader
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -175,29 +175,27 @@ fun WorkoutStatsSection(
                             verticalAlignment = Alignment.Top,
                         ) {
                             Text(
-                                text = stringResource(R.string.workout_stats_pai_title),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                text = stringResource(R.string.workout_stats_ras_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                uiState.latestMetrics?.paiDayScoreRounded?.let { earned ->
-                                    if (earned > 0) {
-                                        Text(
-                                            text = stringResource(R.string.pai_earned_today, earned),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
+                                uiState.latestMetrics?.rasRounded?.let { total ->
+                                    Text(
+                                        text = total.toString(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                 }
                                 MetricTooltip(
-                                    description = stringResource(R.string.tooltip_pai),
+                                    description = stringResource(R.string.tooltip_ras),
                                 )
                             }
                         }
                         Spacer(Modifier.height(12.dp))
-                        PaiWeeklyBar(
-                            dailyBreakdown = uiState.paiDailyBreakdown,
-                            totalPai = uiState.latestMetrics?.paiRounded?.toFloat() ?: 0f,
+                        RasWeeklyBar(
+                            dailyBreakdown = uiState.rasDailyBreakdown,
+                            totalRas = uiState.latestMetrics?.rasRounded?.toFloat() ?: 0f,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -281,8 +279,8 @@ private fun AcwrChartCard(
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = stringResource(R.string.acwr_training_load),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(16.dp))
             if (trimpPoints.isEmpty() && ratioPoints.isEmpty()) {

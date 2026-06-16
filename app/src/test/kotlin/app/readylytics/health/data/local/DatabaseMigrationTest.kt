@@ -21,6 +21,7 @@ import app.readylytics.health.data.local.DatabaseMigrations.MIGRATION_25_26
 import app.readylytics.health.data.local.DatabaseMigrations.MIGRATION_26_27
 import app.readylytics.health.data.local.DatabaseMigrations.MIGRATION_27_28
 import app.readylytics.health.data.local.DatabaseMigrations.MIGRATION_28_29
+import app.readylytics.health.data.local.DatabaseMigrations.MIGRATION_29_30
 import app.readylytics.health.data.local.DatabaseMigrations.MIGRATION_2_3
 import app.readylytics.health.data.local.DatabaseMigrations.MIGRATION_3_4
 import app.readylytics.health.data.local.DatabaseMigrations.MIGRATION_4_5
@@ -37,9 +38,9 @@ class DatabaseMigrationTest {
     @Test
     fun `all migrations are registered in sequential order`() {
         val migrations = DatabaseMigrations.all.filter { it.startVersion < it.endVersion }
-        assertEquals("Expected 28 migrations (1..29)", 28, migrations.size)
+        assertEquals("Expected 29 migrations (1..30)", 29, migrations.size)
 
-        val expectedPairs = (1..28).map { it to it + 1 }
+        val expectedPairs = (1..29).map { it to it + 1 }
         val actualPairs = migrations.map { it.startVersion to it.endVersion }
         assertEquals(expectedPairs, actualPairs)
     }
@@ -301,5 +302,17 @@ class DatabaseMigrationTest {
     fun `MIGRATION_28_29 is registered in all array`() {
         val found = DatabaseMigrations.all.any { it === MIGRATION_28_29 }
         assertTrue("MIGRATION_28_29 must be registered in DatabaseMigrations.all", found)
+    }
+
+    @Test
+    fun `MIGRATION_29_30 version range is correct`() {
+        assertEquals(29, MIGRATION_29_30.startVersion)
+        assertEquals(30, MIGRATION_29_30.endVersion)
+    }
+
+    @Test
+    fun `MIGRATION_29_30 is registered in all array`() {
+        val found = DatabaseMigrations.all.any { it === MIGRATION_29_30 }
+        assertTrue("MIGRATION_29_30 must be registered in DatabaseMigrations.all", found)
     }
 }

@@ -24,7 +24,7 @@ import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
-import app.readylytics.health.domain.scoring.strategies.PaiScoringStrategy
+import app.readylytics.health.domain.scoring.strategies.RasScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
 import io.mockk.coEvery
 import io.mockk.every
@@ -51,7 +51,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
             age = 32,
             gender = Gender.MALE,
             restingHrPercentile = 5,
-            paiScalingFactor = 0.2f,
+            rasScalingFactor = 0.2f,
         )
 
     @Test
@@ -247,7 +247,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
         val scoringCalculator =
             CompositeScoringCalculator(
                 SleepScoringStrategy(LoadScoringStrategy()),
-                PaiScoringStrategy(),
+                RasScoringStrategy(),
                 LoadScoringStrategy(),
             )
         val baselineComputer =

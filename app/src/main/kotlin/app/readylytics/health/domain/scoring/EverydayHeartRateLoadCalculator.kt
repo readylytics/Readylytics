@@ -92,7 +92,7 @@ object EverydayHeartRateLoadCalculator {
 
             validBucketCount++
             nonWorkoutTrimp +=
-                PaiCalculator.calculateDailyTrimp(
+                RasCalculator.calculateDailyTrimp(
                     durationMinutes = 1f,
                     hrAvg = avgBpm,
                     rhrBaseline = input.rhrBaseline,

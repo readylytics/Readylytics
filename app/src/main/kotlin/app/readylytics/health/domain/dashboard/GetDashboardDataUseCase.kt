@@ -17,7 +17,7 @@ import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.efficiencyStatus
 import app.readylytics.health.domain.model.getOrNull
 import app.readylytics.health.domain.model.hrvStatus
-import app.readylytics.health.domain.model.paiStatus
+import app.readylytics.health.domain.model.rasStatus
 import app.readylytics.health.domain.model.restingHrStatus
 import app.readylytics.health.domain.model.rhrStatus
 import app.readylytics.health.domain.model.sleepDurationStatus
@@ -42,7 +42,7 @@ class GetDashboardDataUseCase
     ) {
         data class DashboardCards(
             val cardDataMap: Map<CardId, CardData>,
-            val paiDailyBreakdown: List<Pair<String, Float>>,
+            val rasDailyBreakdown: List<Pair<String, Float>>,
         )
 
         operator fun invoke(
@@ -50,16 +50,16 @@ class GetDashboardDataUseCase
             prefs: UserPreferences,
             date: LocalDate,
             lastSleepSession: SleepSessionSummary?,
-            paiSummaries: List<DailySummary>,
+            rasSummaries: List<DailySummary>,
         ): Result<DashboardCards> =
             try {
                 val cardDataMap = calculateCardData(summary, prefs, date, lastSleepSession)
-                val paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries, prefs)
+                val rasDailyBreakdown = buildRasBreakdown(date, rasSummaries, prefs)
 
                 Result.success(
                     DashboardCards(
                         cardDataMap = cardDataMap,
-                        paiDailyBreakdown = paiDailyBreakdown,
+                        rasDailyBreakdown = rasDailyBreakdown,
                     ),
                 )
             } catch (e: Exception) {
@@ -84,7 +84,7 @@ class GetDashboardDataUseCase
                     CardId.READINESS to readinessCard(summary, m),
                     CardId.SLEEP_RHR to sleepCard(summary, prefs, m),
                     CardId.HRV to hrvCard(summary, prefs, m),
-                    CardId.PAI_DAILY to paiCard(summary, m),
+                    CardId.RAS_DAILY to rasCard(m),
                     CardId.SLEEP_DURATION to sleepDurationCard(summary, prefs, lastSleepSession, m),
                     CardId.RESTING_HR to restingHrCard(summary, prefs, m),
                     CardId.SLEEP_EFFICIENCY to sleepEfficiencyCard(lastSleepSession),
@@ -159,24 +159,21 @@ class GetDashboardDataUseCase
             )
         }
 
-        private fun paiCard(
-            summary: DailySummary,
-            m: DailyMetrics,
-        ): CardData {
-            val status = summary.paiStatus()
-            val value = m.paiRounded?.toString() ?: "—"
+        private fun rasCard(m: DailyMetrics): CardData {
+            val status = m.rasRounded?.toFloat().rasStatus()
+            val value = m.rasRounded?.toString() ?: "—"
 
             return CardData(
-                title = resourceProvider.getString(R.string.card_title_pai),
+                title = resourceProvider.getString(R.string.card_title_ras),
                 value = value,
                 unit = "",
                 status = status,
                 action = DashboardAction.NAVIGATE_WORKOUTS,
-                tooltip = resourceProvider.getString(R.string.tooltip_pai),
+                tooltip = resourceProvider.getString(R.string.tooltip_ras),
             )
         }
 
-        private fun buildPaiBreakdown(
+        private fun buildRasBreakdown(
             endDate: LocalDate,
             summaries: List<DailySummary>,
             prefs: UserPreferences,
@@ -185,8 +182,8 @@ class GetDashboardDataUseCase
             return (6 downTo 0).map { daysBack ->
                 val day = endDate.minusDays(daysBack.toLong())
                 val entry = summaries.firstOrNull { it.date == day }
-                val pai = entry?.let { LoadSourceSelector.selectDailyPai(it, prefs.paiSourceMode) }
-                day.format(fmt) to (pai ?: 0f)
+                val ras = entry?.let { LoadSourceSelector.selectDailyRas(it, prefs.rasSourceMode) }
+                day.format(fmt) to (ras ?: 0f)
             }
         }
 

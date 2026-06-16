@@ -7,7 +7,7 @@ import app.readylytics.health.domain.scoring.LoadSourceMode
 /**
  * Pure projection of the dual-variant (`*WorkoutOnly`/`*EverydayHr`) columns on [DailySummary]
  * into a single value based on the user's selected [LoadSourceMode] for strain/load metrics
- * ([UserPreferences.strainLoadSourceMode]) and PAI metrics ([UserPreferences.paiSourceMode]).
+ * ([UserPreferences.strainLoadSourceMode]) and RAS metrics ([UserPreferences.rasSourceMode]).
  *
  * Zero Android dependencies. No scoring formulas — selection/projection only.
  */
@@ -66,26 +66,26 @@ object LoadSourceSelector {
             LoadSourceMode.EVERYDAY_HEART_RATE -> summary.readinessEverydayHr
         }
 
-    fun selectDailyPai(
+    fun selectDailyRas(
         summary: DailySummary,
         mode: LoadSourceMode,
     ): Float? =
         when (mode) {
-            LoadSourceMode.WORKOUT_ONLY -> summary.paiWorkoutOnly
-            LoadSourceMode.EVERYDAY_HEART_RATE -> summary.paiEverydayHr
+            LoadSourceMode.WORKOUT_ONLY -> summary.rasWorkoutOnly
+            LoadSourceMode.EVERYDAY_HEART_RATE -> summary.rasEverydayHr
         }
 
-    fun selectTotalPai(
+    fun selectTotalRas(
         summary: DailySummary,
         mode: LoadSourceMode,
     ): Float? =
         when (mode) {
-            LoadSourceMode.WORKOUT_ONLY -> summary.totalPaiWorkoutOnly
-            LoadSourceMode.EVERYDAY_HEART_RATE -> summary.totalPaiEverydayHr
+            LoadSourceMode.WORKOUT_ONLY -> summary.totalRasWorkoutOnly
+            LoadSourceMode.EVERYDAY_HEART_RATE -> summary.totalRasEverydayHr
         }
 
     /**
-     * True when the user selected [LoadSourceMode.EVERYDAY_HEART_RATE] for strain/load or PAI,
+     * True when the user selected [LoadSourceMode.EVERYDAY_HEART_RATE] for strain/load or RAS,
      * but the corresponding everyday-HR variant column hasn't been computed/persisted yet for
      * this row.
      */
@@ -100,10 +100,10 @@ object LoadSourceSelector {
                         selectLoadScore(summary, LoadSourceMode.EVERYDAY_HEART_RATE) == null
                 )
         val paiNeedsRecalc =
-            prefs.paiSourceMode == LoadSourceMode.EVERYDAY_HEART_RATE &&
+            prefs.rasSourceMode == LoadSourceMode.EVERYDAY_HEART_RATE &&
                 (
-                    selectDailyPai(summary, LoadSourceMode.EVERYDAY_HEART_RATE) == null ||
-                        selectTotalPai(summary, LoadSourceMode.EVERYDAY_HEART_RATE) == null
+                    selectDailyRas(summary, LoadSourceMode.EVERYDAY_HEART_RATE) == null ||
+                        selectTotalRas(summary, LoadSourceMode.EVERYDAY_HEART_RATE) == null
                 )
         return strainNeedsRecalc || paiNeedsRecalc
     }

@@ -15,7 +15,7 @@ import app.readylytics.health.domain.scoring.ComputeHistoricalBaselinesUseCase
 import app.readylytics.health.domain.scoring.HrMaxProvider
 import app.readylytics.health.domain.scoring.HrvBaselineProvider
 import app.readylytics.health.domain.scoring.LoadMetricsProvider
-import app.readylytics.health.domain.scoring.PaiProvider
+import app.readylytics.health.domain.scoring.RasProvider
 import app.readylytics.health.domain.scoring.RhrBaselineProvider
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
@@ -75,7 +75,7 @@ class ScoringModule {
 
     @Provides
     @Singleton
-    fun providePaiProvider(dailySummaryDao: DailySummaryDao): PaiProvider = PaiProvider(dailySummaryDao)
+    fun provideRasProvider(dailySummaryDao: DailySummaryDao): RasProvider = RasProvider(dailySummaryDao)
 
     @Provides
     @Singleton

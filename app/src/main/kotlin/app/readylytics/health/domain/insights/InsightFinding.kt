@@ -45,8 +45,8 @@ sealed class InsightParams {
         val strainRatio: Float,
     ) : InsightParams()
 
-    data class PaiDepletionStrain(
-        val totalPai: Float,
+    data class RasDepletionStrain(
+        val totalRas: Float,
         val strainRatio: Float,
     ) : InsightParams()
 
@@ -59,8 +59,8 @@ sealed class InsightParams {
         val stepGoal: Int,
     ) : InsightParams()
 
-    data class PaiWeeklyShortfall(
-        val weeklyPai: Float,
+    data class RasWeeklyShortfall(
+        val weeklyRas: Float,
         val target: Float,
     ) : InsightParams()
 

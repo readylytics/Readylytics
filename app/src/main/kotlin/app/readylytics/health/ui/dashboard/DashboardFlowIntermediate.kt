@@ -37,7 +37,7 @@ data class DashboardBasicInputs(
     val summary: DailySummary?,
     val userPreferences: app.readylytics.health.data.preferences.UserPreferences,
     val circadianResult: CircadianConsistencyResult?,
-    val paiSummaries: List<DailySummary>,
+    val rasSummaries: List<DailySummary>,
     val dismissedInsightTypes: Set<InsightType> = emptySet(),
 )
 
@@ -77,7 +77,7 @@ data class DashboardRealtimeState(
  * - Daily summary for selected date
  * - User preferences
  * - Circadian consistency data
- * - 7-day PAI breakdown
+ * - 7-day RAS breakdown
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 fun createDashboardBasicInputsFlow(
@@ -101,14 +101,14 @@ fun createDashboardBasicInputsFlow(
                 dailySummaryRepository.observeByDate(midnightMs)
             }
 
-        // PAI breakdown is always 7-day window
-        val paiFromMs =
+        // RAS breakdown is always 7-day window
+        val rasFromMs =
             date
                 .minusDays(6)
                 .atStartOfDay(zoneId)
                 .toInstant()
                 .toEpochMilli()
-        val paiBreakdownFlow = dailySummaryRepository.observeSince(paiFromMs)
+        val rasBreakdownFlow = dailySummaryRepository.observeSince(rasFromMs)
 
         val dismissalFlow =
             insightDismissalRepository
@@ -119,15 +119,15 @@ fun createDashboardBasicInputsFlow(
             summaryFlow,
             settingsRepository.userPreferences,
             circadianRepository.resultFor(date),
-            paiBreakdownFlow,
+            rasBreakdownFlow,
             dismissalFlow,
-        ) { summary, prefs, circadian, paiSummaries, dismissed ->
+        ) { summary, prefs, circadian, rasSummaries, dismissed ->
             DashboardBasicInputs(
                 selectedDate = date,
                 summary = summary,
                 userPreferences = prefs,
                 circadianResult = circadian,
-                paiSummaries = paiSummaries,
+                rasSummaries = rasSummaries,
                 dismissedInsightTypes = dismissed,
             )
         }

@@ -37,7 +37,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         assert(result.isSuccess) { "Should succeed with valid inputs" }
     }
@@ -51,7 +51,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         assert(result.isSuccess) { "Should handle null summary" }
     }
@@ -66,7 +66,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         assert(result.getOrNull()?.cardDataMap != null) { "Should return card data map" }
     }
@@ -92,7 +92,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = summary.date,
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
 
         val cards = result.getOrNull()?.cardDataMap.orEmpty()
@@ -114,7 +114,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)
@@ -135,7 +135,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)
@@ -156,7 +156,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)
@@ -177,7 +177,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)
@@ -198,7 +198,7 @@ class GetDashboardDataUseCaseTest {
                 prefs = prefs,
                 date = LocalDate.now(),
                 lastSleepSession = null,
-                paiSummaries = emptyList(),
+                rasSummaries = emptyList(),
             )
         val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
         assert(card != null)

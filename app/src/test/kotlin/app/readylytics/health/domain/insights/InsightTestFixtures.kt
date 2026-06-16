@@ -17,8 +17,8 @@ internal fun dailySummary(
     zRhr: Float? = null,
     avgSleepingSpo2: Float? = null,
     bloodPressureSystolic: Int? = null,
-    paiScore: Float? = null,
-    totalPai: Float? = null,
+    rasScore: Float? = null,
+    totalRas: Float? = null,
     stepCount: Int? = null,
     weightKg: Float? = null,
     totalTrimp: Float? = null,
@@ -28,7 +28,7 @@ internal fun dailySummary(
         date = date,
         recoveryFlags = recoveryFlags,
         // Default InsightContext.prefs (UserPreferences()) selects strain/load via WORKOUT_ONLY
-        // and PAI via EVERYDAY_HEART_RATE (SettingsDefaults), so fixtures populate those variant
+        // and RAS via EVERYDAY_HEART_RATE (SettingsDefaults), so fixtures populate those variant
         // columns rather than the frozen legacy columns.
         strainRatioWorkoutOnly = strainRatio,
         sleepDurationMinutes = sleepDurationMinutes,
@@ -36,8 +36,8 @@ internal fun dailySummary(
         zRhr = zRhr,
         avgSleepingSpo2 = avgSleepingSpo2,
         bloodPressureSystolic = bloodPressureSystolic,
-        paiEverydayHr = paiScore,
-        totalPaiEverydayHr = totalPai,
+        rasEverydayHr = rasScore,
+        totalRasEverydayHr = totalRas,
         stepCount = stepCount,
         weightKg = weightKg,
         trimpWorkoutOnly = totalTrimp,

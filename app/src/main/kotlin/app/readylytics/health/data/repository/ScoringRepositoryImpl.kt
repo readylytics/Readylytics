@@ -25,7 +25,7 @@ import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.domain.scoring.EverydayHeartRateLoadCalculator
 import app.readylytics.health.domain.scoring.EverydayHrLoadInput
 import app.readylytics.health.domain.scoring.LongInterval
-import app.readylytics.health.domain.scoring.PaiCalculator
+import app.readylytics.health.domain.scoring.RasCalculator
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.ScoringConstants
@@ -90,7 +90,7 @@ class ScoringRepositoryImpl
 
                 val frozenSnapshot = dailySummary?.takeIf { it.baselineCalculatedAtDate != null }
                 val frozenHrMax = frozenSnapshot?.hrMax
-                val frozenPaiScalingFactor = frozenSnapshot?.paiScalingFactor
+                val frozenRasScalingFactor = frozenSnapshot?.rasScalingFactor
                 val hrMax = frozenHrMax ?: HeartRateFormulas.resolveMaxHeartRate(prefs)
 
                 val rhrBaselineValue =
@@ -114,7 +114,7 @@ class ScoringRepositoryImpl
                         currentDate = targetDate,
                     )
 
-                logD("ScoringRepository") { "PAI CALC START [$targetDate]" }
+                logD("ScoringRepository") { "RAS CALC START [$targetDate]" }
 
                 val workouts = workoutDao.getWorkoutsInRange(dayMidnightMs, nextDayMidnightMs)
                 var dailyTrimpRaw = 0f
@@ -191,23 +191,23 @@ class ScoringRepositoryImpl
                 val everydayCoverageMinutes = everydayResult.coverageMinutes
                 val everydayLoadConfidence = everydayResult.confidence.name
 
-                // Enforce 75-point daily cap. Standard PAI is pure load, no readiness penalty.
-                // Round daily PAI to 1 decimal place to ensure display consistency.
-                val scalingFactor = frozenPaiScalingFactor ?: scoringConfig.paiScalingFactor
-                val dailyPaiRaw = PaiCalculator.calculateDailyPai(dailyTrimpRaw, scalingFactor)
-                val dailyPai = round(dailyPaiRaw * 10f) / 10f
-                val dailyPaiEverydayHr =
-                    round(PaiCalculator.calculateDailyPai(trimpEverydayHr, scalingFactor) * 10f) / 10f
+                // Enforce 75-point daily cap. Standard RAS is pure load, no readiness penalty.
+                // Round daily RAS to 1 decimal place to ensure display consistency.
+                val scalingFactor = frozenRasScalingFactor ?: scoringConfig.rasScalingFactor
+                val dailyRasRaw = RasCalculator.calculateDailyRas(dailyTrimpRaw, scalingFactor)
+                val dailyRas = round(dailyRasRaw * 10f) / 10f
+                val dailyRasEverydayHr =
+                    round(RasCalculator.calculateDailyRas(trimpEverydayHr, scalingFactor) * 10f) / 10f
 
-                val last6DaysPaiWorkoutOnly = sumPaiLastSixDays(targetDate, zoneId) { it.paiWorkoutOnly }
-                val last6DaysPaiEverydayHr = sumPaiLastSixDays(targetDate, zoneId) { it.paiEverydayHr }
-                // Total PAI is rounded to nearest integer to match the UI's simple sum of rounded daily values.
-                val totalPaiWorkoutOnly = round(dailyPai + last6DaysPaiWorkoutOnly)
-                val totalPaiEverydayHr = round(dailyPaiEverydayHr + last6DaysPaiEverydayHr)
+                val last6DaysRasWorkoutOnly = sumRasLastSixDays(targetDate, zoneId) { it.rasWorkoutOnly }
+                val last6DaysRasEverydayHr = sumRasLastSixDays(targetDate, zoneId) { it.rasEverydayHr }
+                // Total RAS is rounded to nearest integer to match the UI's simple sum of rounded daily values.
+                val totalRasWorkoutOnly = round(dailyRas + last6DaysRasWorkoutOnly)
+                val totalRasEverydayHr = round(dailyRasEverydayHr + last6DaysRasEverydayHr)
 
                 logD("ScoringRepository") {
-                    "Result - DailyTrimp: $dailyTrimpRaw, DailyPai: $dailyPai, " +
-                        "Last6d: $last6DaysPaiWorkoutOnly, Total7d: $totalPaiWorkoutOnly"
+                    "Result - DailyTrimp: $dailyTrimpRaw, DailyRas: $dailyRas, " +
+                        "Last6d: $last6DaysRasWorkoutOnly, Total7d: $totalRasWorkoutOnly"
                 }
 
                 val latestWeight = weightRecordDao.getLatestUpTo(nextDayMidnightMs)
@@ -221,10 +221,10 @@ class ScoringRepositoryImpl
                     ).copy(
                         trimpWorkoutOnly = dailyTrimpRaw,
                         trimpEverydayHr = trimpEverydayHr,
-                        paiWorkoutOnly = dailyPai,
-                        paiEverydayHr = dailyPaiEverydayHr,
-                        totalPaiWorkoutOnly = totalPaiWorkoutOnly,
-                        totalPaiEverydayHr = totalPaiEverydayHr,
+                        rasWorkoutOnly = dailyRas,
+                        rasEverydayHr = dailyRasEverydayHr,
+                        totalRasWorkoutOnly = totalRasWorkoutOnly,
+                        totalRasEverydayHr = totalRasEverydayHr,
                         everydayCoverageMinutes = everydayCoverageMinutes,
                         everydayLoadConfidence = everydayLoadConfidence,
                         weightKg = latestWeight?.weightKg,
@@ -332,10 +332,10 @@ class ScoringRepositoryImpl
 
                     val updatedAudit =
                         scoringConfig.auditTrail.copy(
-                            appliedSf = scoringConfig.paiScalingFactor,
+                            appliedSf = scoringConfig.rasScalingFactor,
                             physiologyProfile = prefs.physiologyProfile.name,
-                            paiTotalPre = last6DaysPaiWorkoutOnly,
-                            paiTotalPost = summary.totalPaiWorkoutOnly,
+                            rasTotalPre = last6DaysRasWorkoutOnly,
+                            rasTotalPost = summary.totalRasWorkoutOnly,
                         )
                     logD("ScoringConfig") { "Telemetry: $updatedAudit" }
 
@@ -421,21 +421,21 @@ class ScoringRepositoryImpl
                         baselineCalculatedAtDate = targetDate,
                         avgSleepingSpo2 = avgSpo2,
                         hrMax = summary.hrMax ?: hrMax,
-                        paiScalingFactor = summary.paiScalingFactor ?: scoringConfig.paiScalingFactor,
+                        rasScalingFactor = summary.rasScalingFactor ?: scoringConfig.rasScalingFactor,
                         snapshotProfile = summary.snapshotProfile ?: prefs.physiologyProfile.name,
                         hrvSigmaPrior = summary.hrvSigmaPrior ?: prefs.physiologyProfile.lnSigmaPrior,
                         baselineObservationCount = summary.baselineObservationCount,
                     )
 
-                // Final summary remains consistent with the pre-calculated dailyPai and totalPai7d.
-                // Readiness adjustment is excluded from PAI storage to match standard PAI models and manual sums.
+                // Final summary remains consistent with the pre-calculated dailyRas and totalRas7d.
+                // Readiness adjustment is excluded from RAS storage to match standard RAS models and manual sums.
 
                 val updatedAudit =
                     scoringConfig.auditTrail.copy(
-                        appliedSf = scoringConfig.paiScalingFactor,
+                        appliedSf = scoringConfig.rasScalingFactor,
                         physiologyProfile = prefs.physiologyProfile.name,
-                        paiTotalPre = last6DaysPaiWorkoutOnly,
-                        paiTotalPost = summary.totalPaiWorkoutOnly,
+                        rasTotalPre = last6DaysRasWorkoutOnly,
+                        rasTotalPost = summary.totalRasWorkoutOnly,
                     )
                 logD("ScoringConfig") { "Telemetry: $updatedAudit" }
 
@@ -463,7 +463,7 @@ class ScoringRepositoryImpl
             )
         }
 
-        private suspend fun sumPaiLastSixDays(
+        private suspend fun sumRasLastSixDays(
             targetDate: LocalDate,
             zoneId: ZoneId,
             selector: (DailySummaryEntity) -> Float?,

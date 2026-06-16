@@ -63,8 +63,8 @@ data class WorkoutsUiState(
     val selectedRange: TimeRange = TimeRange.SEVEN_DAYS,
     val selectedDate: LocalDate = LocalDate.now(),
     val rangeStartMs: Long = System.currentTimeMillis(),
-    val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
-    val todayPaiScore: Float? = null,
+    val rasDailyBreakdown: List<Pair<String, Float>> = emptyList(),
+    val todayRasScore: Float? = null,
     val isLoading: Boolean = false,
     val currentPage: Int = 1,
     val totalPages: Int = 1,
@@ -74,7 +74,7 @@ private data class WorkoutFlowData(
     val latestSummary: DailySummary?,
     val allWorkouts: List<WorkoutData>,
     val trimpSummaries: List<DailySummary>,
-    val paiSummaries: List<DailySummary>,
+    val rasSummaries: List<DailySummary>,
     val prefs: app.readylytics.health.data.preferences.UserPreferences,
 )
 
@@ -160,7 +160,7 @@ class WorkoutsViewModel
                             }.flowOn(Dispatchers.IO)
                         }
 
-                    val paiFromMs =
+                    val rasFromMs =
                         date
                             .minusDays(6)
                             .atStartOfDay(zoneId)
@@ -172,15 +172,15 @@ class WorkoutsViewModel
                             summaryFlow,
                             workoutRepository.observeSince(fetchFromMs),
                             dailySummaryRepository.observeSince(fetchFromMs),
-                            dailySummaryRepository.observeSince(paiFromMs),
+                            dailySummaryRepository.observeSince(rasFromMs),
                             settingsRepo.userPreferences,
-                        ) { latest, allWorkouts, trimpSummaries, paiSummaries, prefs ->
-                            WorkoutFlowData(latest, allWorkouts, trimpSummaries, paiSummaries, prefs)
+                        ) { latest, allWorkouts, trimpSummaries, rasSummaries, prefs ->
+                            WorkoutFlowData(latest, allWorkouts, trimpSummaries, rasSummaries, prefs)
                         }
 
                     dataFlow.flatMapLatest { data ->
                         flow {
-                            val (latest, allWorkouts, trimpSummaries, paiSummaries, prefs) = data
+                            val (latest, allWorkouts, trimpSummaries, rasSummaries, prefs) = data
 
                             val filteredWorkouts =
                                 allWorkouts.filter {
@@ -326,12 +326,12 @@ class WorkoutsViewModel
                                 selectedRange = range,
                                 selectedDate = date,
                                 rangeStartMs = displayStartDayMs,
-                                paiDailyBreakdown = buildPaiBreakdown(date, paiSummaries, prefs),
-                                todayPaiScore =
+                                rasDailyBreakdown = buildRasBreakdown(date, rasSummaries, prefs),
+                                todayRasScore =
                                     latest?.let {
-                                        LoadSourceSelector.selectDailyPai(
+                                        LoadSourceSelector.selectDailyRas(
                                             it,
-                                            prefs.paiSourceMode,
+                                            prefs.rasSourceMode,
                                         )
                                     },
                                 isLoading = isSyncing,
@@ -347,7 +347,7 @@ class WorkoutsViewModel
                     initialValue = WorkoutsUiState(isLoading = true),
                 )
 
-        private fun buildPaiBreakdown(
+        private fun buildRasBreakdown(
             endDate: LocalDate,
             summaries: List<DailySummary>,
             prefs: app.readylytics.health.data.preferences.UserPreferences,
@@ -356,8 +356,8 @@ class WorkoutsViewModel
             return (6 downTo 0).map { daysBack ->
                 val day = endDate.minusDays(daysBack.toLong())
                 val entry = summaries.firstOrNull { it.date == day }
-                val pai = entry?.let { LoadSourceSelector.selectDailyPai(it, prefs.paiSourceMode) }
-                day.format(fmt) to (pai ?: 0f)
+                val ras = entry?.let { LoadSourceSelector.selectDailyRas(it, prefs.rasSourceMode) }
+                day.format(fmt) to (ras ?: 0f)
             }
         }
 

@@ -44,7 +44,7 @@ data class UserPreferences(
     val consistencyThresholdMinutes: Int = SettingsDefaults.CONSISTENCY_THRESHOLD_MINUTES,
     val consistencyEvaluationDays: Int = SettingsDefaults.CONSISTENCY_EVALUATION_DAYS,
     val consistencyBaselineDays: Int = SettingsDefaults.CONSISTENCY_BASELINE_DAYS,
-    val paiScalingFactor: Float = SettingsDefaults.PAI_SCALING_FACTOR,
+    val rasScalingFactor: Float = SettingsDefaults.RAS_SCALING_FACTOR,
     val stepGoal: Int = SettingsDefaults.STEP_GOAL,
     val retentionDaysEnabled: Boolean = SettingsDefaults.RETENTION_DAYS_ENABLED,
     val retentionDays: Int = SettingsDefaults.RETENTION_DAYS,
@@ -93,7 +93,7 @@ data class UserPreferences(
     val scoringZoneId: String = SettingsDefaults.SCORING_ZONE_ID,
     val deviceChangeNoticeDismissed: Boolean = SettingsDefaults.DEVICE_CHANGE_NOTICE_DISMISSED,
     val strainLoadSourceMode: LoadSourceMode = SettingsDefaults.STRAIN_LOAD_SOURCE_MODE,
-    val paiSourceMode: LoadSourceMode = SettingsDefaults.PAI_SOURCE_MODE,
+    val rasSourceMode: LoadSourceMode = SettingsDefaults.RAS_SOURCE_MODE,
 )
 
 /**
@@ -168,7 +168,7 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         consistencyThresholdMinutes = consistencyThresholdMinutes,
         consistencyEvaluationDays = consistencyEvaluationDays,
         consistencyBaselineDays = consistencyBaselineDays,
-        paiScalingFactor = paiScalingFactor,
+        rasScalingFactor = rasScalingFactor,
         stepGoal = stepGoal,
         retentionDaysEnabled = retentionDaysEnabled,
         retentionDays = retentionDays,
@@ -197,7 +197,7 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
                 TrimpMethodProto.TRIMP_CHENG -> TrimpModel.CHENG
                 else -> TrimpModel.BANISTER
             },
-        banisterMultiplier = if (paiCalibration > 0f) paiCalibration else profile.banisterMultiplier,
+        banisterMultiplier = if (rasCalibration > 0f) rasCalibration else profile.banisterMultiplier,
         chengBeta = if (this.chengBeta > 0f) this.chengBeta else profile.defaultChengBeta,
         itrimB = if (itrimpB > 0f) itrimpB else profile.defaultItrimB,
         primaryDeviceName = if (hasPrimaryDeviceName()) primaryDeviceName else null,
@@ -253,11 +253,11 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
                 LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE -> LoadSourceMode.EVERYDAY_HEART_RATE
                 else -> SettingsDefaults.STRAIN_LOAD_SOURCE_MODE
             },
-        paiSourceMode =
-            when (paiSourceMode) {
+        rasSourceMode =
+            when (rasSourceMode) {
                 LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY -> LoadSourceMode.WORKOUT_ONLY
                 LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE -> LoadSourceMode.EVERYDAY_HEART_RATE
-                else -> SettingsDefaults.PAI_SOURCE_MODE
+                else -> SettingsDefaults.RAS_SOURCE_MODE
             },
     )
 }

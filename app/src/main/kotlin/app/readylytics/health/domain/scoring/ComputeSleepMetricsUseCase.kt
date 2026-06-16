@@ -493,11 +493,11 @@ class ComputeSleepMetricsUseCase
                             } else {
                                 null
                             },
-                        paiScalingFactor =
+                        rasScalingFactor =
                             if (frozenBaseline) {
-                                summary.paiScalingFactor
+                                summary.rasScalingFactor
                             } else if (!isCalibrating) {
-                                scoringConfig.paiScalingFactor
+                                scoringConfig.rasScalingFactor
                             } else {
                                 null
                             },

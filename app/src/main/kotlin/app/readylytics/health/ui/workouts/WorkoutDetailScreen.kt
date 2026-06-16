@@ -89,7 +89,7 @@ fun WorkoutDetailScreen(
             computedTrimp = uiState.computedTrimp,
             gainedStrain = uiState.gainedStrain,
             gainedStrainDisplay = uiState.gainedStrainDisplay,
-            pai = uiState.pai,
+            ras = uiState.ras,
         )
 
         TrimpBreakdownChart(

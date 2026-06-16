@@ -28,15 +28,16 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.R
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.stepsStatus
 import app.readylytics.health.ui.common.ChartUtils
 import java.text.NumberFormat
 import java.time.LocalDate
 
-// stepGoal fills bar to 75% width — mirrors PAI bar design
+// stepGoal fills bar to 75% width — mirrors RAS bar design
 private fun barMax(stepGoal: Int): Float = stepGoal / 0.75f
 
 @Composable
@@ -192,17 +193,20 @@ fun StepsBar(
             }
         }
         Spacer(Modifier.height(6.dp))
-
         Row(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = if (stepCount != null) "${count.formatSteps()} steps" else "-- steps",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = if (stepCount != null) fillColor else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
             Spacer(Modifier.weight(1f))
+            val formattedCount =
+                stepCount?.let {
+                    java.text.NumberFormat
+                        .getNumberInstance()
+                        .format(it)
+                } ?: "--"
+            val formattedGoal =
+                java.text.NumberFormat
+                    .getNumberInstance()
+                    .format(stepGoal)
             Text(
-                text = if (stepCount != null) status.name else "NO DATA",
+                text = stringResource(R.string.steps_fraction_display, formattedCount, formattedGoal),
                 style = MaterialTheme.typography.labelSmall,
                 color = if (stepCount != null) fillColor else MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -144,7 +144,7 @@ val settingsSections =
         SettingsSectionMetadata(
             id = "advanced",
             name = "Advanced",
-            keywords = listOf("advanced", "override", "pai", "resting", "hr timing"),
+            keywords = listOf("advanced", "override", "ras", "resting", "hr timing"),
         ),
         SettingsSectionMetadata(
             id = "miscellaneous",
@@ -597,7 +597,7 @@ fun SettingsScreen(
                     ) {
                         AdvancedSettingsSection(
                             sleepState = sleepState,
-                            paiScalingFactor = uiState.paiScalingFactor,
+                            rasScalingFactor = uiState.rasScalingFactor,
                             trimpModel = uiState.trimpModel,
                             banisterMultiplier = uiState.banisterMultiplier,
                             chengBeta = uiState.chengBeta,

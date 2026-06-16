@@ -34,8 +34,8 @@ data class DailyMetrics(
     val loadScoreRounded: Int? = null,
     val restorationRounded: Int? = null,
     val trimpRounded: Int? = null,
-    val paiRounded: Int? = null,
-    val paiDayScoreRounded: Int? = null,
+    val rasRounded: Int? = null,
+    val rasDayScoreRounded: Int? = null,
     val spo2Rounded: Int? = null,
     // --- Baseline diffs + arrows (precomputed so tooltips need no recompute) ---
     val rhrBaselineDiff: Int? = null,

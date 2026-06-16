@@ -1,7 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
-import app.readylytics.health.domain.scoring.PaiCalculator
+import app.readylytics.health.domain.scoring.RasCalculator
 import app.readylytics.health.domain.scoring.TrimpModel
 import java.time.Clock
 import java.time.LocalDate
@@ -147,7 +147,7 @@ internal class PhysiologyPreferences
         }
 
         suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) {
-            val newPaiFactor = PaiCalculator.getDefaultPaiScalingFactor(profile)
+            val newRasFactor = RasCalculator.getDefaultRasScalingFactor(profile)
             dataStore.updateData {
                 it
                     .toBuilder()
@@ -157,8 +157,8 @@ internal class PhysiologyPreferences
                             PhysiologyProfile.ACTIVE -> PhysiologyProfileProto.PROFILE_ACTIVE
                             PhysiologyProfile.SEDENTARY -> PhysiologyProfileProto.PROFILE_SEDENTARY
                         },
-                    ).setPaiScalingFactor(newPaiFactor)
-                    .setPaiCalibration(profile.banisterMultiplier)
+                    ).setRasScalingFactor(newRasFactor)
+                    .setRasCalibration(profile.banisterMultiplier)
                     .setChengBeta(profile.defaultChengBeta)
                     .setItrimpB(profile.defaultItrimB)
                     .build()
@@ -181,7 +181,7 @@ internal class PhysiologyPreferences
 
         suspend fun updateBanisterMultiplier(value: Float) {
             dataStore.updateData {
-                it.toBuilder().setPaiCalibration(value.toValidBanisterMultiplier()).build()
+                it.toBuilder().setRasCalibration(value.toValidBanisterMultiplier()).build()
             }
         }
 

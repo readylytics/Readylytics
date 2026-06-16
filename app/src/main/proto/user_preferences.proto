@@ -121,7 +121,7 @@ message UserPreferencesProto {
     int32 consistency_evaluation_days = 36;
     int32 consistency_baseline_days = 37;
     
-    float pai_scaling_factor = 38;
+    float ras_scaling_factor = 38;
     int32 step_goal = 39;
     
     bool retention_days_enabled = 40;
@@ -146,7 +146,7 @@ message UserPreferencesProto {
     TrimpMethodProto trimp_method = 52;
     float cheng_beta = 53;
     float itrimp_b = 54;
-    float pai_calibration = 55;
+    float ras_calibration = 55;
 
     oneof primary_device_name_oneof {
         string primary_device_name = 56;
@@ -191,10 +191,10 @@ message UserPreferencesProto {
     // SettingsDefaults.STRAIN_LOAD_SOURCE_MODE at the domain read boundary.
     LoadSourceModeProto strain_load_source_mode = 73;
 
-    // Source of heart-rate data used for PAI computations.
+    // Source of heart-rate data used for RAS computations.
     // LOAD_SOURCE_UNSET (proto3 zero value) = never explicitly set; resolves to
-    // SettingsDefaults.PAI_SOURCE_MODE at the domain read boundary.
-    LoadSourceModeProto pai_source_mode = 74;
+    // SettingsDefaults.RAS_SOURCE_MODE at the domain read boundary.
+    LoadSourceModeProto ras_source_mode = 74;
 }
 
 enum TrimpMethodProto {

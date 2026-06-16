@@ -38,42 +38,42 @@ class SyncPreferencesTest {
     @Test
     fun `bootstrap sets WORKOUT_ONLY when unset and workout-only history exists`() =
         runTest {
-            syncPreferences.bootstrapPaiSourceModeIfUnset(hasWorkoutOnlyHistory = true)
+            syncPreferences.bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory = true)
 
             val proto = dataStore.data.first()
-            assertEquals(LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY, proto.paiSourceMode)
-            assertEquals(LoadSourceMode.WORKOUT_ONLY, proto.toDomainModel().paiSourceMode)
+            assertEquals(LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY, proto.rasSourceMode)
+            assertEquals(LoadSourceMode.WORKOUT_ONLY, proto.toDomainModel().rasSourceMode)
         }
 
     @Test
     fun `bootstrap sets EVERYDAY_HEART_RATE explicitly when unset and no workout-only history`() =
         runTest {
-            syncPreferences.bootstrapPaiSourceModeIfUnset(hasWorkoutOnlyHistory = false)
+            syncPreferences.bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory = false)
 
             val proto = dataStore.data.first()
-            assertEquals(LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE, proto.paiSourceMode)
-            assertEquals(LoadSourceMode.EVERYDAY_HEART_RATE, proto.toDomainModel().paiSourceMode)
+            assertEquals(LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE, proto.rasSourceMode)
+            assertEquals(LoadSourceMode.EVERYDAY_HEART_RATE, proto.toDomainModel().rasSourceMode)
         }
 
     @Test
     fun `second invocation is a no-op once resolved to WORKOUT_ONLY`() =
         runTest {
-            syncPreferences.bootstrapPaiSourceModeIfUnset(hasWorkoutOnlyHistory = true)
+            syncPreferences.bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory = true)
             // Second call, even with different history signal, must not change the persisted value.
-            syncPreferences.bootstrapPaiSourceModeIfUnset(hasWorkoutOnlyHistory = false)
+            syncPreferences.bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory = false)
 
             val proto = dataStore.data.first()
-            assertEquals(LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY, proto.paiSourceMode)
+            assertEquals(LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY, proto.rasSourceMode)
         }
 
     @Test
     fun `second invocation is a no-op once resolved to EVERYDAY_HEART_RATE`() =
         runTest {
-            syncPreferences.bootstrapPaiSourceModeIfUnset(hasWorkoutOnlyHistory = false)
+            syncPreferences.bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory = false)
             // Second call, even with different history signal, must not change the persisted value.
-            syncPreferences.bootstrapPaiSourceModeIfUnset(hasWorkoutOnlyHistory = true)
+            syncPreferences.bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory = true)
 
             val proto = dataStore.data.first()
-            assertEquals(LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE, proto.paiSourceMode)
+            assertEquals(LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE, proto.rasSourceMode)
         }
 }

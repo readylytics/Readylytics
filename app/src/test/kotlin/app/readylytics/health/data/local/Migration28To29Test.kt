@@ -33,6 +33,7 @@ class Migration28To29Test {
             `totalTrimp` REAL,
             `paiScore` REAL,
             `totalPai` REAL,
+            `pai_scaling_factor` REAL,
             PRIMARY KEY(`dateMidnightMs`)
         )
         """.trimIndent()

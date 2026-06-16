@@ -116,11 +116,11 @@ sealed interface SettingsEvent {
         val days: Int,
     ) : SettingsEvent
 
-    data class PaiScalingFactorChanged(
+    data class RasScalingFactorChanged(
         val value: Float,
     ) : SettingsEvent
 
-    data object ResetPaiScalingFactor : SettingsEvent
+    data object ResetRasScalingFactor : SettingsEvent
 
     data class StepGoalChanged(
         val steps: Int,
@@ -241,7 +241,7 @@ sealed interface SettingsEvent {
         val mode: LoadSourceMode,
     ) : SettingsEvent
 
-    data class PaiSourceModeChanged(
+    data class RasSourceModeChanged(
         val mode: LoadSourceMode,
     ) : SettingsEvent
 }

@@ -91,7 +91,7 @@ class BaselineComputer
         }
 
         /**
-         * Resolves the baseline RHR scalar used for TRIMP/PAI calculations.
+         * Resolves the baseline RHR scalar used for TRIMP/RAS calculations.
          * Honors [rhrBaselineOverride] then falls back to median of [rhrValues],
          * else [ScoringConstants.DEFAULT_RHR_BPM].
          */

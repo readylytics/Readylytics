@@ -122,17 +122,17 @@ object ScoringConstants {
         const val ILLNESS_MAX_SCORE = 50f
     }
 
-    object Pai {
+    object Ras {
         const val DAILY_CAP = 75f
         const val TIER1_THRESHOLD = 50f
         const val TIER2_THRESHOLD = 100f
         const val TIER2_MULTIPLIER = 0.5f
         const val TIER3_MULTIPLIER = 0.25f
 
-        // PAI scaling factors by physiology profile — REF: Whoop PAI model
-        const val PAI_SCALING_ATHLETE = 0.15f
-        const val PAI_SCALING_ACTIVE = 0.18f
-        const val PAI_SCALING_SEDENTARY = 0.25f
+        // RAS scaling factors by physiology profile
+        const val RAS_SCALING_ATHLETE = 0.15f
+        const val RAS_SCALING_ACTIVE = 0.18f
+        const val RAS_SCALING_SEDENTARY = 0.25f
 
         // Readiness integration divisor
         const val READINESS_SCALE = 100f

@@ -85,8 +85,8 @@ class ScoringDeterminismRegressionTest {
     private fun frozenSnapshot(
         dayMidnightMs: Long,
         date: LocalDate,
-        paiScore: Float?,
-        totalPai: Float?,
+        legacyRasScore: Float?,
+        legacyTotalRas: Float?,
         loadScore: Float?,
         strainRatio: Float?,
     ): DailySummaryEntity =
@@ -95,12 +95,12 @@ class ScoringDeterminismRegressionTest {
             // Legitimate frozen baseline fields — held constant across runs.
             baselineCalculatedAtDate = date,
             hrMax = 190f,
-            paiScalingFactor = 0.2f,
+            rasScalingFactor = 0.2f,
             rhrBpm = 60f,
             baselineObservationCount = 10,
             // Derived outputs — deliberately varied between runs to prove they do not leak.
-            paiScore = paiScore,
-            totalPai = totalPai,
+            legacyRasScore = legacyRasScore,
+            legacyTotalRas = legacyTotalRas,
             loadScore = loadScore,
             strainRatio = strainRatio,
         )
@@ -115,17 +115,24 @@ class ScoringDeterminismRegressionTest {
             val prefs = UserPreferences(rhrBaselineOverride = 55f, maxHeartRate = 195)
             every { settingsRepo.userPreferences } returns flowOf(prefs)
             val mockConfig = mockk<ScoringConfig>(relaxed = true)
-            every { mockConfig.paiScalingFactor } returns 0.2f
+            every { mockConfig.rasScalingFactor } returns 0.2f
             every { scoringConfigFactory.build(any(), any(), any(), any()) } returns mockConfig
 
-            // Calibrated, no-session path → loadScore/strainRatio/PAI are all set deterministically.
+            // Calibrated, no-session path → loadScore/strainRatio/RAS are all set deterministically.
             coEvery { sleepSessionDao.countSince(any()) } returns ScoringConstants.MIN_SESSIONS_FOR_CALIBRATION
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
 
             // Run 1: fresh derived state.
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns
-                frozenSnapshot(dayMidnightMs, today, paiScore = 0f, totalPai = 0f, loadScore = 100f, strainRatio = 1f)
+                frozenSnapshot(
+                    dayMidnightMs,
+                    today,
+                    legacyRasScore = 0f,
+                    legacyTotalRas = 0f,
+                    loadScore = 100f,
+                    strainRatio = 1f,
+                )
             val run1 = repo.computeDailySummary(today)
 
             // Mutate the "live state" left behind by run 1: poison every derived output that the
@@ -135,8 +142,8 @@ class ScoringDeterminismRegressionTest {
                 frozenSnapshot(
                     dayMidnightMs,
                     today,
-                    paiScore = 999f,
-                    totalPai = 4242f,
+                    legacyRasScore = 999f,
+                    legacyTotalRas = 4242f,
                     loadScore = 7f,
                     strainRatio = 13.5f,
                 )
@@ -145,8 +152,8 @@ class ScoringDeterminismRegressionTest {
             // US-03: derived outputs now live in the freshly-recomputed variant columns. The legacy
             // columns are frozen passthroughs of the stored snapshot and are intentionally NOT
             // recomputed, so reproducibility is asserted on the active variant columns instead.
-            assertEquals(run1.paiWorkoutOnly, run2.paiWorkoutOnly, "paiWorkoutOnly must be reproducible")
-            assertEquals(run1.totalPaiWorkoutOnly, run2.totalPaiWorkoutOnly, "totalPaiWorkoutOnly must be reproducible")
+            assertEquals(run1.rasWorkoutOnly, run2.rasWorkoutOnly, "rasWorkoutOnly must be reproducible")
+            assertEquals(run1.totalRasWorkoutOnly, run2.totalRasWorkoutOnly, "totalRasWorkoutOnly must be reproducible")
             assertEquals(
                 run1.loadScoreWorkoutOnly,
                 run2.loadScoreWorkoutOnly,
@@ -188,7 +195,7 @@ class ScoringDeterminismRegressionTest {
                     dateMidnightMs = dayMidnightMs,
                     baselineCalculatedAtDate = today,
                     hrMax = 190f,
-                    paiScalingFactor = 0.2f,
+                    rasScalingFactor = 0.2f,
                     rhrBpm = 60f,
                     hrvMuMssd = storedMu,
                     hrvSigmaMssd = 0.2f,

@@ -28,8 +28,8 @@ data class DailySummaryEntity(
     val hrvBaseline: Int? = null,
     val restingHeartRate: Int? = null,
     val restingHrRatio: Float? = null,
-    val paiScore: Float? = null,
-    val totalPai: Float? = null,
+    @Deprecated("Use rasWorkoutOnly") @ColumnInfo(name = "legacyRasScore") val legacyRasScore: Float? = null,
+    @Deprecated("Use totalRasWorkoutOnly") @ColumnInfo(name = "legacyTotalRas") val legacyTotalRas: Float? = null,
     val stepCount: Int? = null,
     val zLnHrv: Float? = null,
     val zRhr: Float? = null,
@@ -75,16 +75,16 @@ data class DailySummaryEntity(
     val snapshotCalibrationPhase: String? = null,
     @ColumnInfo(name = "hrv_sigma_prior")
     val hrvSigmaPrior: Float? = null,
-    @ColumnInfo(name = "pai_scaling_factor")
-    val paiScalingFactor: Float? = null,
+    @ColumnInfo(name = "ras_scaling_factor")
+    val rasScalingFactor: Float? = null,
     @ColumnInfo(name = "baseline_observation_count")
     val baselineObservationCount: Int? = null,
     val trimpWorkoutOnly: Float? = null,
     val trimpEverydayHr: Float? = null,
-    val paiWorkoutOnly: Float? = null,
-    val paiEverydayHr: Float? = null,
-    val totalPaiWorkoutOnly: Float? = null,
-    val totalPaiEverydayHr: Float? = null,
+    val rasWorkoutOnly: Float? = null,
+    val rasEverydayHr: Float? = null,
+    val totalRasWorkoutOnly: Float? = null,
+    val totalRasEverydayHr: Float? = null,
     val atlWorkoutOnly: Float? = null,
     val atlEverydayHr: Float? = null,
     val ctlWorkoutOnly: Float? = null,

@@ -129,7 +129,7 @@ class DashboardViewModel
                     prefs = basicInputs.userPreferences,
                     date = selectedDate,
                     lastSleepSession = sessionSummary,
-                    paiSummaries = basicInputs.paiSummaries,
+                    rasSummaries = basicInputs.rasSummaries,
                 )
 
             val cards = cardsResult.getOrNull()
@@ -141,7 +141,7 @@ class DashboardViewModel
                             circadianResult = basicInputs.circadianResult ?: CircadianConsistencyResult.MissingData,
                             goalSleepMinutes = (basicInputs.userPreferences.goalSleepHours * 60).toInt(),
                             stepGoal = basicInputs.userPreferences.stepGoal,
-                            recentDays = basicInputs.paiSummaries,
+                            recentDays = basicInputs.rasSummaries,
                             nowMinutesOfDay = nowMinutesOfDayFor(selectedDate),
                             prefs = basicInputs.userPreferences,
                         ),
@@ -159,7 +159,7 @@ class DashboardViewModel
                 cardDataMap = cards?.cardDataMap ?: emptyMap(),
                 circadianConsistency = basicInputs.circadianResult,
                 restingHrCard = cards?.cardDataMap?.get(CardId.RESTING_HR),
-                paiDailyBreakdown = cards?.paiDailyBreakdown ?: emptyList(),
+                rasDailyBreakdown = cards?.rasDailyBreakdown ?: emptyList(),
                 stepCount = basicInputs.summary?.stepCount,
                 stepGoal = basicInputs.userPreferences.stepGoal,
                 lastSleepSession = sessionSummary,
@@ -316,7 +316,7 @@ data class DashboardUiState(
     val cardDataMap: Map<CardId, CardData> = emptyMap(),
     val circadianConsistency: CircadianConsistencyResult? = null,
     val restingHrCard: CardData? = null,
-    val paiDailyBreakdown: List<Pair<String, Float>> = emptyList(),
+    val rasDailyBreakdown: List<Pair<String, Float>> = emptyList(),
     val stepCount: Int? = null,
     val stepGoal: Int = 10000,
     val lastSleepSession: SleepSessionSummary? = null,
