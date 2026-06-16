@@ -112,14 +112,9 @@ fun RasWeeklyBar(
             Text(
                 // Allow-listed: chart-widget label for the passed-in RAS series (bar geometry
                 // uses the raw Float above); not a DailySummary metric read.
-                text = "${totalRas.roundToPercentInt()} RAS",
+                text = "${totalRas.roundToPercentInt()}",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = fillColor,
-            )
-            Text(
-                text = status.name,
-                style = MaterialTheme.typography.labelSmall,
                 color = fillColor,
             )
         }

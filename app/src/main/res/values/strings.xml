@@ -864,7 +864,7 @@
     <string name="unit_system_metric_label">Metric (cm, kg)</string>
     <string name="unit_system_imperial_label">Imperial (ft/in, lbs)</string>
     <string name="workout_zones_title">Heart rate zones</string>
-    <string name="workout_stats_ras_title">RAS</string>
+    <string name="workout_stats_ras_title">Readylytics Activity Score</string>
     <string name="workout_stats_history_title">History</string>
     <string name="sleep_metrics_title">Metrics</string>
 

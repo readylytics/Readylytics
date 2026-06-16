@@ -195,15 +195,9 @@ fun StepsBar(
 
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = if (stepCount != null) "${count.formatSteps()} steps" else "-- steps",
+                text = if (stepCount != null) count.formatSteps() else "--",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = if (stepCount != null) fillColor else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                text = if (stepCount != null) status.name else "NO DATA",
-                style = MaterialTheme.typography.labelSmall,
                 color = if (stepCount != null) fillColor else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
