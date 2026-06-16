@@ -24,94 +24,18 @@ fun LoadSourcesSection(
     onEvent: (SettingsEvent) -> Unit,
 ) {
     Column {
-        ListItem(
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            headlineContent = {
-                Text(
-                    text = stringResource(R.string.load_sources_strain_label),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            },
-        )
-        SingleChoiceSegmentedButtonRow(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-        ) {
-            LoadSourceMode.entries.forEachIndexed { index, mode ->
-                SegmentedButton(
-                    selected = uiState.strainLoadSourceMode == mode,
-                    onClick = { onEvent(SettingsEvent.StrainLoadSourceModeChanged(mode)) },
-                    shape =
-                        SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = LoadSourceMode.entries.size,
-                        ),
-                    label = {
-                        Text(
-                            text =
-                                when (mode) {
-                                    LoadSourceMode.WORKOUT_ONLY ->
-                                        stringResource(R.string.load_source_option_workout_only)
-                                    LoadSourceMode.EVERYDAY_HEART_RATE ->
-                                        stringResource(R.string.load_source_option_everyday_hr)
-                                },
-                        )
-                    },
-                )
-            }
-        }
-        Text(
-            text = stringResource(R.string.load_sources_strain_help),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        LoadSourcePicker(
+            labelRes = R.string.load_sources_strain_label,
+            selectedMode = uiState.strainLoadSourceMode,
+            helpRes = R.string.load_sources_strain_help,
+            onModeSelected = { onEvent(SettingsEvent.StrainLoadSourceModeChanged(it)) },
         )
 
-        ListItem(
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            headlineContent = {
-                Text(
-                    text = stringResource(R.string.load_sources_pai_label),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            },
-        )
-        SingleChoiceSegmentedButtonRow(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-        ) {
-            LoadSourceMode.entries.forEachIndexed { index, mode ->
-                SegmentedButton(
-                    selected = uiState.paiSourceMode == mode,
-                    onClick = { onEvent(SettingsEvent.PaiSourceModeChanged(mode)) },
-                    shape =
-                        SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = LoadSourceMode.entries.size,
-                        ),
-                    label = {
-                        Text(
-                            text =
-                                when (mode) {
-                                    LoadSourceMode.WORKOUT_ONLY ->
-                                        stringResource(R.string.load_source_option_workout_only)
-                                    LoadSourceMode.EVERYDAY_HEART_RATE ->
-                                        stringResource(R.string.load_source_option_everyday_hr)
-                                },
-                        )
-                    },
-                )
-            }
-        }
-        Text(
-            text = stringResource(R.string.load_sources_pai_help),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        LoadSourcePicker(
+            labelRes = R.string.load_sources_pai_label,
+            selectedMode = uiState.paiSourceMode,
+            helpRes = R.string.load_sources_pai_help,
+            onModeSelected = { onEvent(SettingsEvent.PaiSourceModeChanged(it)) },
         )
 
         Text(
@@ -127,4 +51,57 @@ fun LoadSourcesSection(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
         )
     }
+}
+
+@Composable
+private fun LoadSourcePicker(
+    labelRes: Int,
+    selectedMode: LoadSourceMode,
+    helpRes: Int,
+    onModeSelected: (LoadSourceMode) -> Unit,
+) {
+    ListItem(
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        headlineContent = {
+            Text(
+                text = stringResource(labelRes),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        },
+    )
+    SingleChoiceSegmentedButtonRow(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+    ) {
+        LoadSourceMode.entries.forEachIndexed { index, mode ->
+            SegmentedButton(
+                selected = selectedMode == mode,
+                onClick = { onModeSelected(mode) },
+                shape =
+                    SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = LoadSourceMode.entries.size,
+                    ),
+                label = {
+                    Text(
+                        text =
+                            when (mode) {
+                                LoadSourceMode.WORKOUT_ONLY ->
+                                    stringResource(R.string.load_source_option_workout_only)
+                                LoadSourceMode.EVERYDAY_HEART_RATE ->
+                                    stringResource(R.string.load_source_option_everyday_hr)
+                            },
+                    )
+                },
+            )
+        }
+    }
+    Text(
+        text = stringResource(helpRes),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    )
 }

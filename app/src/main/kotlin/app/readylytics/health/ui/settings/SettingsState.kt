@@ -93,7 +93,7 @@ data class UIState(
     val banisterMultiplier: Float = PhysiologyProfile.ACTIVE.banisterMultiplier,
     val chengBeta: Float = PhysiologyProfile.ACTIVE.defaultChengBeta,
     val itrimB: Float = PhysiologyProfile.ACTIVE.defaultItrimB,
-    val unitSystem: app.readylytics.health.data.preferences.UnitSystem = SettingsDefaults.UNIT_SYSTEM,
+    val unitSystem: UnitSystem = SettingsDefaults.UNIT_SYSTEM,
     val isCustomPaletteEnabled: Boolean = false,
     val customSecondaryColor: Long = SettingsDefaults.CUSTOM_SECONDARY_COLOR,
     val customTertiaryColor: Long = SettingsDefaults.CUSTOM_TERTIARY_COLOR,
