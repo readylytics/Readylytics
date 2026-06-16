@@ -176,8 +176,8 @@ fun WorkoutStatsSection(
                         ) {
                             Text(
                                 text = stringResource(R.string.workout_stats_ras_title),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 uiState.latestMetrics?.rasDayScoreRounded?.let { earned ->
@@ -281,8 +281,8 @@ private fun AcwrChartCard(
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = stringResource(R.string.acwr_training_load),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(16.dp))
             if (trimpPoints.isEmpty() && ratioPoints.isEmpty()) {
