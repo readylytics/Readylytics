@@ -13,10 +13,10 @@ class RasWeeklyUnderperformanceRuleTest {
     private val today = LocalDate.of(2026, 6, 12)
 
     private fun context(
-        todayTotalPai: Float? = 10f,
+        todayTotalRas: Float? = 10f,
         recentDays: List<DailySummary> = emptyList(),
     ) = InsightContext(
-        today = dailySummary(date = today, totalRas = todayTotalPai),
+        today = dailySummary(date = today, totalRas = todayTotalRas),
         circadianResult = CircadianConsistencyResult.MissingData,
         goalSleepMinutes = 480,
         recentDays = recentDays,
@@ -49,13 +49,13 @@ class RasWeeklyUnderperformanceRuleTest {
         val recent =
             (1..6).map { offset -> dailySummary(date = today.minusDays(offset.toLong()), totalRas = 0f) }
         // 150 (today only) == target -> not below
-        assertNull(rule.evaluate(context(todayTotalPai = 150f, recentDays = recent)))
+        assertNull(rule.evaluate(context(todayTotalRas = 150f, recentDays = recent)))
     }
 
     @Test
     fun `does not fire when all days have null totalRas`() {
         val recent = (1..6).map { offset -> dailySummary(date = today.minusDays(offset.toLong())) }
-        assertNull(rule.evaluate(context(todayTotalPai = null, recentDays = recent)))
+        assertNull(rule.evaluate(context(todayTotalRas = null, recentDays = recent)))
     }
 
     @Test
@@ -65,7 +65,7 @@ class RasWeeklyUnderperformanceRuleTest {
                 dailySummary(date = today.minusDays(1), totalRas = null),
                 dailySummary(date = today.minusDays(2), totalRas = null),
             )
-        val finding = rule.evaluate(context(todayTotalPai = 10f, recentDays = recent))
+        val finding = rule.evaluate(context(todayTotalRas = 10f, recentDays = recent))
 
         assertEquals(InsightType.RAS_WEEKLY_UNDERPERFORMANCE, finding?.type)
         assertEquals(10f, (finding?.params as InsightParams.RasWeeklyShortfall).weeklyRas)
@@ -74,7 +74,7 @@ class RasWeeklyUnderperformanceRuleTest {
     @Test
     fun `deduplicates days by date when recentDays includes today`() {
         val recent = listOf(dailySummary(date = today, totalRas = 10f))
-        val finding = rule.evaluate(context(todayTotalPai = 10f, recentDays = recent))
+        val finding = rule.evaluate(context(todayTotalRas = 10f, recentDays = recent))
 
         assertEquals(InsightType.RAS_WEEKLY_UNDERPERFORMANCE, finding?.type)
         assertEquals(10f, (finding?.params as InsightParams.RasWeeklyShortfall).weeklyRas)

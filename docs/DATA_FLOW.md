@@ -204,7 +204,7 @@ keep Android types out of`domain/scoring/\*\*`.
 | Component                          | Path                                                 | Model / default                                                                                                                                                                                                                              |
 | :--------------------------------- | :--------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `TrimpModel` (enum)                | `domain/scoring/TrimpModel.kt`                       | `BANISTER`, `I_TRIMP`, `CHENG`.                                                                                                                                                                                                              |
-| `RasCalculator`                    | `domain/scoring/RasCalculator.kt`                    | `calculateDailyTrimp(..., trimpModel = TrimpModel.BANISTER)` switches per model — **BANISTER is the operational default** (default parameter value). `calculateDailyPai()` converts TRIMP → PAI via a profile scaling factor (capped at 75). |
+| `RasCalculator`                    | `domain/scoring/RasCalculator.kt`                    | `calculateDailyTrimp(..., trimpModel = TrimpModel.BANISTER)` switches per model — **BANISTER is the operational default** (default parameter value). `calculateDailyRas()` converts TRIMP → RAS via a profile scaling factor (capped at 75). |
 | `ComputeWorkoutTrimpUseCase`       | `domain/scoring/ComputeWorkoutTrimpUseCase.kt`       | Per-workout integration over HR samples; reads the user-selected model from `prefs.trimpModel`.                                                                                                                                              |
 | `ComputeWorkoutLoadMetricsUseCase` | `domain/scoring/ComputeWorkoutLoadMetricsUseCase.kt` | Single per-workout load source for workout history/detail UI: resolves precise TRIMP + gained strain from DB-backed workout samples, then returns the rounded TRIMP/strain display values used by cards and rows.                            |
 | `GetWorkoutDisplayMetricsUseCase`  | `domain/scoring/GetWorkoutDisplayMetricsUseCase.kt`  | Unified display metrics provider for workouts. Orchestrates 42-day history fetching and delegates calculations to `ComputeWorkoutLoadMetricsUseCase` to return UI-ready preformatted values.                                                 |
@@ -213,7 +213,7 @@ keep Android types out of`domain/scoring/\*\*`.
 Daily score display values are projected through `DailyMetricsMapper` /
 `DailyMetricsRepository`. UI screens may use raw `DailySummary` floats for chart
 geometry and dial progress, but visible Sleep Score, Readiness, Restoration, TRIMP,
-PAI, RHR/HRV baselines, SpO2, and Strain Ratio text must use `DailyMetrics`
+RAS, RHR/HRV baselines, SpO2, and Strain Ratio text must use `DailyMetrics`
 rounded/display fields or the workout-specific `GetWorkoutDisplayMetricsUseCase`
 result.
 

@@ -63,11 +63,11 @@ class RasCalculatorTest {
     }
 
     @Test
-    fun `calculateDailyPai respects daily cap`() {
+    fun `calculateDailyRas respects daily cap`() {
         val trimp = 1000f
         val scalingFactor = 0.2f
         // 1000 * 0.2 = 200 -> capped at 75
-        val result = RasCalculator.calculateDailyPai(trimp, scalingFactor)
+        val result = RasCalculator.calculateDailyRas(trimp, scalingFactor)
         assertEquals(75f, result, 0.001f)
     }
 

@@ -261,7 +261,7 @@ This document defines the user-facing details, signal meanings, possible causes,
   - Strength training with lower sustained heart rate: RAS rewards sustained heart-rate activity more than brief spikes.
   - Short workouts: Short sessions may not add much RAS even when they feel hard.
   - Incomplete heart-rate data: Missing heart-rate samples can reduce RAS credit.
-  - Training intensity below RAS zones: Some work may be below zones that contribute strongly to PAI.
+  - Training intensity below RAS zones: Some work may be below zones that contribute strongly to RAS.
   - Device measurement gaps: Wearable gaps can affect RAS calculation.
 - **Recommendations**:
   - If RAS is a goal, include some sustained aerobic work in appropriate heart-rate zones.

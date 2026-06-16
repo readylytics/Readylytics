@@ -160,7 +160,7 @@ class GetDashboardDataUseCase
         }
 
         private fun rasCard(m: DailyMetrics): CardData {
-            val status = m.rasRounded.rasStatus()
+            val status = m.rasRounded?.toFloat().rasStatus()
             val value = m.rasRounded?.toString() ?: "—"
 
             return CardData(
