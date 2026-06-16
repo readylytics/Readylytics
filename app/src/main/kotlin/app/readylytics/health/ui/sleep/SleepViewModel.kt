@@ -3,7 +3,9 @@ package app.readylytics.health.ui.sleep
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
@@ -54,6 +56,13 @@ data class SleepUiState(
     val trendDurationSpanPoints: List<DailyDataPoint> = emptyList(),
     val trendActualDurationPoints: List<DailyDataPoint> = emptyList(),
     val trendRangeStartMs: Long = 0,
+    val goalSleepHours: Float = SettingsDefaults.GOAL_SLEEP_HOURS,
+    val sleepTimeGaugeData: SleepTimeGaugeData =
+        buildSleepTimeGaugeData(
+            session = null,
+            summary = null,
+            goalSleepHours = SettingsDefaults.GOAL_SLEEP_HOURS,
+        ),
 )
 
 @HiltViewModel
@@ -201,6 +210,7 @@ class SleepViewModel
                         foregroundSyncController.isSyncing,
                         metricsFlow,
                         trendSessionsFlow,
+                        settingsRepo.userPreferences,
                     ) { array ->
                         val latestSummary = array[0] as DailySummary?
                         val latestSession = array[1] as SleepSessionData?
@@ -217,6 +227,7 @@ class SleepViewModel
                                 List<DailyDataPoint>,
                                 List<DailyDataPoint>,
                             >
+                        val prefs = array[6] as UserPreferences
 
                         SleepUiState(
                             latestSummary = latestSummary,
@@ -230,6 +241,13 @@ class SleepViewModel
                             trendDurationSpanPoints = trendData.second,
                             trendActualDurationPoints = trendData.third,
                             trendRangeStartMs = visibleRangeStartMs,
+                            goalSleepHours = prefs.goalSleepHours,
+                            sleepTimeGaugeData =
+                                buildSleepTimeGaugeData(
+                                    session = latestSession,
+                                    summary = latestSummary,
+                                    goalSleepHours = prefs.goalSleepHours,
+                                ),
                         )
                     }
                 }.flowOn(Dispatchers.Default)

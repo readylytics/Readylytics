@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -12,8 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -21,7 +21,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -35,6 +34,7 @@ import app.readylytics.health.domain.model.efficiencyStatus
 import app.readylytics.health.domain.model.remSleepStatus
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.util.roundToPercentInt
+import app.readylytics.health.ui.common.DateFormatUtils
 import app.readylytics.health.ui.common.MetricCardSkeleton
 import app.readylytics.health.ui.common.ScoreDialSkeleton
 import app.readylytics.health.ui.common.SkeletonCard
@@ -79,183 +79,179 @@ fun SleepScreen(
     earliestDate: java.time.LocalDate? = null,
     modifier: Modifier = Modifier,
 ) {
-    val listState = rememberLazyListState()
+    val scrollState = rememberScrollState()
     val (trendScrollState, trendZoomState) =
         ChartDefaults.rememberChartState(
             rangeDays = uiState.selectedTrendRange.days,
             key = uiState.selectedTrendRange,
         )
 
-    LazyColumn(
-        state = listState,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 16.dp),
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(vertical = 16.dp),
     ) {
-        item(key = "date_switcher") {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+        ) {
+            DateSwitcher(
+                selectedDate = uiState.selectedDate,
+                onPreviousDay = onPreviousDay,
+                onNextDay = onNextDay,
+                onDateSelected = onDateSelected,
+                earliestDate = earliestDate,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (uiState.isLoading) {
+                ScoreDialSkeleton(
+                    modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
+                )
+                ScoreDialSkeleton(
+                    modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
+                )
+            } else {
+                M3ScoreDial(
+                    score = uiState.latestSummary?.sleepScore,
+                    label = stringResource(R.string.sleep_score_gauge_title),
+                    displayText = uiState.latestMetrics?.sleepScoreRounded?.toString() ?: "—",
+                    tooltipDescription = stringResource(R.string.tooltip_sleep_score),
+                    modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
+                )
+
+                val sleepTimeGaugeData = uiState.sleepTimeGaugeData
+                val goalText =
+                    DateFormatUtils.formatSleepDuration(
+                        (uiState.goalSleepHours * 60f).toInt().coerceAtLeast(0),
+                    )
+
+                M3ScoreDial(
+                    score = sleepTimeGaugeData.progress,
+                    label = stringResource(R.string.sleep_time_gauge_title),
+                    maxScore = 1f,
+                    status = sleepTimeGaugeData.status,
+                    displayText = sleepTimeGaugeData.displayText,
+                    tooltipDescription = stringResource(R.string.tooltip_sleep_duration, goalText),
+                    modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
+                )
+            }
+        }
+
+        if (uiState.isLoading) {
+            SkeletonCard(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                height = 120.dp,
+            )
+        } else {
+            TrendCard(
+                title = stringResource(R.string.sleep_breakdown_title),
+                modifier = Modifier.padding(horizontal = 16.dp),
             ) {
-                DateSwitcher(
-                    selectedDate = uiState.selectedDate,
-                    onPreviousDay = onPreviousDay,
-                    onNextDay = onNextDay,
-                    onDateSelected = onDateSelected,
-                    earliestDate = earliestDate,
+                SleepArchitectureBar(
+                    session = uiState.latestSession,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
 
-        item(key = "score_dial") {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (uiState.isLoading) {
-                    ScoreDialSkeleton()
-                } else {
-                    val sleepScoreTooltip =
-                        remember {
-                            buildString {
-                                append("Total quality of rest based on duration and cycles.\n\n")
-                                append("• 80–100: Optimal\n")
-                                append("• 60–79: Fair\n")
-                                append("• < 60: Poor")
-                            }
-                        }
-                    M3ScoreDial(
-                        score = uiState.latestSummary?.sleepScore,
-                        label = "Sleep Score",
-                        displayText = uiState.latestMetrics?.sleepScoreRounded?.toString() ?: "—",
-                        tooltipDescription = sleepScoreTooltip,
-                    )
-                }
-            }
-        }
+        Spacer(Modifier.height(8.dp))
 
-        item(key = "architecture_bar") {
-            if (uiState.isLoading) {
-                SkeletonCard(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    height = 120.dp,
-                )
-            } else {
-                TrendCard(
-                    title = stringResource(R.string.sleep_breakdown_title),
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                ) {
-                    SleepArchitectureBar(
-                        session = uiState.latestSession,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-        }
-
-        item(key = "spacer_arch2") { Spacer(Modifier.height(8.dp)) }
-
-        item(key = "hypnogram") {
-            if (uiState.isLoading) {
-                SkeletonCard(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    height = 260.dp,
-                )
-            } else {
-                TrendCard(
-                    title = stringResource(R.string.sleep_timeline_title),
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                ) {
-                    SleepStagesChart(
-                        session = uiState.latestSession,
-                        stageTimeline = uiState.stageTimeline,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-        }
-
-        item(key = "spacer_trend") { Spacer(Modifier.height(16.dp)) }
-
-        item(key = "sleep_trend_header") {
-            SectionHeader(
-                title = stringResource(R.string.sleep_trend_section_title),
-                enabled = !uiState.isLoading,
+        if (uiState.isLoading) {
+            SkeletonCard(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                height = 260.dp,
             )
-            Spacer(Modifier.height(8.dp))
-        }
-
-        item(key = "sleep_trend_range") {
-            SingleChoiceSegmentedButtonRow(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+        } else {
+            TrendCard(
+                title = stringResource(R.string.sleep_timeline_title),
+                modifier = Modifier.padding(horizontal = 16.dp),
             ) {
-                TimeRange.entries.forEachIndexed { index, range ->
-                    SegmentedButton(
-                        selected = uiState.selectedTrendRange == range,
-                        onClick = { onTrendRangeSelected(range) },
-                        enabled = !uiState.isLoading,
-                        shape =
-                            SegmentedButtonDefaults.itemShape(
-                                index = index,
-                                count = TimeRange.entries.size,
-                            ),
-                        label = { Text(range.label) },
-                    )
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-
-        item(key = "sleep_trend_card") {
-            if (uiState.isLoading) {
-                SleepTrendSkeleton(modifier = Modifier.padding(horizontal = 16.dp))
-            } else {
-                SleepTrendCard(
-                    selectedRange = uiState.selectedTrendRange,
-                    startOffsetPoints = uiState.trendStartOffsetPoints,
-                    durationSpanPoints = uiState.trendDurationSpanPoints,
-                    actualDurationPoints = uiState.trendActualDurationPoints,
-                    rangeStartMs = uiState.trendRangeStartMs,
-                    scrollState = trendScrollState,
-                    zoomState = trendZoomState,
-                    parentScrollInProgress = listState.isScrollInProgress,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                SleepStagesChart(
+                    session = uiState.latestSession,
+                    stageTimeline = uiState.stageTimeline,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
 
-        item(key = "spacer_arch") { Spacer(Modifier.height(24.dp)) }
+        Spacer(Modifier.height(16.dp))
 
-        item(key = "metrics_header") {
-            SectionHeader(title = stringResource(R.string.sleep_metrics_title))
-            Spacer(Modifier.height(8.dp))
-        }
+        SectionHeader(
+            title = stringResource(R.string.sleep_trend_section_title),
+            enabled = !uiState.isLoading,
+        )
+        Spacer(Modifier.height(8.dp))
 
-        item(key = "metrics_grid") {
-            if (uiState.isLoading) {
-                MetricsGridSkeleton()
-            } else {
-                MetricsGrid(
-                    uiState = uiState,
-                    circadianResult = circadianConsistency,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+        SingleChoiceSegmentedButtonRow(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+        ) {
+            TimeRange.entries.forEachIndexed { index, range ->
+                SegmentedButton(
+                    selected = uiState.selectedTrendRange == range,
+                    onClick = { onTrendRangeSelected(range) },
+                    enabled = !uiState.isLoading,
+                    shape =
+                        SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = TimeRange.entries.size,
+                        ),
+                    label = { Text(range.label) },
                 )
             }
         }
+        Spacer(Modifier.height(16.dp))
 
-        item(key = "spacer_bottom") { Spacer(Modifier.height(16.dp)) }
-
-        item(key = "status_legend") {
-            StatusLegend()
+        if (uiState.isLoading) {
+            SleepTrendSkeleton(modifier = Modifier.padding(horizontal = 16.dp))
+        } else {
+            SleepTrendCard(
+                selectedRange = uiState.selectedTrendRange,
+                startOffsetPoints = uiState.trendStartOffsetPoints,
+                durationSpanPoints = uiState.trendDurationSpanPoints,
+                actualDurationPoints = uiState.trendActualDurationPoints,
+                rangeStartMs = uiState.trendRangeStartMs,
+                scrollState = trendScrollState,
+                zoomState = trendZoomState,
+                parentScrollInProgress = scrollState.isScrollInProgress,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
         }
+
+        Spacer(Modifier.height(24.dp))
+
+        SectionHeader(title = stringResource(R.string.sleep_metrics_title))
+        Spacer(Modifier.height(8.dp))
+
+        if (uiState.isLoading) {
+            MetricsGridSkeleton()
+        } else {
+            MetricsGrid(
+                uiState = uiState,
+                circadianResult = circadianConsistency,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        StatusLegend()
     }
 }
 
