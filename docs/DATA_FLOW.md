@@ -42,7 +42,7 @@ All paths are rooted at `app/src/main/kotlin/app/readylytics/health/`.
                │ @Upsert by stable HC id (idempotent; overlap → replace)
                ▼
 ┌──────────────────────────────┐
-│  HealthDatabase (SQLite v28) │   11 entities — single source of truth
+│  HealthDatabase (SQLite v1)  │   11 entities — single source of truth
 └──────────────┬───────────────┘
                │ raw DAO reads (local; no further HC calls)
                ▼
@@ -140,7 +140,7 @@ deterministic composite IDs (`${hcRecordId}_${timestampMs}`) so re-ingestion is 
 | `BloodPressureDataMapper`    | `data/mapper/BloodPressureDataMapper.kt`    | `BloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg).                                                                     |
 | `OxygenSaturationDataMapper` | `data/mapper/OxygenSaturationDataMapper.kt` | `OxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                                     |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 30)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 1)`)
 
 Defined in `data/local/HealthDatabase.kt`; entities in `data/local/entity/`, DAOs in
 `data/local/dao/`. **The database is the single source of truth; the UI never reads Health
@@ -385,7 +385,7 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | `data/healthconnect/HrvMapper.kt`                                          | Ingestion — mapper                                  | RMSSD samples                                                                            |
 | `data/healthconnect/WorkoutMapper.kt`                                      | Ingestion — mapper                                  | zone minutes + workout TRIMP                                                             |
 | `data/mapper/{Weight,BodyFat,BloodPressure,OxygenSaturation}DataMapper.kt` | Ingestion — mappers                                 | weight / body fat / BP / SpO2                                                            |
-| `data/local/HealthDatabase.kt`                                             | Storage — Room DB (v28)                             | 11 entities, migrations                                                                  |
+| `data/local/HealthDatabase.kt`                                             | Storage — Room DB (v1)                              | 11 entities, MVP baseline; future migrations remain wired through `DatabaseMigrations`   |
 | `data/local/entity/DailySummaryEntity.kt`                                  | Storage — computed-day snapshot                     | scores + frozen baselines                                                                |
 | `data/local/entity/InsightDismissalEntity.kt`                              | Storage — insight dismissal                         | dateMidnightMs + type                                                                    |
 | `data/local/entity/*.kt` (sleep, HR, HRV, workout, weight, …)              | Storage — raw metric entities                       | upsert by stable HC id                                                                   |
