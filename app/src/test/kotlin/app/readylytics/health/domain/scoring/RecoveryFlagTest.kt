@@ -191,6 +191,7 @@ class RecoveryFlagTest {
         currentHrv: Float,
         hrvOptimalThreshold: Float = 1.10f,
         isCurrentHrvOptimal: Boolean = false,
+        isCurrentRhrOptimal: Boolean = true,
     ) = calculator.computeRecoveryFlags(
         zLnHrv = 0f,
         zRhr = 0f,
@@ -207,6 +208,7 @@ class RecoveryFlagTest {
         currentHrv = currentHrv,
         hrvOptimalThreshold = hrvOptimalThreshold,
         isCurrentHrvOptimal = isCurrentHrvOptimal,
+        isCurrentRhrOptimal = isCurrentRhrOptimal,
     )
 
     @Test
@@ -258,9 +260,68 @@ class RecoveryFlagTest {
                 yesterdayTrimp = 150f,
                 yesterdayHrv = 50f,
                 currentHrv = 40f,
+                isCurrentRhrOptimal = false,
             )
         assertTrue(RecoveryFlag.WORKOUT_IMPACT in result)
         assertFalse(RecoveryFlag.REST_DAY_NO_IMPACT in result)
         assertFalse(RecoveryFlag.REST_DAY_SUCCESS in result)
+    }
+
+    @Test
+    fun `workout impact suppressed when current hrv remains optimal`() {
+        val result =
+            restDayFlags(
+                yesterdayTrimp = 150f,
+                yesterdayHrv = 50f,
+                currentHrv = 48f,
+                isCurrentHrvOptimal = true,
+                isCurrentRhrOptimal = false,
+            )
+
+        assertFalse(RecoveryFlag.WORKOUT_IMPACT in result)
+    }
+
+    @Test
+    fun `workout impact suppressed when current rhr remains optimal`() {
+        val result =
+            restDayFlags(
+                yesterdayTrimp = 150f,
+                yesterdayHrv = 50f,
+                currentHrv = 40f,
+                isCurrentHrvOptimal = false,
+                isCurrentRhrOptimal = true,
+            )
+
+        assertFalse(RecoveryFlag.WORKOUT_IMPACT in result)
+    }
+
+    @Test
+    fun `workout impact suppressed when hrv drop is within configured threshold`() {
+        val result =
+            restDayFlags(
+                yesterdayTrimp = 150f,
+                yesterdayHrv = 50f,
+                currentHrv = 46f,
+                hrvOptimalThreshold = 1.10f,
+                isCurrentHrvOptimal = false,
+                isCurrentRhrOptimal = false,
+            )
+
+        assertFalse(RecoveryFlag.WORKOUT_IMPACT in result)
+    }
+
+    @Test
+    fun `workout impact fires when hrv and rhr are no longer optimal and hrv drop exceeds threshold`() {
+        val result =
+            restDayFlags(
+                yesterdayTrimp = 150f,
+                yesterdayHrv = 50f,
+                currentHrv = 44f,
+                hrvOptimalThreshold = 1.10f,
+                isCurrentHrvOptimal = false,
+                isCurrentRhrOptimal = false,
+            )
+
+        assertTrue(RecoveryFlag.WORKOUT_IMPACT in result)
     }
 }

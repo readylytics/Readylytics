@@ -117,6 +117,36 @@ class ScoringSyncScopeOutputsDeterminismTest {
             )
         }
 
+    @Test
+    fun `frozen baseline snapshot columns remain unchanged when target day is recomputed`() =
+        runTest {
+            val fixture = buildFixture(includeFutureSessions = false)
+            val live = computeForScope("live", fixture, scopeDays = 60).summary
+            val frozenSnapshot =
+                live.copy(
+                    hrvBaseline = 123,
+                    hrvMuMssd = 4.321f,
+                    hrvSigmaMssd = 0.321f,
+                    rhrBpm = 52.5f,
+                    rhrSigma = 1.75f,
+                    baselineCalculatedAtDate = targetDate,
+                )
+
+            val recomputed =
+                computeForScope(
+                    label = "frozen snapshot replay",
+                    fixture = fixture,
+                    scopeDays = 365,
+                    existingTargetSummary = frozenSnapshot,
+                ).summary
+
+            assertEquals(123, recomputed.hrvBaseline, "Frozen HRV display baseline must not be recomputed.")
+            assertEquals(4.321f, recomputed.hrvMuMssd, "Frozen HRV mu must not be recomputed.")
+            assertEquals(0.321f, recomputed.hrvSigmaMssd, "Frozen HRV sigma must not be recomputed.")
+            assertEquals(52.5f, recomputed.rhrBpm, "Frozen RHR baseline must not be recomputed.")
+            assertEquals(1.75f, recomputed.rhrSigma, "Frozen RHR sigma must not be recomputed.")
+        }
+
     private suspend fun computeForScope(
         label: String,
         fixture: Fixture,

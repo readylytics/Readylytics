@@ -50,11 +50,6 @@ object ScoringConstants {
     const val DEFAULT_GOAL_SLEEP_HOURS = 8f
     const val DEFAULT_RHR_BPM = 60f
 
-    // RHR baseline fallback when no measured baseline available — REF: Karvonen approximation for untrained populations
-    // Estimated as: avgHR - HR_ELEVATION_AT_EXERCISE, but clamped to MINIMUM_FALLBACK_RHR for safety
-    const val HR_ELEVATION_AT_EXERCISE = 20 // bpm elevation during light-moderate exercise
-    const val MINIMUM_FALLBACK_RHR = 40f // physiological floor; <40 indicates measurement error or extreme bradycardia
-
     const val TIMEZONE_JUMP_THRESHOLD_SECONDS = 3600L
 
     object Strain {
