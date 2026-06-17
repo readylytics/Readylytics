@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.util.roundToPercentInt
 
@@ -88,9 +89,9 @@ fun M3ScoreDial(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             val textStyle =
                 if (scoreText.length >= 5) {
-                    MaterialTheme.typography.headlineMedium
+                    MaterialTheme.typography.headlineMedium.copy(fontSize = 26.sp)
                 } else {
-                    MaterialTheme.typography.displaySmall
+                    MaterialTheme.typography.displaySmall.copy(fontSize = 34.sp)
                 }
             Text(
                 text = scoreText,

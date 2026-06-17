@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
 import app.readylytics.health.ui.common.ChartUtils
 import app.readylytics.health.ui.common.DailyDataPoint
+import app.readylytics.health.ui.common.DateFormatUtils
 import app.readylytics.health.ui.common.SkeletonCard
 import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.components.ChartDefaults
@@ -189,11 +190,15 @@ fun SleepTrendChart(
                         },
                     )
 
+                val durationStr =
+                    DateFormatUtils.formatSleepDuration(
+                        ((s.actualDurationValue ?: 0f) * 60f).roundToInt(),
+                    )
                 val valueText =
                     String.format(
                         Locale.getDefault(),
                         durationFormat,
-                        s.actualDurationValue ?: 0f,
+                        durationStr,
                     )
                 val dateTextVal =
                     String.format(
