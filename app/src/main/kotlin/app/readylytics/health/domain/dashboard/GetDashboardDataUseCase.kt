@@ -4,6 +4,7 @@ import app.readylytics.health.R
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.calculation.HealthMetricsCalculator
+import app.readylytics.health.domain.model.BaselineArrow
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.BodyFatStatus
@@ -23,6 +24,7 @@ import app.readylytics.health.domain.model.rhrStatus
 import app.readylytics.health.domain.model.sleepDurationStatus
 import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.domain.util.roundToPercentInt
+import app.readylytics.health.ui.dashboard.BaselineDeltaDirection
 import app.readylytics.health.ui.dashboard.CardData
 import app.readylytics.health.ui.dashboard.DashboardAction
 import java.time.Instant
@@ -137,6 +139,27 @@ class GetDashboardDataUseCase
                 else -> MetricStatus.POOR
             }
 
+        private fun baselineDeltaText(
+            diff: Int?,
+            arrow: BaselineArrow?,
+            unit: String,
+        ): String? {
+            if (diff == null || arrow == null) return null
+            return resourceProvider.getString(
+                R.string.metric_baseline_delta_format,
+                arrow.symbol,
+                diff,
+                unit,
+            )
+        }
+
+        private fun BaselineArrow.toDashboardDirection(): BaselineDeltaDirection =
+            when (this) {
+                BaselineArrow.UP -> BaselineDeltaDirection.UP
+                BaselineArrow.DOWN -> BaselineDeltaDirection.DOWN
+                BaselineArrow.EQUAL -> BaselineDeltaDirection.EQUAL
+            }
+
         private fun sleepEfficiencyCard(lastSleepSession: SleepSessionSummary?): CardData {
             val efficiencyStatus = lastSleepSession?.efficiencyStatus() ?: MetricStatus.CALIBRATING
             val efficiency = lastSleepSession?.efficiency?.roundToPercentInt()?.toString() ?: "—"
@@ -193,6 +216,7 @@ class GetDashboardDataUseCase
             m: DailyMetrics,
         ): CardData {
             val rhrStatus = summary.rhrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold)
+            val unit = resourceProvider.getString(R.string.unit_bpm)
             val rhrBaseline = m.rhrBaselineRounded
             val rhrDiff = m.rhrBaselineDiff
             val rhrArrow = m.rhrBaselineArrow?.symbol
@@ -217,10 +241,12 @@ class GetDashboardDataUseCase
             return CardData(
                 title = resourceProvider.getString(R.string.card_title_sleep_rhr),
                 value = summary.restingHeartRate?.toString() ?: "—",
-                unit = resourceProvider.getString(R.string.unit_bpm),
+                unit = unit,
                 status = rhrStatus,
                 action = DashboardAction.NAVIGATE_SLEEP,
                 tooltip = tooltip,
+                baselineDeltaText = baselineDeltaText(rhrDiff, m.rhrBaselineArrow, unit),
+                baselineDeltaDirection = m.rhrBaselineArrow?.toDashboardDirection(),
             )
         }
 
@@ -230,6 +256,7 @@ class GetDashboardDataUseCase
             m: DailyMetrics,
         ): CardData {
             val hrvStatus = summary.hrvStatus(prefs.hrvOptimalThreshold, prefs.hrvWarningThreshold)
+            val unit = resourceProvider.getString(R.string.unit_ms)
             val hrvBaseline = m.hrvBaselineRounded
             val hrvDiff = m.hrvBaselineDiff
             val hrvArrow = m.hrvBaselineArrow?.symbol
@@ -265,10 +292,12 @@ class GetDashboardDataUseCase
             return CardData(
                 title = resourceProvider.getString(R.string.card_title_hrv),
                 value = summary.nocturnalHrv?.toString() ?: "—",
-                unit = resourceProvider.getString(R.string.unit_ms),
+                unit = unit,
                 status = hrvStatus,
                 action = DashboardAction.NAVIGATE_SLEEP,
                 tooltip = tooltip,
+                baselineDeltaText = baselineDeltaText(hrvDiff, m.hrvBaselineArrow, unit),
+                baselineDeltaDirection = m.hrvBaselineArrow?.toDashboardDirection(),
             )
         }
 
@@ -308,6 +337,9 @@ class GetDashboardDataUseCase
             m: DailyMetrics,
         ): CardData {
             val restingHrStatus = summary.restingHrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold)
+            val unit = resourceProvider.getString(R.string.unit_bpm)
+            val restingHrDiff = m.restingHrBaselineDiff ?: m.rhrBaselineDiff
+            val restingHrArrow = m.restingHrBaselineArrow ?: m.rhrBaselineArrow
 
             val tooltip =
                 buildString {
@@ -331,10 +363,12 @@ class GetDashboardDataUseCase
             return CardData(
                 title = resourceProvider.getString(R.string.card_title_resting_hr),
                 value = m.restingHeartRateRounded?.toString() ?: "—",
-                unit = resourceProvider.getString(R.string.unit_bpm),
+                unit = unit,
                 status = restingHrStatus,
                 action = DashboardAction.NAVIGATE_RHR,
                 tooltip = tooltip,
+                baselineDeltaText = baselineDeltaText(restingHrDiff, restingHrArrow, unit),
+                baselineDeltaDirection = restingHrArrow?.toDashboardDirection(),
             )
         }
 

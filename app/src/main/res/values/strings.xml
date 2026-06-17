@@ -893,6 +893,7 @@
     <string name="card_title_blood_pressure">Blood Pressure</string>
     <string name="card_title_oxygen_saturation">Oxygen saturation</string>
     <string name="card_title_insights">Insights</string>
+    <string name="metric_baseline_delta_format">%1$s %2$d %3$s vs baseline</string>
 
     <!-- Card Tooltips & Secondary Texts -->
     <string name="card_tooltip_sleep_efficiency">The percentage of time actually asleep while in
