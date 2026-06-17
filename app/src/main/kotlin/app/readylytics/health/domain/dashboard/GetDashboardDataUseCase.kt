@@ -338,8 +338,8 @@ class GetDashboardDataUseCase
         ): CardData {
             val restingHrStatus = summary.restingHrStatus(prefs.rhrOptimalThreshold, prefs.rhrWarningThreshold)
             val unit = resourceProvider.getString(R.string.unit_bpm)
-            val restingHrDiff = m.restingHrBaselineDiff ?: m.rhrBaselineDiff
-            val restingHrArrow = m.restingHrBaselineArrow ?: m.rhrBaselineArrow
+            val restingHrDiff = m.restingHrBaselineDiff
+            val restingHrArrow = m.restingHrBaselineArrow
 
             val tooltip =
                 buildString {

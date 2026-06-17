@@ -46,6 +46,30 @@ class DashboardBaselineDeltaTextTest {
     }
 
     @Test
+    fun restingHrCardHasNoChipWhenOnlySleepRhrBaselineExists() {
+        val summary =
+            DailySummary(
+                date = LocalDate.of(2026, 6, 17),
+                restingHeartRate = 48,
+                rhrBpm = null,
+                isCalibrating = false,
+            )
+
+        val result =
+            useCase(
+                summary = summary,
+                prefs = UserPreferences(rhrBaselineOverride = 51f),
+                date = summary.date,
+                lastSleepSession = null,
+                rasSummaries = emptyList(),
+            )
+
+        val card = result.getOrThrow().cardDataMap[CardId.RESTING_HR]!!
+        assertNull(card.baselineDeltaText)
+        assertNull(card.baselineDeltaDirection)
+    }
+
+    @Test
     fun hrvCardHasNoChipWhenBaselineMissing() {
         val summary =
             DailySummary(
