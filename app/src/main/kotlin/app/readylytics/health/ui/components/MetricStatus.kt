@@ -9,6 +9,7 @@ import app.readylytics.health.ui.theme.LocalExtendedColors
 
 internal enum class MetricContainerTone {
     DEFAULT_CARD,
+    NEUTRAL,
     PRIMARY,
     WARNING,
     ERROR,
@@ -19,7 +20,7 @@ internal fun MetricStatus.containerTone(): MetricContainerTone =
         MetricStatus.NO_DATA -> MetricContainerTone.DEFAULT_CARD
         MetricStatus.CALIBRATING -> MetricContainerTone.DEFAULT_CARD
         MetricStatus.OPTIMAL -> MetricContainerTone.PRIMARY
-        MetricStatus.NEUTRAL -> MetricContainerTone.DEFAULT_CARD
+        MetricStatus.NEUTRAL -> MetricContainerTone.NEUTRAL
         MetricStatus.WARNING -> MetricContainerTone.WARNING
         MetricStatus.POOR -> MetricContainerTone.ERROR
     }
@@ -28,6 +29,7 @@ internal fun MetricStatus.containerTone(): MetricContainerTone =
 fun MetricStatus.containerColor(): Color =
     when (containerTone()) {
         MetricContainerTone.DEFAULT_CARD -> MaterialTheme.colorScheme.surfaceContainerLow
+        MetricContainerTone.NEUTRAL -> MaterialTheme.colorScheme.surfaceContainerHighest
         MetricContainerTone.PRIMARY -> MaterialTheme.colorScheme.primaryContainer
         MetricContainerTone.WARNING -> LocalExtendedColors.current.warningContainer
         MetricContainerTone.ERROR -> MaterialTheme.colorScheme.errorContainer
