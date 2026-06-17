@@ -56,6 +56,7 @@ fun SoftArcMetricCard(
     val contentColor = MaterialTheme.colorScheme.onSurface
     val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
     val gaugeColor = status.gaugeColor()
+    val containerColor = MetricStatus.NEUTRAL.containerColor()
     val animatedProgress by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
         animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
@@ -70,9 +71,9 @@ fun SoftArcMetricCard(
             }
     val cardColors =
         CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            containerColor = containerColor,
             contentColor = contentColor,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            disabledContainerColor = containerColor,
             disabledContentColor = contentColor,
         )
 
@@ -195,9 +196,16 @@ private fun SoftArcMetricCardContent(
         }
 
         if (baselineDeltaText != null) {
+            val chipText =
+                when (baselineDeltaDirection) {
+                    BaselineDeltaDirection.UP,
+                    BaselineDeltaDirection.DOWN,
+                    BaselineDeltaDirection.EQUAL,
+                    null,
+                    -> baselineDeltaText
+                }
             BaselineDeltaChip(
-                text = baselineDeltaText,
-                direction = baselineDeltaDirection,
+                text = chipText,
                 tint = gaugeColor,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
@@ -249,21 +257,11 @@ private fun SoftArc(
 @Composable
 private fun BaselineDeltaChip(
     text: String,
-    direction: BaselineDeltaDirection?,
     tint: Color,
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier =
-            modifier.semantics {
-                contentDescription =
-                    when (direction) {
-                        BaselineDeltaDirection.UP -> "$text, above baseline"
-                        BaselineDeltaDirection.DOWN -> "$text, below baseline"
-                        BaselineDeltaDirection.EQUAL -> "$text, at baseline"
-                        null -> text
-                    }
-            },
+        modifier = modifier,
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = tint,

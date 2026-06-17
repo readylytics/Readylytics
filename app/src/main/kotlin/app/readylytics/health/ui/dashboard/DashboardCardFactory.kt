@@ -71,6 +71,7 @@ fun buildCardDataMap(
 
     @Composable
     fun metricCard(
+        cardId: CardId,
         card: CardData,
         onClick: (() -> Unit)?,
         valueOverride: String? = null,
@@ -82,7 +83,7 @@ fun buildCardDataMap(
             unit = unitOverride ?: card.unit,
             status = card.status,
             tooltip = card.tooltip,
-            progress = card.softArcProgress(),
+            progress = card.softArcProgress(cardId),
             baselineDeltaText = card.baselineDeltaText,
             baselineDeltaDirection = card.baselineDeltaDirection,
             onClick = onClick,
@@ -221,6 +222,7 @@ fun buildCardDataMap(
                 val hrvCard = uiState.cardDataMap[CardId.HRV]
                 if (hrvCard != null) {
                     metricCard(
+                        cardId = CardId.HRV,
                         card = hrvCard,
                         onClick = if (isEditing) null else onNavigateToHrv,
                     )
@@ -237,6 +239,7 @@ fun buildCardDataMap(
                 val sleepRhrCard = uiState.cardDataMap[CardId.SLEEP_RHR]
                 if (sleepRhrCard != null) {
                     metricCard(
+                        cardId = CardId.SLEEP_RHR,
                         card = sleepRhrCard,
                         onClick = if (isEditing) null else onNavigateToSleep,
                     )
@@ -253,6 +256,7 @@ fun buildCardDataMap(
                 val strainCard = uiState.cardDataMap[CardId.STRAIN_RATIO]
                 if (strainCard != null) {
                     metricCard(
+                        cardId = CardId.STRAIN_RATIO,
                         card = strainCard,
                         onClick = if (isEditing) null else onNavigateToWorkouts,
                     )
@@ -269,6 +273,7 @@ fun buildCardDataMap(
                 val durationCard = uiState.cardDataMap[CardId.SLEEP_DURATION]
                 if (durationCard != null) {
                     metricCard(
+                        cardId = CardId.SLEEP_DURATION,
                         card = durationCard,
                         onClick = if (isEditing) null else onNavigateToSleep,
                         unitOverride = durationCard.secondaryText ?: durationCard.unit,
@@ -286,6 +291,7 @@ fun buildCardDataMap(
                 val efficiencyCard = uiState.cardDataMap[CardId.SLEEP_EFFICIENCY]
                 if (efficiencyCard != null) {
                     metricCard(
+                        cardId = CardId.SLEEP_EFFICIENCY,
                         card = efficiencyCard,
                         onClick = if (isEditing) null else onNavigateToSleep,
                         unitOverride = efficiencyCard.secondaryText ?: efficiencyCard.unit,
@@ -303,6 +309,7 @@ fun buildCardDataMap(
                 val rasCard = uiState.cardDataMap[CardId.RAS_DAILY]
                 if (rasCard != null) {
                     metricCard(
+                        cardId = CardId.RAS_DAILY,
                         card = rasCard,
                         onClick = if (isEditing) null else onNavigateToWorkouts,
                     )
@@ -319,6 +326,7 @@ fun buildCardDataMap(
                 if (uiState.restingHrCard != null) {
                     val card = uiState.restingHrCard
                     metricCard(
+                        cardId = CardId.RESTING_HR,
                         card = card,
                         onClick = if (isEditing) null else onNavigateToRhr,
                     )
@@ -363,6 +371,7 @@ fun buildCardDataMap(
                 val weightCard = uiState.cardDataMap[CardId.WEIGHT]
                 if (weightCard != null) {
                     metricCard(
+                        cardId = CardId.WEIGHT,
                         card = weightCard,
                         onClick = if (isEditing) null else onNavigateToWeight,
                         unitOverride = weightCard.secondaryText ?: weightCard.unit,
@@ -380,6 +389,7 @@ fun buildCardDataMap(
                 val bodyFatCard = uiState.cardDataMap[CardId.BODY_FAT]
                 if (bodyFatCard != null) {
                     metricCard(
+                        cardId = CardId.BODY_FAT,
                         card = bodyFatCard,
                         onClick = if (isEditing) null else onNavigateToBodyFat,
                     )
@@ -396,6 +406,7 @@ fun buildCardDataMap(
                 val bpCard = uiState.cardDataMap[CardId.BLOOD_PRESSURE]
                 if (bpCard != null) {
                     metricCard(
+                        cardId = CardId.BLOOD_PRESSURE,
                         card = bpCard,
                         onClick = if (isEditing) null else onNavigateToBloodPressure,
                     )
@@ -411,12 +422,10 @@ fun buildCardDataMap(
             content = {
                 val spo2Card = uiState.cardDataMap[CardId.OXYGEN_SATURATION]
                 if (spo2Card != null) {
-                    val spo2Value =
-                        if (spo2Card.value == "—") spo2Card.value else "${spo2Card.value}%"
                     metricCard(
+                        cardId = CardId.OXYGEN_SATURATION,
                         card = spo2Card,
-                        valueOverride = spo2Value,
-                        unitOverride = spo2Card.secondaryText ?: spo2Card.unit,
+                        unitOverride = spo2Card.unit,
                         onClick = if (isEditing) null else onNavigateToVitals,
                     )
                 }
@@ -427,26 +436,32 @@ fun buildCardDataMap(
     return cardMap
 }
 
-private fun CardData.softArcProgress(): Float =
-    value
-        .filter { it.isDigit() || it == '.' }
-        .toFloatOrNull()
-        ?.let { numeric ->
-            when {
-                unit == "%" -> numeric / 100f
-                title.contains("strain", ignoreCase = true) -> numeric / 2f
-                title.contains("blood", ignoreCase = true) -> numeric / 180f
-                title.contains("weight", ignoreCase = true) -> 0.5f
-                title.contains("body", ignoreCase = true) -> numeric / 40f
-                title.contains("oxygen", ignoreCase = true) -> numeric / 100f
-                title.contains("duration", ignoreCase = true) -> 0.65f
-                title.contains("efficiency", ignoreCase = true) -> numeric / 100f
-                title.contains("ras", ignoreCase = true) -> numeric / 100f
-                title.contains("hrv", ignoreCase = true) -> numeric / 120f
-                title.contains("heart", ignoreCase = true) -> numeric / 120f
-                else -> numeric / 100f
-            }.coerceIn(0f, 1f)
-        } ?: 0f
+private fun CardData.softArcProgress(cardId: CardId): Float {
+    val numeric = value.filter { it.isDigit() || it == '.' }.toFloatOrNull()
+    val progress =
+        when (cardId) {
+            CardId.STRAIN_RATIO -> numeric?.div(2f)
+            CardId.BLOOD_PRESSURE ->
+                value
+                    .substringBefore(
+                        '/',
+                    ).filter { it.isDigit() || it == '.' }
+                    .toFloatOrNull()
+                    ?.div(180f)
+            CardId.WEIGHT -> 0.5f
+            CardId.BODY_FAT -> numeric?.div(40f)
+            CardId.OXYGEN_SATURATION -> numeric?.div(100f)
+            CardId.SLEEP_DURATION -> 0.65f
+            CardId.SLEEP_EFFICIENCY -> numeric?.div(100f)
+            CardId.RAS_DAILY -> numeric?.div(100f)
+            CardId.HRV -> numeric?.div(120f)
+            CardId.SLEEP_RHR,
+            CardId.RESTING_HR,
+            -> numeric?.div(120f)
+            else -> numeric?.div(100f)
+        }
+    return progress?.coerceIn(0f, 1f) ?: 0f
+}
 
 private fun DashboardUiState.toDailyInsightContext(): DailyInsightContext =
     DailyInsightContext(
