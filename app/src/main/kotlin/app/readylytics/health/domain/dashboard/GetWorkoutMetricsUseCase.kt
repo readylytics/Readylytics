@@ -18,6 +18,10 @@ class GetWorkoutMetricsUseCase
     constructor(
         private val resourceProvider: ResourceProvider,
     ) {
+        companion object {
+            private const val STRAIN_RATIO_PROGRESS_MAX = 2f
+        }
+
         data class WorkoutMetrics(
             val strainRatioCard: CardData?,
         )
@@ -46,6 +50,7 @@ class GetWorkoutMetricsUseCase
                             value = "—",
                             unit = "",
                             status = MetricStatus.CALIBRATING,
+                            progress = null,
                             action = DashboardAction.NAVIGATE_WORKOUTS,
                             tooltip = resourceProvider.getString(R.string.tooltip_strain_ratio),
                         )
@@ -67,6 +72,7 @@ class GetWorkoutMetricsUseCase
                 value = displayValue,
                 unit = "",
                 status = status,
+                progress = (strainRatio / STRAIN_RATIO_PROGRESS_MAX).coerceIn(0f, 1f),
                 action = DashboardAction.NAVIGATE_WORKOUTS,
                 tooltip = resourceProvider.getString(R.string.tooltip_strain_ratio),
             )

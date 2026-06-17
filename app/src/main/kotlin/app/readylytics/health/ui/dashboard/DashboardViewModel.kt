@@ -344,6 +344,7 @@ data class CardData(
     val unit: String,
     val status: MetricStatus,
     val tooltip: String,
+    val progress: Float? = null,
     val action: DashboardAction? = null,
     val secondaryText: String? = null,
     val baselineDeltaText: String? = null,

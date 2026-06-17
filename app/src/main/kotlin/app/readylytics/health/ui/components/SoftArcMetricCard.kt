@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -76,6 +77,20 @@ fun SoftArcMetricCard(
             disabledContainerColor = containerColor,
             disabledContentColor = contentColor,
         )
+    val content: @Composable ColumnScope.() -> Unit = {
+        SoftArcMetricCardContent(
+            title = title,
+            value = value,
+            unit = unit,
+            tooltip = tooltip,
+            animatedProgress = animatedProgress,
+            gaugeColor = gaugeColor,
+            contentColor = contentColor,
+            secondaryColor = secondaryColor,
+            baselineDeltaText = baselineDeltaText,
+            baselineDeltaDirection = baselineDeltaDirection,
+        )
+    }
 
     if (onClick != null) {
         Card(
@@ -83,39 +98,15 @@ fun SoftArcMetricCard(
             modifier = cardModifier,
             shape = MaterialTheme.shapes.large,
             colors = cardColors,
-        ) {
-            SoftArcMetricCardContent(
-                title = title,
-                value = value,
-                unit = unit,
-                tooltip = tooltip,
-                animatedProgress = animatedProgress,
-                gaugeColor = gaugeColor,
-                contentColor = contentColor,
-                secondaryColor = secondaryColor,
-                baselineDeltaText = baselineDeltaText,
-                baselineDeltaDirection = baselineDeltaDirection,
-            )
-        }
+            content = content,
+        )
     } else {
         Card(
             modifier = cardModifier,
             shape = MaterialTheme.shapes.large,
             colors = cardColors,
-        ) {
-            SoftArcMetricCardContent(
-                title = title,
-                value = value,
-                unit = unit,
-                tooltip = tooltip,
-                animatedProgress = animatedProgress,
-                gaugeColor = gaugeColor,
-                contentColor = contentColor,
-                secondaryColor = secondaryColor,
-                baselineDeltaText = baselineDeltaText,
-                baselineDeltaDirection = baselineDeltaDirection,
-            )
-        }
+            content = content,
+        )
     }
 }
 

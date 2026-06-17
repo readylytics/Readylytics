@@ -34,6 +34,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.abs
 
 @Singleton
 class GetDashboardDataUseCase
@@ -42,6 +43,16 @@ class GetDashboardDataUseCase
         private val resourceProvider: ResourceProvider,
         private val getWorkoutMetricsUseCase: GetWorkoutMetricsUseCase,
     ) {
+        companion object {
+            private const val RHR_PROGRESS_MAX = 120f
+            private const val HRV_PROGRESS_MAX = 120f
+            private const val BODY_FAT_PROGRESS_MAX = 40f
+            private const val BP_SYSTOLIC_PROGRESS_MAX = 180f
+            private const val PERCENT_PROGRESS_MAX = 100f
+            private const val WEIGHT_PROGRESS_DEFAULT = 0.5f
+            private const val SLEEP_GOAL_FILL_RATIO = 0.5f
+        }
+
         data class DashboardCards(
             val cardDataMap: Map<CardId, CardData>,
             val rasDailyBreakdown: List<Pair<String, Float>>,
@@ -114,6 +125,7 @@ class GetDashboardDataUseCase
                 value = m.sleepScoreRounded?.toString() ?: "—",
                 unit = "",
                 status = summary.sleepScore?.let { scoreStatus(it) } ?: MetricStatus.CALIBRATING,
+                progress = null,
                 action = DashboardAction.NAVIGATE_SLEEP,
                 tooltip = resourceProvider.getString(R.string.tooltip_sleep_score),
             )
@@ -127,6 +139,7 @@ class GetDashboardDataUseCase
                 value = m.readinessRounded?.toString() ?: "—",
                 unit = "",
                 status = m.readinessRounded?.let { scoreStatus(it.toFloat()) } ?: MetricStatus.CALIBRATING,
+                progress = null,
                 action = DashboardAction.NAVIGATE_WORKOUTS,
                 tooltip = resourceProvider.getString(R.string.tooltip_readiness),
             )
@@ -148,9 +161,29 @@ class GetDashboardDataUseCase
             return resourceProvider.getString(
                 R.string.metric_baseline_delta_format,
                 arrow.symbol,
-                diff,
+                abs(diff),
                 unit,
             )
+        }
+
+        private fun normalizedProgress(
+            value: Float?,
+            maxValue: Float,
+        ): Float? = value?.div(maxValue)?.coerceIn(0f, 1f)
+
+        private fun sleepDurationProgress(
+            sleepDurationMinutes: Int?,
+            goalSleepHours: Float,
+        ): Float? {
+            val actualMinutes = sleepDurationMinutes ?: return null
+            val goalMinutes = (goalSleepHours * 60f).toInt().coerceAtLeast(0)
+            val maxMinutes =
+                if (goalMinutes > 0) {
+                    goalMinutes / SLEEP_GOAL_FILL_RATIO
+                } else {
+                    1f
+                }
+            return (actualMinutes / maxMinutes).coerceIn(0f, 1f)
         }
 
         private fun BaselineArrow.toDashboardDirection(): BaselineDeltaDirection =
@@ -176,6 +209,7 @@ class GetDashboardDataUseCase
                     },
                 unit = "",
                 status = efficiencyStatus,
+                progress = lastSleepSession?.efficiency?.coerceIn(0f, 1f),
                 action = DashboardAction.NAVIGATE_SLEEP,
                 tooltip = resourceProvider.getString(R.string.card_tooltip_sleep_efficiency),
                 secondaryText = resourceProvider.getString(R.string.card_goal_sleep_efficiency),
@@ -191,6 +225,7 @@ class GetDashboardDataUseCase
                 value = value,
                 unit = "",
                 status = status,
+                progress = normalizedProgress(m.rasRounded?.toFloat(), PERCENT_PROGRESS_MAX),
                 action = DashboardAction.NAVIGATE_WORKOUTS,
                 tooltip = resourceProvider.getString(R.string.tooltip_ras),
             )
@@ -243,6 +278,7 @@ class GetDashboardDataUseCase
                 value = summary.restingHeartRate?.toString() ?: "—",
                 unit = unit,
                 status = rhrStatus,
+                progress = normalizedProgress(summary.restingHeartRate?.toFloat(), RHR_PROGRESS_MAX),
                 action = DashboardAction.NAVIGATE_SLEEP,
                 tooltip = tooltip,
                 baselineDeltaText = baselineDeltaText(rhrDiff, m.rhrBaselineArrow, unit),
@@ -294,6 +330,7 @@ class GetDashboardDataUseCase
                 value = summary.nocturnalHrv?.toString() ?: "—",
                 unit = unit,
                 status = hrvStatus,
+                progress = normalizedProgress(summary.nocturnalHrv?.toFloat(), HRV_PROGRESS_MAX),
                 action = DashboardAction.NAVIGATE_SLEEP,
                 tooltip = tooltip,
                 baselineDeltaText = baselineDeltaText(hrvDiff, m.hrvBaselineArrow, unit),
@@ -324,6 +361,7 @@ class GetDashboardDataUseCase
                 value = m.sleepDurationDisplay ?: "—",
                 unit = "",
                 status = durationStatus,
+                progress = sleepDurationProgress(summary.sleepDurationMinutes, prefs.goalSleepHours),
                 action = DashboardAction.NAVIGATE_SLEEP,
                 tooltip = resourceProvider.getString(R.string.tooltip_sleep_duration, goalStr),
             ).let {
@@ -365,6 +403,7 @@ class GetDashboardDataUseCase
                 value = m.restingHeartRateRounded?.toString() ?: "—",
                 unit = unit,
                 status = restingHrStatus,
+                progress = normalizedProgress(m.restingHeartRateRounded?.toFloat(), RHR_PROGRESS_MAX),
                 action = DashboardAction.NAVIGATE_RHR,
                 tooltip = tooltip,
                 baselineDeltaText = baselineDeltaText(restingHrDiff, restingHrArrow, unit),
@@ -400,6 +439,7 @@ class GetDashboardDataUseCase
                     value = "—",
                     unit = unitStr,
                     status = MetricStatus.NEUTRAL,
+                    progress = null,
                     tooltip = resourceProvider.getString(R.string.card_tooltip_weight_no_data),
                 )
 
@@ -426,6 +466,7 @@ class GetDashboardDataUseCase
                 value = weightValue ?: "—",
                 unit = unitStr,
                 status = bmiStatus,
+                progress = WEIGHT_PROGRESS_DEFAULT,
                 action = DashboardAction.NAVIGATE_WEIGHT,
                 tooltip = resourceProvider.getString(R.string.card_tooltip_weight_latest),
                 secondaryText = null,
@@ -443,6 +484,7 @@ class GetDashboardDataUseCase
                     value = "—",
                     unit = resourceProvider.getString(R.string.unit_percent),
                     status = MetricStatus.NEUTRAL,
+                    progress = null,
                     tooltip = resourceProvider.getString(R.string.card_tooltip_body_fat_no_data),
                 )
 
@@ -465,6 +507,7 @@ class GetDashboardDataUseCase
                 value = m.bodyFatDisplay ?: "—",
                 unit = "",
                 status = status,
+                progress = normalizedProgress(bodyFatPercent, BODY_FAT_PROGRESS_MAX),
                 action = DashboardAction.NAVIGATE_BODY_FAT,
                 tooltip = resourceProvider.getString(R.string.card_tooltip_body_fat_latest),
             )
@@ -483,6 +526,7 @@ class GetDashboardDataUseCase
                     value = "—",
                     unit = resourceProvider.getString(R.string.unit_mmHg),
                     status = MetricStatus.NEUTRAL,
+                    progress = null,
                     tooltip = resourceProvider.getString(R.string.card_tooltip_bp_no_data),
                 )
             }
@@ -520,6 +564,7 @@ class GetDashboardDataUseCase
                 value = m.bloodPressureDisplay ?: "$systolic/$diastolic",
                 unit = resourceProvider.getString(R.string.unit_mmHg),
                 status = status,
+                progress = normalizedProgress(systolic.toFloat(), BP_SYSTOLIC_PROGRESS_MAX),
                 action = DashboardAction.NAVIGATE_BLOOD_PRESSURE,
                 tooltip = tooltip,
             )
@@ -540,6 +585,7 @@ class GetDashboardDataUseCase
                     value = "—",
                     unit = resourceProvider.getString(R.string.unit_percent),
                     status = MetricStatus.CALIBRATING,
+                    progress = null,
                     tooltip = resourceProvider.getString(R.string.tooltip_vitals_spo2),
                     secondaryText = resourceProvider.getString(R.string.spo2_calibrating),
                 )
@@ -557,6 +603,7 @@ class GetDashboardDataUseCase
                 value = "$roundedSpo2",
                 unit = resourceProvider.getString(R.string.unit_percent),
                 status = status,
+                progress = normalizedProgress(roundedSpo2.toFloat(), PERCENT_PROGRESS_MAX),
                 action = DashboardAction.NAVIGATE_VITALS,
                 tooltip = resourceProvider.getString(R.string.tooltip_vitals_spo2),
                 secondaryText = resourceProvider.getString(statusLabelRes),

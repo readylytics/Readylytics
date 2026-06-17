@@ -7,6 +7,7 @@ import app.readylytics.health.domain.model.getOrNull
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -99,6 +100,51 @@ class GetDashboardDataUseCaseTest {
         assertEquals("80", cards[CardId.SLEEP_SCORE]?.value)
         assertEquals("73", cards[CardId.READINESS]?.value)
         assertEquals("0.37", cards[CardId.STRAIN_RATIO]?.value)
+        assertEquals(0.1825f, cards[CardId.STRAIN_RATIO]?.progress ?: -1f, 0.0001f)
+        assertNull(cards[CardId.SLEEP_SCORE]?.progress)
+        assertNull(cards[CardId.READINESS]?.progress)
+    }
+
+    @Test
+    fun invoke_sleepDurationProgressMatchesExistingGaugeScale() {
+        val summary =
+            DailySummary(
+                date = LocalDate.of(2026, 6, 17),
+                sleepDurationMinutes = 480,
+            )
+
+        val result =
+            useCase(
+                summary = summary,
+                prefs = UserPreferences(goalSleepHours = 8f),
+                date = summary.date,
+                lastSleepSession = null,
+                rasSummaries = emptyList(),
+            )
+
+        val card = result.getOrNull()?.cardDataMap?.get(CardId.SLEEP_DURATION)
+        assertEquals(0.5f, card?.progress ?: -1f, 0.001f)
+    }
+
+    @Test
+    fun invoke_spo2ProgressUsesRoundedDisplayValue() {
+        val summary =
+            DailySummary(
+                date = LocalDate.of(2026, 6, 17),
+                avgSleepingSpo2 = 98.5f,
+            )
+
+        val result =
+            useCase(
+                summary = summary,
+                prefs = UserPreferences(),
+                date = summary.date,
+                lastSleepSession = null,
+                rasSummaries = emptyList(),
+            )
+
+        val card = result.getOrNull()?.cardDataMap?.get(CardId.OXYGEN_SATURATION)
+        assertEquals(0.99f, card?.progress ?: -1f, 0.001f)
     }
 
     @Test
