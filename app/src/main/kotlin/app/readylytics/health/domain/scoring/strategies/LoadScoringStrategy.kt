@@ -113,7 +113,7 @@ class LoadScoringStrategy
             currentHrv: Float? = null,
             hrvOptimalThreshold: Float = 1.0f,
             isCurrentHrvOptimal: Boolean = false,
-            isCurrentRhrOptimal: Boolean = true,
+            isCurrentRhrOptimal: Boolean = false,
         ): Set<RecoveryFlag> {
             val flags = mutableSetOf<RecoveryFlag>()
             if (isCalibrating) flags += RecoveryFlag.CALIBRATING
