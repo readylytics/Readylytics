@@ -103,7 +103,7 @@ class LocalRestoreManagerTest {
     fun validate_wrongVersion_returnsFailure() =
         runTest {
             val json = createValidBackupJson()
-            json.put("schemaVersion", 1)
+            json.put("schemaVersion", HealthDatabase.DATABASE_VERSION + 1)
             val zipFile = createBackupZipFile("old_backup.zip", json)
 
             val result = manager.validate(Uri.fromFile(zipFile))

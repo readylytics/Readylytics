@@ -69,7 +69,7 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun insightDismissalDao(): InsightDismissalDao
 
     companion object {
-        const val DATABASE_VERSION = 30
+        const val DATABASE_VERSION = 1
 
         fun create(context: Context): HealthDatabase =
             Room
