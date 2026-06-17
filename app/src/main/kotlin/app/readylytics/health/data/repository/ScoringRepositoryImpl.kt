@@ -450,8 +450,9 @@ class ScoringRepositoryImpl
                         runCatching { RecoveryFlag.valueOf(token.trim()) }.getOrNull()
                     }?.toSet()
                     ?: emptySet()
-            val mode = settingsRepo.userPreferences.first().strainLoadSourceMode
-            val domainSummary = DailySummaryMapper.toDomain(summary)
+            val prefs = settingsRepo.userPreferences.first()
+            val mode = prefs.strainLoadSourceMode
+            val domainSummary = DailySummaryMapper.toDomain(summary, prefs.scoringZone())
             return ReadinessResult(
                 readinessScore = LoadSourceSelector.selectReadiness(domainSummary, mode),
                 sleepScore = summary.sleepScore,

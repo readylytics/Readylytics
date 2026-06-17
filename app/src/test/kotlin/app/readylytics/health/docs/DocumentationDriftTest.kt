@@ -116,10 +116,23 @@ class DocumentationDriftTest {
         assertEquals(59, Phase.MATURING_MAX_SESSIONS)
 
         for (text in listOf(aboutMd, stringsXml)) {
-            assertTrue(text.contains("0-6 nights") || text.contains("0–6"), "expected Calibration 0-6 in doc")
+            assertTrue(
+                text.contains("0-6 valid nights") || text.contains("0–6 valid nights"),
+                "expected Calibration 0-6 valid nights in doc",
+            )
             assertTrue(text.contains("7-20 nights") || text.contains("7–20"), "expected Early Baseline 7-20 in doc")
             assertTrue(text.contains("21-59 nights") || text.contains("21–59"), "expected Maturing 21-59 in doc")
             assertTrue(text.contains("60+ nights") || text.contains("60+"), "expected Mature 60+ in doc")
+        }
+    }
+
+    @Test
+    fun `calibration docs say headline scores are hidden until seven valid nights`() {
+        for (text in listOf(aboutMd, stringsXml)) {
+            val normalized = normalizeWhitespace(text)
+            assertTrue(normalized.contains("0-6 valid nights") || normalized.contains("0–6 valid nights"))
+            assertTrue(normalized.contains("Sleep Score, Load Score, and Readiness stay hidden"))
+            assertTrue(normalized.contains("at least 7 valid nights"))
         }
     }
 
@@ -155,6 +168,18 @@ class DocumentationDriftTest {
                 text.contains("Existing users upgrading") || text.contains("existing-user"),
                 "expected existing-user RAS bootstrap note in doc",
             )
+        }
+    }
+
+    @Test
+    fun `activity score docs keep RAS independent from readiness load`() {
+        assertTrue(aboutMd.contains("PAI-style motivational activity metric"))
+        assertTrue(aboutMd.contains("RAS never feeds Readiness"))
+
+        for (text in listOf(aboutMd, stringsXml)) {
+            val normalized = normalizeWhitespace(text)
+            assertTrue(normalized.contains("RAS source never affects Readiness"))
+            assertTrue(normalized.contains("daily and 7-day total RAS only"))
         }
     }
 

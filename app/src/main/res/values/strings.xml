@@ -310,11 +310,10 @@
     <string name="about_header_stabilise">## How long until your scores stabilise</string>
     <string name="about_baselines_intro">Biological baselines take time to learn. We are explicit
         about the phases:</string>
-    <string name="about_phase_calibration">**Calibration (0-6 nights, confidence: Not Ready).** We
-        collect data. Sleep Score and Circadian Consistency are visible from the first night you
-        log enough sleep, but **HRV-based Restoration is hidden** because a single night of HRV is
-        not interpretable on its own. Readiness uses a placeholder fitness value based on the
-        activity level you tell us during onboarding.</string>
+    <string name="about_phase_calibration">**Calibration (0-6 valid nights, confidence: Not
+        Ready).** We collect baseline data and show raw sleep/recovery measurements where available,
+        but Sleep Score, Load Score, and Readiness stay hidden until there are at least 7 valid
+        nights. This avoids unstable early scores while HRV and RHR baselines are still forming.</string>
     <string name="about_phase_provisional">**Early Baseline (7-20 nights, confidence: Low).** We
         start showing all three scores, but Restoration uses a population-typical estimate of how
         much your HRV varies night to night. Expect more variability than the mature score.</string>

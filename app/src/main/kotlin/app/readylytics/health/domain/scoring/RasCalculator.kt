@@ -82,46 +82,4 @@ object RasCalculator {
         val rasD = dailyTrimp * rasScalingFactor
         return rasD.coerceAtMost(ScoringConstants.Ras.DAILY_CAP)
     }
-
-    /**
-     * Phase IV.B: Non-Linear Accumulation (Logarithmic Decay)
-     * Splits daily RAS across tier boundaries instead of applying a single multiplier.
-     */
-    fun applyAccumulationMultiplier(
-        dailyRas: Float,
-        totalRasSoFar: Float,
-    ): Float {
-        if (dailyRas <= 0f) return 0f
-        var remaining = dailyRas
-        var accumulated = totalRasSoFar
-        var result = 0f
-        // Tier 1: 0–50 → 1.0×
-        if (accumulated < ScoringConstants.Ras.TIER1_THRESHOLD) {
-            val used = remaining.coerceAtMost(ScoringConstants.Ras.TIER1_THRESHOLD - accumulated)
-            result += used
-            accumulated += used
-            remaining -= used
-        }
-        // Tier 2: 50–100 → 0.5×
-        if (remaining > 0f && accumulated < ScoringConstants.Ras.TIER2_THRESHOLD) {
-            val used = remaining.coerceAtMost(ScoringConstants.Ras.TIER2_THRESHOLD - accumulated)
-            result += used * ScoringConstants.Ras.TIER2_MULTIPLIER
-            accumulated += used
-            remaining -= used
-        }
-        // Tier 3: 100+ → 0.25×
-        if (remaining > 0f) result += remaining * ScoringConstants.Ras.TIER3_MULTIPLIER
-        return result
-    }
-
-    /**
-     * Phase IV.C: Readiness Integration
-     */
-    fun adjustForReadiness(
-        rasD: Float,
-        readinessScore: Float?,
-    ): Float {
-        if (readinessScore == null) return rasD
-        return rasD * (readinessScore / ScoringConstants.Ras.READINESS_SCALE)
-    }
 }
