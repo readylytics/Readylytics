@@ -412,12 +412,32 @@ class ScoringRepositoryImpl
                     } else {
                         summary.hrvMuMssd
                     }
+                val hrvSigmaMssd =
+                    if (frozenSnapshot != null) {
+                        frozenSnapshot.hrvSigmaMssd
+                    } else {
+                        summary.hrvSigmaMssd
+                    }
+                val rhrBpm =
+                    if (frozenSnapshot != null) {
+                        frozenSnapshot.rhrBpm
+                    } else {
+                        rhrBaselineValue
+                    }
+                val rhrSigma =
+                    if (frozenSnapshot != null) {
+                        frozenSnapshot.rhrSigma
+                    } else {
+                        summary.rhrSigma
+                    }
 
                 summary =
                     summary.copy(
                         hrvBaseline = computedHrvBaseline,
-                        rhrBpm = rhrBaselineValue,
+                        rhrBpm = rhrBpm,
                         hrvMuMssd = hrvMuMssd,
+                        hrvSigmaMssd = hrvSigmaMssd,
+                        rhrSigma = rhrSigma,
                         baselineCalculatedAtDate = targetDate,
                         avgSleepingSpo2 = avgSpo2,
                         hrMax = summary.hrMax ?: hrMax,

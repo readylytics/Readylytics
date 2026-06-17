@@ -7,7 +7,7 @@ import java.time.ZoneId
 object DailySummaryMapper {
     fun toDomain(
         entity: DailySummaryEntity,
-        zoneId: ZoneId = ZoneId.systemDefault(),
+        zoneId: ZoneId,
     ): DailySummary {
         val date =
             Instant
@@ -95,7 +95,7 @@ object DailySummaryMapper {
 
     fun toEntity(
         domain: DailySummary,
-        zoneId: ZoneId = ZoneId.systemDefault(),
+        zoneId: ZoneId,
     ): DailySummaryEntity {
         val midnightMs =
             domain.date
