@@ -159,6 +159,7 @@ class CompositeScoringCalculator
             currentHrv: Float?,
             hrvOptimalThreshold: Float,
             isCurrentHrvOptimal: Boolean,
+            isCurrentRhrOptimal: Boolean,
         ): Set<RecoveryFlag> =
             loadStrategy.computeRecoveryFlags(
                 zLnHrv,
@@ -176,6 +177,7 @@ class CompositeScoringCalculator
                 currentHrv,
                 hrvOptimalThreshold,
                 isCurrentHrvOptimal,
+                isCurrentRhrOptimal,
             )
 
         override fun computeReadinessScore(

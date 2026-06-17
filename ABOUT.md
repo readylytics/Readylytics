@@ -151,7 +151,7 @@ _Implemented in: `LoadScoringStrategy.kt`, `RasScoringStrategy.kt`, `ComputeSlee
 ## Load Sources
 
 Two independent settings control which heart-rate data feeds your strain/training-load
-metrics versus your RAS score:
+metrics versus your Readylytics Activity Score (RAS):
 
 - **Strain / Training Load source** (default: **Workout only**) — controls TRIMP,
   acute/chronic load (ATL/CTL), Strain Ratio, Load Score, and **Readiness**. Readiness
@@ -217,7 +217,7 @@ If a particular metric is missing on a given day, we'll either:
 
 Biological baselines take time to learn. We are explicit about the phases:
 
-- **Calibration (0–6 nights, confidence: Not Ready).** We collect data. Sleep Score and Circadian Consistency are visible from the first night you log enough sleep, but **HRV-based Restoration is hidden** because a single night of HRV is not interpretable on its own. Readiness uses a placeholder fitness value based on the activity level you tell us during onboarding.
+- **Calibration (0–6 valid nights, confidence: Not Ready).** We collect baseline data and show raw sleep/recovery measurements where available, but Sleep Score, Load Score, and Readiness stay hidden until there are at least 7 valid nights. This avoids unstable early scores while HRV and RHR baselines are still forming.
 - **Early Baseline (7–20 nights, confidence: Low).** We start showing all three scores, but Restoration uses a population-typical estimate of how much your HRV varies night to night (tiered by your profile). Expect more variability than the mature score.
 - **Maturing (21–59 nights, confidence: Medium).** Your personal HRV mean is settled, and we begin blending your personal night-to-night variability with the population estimate. A confidence indicator becomes visible.
 - **Mature (60+ nights, confidence: High).** All scores use your own personal baselines for both the average and the variability. This is when small day-to-day differences become trustworthy.
@@ -254,7 +254,7 @@ A few smaller modifiers shape the numbers behind the scenes. We list them here f
 - **HRV-score saturation.** Above a Z-score of 1.5, additional HRV improvement contributes less to your Restoration score (a 0.25 slope beyond that point) — so an extraordinarily high reading doesn't dominate the score the way a moderate one does.
 - **Late-nadir penalty.** If your lowest overnight heart rate occurs in the final third of your sleep period (after 67% of total sleep time has elapsed), we apply a small 0.95 multiplier to the restoration component. A very late RHR nadir often reflects a shortened or fragmented night rather than genuine recovery.
 - **Per-profile training-load multiplier.** Your Banister training-load model uses a profile-specific multiplier when converting heart-rate-reserve intensity into TRIMP: Athlete ×1.0, Active ×1.35, Sedentary ×1.75. This reflects that the same relative effort represents a larger physiological load for someone who trains less.
-- **RAS tiered accumulation.** Your daily Readylytics Activity Score (RAS) points accumulate at full rate (×1.0) up to 50 points, at half rate (×0.5) from 50–100, and at a quarter rate (×0.25) beyond 100 — with a 75-point daily cap. This keeps one very long or intense session from disproportionately inflating your Load Score, and feeds into the Readiness load component.
+- **Readylytics Activity Score (RAS).** RAS is a PAI-style motivational activity metric with a daily cap and rolling 7-day accumulation. It is separate from the physiological Load Score: RAS never feeds Readiness, and Readiness/load continue to use TRIMP → ATL → CTL → Strain Ratio → Load Score.
 - **Suspicious sleep-stage reweight.** If your wearable's sleep-stage data for a night looks implausible (e.g., no deep or REM sleep detected at all), we reweight the Sleep Score: Duration rises to 75% and Architecture drops to 0%, while Restoration stays at 25%. This avoids penalising you for a wearable data glitch rather than your actual sleep.
 - **Missing-day handling in load averages.** Acute and chronic training-load averages (ATL/CTL) are exponential moving averages where a day with no logged exercise counts as zero TRIMP, not "no data". When you only have one day of history, that single day's value is used directly as the starting average.
 - **Estimated max heart rate.** If you haven't entered your own max heart rate, we estimate it from your age using the Tanaka formula (`208 − 0.7 × age`), which is more accurate across adult age ranges than the older "220 − age" rule of thumb.

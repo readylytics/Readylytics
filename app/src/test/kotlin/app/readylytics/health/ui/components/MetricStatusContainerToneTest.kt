@@ -6,7 +6,12 @@ import org.junit.Test
 
 class MetricStatusContainerToneTest {
     @Test
-    fun neutralStatusUsesDefaultCardContainerTone() {
-        assertEquals(MetricContainerTone.DEFAULT_CARD, MetricStatus.NEUTRAL.containerTone())
+    fun neutralStatusUsesNeutralContainerTone() {
+        assertEquals(MetricContainerTone.NEUTRAL, MetricStatus.NEUTRAL.containerTone())
+    }
+
+    @Test
+    fun noDataStatusKeepsDefaultCardContainerTone() {
+        assertEquals(MetricContainerTone.DEFAULT_CARD, MetricStatus.NO_DATA.containerTone())
     }
 }

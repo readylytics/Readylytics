@@ -72,24 +72,6 @@ class RasCalculatorTest {
     }
 
     @Test
-    fun `applyAccumulationMultiplier applies correct multipliers within a tier`() {
-        val dailyPai = 10f
-        assertEquals(10f, RasCalculator.applyAccumulationMultiplier(dailyPai, 40f), 0.001f) // tier 1: 10×1.0
-        assertEquals(5f, RasCalculator.applyAccumulationMultiplier(dailyPai, 60f), 0.001f) // tier 2: 10×0.5
-        assertEquals(2.5f, RasCalculator.applyAccumulationMultiplier(dailyPai, 110f), 0.001f) // tier 3: 10×0.25
-    }
-
-    @Test
-    fun `applyAccumulationMultiplier splits RAS across tier boundaries`() {
-        // Start=45, daily=30: 5 in tier1(×1.0)=5, 25 in tier2(×0.5)=12.5 → 17.5
-        assertEquals(17.5f, RasCalculator.applyAccumulationMultiplier(30f, 45f), 0.001f)
-        // Start=90, daily=30: 10 in tier2(×0.5)=5, 20 in tier3(×0.25)=5 → 10.0
-        assertEquals(10f, RasCalculator.applyAccumulationMultiplier(30f, 90f), 0.001f)
-        // Start=45, daily=60: 5 in tier1=5, 50 in tier2=25, 5 in tier3=1.25 → 31.25
-        assertEquals(31.25f, RasCalculator.applyAccumulationMultiplier(60f, 45f), 0.001f)
-    }
-
-    @Test
     fun `calculateDailyTrimp handles mixed heart rate sources correctly`() {
         // Scenario: Some samples are high intensity (exercise), some are low (resting)
         // High intensity: 160 bpm -> TRIMP = 86.23 (as seen in other test)

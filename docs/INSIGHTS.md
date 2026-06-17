@@ -318,10 +318,13 @@ Identifier:
 WORKOUT_IMPACT
 
 Description:
-Your high strain workout yesterday is impacting your recovery today.
+Yesterday's high-strain workout appears to be carrying into today because both HRV and RHR are no longer in their optimal ranges.
 
 Trigger:
 Generated when:
 - `RecoveryFlag.WORKOUT_IMPACT` is present in today's recovery flags.
 - Where `RecoveryFlag.WORKOUT_IMPACT` is triggered when:
-  `yesterdayTrimp` >= `120.0f`.
+  - `yesterdayTrimp` >= `120.0f`;
+  - current HRV is no longer optimal;
+  - current RHR is no longer optimal;
+  - current HRV has dropped from yesterday by more than the configured HRV optimal-threshold percentage.

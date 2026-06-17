@@ -10,16 +10,16 @@ An offline-first Android health and recovery dashboard that turns biometric data
 The app tracks three evidence-based metrics:
 
 - **Sleep Score (0-100):** Quality of last night's sleep, combining duration (50%), sleep architecture—deep and REM sleep (25%)—and physiological recovery markers like HRV and resting heart rate (25%).
-- **Circadian Consistency (0-100):** Regularity of your sleep schedule. Measures how close bedtime and wake time stay to your median over the last 14 days (or 4 weeks for shift workers).
+- **Circadian Consistency (0-100):** Regularity of your sleep schedule. Measures how close bedtime and wake time stay to your median over the last 14 days.
 - **Readiness (0-100):** How prepared your body is for today's training load, based on the acute-to-chronic workload ratio (Strain Ratio) from workout TRIMP calculations.
 
-All three scores adapt to your physiological profile (Athlete, Active, Sedentary, or Shift Worker) for fair, personalized interpretation.
+All three scores adapt to your physiological profile (Athlete, Active, or Sedentary) for fair, personalized interpretation.
 
 ## Key Features
 
 - **Health Connect Integration:** Reads sleep, heart rate variability (HRV), resting heart rate (RHR), and exercise data from Android Health Connect.
 - **Advanced Metrics:** Calculates TRIMP (Training Impulse), Strain Ratio (ACWR), and baselines using 30-day rolling medians.
-- **Personalized Profiles:** Four profile options tune baselines and thresholds to match your lifestyle (sleep consistency targets, HRV sensitivity, etc.).
+- **Personalized Profiles:** Three profile options tune baselines and thresholds to match your lifestyle (sleep consistency targets, HRV sensitivity, etc.).
 - **Material 3 UI:** Native Jetpack Compose design with semantic color roles (Success, Error, Tertiary) for health status indicators and dark mode by default.
 - **Offline-First:** Local SQLite database (Room) stores all data; UI is driven entirely by local cache. Health Connect is purely a data source.
 - **Smart Syncing:** Configurable foreground sync on app return (Never, Always, or by time interval up to 24 hours).
