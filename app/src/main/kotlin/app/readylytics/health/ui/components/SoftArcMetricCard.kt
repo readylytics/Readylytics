@@ -93,6 +93,7 @@ fun SoftArcMetricCard(
                 contentColor = contentColor,
                 secondaryColor = secondaryColor,
                 baselineDeltaText = baselineDeltaText,
+                baselineDeltaDirection = baselineDeltaDirection,
             )
         }
     } else {
@@ -111,6 +112,7 @@ fun SoftArcMetricCard(
                 contentColor = contentColor,
                 secondaryColor = secondaryColor,
                 baselineDeltaText = baselineDeltaText,
+                baselineDeltaDirection = baselineDeltaDirection,
             )
         }
     }
@@ -127,6 +129,7 @@ private fun SoftArcMetricCardContent(
     contentColor: Color,
     secondaryColor: Color,
     baselineDeltaText: String?,
+    baselineDeltaDirection: BaselineDeltaDirection?,
 ) {
     Column(
         modifier =
@@ -194,6 +197,7 @@ private fun SoftArcMetricCardContent(
         if (baselineDeltaText != null) {
             BaselineDeltaChip(
                 text = baselineDeltaText,
+                direction = baselineDeltaDirection,
                 tint = gaugeColor,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
@@ -245,11 +249,21 @@ private fun SoftArc(
 @Composable
 private fun BaselineDeltaChip(
     text: String,
+    direction: BaselineDeltaDirection?,
     tint: Color,
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier,
+        modifier =
+            modifier.semantics {
+                contentDescription =
+                    when (direction) {
+                        BaselineDeltaDirection.UP -> "$text, above baseline"
+                        BaselineDeltaDirection.DOWN -> "$text, below baseline"
+                        BaselineDeltaDirection.EQUAL -> "$text, at baseline"
+                        null -> text
+                    }
+            },
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = tint,

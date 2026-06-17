@@ -46,7 +46,7 @@ class DashboardBaselineDeltaTextTest {
     }
 
     @Test
-    fun restingHrCardHasNoChipWhenOnlySleepRhrBaselineExists() {
+    fun restingHrCardFallsBackToSleepRhrBaselineDelta() {
         val summary =
             DailySummary(
                 date = LocalDate.of(2026, 6, 17),
@@ -65,8 +65,8 @@ class DashboardBaselineDeltaTextTest {
             )
 
         val card = result.getOrThrow().cardDataMap[CardId.RESTING_HR]!!
-        assertNull(card.baselineDeltaText)
-        assertNull(card.baselineDeltaDirection)
+        assertEquals("↓ 3 bpm vs baseline", card.baselineDeltaText)
+        assertEquals(BaselineDeltaDirection.DOWN, card.baselineDeltaDirection)
     }
 
     @Test
