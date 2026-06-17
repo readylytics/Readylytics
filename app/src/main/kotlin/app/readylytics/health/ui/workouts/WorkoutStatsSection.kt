@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
@@ -72,6 +73,18 @@ import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import kotlin.math.ceil
+
+internal enum class RasSummaryValueTextStyle {
+    TITLE,
+}
+
+internal fun rasTotalValueTextStyle(): RasSummaryValueTextStyle = RasSummaryValueTextStyle.TITLE
+
+@Composable
+private fun RasSummaryValueTextStyle.asTextStyle(): TextStyle =
+    when (this) {
+        RasSummaryValueTextStyle.TITLE -> MaterialTheme.typography.titleMedium
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -179,11 +192,14 @@ fun WorkoutStatsSection(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
                                 uiState.latestMetrics?.rasRounded?.let { total ->
                                     Text(
                                         text = total.toString(),
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = rasTotalValueTextStyle().asTextStyle(),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
