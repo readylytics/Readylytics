@@ -95,98 +95,105 @@ class SettingsViewModelTest {
 
     @Test
     fun `UISettingsViewModel retention toggle event updates state`() =
-        runTest {
+        runTest(testDispatcher) {
             val viewModel =
                 UISettingsViewModel(
                     settingsRepo,
                     healthSyncUseCase,
                 )
-            viewModel.sharingStarted = SharingStarted.Lazily
+            try {
+                viewModel.sharingStarted = SharingStarted.Lazily
 
-            // Launch collection in backgroundScope to handle Lazily start and automatic cleanup
-            val job =
+                // Launch collection in backgroundScope to handle Lazily start and automatic cleanup
                 backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
                     viewModel.uiState.collect()
                 }
 
-            viewModel.onEvent(SettingsEvent.RetentionDaysEnabledChanged(false))
-            advanceUntilIdle()
+                viewModel.onEvent(SettingsEvent.RetentionDaysEnabledChanged(false))
+                advanceUntilIdle()
 
-            val state = viewModel.uiState.first { !it.retentionDaysEnabled }
-            assertFalse(state.retentionDaysEnabled)
+                val state = viewModel.uiState.first { !it.retentionDaysEnabled }
+                assertFalse(state.retentionDaysEnabled)
 
-            viewModel.onEvent(SettingsEvent.RetentionDaysEnabledChanged(true))
-            advanceUntilIdle()
+                viewModel.onEvent(SettingsEvent.RetentionDaysEnabledChanged(true))
+                advanceUntilIdle()
 
-            val state2 = viewModel.uiState.first { it.retentionDaysEnabled }
-            assertTrue(state2.retentionDaysEnabled)
-            viewModel.viewModelScope.cancel()
+                val state2 = viewModel.uiState.first { it.retentionDaysEnabled }
+                assertTrue(state2.retentionDaysEnabled)
+            } finally {
+                viewModel.viewModelScope.cancel()
+            }
         }
 
     @Test
     fun `UISettingsViewModel retention days event updates state`() =
-        runTest {
+        runTest(testDispatcher) {
             val viewModel =
                 UISettingsViewModel(
                     settingsRepo,
                     healthSyncUseCase,
                 )
-            viewModel.sharingStarted = SharingStarted.Lazily
+            try {
+                viewModel.sharingStarted = SharingStarted.Lazily
 
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-                viewModel.uiState.collect()
+                backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                    viewModel.uiState.collect()
+                }
+
+                viewModel.onEvent(SettingsEvent.RetentionDaysChanged(500))
+                advanceUntilIdle()
+
+                val state = viewModel.uiState.first { it.retentionDays == 500 }
+                assertEquals(500, state.retentionDays)
+
+                viewModel.onEvent(SettingsEvent.RetentionDaysChanged(180))
+                advanceUntilIdle()
+
+                val state2 = viewModel.uiState.first { it.retentionDays == 180 }
+                assertEquals(180, state2.retentionDays)
+            } finally {
+                viewModel.viewModelScope.cancel()
             }
-
-            viewModel.onEvent(SettingsEvent.RetentionDaysChanged(500))
-            advanceUntilIdle()
-
-            val state = viewModel.uiState.first { it.retentionDays == 500 }
-            assertEquals(500, state.retentionDays)
-
-            viewModel.onEvent(SettingsEvent.RetentionDaysChanged(180))
-            advanceUntilIdle()
-
-            val state2 = viewModel.uiState.first { it.retentionDays == 180 }
-            assertEquals(180, state2.retentionDays)
-            viewModel.viewModelScope.cancel()
         }
 
     @Test
     fun `UISettingsViewModel custom color events update state`() =
-        runTest {
+        runTest(testDispatcher) {
             val viewModel = UISettingsViewModel(settingsRepo, healthSyncUseCase)
-            viewModel.sharingStarted = SharingStarted.Lazily
+            try {
+                viewModel.sharingStarted = SharingStarted.Lazily
 
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-                viewModel.uiState.collect()
+                backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                    viewModel.uiState.collect()
+                }
+
+                viewModel.onEvent(SettingsEvent.CustomPaletteEnabledChanged(true))
+                advanceUntilIdle()
+                val state1 = viewModel.uiState.first { it.isCustomPaletteEnabled }
+                assertTrue(state1.isCustomPaletteEnabled)
+
+                viewModel.onEvent(SettingsEvent.CustomSecondaryColorChanged(0xFF112233L))
+                advanceUntilIdle()
+                val state2 = viewModel.uiState.first { it.customSecondaryColor == 0xFF112233L }
+                assertEquals(0xFF112233L, state2.customSecondaryColor)
+
+                viewModel.onEvent(SettingsEvent.CustomTertiaryColorChanged(0xFF445566L))
+                advanceUntilIdle()
+                val state3 = viewModel.uiState.first { it.customTertiaryColor == 0xFF445566L }
+                assertEquals(0xFF445566L, state3.customTertiaryColor)
+
+                viewModel.onEvent(SettingsEvent.CustomPrimaryColorChanged(0xFF556677L))
+                advanceUntilIdle()
+                val state4 = viewModel.uiState.first { it.customPrimaryColor == 0xFF556677L }
+                assertEquals(0xFF556677L, state4.customPrimaryColor)
+            } finally {
+                viewModel.viewModelScope.cancel()
             }
-
-            viewModel.onEvent(SettingsEvent.CustomPaletteEnabledChanged(true))
-            advanceUntilIdle()
-            val state1 = viewModel.uiState.first { it.isCustomPaletteEnabled }
-            assertTrue(state1.isCustomPaletteEnabled)
-
-            viewModel.onEvent(SettingsEvent.CustomSecondaryColorChanged(0xFF112233L))
-            advanceUntilIdle()
-            val state2 = viewModel.uiState.first { it.customSecondaryColor == 0xFF112233L }
-            assertEquals(0xFF112233L, state2.customSecondaryColor)
-
-            viewModel.onEvent(SettingsEvent.CustomTertiaryColorChanged(0xFF445566L))
-            advanceUntilIdle()
-            val state3 = viewModel.uiState.first { it.customTertiaryColor == 0xFF445566L }
-            assertEquals(0xFF445566L, state3.customTertiaryColor)
-
-            viewModel.onEvent(SettingsEvent.CustomPrimaryColorChanged(0xFF556677L))
-            advanceUntilIdle()
-            val state4 = viewModel.uiState.first { it.customPrimaryColor == 0xFF556677L }
-            assertEquals(0xFF556677L, state4.customPrimaryColor)
-
-            viewModel.viewModelScope.cancel()
         }
 
     @Test
     fun `SyncSettingsViewModel resync event enqueues worker`() =
-        runTest {
+        runTest(testDispatcher) {
             val mockSettingsRepo =
                 mockk<SettingsRepository>(relaxed = true) {
                     every { userPreferences } returns flowOf(UserPreferences())
@@ -207,16 +214,20 @@ class SettingsViewModelTest {
                     mockScheduler,
                     workManager,
                 )
-            viewModel.sharingStarted = SharingStarted.Lazily
+            try {
+                viewModel.sharingStarted = SharingStarted.Lazily
 
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-                viewModel.uiState.collect()
+                backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                    viewModel.uiState.collect()
+                }
+
+                assertFalse(viewModel.uiState.value.isResyncing)
+                viewModel.onEvent(SettingsEvent.ResyncHealthConnect)
+                advanceUntilIdle()
+
+                io.mockk.coVerify { mockScheduler.scheduleResyncWorker() }
+            } finally {
+                viewModel.viewModelScope.cancel()
             }
-
-            assertFalse(viewModel.uiState.value.isResyncing)
-            viewModel.onEvent(SettingsEvent.ResyncHealthConnect)
-            advanceUntilIdle()
-
-            io.mockk.coVerify { mockScheduler.scheduleResyncWorker() }
         }
 }
