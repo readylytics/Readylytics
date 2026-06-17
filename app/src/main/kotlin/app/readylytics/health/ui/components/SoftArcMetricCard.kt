@@ -196,16 +196,8 @@ private fun SoftArcMetricCardContent(
         }
 
         if (baselineDeltaText != null) {
-            val chipText =
-                when (baselineDeltaDirection) {
-                    BaselineDeltaDirection.UP,
-                    BaselineDeltaDirection.DOWN,
-                    BaselineDeltaDirection.EQUAL,
-                    null,
-                    -> baselineDeltaText
-                }
             BaselineDeltaChip(
-                text = chipText,
+                text = baselineDeltaText,
                 tint = gaugeColor,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
