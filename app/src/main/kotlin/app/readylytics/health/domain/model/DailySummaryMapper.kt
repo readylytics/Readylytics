@@ -5,11 +5,14 @@ import java.time.Instant
 import java.time.ZoneId
 
 object DailySummaryMapper {
-    fun toDomain(entity: DailySummaryEntity): DailySummary {
+    fun toDomain(
+        entity: DailySummaryEntity,
+        zoneId: ZoneId,
+    ): DailySummary {
         val date =
             Instant
                 .ofEpochMilli(entity.dateMidnightMs)
-                .atZone(ZoneId.systemDefault())
+                .atZone(zoneId)
                 .toLocalDate()
 
         val flags: Set<RecoveryFlag> =
@@ -90,10 +93,13 @@ object DailySummaryMapper {
         )
     }
 
-    fun toEntity(domain: DailySummary): DailySummaryEntity {
+    fun toEntity(
+        domain: DailySummary,
+        zoneId: ZoneId,
+    ): DailySummaryEntity {
         val midnightMs =
             domain.date
-                .atStartOfDay(ZoneId.systemDefault())
+                .atStartOfDay(zoneId)
                 .toInstant()
                 .toEpochMilli()
 

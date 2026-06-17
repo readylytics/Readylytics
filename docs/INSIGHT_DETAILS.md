@@ -502,10 +502,10 @@ This document defines the user-facing details, signal meanings, possible causes,
 ## WORKOUT_IMPACT
 
 - **Type**: `PHYSIOLOGY`
-- **Trigger**: Training load yesterday was high (TRIMP >= 120).
+- **Trigger**: Training load yesterday was high (TRIMP >= 120), current HRV and RHR are both outside their optimal ranges, and HRV dropped from yesterday by more than the configured HRV optimal-threshold percentage.
 - **Card title**: Training Load Carryover
-- **Card description**: Yesterday's training load was high, so your body may still be recovering today.
-- **Observed signal**: Your training load yesterday was high.
+- **Card description**: Yesterday's training load was high and today's HRV/RHR signals suggest recovery is still carrying over.
+- **Observed signal**: Yesterday's training load was high, HRV is no longer optimal, RHR is no longer optimal, and HRV dropped meaningfully from yesterday.
 - **Meaning**: Your body may still be repairing, refueling, and returning to baseline after a demanding session.
 - **Confidence**: `MEDIUM`
 - **Possible causes**:

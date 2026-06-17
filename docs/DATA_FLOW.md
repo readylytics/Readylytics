@@ -190,7 +190,7 @@ keep Android types out of`domain/scoring/\*\*`.
 | Component                       | Path                                       | Responsibility                                                                                                                                                                                                                                                                                                                                                                                          |
 | :------------------------------ | :----------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `ScoringRepository` (interface) | `domain/repository/ScoringRepository.kt`   | Contract for daily computation.                                                                                                                                                                                                                                                                                                                                                                         |
-| `ScoringRepositoryImpl`         | `data/repository/ScoringRepositoryImpl.kt` | `computeDailySummary(day)` (mutex-locked) orchestrates: raw DAO fetch → daily TRIMP/RAS → baseline resolve/freeze → sleep + load + readiness → persist `DailySummaryEntity`. Hosts the "Calibrating" gate (< 7 sleep sessions in the last 42 days → tentative scores, no load score). **Both sync flows recompute exclusively through this method — formulas are never duplicated in the sync engine.** Day boundaries (`dateMidnightMs`) and every scoring window resolve through the **stored scoring timezone** (`UserPreferences.scoringZoneId` → `scoringZone()`, seeded once from the device zone by a DataStore migration), not `ZoneId.systemDefault()`, so identical SQLite + preferences reproduce identical scores across devices/timezones. The same stored zone is threaded through `CircadianConsistencyRepository`, `HrvBaselineProvider`, `RhrBaselineProvider`, and `ComputeHistoricalBaselinesUseCase`. |
+| `ScoringRepositoryImpl`         | `data/repository/ScoringRepositoryImpl.kt` | `computeDailySummary(day)` (mutex-locked) orchestrates: raw DAO fetch → daily TRIMP/RAS → baseline resolve/freeze → sleep + load + readiness → persist `DailySummaryEntity`. Hosts the "Calibrating" gate (< 7 sleep sessions in the last 42 days → raw sleep/recovery measurements only; Sleep Score, Load Score, and Readiness remain hidden). **Both sync flows recompute exclusively through this method — formulas are never duplicated in the sync engine.** Day boundaries (`dateMidnightMs`) and every scoring window resolve through the **stored scoring timezone** (`UserPreferences.scoringZoneId` → `scoringZone()`, seeded once from the device zone by a DataStore migration), not `ZoneId.systemDefault()`, so identical SQLite + preferences reproduce identical scores across devices/timezones. The same stored zone is threaded through `DailySummaryMapper` when a `DailySummaryEntity` is projected to domain data, plus `CircadianConsistencyRepository`, `HrvBaselineProvider`, `RhrBaselineProvider`, and `ComputeHistoricalBaselinesUseCase`. |
 
 ### 2.2 Resting Heart Rate (RHR) — percentile "nocturnal floor"
 
@@ -236,7 +236,15 @@ stay reserved (never reused) so old payloads/backups still deserialize.
 `hrMax`, `rhrBpm`, `rhrSigma`, HRV `mu`/`sigma` (with profile-prior blending for new users),
 `rasScalingFactor`, and physiology profile. Baselines freeze once
 calibrated (≥ 7 valid sessions); before that, `ScoringRepositoryImpl` reports
-**"Calibrating"** and emits tentative metrics only.
+**"Calibrating"** and emits raw sleep/recovery measurements without Sleep Score,
+Load Score, or Readiness.
+
+Once a daily baseline snapshot exists, scoring for that day uses the frozen
+`hrvMuMssd`, `hrvSigmaMssd`, `rhrBpm`, and `rhrSigma` values instead of
+recomputing them from whatever historical rows happen to be present later.
+Normal sync, 60-day resync, 365-day resync, and unlimited resync must therefore
+produce the same `DailySummaryEntity` for a target day when raw records,
+preferences, and scoring zone are identical.
 
 **Displayed HRV Baseline (ms)** is the geometric statistic, `exp(mu)` where `mu` is the
 frozen `hrvMuMssd` (mean of `ln(nightly RMSSD)`) — this matches the statistic Restoration

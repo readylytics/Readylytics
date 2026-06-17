@@ -412,12 +412,32 @@ class ScoringRepositoryImpl
                     } else {
                         summary.hrvMuMssd
                     }
+                val hrvSigmaMssd =
+                    if (frozenSnapshot != null) {
+                        frozenSnapshot.hrvSigmaMssd
+                    } else {
+                        summary.hrvSigmaMssd
+                    }
+                val rhrBpm =
+                    if (frozenSnapshot != null) {
+                        frozenSnapshot.rhrBpm
+                    } else {
+                        rhrBaselineValue
+                    }
+                val rhrSigma =
+                    if (frozenSnapshot != null) {
+                        frozenSnapshot.rhrSigma
+                    } else {
+                        summary.rhrSigma
+                    }
 
                 summary =
                     summary.copy(
                         hrvBaseline = computedHrvBaseline,
-                        rhrBpm = rhrBaselineValue,
+                        rhrBpm = rhrBpm,
                         hrvMuMssd = hrvMuMssd,
+                        hrvSigmaMssd = hrvSigmaMssd,
+                        rhrSigma = rhrSigma,
                         baselineCalculatedAtDate = targetDate,
                         avgSleepingSpo2 = avgSpo2,
                         hrMax = summary.hrMax ?: hrMax,
@@ -450,8 +470,9 @@ class ScoringRepositoryImpl
                         runCatching { RecoveryFlag.valueOf(token.trim()) }.getOrNull()
                     }?.toSet()
                     ?: emptySet()
-            val mode = settingsRepo.userPreferences.first().strainLoadSourceMode
-            val domainSummary = DailySummaryMapper.toDomain(summary)
+            val prefs = settingsRepo.userPreferences.first()
+            val mode = prefs.strainLoadSourceMode
+            val domainSummary = DailySummaryMapper.toDomain(summary, prefs.scoringZone())
             return ReadinessResult(
                 readinessScore = LoadSourceSelector.selectReadiness(domainSummary, mode),
                 sleepScore = summary.sleepScore,

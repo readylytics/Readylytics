@@ -113,6 +113,7 @@ class LoadScoringStrategy
             currentHrv: Float? = null,
             hrvOptimalThreshold: Float = 1.0f,
             isCurrentHrvOptimal: Boolean = false,
+            isCurrentRhrOptimal: Boolean = false,
         ): Set<RecoveryFlag> {
             val flags = mutableSetOf<RecoveryFlag>()
             if (isCalibrating) flags += RecoveryFlag.CALIBRATING
@@ -152,7 +153,15 @@ class LoadScoringStrategy
 
             // Workout Impact & Rest Day Insight Logic
             if (yesterdayTrimp != null && yesterdayTrimp >= 120f) {
-                flags.add(RecoveryFlag.WORKOUT_IMPACT)
+                val hrvDropThreshold = (2f - hrvOptimalThreshold).coerceIn(0f, 1f)
+                val hrvDroppedBeyondThreshold =
+                    currentHrv != null &&
+                        yesterdayHrv != null &&
+                        yesterdayHrv > 0f &&
+                        currentHrv < yesterdayHrv * hrvDropThreshold
+                if (!isCurrentHrvOptimal && !isCurrentRhrOptimal && hrvDroppedBeyondThreshold) {
+                    flags.add(RecoveryFlag.WORKOUT_IMPACT)
+                }
             } else if (yesterdayTrimp != null && yesterdayTrimp < 10f) {
                 if (currentHrv != null && yesterdayHrv != null && yesterdayHrv > 0) {
                     val targetHrv = yesterdayHrv * hrvOptimalThreshold
