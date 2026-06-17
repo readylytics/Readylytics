@@ -988,7 +988,7 @@
     <string name="insight_rerun_description">Restore dismissed health insights</string>
     <!-- Insights -->
     <string name="insight_workout_impact_title">Workout Impact</string>
-    <string name="insight_workout_impact_body">Your high strain workout yesterday is impacting your recovery today.</string>
+    <string name="insight_workout_impact_body">Yesterday\'s high strain workout appears to be carrying into today because both HRV and RHR are outside their optimal ranges.</string>
     <string name="insight_rest_day_success_title">Rest Day Success</string>
     <string name="insight_rest_day_success_body">Your dedicated rest day resulted in an optimal HRV rebound.</string>
     <string name="insight_rest_day_perfect_sleep"> Your night\'s rest was perfect!</string>
@@ -1403,7 +1403,7 @@
     </string-array>
 
     <!-- WORKOUT_IMPACT -->
-    <string name="insight_detail_workout_impact_observed">Your training load yesterday was high.</string>
+    <string name="insight_detail_workout_impact_observed">Yesterday\'s training load was high, HRV is no longer optimal, RHR is no longer optimal, and HRV dropped meaningfully from yesterday.</string>
     <string name="insight_detail_workout_impact_meaning">Your body may still be repairing, refueling, and returning to baseline after a demanding session.</string>
     <string-array name="insight_detail_workout_impact_causes">
         <item>Long workout|Long duration can raise training load.|GENERIC</item>

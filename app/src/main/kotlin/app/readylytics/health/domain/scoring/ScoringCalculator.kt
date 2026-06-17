@@ -113,6 +113,7 @@ interface ScoringCalculator {
         currentHrv: Float? = null,
         hrvOptimalThreshold: Float = 1.0f,
         isCurrentHrvOptimal: Boolean = false,
+        isCurrentRhrOptimal: Boolean = true,
     ): Set<RecoveryFlag>
 
     fun computeReadinessScore(
