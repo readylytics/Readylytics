@@ -32,6 +32,7 @@ import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.RecalcProgress
 import app.readylytics.health.ui.common.BaseViewModel
 import app.readylytics.health.ui.common.UiText
+import app.readylytics.health.ui.components.GaugeComparisonTone
 import app.readylytics.health.ui.heartrate.HeartRateDaySummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -130,6 +131,7 @@ class DashboardViewModel
                     date = selectedDate,
                     lastSleepSession = sessionSummary,
                     rasSummaries = basicInputs.rasSummaries,
+                    previousSummary = basicInputs.previousSummary,
                 )
 
             val cards = cardsResult.getOrNull()
@@ -346,6 +348,8 @@ data class CardData(
     val tooltip: String,
     val action: DashboardAction? = null,
     val secondaryText: String? = null,
+    val comparisonText: String? = null,
+    val comparisonTone: GaugeComparisonTone = GaugeComparisonTone.NEUTRAL,
 )
 
 enum class DashboardAction {

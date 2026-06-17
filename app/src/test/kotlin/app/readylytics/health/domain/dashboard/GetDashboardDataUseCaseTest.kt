@@ -1,12 +1,17 @@
 package app.readylytics.health.domain.dashboard
 
+import app.readylytics.health.R
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.domain.util.ResourceProvider
+import app.readylytics.health.ui.components.GaugeComparisonTone
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
@@ -19,7 +24,7 @@ class GetDashboardDataUseCaseTest {
     @Before
     fun setUp() {
         getWorkoutMetricsUseCase = mockk(relaxed = true)
-        resourceProvider = mockk(relaxed = true)
+        resourceProvider = FakeDashboardResourceProvider()
         useCase =
             GetDashboardDataUseCase(
                 resourceProvider = resourceProvider,
@@ -99,6 +104,63 @@ class GetDashboardDataUseCaseTest {
         assertEquals("80", cards[CardId.SLEEP_SCORE]?.value)
         assertEquals("73", cards[CardId.READINESS]?.value)
         assertEquals("0.37", cards[CardId.STRAIN_RATIO]?.value)
+    }
+
+    @Test
+    fun invoke_scoreCardsCompareAgainstPreviousDayWhenAvailable() {
+        val date = LocalDate.of(2026, 6, 9)
+        val summary =
+            DailySummary(
+                date = date,
+                sleepScore = 79.5f,
+                readinessWorkoutOnly = 72.5f,
+            )
+        val previousSummary =
+            DailySummary(
+                date = date.minusDays(1),
+                sleepScore = 75.1f,
+                readinessWorkoutOnly = 76.4f,
+            )
+
+        val result =
+            useCase(
+                summary = summary,
+                prefs = UserPreferences(rasSourceMode = LoadSourceMode.WORKOUT_ONLY),
+                date = date,
+                lastSleepSession = null,
+                rasSummaries = emptyList(),
+                previousSummary = previousSummary,
+            )
+
+        val cards = result.getOrNull()?.cardDataMap.orEmpty()
+        assertEquals("↑ 5 vs yesterday", cards[CardId.SLEEP_SCORE]?.comparisonText)
+        assertEquals(GaugeComparisonTone.POSITIVE, cards[CardId.SLEEP_SCORE]?.comparisonTone)
+        assertEquals("↓ 3 vs yesterday", cards[CardId.READINESS]?.comparisonText)
+        assertEquals(GaugeComparisonTone.NEGATIVE, cards[CardId.READINESS]?.comparisonTone)
+    }
+
+    @Test
+    fun invoke_scoreCardsHideComparisonWhenPreviousDayMissing() {
+        val summary =
+            DailySummary(
+                date = LocalDate.of(2026, 6, 9),
+                sleepScore = 79.5f,
+                readinessWorkoutOnly = 72.5f,
+            )
+
+        val result =
+            useCase(
+                summary = summary,
+                prefs = UserPreferences(),
+                date = summary.date,
+                lastSleepSession = null,
+                rasSummaries = emptyList(),
+                previousSummary = null,
+            )
+
+        val cards = result.getOrNull()?.cardDataMap.orEmpty()
+        assertNull(cards[CardId.SLEEP_SCORE]?.comparisonText)
+        assertNull(cards[CardId.READINESS]?.comparisonText)
     }
 
     @Test
@@ -204,5 +266,20 @@ class GetDashboardDataUseCaseTest {
         assert(card != null)
         assertEquals("—", card?.value)
         assertEquals(MetricStatus.CALIBRATING, card?.status)
+    }
+
+    private class FakeDashboardResourceProvider : ResourceProvider {
+        override fun getString(resId: Int): String = "res-$resId"
+
+        override fun getString(
+            resId: Int,
+            vararg formatArgs: Any,
+        ): String =
+            when (resId) {
+                R.string.dashboard_comparison_up_vs_yesterday -> "↑ ${formatArgs[0]} vs yesterday"
+                R.string.dashboard_comparison_down_vs_yesterday -> "↓ ${formatArgs[0]} vs yesterday"
+                R.string.dashboard_comparison_same_vs_yesterday -> "No change vs yesterday"
+                else -> getString(resId)
+            }
     }
 }

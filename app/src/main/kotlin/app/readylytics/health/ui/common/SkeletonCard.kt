@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -128,28 +126,56 @@ fun MetricCardSkeleton(
 @Composable
 fun ScoreDialSkeleton(
     modifier: Modifier = Modifier,
-    height: Dp = 140.dp,
+    height: Dp = 156.dp,
 ) {
     Card(
-        modifier = modifier.size(height),
-        shape = CircleShape,
+        modifier = modifier.fillMaxWidth().height(height),
+        shape = MaterialTheme.shapes.large,
         colors =
             CardDefaults.cardColors(
                 containerColor =
                     MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f),
             ),
     ) {
-        Box(
+        Column(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(24.dp)
-                    .background(
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                            alpha = 0.2f,
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .shimmerAnimation(),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth(0.6f)
+                        .height(14.dp)
+                        .background(
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
+                            MaterialTheme.shapes.extraSmall,
                         ),
-                        CircleShape,
-                    ).shimmerAnimation(),
-        )
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(72.dp)
+                        .background(
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f),
+                            MaterialTheme.shapes.large,
+                        ),
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth(0.72f)
+                        .height(28.dp)
+                        .background(
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f),
+                            MaterialTheme.shapes.extraLarge,
+                        ),
+            )
+        }
     }
 }

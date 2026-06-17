@@ -872,6 +872,9 @@
 
     <!-- Card Titles -->
     <string name="card_title_sleep_score">Sleep score</string>
+    <string name="dashboard_comparison_up_vs_yesterday">↑ %1$d vs yesterday</string>
+    <string name="dashboard_comparison_down_vs_yesterday">↓ %1$d vs yesterday</string>
+    <string name="dashboard_comparison_same_vs_yesterday">No change vs yesterday</string>
     <string name="sleep_score_gauge_title">Sleep Score</string>
     <string name="sleep_time_gauge_title">Sleep Time</string>
     <string name="card_title_readiness">Readiness</string>

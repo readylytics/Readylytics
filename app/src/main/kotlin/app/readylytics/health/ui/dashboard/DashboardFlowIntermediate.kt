@@ -35,6 +35,7 @@ import java.time.ZoneId
 data class DashboardBasicInputs(
     val selectedDate: LocalDate,
     val summary: DailySummary?,
+    val previousSummary: DailySummary?,
     val userPreferences: app.readylytics.health.data.preferences.UserPreferences,
     val circadianResult: CircadianConsistencyResult?,
     val rasSummaries: List<DailySummary>,
@@ -110,21 +111,34 @@ fun createDashboardBasicInputsFlow(
                 .toEpochMilli()
         val rasBreakdownFlow = dailySummaryRepository.observeSince(rasFromMs)
 
+        val previousMidnightMs =
+            date
+                .minusDays(1)
+                .atStartOfDay(zoneId)
+                .toInstant()
+                .toEpochMilli()
+        val previousSummaryFlow = dailySummaryRepository.observeByDate(previousMidnightMs)
+        val summaryPairFlow =
+            combine(summaryFlow, previousSummaryFlow) { summary, previousSummary ->
+                summary to previousSummary
+            }
+
         val dismissalFlow =
             insightDismissalRepository
                 .observeForDate(date.atStartOfDay(zoneId).toInstant().toEpochMilli())
 
         // Combine all basic inputs
         combine(
-            summaryFlow,
+            summaryPairFlow,
             settingsRepository.userPreferences,
             circadianRepository.resultFor(date),
             rasBreakdownFlow,
             dismissalFlow,
-        ) { summary, prefs, circadian, rasSummaries, dismissed ->
+        ) { summaryPair, prefs, circadian, rasSummaries, dismissed ->
             DashboardBasicInputs(
                 selectedDate = date,
-                summary = summary,
+                summary = summaryPair.first,
+                previousSummary = summaryPair.second,
                 userPreferences = prefs,
                 circadianResult = circadian,
                 rasSummaries = rasSummaries,

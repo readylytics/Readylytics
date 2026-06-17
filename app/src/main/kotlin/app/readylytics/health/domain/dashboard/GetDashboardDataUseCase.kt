@@ -23,6 +23,7 @@ import app.readylytics.health.domain.model.rhrStatus
 import app.readylytics.health.domain.model.sleepDurationStatus
 import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.domain.util.roundToPercentInt
+import app.readylytics.health.ui.components.GaugeComparisonTone
 import app.readylytics.health.ui.dashboard.CardData
 import app.readylytics.health.ui.dashboard.DashboardAction
 import java.time.Instant
@@ -51,9 +52,17 @@ class GetDashboardDataUseCase
             date: LocalDate,
             lastSleepSession: SleepSessionSummary?,
             rasSummaries: List<DailySummary>,
+            previousSummary: DailySummary? = null,
         ): Result<DashboardCards> =
             try {
-                val cardDataMap = calculateCardData(summary, prefs, date, lastSleepSession)
+                val cardDataMap =
+                    calculateCardData(
+                        summary = summary,
+                        prefs = prefs,
+                        selectedDate = date,
+                        lastSleepSession = lastSleepSession,
+                        previousSummary = previousSummary,
+                    )
                 val rasDailyBreakdown = buildRasBreakdown(date, rasSummaries, prefs)
 
                 Result.success(
@@ -71,6 +80,7 @@ class GetDashboardDataUseCase
             prefs: UserPreferences,
             selectedDate: LocalDate,
             lastSleepSession: SleepSessionSummary?,
+            previousSummary: DailySummary?,
         ): Map<CardId, CardData> {
             if (summary == null) return emptyMap()
 
@@ -80,8 +90,8 @@ class GetDashboardDataUseCase
 
             val mapBuilder =
                 mutableMapOf<CardId, CardData>(
-                    CardId.SLEEP_SCORE to sleepScoreCard(summary, m),
-                    CardId.READINESS to readinessCard(summary, m),
+                    CardId.SLEEP_SCORE to sleepScoreCard(summary, m, previousSummary),
+                    CardId.READINESS to readinessCard(summary, m, previousSummary, prefs),
                     CardId.SLEEP_RHR to sleepCard(summary, prefs, m),
                     CardId.HRV to hrvCard(summary, prefs, m),
                     CardId.RAS_DAILY to rasCard(m),
@@ -106,6 +116,7 @@ class GetDashboardDataUseCase
         private fun sleepScoreCard(
             summary: DailySummary,
             m: DailyMetrics,
+            previousSummary: DailySummary?,
         ): CardData =
             CardData(
                 title = resourceProvider.getString(R.string.card_title_sleep_score),
@@ -114,20 +125,31 @@ class GetDashboardDataUseCase
                 status = summary.sleepScore?.let { scoreStatus(it) } ?: MetricStatus.CALIBRATING,
                 action = DashboardAction.NAVIGATE_SLEEP,
                 tooltip = resourceProvider.getString(R.string.tooltip_sleep_score),
+                comparisonText = scoreComparisonText(summary.sleepScore, previousSummary?.sleepScore),
+                comparisonTone = scoreComparisonTone(summary.sleepScore, previousSummary?.sleepScore),
             )
 
         private fun readinessCard(
             summary: DailySummary,
             m: DailyMetrics,
+            previousSummary: DailySummary?,
+            prefs: UserPreferences,
         ): CardData =
-            CardData(
-                title = resourceProvider.getString(R.string.card_title_readiness),
-                value = m.readinessRounded?.toString() ?: "—",
-                unit = "",
-                status = m.readinessRounded?.let { scoreStatus(it.toFloat()) } ?: MetricStatus.CALIBRATING,
-                action = DashboardAction.NAVIGATE_WORKOUTS,
-                tooltip = resourceProvider.getString(R.string.tooltip_readiness),
-            )
+            LoadSourceSelector.selectReadiness(summary, prefs.rasSourceMode).let { readiness ->
+                val previousReadiness =
+                    previousSummary?.let { LoadSourceSelector.selectReadiness(it, prefs.rasSourceMode) }
+
+                CardData(
+                    title = resourceProvider.getString(R.string.card_title_readiness),
+                    value = m.readinessRounded?.toString() ?: "—",
+                    unit = "",
+                    status = m.readinessRounded?.let { scoreStatus(it.toFloat()) } ?: MetricStatus.CALIBRATING,
+                    action = DashboardAction.NAVIGATE_WORKOUTS,
+                    tooltip = resourceProvider.getString(R.string.tooltip_readiness),
+                    comparisonText = scoreComparisonText(readiness, previousReadiness),
+                    comparisonTone = scoreComparisonTone(readiness, previousReadiness),
+                )
+            }
 
         private fun scoreStatus(score: Float): MetricStatus =
             when {
@@ -135,6 +157,30 @@ class GetDashboardDataUseCase
                 score >= 60f -> MetricStatus.NEUTRAL
                 score >= 40f -> MetricStatus.WARNING
                 else -> MetricStatus.POOR
+            }
+
+        private fun scoreComparisonText(
+            current: Float?,
+            previous: Float?,
+        ): String? {
+            if (current == null || previous == null) return null
+            val delta = current.roundToPercentInt() - previous.roundToPercentInt()
+            return when {
+                delta > 0 -> resourceProvider.getString(R.string.dashboard_comparison_up_vs_yesterday, delta)
+                delta < 0 -> resourceProvider.getString(R.string.dashboard_comparison_down_vs_yesterday, -delta)
+                else -> resourceProvider.getString(R.string.dashboard_comparison_same_vs_yesterday)
+            }
+        }
+
+        private fun scoreComparisonTone(
+            current: Float?,
+            previous: Float?,
+        ): GaugeComparisonTone =
+            when {
+                current == null || previous == null -> GaugeComparisonTone.NEUTRAL
+                current.roundToPercentInt() > previous.roundToPercentInt() -> GaugeComparisonTone.POSITIVE
+                current.roundToPercentInt() < previous.roundToPercentInt() -> GaugeComparisonTone.NEGATIVE
+                else -> GaugeComparisonTone.NEUTRAL
             }
 
         private fun sleepEfficiencyCard(lastSleepSession: SleepSessionSummary?): CardData {

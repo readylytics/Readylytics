@@ -36,6 +36,7 @@ import app.readylytics.health.ui.common.CardLoader
 import app.readylytics.health.ui.common.MetricCardSkeleton
 import app.readylytics.health.ui.common.ScoreDialSkeleton
 import app.readylytics.health.ui.components.CircadianConsistencyCard
+import app.readylytics.health.ui.components.GaugeComparisonTone
 import app.readylytics.health.ui.components.InsightCard
 import app.readylytics.health.ui.components.InsightRerunCard
 import app.readylytics.health.ui.components.M3ScoreDial
@@ -76,9 +77,12 @@ fun buildCardDataMap(
             content = {
                 val sleepScoreCard = uiState.cardDataMap[CardId.SLEEP_SCORE]
                 M3ScoreDial(
-                    label = "Sleep Score",
+                    label = stringResource(R.string.card_title_sleep_score),
                     score = summary?.sleepScore,
                     displayText = sleepScoreCard?.value ?: "—",
+                    unitLabel = sleepScoreCard?.unit,
+                    comparisonText = sleepScoreCard?.comparisonText,
+                    comparisonTone = sleepScoreCard?.comparisonTone ?: GaugeComparisonTone.NEUTRAL,
                     status = sleepScoreCard?.status,
                     onClick = if (isEditing) ({}) else onNavigateToSleep,
                     tooltipDescription = sleepScoreCard?.tooltip,
@@ -94,9 +98,12 @@ fun buildCardDataMap(
             content = {
                 val readinessCard = uiState.cardDataMap[CardId.READINESS]
                 M3ScoreDial(
-                    label = "Readiness",
+                    label = stringResource(R.string.card_title_readiness),
                     score = readinessCard?.value?.toFloatOrNull(),
                     displayText = readinessCard?.value ?: "—",
+                    unitLabel = readinessCard?.unit,
+                    comparisonText = readinessCard?.comparisonText,
+                    comparisonTone = readinessCard?.comparisonTone ?: GaugeComparisonTone.NEUTRAL,
                     status = readinessCard?.status,
                     onClick = if (isEditing) ({}) else onNavigateToWorkouts,
                     tooltipDescription = readinessCard?.tooltip,
