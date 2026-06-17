@@ -141,8 +141,7 @@ fun ScoreDialSkeleton(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-                    .shimmerAnimation(),
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
             Box(
                 modifier =
@@ -152,7 +151,7 @@ fun ScoreDialSkeleton(
                         .background(
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
                             MaterialTheme.shapes.extraSmall,
-                        ),
+                        ).shimmerAnimation(),
             )
             Spacer(modifier = Modifier.height(12.dp))
             Box(
@@ -163,7 +162,7 @@ fun ScoreDialSkeleton(
                         .background(
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f),
                             MaterialTheme.shapes.large,
-                        ),
+                        ).shimmerAnimation(),
             )
             Spacer(modifier = Modifier.height(10.dp))
             Box(
@@ -174,7 +173,7 @@ fun ScoreDialSkeleton(
                         .background(
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f),
                             MaterialTheme.shapes.extraLarge,
-                        ),
+                        ).shimmerAnimation(),
             )
         }
     }

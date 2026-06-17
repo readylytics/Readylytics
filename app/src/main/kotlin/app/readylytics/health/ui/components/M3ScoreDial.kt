@@ -227,15 +227,18 @@ private fun SoftArcGauge(
     trackColor: Color,
 ) {
     val isDarkTheme = isSystemInDarkTheme()
-    Canvas(modifier = Modifier.size(width = 122.dp, height = 96.dp)) {
+    Canvas(modifier = Modifier.size(width = 122.dp, height = 100.dp)) {
         val strokeWidth = 11.dp.toPx()
         val haloStrokeWidth = 24.dp.toPx()
-        val halfStroke = strokeWidth / 2f
-        val arcSize = Size(size.width - strokeWidth, (size.height * 1.45f) - strokeWidth)
-        val arcTopLeft = Offset(halfStroke, halfStroke)
+        val endpointGlowRadius = 16.dp.toPx()
+        val horizontalInset = maxOf(endpointGlowRadius, haloStrokeWidth / 2f)
+        val verticalInset = haloStrokeWidth / 2f
+        val arcSize = Size(size.width - horizontalInset * 2f, (size.height - verticalInset * 2f) * 1.35f)
+        val arcTopLeft = Offset(horizontalInset, verticalInset)
         val startAngle = 145f
         val sweepAngle = 250f
         val activeSweep = sweepAngle * progress.coerceIn(0f, 1f)
+        val gaugeStroke = Stroke(width = strokeWidth, cap = StrokeCap.Round)
 
         if (activeSweep > 0f) {
             drawProgressiveHalo(
@@ -256,7 +259,7 @@ private fun SoftArcGauge(
             useCenter = false,
             topLeft = arcTopLeft,
             size = arcSize,
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+            style = gaugeStroke,
         )
 
         if (activeSweep > 0f) {
@@ -267,13 +270,13 @@ private fun SoftArcGauge(
                 useCenter = false,
                 topLeft = arcTopLeft,
                 size = arcSize,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                style = gaugeStroke,
             )
 
             val endpoint = arcEndpoint(startAngle + activeSweep, arcTopLeft, arcSize)
             drawCircle(
                 color = progressColor.copy(alpha = if (isDarkTheme) 0.20f else 0.10f),
-                radius = 16.dp.toPx(),
+                radius = endpointGlowRadius,
                 center = endpoint,
             )
             drawCircle(
@@ -296,6 +299,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawProgressiveHalo
 ) {
     val segmentCount = 18
     val segmentSweep = activeSweep / segmentCount
+    val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
     repeat(segmentCount) { index ->
         val segmentStart = startAngle + segmentSweep * index
         val t = (index + 1f) / segmentCount
@@ -306,7 +310,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawProgressiveHalo
             useCenter = false,
             topLeft = topLeft,
             size = size,
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+            style = stroke,
         )
     }
 }

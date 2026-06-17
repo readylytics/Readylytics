@@ -135,9 +135,9 @@ class GetDashboardDataUseCase
             previousSummary: DailySummary?,
             prefs: UserPreferences,
         ): CardData =
-            LoadSourceSelector.selectReadiness(summary, prefs.rasSourceMode).let { readiness ->
+            LoadSourceSelector.selectReadiness(summary, prefs.strainLoadSourceMode).let { readiness ->
                 val previousReadiness =
-                    previousSummary?.let { LoadSourceSelector.selectReadiness(it, prefs.rasSourceMode) }
+                    previousSummary?.let { LoadSourceSelector.selectReadiness(it, prefs.strainLoadSourceMode) }
 
                 CardData(
                     title = resourceProvider.getString(R.string.card_title_readiness),

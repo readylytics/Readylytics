@@ -125,7 +125,7 @@ class GetDashboardDataUseCaseTest {
         val result =
             useCase(
                 summary = summary,
-                prefs = UserPreferences(rasSourceMode = LoadSourceMode.WORKOUT_ONLY),
+                prefs = UserPreferences(strainLoadSourceMode = LoadSourceMode.WORKOUT_ONLY),
                 date = date,
                 lastSleepSession = null,
                 rasSummaries = emptyList(),

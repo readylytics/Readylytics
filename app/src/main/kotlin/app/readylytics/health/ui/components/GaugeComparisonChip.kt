@@ -10,7 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.unit.dp
 
 @Immutable
@@ -50,15 +50,4 @@ fun GaugeComparisonChip(
             maxLines = 1,
         )
     }
-}
-
-private fun Color.compositeOver(background: Color): Color {
-    val alpha = alpha + background.alpha * (1f - alpha)
-    if (alpha == 0f) return Color.Transparent
-    return Color(
-        red = (red * this.alpha + background.red * background.alpha * (1f - this.alpha)) / alpha,
-        green = (green * this.alpha + background.green * background.alpha * (1f - this.alpha)) / alpha,
-        blue = (blue * this.alpha + background.blue * background.alpha * (1f - this.alpha)) / alpha,
-        alpha = alpha,
-    )
 }
