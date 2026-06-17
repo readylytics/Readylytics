@@ -346,7 +346,15 @@ data class CardData(
     val tooltip: String,
     val action: DashboardAction? = null,
     val secondaryText: String? = null,
+    val baselineDeltaText: String? = null,
+    val baselineDeltaDirection: BaselineDeltaDirection? = null,
 )
+
+enum class BaselineDeltaDirection {
+    UP,
+    DOWN,
+    EQUAL,
+}
 
 enum class DashboardAction {
     NAVIGATE_SLEEP,
