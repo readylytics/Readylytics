@@ -104,7 +104,8 @@ fun VitalsScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 16.dp),
             )
         }
 
@@ -114,7 +115,7 @@ fun VitalsScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .verticalScroll(scrollState)
-                    .padding(vertical = 16.dp),
+                    .padding(top = 8.dp, bottom = 16.dp),
         ) {
             // Twin gauges side-by-side
             CardLoader(
@@ -230,8 +231,6 @@ fun VitalsScreen(
                 },
             )
 
-            Spacer(Modifier.height(8.dp))
-
             // Time Range selection
             SectionHeader(
                 title = stringResource(R.string.label_physiological_trends),
@@ -259,7 +258,7 @@ fun VitalsScreen(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
 
             // Chart 1: HRV Trend
             CardLoader(
@@ -293,7 +292,7 @@ fun VitalsScreen(
                 },
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
 
             // Chart 2: Resting HR Trend
             CardLoader(

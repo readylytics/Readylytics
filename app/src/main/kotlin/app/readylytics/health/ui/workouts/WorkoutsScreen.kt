@@ -75,7 +75,8 @@ fun WorkoutsScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 16.dp),
             )
         }
 
@@ -85,7 +86,7 @@ fun WorkoutsScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .verticalScroll(scrollState)
-                    .padding(vertical = 16.dp),
+                    .padding(top = 8.dp, bottom = 16.dp),
         ) {
             WorkoutStatsSection(
                 uiState = uiState,

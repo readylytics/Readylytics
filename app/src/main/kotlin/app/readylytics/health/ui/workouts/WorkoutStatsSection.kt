@@ -194,8 +194,6 @@ fun WorkoutStatsSection(
             },
         )
 
-        Spacer(Modifier.height(8.dp))
-
         CardLoader(
             isLoading = uiState.isLoading,
             skeleton = {

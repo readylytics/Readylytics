@@ -1,36 +1,48 @@
 package app.readylytics.health.ui.dashboard
 
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
 import java.time.Instant
@@ -51,14 +63,12 @@ fun DateSwitcher(
     earliestDate: LocalDate? = null,
     enabled: Boolean = true,
 ) {
-    val label = remember(selectedDate) { formatDateLabel(selectedDate, today) }
     val canGoForward = selectedDate < today
     val canGoBack = earliestDate == null || selectedDate > earliestDate
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
     val prevEnabled = canGoBack && enabled
     val nextEnabled = canGoForward && enabled
-    val datePickerEnabled = enabled
 
     Row(
         modifier =
@@ -68,55 +78,50 @@ fun DateSwitcher(
                 .graphicsLayer {
                     alpha = if (enabled) 1.0f else 0.5f
                 },
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(
+        FilledIconButton(
             onClick = onPreviousDay,
             enabled = prevEnabled,
+            shape = MaterialTheme.shapes.large,
+            colors =
+                IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                    disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                ),
+            modifier = Modifier.size(48.dp),
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                 contentDescription = stringResource(R.string.accessibility_prev_day),
-                tint =
-                    if (prevEnabled) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    },
             )
         }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.clickable(enabled = datePickerEnabled) { showDatePicker = true },
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Icon(
-                imageVector = Icons.Default.DateRange,
-                contentDescription = stringResource(R.string.accessibility_open_date_picker),
-                modifier =
-                    Modifier
-                        .padding(start = 4.dp)
-                        .size(18.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        IconButton(
+        DatePill(
+            selectedDate = selectedDate,
+            today = today,
+            enabled = enabled,
+            onClick = { showDatePicker = true },
+            modifier = Modifier.weight(1f),
+        )
+        FilledIconButton(
             onClick = onNextDay,
             enabled = nextEnabled,
+            shape = MaterialTheme.shapes.large,
+            colors =
+                IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                    disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                ),
+            modifier = Modifier.size(48.dp),
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = stringResource(R.string.accessibility_next_day),
-                tint =
-                    if (nextEnabled) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    },
             )
         }
     }
@@ -166,12 +171,85 @@ fun DateSwitcher(
     }
 }
 
-private fun formatDateLabel(
+@Composable
+private fun DatePill(
+    selectedDate: LocalDate,
+    today: LocalDate,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val pillDescription =
+        stringResource(
+            R.string.accessibility_date_pill,
+            qualifierLabelFor(selectedDate, today),
+            formatDate(selectedDate),
+        )
+
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 2.dp,
+        shadowElevation = 1.dp,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .heightIn(min = 64.dp, max = 72.dp)
+                .testTag("date_pill")
+                .clearAndSetSemantics {
+                    contentDescription = pillDescription
+                    role = Role.Button
+                },
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AnimatedContent(
+                targetState = selectedDate,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
+                },
+                label = "date_pill_content",
+            ) { date ->
+                Column {
+                    Text(
+                        text = qualifierLabelFor(date, today),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = formatDate(date),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+            }
+            Icon(
+                imageVector = Icons.Default.DateRange,
+                contentDescription = null,
+                modifier =
+                    Modifier
+                        .padding(start = 8.dp)
+                        .size(22.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun qualifierLabelFor(
     date: LocalDate,
     today: LocalDate,
 ): String =
     when (date) {
-        today -> "Today"
-        today.minusDays(1) -> "Yesterday"
-        else -> date.format(DateTimeFormatter.ofPattern("EEE MMM d", Locale.getDefault()))
+        today -> stringResource(R.string.date_switcher_label_today)
+        today.minusDays(1) -> stringResource(R.string.date_switcher_label_yesterday)
+        else -> stringResource(R.string.date_switcher_label_selected)
     }
+
+private fun formatDate(date: LocalDate): String =
+    date.format(DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault()))
