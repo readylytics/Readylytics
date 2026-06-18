@@ -16,9 +16,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -98,7 +96,6 @@ class WeightDetailViewModelTest {
                 MutableStateFlow(UserPreferences(unitSystem = UnitSystem.METRIC))
 
             viewModel = createViewModel()
-            advanceUntilIdle()
 
             val state = viewModel.uiState.first { it.weightDisplay != null }
 
@@ -116,7 +113,6 @@ class WeightDetailViewModelTest {
                 MutableStateFlow(UserPreferences(unitSystem = UnitSystem.IMPERIAL))
 
             viewModel = createViewModel()
-            advanceUntilIdle()
 
             val state = viewModel.uiState.first { it.weightDisplay != null }
 
@@ -136,7 +132,6 @@ class WeightDetailViewModelTest {
                 MutableStateFlow(UserPreferences(unitSystem = UnitSystem.METRIC, heightCm = 175f))
 
             viewModel = createViewModel()
-            advanceUntilIdle()
 
             val state = viewModel.uiState.first { it.bmiDisplay != null }
 
@@ -154,7 +149,6 @@ class WeightDetailViewModelTest {
                 MutableStateFlow(UserPreferences(unitSystem = UnitSystem.METRIC, heightCm = null))
 
             viewModel = createViewModel()
-            advanceUntilIdle()
 
             val state = viewModel.uiState.first { it.weightDisplay != null }
 
@@ -174,7 +168,6 @@ class WeightDetailViewModelTest {
                 MutableStateFlow(UserPreferences(unitSystem = UnitSystem.METRIC, heightCm = 175f))
 
             viewModel = createViewModel()
-            advanceUntilIdle()
             val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
             assertEquals(2, state.historyItems.size)
@@ -202,7 +195,6 @@ class WeightDetailViewModelTest {
                 MutableStateFlow(UserPreferences(unitSystem = UnitSystem.IMPERIAL, heightCm = 175f))
 
             viewModel = createViewModel()
-            advanceUntilIdle()
             val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
             val newest = state.historyItems[0]
@@ -220,7 +212,6 @@ class WeightDetailViewModelTest {
                 MutableStateFlow(UserPreferences(unitSystem = UnitSystem.METRIC, heightCm = null))
 
             viewModel = createViewModel()
-            advanceUntilIdle()
             val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
             assertEquals(null, state.historyItems[0].bmiStatus)

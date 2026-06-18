@@ -20,9 +20,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -109,7 +107,6 @@ class BodyFatDetailViewModelTest {
             coEvery { bodyFatRepository.getLatest() } returns record
 
             viewModel = createViewModel()
-            advanceUntilIdle()
 
             val state = viewModel.uiState.first { it.bodyFatDisplay != null }
 
@@ -137,7 +134,6 @@ class BodyFatDetailViewModelTest {
                 )
 
             viewModel = createViewModel()
-            advanceUntilIdle()
 
             val state = viewModel.uiState.first { it.optimalRangeMax > 0f }
 
@@ -153,7 +149,6 @@ class BodyFatDetailViewModelTest {
                 )
 
             viewModel = createViewModel()
-            advanceUntilIdle()
 
             val state = viewModel.uiState.first { it.optimalRangeMax > 0f }
 
@@ -175,7 +170,6 @@ class BodyFatDetailViewModelTest {
                 MutableStateFlow(UserPreferences(age = 30, gender = Gender.MALE))
 
             viewModel = createViewModel()
-            advanceUntilIdle()
             val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
             val item = state.historyItems[0]
@@ -201,7 +195,6 @@ class BodyFatDetailViewModelTest {
                 MutableStateFlow(UserPreferences(age = 30, gender = Gender.MALE))
 
             viewModel = createViewModel()
-            advanceUntilIdle()
             val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
             assertNull(state.historyItems[0].leanMassDisplay)
@@ -220,7 +213,6 @@ class BodyFatDetailViewModelTest {
                 MutableStateFlow(UserPreferences(age = 30, gender = Gender.MALE, unitSystem = UnitSystem.IMPERIAL))
 
             viewModel = createViewModel()
-            advanceUntilIdle()
             val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
             val item = state.historyItems[0]
