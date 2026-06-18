@@ -211,8 +211,8 @@ private fun GaugeCardContent(
                         .height(60.dp)
                         .padding(bottom = 6.dp),
             ) {
-                val strokeWidthPx = 6.dp.toPx()
-                val dotRadiusPx = 4.dp.toPx()
+                val strokeWidthPx = 8.dp.toPx()
+                val dotRadiusPx = 5.dp.toPx()
 
                 // Add padding to prevent any clipping of rounded caps or the endpoint dot
                 val horizontalPadding = strokeWidthPx / 2f + dotRadiusPx
