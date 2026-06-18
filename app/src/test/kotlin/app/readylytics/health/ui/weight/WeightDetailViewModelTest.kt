@@ -46,6 +46,7 @@ class WeightDetailViewModelTest {
             mockk {
                 coEvery { getByDateRange(any(), any()) } returns emptyList()
                 coEvery { getLatest() } returns null
+                coEvery { getPrevious(any()) } returns null
             }
         settingsRepo =
             mockk {
@@ -113,12 +114,10 @@ class WeightDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            collectWithCleanup {
-                val state = viewModel.uiState.first { it.weightDisplay != null }
+            val state = viewModel.uiState.first { it.weightDisplay != null }
 
-                // 75 kg * 2.20462 = 165.3465 lbs -> "165.3"
-                assertEquals("165.3", state.weightDisplay)
-            }
+            // 75 kg * 2.20462 = 165.3465 lbs -> "165.3"
+            assertEquals("165.3", state.weightDisplay)
         }
 
     @Test
@@ -153,7 +152,6 @@ class WeightDetailViewModelTest {
 
             val state = viewModel.uiState.first { it.weightDisplay != null }
             assertEquals(null, state.bmiDisplay)
-            }
         }
 
     // --- historyItems ---
@@ -196,8 +194,7 @@ class WeightDetailViewModelTest {
                 MutableStateFlow(UserPreferences(unitSystem = UnitSystem.IMPERIAL, heightCm = 175f))
 
             viewModel = createViewModel()
-            collectWithCleanup {
-                val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
+            val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
             val newest = state.historyItems[0]
             // -1 kg * 2.20462 = -2.20462 lbs
