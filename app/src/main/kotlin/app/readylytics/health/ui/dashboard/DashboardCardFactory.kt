@@ -36,6 +36,7 @@ import app.readylytics.health.ui.common.CardLoader
 import app.readylytics.health.ui.common.MetricCardSkeleton
 import app.readylytics.health.ui.common.ScoreDialSkeleton
 import app.readylytics.health.ui.common.formatRoundedScoreDelta
+import app.readylytics.health.ui.common.resolveOrNull
 import app.readylytics.health.ui.components.CircadianConsistencyCard
 import app.readylytics.health.ui.components.InsightCard
 import app.readylytics.health.ui.components.InsightRerunCard
@@ -86,7 +87,7 @@ fun buildCardDataMap(
                         formatRoundedScoreDelta(
                             currentRounded = sleepScoreCard?.value?.toIntOrNull(),
                             previousRounded = uiState.yesterdaySleepScoreRounded,
-                        ),
+                        ).resolveOrNull(),
                     onClick = if (isEditing) ({}) else onNavigateToSleep,
                     tooltipDescription = sleepScoreCard?.tooltip,
                 )
@@ -105,9 +106,9 @@ fun buildCardDataMap(
                     if (readinessVal != null && uiState.yesterdayReadiness != null) {
                         val diff = (readinessVal - uiState.yesterdayReadiness).toInt()
                         when {
-                            diff > 0 -> "↑ $diff"
-                            diff < 0 -> "↓ ${kotlin.math.abs(diff)}"
-                            else -> "—"
+                            diff > 0 -> stringResource(R.string.delta_up) + " $diff"
+                            diff < 0 -> stringResource(R.string.delta_down) + " ${kotlin.math.abs(diff)}"
+                            else -> stringResource(R.string.delta_no_change)
                         }
                     } else {
                         null

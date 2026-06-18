@@ -34,6 +34,7 @@ import app.readylytics.health.domain.model.bodyFatZoneBands
 import app.readylytics.health.ui.common.ScoreDialSkeleton
 import app.readylytics.health.ui.common.SkeletonCard
 import app.readylytics.health.ui.common.TimeRange
+import app.readylytics.health.ui.common.resolveOrNull
 import app.readylytics.health.ui.components.ChartDefaults
 import app.readylytics.health.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.ui.components.SectionHeader
@@ -129,7 +130,7 @@ fun BodyFatDetailScreen(
                     unitText = stringResource(R.string.unit_percent),
                     maxScore = uiState.optimalRangeMax * 2f,
                     status = uiState.bodyFatStatus,
-                    deltaText = uiState.deltaBodyFatDisplay,
+                    deltaText = uiState.deltaBodyFatDisplay.resolveOrNull(),
                     tooltipDescription =
                         stringResource(
                             R.string.tooltip_body_fat_current,

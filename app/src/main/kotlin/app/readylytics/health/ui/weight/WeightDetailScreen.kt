@@ -38,6 +38,7 @@ import app.readylytics.health.domain.model.weightZoneBands
 import app.readylytics.health.ui.common.ScoreDialSkeleton
 import app.readylytics.health.ui.common.SkeletonCard
 import app.readylytics.health.ui.common.TimeRange
+import app.readylytics.health.ui.common.resolveOrNull
 import app.readylytics.health.ui.components.ChartDefaults
 import app.readylytics.health.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.ui.components.SectionHeader
@@ -193,7 +194,7 @@ fun WeightDetailScreen(
                         unitText = unitLabel,
                         maxScore = weightMaxScore,
                         status = bmiStatus,
-                        deltaText = uiState.deltaWeightDisplay,
+                        deltaText = uiState.deltaWeightDisplay.resolveOrNull(),
                         tooltipDescription =
                             stringResource(
                                 R.string.tooltip_weight_current,

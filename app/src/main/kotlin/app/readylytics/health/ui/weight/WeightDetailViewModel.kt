@@ -2,6 +2,7 @@ package app.readylytics.health.ui.weight
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.R
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.repository.SelectedDateRepository
@@ -11,6 +12,7 @@ import app.readylytics.health.domain.repository.WeightRepository
 import app.readylytics.health.domain.util.UnitConverter
 import app.readylytics.health.ui.common.DailyDataPoint
 import app.readylytics.health.ui.common.TimeRange
+import app.readylytics.health.ui.common.UiText
 import app.readylytics.health.ui.common.WeightHistoryItem
 import app.readylytics.health.ui.common.padToRange
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,7 +43,7 @@ data class WeightDetailUiState(
     val bmiDisplay: String? = null,
     val historyItems: List<WeightHistoryItem> = emptyList(),
     val isLoading: Boolean = true,
-    val deltaWeightDisplay: String? = null,
+    val deltaWeightDisplay: UiText? = null,
 )
 
 @HiltViewModel
@@ -77,11 +79,32 @@ class WeightDetailViewModel
                                     kotlin.math.abs(diffKg),
                                     userPrefs.unitSystem,
                                 )
-                            val unitLabel = if (userPrefs.unitSystem == UnitSystem.METRIC) "kg" else "lbs"
+                            val unitRes =
+                                if (userPrefs.unitSystem ==
+                                    UnitSystem.METRIC
+                                ) {
+                                    R.string.unit_kg
+                                } else {
+                                    R.string.unit_lbs
+                                }
                             when {
-                                diffKg > 0f -> "↑ $formattedDiff $unitLabel"
-                                diffKg < 0f -> "↓ $formattedDiff $unitLabel"
-                                else -> "—"
+                                diffKg > 0f ->
+                                    UiText.Compound(
+                                        listOf(
+                                            UiText.StringRes(R.string.delta_up),
+                                            UiText.RawString(" $formattedDiff "),
+                                            UiText.StringRes(unitRes),
+                                        ),
+                                    )
+                                diffKg < 0f ->
+                                    UiText.Compound(
+                                        listOf(
+                                            UiText.StringRes(R.string.delta_down),
+                                            UiText.RawString(" $formattedDiff "),
+                                            UiText.StringRes(unitRes),
+                                        ),
+                                    )
+                                else -> UiText.StringRes(R.string.delta_no_change)
                             }
                         } else {
                             null

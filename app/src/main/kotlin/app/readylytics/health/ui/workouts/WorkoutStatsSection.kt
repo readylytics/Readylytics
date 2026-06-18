@@ -149,9 +149,9 @@ fun WorkoutStatsSection(
                                         "%.2f",
                                         uiState.todayStrainIncrease,
                                     )
-                                "↑ $diffFormatted"
+                                stringResource(R.string.delta_up) + " $diffFormatted"
                             } else {
-                                "—"
+                                stringResource(R.string.delta_no_change)
                             }
                         } else {
                             null
@@ -161,7 +161,8 @@ fun WorkoutStatsSection(
                         modifier = Modifier.weight(1f),
                         title = stringResource(R.string.card_title_strain_ratio),
                         score = strainRatio,
-                        displayText = uiState.latestMetrics?.strainRatioDisplay ?: "—",
+                        displayText =
+                            uiState.latestMetrics?.strainRatioDisplay ?: stringResource(R.string.delta_no_change),
                         unitText = "",
                         maxScore = 2.0f,
                         status = strainStatus,
@@ -174,9 +175,9 @@ fun WorkoutStatsSection(
                         if (readinessVal != null && uiState.yesterdayReadiness != null) {
                             val diff = (readinessVal - uiState.yesterdayReadiness).toInt()
                             when {
-                                diff > 0 -> "↑ $diff"
-                                diff < 0 -> "↓ ${kotlin.math.abs(diff)}"
-                                else -> "—"
+                                diff > 0 -> stringResource(R.string.delta_up) + " $diff"
+                                diff < 0 -> stringResource(R.string.delta_down) + " ${kotlin.math.abs(diff)}"
+                                else -> stringResource(R.string.delta_no_change)
                             }
                         } else {
                             null
@@ -186,7 +187,9 @@ fun WorkoutStatsSection(
                         modifier = Modifier.weight(1f),
                         title = stringResource(R.string.card_title_readiness),
                         score = readinessVal,
-                        displayText = uiState.latestMetrics?.readinessRounded?.toString() ?: "—",
+                        displayText =
+                            uiState.latestMetrics?.readinessRounded?.toString()
+                                ?: stringResource(R.string.delta_no_change),
                         unitText = "",
                         deltaText = readinessDelta,
                         tooltipDescription = stringResource(R.string.tooltip_readiness),

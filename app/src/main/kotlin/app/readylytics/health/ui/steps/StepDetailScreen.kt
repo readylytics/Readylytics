@@ -106,9 +106,9 @@ fun StepDetailScreen(
                         val diff = stepCount - stepGoal
                         val formattedDiff = String.format(java.util.Locale.US, "%,d", kotlin.math.abs(diff))
                         when {
-                            diff > 0 -> "↑ $formattedDiff"
-                            diff < 0 -> "↓ $formattedDiff"
-                            else -> "Goal met"
+                            diff > 0 -> stringResource(R.string.delta_up) + " $formattedDiff"
+                            diff < 0 -> stringResource(R.string.delta_down) + " $formattedDiff"
+                            else -> stringResource(R.string.delta_no_change)
                         }
                     } else {
                         null

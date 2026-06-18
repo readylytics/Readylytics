@@ -16,6 +16,10 @@ sealed class UiText {
     data class RawString(
         val value: String,
     ) : UiText()
+
+    data class Compound(
+        val parts: List<UiText>,
+    ) : UiText()
 }
 
 @Composable
@@ -24,6 +28,11 @@ fun UiText.resolveString(): String =
         is UiText.StringRes -> stringResource(id)
         is UiText.StringResWithArgs -> stringResource(id, *args.toTypedArray())
         is UiText.RawString -> value
+        is UiText.Compound -> {
+            val builder = StringBuilder()
+            parts.forEach { builder.append(it.resolveString()) }
+            builder.toString()
+        }
     }
 
 @Composable

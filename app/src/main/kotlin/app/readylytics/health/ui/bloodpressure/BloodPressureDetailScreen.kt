@@ -115,11 +115,15 @@ fun BloodPressureDetailScreen(
                 ) {
                     val systolicDelta =
                         if (uiState.latestSystolic != null) {
-                            val diff = uiState.latestSystolic - 120
+                            val diff = (uiState.latestSystolic - 120)
                             when {
-                                diff > 0 -> "↑ $diff mmHg"
-                                diff < 0 -> "↓ ${kotlin.math.abs(diff)} mmHg"
-                                else -> "Optimal"
+                                diff > 0 ->
+                                    stringResource(R.string.delta_up) + " $diff " +
+                                        stringResource(R.string.unit_mmHg)
+                                diff < 0 ->
+                                    stringResource(R.string.delta_down) + " ${kotlin.math.abs(diff)} " +
+                                        stringResource(R.string.unit_mmHg)
+                                else -> stringResource(R.string.delta_no_change)
                             }
                         } else {
                             null
@@ -139,11 +143,15 @@ fun BloodPressureDetailScreen(
 
                     val diastolicDelta =
                         if (uiState.latestDiastolic != null) {
-                            val diff = uiState.latestDiastolic - 80
+                            val diff = (uiState.latestDiastolic - 80)
                             when {
-                                diff > 0 -> "↑ $diff mmHg"
-                                diff < 0 -> "↓ ${kotlin.math.abs(diff)} mmHg"
-                                else -> "Optimal"
+                                diff > 0 ->
+                                    stringResource(R.string.delta_up) + " $diff " +
+                                        stringResource(R.string.unit_mmHg)
+                                diff < 0 ->
+                                    stringResource(R.string.delta_down) + " ${kotlin.math.abs(diff)} " +
+                                        stringResource(R.string.unit_mmHg)
+                                else -> stringResource(R.string.delta_no_change)
                             }
                         } else {
                             null

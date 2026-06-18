@@ -165,9 +165,13 @@ fun VitalsScreen(
                             if (currentRhr != null && baselineRhr != null) {
                                 val diff = currentRhr - baselineRhr
                                 when {
-                                    diff > 0 -> "↑ $diff bpm"
-                                    diff < 0 -> "↓ ${kotlin.math.abs(diff)} bpm"
-                                    else -> "—"
+                                    diff > 0 ->
+                                        stringResource(R.string.delta_up) + " $diff " +
+                                            stringResource(R.string.unit_bpm)
+                                    diff < 0 ->
+                                        stringResource(R.string.delta_down) + " ${kotlin.math.abs(diff)} " +
+                                            stringResource(R.string.unit_bpm)
+                                    else -> stringResource(R.string.delta_no_change)
                                 }
                             } else {
                                 null
@@ -198,9 +202,13 @@ fun VitalsScreen(
                             if (currentHrv != null && baselineHrv != null) {
                                 val diff = (currentHrv - baselineHrv).roundToInt()
                                 when {
-                                    diff > 0 -> "↑ $diff ms"
-                                    diff < 0 -> "↓ ${kotlin.math.abs(diff)} ms"
-                                    else -> "—"
+                                    diff > 0 ->
+                                        stringResource(R.string.delta_up) + " $diff " +
+                                            stringResource(R.string.unit_ms)
+                                    diff < 0 ->
+                                        stringResource(R.string.delta_down) + " ${kotlin.math.abs(diff)} " +
+                                            stringResource(R.string.unit_ms)
+                                    else -> stringResource(R.string.delta_no_change)
                                 }
                             } else {
                                 null

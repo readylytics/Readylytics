@@ -1,10 +1,12 @@
 package app.readylytics.health.ui.sleep
 
+import app.readylytics.health.R
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.sleepDurationStatus
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.ui.common.DateFormatUtils
+import app.readylytics.health.ui.common.UiText
 
 private const val SLEEP_TIME_GOAL_FILL_RATIO = 0.5f
 
@@ -12,7 +14,7 @@ data class SleepTimeGaugeData(
     val progress: Float?,
     val displayText: String,
     val status: MetricStatus,
-    val deltaText: String? = null,
+    val deltaText: UiText? = null,
 )
 
 internal fun buildSleepTimeGaugeData(
@@ -28,11 +30,21 @@ internal fun buildSleepTimeGaugeData(
         if (actualMinutes != null && goalMinutes > 0) {
             val diffMinutes = actualMinutes - goalMinutes
             if (diffMinutes > 0) {
-                "↑ ${formatSleepDiff(diffMinutes)}"
+                UiText.Compound(
+                    listOf(
+                        UiText.StringRes(R.string.delta_up),
+                        UiText.RawString(" ${formatSleepDiff(diffMinutes)}"),
+                    ),
+                )
             } else if (diffMinutes < 0) {
-                "↓ ${formatSleepDiff(-diffMinutes)}"
+                UiText.Compound(
+                    listOf(
+                        UiText.StringRes(R.string.delta_down),
+                        UiText.RawString(" ${formatSleepDiff(-diffMinutes)}"),
+                    ),
+                )
             } else {
-                "Goal met"
+                UiText.StringRes(R.string.delta_no_change)
             }
         } else {
             null

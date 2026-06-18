@@ -39,6 +39,7 @@ import app.readylytics.health.ui.common.ScoreDialSkeleton
 import app.readylytics.health.ui.common.SkeletonCard
 import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.common.formatRoundedScoreDelta
+import app.readylytics.health.ui.common.resolveOrNull
 import app.readylytics.health.ui.components.ChartDefaults
 import app.readylytics.health.ui.components.CircadianConsistencyCard
 import app.readylytics.health.ui.components.M3ScoreGaugeCard
@@ -135,7 +136,7 @@ fun SleepScreen(
                         formatRoundedScoreDelta(
                             currentRounded = uiState.latestMetrics?.sleepScoreRounded,
                             previousRounded = uiState.yesterdaySleepScoreRounded,
-                        ),
+                        ).resolveOrNull(),
                     tooltipDescription = stringResource(R.string.tooltip_sleep_score),
                 )
 
@@ -153,7 +154,7 @@ fun SleepScreen(
                     unitText = "",
                     maxScore = 1f,
                     status = sleepTimeGaugeData.status,
-                    deltaText = sleepTimeGaugeData.deltaText,
+                    deltaText = sleepTimeGaugeData.deltaText.resolveOrNull(),
                     tooltipDescription = stringResource(R.string.tooltip_sleep_duration, goalText),
                 )
             }
