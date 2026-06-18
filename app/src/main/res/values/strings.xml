@@ -858,6 +858,10 @@
     <string name="accessibility_prev_day">Previous day</string>
     <string name="accessibility_open_date_picker">Open date picker</string>
     <string name="accessibility_next_day">Next day</string>
+    <string name="accessibility_date_pill">%1$s, %2$s. Tap to open date picker.</string>
+    <string name="date_switcher_label_today">Today</string>
+    <string name="date_switcher_label_yesterday">Yesterday</string>
+    <string name="date_switcher_label_selected">Selected date</string>
     <string name="accessibility_circadian_threshold_adjustment">Circadian threshold adjustment.
         Range: 0 to 90 minutes</string>
     <string name="accessibility_circadian_threshold_state">Current value: %1$d minutes</string>

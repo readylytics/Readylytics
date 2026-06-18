@@ -396,7 +396,13 @@ private fun ReorderableCardItem(
                 Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .then(
+                        if (isEditing) {
+                            Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        } else {
+                            Modifier
+                        },
+                    ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (isEditing) {

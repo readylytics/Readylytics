@@ -9,13 +9,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -172,6 +173,10 @@ fun DashboardScreen(
                 }
             }
 
+            item(key = "date_switcher_spacer") {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             if (uiState.isCalibrating) {
                 item(key = "calibration_banner") {
                     CalibrationBanner(
@@ -248,11 +253,16 @@ fun DashboardScreen(
                                 .padding(vertical = 16.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TextButton(
+                        FilledTonalButton(
                             onClick = {
                                 showCardManagement = true
                                 onToggleCardManagement()
                             },
+                            colors =
+                                ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    contentColor = MaterialTheme.colorScheme.onSurface,
+                                ),
                         ) {
                             Text(
                                 text = stringResource(R.string.action_customize),
