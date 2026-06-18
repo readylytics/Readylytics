@@ -185,7 +185,7 @@ class DashboardViewModel
                 dismissedInsightCount = derived.dismissedCount,
                 goalSleepHours = basicInputs.userPreferences.goalSleepHours,
                 userPreferences = basicInputs.userPreferences,
-                yesterdaySleepScore = yesterdayMetrics?.sleepScoreRounded?.toFloat(),
+                yesterdaySleepScoreRounded = yesterdayMetrics?.sleepScoreRounded,
                 yesterdayReadiness = yesterdayMetrics?.readinessRounded?.toFloat(),
             )
         }
@@ -344,7 +344,7 @@ data class DashboardUiState(
     val dismissedInsightCount: Int = 0,
     val goalSleepHours: Float = 8f,
     val userPreferences: UserPreferences = UserPreferences(),
-    val yesterdaySleepScore: Float? = null,
+    val yesterdaySleepScoreRounded: Int? = null,
     val yesterdayReadiness: Float? = null,
 )
 

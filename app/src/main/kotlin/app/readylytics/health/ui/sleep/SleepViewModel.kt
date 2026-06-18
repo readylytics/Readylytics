@@ -38,6 +38,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
+import kotlin.math.roundToInt
 
 data class Baselines(
     val hrv: Float? = null,
@@ -63,7 +64,7 @@ data class SleepUiState(
             summary = null,
             goalSleepHours = SettingsDefaults.GOAL_SLEEP_HOURS,
         ),
-    val yesterdaySleepScore: Float? = null,
+    val yesterdaySleepScoreRounded: Int? = null,
 )
 
 @HiltViewModel
@@ -151,9 +152,7 @@ class SleepViewModel
                             .toInstant()
                             .toEpochMilli()
                     val yesterdaySummaryFlow =
-                        flow {
-                            emit(dailySummaryRepository.getByDate(yesterdayMidnightMs))
-                        }.flowOn(Dispatchers.IO)
+                        dailySummaryRepository.observeByDate(yesterdayMidnightMs).flowOn(Dispatchers.IO)
 
                     val sessionFlow =
                         sleepSessionRepository.observeFirstSessionEndingInRange(
@@ -262,7 +261,7 @@ class SleepViewModel
                                     summary = latestSummary,
                                     goalSleepHours = prefs.goalSleepHours,
                                 ),
-                            yesterdaySleepScore = yesterdaySummary?.sleepScore,
+                            yesterdaySleepScoreRounded = yesterdaySummary?.sleepScore?.roundToInt(),
                         )
                     }
                 }.flowOn(Dispatchers.Default)

@@ -38,6 +38,7 @@ import app.readylytics.health.ui.common.MetricCardSkeleton
 import app.readylytics.health.ui.common.ScoreDialSkeleton
 import app.readylytics.health.ui.common.SkeletonCard
 import app.readylytics.health.ui.common.TimeRange
+import app.readylytics.health.ui.common.formatRoundedScoreDelta
 import app.readylytics.health.ui.components.ChartDefaults
 import app.readylytics.health.ui.components.CircadianConsistencyCard
 import app.readylytics.health.ui.components.M3ScoreGaugeCard
@@ -124,26 +125,17 @@ fun SleepScreen(
                     modifier = Modifier.weight(1f),
                 )
             } else {
-                val sleepDeltaText =
-                    if (uiState.latestSummary?.sleepScore != null &&
-                        uiState.yesterdaySleepScore != null
-                    ) {
-                        val diff = (uiState.latestSummary.sleepScore - uiState.yesterdaySleepScore).toInt()
-                        when {
-                            diff > 0 -> "↑ $diff"
-                            diff < 0 -> "↓ ${kotlin.math.abs(diff)}"
-                            else -> "—"
-                        }
-                    } else {
-                        null
-                    }
                 M3ScoreGaugeCard(
                     modifier = Modifier.weight(1f),
                     title = stringResource(R.string.sleep_score_gauge_title),
                     score = uiState.latestSummary?.sleepScore,
                     displayText = uiState.latestMetrics?.sleepScoreRounded?.toString() ?: "—",
                     unitText = "",
-                    deltaText = sleepDeltaText,
+                    deltaText =
+                        formatRoundedScoreDelta(
+                            currentRounded = uiState.latestMetrics?.sleepScoreRounded,
+                            previousRounded = uiState.yesterdaySleepScoreRounded,
+                        ),
                     tooltipDescription = stringResource(R.string.tooltip_sleep_score),
                 )
 

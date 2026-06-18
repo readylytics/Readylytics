@@ -35,6 +35,7 @@ import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.ui.common.CardLoader
 import app.readylytics.health.ui.common.MetricCardSkeleton
 import app.readylytics.health.ui.common.ScoreDialSkeleton
+import app.readylytics.health.ui.common.formatRoundedScoreDelta
 import app.readylytics.health.ui.components.CircadianConsistencyCard
 import app.readylytics.health.ui.components.InsightCard
 import app.readylytics.health.ui.components.InsightRerunCard
@@ -75,24 +76,17 @@ fun buildCardDataMap(
             skeleton = { ScoreDialSkeleton() },
             content = {
                 val sleepScoreCard = uiState.cardDataMap[CardId.SLEEP_SCORE]
-                val sleepDelta =
-                    if (summary?.sleepScore != null && uiState.yesterdaySleepScore != null) {
-                        val diff = (summary.sleepScore - uiState.yesterdaySleepScore).toInt()
-                        when {
-                            diff > 0 -> "↑ $diff"
-                            diff < 0 -> "↓ ${kotlin.math.abs(diff)}"
-                            else -> "—"
-                        }
-                    } else {
-                        null
-                    }
                 M3ScoreGaugeCard(
                     title = sleepScoreCard?.title ?: "Sleep Score",
                     score = summary?.sleepScore,
                     displayText = sleepScoreCard?.value ?: "—",
                     unitText = sleepScoreCard?.unit ?: "",
                     status = sleepScoreCard?.status,
-                    deltaText = sleepDelta,
+                    deltaText =
+                        formatRoundedScoreDelta(
+                            currentRounded = sleepScoreCard?.value?.toIntOrNull(),
+                            previousRounded = uiState.yesterdaySleepScoreRounded,
+                        ),
                     onClick = if (isEditing) ({}) else onNavigateToSleep,
                     tooltipDescription = sleepScoreCard?.tooltip,
                 )
