@@ -16,7 +16,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -28,7 +28,7 @@ import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WeightDetailViewModelTest {
-    private val testDispatcher = UnconfinedTestDispatcher()
+    private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var viewModel: WeightDetailViewModel
     private lateinit var weightRepository: WeightRepository
@@ -68,19 +68,6 @@ class WeightDetailViewModelTest {
             selectedDateRepository = selectedDateRepo,
         )
 
-    private suspend fun <T> collectWithCleanup(block: suspend () -> T): T =
-        try {
-            block()
-        } finally {
-            if (::viewModel.isInitialized) {
-                try {
-                    viewModel.viewModelScope.cancel()
-                } catch (e: Exception) {
-                    // Ignore cancellation exceptions
-                }
-            }
-        }
-
     @After
     fun tearDown() {
         if (::viewModel.isInitialized) {
@@ -91,7 +78,7 @@ class WeightDetailViewModelTest {
 
     @Test
     fun `initial state has null weightDisplay and bmiDisplay`() =
-        runTest(testDispatcher) {
+        runTest {
             viewModel = createViewModel()
             val state = viewModel.uiState.value
             assertEquals(null, state.weightDisplay)
@@ -100,7 +87,7 @@ class WeightDetailViewModelTest {
 
     @Test
     fun `weightDisplay formats metric weight correctly`() =
-        runTest(testDispatcher) {
+        runTest {
             val record = WeightRecordEntity(id = "1", timestampMs = System.currentTimeMillis(), weightKg = 75f)
             coEvery { weightRepository.getLatest() } returns record
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(record)
@@ -110,15 +97,13 @@ class WeightDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            collectWithCleanup {
-                val state = viewModel.uiState.first { it.weightDisplay != null }
-                assertEquals("75.0", state.weightDisplay)
-            }
+            val state = viewModel.uiState.first { it.weightDisplay != null }
+            assertEquals("75.0", state.weightDisplay)
         }
 
     @Test
     fun `weightDisplay formats imperial weight correctly`() =
-        runTest(testDispatcher) {
+        runTest {
             val record = WeightRecordEntity(id = "1", timestampMs = System.currentTimeMillis(), weightKg = 75f)
             coEvery { weightRepository.getLatest() } returns record
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(record)
@@ -138,7 +123,7 @@ class WeightDetailViewModelTest {
 
     @Test
     fun `bmiDisplay formats BMI correctly when height is set`() =
-        runTest(testDispatcher) {
+        runTest {
             val record = WeightRecordEntity(id = "1", timestampMs = System.currentTimeMillis(), weightKg = 70f)
             coEvery { weightRepository.getLatest() } returns record
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(record)
@@ -149,16 +134,14 @@ class WeightDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            collectWithCleanup {
-                val state = viewModel.uiState.first { it.bmiDisplay != null }
+            val state = viewModel.uiState.first { it.bmiDisplay != null }
 
-                assertEquals("22.9", state.bmiDisplay)
-            }
+            assertEquals("22.9", state.bmiDisplay)
         }
 
     @Test
     fun `bmiDisplay is null when height is not set`() =
-        runTest(testDispatcher) {
+        runTest {
             val record = WeightRecordEntity(id = "1", timestampMs = System.currentTimeMillis(), weightKg = 70f)
             coEvery { weightRepository.getLatest() } returns record
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(record)
@@ -168,9 +151,8 @@ class WeightDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            collectWithCleanup {
-                val state = viewModel.uiState.first { it.weightDisplay != null }
-                assertEquals(null, state.bmiDisplay)
+            val state = viewModel.uiState.first { it.weightDisplay != null }
+            assertEquals(null, state.bmiDisplay)
             }
         }
 
@@ -178,7 +160,7 @@ class WeightDetailViewModelTest {
 
     @Test
     fun `historyItems are sorted newest first with delta and bmiStatus`() =
-        runTest(testDispatcher) {
+        runTest {
             val older = WeightRecordEntity(id = "1", timestampMs = 1_000L, weightKg = 80f)
             val newer = WeightRecordEntity(id = "2", timestampMs = 2_000L, weightKg = 79.6f)
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(older, newer)
@@ -187,27 +169,25 @@ class WeightDetailViewModelTest {
                 MutableStateFlow(UserPreferences(unitSystem = UnitSystem.METRIC, heightCm = 175f))
 
             viewModel = createViewModel()
-            collectWithCleanup {
-                val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
+            val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
-                assertEquals(2, state.historyItems.size)
+            assertEquals(2, state.historyItems.size)
 
-                val newest = state.historyItems[0]
-                assertEquals(2_000L, newest.timestampMs)
-                assertEquals(79.6f, newest.weightDisplay, 0.01f)
-                assertEquals(-0.4f, newest.deltaDisplay!!, 0.01f)
-                assertEquals(BmiStatus.Neutral, newest.bmiStatus)
+            val newest = state.historyItems[0]
+            assertEquals(2_000L, newest.timestampMs)
+            assertEquals(79.6f, newest.weightDisplay, 0.01f)
+            assertEquals(-0.4f, newest.deltaDisplay!!, 0.01f)
+            assertEquals(BmiStatus.Neutral, newest.bmiStatus)
 
-                val oldest = state.historyItems[1]
-                assertEquals(1_000L, oldest.timestampMs)
-                assertEquals(80f, oldest.weightDisplay, 0.01f)
-                assertEquals(null, oldest.deltaDisplay)
-            }
+            val oldest = state.historyItems[1]
+            assertEquals(1_000L, oldest.timestampMs)
+            assertEquals(80f, oldest.weightDisplay, 0.01f)
+            assertEquals(null, oldest.deltaDisplay)
         }
 
     @Test
     fun `historyItems convert weight and delta to imperial units`() =
-        runTest(testDispatcher) {
+        runTest {
             val older = WeightRecordEntity(id = "1", timestampMs = 1_000L, weightKg = 80f)
             val newer = WeightRecordEntity(id = "2", timestampMs = 2_000L, weightKg = 79f)
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(older, newer)
@@ -219,15 +199,14 @@ class WeightDetailViewModelTest {
             collectWithCleanup {
                 val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
-                val newest = state.historyItems[0]
-                // -1 kg * 2.20462 = -2.20462 lbs
-                assertEquals(-2.20462f, newest.deltaDisplay!!, 0.01f)
-            }
+            val newest = state.historyItems[0]
+            // -1 kg * 2.20462 = -2.20462 lbs
+            assertEquals(-2.20462f, newest.deltaDisplay!!, 0.01f)
         }
 
     @Test
     fun `historyItems bmiStatus is null when height is not set`() =
-        runTest(testDispatcher) {
+        runTest {
             val record = WeightRecordEntity(id = "1", timestampMs = System.currentTimeMillis(), weightKg = 70f)
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(record)
 
@@ -235,10 +214,8 @@ class WeightDetailViewModelTest {
                 MutableStateFlow(UserPreferences(unitSystem = UnitSystem.METRIC, heightCm = null))
 
             viewModel = createViewModel()
-            collectWithCleanup {
-                val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
+            val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
-                assertEquals(null, state.historyItems[0].bmiStatus)
-            }
+            assertEquals(null, state.historyItems[0].bmiStatus)
         }
 }
