@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,9 +38,11 @@ import app.readylytics.health.ui.common.MetricCardSkeleton
 import app.readylytics.health.ui.common.ScoreDialSkeleton
 import app.readylytics.health.ui.common.SkeletonCard
 import app.readylytics.health.ui.common.TimeRange
+import app.readylytics.health.ui.common.formatRoundedScoreDelta
+import app.readylytics.health.ui.common.resolveOrNull
 import app.readylytics.health.ui.components.ChartDefaults
 import app.readylytics.health.ui.components.CircadianConsistencyCard
-import app.readylytics.health.ui.components.M3ScoreDial
+import app.readylytics.health.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.ui.components.MetricCard
 import app.readylytics.health.ui.components.SectionHeader
 import app.readylytics.health.ui.components.SleepArchitectureBar
@@ -119,18 +120,24 @@ fun SleepScreen(
         ) {
             if (uiState.isLoading) {
                 ScoreDialSkeleton(
-                    modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
+                    modifier = Modifier.weight(1f),
                 )
                 ScoreDialSkeleton(
-                    modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
+                    modifier = Modifier.weight(1f),
                 )
             } else {
-                M3ScoreDial(
+                M3ScoreGaugeCard(
+                    modifier = Modifier.weight(1f),
+                    title = stringResource(R.string.sleep_score_gauge_title),
                     score = uiState.latestSummary?.sleepScore,
-                    label = stringResource(R.string.sleep_score_gauge_title),
                     displayText = uiState.latestMetrics?.sleepScoreRounded?.toString() ?: "—",
+                    unitText = "",
+                    deltaText =
+                        formatRoundedScoreDelta(
+                            currentRounded = uiState.latestMetrics?.sleepScoreRounded,
+                            previousRounded = uiState.yesterdaySleepScoreRounded,
+                        ).resolveOrNull(),
                     tooltipDescription = stringResource(R.string.tooltip_sleep_score),
-                    modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
                 )
 
                 val sleepTimeGaugeData = uiState.sleepTimeGaugeData
@@ -139,14 +146,16 @@ fun SleepScreen(
                         (uiState.goalSleepHours * 60f).toInt().coerceAtLeast(0),
                     )
 
-                M3ScoreDial(
+                M3ScoreGaugeCard(
+                    modifier = Modifier.weight(1f),
+                    title = stringResource(R.string.sleep_time_gauge_title),
                     score = sleepTimeGaugeData.progress,
-                    label = stringResource(R.string.sleep_time_gauge_title),
+                    displayText = sleepTimeGaugeData.displayText,
+                    unitText = "",
                     maxScore = 1f,
                     status = sleepTimeGaugeData.status,
-                    displayText = sleepTimeGaugeData.displayText,
+                    deltaText = sleepTimeGaugeData.deltaText.resolveOrNull(),
                     tooltipDescription = stringResource(R.string.tooltip_sleep_duration, goalText),
-                    modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
                 )
             }
         }

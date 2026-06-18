@@ -2,6 +2,7 @@ package app.readylytics.health.ui.bodyfat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.R
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.repository.SelectedDateRepository
@@ -14,6 +15,7 @@ import app.readylytics.health.domain.util.UnitConverter
 import app.readylytics.health.ui.common.BodyFatHistoryItem
 import app.readylytics.health.ui.common.DailyDataPoint
 import app.readylytics.health.ui.common.TimeRange
+import app.readylytics.health.ui.common.UiText
 import app.readylytics.health.ui.common.padToRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +47,7 @@ data class BodyFatDetailUiState(
     val optimalRangeDisplay: String? = null,
     val historyItems: List<BodyFatHistoryItem> = emptyList(),
     val isLoading: Boolean = true,
+    val deltaBodyFatDisplay: UiText? = null,
 )
 
 @HiltViewModel
@@ -72,6 +75,33 @@ class BodyFatDetailViewModel
 
                     val records = bodyFatRepository.getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
                     val latest = bodyFatRepository.getLatest()
+                    val previous = if (latest != null) bodyFatRepository.getPrevious(latest.timestampMs) else null
+                    val deltaBodyFatDisplay =
+                        if (latest != null && previous != null) {
+                            val diff = latest.bodyFatPercent - previous.bodyFatPercent
+                            val formattedDiff = MetricFormatter.formatBodyFatNumericOnly(kotlin.math.abs(diff))
+                            when {
+                                diff > 0 ->
+                                    UiText.Compound(
+                                        listOf(
+                                            UiText.StringRes(R.string.delta_up),
+                                            UiText.RawString(" $formattedDiff"),
+                                            UiText.StringRes(R.string.unit_percent),
+                                        ),
+                                    )
+                                diff < 0 ->
+                                    UiText.Compound(
+                                        listOf(
+                                            UiText.StringRes(R.string.delta_down),
+                                            UiText.RawString(" $formattedDiff"),
+                                            UiText.StringRes(R.string.unit_percent),
+                                        ),
+                                    )
+                                else -> UiText.StringRes(R.string.delta_no_change)
+                            }
+                        } else {
+                            null
+                        }
 
                     val recordsByDay =
                         records.groupBy { record ->
@@ -157,6 +187,7 @@ class BodyFatDetailViewModel
                             },
                         historyItems = historyItems,
                         isLoading = false,
+                        deltaBodyFatDisplay = deltaBodyFatDisplay,
                     )
                 }
             }.stateIn(

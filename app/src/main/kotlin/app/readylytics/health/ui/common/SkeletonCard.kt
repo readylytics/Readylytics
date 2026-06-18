@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -128,11 +126,11 @@ fun MetricCardSkeleton(
 @Composable
 fun ScoreDialSkeleton(
     modifier: Modifier = Modifier,
-    height: Dp = 140.dp,
+    height: Dp = 156.dp,
 ) {
     Card(
-        modifier = modifier.size(height),
-        shape = CircleShape,
+        modifier = modifier.fillMaxWidth().height(height),
+        shape = MaterialTheme.shapes.large,
         colors =
             CardDefaults.cardColors(
                 containerColor =
@@ -143,12 +141,12 @@ fun ScoreDialSkeleton(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(24.dp)
+                    .padding(16.dp)
                     .background(
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                            alpha = 0.2f,
+                            alpha = 0.15f,
                         ),
-                        CircleShape,
+                        MaterialTheme.shapes.large,
                     ).shimmerAnimation(),
         )
     }

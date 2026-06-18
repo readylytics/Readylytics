@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
@@ -51,6 +52,9 @@ class SleepViewModelTest {
     private val savedStateHandle: SavedStateHandle = mockk(relaxed = true)
 
     private val selectedDateFlow = MutableStateFlow(LocalDate.of(2026, 6, 11))
+    private val selectedSummaryFlow = MutableStateFlow<DailySummary?>(null)
+    private val selectedMetricsFlow = MutableStateFlow<DailyMetrics?>(null)
+    private val yesterdaySummaryFlow = MutableStateFlow<DailySummary?>(null)
     private lateinit var viewModel: SleepViewModel
 
     @Before
@@ -61,10 +65,22 @@ class SleepViewModelTest {
         every { selectedDateRepository.earliestDate } returns MutableStateFlow(null)
         every { circadianRepo.resultFor(any()) } returns flowOf(CircadianConsistencyResult.Calibrating)
         every { foregroundSyncController.isSyncing } returns MutableStateFlow(false)
-        every { dailyMetricsRepository.observeByDate(any()) } returns flowOf(null)
+        every { dailyMetricsRepository.observeByDate(any()) } returns selectedMetricsFlow
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences(goalSleepHours = 8f))
 
         every { dailySummaryRepository.observeSince(any()) } returns flowOf(emptyList())
+        every { dailySummaryRepository.observeByDate(any()) } answers {
+            val requestedMidnightMs = firstArg<Long>()
+            val selectedMidnightMs =
+                selectedDateFlow.value
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+            when (requestedMidnightMs) {
+                selectedMidnightMs -> selectedSummaryFlow
+                else -> yesterdaySummaryFlow
+            }
+        }
         every { sleepSessionRepository.observeSince(any()) } returns flowOf(emptyList())
         every { sleepSessionRepository.observeFirstSessionEndingInRange(any(), any()) } returns flowOf(null)
     }
@@ -255,5 +271,42 @@ class SleepViewModelTest {
             assertEquals(true, state.trendStartOffsetPoints.all { it.value == null })
             assertEquals(true, state.trendDurationSpanPoints.all { it.value == null })
             assertEquals(true, state.trendActualDurationPoints.all { it.value == null })
+        }
+
+    @Test
+    fun `ui state observes yesterday sleep score as rounded reactive value`() =
+        runTest(testDispatcher) {
+            val selectedDate = selectedDateFlow.value
+            val selectedMidnightMs =
+                selectedDate
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+            selectedSummaryFlow.value = DailySummary(date = selectedDate, sleepScore = 80.2f)
+            selectedMetricsFlow.value = DailyMetrics(date = selectedDate, sleepScoreRounded = 80)
+            yesterdaySummaryFlow.value = DailySummary(date = selectedDate.minusDays(1), sleepScore = 80.2f)
+            coEvery { dailySummaryRepository.getByDate(selectedMidnightMs) } returns selectedSummaryFlow.value
+
+            viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            var state =
+                viewModel.uiState.first {
+                    !it.isLoading &&
+                        it.latestSummary?.sleepScore == 80.2f &&
+                        it.yesterdaySleepScoreRounded == 80
+                }
+            assertEquals(80, state.latestMetrics?.sleepScoreRounded)
+            assertEquals(80, state.yesterdaySleepScoreRounded)
+
+            yesterdaySummaryFlow.value = DailySummary(date = selectedDate.minusDays(1), sleepScore = 80.6f)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            state =
+                viewModel.uiState.first {
+                    !it.isLoading &&
+                        it.yesterdaySleepScoreRounded == 81
+                }
+            assertEquals(81, state.yesterdaySleepScoreRounded)
         }
 }

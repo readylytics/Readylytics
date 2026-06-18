@@ -1,6 +1,5 @@
 package app.readylytics.health.ui.steps
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -24,7 +23,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -36,7 +34,7 @@ import app.readylytics.health.ui.common.ScoreDialSkeleton
 import app.readylytics.health.ui.common.SkeletonCard
 import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.components.ChartDefaults
-import app.readylytics.health.ui.components.M3ScoreDial
+import app.readylytics.health.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.ui.components.SectionHeader
 import app.readylytics.health.ui.components.TrendCard
 import app.readylytics.health.ui.components.TrendChart
@@ -94,31 +92,41 @@ fun StepDetailScreen(
                     .padding(vertical = 16.dp),
         ) {
             if (uiState.isLoading) {
-                Box(
+                ScoreDialSkeleton(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    ScoreDialSkeleton()
-                }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
             } else {
-                Box(
+                val stepCount = uiState.latestSummary?.stepCount
+                val stepGoal = uiState.stepGoal
+                val stepsDelta =
+                    if (stepCount != null && stepGoal > 0) {
+                        val diff = stepCount - stepGoal
+                        val formattedDiff = String.format(java.util.Locale.US, "%,d", kotlin.math.abs(diff))
+                        when {
+                            diff > 0 -> stringResource(R.string.delta_up) + " $formattedDiff"
+                            diff < 0 -> stringResource(R.string.delta_down) + " $formattedDiff"
+                            else -> stringResource(R.string.delta_no_change)
+                        }
+                    } else {
+                        null
+                    }
+                M3ScoreGaugeCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    M3ScoreDial(
-                        score = uiState.latestSummary?.stepCount?.toFloat(),
-                        label = stringResource(R.string.label_steps_today),
-                        maxScore = (uiState.stepGoal * 1.5f),
-                        status = uiState.latestSummary?.stepCount?.let { stepsStatus(it, uiState.stepGoal) },
-                        tooltipDescription = stringResource(R.string.tooltip_steps_today, uiState.stepGoal),
-                    )
-                }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    title = stringResource(R.string.label_steps_today),
+                    score = stepCount?.toFloat(),
+                    displayText = stepCount?.let { String.format(java.util.Locale.US, "%,d", it) } ?: "—",
+                    unitText = "steps",
+                    maxScore = (stepGoal * 1.5f),
+                    status = stepCount?.let { stepsStatus(it, stepGoal) },
+                    deltaText = stepsDelta,
+                    tooltipDescription = stringResource(R.string.tooltip_steps_today, stepGoal),
+                )
             }
 
             SectionHeader(title = stringResource(R.string.label_trends))

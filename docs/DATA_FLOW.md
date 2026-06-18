@@ -60,7 +60,7 @@ All paths are rooted at `app/src/main/kotlin/app/readylytics/health/`.
                │ collectAsStateWithLifecycle()
                ▼
 ┌──────────────────────────────┐
-│  Jetpack Compose UI          │   M3ScoreDial · Vico TrendChart · Canvas charts
+│  Jetpack Compose UI          │   M3ScoreGaugeCard · Vico TrendChart · Canvas charts
 └──────────────────────────────┘
 ```
 
@@ -338,7 +338,7 @@ progress).
 | Component                                                                                     | Path                                              | Role                                                                                                                                       |
 | :-------------------------------------------------------------------------------------------- | :------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------- |
 | `MainScaffold` / `RecalcProgressBanner`                                                       | `ui/scaffold/MainScaffold.kt`                     | Root scaffold, bottom nav, pull-to-refresh; renders the determinate "Recalculating day X of Y" banner (`R.string.recalculating_progress`). |
-| `M3ScoreDial`                                                                                 | `ui/components/M3ScoreDial.kt`                    | Animated radial score dial (status-colored).                                                                                               |
+| `M3ScoreGaugeCard`                                                                             | `ui/components/M3ScoreGaugeCard.kt`                | Soft Arc Metric Card gauge layout (status-colored) with comparison delta pill.                                                              |
 | `MetricCard` / `MetricTooltip`                                                                | `ui/components/MetricCard.kt`, `MetricTooltip.kt` | Status-colored metric cards with tooltips.                                                                                                 |
 | `TrendCharts`                                                                                 | `ui/components/TrendCharts.kt`                    | Vico line charts (`TrendChart`, `MultiSeriesTrendChart`) — Bezier curves, gradient fills, M3 tonal mapping.                                |
 | `SingleBloodPressureChart` / `BloodPressureSplitChart`                                        | `ui/components/`                                  | Vico dual-series synchronized BP charts.                                                                                                   |
@@ -413,7 +413,7 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | `ui/settings/SettingsState.kt`                                             | UI — settings state                                 | `SyncSettingsState` resync progress                                                      |
 | `ui/scaffold/MainScaffold.kt`                                              | UI — scaffold + banner                              | "Recalculating day X of Y"                                                               |
 | `ui/components/InsightCard.kt`                                             | UI — component                                      | dismissible M3 health insight card + slim rerun restore state                            |
-| `ui/components/M3ScoreDial.kt`                                             | UI — visualization                                  | radial score dial                                                                        |
+| `ui/components/M3ScoreGaugeCard.kt`                                         | UI — visualization                                  | soft arc gauge metric card                                                               |
 | `ui/components/TrendCharts.kt`                                             | UI — Vico charts                                    | line trends (Bezier, gradient)                                                           |
 | `ui/components/HrTimelineChart.kt`                                         | UI — Canvas chart                                   | intra-day HR + zones                                                                     |
 | `ui/components/SleepStagesChart.kt`                                        | UI — Canvas chart                                   | sleep stage timeline                                                                     |

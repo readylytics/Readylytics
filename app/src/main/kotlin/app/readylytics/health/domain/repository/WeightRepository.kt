@@ -20,4 +20,6 @@ interface WeightRepository {
         dayStartMs: Long,
         dayEndMs: Long,
     ): WeightRecordEntity?
+
+    suspend fun getPrevious(beforeMs: Long): WeightRecordEntity?
 }

@@ -46,6 +46,7 @@ class WeightDetailViewModelTest {
             mockk {
                 coEvery { getByDateRange(any(), any()) } returns emptyList()
                 coEvery { getLatest() } returns null
+                coEvery { getPrevious(any()) } returns null
             }
         settingsRepo =
             mockk {
@@ -98,7 +99,6 @@ class WeightDetailViewModelTest {
             viewModel = createViewModel()
 
             val state = viewModel.uiState.first { it.weightDisplay != null }
-
             assertEquals("75.0", state.weightDisplay)
         }
 
@@ -151,7 +151,6 @@ class WeightDetailViewModelTest {
             viewModel = createViewModel()
 
             val state = viewModel.uiState.first { it.weightDisplay != null }
-
             assertEquals(null, state.bmiDisplay)
         }
 

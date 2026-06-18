@@ -1,6 +1,5 @@
 package app.readylytics.health.ui.bodyfat
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -24,7 +23,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -36,8 +34,9 @@ import app.readylytics.health.domain.model.bodyFatZoneBands
 import app.readylytics.health.ui.common.ScoreDialSkeleton
 import app.readylytics.health.ui.common.SkeletonCard
 import app.readylytics.health.ui.common.TimeRange
+import app.readylytics.health.ui.common.resolveOrNull
 import app.readylytics.health.ui.components.ChartDefaults
-import app.readylytics.health.ui.components.M3ScoreDial
+import app.readylytics.health.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.ui.components.SectionHeader
 import app.readylytics.health.ui.components.TrendCard
 import app.readylytics.health.ui.components.TrendChart
@@ -105,47 +104,42 @@ fun BodyFatDetailScreen(
                     .padding(vertical = 16.dp),
         ) {
             if (uiState.isLoading) {
-                Box(
+                ScoreDialSkeleton(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    ScoreDialSkeleton()
-                }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
             } else if (uiState.optimalRangeMax > 0f) {
-                Box(
+                val genderStringRes =
+                    when (Gender.entries.find { it.name == uiState.gender }) {
+                        Gender.MALE -> R.string.gender_male
+                        Gender.FEMALE -> R.string.gender_female
+                        Gender.OTHER -> R.string.gender_other
+                        Gender.PREFER_NOT_TO_SAY -> R.string.gender_prefer_not_to_say
+                        else -> R.string.gender_other
+                    }
+                M3ScoreGaugeCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    val genderStringRes =
-                        when (Gender.entries.find { it.name == uiState.gender }) {
-                            Gender.MALE -> R.string.gender_male
-                            Gender.FEMALE -> R.string.gender_female
-                            Gender.OTHER -> R.string.gender_other
-                            Gender.PREFER_NOT_TO_SAY -> R.string.gender_prefer_not_to_say
-                            else -> R.string.gender_other
-                        }
-                    M3ScoreDial(
-                        score = uiState.latestBodyFat,
-                        label = stringResource(R.string.label_body_fat),
-                        maxScore = uiState.optimalRangeMax * 2f,
-                        status = uiState.bodyFatStatus,
-                        displayText = uiState.bodyFatDisplay,
-                        tooltipDescription =
-                            stringResource(
-                                R.string.tooltip_body_fat_current,
-                                uiState.bodyFatDisplay ?: "—",
-                                uiState.optimalRangeDisplay ?: "—",
-                                stringResource(genderStringRes),
-                                uiState.age,
-                            ),
-                    )
-                }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    title = stringResource(R.string.label_body_fat),
+                    score = uiState.latestBodyFat,
+                    displayText = uiState.bodyFatDisplay ?: "—",
+                    unitText = stringResource(R.string.unit_percent),
+                    maxScore = uiState.optimalRangeMax * 2f,
+                    status = uiState.bodyFatStatus,
+                    deltaText = uiState.deltaBodyFatDisplay.resolveOrNull(),
+                    tooltipDescription =
+                        stringResource(
+                            R.string.tooltip_body_fat_current,
+                            uiState.bodyFatDisplay ?: "—",
+                            uiState.optimalRangeDisplay ?: "—",
+                            stringResource(genderStringRes),
+                            uiState.age,
+                        ),
+                )
             }
 
             SectionHeader(title = stringResource(R.string.label_trends))

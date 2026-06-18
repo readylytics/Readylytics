@@ -369,4 +369,43 @@ class WorkoutsViewModelTest {
 
             collectJob.cancelAndJoin()
         }
+
+    @Test
+    fun `stats state computes todayStrainIncrease correctly`() =
+        runTest(testDispatcher) {
+            val today = LocalDate.now()
+            summariesFlow.value =
+                listOf(
+                    DailySummary(
+                        date = today,
+                        readinessWorkoutOnly = 72.5f,
+                        strainRatioWorkoutOnly = 0.365f,
+                        trimpWorkoutOnly = 15f,
+                    ),
+                )
+            every { dailySummaryRepository.observeLatest() } returns flowOf(summariesFlow.value.single())
+            coEvery { workoutRepository.getEarliestWorkoutTimestamp() } returns
+                today
+                    .minusDays(10)
+                    .atStartOfDay(java.time.ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+
+            every { scoringCalculator.computeCtlEmaWithDecay(any(), today) } returns 10f
+            every { scoringCalculator.computeStrainRatio(15f, 10f) } returns 1.5f
+            every { scoringCalculator.computeStrainRatio(12f, 10f) } returns 1.2f
+
+            // Distinguish atlWith and atlWithout calls
+            every { scoringCalculator.computeAtlEmaWithDecay(match { it[today] == 0f }, today) } returns 12f
+            every { scoringCalculator.computeAtlEmaWithDecay(match { it[today] != 0f }, today) } returns 15f
+
+            viewModel = createViewModel()
+            val collectJob = launch { viewModel.uiState.collect {} }
+            val state = viewModel.uiState.first { it.todayStrainIncrease != null }
+
+            // 1.5f - 1.2f = 0.3f
+            assertEquals(0.3f, state.todayStrainIncrease!!, 0.001f)
+
+            collectJob.cancelAndJoin()
+        }
 }

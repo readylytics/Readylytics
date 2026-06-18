@@ -1,10 +1,12 @@
 package app.readylytics.health.ui.sleep
 
+import app.readylytics.health.R
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.sleepDurationStatus
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.ui.common.DateFormatUtils
+import app.readylytics.health.ui.common.UiText
 
 private const val SLEEP_TIME_GOAL_FILL_RATIO = 0.5f
 
@@ -12,6 +14,7 @@ data class SleepTimeGaugeData(
     val progress: Float?,
     val displayText: String,
     val status: MetricStatus,
+    val deltaText: UiText? = null,
 )
 
 internal fun buildSleepTimeGaugeData(
@@ -23,6 +26,30 @@ internal fun buildSleepTimeGaugeData(
     val goalMinutes = sleepGoalMinutes(goalSleepHours)
     val maxMinutes = sleepTimeGaugeMaxMinutes(goalMinutes)
 
+    val deltaText =
+        if (actualMinutes != null && goalMinutes > 0) {
+            val diffMinutes = actualMinutes - goalMinutes
+            if (diffMinutes > 0) {
+                UiText.Compound(
+                    listOf(
+                        UiText.StringRes(R.string.delta_up),
+                        UiText.RawString(" ${formatSleepDiff(diffMinutes)}"),
+                    ),
+                )
+            } else if (diffMinutes < 0) {
+                UiText.Compound(
+                    listOf(
+                        UiText.StringRes(R.string.delta_down),
+                        UiText.RawString(" ${formatSleepDiff(-diffMinutes)}"),
+                    ),
+                )
+            } else {
+                UiText.StringRes(R.string.delta_no_change)
+            }
+        } else {
+            null
+        }
+
     return SleepTimeGaugeData(
         progress = actualMinutes?.let { sleepTimeGaugeProgress(it, maxMinutes) },
         displayText = formatSleepTimeGaugeDuration(actualMinutes),
@@ -32,11 +59,21 @@ internal fun buildSleepTimeGaugeData(
             } else {
                 MetricStatus.CALIBRATING
             },
+        deltaText = deltaText,
     )
 }
 
 internal fun actualSleepMinutes(session: SleepSessionData?): Int? =
     session?.let { (it.durationMinutes - it.awakeMinutes).coerceAtLeast(0) }
+
+private fun formatSleepDiff(minutes: Int): String =
+    if (minutes < 60) {
+        "${minutes}m"
+    } else {
+        val hrs = minutes / 60
+        val mins = minutes % 60
+        if (mins == 0) "${hrs}h" else "${hrs}h ${mins}m"
+    }
 
 private fun formatSleepTimeGaugeDuration(minutes: Int?): String {
     if (minutes == null) return DateFormatUtils.formatSleepDuration(null)
