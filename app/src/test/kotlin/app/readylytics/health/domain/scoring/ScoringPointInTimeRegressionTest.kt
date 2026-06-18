@@ -222,8 +222,6 @@ class ScoringPointInTimeRegressionTest {
             assertNotNull(result.ctlWorkoutOnly, "Workout-only CTL persisted")
             assertNotNull(result.atlEverydayHr, "Everyday ATL persisted")
             assertNotNull(result.ctlEverydayHr, "Everyday CTL persisted")
-
-
         }
 
     @Test
