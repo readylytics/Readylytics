@@ -68,6 +68,15 @@ class WeightDetailViewModelTest {
             selectedDateRepository = selectedDateRepo,
         )
 
+    private suspend fun <T> collectWithCleanup(block: suspend () -> T): T =
+        try {
+            block()
+        } finally {
+            if (::viewModel.isInitialized) {
+                viewModel.viewModelScope.cancel()
+            }
+        }
+
     @After
     fun tearDown() {
         if (::viewModel.isInitialized) {
@@ -97,9 +106,10 @@ class WeightDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            val state = viewModel.uiState.first { it.weightDisplay != null }
-
-            assertEquals("75.0", state.weightDisplay)
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.weightDisplay != null }
+                assertEquals("75.0", state.weightDisplay)
+            }
         }
 
     @Test
@@ -114,10 +124,12 @@ class WeightDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            val state = viewModel.uiState.first { it.weightDisplay != null }
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.weightDisplay != null }
 
-            // 75 kg * 2.20462 = 165.3465 lbs -> "165.3"
-            assertEquals("165.3", state.weightDisplay)
+                // 75 kg * 2.20462 = 165.3465 lbs -> "165.3"
+                assertEquals("165.3", state.weightDisplay)
+            }
         }
 
     @Test
@@ -133,9 +145,11 @@ class WeightDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            val state = viewModel.uiState.first { it.bmiDisplay != null }
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.bmiDisplay != null }
 
-            assertEquals("22.9", state.bmiDisplay)
+                assertEquals("22.9", state.bmiDisplay)
+            }
         }
 
     @Test
@@ -150,9 +164,10 @@ class WeightDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            val state = viewModel.uiState.first { it.weightDisplay != null }
-
-            assertEquals(null, state.bmiDisplay)
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.weightDisplay != null }
+                assertEquals(null, state.bmiDisplay)
+            }
         }
 
     // --- historyItems ---
@@ -168,20 +183,22 @@ class WeightDetailViewModelTest {
                 MutableStateFlow(UserPreferences(unitSystem = UnitSystem.METRIC, heightCm = 175f))
 
             viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
-            assertEquals(2, state.historyItems.size)
+                assertEquals(2, state.historyItems.size)
 
-            val newest = state.historyItems[0]
-            assertEquals(2_000L, newest.timestampMs)
-            assertEquals(79.6f, newest.weightDisplay, 0.01f)
-            assertEquals(-0.4f, newest.deltaDisplay!!, 0.01f)
-            assertEquals(BmiStatus.Neutral, newest.bmiStatus)
+                val newest = state.historyItems[0]
+                assertEquals(2_000L, newest.timestampMs)
+                assertEquals(79.6f, newest.weightDisplay, 0.01f)
+                assertEquals(-0.4f, newest.deltaDisplay!!, 0.01f)
+                assertEquals(BmiStatus.Neutral, newest.bmiStatus)
 
-            val oldest = state.historyItems[1]
-            assertEquals(1_000L, oldest.timestampMs)
-            assertEquals(80f, oldest.weightDisplay, 0.01f)
-            assertEquals(null, oldest.deltaDisplay)
+                val oldest = state.historyItems[1]
+                assertEquals(1_000L, oldest.timestampMs)
+                assertEquals(80f, oldest.weightDisplay, 0.01f)
+                assertEquals(null, oldest.deltaDisplay)
+            }
         }
 
     @Test
@@ -195,11 +212,13 @@ class WeightDetailViewModelTest {
                 MutableStateFlow(UserPreferences(unitSystem = UnitSystem.IMPERIAL, heightCm = 175f))
 
             viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
-            val newest = state.historyItems[0]
-            // -1 kg * 2.20462 = -2.20462 lbs
-            assertEquals(-2.20462f, newest.deltaDisplay!!, 0.01f)
+                val newest = state.historyItems[0]
+                // -1 kg * 2.20462 = -2.20462 lbs
+                assertEquals(-2.20462f, newest.deltaDisplay!!, 0.01f)
+            }
         }
 
     @Test
@@ -212,8 +231,10 @@ class WeightDetailViewModelTest {
                 MutableStateFlow(UserPreferences(unitSystem = UnitSystem.METRIC, heightCm = null))
 
             viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
-            assertEquals(null, state.historyItems[0].bmiStatus)
+                assertEquals(null, state.historyItems[0].bmiStatus)
+            }
         }
 }

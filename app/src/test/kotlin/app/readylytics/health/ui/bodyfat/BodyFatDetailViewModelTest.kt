@@ -79,6 +79,15 @@ class BodyFatDetailViewModelTest {
             selectedDateRepository = selectedDateRepo,
         )
 
+    private suspend fun <T> collectWithCleanup(block: suspend () -> T): T =
+        try {
+            block()
+        } finally {
+            if (::viewModel.isInitialized) {
+                viewModel.viewModelScope.cancel()
+            }
+        }
+
     @After
     fun tearDown() {
         if (::viewModel.isInitialized) {
@@ -108,9 +117,10 @@ class BodyFatDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            val state = viewModel.uiState.first { it.bodyFatDisplay != null }
-
-            assertEquals("18.5", state.bodyFatDisplay)
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.bodyFatDisplay != null }
+                assertEquals("18.5", state.bodyFatDisplay)
+            }
         }
 
     @Test
@@ -120,9 +130,10 @@ class BodyFatDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            val state = viewModel.uiState.first { it.latestBodyFat == null }
-
-            assertNull(state.bodyFatDisplay)
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.latestBodyFat == null }
+                assertNull(state.bodyFatDisplay)
+            }
         }
 
     @Test
@@ -135,9 +146,10 @@ class BodyFatDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            val state = viewModel.uiState.first { it.optimalRangeMax > 0f }
-
-            assertEquals("0–19.0%", state.optimalRangeDisplay)
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.optimalRangeMax > 0f }
+                assertEquals("0–19.0%", state.optimalRangeDisplay)
+            }
         }
 
     @Test
@@ -150,9 +162,10 @@ class BodyFatDetailViewModelTest {
 
             viewModel = createViewModel()
 
-            val state = viewModel.uiState.first { it.optimalRangeMax > 0f }
-
-            assertEquals("0–34.0%", state.optimalRangeDisplay)
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.optimalRangeMax > 0f }
+                assertEquals("0–34.0%", state.optimalRangeDisplay)
+            }
         }
 
     // --- historyItems ---
@@ -170,13 +183,15 @@ class BodyFatDetailViewModelTest {
                 MutableStateFlow(UserPreferences(age = 30, gender = Gender.MALE))
 
             viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
-            val item = state.historyItems[0]
-            assertEquals(14.2f, item.bodyFatPercent, 0.01f)
-            // 78.4 * (1 - 14.2/100) = 67.2752
-            assertEquals(67.2752f, item.leanMassDisplay!!, 0.01f)
-            assertEquals(MetricStatus.OPTIMAL, item.status)
+                val item = state.historyItems[0]
+                assertEquals(14.2f, item.bodyFatPercent, 0.01f)
+                // 78.4 * (1 - 14.2/100) = 67.2752
+                assertEquals(67.2752f, item.leanMassDisplay!!, 0.01f)
+                assertEquals(MetricStatus.OPTIMAL, item.status)
+            }
         }
 
     @Test
@@ -195,9 +210,11 @@ class BodyFatDetailViewModelTest {
                 MutableStateFlow(UserPreferences(age = 30, gender = Gender.MALE))
 
             viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
-            assertNull(state.historyItems[0].leanMassDisplay)
+                assertNull(state.historyItems[0].leanMassDisplay)
+            }
         }
 
     @Test
@@ -213,12 +230,14 @@ class BodyFatDetailViewModelTest {
                 MutableStateFlow(UserPreferences(age = 30, gender = Gender.MALE, unitSystem = UnitSystem.IMPERIAL))
 
             viewModel = createViewModel()
-            val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.historyItems.isNotEmpty() }
 
-            val item = state.historyItems[0]
-            // 67.2752 kg * 2.20462 = 148.3 lbs
-            assertEquals(148.3f, item.leanMassDisplay!!, 0.1f)
-            assertEquals(UnitSystem.IMPERIAL, item.unitSystem)
+                val item = state.historyItems[0]
+                // 67.2752 kg * 2.20462 = 148.3 lbs
+                assertEquals(148.3f, item.leanMassDisplay!!, 0.1f)
+                assertEquals(UnitSystem.IMPERIAL, item.unitSystem)
+            }
         }
 
     @Test
@@ -226,7 +245,9 @@ class BodyFatDetailViewModelTest {
         runTest(testDispatcher) {
             viewModel = createViewModel()
             viewModel.onRangeSelected(TimeRange.THIRTY_DAYS)
-            val state = viewModel.uiState.first { it.selectedRange == TimeRange.THIRTY_DAYS }
-            assertEquals(TimeRange.THIRTY_DAYS, state.selectedRange)
+            collectWithCleanup {
+                val state = viewModel.uiState.first { it.selectedRange == TimeRange.THIRTY_DAYS }
+                assertEquals(TimeRange.THIRTY_DAYS, state.selectedRange)
+            }
         }
 }
