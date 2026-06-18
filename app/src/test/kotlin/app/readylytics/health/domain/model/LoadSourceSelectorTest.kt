@@ -14,11 +14,10 @@ class LoadSourceSelectorTest {
     // --- Selector-only regression: variant columns win over legacy columns ---
 
     @Test
-    fun `selectTrimp returns variant value, never the legacy totalTrimp value`() {
+    fun `selectTrimp returns variant value`() {
         val summary =
             DailySummary(
                 date = date,
-                totalTrimp = 999f,
                 trimpWorkoutOnly = 100f,
                 trimpEverydayHr = 200f,
             )
@@ -55,7 +54,6 @@ class LoadSourceSelectorTest {
         val summary =
             DailySummary(
                 date = date,
-                strainRatio = 9.99f,
                 strainRatioWorkoutOnly = 0.5f,
                 strainRatioEverydayHr = 0.8f,
             )
@@ -68,7 +66,6 @@ class LoadSourceSelectorTest {
         val summary =
             DailySummary(
                 date = date,
-                loadScore = 999f,
                 loadScoreWorkoutOnly = 50f,
                 loadScoreEverydayHr = 60f,
             )
@@ -81,38 +78,11 @@ class LoadSourceSelectorTest {
         val summary =
             DailySummary(
                 date = date,
-                readinessScore = 999f,
                 readinessWorkoutOnly = 70f,
                 readinessEverydayHr = 80f,
             )
         assertEquals(70f, LoadSourceSelector.selectReadiness(summary, LoadSourceMode.WORKOUT_ONLY))
         assertEquals(80f, LoadSourceSelector.selectReadiness(summary, LoadSourceMode.EVERYDAY_HEART_RATE))
-    }
-
-    @Test
-    fun `selectDailyRas returns variant value, never the legacy legacyRasScore value`() {
-        val summary =
-            DailySummary(
-                date = date,
-                legacyRasScore = 999f,
-                rasWorkoutOnly = 5f,
-                rasEverydayHr = 6f,
-            )
-        assertEquals(5f, LoadSourceSelector.selectDailyRas(summary, LoadSourceMode.WORKOUT_ONLY))
-        assertEquals(6f, LoadSourceSelector.selectDailyRas(summary, LoadSourceMode.EVERYDAY_HEART_RATE))
-    }
-
-    @Test
-    fun `selectTotalRas returns variant value, never the legacy legacyTotalRas value`() {
-        val summary =
-            DailySummary(
-                date = date,
-                legacyTotalRas = 999f,
-                totalRasWorkoutOnly = 70f,
-                totalRasEverydayHr = 75f,
-            )
-        assertEquals(70f, LoadSourceSelector.selectTotalRas(summary, LoadSourceMode.WORKOUT_ONLY))
-        assertEquals(75f, LoadSourceSelector.selectTotalRas(summary, LoadSourceMode.EVERYDAY_HEART_RATE))
     }
 
     // --- Toggle test: same summary, prefs differ only in mode ---

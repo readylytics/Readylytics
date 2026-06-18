@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "803e83875f1246a5ff029fca25c2f632",
+    "identityHash": "a0c77cb5ac8e91010477a07438297994",
     "entities": [
       {
         "tableName": "sleep_sessions",
@@ -448,7 +448,7 @@
       },
       {
         "tableName": "daily_summaries",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`dateMidnightMs` INTEGER NOT NULL, `sleepScore` REAL, `loadScore` REAL, `readinessScore` REAL, `strainRatio` REAL, `nocturnalHrv` INTEGER, `sleepDurationMinutes` INTEGER, `deepSleepPercent` REAL, `remSleepPercent` REAL, `totalTrimp` REAL, `hrvBaseline` INTEGER, `restingHeartRate` INTEGER, `restingHrRatio` REAL, `legacyRasScore` REAL, `legacyTotalRas` REAL, `stepCount` INTEGER, `zLnHrv` REAL, `zRhr` REAL, `recoveryFlags` TEXT, `hrvSigma` REAL, `rollingMu` REAL, `rhrDeltaBpm` REAL, `lateNadir` INTEGER, `stagesSuspicious` INTEGER, `isCalibrating` INTEGER, `hrvScoreContribution` REAL, `rhrScoreContribution` REAL, `durationScoreContribution` REAL, `architectureScoreContribution` REAL, `loadContribution` REAL, `sRest` REAL, `weightKg` REAL, `bodyFatPercent` REAL, `bloodPressureSystolic` INTEGER, `bloodPressureDiastolic` INTEGER, `avgSleepingSpo2` REAL, `hrv_mu_mssd` REAL, `hrv_sigma_mssd` REAL, `rhr_bpm` REAL, `rhr_sigma` REAL DEFAULT NULL, `baseline_calculated_at_date` TEXT, `hr_max` REAL, `snapshot_profile` TEXT, `snapshot_calibration_phase` TEXT, `hrv_sigma_prior` REAL, `ras_scaling_factor` REAL, `baseline_observation_count` INTEGER, `trimpWorkoutOnly` REAL, `trimpEverydayHr` REAL, `rasWorkoutOnly` REAL, `rasEverydayHr` REAL, `totalRasWorkoutOnly` REAL, `totalRasEverydayHr` REAL, `atlWorkoutOnly` REAL, `atlEverydayHr` REAL, `ctlWorkoutOnly` REAL, `ctlEverydayHr` REAL, `strainRatioWorkoutOnly` REAL, `strainRatioEverydayHr` REAL, `loadScoreWorkoutOnly` REAL, `loadScoreEverydayHr` REAL, `readinessWorkoutOnly` REAL, `readinessEverydayHr` REAL, `everydayCoverageMinutes` INTEGER, `everydayLoadConfidence` TEXT, `diag_zLnHrv` REAL, `diag_zRhr` REAL, `diag_lnSigma` REAL, `diag_rollingMu` REAL, `diag_rhrDeltaBpm` REAL, `diag_isCalibrating` INTEGER NOT NULL, `diag_stagesSuspicious` INTEGER NOT NULL, `diag_lateNadir` INTEGER NOT NULL, `diag_hrvMissing` INTEGER NOT NULL, `diag_timezoneJump` INTEGER NOT NULL, `diag_configHashCode` INTEGER, `diag_phaseName` TEXT, `contrib_hrvScore` REAL, `contrib_rhrScore` REAL, `contrib_durationScore` REAL, `contrib_architectureScore` REAL, `contrib_loadContribution` REAL, PRIMARY KEY(`dateMidnightMs`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`dateMidnightMs` INTEGER NOT NULL, `sleepScore` REAL, `nocturnalHrv` INTEGER, `sleepDurationMinutes` INTEGER, `deepSleepPercent` REAL, `remSleepPercent` REAL, `hrvBaseline` INTEGER, `restingHeartRate` INTEGER, `restingHrRatio` REAL, `stepCount` INTEGER, `zLnHrv` REAL, `zRhr` REAL, `recoveryFlags` TEXT, `hrvSigma` REAL, `rollingMu` REAL, `rhrDeltaBpm` REAL, `lateNadir` INTEGER, `stagesSuspicious` INTEGER, `isCalibrating` INTEGER, `hrvScoreContribution` REAL, `rhrScoreContribution` REAL, `durationScoreContribution` REAL, `architectureScoreContribution` REAL, `loadContribution` REAL, `sRest` REAL, `weightKg` REAL, `bodyFatPercent` REAL, `bloodPressureSystolic` INTEGER, `bloodPressureDiastolic` INTEGER, `avgSleepingSpo2` REAL, `hrv_mu_mssd` REAL, `hrv_sigma_mssd` REAL, `rhr_bpm` REAL, `rhr_sigma` REAL DEFAULT NULL, `baseline_calculated_at_date` TEXT, `hr_max` REAL, `snapshot_profile` TEXT, `snapshot_calibration_phase` TEXT, `hrv_sigma_prior` REAL, `ras_scaling_factor` REAL, `baseline_observation_count` INTEGER, `trimpWorkoutOnly` REAL, `trimpEverydayHr` REAL, `rasWorkoutOnly` REAL, `rasEverydayHr` REAL, `totalRasWorkoutOnly` REAL, `totalRasEverydayHr` REAL, `atlWorkoutOnly` REAL, `atlEverydayHr` REAL, `ctlWorkoutOnly` REAL, `ctlEverydayHr` REAL, `strainRatioWorkoutOnly` REAL, `strainRatioEverydayHr` REAL, `loadScoreWorkoutOnly` REAL, `loadScoreEverydayHr` REAL, `readinessWorkoutOnly` REAL, `readinessEverydayHr` REAL, `everydayCoverageMinutes` INTEGER, `everydayLoadConfidence` TEXT, `diag_zLnHrv` REAL, `diag_zRhr` REAL, `diag_lnSigma` REAL, `diag_rollingMu` REAL, `diag_rhrDeltaBpm` REAL, `diag_isCalibrating` INTEGER NOT NULL, `diag_stagesSuspicious` INTEGER NOT NULL, `diag_lateNadir` INTEGER NOT NULL, `diag_hrvMissing` INTEGER NOT NULL, `diag_timezoneJump` INTEGER NOT NULL, `diag_configHashCode` INTEGER, `diag_phaseName` TEXT, `contrib_hrvScore` REAL, `contrib_rhrScore` REAL, `contrib_durationScore` REAL, `contrib_architectureScore` REAL, `contrib_loadContribution` REAL, PRIMARY KEY(`dateMidnightMs`))",
         "fields": [
           {
             "fieldPath": "dateMidnightMs",
@@ -459,21 +459,6 @@
           {
             "fieldPath": "sleepScore",
             "columnName": "sleepScore",
-            "affinity": "REAL"
-          },
-          {
-            "fieldPath": "loadScore",
-            "columnName": "loadScore",
-            "affinity": "REAL"
-          },
-          {
-            "fieldPath": "readinessScore",
-            "columnName": "readinessScore",
-            "affinity": "REAL"
-          },
-          {
-            "fieldPath": "strainRatio",
-            "columnName": "strainRatio",
             "affinity": "REAL"
           },
           {
@@ -497,11 +482,6 @@
             "affinity": "REAL"
           },
           {
-            "fieldPath": "totalTrimp",
-            "columnName": "totalTrimp",
-            "affinity": "REAL"
-          },
-          {
             "fieldPath": "hrvBaseline",
             "columnName": "hrvBaseline",
             "affinity": "INTEGER"
@@ -514,16 +494,6 @@
           {
             "fieldPath": "restingHrRatio",
             "columnName": "restingHrRatio",
-            "affinity": "REAL"
-          },
-          {
-            "fieldPath": "legacyRasScore",
-            "columnName": "legacyRasScore",
-            "affinity": "REAL"
-          },
-          {
-            "fieldPath": "legacyTotalRas",
-            "columnName": "legacyTotalRas",
             "affinity": "REAL"
           },
           {
@@ -1144,7 +1114,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '803e83875f1246a5ff029fca25c2f632')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a0c77cb5ac8e91010477a07438297994')"
     ]
   }
 }

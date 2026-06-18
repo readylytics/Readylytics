@@ -159,9 +159,6 @@ interface DailySummaryDao {
     )
     suspend fun getRoundedRas(dateMidnightMs: Long): Int?
 
-    @Query("SELECT strainRatio FROM daily_summaries WHERE dateMidnightMs = :dateMidnightMs")
-    suspend fun getPreciseStrainRatio(dateMidnightMs: Long): Double?
-
     @Query("SELECT EXISTS(SELECT 1 FROM daily_summaries WHERE trimpWorkoutOnly IS NOT NULL LIMIT 1)")
     suspend fun hasAnyWorkoutOnlyTrimpData(): Boolean
 

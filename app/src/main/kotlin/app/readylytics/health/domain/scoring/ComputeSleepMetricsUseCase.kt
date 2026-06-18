@@ -460,7 +460,6 @@ class ComputeSleepMetricsUseCase
                 Result.success(
                     summary.copy(
                         sleepScore = sleepScore,
-                        readinessScore = summary.readinessScore,
                         readinessWorkoutOnly = readinessScore,
                         readinessEverydayHr = readinessEverydayHr,
                         nocturnalHrv = if (sessionHrvSamples.isNotEmpty()) currentHrvMean.roundToInt() else null,

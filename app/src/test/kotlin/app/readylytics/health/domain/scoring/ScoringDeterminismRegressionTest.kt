@@ -85,10 +85,6 @@ class ScoringDeterminismRegressionTest {
     private fun frozenSnapshot(
         dayMidnightMs: Long,
         date: LocalDate,
-        legacyRasScore: Float?,
-        legacyTotalRas: Float?,
-        loadScore: Float?,
-        strainRatio: Float?,
     ): DailySummaryEntity =
         DailySummaryEntity(
             dateMidnightMs = dayMidnightMs,
@@ -98,11 +94,6 @@ class ScoringDeterminismRegressionTest {
             rasScalingFactor = 0.2f,
             rhrBpm = 60f,
             baselineObservationCount = 10,
-            // Derived outputs — deliberately varied between runs to prove they do not leak.
-            legacyRasScore = legacyRasScore,
-            legacyTotalRas = legacyTotalRas,
-            loadScore = loadScore,
-            strainRatio = strainRatio,
         )
 
     @Test
@@ -128,10 +119,6 @@ class ScoringDeterminismRegressionTest {
                 frozenSnapshot(
                     dayMidnightMs,
                     today,
-                    legacyRasScore = 0f,
-                    legacyTotalRas = 0f,
-                    loadScore = 100f,
-                    strainRatio = 1f,
                 )
             val run1 = repo.computeDailySummary(today)
 
@@ -142,10 +129,6 @@ class ScoringDeterminismRegressionTest {
                 frozenSnapshot(
                     dayMidnightMs,
                     today,
-                    legacyRasScore = 999f,
-                    legacyTotalRas = 4242f,
-                    loadScore = 7f,
-                    strainRatio = 13.5f,
                 )
             val run2 = repo.computeDailySummary(today)
 

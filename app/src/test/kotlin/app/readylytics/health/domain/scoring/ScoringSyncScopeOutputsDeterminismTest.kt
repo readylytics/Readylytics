@@ -111,9 +111,9 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 "Rounded sleepScore must not flip when a live-computed day is recomputed from its frozen summary.",
             )
             assertEquals(
-                live.readinessScore?.roundToInt(),
-                frozenReplay.readinessScore?.roundToInt(),
-                "Rounded readinessScore must not flip when a live-computed day is recomputed from its frozen summary.",
+                live.readinessWorkoutOnly?.roundToInt(),
+                frozenReplay.readinessWorkoutOnly?.roundToInt(),
+                "Rounded readinessWorkoutOnly must not flip when a live-computed day is recomputed from its frozen summary.",
             )
         }
 

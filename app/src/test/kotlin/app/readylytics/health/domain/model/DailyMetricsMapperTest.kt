@@ -88,7 +88,6 @@ class DailyMetricsMapperTest {
                 restingHeartRate = 50,
                 nocturnalHrv = 65,
                 rhrBpm = 52.6f,
-                legacyTotalRas = 74.6f,
                 avgSleepingSpo2 = 96.5f,
                 weightKg = 80.25f,
             )

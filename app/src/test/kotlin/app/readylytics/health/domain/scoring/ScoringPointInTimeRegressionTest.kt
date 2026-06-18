@@ -134,8 +134,7 @@ class ScoringPointInTimeRegressionTest {
             val result2 = repo.computeDailySummary(today)
 
             // Assert that the computed metrics on this historical day are unchanged.
-            // Reads target the new workout-only variant columns; legacy legacyRasScore/legacyTotalRas are no
-            // longer written by computeDailySummary (frozen at migration time per US-03).
+            // Reads target the new workout-only variant columns.
             assertEquals(
                 result1.rasWorkoutOnly,
                 result2.rasWorkoutOnly,
@@ -146,10 +145,6 @@ class ScoringPointInTimeRegressionTest {
                 result2.totalRasWorkoutOnly,
                 "Workout-only Total RAS must remain unchanged",
             )
-
-            // Legacy columns are no longer written by computeDailySummary.
-            assertNull(result1.legacyRasScore, "Legacy legacyRasScore must not be written")
-            assertNull(result1.legacyTotalRas, "Legacy legacyTotalRas must not be written")
         }
 
     @Test
@@ -228,10 +223,7 @@ class ScoringPointInTimeRegressionTest {
             assertNotNull(result.atlEverydayHr, "Everyday ATL persisted")
             assertNotNull(result.ctlEverydayHr, "Everyday CTL persisted")
 
-            // Legacy load columns are not written.
-            assertNull(result.totalTrimp, "Legacy totalTrimp must not be written")
-            assertNull(result.loadScore, "Legacy loadScore must not be written")
-            assertNull(result.strainRatio, "Legacy strainRatio must not be written")
+
         }
 
     @Test
