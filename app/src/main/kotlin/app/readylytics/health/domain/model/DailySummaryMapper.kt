@@ -40,10 +40,6 @@ object DailySummaryMapper {
             hrvSigma = entity.hrvSigma,
             readinessResult =
                 ReadinessResult(
-                    readinessScore = null,
-                    sleepScore = null,
-                    loadScore = null,
-                    sRest = entity.sRest,
                     recoveryFlags = flags,
                     contributors = entity.contributors,
                     diagnostics = entity.diagnostics,
