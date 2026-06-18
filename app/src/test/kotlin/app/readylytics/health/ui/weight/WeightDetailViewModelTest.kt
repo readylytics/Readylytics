@@ -79,7 +79,7 @@ class WeightDetailViewModelTest {
 
     @Test
     fun `initial state has null weightDisplay and bmiDisplay`() =
-        runTest {
+        runTest(testDispatcher) {
             viewModel = createViewModel()
             val state = viewModel.uiState.value
             assertEquals(null, state.weightDisplay)
@@ -88,7 +88,7 @@ class WeightDetailViewModelTest {
 
     @Test
     fun `weightDisplay formats metric weight correctly`() =
-        runTest {
+        runTest(testDispatcher) {
             val record = WeightRecordEntity(id = "1", timestampMs = System.currentTimeMillis(), weightKg = 75f)
             coEvery { weightRepository.getLatest() } returns record
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(record)
@@ -106,7 +106,7 @@ class WeightDetailViewModelTest {
 
     @Test
     fun `weightDisplay formats imperial weight correctly`() =
-        runTest {
+        runTest(testDispatcher) {
             val record = WeightRecordEntity(id = "1", timestampMs = System.currentTimeMillis(), weightKg = 75f)
             coEvery { weightRepository.getLatest() } returns record
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(record)
@@ -125,7 +125,7 @@ class WeightDetailViewModelTest {
 
     @Test
     fun `bmiDisplay formats BMI correctly when height is set`() =
-        runTest {
+        runTest(testDispatcher) {
             val record = WeightRecordEntity(id = "1", timestampMs = System.currentTimeMillis(), weightKg = 70f)
             coEvery { weightRepository.getLatest() } returns record
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(record)
@@ -144,7 +144,7 @@ class WeightDetailViewModelTest {
 
     @Test
     fun `bmiDisplay is null when height is not set`() =
-        runTest {
+        runTest(testDispatcher) {
             val record = WeightRecordEntity(id = "1", timestampMs = System.currentTimeMillis(), weightKg = 70f)
             coEvery { weightRepository.getLatest() } returns record
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(record)
@@ -164,7 +164,7 @@ class WeightDetailViewModelTest {
 
     @Test
     fun `historyItems are sorted newest first with delta and bmiStatus`() =
-        runTest {
+        runTest(testDispatcher) {
             val older = WeightRecordEntity(id = "1", timestampMs = 1_000L, weightKg = 80f)
             val newer = WeightRecordEntity(id = "2", timestampMs = 2_000L, weightKg = 79.6f)
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(older, newer)
@@ -192,7 +192,7 @@ class WeightDetailViewModelTest {
 
     @Test
     fun `historyItems convert weight and delta to imperial units`() =
-        runTest {
+        runTest(testDispatcher) {
             val older = WeightRecordEntity(id = "1", timestampMs = 1_000L, weightKg = 80f)
             val newer = WeightRecordEntity(id = "2", timestampMs = 2_000L, weightKg = 79f)
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(older, newer)
@@ -211,7 +211,7 @@ class WeightDetailViewModelTest {
 
     @Test
     fun `historyItems bmiStatus is null when height is not set`() =
-        runTest {
+        runTest(testDispatcher) {
             val record = WeightRecordEntity(id = "1", timestampMs = System.currentTimeMillis(), weightKg = 70f)
             coEvery { weightRepository.getByDateRange(any(), any()) } returns listOf(record)
 

@@ -90,7 +90,7 @@ class BodyFatDetailViewModelTest {
 
     @Test
     fun `initial state has null bodyFatDisplay`() =
-        runTest {
+        runTest(testDispatcher) {
             viewModel = createViewModel()
             val state = viewModel.uiState.value
             assertNull(state.bodyFatDisplay)
@@ -98,7 +98,7 @@ class BodyFatDetailViewModelTest {
 
     @Test
     fun `bodyFatDisplay formats value with one decimal and percent sign`() =
-        runTest {
+        runTest(testDispatcher) {
             val record =
                 BodyFatRecordEntity(
                     id = "1",
@@ -117,7 +117,7 @@ class BodyFatDetailViewModelTest {
 
     @Test
     fun `bodyFatDisplay is null when no latest record`() =
-        runTest {
+        runTest(testDispatcher) {
             coEvery { bodyFatRepository.getLatest() } returns null
 
             viewModel = createViewModel()
@@ -129,7 +129,7 @@ class BodyFatDetailViewModelTest {
 
     @Test
     fun `optimalRangeDisplay formats male age 30 correctly`() =
-        runTest {
+        runTest(testDispatcher) {
             every { settingsRepo.userPreferences } returns
                 MutableStateFlow(
                     UserPreferences(age = 30, gender = Gender.MALE),
@@ -145,7 +145,7 @@ class BodyFatDetailViewModelTest {
 
     @Test
     fun `optimalRangeDisplay formats female age 50 correctly`() =
-        runTest {
+        runTest(testDispatcher) {
             every { settingsRepo.userPreferences } returns
                 MutableStateFlow(
                     UserPreferences(age = 50, gender = Gender.FEMALE),
@@ -163,7 +163,7 @@ class BodyFatDetailViewModelTest {
 
     @Test
     fun `historyItems include lean mass when same-day weight record exists`() =
-        runTest {
+        runTest(testDispatcher) {
             val now = System.currentTimeMillis()
             val bodyFatRecord = BodyFatRecordEntity(id = "1", timestampMs = now, bodyFatPercent = 14.2f)
             val weightRecord = WeightRecordEntity(id = "1", timestampMs = now, weightKg = 78.4f)
@@ -186,7 +186,7 @@ class BodyFatDetailViewModelTest {
 
     @Test
     fun `historyItems leanMass is null when no same-day weight record`() =
-        runTest {
+        runTest(testDispatcher) {
             val bodyFatRecord =
                 BodyFatRecordEntity(
                     id = "1",
@@ -208,7 +208,7 @@ class BodyFatDetailViewModelTest {
 
     @Test
     fun `historyItems lean mass converts to imperial units`() =
-        runTest {
+        runTest(testDispatcher) {
             val now = System.currentTimeMillis()
             val bodyFatRecord = BodyFatRecordEntity(id = "1", timestampMs = now, bodyFatPercent = 14.2f)
             val weightRecord = WeightRecordEntity(id = "1", timestampMs = now, weightKg = 78.4f)
@@ -230,7 +230,7 @@ class BodyFatDetailViewModelTest {
 
     @Test
     fun `onRangeSelected updates selectedRange`() =
-        runTest {
+        runTest(testDispatcher) {
             viewModel = createViewModel()
             viewModel.onRangeSelected(TimeRange.THIRTY_DAYS)
             val state = viewModel.uiState.first { it.selectedRange == TimeRange.THIRTY_DAYS }
