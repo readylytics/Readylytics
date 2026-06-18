@@ -103,16 +103,10 @@ fun buildCardDataMap(
                 val readinessCard = uiState.cardDataMap[CardId.READINESS]
                 val readinessVal = readinessCard?.value?.toFloatOrNull()
                 val readinessDelta =
-                    if (readinessVal != null && uiState.yesterdayReadiness != null) {
-                        val diff = (readinessVal - uiState.yesterdayReadiness).toInt()
-                        when {
-                            diff > 0 -> stringResource(R.string.delta_up) + " $diff"
-                            diff < 0 -> stringResource(R.string.delta_down) + " ${kotlin.math.abs(diff)}"
-                            else -> stringResource(R.string.delta_no_change)
-                        }
-                    } else {
-                        null
-                    }
+                    formatRoundedScoreDelta(
+                        currentRounded = readinessVal?.toInt(),
+                        previousRounded = uiState.yesterdayReadiness?.toInt(),
+                    ).resolveOrNull()
                 M3ScoreGaugeCard(
                     title = readinessCard?.title ?: "Readiness",
                     score = readinessVal,

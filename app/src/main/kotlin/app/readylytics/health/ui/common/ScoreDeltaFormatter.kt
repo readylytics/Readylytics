@@ -13,7 +13,10 @@ internal fun formatRoundedScoreDelta(
     val diff = currentRounded - previousRounded
     return when {
         diff > 0 -> UiText.Compound(listOf(UiText.StringRes(R.string.delta_up), UiText.RawString(" $diff")))
-        diff < 0 -> UiText.Compound(listOf(UiText.StringRes(R.string.delta_down), UiText.RawString(" ${kotlin.math.abs(diff)}")))
+        diff < 0 ->
+            UiText.Compound(
+                listOf(UiText.StringRes(R.string.delta_down), UiText.RawString(" ${kotlin.math.abs(diff)}")),
+            )
         else -> UiText.StringRes(R.string.delta_no_change)
     }
 }

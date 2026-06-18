@@ -41,6 +41,8 @@ import app.readylytics.health.ui.common.DailyDataPoint
 import app.readylytics.health.ui.common.ScoreDialSkeleton
 import app.readylytics.health.ui.common.SkeletonCard
 import app.readylytics.health.ui.common.TimeRange
+import app.readylytics.health.ui.common.formatRoundedScoreDelta
+import app.readylytics.health.ui.common.resolveOrNull
 import app.readylytics.health.ui.components.ChartDefaults
 import app.readylytics.health.ui.components.DataPointTooltip
 import app.readylytics.health.ui.components.DataPointTooltipData
@@ -172,16 +174,10 @@ fun WorkoutStatsSection(
 
                     val readinessVal = uiState.latestMetrics?.readinessRounded?.toFloat()
                     val readinessDelta =
-                        if (readinessVal != null && uiState.yesterdayReadiness != null) {
-                            val diff = (readinessVal - uiState.yesterdayReadiness).toInt()
-                            when {
-                                diff > 0 -> stringResource(R.string.delta_up) + " $diff"
-                                diff < 0 -> stringResource(R.string.delta_down) + " ${kotlin.math.abs(diff)}"
-                                else -> stringResource(R.string.delta_no_change)
-                            }
-                        } else {
-                            null
-                        }
+                        formatRoundedScoreDelta(
+                            currentRounded = uiState.latestMetrics?.readinessRounded,
+                            previousRounded = uiState.yesterdayReadiness?.toInt(),
+                        ).resolveOrNull()
 
                     M3ScoreGaugeCard(
                         modifier = Modifier.weight(1f),
