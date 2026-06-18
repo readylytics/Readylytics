@@ -9,6 +9,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import app.readylytics.health.R
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -23,7 +25,10 @@ class DateSwitcherTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val testToday = LocalDate.of(2026, 6, 18)
+
+    private fun string(id: Int): String = context.getString(id)
 
     private fun formatted(date: LocalDate): String =
         date.format(DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault()))
@@ -41,7 +46,7 @@ class DateSwitcherTest {
             }
         }
 
-        composeRule.onNodeWithText("Today").assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.date_switcher_label_today)).assertIsDisplayed()
         composeRule.onNodeWithText(formatted(testToday)).assertIsDisplayed()
     }
 
@@ -59,7 +64,7 @@ class DateSwitcherTest {
             }
         }
 
-        composeRule.onNodeWithText("Yesterday").assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.date_switcher_label_yesterday)).assertIsDisplayed()
         composeRule.onNodeWithText(formatted(yesterday)).assertIsDisplayed()
     }
 
@@ -77,7 +82,7 @@ class DateSwitcherTest {
             }
         }
 
-        composeRule.onNodeWithText("Selected date").assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.date_switcher_label_selected)).assertIsDisplayed()
         composeRule.onNodeWithText(formatted(olderDate)).assertIsDisplayed()
     }
 
@@ -94,7 +99,7 @@ class DateSwitcherTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Next day").assertIsNotEnabled()
+        composeRule.onNodeWithContentDescription(string(R.string.accessibility_next_day)).assertIsNotEnabled()
     }
 
     @Test
@@ -112,7 +117,7 @@ class DateSwitcherTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Previous day").assertIsNotEnabled()
+        composeRule.onNodeWithContentDescription(string(R.string.accessibility_prev_day)).assertIsNotEnabled()
     }
 
     @Test
@@ -130,8 +135,8 @@ class DateSwitcherTest {
 
         composeRule.onNodeWithTag("date_pill").performClick()
 
-        composeRule.onNodeWithText("OK").assertIsDisplayed()
-        composeRule.onNodeWithText("Cancel").assertIsDisplayed()
+        composeRule.onNodeWithText(string(android.R.string.ok)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(android.R.string.cancel)).assertIsDisplayed()
     }
 
     @Test
@@ -148,7 +153,7 @@ class DateSwitcherTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Previous day").performClick()
+        composeRule.onNodeWithContentDescription(string(R.string.accessibility_prev_day)).performClick()
         assertTrue(invoked)
     }
 
@@ -166,7 +171,7 @@ class DateSwitcherTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Next day").performClick()
+        composeRule.onNodeWithContentDescription(string(R.string.accessibility_next_day)).performClick()
         assertTrue(invoked)
     }
 
@@ -186,8 +191,8 @@ class DateSwitcherTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Previous day").assertIsNotEnabled()
-        composeRule.onNodeWithContentDescription("Next day").assertIsNotEnabled()
+        composeRule.onNodeWithContentDescription(string(R.string.accessibility_prev_day)).assertIsNotEnabled()
+        composeRule.onNodeWithContentDescription(string(R.string.accessibility_next_day)).assertIsNotEnabled()
         composeRule.onNodeWithTag("date_pill").assertIsNotEnabled()
         assertFalse(previousInvoked)
         assertFalse(nextInvoked)

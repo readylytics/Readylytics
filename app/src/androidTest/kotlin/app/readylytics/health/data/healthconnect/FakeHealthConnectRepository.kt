@@ -6,6 +6,7 @@ import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
@@ -31,6 +32,7 @@ internal enum class FakeOp {
     Weight,
     BodyFat,
     BloodPressure,
+    OxygenSaturation,
     Discovery,
 }
 
@@ -69,6 +71,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             HealthPermission.getReadPermission(WeightRecord::class),
             HealthPermission.getReadPermission(BodyFatRecord::class),
             HealthPermission.getReadPermission(BloodPressureRecord::class),
+            HealthPermission.getReadPermission(OxygenSaturationRecord::class),
         )
 
     override val allPermissions: Set<String> = requiredPermissions + optionalPermissions
@@ -90,6 +93,7 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     val weightCount: MutableMap<Instant, Int> = mutableMapOf()
     val bodyFatCount: MutableMap<Instant, Int> = mutableMapOf()
     val bpCount: MutableMap<Instant, Int> = mutableMapOf()
+    val spo2Count: MutableMap<Instant, Int> = mutableMapOf()
 
     /** Synthetic steps keyed by sample timestamp. Each entry is one StepsRecord. */
     val stepsByInstant: MutableMap<Instant, Long> = mutableMapOf()
@@ -228,6 +232,14 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     ): List<BloodPressureRecord> =
         runOptional(FakeOp.BloodPressure) {
             stubList(totalInRange(bpCount, from, to))
+        }
+
+    override suspend fun readOxygenSaturationRecords(
+        from: Instant,
+        to: Instant,
+    ): List<OxygenSaturationRecord> =
+        runOptional(FakeOp.OxygenSaturation) {
+            stubList(totalInRange(spo2Count, from, to))
         }
 
     override suspend fun discoverDevices(windowDays: Int): List<String> {

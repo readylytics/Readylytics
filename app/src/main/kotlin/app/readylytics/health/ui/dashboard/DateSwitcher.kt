@@ -32,11 +32,13 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -49,7 +51,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -179,11 +180,13 @@ private fun DatePill(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val locale = LocalLocale.current.platformLocale
+    val dateFormatter = remember(locale) { DateTimeFormatter.ofPattern("EEE, MMM d", locale) }
     val pillDescription =
         stringResource(
             R.string.accessibility_date_pill,
             qualifierLabelFor(selectedDate, today),
-            formatDate(selectedDate),
+            selectedDate.format(dateFormatter),
         )
 
     Surface(
@@ -222,7 +225,7 @@ private fun DatePill(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = formatDate(date),
+                        text = date.format(dateFormatter),
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
@@ -250,6 +253,3 @@ private fun qualifierLabelFor(
         today.minusDays(1) -> stringResource(R.string.date_switcher_label_yesterday)
         else -> stringResource(R.string.date_switcher_label_selected)
     }
-
-private fun formatDate(date: LocalDate): String =
-    date.format(DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault()))
