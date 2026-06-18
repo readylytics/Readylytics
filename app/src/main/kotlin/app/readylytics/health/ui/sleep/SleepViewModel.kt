@@ -63,6 +63,7 @@ data class SleepUiState(
             summary = null,
             goalSleepHours = SettingsDefaults.GOAL_SLEEP_HOURS,
         ),
+    val yesterdaySleepScore: Float? = null,
 )
 
 @HiltViewModel
@@ -143,6 +144,17 @@ class SleepViewModel
                             }
                         }
 
+                    val yesterdayMidnightMs =
+                        date
+                            .minusDays(1)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli()
+                    val yesterdaySummaryFlow =
+                        flow {
+                            emit(dailySummaryRepository.getByDate(yesterdayMidnightMs))
+                        }.flowOn(Dispatchers.IO)
+
                     val sessionFlow =
                         sleepSessionRepository.observeFirstSessionEndingInRange(
                             selectedMidnightMs,
@@ -211,6 +223,7 @@ class SleepViewModel
                         metricsFlow,
                         trendSessionsFlow,
                         settingsRepo.userPreferences,
+                        yesterdaySummaryFlow,
                     ) { array ->
                         val latestSummary = array[0] as DailySummary?
                         val latestSession = array[1] as SleepSessionData?
@@ -228,6 +241,7 @@ class SleepViewModel
                                 List<DailyDataPoint>,
                             >
                         val prefs = array[6] as UserPreferences
+                        val yesterdaySummary = array[7] as DailySummary?
 
                         SleepUiState(
                             latestSummary = latestSummary,
@@ -248,6 +262,7 @@ class SleepViewModel
                                     summary = latestSummary,
                                     goalSleepHours = prefs.goalSleepHours,
                                 ),
+                            yesterdaySleepScore = yesterdaySummary?.sleepScore,
                         )
                     }
                 }.flowOn(Dispatchers.Default)

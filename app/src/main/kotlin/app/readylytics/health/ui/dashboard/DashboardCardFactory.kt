@@ -38,7 +38,7 @@ import app.readylytics.health.ui.common.ScoreDialSkeleton
 import app.readylytics.health.ui.components.CircadianConsistencyCard
 import app.readylytics.health.ui.components.InsightCard
 import app.readylytics.health.ui.components.InsightRerunCard
-import app.readylytics.health.ui.components.M3ScoreDial
+import app.readylytics.health.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.ui.components.MetricCard
 import app.readylytics.health.ui.components.StepsCard
 import app.readylytics.health.ui.heartrate.HeartRateCard
@@ -75,11 +75,24 @@ fun buildCardDataMap(
             skeleton = { ScoreDialSkeleton() },
             content = {
                 val sleepScoreCard = uiState.cardDataMap[CardId.SLEEP_SCORE]
-                M3ScoreDial(
-                    label = "Sleep Score",
+                val sleepDelta =
+                    if (summary?.sleepScore != null && uiState.yesterdaySleepScore != null) {
+                        val diff = (summary.sleepScore - uiState.yesterdaySleepScore).toInt()
+                        when {
+                            diff > 0 -> "↑ $diff"
+                            diff < 0 -> "↓ ${kotlin.math.abs(diff)}"
+                            else -> "—"
+                        }
+                    } else {
+                        null
+                    }
+                M3ScoreGaugeCard(
+                    title = sleepScoreCard?.title ?: "Sleep Score",
                     score = summary?.sleepScore,
                     displayText = sleepScoreCard?.value ?: "—",
+                    unitText = sleepScoreCard?.unit ?: "",
                     status = sleepScoreCard?.status,
+                    deltaText = sleepDelta,
                     onClick = if (isEditing) ({}) else onNavigateToSleep,
                     tooltipDescription = sleepScoreCard?.tooltip,
                 )
@@ -93,11 +106,25 @@ fun buildCardDataMap(
             skeleton = { ScoreDialSkeleton() },
             content = {
                 val readinessCard = uiState.cardDataMap[CardId.READINESS]
-                M3ScoreDial(
-                    label = "Readiness",
-                    score = readinessCard?.value?.toFloatOrNull(),
+                val readinessVal = readinessCard?.value?.toFloatOrNull()
+                val readinessDelta =
+                    if (readinessVal != null && uiState.yesterdayReadiness != null) {
+                        val diff = (readinessVal - uiState.yesterdayReadiness).toInt()
+                        when {
+                            diff > 0 -> "↑ $diff"
+                            diff < 0 -> "↓ ${kotlin.math.abs(diff)}"
+                            else -> "—"
+                        }
+                    } else {
+                        null
+                    }
+                M3ScoreGaugeCard(
+                    title = readinessCard?.title ?: "Readiness",
+                    score = readinessVal,
                     displayText = readinessCard?.value ?: "—",
+                    unitText = readinessCard?.unit ?: "",
                     status = readinessCard?.status,
+                    deltaText = readinessDelta,
                     onClick = if (isEditing) ({}) else onNavigateToWorkouts,
                     tooltipDescription = readinessCard?.tooltip,
                 )

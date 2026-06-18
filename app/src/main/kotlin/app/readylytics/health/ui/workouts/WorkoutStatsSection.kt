@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,7 +44,7 @@ import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.components.ChartDefaults
 import app.readylytics.health.ui.components.DataPointTooltip
 import app.readylytics.health.ui.components.DataPointTooltipData
-import app.readylytics.health.ui.components.M3ScoreDial
+import app.readylytics.health.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.ui.components.MetricTooltip
 import app.readylytics.health.ui.components.RasWeeklyBar
 import app.readylytics.health.ui.components.SectionHeader
@@ -120,12 +119,12 @@ fun WorkoutStatsSection(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    ScoreDialSkeleton(height = 130.dp)
-                    ScoreDialSkeleton(height = 130.dp)
+                    ScoreDialSkeleton(height = 156.dp, modifier = Modifier.weight(1f))
+                    ScoreDialSkeleton(height = 156.dp, modifier = Modifier.weight(1f))
                 }
             },
             content = {
@@ -133,28 +132,64 @@ fun WorkoutStatsSection(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val strainRatio = uiState.latestMetrics?.strainRatioRaw
                     val strainStatus = strainRatio?.strainRatioStatus() ?: MetricStatus.CALIBRATING
                     val strainTooltip = stringResource(R.string.tooltip_strain_ratio)
-                    M3ScoreDial(
+
+                    val strainDelta =
+                        if (uiState.todayStrainIncrease != null) {
+                            if (uiState.todayStrainIncrease > 0.005f) {
+                                val diffFormatted =
+                                    String.format(
+                                        java.util.Locale.US,
+                                        "%.2f",
+                                        uiState.todayStrainIncrease,
+                                    )
+                                "↑ $diffFormatted"
+                            } else {
+                                "—"
+                            }
+                        } else {
+                            null
+                        }
+
+                    M3ScoreGaugeCard(
+                        modifier = Modifier.weight(1f),
+                        title = stringResource(R.string.card_title_strain_ratio),
                         score = strainRatio,
-                        label = stringResource(R.string.card_title_strain_ratio),
+                        displayText = uiState.latestMetrics?.strainRatioDisplay ?: "—",
+                        unitText = "",
                         maxScore = 2.0f,
                         status = strainStatus,
-                        displayText = uiState.latestMetrics?.strainRatioDisplay ?: "—",
+                        deltaText = strainDelta,
                         tooltipDescription = strainTooltip,
-                        modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
                     )
-                    M3ScoreDial(
-                        score = uiState.latestMetrics?.readinessRounded?.toFloat(),
-                        label = stringResource(R.string.card_title_readiness),
+
+                    val readinessVal = uiState.latestMetrics?.readinessRounded?.toFloat()
+                    val readinessDelta =
+                        if (readinessVal != null && uiState.yesterdayReadiness != null) {
+                            val diff = (readinessVal - uiState.yesterdayReadiness).toInt()
+                            when {
+                                diff > 0 -> "↑ $diff"
+                                diff < 0 -> "↓ ${kotlin.math.abs(diff)}"
+                                else -> "—"
+                            }
+                        } else {
+                            null
+                        }
+
+                    M3ScoreGaugeCard(
+                        modifier = Modifier.weight(1f),
+                        title = stringResource(R.string.card_title_readiness),
+                        score = readinessVal,
                         displayText = uiState.latestMetrics?.readinessRounded?.toString() ?: "—",
+                        unitText = "",
+                        deltaText = readinessDelta,
                         tooltipDescription = stringResource(R.string.tooltip_readiness),
-                        modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally),
                     )
                 }
             },

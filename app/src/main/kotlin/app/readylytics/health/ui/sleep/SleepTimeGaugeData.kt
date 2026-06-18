@@ -12,6 +12,7 @@ data class SleepTimeGaugeData(
     val progress: Float?,
     val displayText: String,
     val status: MetricStatus,
+    val deltaText: String? = null,
 )
 
 internal fun buildSleepTimeGaugeData(
@@ -23,6 +24,20 @@ internal fun buildSleepTimeGaugeData(
     val goalMinutes = sleepGoalMinutes(goalSleepHours)
     val maxMinutes = sleepTimeGaugeMaxMinutes(goalMinutes)
 
+    val deltaText =
+        if (actualMinutes != null && goalMinutes > 0) {
+            val diffMinutes = actualMinutes - goalMinutes
+            if (diffMinutes > 0) {
+                "↑ ${formatSleepDiff(diffMinutes)}"
+            } else if (diffMinutes < 0) {
+                "↓ ${formatSleepDiff(-diffMinutes)}"
+            } else {
+                "Goal met"
+            }
+        } else {
+            null
+        }
+
     return SleepTimeGaugeData(
         progress = actualMinutes?.let { sleepTimeGaugeProgress(it, maxMinutes) },
         displayText = formatSleepTimeGaugeDuration(actualMinutes),
@@ -32,11 +47,21 @@ internal fun buildSleepTimeGaugeData(
             } else {
                 MetricStatus.CALIBRATING
             },
+        deltaText = deltaText,
     )
 }
 
 internal fun actualSleepMinutes(session: SleepSessionData?): Int? =
     session?.let { (it.durationMinutes - it.awakeMinutes).coerceAtLeast(0) }
+
+private fun formatSleepDiff(minutes: Int): String =
+    if (minutes < 60) {
+        "${minutes}m"
+    } else {
+        val hrs = minutes / 60
+        val mins = minutes % 60
+        if (mins == 0) "${hrs}h" else "${hrs}h ${mins}m"
+    }
 
 private fun formatSleepTimeGaugeDuration(minutes: Int?): String {
     if (minutes == null) return DateFormatUtils.formatSleepDuration(null)

@@ -33,12 +33,13 @@ import app.readylytics.health.ui.common.ScreenHeaderSection
 import app.readylytics.health.ui.common.SkeletonCard
 import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.components.ChartDefaults
-import app.readylytics.health.ui.components.M3ScoreDial
+import app.readylytics.health.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.ui.components.SectionHeader
 import app.readylytics.health.ui.components.StatusLegend
 import app.readylytics.health.ui.components.TrendCard
 import app.readylytics.health.ui.components.TrendChart
 import app.readylytics.health.ui.dashboard.DateSwitcher
+import kotlin.math.roundToInt
 
 private const val RHR_DIAL_FLOOR = 30
 private const val RHR_BASELINE_FILL = 0.5f
@@ -124,11 +125,11 @@ fun VitalsScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        ScoreDialSkeleton()
-                        ScoreDialSkeleton()
+                        ScoreDialSkeleton(modifier = Modifier.weight(1f))
+                        ScoreDialSkeleton(modifier = Modifier.weight(1f))
                     }
                 },
                 content = {
@@ -137,7 +138,7 @@ fun VitalsScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         val summary = uiState.latestSummary
@@ -160,12 +161,27 @@ fun VitalsScreen(
                             ) ?: MetricStatus.CALIBRATING
                         val rhrTooltip = stringResource(R.string.tooltip_sleep_rhr)
 
-                        M3ScoreDial(
+                        val rhrDelta =
+                            if (currentRhr != null && baselineRhr != null) {
+                                val diff = currentRhr - baselineRhr
+                                when {
+                                    diff > 0 -> "↑ $diff bpm"
+                                    diff < 0 -> "↓ ${kotlin.math.abs(diff)} bpm"
+                                    else -> "—"
+                                }
+                            } else {
+                                null
+                            }
+
+                        M3ScoreGaugeCard(
+                            modifier = Modifier.weight(1f),
+                            title = "RHR",
                             score = rhrFill,
-                            label = "RHR",
+                            displayText = currentRhr?.toString() ?: "—",
+                            unitText = stringResource(R.string.unit_bpm),
                             maxScore = 1f,
                             status = rhrStatus,
-                            displayText = currentRhr?.toString() ?: "—",
+                            deltaText = rhrDelta,
                             tooltipDescription = rhrTooltip,
                             onClick = onNavigateToRhr,
                         )
@@ -178,12 +194,27 @@ fun VitalsScreen(
                             ) ?: MetricStatus.CALIBRATING
                         val hrvTooltip = stringResource(R.string.tooltip_sleep_hrv)
 
-                        M3ScoreDial(
+                        val hrvDelta =
+                            if (currentHrv != null && baselineHrv != null) {
+                                val diff = (currentHrv - baselineHrv).roundToInt()
+                                when {
+                                    diff > 0 -> "↑ $diff ms"
+                                    diff < 0 -> "↓ ${kotlin.math.abs(diff)} ms"
+                                    else -> "—"
+                                }
+                            } else {
+                                null
+                            }
+
+                        M3ScoreGaugeCard(
+                            modifier = Modifier.weight(1f),
+                            title = "HRV",
                             score = currentHrv?.toFloat(),
-                            label = "HRV",
+                            displayText = currentHrv?.toString() ?: "—",
+                            unitText = stringResource(R.string.unit_ms),
                             maxScore = hrvMax,
                             status = hrvStatus,
-                            displayText = currentHrv?.toString() ?: "—",
+                            deltaText = hrvDelta,
                             tooltipDescription = hrvTooltip,
                             onClick = onNavigateToHrv,
                         )

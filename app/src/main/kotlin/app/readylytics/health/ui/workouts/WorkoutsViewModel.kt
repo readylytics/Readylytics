@@ -68,6 +68,9 @@ data class WorkoutsUiState(
     val isLoading: Boolean = false,
     val currentPage: Int = 1,
     val totalPages: Int = 1,
+    val yesterdayStrainRatio: Float? = null,
+    val yesterdayReadiness: Float? = null,
+    val todayStrainIncrease: Float? = null,
 )
 
 private data class WorkoutFlowData(
@@ -317,6 +320,33 @@ class WorkoutsViewModel
                                     emptyList()
                                 }
 
+                            val yesterday = date.minusDays(1)
+                            val yesterdaySummary = rasSummaries.firstOrNull { it.date == yesterday }
+                            val yesterdayMetrics = yesterdaySummary?.let { DailyMetricsMapper.toMetrics(it, prefs) }
+
+                            val dataTenureDaysForDate =
+                                if (earliestLocalDate != null) {
+                                    ChronoUnit.DAYS.between(earliestLocalDate, date).toInt() + 1
+                                } else {
+                                    0
+                                }
+
+                            val todayStrainIncrease =
+                                if (dataTenureDaysForDate >= 7) {
+                                    val trimpByDateWithout = trimpByDate.toMutableMap().apply { put(date, 0f) }
+                                    val ctlWith = scoringCalculator.computeCtlEmaWithDecay(trimpByDate, date)
+                                    val atlWith = scoringCalculator.computeAtlEmaWithDecay(trimpByDate, date)
+                                    val srWith = scoringCalculator.computeStrainRatio(atlWith, ctlWith)
+
+                                    val ctlWithout = scoringCalculator.computeCtlEmaWithDecay(trimpByDateWithout, date)
+                                    val atlWithout = scoringCalculator.computeAtlEmaWithDecay(trimpByDateWithout, date)
+                                    val srWithout = scoringCalculator.computeStrainRatio(atlWithout, ctlWithout)
+
+                                    (srWith - srWithout).coerceAtLeast(0f)
+                                } else {
+                                    null
+                                }
+
                             WorkoutsUiState(
                                 latestSummary = latest,
                                 latestMetrics = latest?.let { DailyMetricsMapper.toMetrics(it, prefs) },
@@ -337,6 +367,9 @@ class WorkoutsViewModel
                                 isLoading = isSyncing,
                                 currentPage = clampedPage,
                                 totalPages = totalPages,
+                                yesterdayStrainRatio = yesterdayMetrics?.strainRatioRaw,
+                                yesterdayReadiness = yesterdayMetrics?.readinessRounded?.toFloat(),
+                                todayStrainIncrease = todayStrainIncrease,
                             ).also { emit(it) }
                         }
                     }

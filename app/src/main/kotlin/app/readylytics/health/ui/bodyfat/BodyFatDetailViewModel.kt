@@ -45,6 +45,7 @@ data class BodyFatDetailUiState(
     val optimalRangeDisplay: String? = null,
     val historyItems: List<BodyFatHistoryItem> = emptyList(),
     val isLoading: Boolean = true,
+    val deltaBodyFatDisplay: String? = null,
 )
 
 @HiltViewModel
@@ -72,6 +73,26 @@ class BodyFatDetailViewModel
 
                     val records = bodyFatRepository.getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
                     val latest = bodyFatRepository.getLatest()
+                    val previous =
+                        if (latest != null) {
+                            bodyFatRepository
+                                .getByDateRange(0L, latest.timestampMs - 1)
+                                .maxByOrNull { it.timestampMs }
+                        } else {
+                            null
+                        }
+                    val deltaBodyFatDisplay =
+                        if (latest != null && previous != null) {
+                            val diff = latest.bodyFatPercent - previous.bodyFatPercent
+                            val formattedDiff = MetricFormatter.formatBodyFatNumericOnly(kotlin.math.abs(diff))
+                            when {
+                                diff > 0f -> "↑ $formattedDiff%"
+                                diff < 0f -> "↓ $formattedDiff%"
+                                else -> "= 0%"
+                            }
+                        } else {
+                            null
+                        }
 
                     val recordsByDay =
                         records.groupBy { record ->
@@ -157,6 +178,7 @@ class BodyFatDetailViewModel
                             },
                         historyItems = historyItems,
                         isLoading = false,
+                        deltaBodyFatDisplay = deltaBodyFatDisplay,
                     )
                 }
             }.stateIn(

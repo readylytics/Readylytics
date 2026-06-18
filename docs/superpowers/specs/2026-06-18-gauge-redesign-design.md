@@ -118,7 +118,7 @@ We will map baseline diffs and comparison values for each gauge:
 | **BP Detail** | Systolic | Difference to optimal (120 mmHg): `systolic - 120` | `↑ 10 mmHg` or `↓ 5 mmHg` |
 | **BP Detail** | Diastolic | Difference to optimal (80 mmHg): `diastolic - 80` | `↑ 5 mmHg` or `↓ 2 mmHg` |
 | **Body Fat Detail**| Body Fat | Delta to last measurement: `latest - previous` | `↓ 0.5%` or `↑ 0.3%` |
-| **Steps Detail** | Steps | Difference to goal: `actualSteps - stepGoal` | `↓ 1,200` or `Goal met` |
+| **Steps Detail** | Steps | Difference to goal: `actualSteps - stepGoal` | `↓ 1,200` or `↑ 13,000` |
 | **Weight Detail**| Weight | Compare to previous weight (uses `deltaDisplay`) | `↓ 0.4 kg` or `↑ 0.6 lbs` |
 
 ---

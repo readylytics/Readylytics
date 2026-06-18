@@ -41,6 +41,7 @@ data class WeightDetailUiState(
     val bmiDisplay: String? = null,
     val historyItems: List<WeightHistoryItem> = emptyList(),
     val isLoading: Boolean = true,
+    val deltaWeightDisplay: String? = null,
 )
 
 @HiltViewModel
@@ -67,6 +68,31 @@ class WeightDetailViewModel
 
                     val records = weightRepository.getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
                     val latest = weightRepository.getLatest()
+                    val previous =
+                        if (latest != null) {
+                            weightRepository
+                                .getByDateRange(0L, latest.timestampMs - 1)
+                                .maxByOrNull { it.timestampMs }
+                        } else {
+                            null
+                        }
+                    val deltaWeightDisplay =
+                        if (latest != null && previous != null) {
+                            val diffKg = latest.weightKg - previous.weightKg
+                            val formattedDiff =
+                                MetricFormatter.formatWeightNumericOnly(
+                                    kotlin.math.abs(diffKg),
+                                    userPrefs.unitSystem,
+                                )
+                            val unitLabel = if (userPrefs.unitSystem == UnitSystem.METRIC) "kg" else "lbs"
+                            when {
+                                diffKg > 0f -> "↑ $formattedDiff $unitLabel"
+                                diffKg < 0f -> "↓ $formattedDiff $unitLabel"
+                                else -> "= 0 $unitLabel"
+                            }
+                        } else {
+                            null
+                        }
 
                     val recordsByDay =
                         records.groupBy { record ->
@@ -169,6 +195,7 @@ class WeightDetailViewModel
                         bmiDisplay = bmi?.let { MetricFormatter.formatBmi(it) },
                         historyItems = historyItems,
                         isLoading = false,
+                        deltaWeightDisplay = deltaWeightDisplay,
                     )
                 }
             }.stateIn(

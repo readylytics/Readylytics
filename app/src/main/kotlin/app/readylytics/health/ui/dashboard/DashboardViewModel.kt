@@ -17,6 +17,7 @@ import app.readylytics.health.domain.dashboard.InsightDeriver
 import app.readylytics.health.domain.insights.InsightContext
 import app.readylytics.health.domain.insights.InsightEngine
 import app.readylytics.health.domain.insights.InsightParams
+import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.model.MetricStatus
@@ -153,6 +154,12 @@ class DashboardViewModel
                     engineFindings = engineFindings,
                     dismissedTypes = basicInputs.dismissedInsightTypes,
                 )
+            val yesterday = selectedDate.minusDays(1)
+            val yesterdaySummary = basicInputs.rasSummaries.firstOrNull { it.date == yesterday }
+            val yesterdayMetrics =
+                yesterdaySummary?.let {
+                    DailyMetricsMapper.toMetrics(it, basicInputs.userPreferences)
+                }
             return DashboardUiState(
                 summary = basicInputs.summary,
                 selectedDate = selectedDate,
@@ -178,6 +185,8 @@ class DashboardViewModel
                 dismissedInsightCount = derived.dismissedCount,
                 goalSleepHours = basicInputs.userPreferences.goalSleepHours,
                 userPreferences = basicInputs.userPreferences,
+                yesterdaySleepScore = yesterdayMetrics?.sleepScoreRounded?.toFloat(),
+                yesterdayReadiness = yesterdayMetrics?.readinessRounded?.toFloat(),
             )
         }
 
@@ -335,6 +344,8 @@ data class DashboardUiState(
     val dismissedInsightCount: Int = 0,
     val goalSleepHours: Float = 8f,
     val userPreferences: UserPreferences = UserPreferences(),
+    val yesterdaySleepScore: Float? = null,
+    val yesterdayReadiness: Float? = null,
 )
 
 @Immutable

@@ -36,7 +36,7 @@ import app.readylytics.health.ui.common.SkeletonCard
 import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.components.BloodPressureSplitChart
 import app.readylytics.health.ui.components.ChartDefaults
-import app.readylytics.health.ui.components.M3ScoreDial
+import app.readylytics.health.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.ui.components.SectionHeader
 import app.readylytics.health.ui.components.TrendCard
 
@@ -97,36 +97,67 @@ fun BloodPressureDetailScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    ScoreDialSkeleton()
-                    ScoreDialSkeleton()
+                    ScoreDialSkeleton(height = 156.dp, modifier = Modifier.weight(1f))
+                    ScoreDialSkeleton(height = 156.dp, modifier = Modifier.weight(1f))
                 }
             } else {
                 Row(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    M3ScoreDial(
+                    val systolicDelta =
+                        if (uiState.latestSystolic != null) {
+                            val diff = uiState.latestSystolic - 120
+                            when {
+                                diff > 0 -> "↑ $diff mmHg"
+                                diff < 0 -> "↓ ${kotlin.math.abs(diff)} mmHg"
+                                else -> "Optimal"
+                            }
+                        } else {
+                            null
+                        }
+
+                    M3ScoreGaugeCard(
+                        modifier = Modifier.weight(1f),
+                        title = stringResource(R.string.label_systolic),
                         score = uiState.latestSystolic?.toFloat(),
-                        label = stringResource(R.string.label_systolic),
+                        displayText = uiState.latestSystolic?.toString() ?: "—",
+                        unitText = stringResource(R.string.unit_mmHg),
                         maxScore = 200f,
                         status = uiState.systolicStatus,
-                        displayText = uiState.latestSystolic?.toString(),
+                        deltaText = systolicDelta,
                         tooltipDescription = stringResource(R.string.tooltip_blood_pressure_systolic),
                     )
-                    M3ScoreDial(
+
+                    val diastolicDelta =
+                        if (uiState.latestDiastolic != null) {
+                            val diff = uiState.latestDiastolic - 80
+                            when {
+                                diff > 0 -> "↑ $diff mmHg"
+                                diff < 0 -> "↓ ${kotlin.math.abs(diff)} mmHg"
+                                else -> "Optimal"
+                            }
+                        } else {
+                            null
+                        }
+
+                    M3ScoreGaugeCard(
+                        modifier = Modifier.weight(1f),
+                        title = stringResource(R.string.label_diastolic),
                         score = uiState.latestDiastolic?.toFloat(),
-                        label = stringResource(R.string.label_diastolic),
+                        displayText = uiState.latestDiastolic?.toString() ?: "—",
+                        unitText = stringResource(R.string.unit_mmHg),
                         maxScore = 120f,
                         status = uiState.diastolicStatus,
-                        displayText = uiState.latestDiastolic?.toString(),
+                        deltaText = diastolicDelta,
                         tooltipDescription = stringResource(R.string.tooltip_blood_pressure_diastolic),
                     )
                 }

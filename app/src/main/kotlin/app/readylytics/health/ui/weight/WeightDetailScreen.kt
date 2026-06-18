@@ -39,7 +39,7 @@ import app.readylytics.health.ui.common.ScoreDialSkeleton
 import app.readylytics.health.ui.common.SkeletonCard
 import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.components.ChartDefaults
-import app.readylytics.health.ui.components.M3ScoreDial
+import app.readylytics.health.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.ui.components.SectionHeader
 import app.readylytics.health.ui.components.TrendCard
 import app.readylytics.health.ui.components.TrendChart
@@ -148,12 +148,12 @@ fun WeightDetailScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    ScoreDialSkeleton()
-                    ScoreDialSkeleton()
+                    ScoreDialSkeleton(height = 156.dp, modifier = Modifier.weight(1f))
+                    ScoreDialSkeleton(height = 156.dp, modifier = Modifier.weight(1f))
                 }
             } else {
                 val weightMaxScore = if (uiState.unitSystem == UnitSystem.METRIC) 150f else 330f
@@ -181,16 +181,19 @@ fun WeightDetailScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    M3ScoreDial(
+                    M3ScoreGaugeCard(
+                        modifier = Modifier.weight(1f),
+                        title = stringResource(R.string.label_weight_unit_format, unitLabel),
                         score = uiState.latestWeight,
-                        label = stringResource(R.string.label_weight_unit_format, unitLabel),
+                        displayText = uiState.weightDisplay ?: "—",
+                        unitText = unitLabel,
                         maxScore = weightMaxScore,
                         status = bmiStatus,
-                        displayText = uiState.weightDisplay,
+                        deltaText = uiState.deltaWeightDisplay,
                         tooltipDescription =
                             stringResource(
                                 R.string.tooltip_weight_current,
@@ -198,12 +201,15 @@ fun WeightDetailScreen(
                                 heightTooltip,
                             ),
                     )
-                    M3ScoreDial(
+                    M3ScoreGaugeCard(
+                        modifier = Modifier.weight(1f),
+                        title = stringResource(R.string.label_bmi),
                         score = uiState.bmi,
-                        label = stringResource(R.string.label_bmi),
+                        displayText = uiState.bmiDisplay ?: "—",
+                        unitText = "",
                         maxScore = 40f,
                         status = bmiStatus,
-                        displayText = uiState.bmiDisplay,
+                        deltaText = null,
                         tooltipDescription = stringResource(R.string.tooltip_bmi),
                     )
                 }
