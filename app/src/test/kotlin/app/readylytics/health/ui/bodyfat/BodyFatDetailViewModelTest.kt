@@ -84,7 +84,11 @@ class BodyFatDetailViewModelTest {
             block()
         } finally {
             if (::viewModel.isInitialized) {
-                viewModel.viewModelScope.cancel()
+                try {
+                    viewModel.viewModelScope.cancel()
+                } catch (e: Exception) {
+                    // Ignore cancellation exceptions
+                }
             }
         }
 
