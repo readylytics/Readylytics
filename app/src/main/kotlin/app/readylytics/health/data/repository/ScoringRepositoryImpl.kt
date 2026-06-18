@@ -12,8 +12,6 @@ import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.scoringZone
-import app.readylytics.health.domain.model.DailySummaryMapper
-import app.readylytics.health.domain.model.LoadSourceSelector
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.model.RecoveryFlag
@@ -470,14 +468,7 @@ class ScoringRepositoryImpl
                         runCatching { RecoveryFlag.valueOf(token.trim()) }.getOrNull()
                     }?.toSet()
                     ?: emptySet()
-            val prefs = settingsRepo.userPreferences.first()
-            val mode = prefs.strainLoadSourceMode
-            val domainSummary = DailySummaryMapper.toDomain(summary, prefs.scoringZone())
             return ReadinessResult(
-                readinessScore = LoadSourceSelector.selectReadiness(domainSummary, mode),
-                sleepScore = summary.sleepScore,
-                loadScore = LoadSourceSelector.selectLoadScore(domainSummary, mode),
-                sRest = summary.sRest,
                 recoveryFlags = flags,
                 contributors = summary.contributors,
                 diagnostics = summary.diagnostics,

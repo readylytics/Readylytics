@@ -194,6 +194,7 @@ class ComputeSleepMetricsUseCase
                 var persistedZLnHrv: Float? = null
                 var persistedZRhr: Float? = null
                 var persistedFlags: String? = null
+                var sRest: Float? = null
                 var readinessResult: ReadinessResult = ReadinessResult.EMPTY
 
                 val sigmaPrior = prefs.physiologyProfile.lnSigmaPrior
@@ -266,7 +267,7 @@ class ComputeSleepMetricsUseCase
                         )
                     val rhrDeltaBpm = currentNocturnalRhr.toFloat() - baselineRhrValue.toFloat()
 
-                    var sRest =
+                    sRest =
                         scoringCalculator.computeRestorationSubScore(
                             currentHrvMean,
                             muHrvHistory,
@@ -382,10 +383,6 @@ class ComputeSleepMetricsUseCase
 
                     readinessResult =
                         ReadinessResult(
-                            readinessScore = readinessScore,
-                            sleepScore = sleepScore,
-                            loadScore = loadScore,
-                            sRest = sRest,
                             recoveryFlags = recoveryFlags,
                             contributors =
                                 ReadinessResult.Contributors(
@@ -448,7 +445,7 @@ class ComputeSleepMetricsUseCase
                         "scores": {
                             "zHrv": $persistedZLnHrv,
                             "zRhr": $persistedZRhr,
-                            "sRest": ${readinessResult.sRest},
+                            "sRest": $sRest,
                             "sleepScore": $sleepScore,
                             "readinessScore": $readinessScore,
                             "recoveryFlags": "$persistedFlags"
@@ -460,7 +457,6 @@ class ComputeSleepMetricsUseCase
                 Result.success(
                     summary.copy(
                         sleepScore = sleepScore,
-                        readinessScore = summary.readinessScore,
                         readinessWorkoutOnly = readinessScore,
                         readinessEverydayHr = readinessEverydayHr,
                         nocturnalHrv = if (sessionHrvSamples.isNotEmpty()) currentHrvMean.roundToInt() else null,
@@ -556,7 +552,7 @@ class ComputeSleepMetricsUseCase
                         snapshotCalibrationPhase = sessionPhase.name,
                         diagnostics = readinessResult.diagnostics,
                         contributors = readinessResult.contributors,
-                        sRest = readinessResult.sRest,
+                        sRest = sRest,
                     ),
                 )
             } catch (e: Exception) {

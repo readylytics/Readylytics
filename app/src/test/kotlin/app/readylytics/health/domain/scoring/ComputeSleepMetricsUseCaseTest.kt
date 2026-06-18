@@ -33,7 +33,6 @@ fun testDailySummary(
     DailySummaryEntity(
         dateMidnightMs = dateMidnightMs,
         sleepScore = 0f,
-        readinessScore = null,
         baselineCalculatedAtDate = baselineCalculatedAtDate,
         hrvMuMssd = hrvMuMssd,
         hrvSigmaMssd = hrvSigmaMssd,

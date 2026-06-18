@@ -133,9 +133,7 @@ class QueryOptimizationTest {
                 (0 until 7).map { i ->
                     DailySummaryEntity(
                         dateMidnightMs = baselineMs + (i * 24 * 3_600_000L),
-                        loadScore = 50f + i,
                         sleepScore = 70f + i,
-                        legacyRasScore = 40f + i,
                     )
                 }
             dailySummaryDao.upsertAll(summaries)

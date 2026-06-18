@@ -319,7 +319,7 @@ class WorkoutsViewModelTest {
                     avgHr = 134f,
                 )
             workoutsFlow.value = listOf(workout)
-            summariesFlow.value = listOf(DailySummary(date = today, totalTrimp = 115.6f, rhrBpm = 52f))
+            summariesFlow.value = listOf(DailySummary(date = today, trimpWorkoutOnly = 115.6f, rhrBpm = 52f))
             coEvery {
                 getWorkoutDisplayMetricsUseCase.execute(
                     workout = workout,

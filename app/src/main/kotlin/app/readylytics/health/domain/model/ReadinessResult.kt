@@ -23,10 +23,6 @@ enum class RecoveryFlag {
  * derivation rather than reading scattered raw columns.
  */
 data class ReadinessResult(
-    val readinessScore: Float?,
-    val sleepScore: Float?,
-    val loadScore: Float?,
-    val sRest: Float?,
     val recoveryFlags: Set<RecoveryFlag>,
     val contributors: Contributors,
     val diagnostics: Diagnostics,
@@ -67,10 +63,6 @@ data class ReadinessResult(
     companion object {
         val EMPTY: ReadinessResult =
             ReadinessResult(
-                readinessScore = null,
-                sleepScore = null,
-                loadScore = null,
-                sRest = null,
                 recoveryFlags = emptySet(),
                 contributors = Contributors(),
                 diagnostics = Diagnostics(),
