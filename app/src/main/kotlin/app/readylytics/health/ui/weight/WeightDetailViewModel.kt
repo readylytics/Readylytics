@@ -68,14 +68,7 @@ class WeightDetailViewModel
 
                     val records = weightRepository.getByDateRange(rangeStart.toEpochMilli(), rangeEnd.toEpochMilli())
                     val latest = weightRepository.getLatest()
-                    val previous =
-                        if (latest != null) {
-                            weightRepository
-                                .getByDateRange(0L, latest.timestampMs - 1)
-                                .maxByOrNull { it.timestampMs }
-                        } else {
-                            null
-                        }
+                    val previous = if (latest != null) weightRepository.getPrevious(latest.timestampMs) else null
                     val deltaWeightDisplay =
                         if (latest != null && previous != null) {
                             val diffKg = latest.weightKg - previous.weightKg
@@ -88,7 +81,7 @@ class WeightDetailViewModel
                             when {
                                 diffKg > 0f -> "↑ $formattedDiff $unitLabel"
                                 diffKg < 0f -> "↓ $formattedDiff $unitLabel"
-                                else -> "= 0 $unitLabel"
+                                else -> "—"
                             }
                         } else {
                             null

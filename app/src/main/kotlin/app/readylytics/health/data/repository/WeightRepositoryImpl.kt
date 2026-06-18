@@ -29,4 +29,6 @@ class WeightRepositoryImpl
             dayStartMs: Long,
             dayEndMs: Long,
         ): WeightRecordEntity? = dao.getLatestByDate(dayStartMs, dayEndMs)
+
+        override suspend fun getPrevious(beforeMs: Long): WeightRecordEntity? = dao.getPrevious(beforeMs)
     }

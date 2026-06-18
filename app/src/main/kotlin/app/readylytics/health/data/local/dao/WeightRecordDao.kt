@@ -57,6 +57,9 @@ interface WeightRecordDao {
     @Query("SELECT * FROM weight_records WHERE timestampMs <= :endMs ORDER BY timestampMs DESC LIMIT 1")
     suspend fun getLatestUpTo(endMs: Long): WeightRecordEntity?
 
+    @Query("SELECT * FROM weight_records WHERE timestampMs < :beforeMs ORDER BY timestampMs DESC LIMIT 1")
+    suspend fun getPrevious(beforeMs: Long): WeightRecordEntity?
+
     @Upsert
     suspend fun upsertAll(records: List<WeightRecordEntity>)
 

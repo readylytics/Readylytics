@@ -29,4 +29,6 @@ class BodyFatRepositoryImpl
             dayStartMs: Long,
             dayEndMs: Long,
         ): BodyFatRecordEntity? = dao.getLatestByDate(dayStartMs, dayEndMs)
+
+        override suspend fun getPrevious(beforeMs: Long): BodyFatRecordEntity? = dao.getPrevious(beforeMs)
     }

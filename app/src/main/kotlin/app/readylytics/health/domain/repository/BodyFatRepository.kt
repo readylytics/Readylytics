@@ -20,4 +20,6 @@ interface BodyFatRepository {
         dayStartMs: Long,
         dayEndMs: Long,
     ): BodyFatRecordEntity?
+
+    suspend fun getPrevious(beforeMs: Long): BodyFatRecordEntity?
 }

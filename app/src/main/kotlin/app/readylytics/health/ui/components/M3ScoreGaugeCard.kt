@@ -55,6 +55,7 @@ fun M3ScoreGaugeCard(
     tooltipDescription: String? = null,
     onClick: () -> Unit = {},
 ) {
+    val isClickable = onClick != {}
     val effectiveStatus =
         status ?: when {
             score == null -> MetricStatus.CALIBRATING
@@ -88,187 +89,243 @@ fun M3ScoreGaugeCard(
             "$title: $displayText $unitText"
         }
 
-    Card(
-        onClick = onClick,
+    val baseModifier = modifier.height(156.dp)
+    val semanticsModifier =
+        if (isClickable) {
+            baseModifier.semantics {
+                contentDescription = semanticDesc
+                role = Role.Button
+            }
+        } else {
+            baseModifier.semantics {
+                contentDescription = semanticDesc
+            }
+        }
+
+    if (isClickable) {
+        Card(
+            onClick = onClick,
+            modifier = semanticsModifier,
+            shape = MaterialTheme.shapes.large,
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+        ) {
+            GaugeCardContent(
+                title = title,
+                displayText = displayText,
+                unitText = unitText,
+                animatedProgress = animatedProgress,
+                progressColor = progressColor,
+                trackColor = trackColor,
+                deltaText = deltaText,
+                tooltipDescription = tooltipDescription,
+                score = score,
+            )
+        }
+    } else {
+        Card(
+            modifier = semanticsModifier,
+            shape = MaterialTheme.shapes.large,
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+        ) {
+            GaugeCardContent(
+                title = title,
+                displayText = displayText,
+                unitText = unitText,
+                animatedProgress = animatedProgress,
+                progressColor = progressColor,
+                trackColor = trackColor,
+                deltaText = deltaText,
+                tooltipDescription = tooltipDescription,
+                score = score,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GaugeCardContent(
+    title: String,
+    displayText: String,
+    unitText: String,
+    animatedProgress: Float,
+    progressColor: androidx.compose.ui.graphics.Color,
+    trackColor: androidx.compose.ui.graphics.Color,
+    deltaText: String?,
+    tooltipDescription: String?,
+    score: Float?,
+) {
+    Column(
         modifier =
-            modifier
-                .height(156.dp)
-                .semantics {
-                    contentDescription = semanticDesc
-                    role = Role.Button
-                },
-        shape = MaterialTheme.shapes.large,
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        Column(
+        // Header Row: Title and Tooltip
+        Row(
             modifier =
                 Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .fillMaxWidth()
+                    .semantics { heading() },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
         ) {
-            // Header Row: Title and Tooltip
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .semantics { heading() },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Text(
-                    text = title,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+            Text(
+                text = title,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (tooltipDescription != null) {
+                MetricTooltip(
+                    description = tooltipDescription,
+                    iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (tooltipDescription != null) {
-                    MetricTooltip(
-                        description = tooltipDescription,
-                        iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
+        }
 
-            Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-            // Center Area: Gauge and Value
-            Box(
+        // Center Area: Gauge and Value
+        Box(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            // Soft Arc Gauge (shifted up slightly to leave more space below)
+            Canvas(
                 modifier =
                     Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                contentAlignment = Alignment.BottomCenter,
+                        .width(120.dp)
+                        .height(60.dp)
+                        .padding(bottom = 6.dp),
             ) {
-                // Soft Arc Gauge (shifted up slightly to leave more space below)
-                Canvas(
-                    modifier =
-                        Modifier
-                            .width(120.dp)
-                            .height(60.dp)
-                            .padding(bottom = 6.dp),
-                ) {
-                    val strokeWidthPx = 6.dp.toPx()
-                    val dotRadiusPx = 4.dp.toPx()
+                val strokeWidthPx = 6.dp.toPx()
+                val dotRadiusPx = 4.dp.toPx()
 
-                    // Add padding to prevent any clipping of rounded caps or the endpoint dot
-                    val horizontalPadding = strokeWidthPx / 2f + dotRadiusPx
-                    val verticalPadding = strokeWidthPx / 2f + dotRadiusPx
+                // Add padding to prevent any clipping of rounded caps or the endpoint dot
+                val horizontalPadding = strokeWidthPx / 2f + dotRadiusPx
+                val verticalPadding = strokeWidthPx / 2f + dotRadiusPx
 
-                    val arcWidth = size.width - 2 * horizontalPadding
-                    val radius = arcWidth / 2f
-                    val centerX = size.width / 2f
-                    val centerY = size.height - verticalPadding
+                val arcWidth = size.width - 2 * horizontalPadding
+                val radius = arcWidth / 2f
+                val centerX = size.width / 2f
+                val centerY = size.height - verticalPadding
 
-                    val topLeft = Offset(centerX - radius, centerY - radius)
-                    val arcSize = Size(radius * 2, radius * 2)
+                val topLeft = Offset(centerX - radius, centerY - radius)
+                val arcSize = Size(radius * 2, radius * 2)
 
-                    // Draw track
+                // Draw track
+                drawArc(
+                    color = trackColor,
+                    startAngle = 180f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round),
+                )
+
+                // Draw active arc progress
+                if (animatedProgress > 0f) {
                     drawArc(
-                        color = trackColor,
+                        color = progressColor,
                         startAngle = 180f,
-                        sweepAngle = 180f,
+                        sweepAngle = 180f * animatedProgress,
                         useCenter = false,
                         topLeft = topLeft,
                         size = arcSize,
                         style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round),
                     )
 
-                    // Draw active arc progress
-                    if (animatedProgress > 0f) {
-                        drawArc(
-                            color = progressColor,
-                            startAngle = 180f,
-                            sweepAngle = 180f * animatedProgress,
-                            useCenter = false,
-                            topLeft = topLeft,
-                            size = arcSize,
-                            style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round),
-                        )
+                    // Draw endpoint dot
+                    val endAngle = 180f + (180f * animatedProgress)
+                    val endAngleRad = Math.toRadians(endAngle.toDouble())
+                    val dotX = centerX + radius * cos(endAngleRad).toFloat()
+                    val dotY = centerY + radius * sin(endAngleRad).toFloat()
 
-                        // Draw endpoint dot
-                        val endAngle = 180f + (180f * animatedProgress)
-                        val endAngleRad = Math.toRadians(endAngle.toDouble())
-                        val dotX = centerX + radius * cos(endAngleRad).toFloat()
-                        val dotY = centerY + radius * sin(endAngleRad).toFloat()
-
-                        drawCircle(
-                            color = progressColor,
-                            radius = dotRadiusPx,
-                            center = Offset(dotX, dotY),
-                        )
-                    }
-                }
-
-                // Centered Value & Unit
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    val textStyle =
-                        if (displayText.length >= 6) {
-                            MaterialTheme.typography.titleLarge.copy(
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = (-0.3).sp,
-                            )
-                        } else {
-                            MaterialTheme.typography.headlineSmall.copy(
-                                fontSize = 25.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = (-0.5).sp,
-                            )
-                        }
-                    Text(
-                        text = displayText,
-                        style = textStyle,
-                        color = if (score != null) progressColor else MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                    )
-                    Text(
-                        text = if (!unitText.isNullOrEmpty()) unitText else " ",
-                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
-                        color =
-                            if (!unitText.isNullOrEmpty()) {
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                            } else {
-                                androidx.compose.ui.graphics.Color.Transparent
-                            },
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
+                    drawCircle(
+                        color = progressColor,
+                        radius = dotRadiusPx,
+                        center = Offset(dotX, dotY),
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(2.dp))
-
-            // Footer: Baseline Chip
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(20.dp),
-                contentAlignment = Alignment.Center,
+            // Centered Value & Unit
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                if (!deltaText.isNullOrEmpty()) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ) {
-                        Text(
-                            text = deltaText,
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            textAlign = TextAlign.Center,
+                val textStyle =
+                    if (displayText.length >= 6) {
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.3).sp,
+                        )
+                    } else {
+                        MaterialTheme.typography.headlineSmall.copy(
+                            fontSize = 25.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.5).sp,
                         )
                     }
+                Text(
+                    text = displayText,
+                    style = textStyle,
+                    color = if (score != null) progressColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                )
+                Text(
+                    text = if (!unitText.isNullOrEmpty()) unitText else " ",
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
+                    color =
+                        if (!unitText.isNullOrEmpty()) {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        } else {
+                            androidx.compose.ui.graphics.Color.Transparent
+                        },
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        // Footer: Baseline Chip
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(20.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (!deltaText.isNullOrEmpty()) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ) {
+                    Text(
+                        text = deltaText,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
         }
