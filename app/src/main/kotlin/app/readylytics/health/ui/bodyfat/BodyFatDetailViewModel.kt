@@ -6,6 +6,7 @@ import app.readylytics.health.R
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.bodyFatStatus
@@ -18,7 +19,7 @@ import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.common.UiText
 import app.readylytics.health.ui.common.padToRange
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -58,6 +59,7 @@ class BodyFatDetailViewModel
         private val weightRepository: WeightRepository,
         private val settingsRepo: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val selectedRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
 
@@ -67,7 +69,7 @@ class BodyFatDetailViewModel
                 selectedDateRepository.selectedDate,
                 settingsRepo.userPreferences,
             ) { range, selectedDate, userPrefs ->
-                withContext(Dispatchers.IO) {
+                withContext(ioDispatcher) {
                     val zoneId = ZoneId.systemDefault()
                     val rangeStart =
                         selectedDate.minusDays((range.days - 1).toLong()).atStartOfDay(zoneId).toInstant()

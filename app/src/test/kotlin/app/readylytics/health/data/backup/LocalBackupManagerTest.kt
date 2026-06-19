@@ -15,6 +15,7 @@ import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import net.lingala.zip4j.ZipFile
@@ -78,7 +79,8 @@ class LocalBackupManagerTest {
             mockk<CardConfigurationRepository>(relaxed = true).apply {
                 coEvery { dashboardCardConfigurations() } returns flowOf(emptyList())
             }
-        manager = LocalBackupManager(context, db, settingsRepo, cardConfigRepo, encryptionManager)
+        manager =
+            LocalBackupManager(context, db, settingsRepo, cardConfigRepo, encryptionManager, Dispatchers.Unconfined)
     }
 
     @After
@@ -214,7 +216,8 @@ class LocalBackupManagerTest {
                             },
                         )
                 }
-            manager = LocalBackupManager(context, db, settingsRepo, cardConfigRepo, encryptionManager)
+            manager =
+                LocalBackupManager(context, db, settingsRepo, cardConfigRepo, encryptionManager, Dispatchers.Unconfined)
 
             val now = System.currentTimeMillis()
             val eightDaysAgo = now - (8L * 24 * 60 * 60 * 1000)
@@ -266,7 +269,8 @@ class LocalBackupManagerTest {
                             ),
                         )
                 }
-            manager = LocalBackupManager(context, db, settingsRepo, cardConfigRepo, encryptionManager)
+            manager =
+                LocalBackupManager(context, db, settingsRepo, cardConfigRepo, encryptionManager, Dispatchers.Unconfined)
 
             val result = manager.createBackup()
 

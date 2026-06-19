@@ -18,6 +18,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
@@ -62,7 +63,16 @@ class LocalRestoreManagerTest {
         every { encryptionManager.encrypt("restored_password") } returns "encrypted_restored_password"
         cardConfigRepo = mockk<CardConfigurationRepository>(relaxed = true)
         workerScheduler = mockk<WorkerScheduler>(relaxed = true)
-        manager = LocalRestoreManager(context, db, settingsRepo, cardConfigRepo, workerScheduler, encryptionManager)
+        manager =
+            LocalRestoreManager(
+                context,
+                db,
+                settingsRepo,
+                cardConfigRepo,
+                workerScheduler,
+                encryptionManager,
+                Dispatchers.Unconfined,
+            )
     }
 
     @After

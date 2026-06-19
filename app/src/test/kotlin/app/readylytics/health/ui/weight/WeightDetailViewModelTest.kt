@@ -67,6 +67,7 @@ class WeightDetailViewModelTest {
             weightRepository = weightRepository,
             settingsRepo = settingsRepo,
             selectedDateRepository = selectedDateRepo,
+            ioDispatcher = testDispatcher,
         )
 
     @After

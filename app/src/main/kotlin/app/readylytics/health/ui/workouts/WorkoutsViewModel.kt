@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
@@ -22,6 +23,7 @@ import app.readylytics.health.domain.util.truncateToDayMs
 import app.readylytics.health.ui.common.DailyDataPoint
 import app.readylytics.health.ui.common.TimeRange
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -101,6 +103,7 @@ class WorkoutsViewModel
         private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
         private val foregroundSyncController: ForegroundSyncController,
         private val savedStateHandle: SavedStateHandle,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val _selectedRange =
             MutableStateFlow(
@@ -160,7 +163,7 @@ class WorkoutsViewModel
                         } else {
                             flow {
                                 emit(dailySummaryRepository.getByDate(selectedMidnightMs))
-                            }.flowOn(Dispatchers.IO)
+                            }.flowOn(ioDispatcher)
                         }
 
                     val rasFromMs =

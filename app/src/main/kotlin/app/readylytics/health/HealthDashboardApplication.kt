@@ -21,7 +21,6 @@ import app.readylytics.health.domain.util.logD
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -73,7 +72,7 @@ class HealthDashboardApplication :
         app.readylytics.health.workers.SyncNotifications
             .ensureChannel(this)
 
-        appScope.launch(Dispatchers.IO) {
+        appScope.launch {
             // Run historical baseline backfill once per app start
             runCatching {
                 val backfilled = backfillHistoricalBaselines.execute()
