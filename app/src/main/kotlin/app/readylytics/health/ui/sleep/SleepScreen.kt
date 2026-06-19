@@ -14,12 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import app.readylytics.health.ui.theme.spacing
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -52,6 +51,7 @@ import app.readylytics.health.ui.components.SleepStagesChart
 import app.readylytics.health.ui.components.StatusLegend
 import app.readylytics.health.ui.components.TrendCard
 import app.readylytics.health.ui.dashboard.DateSwitcher
+import app.readylytics.health.ui.theme.spacing
 
 @Composable
 fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
