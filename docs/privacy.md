@@ -57,9 +57,11 @@ delete local backup files from their storage location.
 
 Readylytics limits locally stored history using a retention setting. By
 default, retention is enabled at 365 days, and you can adjust it in Settings
-to any value between 180 days and 3 years (1095 days). If you turn retention
+to any value between 180 days and 3 years (1095 days). State retention
+applies to every imported health-record table. If you turn retention
 limiting off, Readylytics keeps history up to a 10-year (3650-day) ceiling
-rather than indefinitely.
+rather than indefinitely. Backups contain only records present in the local
+database at backup time.
 
 ## Age requirement
 

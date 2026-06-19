@@ -258,17 +258,17 @@ git commit -m "fix: bucket load history by per-record local date"
 - Modify: `docs/privacy.md`
 - Modify: `docs/backup-and-data.md`
 
-- [ ] **Step 1: Write failing all-table retention integration test**
+- [x] **Step 1: Write failing all-table retention integration test**
 
 Seed old, cutoff-equal, and new rows in sleep, stages, HR, HRV, workout, daily summary, weight, body fat, blood pressure, and oxygen saturation. Assert only rows strictly older than cutoff are removed; cutoff-equal rows remain.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `.\gradlew testDebugUnitTest --tests "*RetentionCleanupTest"`
 
 Expected: FAIL because four tables retain old rows and cleanup is not transactional.
 
-- [ ] **Step 3: Add transactional cleanup unit**
+- [x] **Step 3: Add transactional cleanup unit**
 
 ```kotlin
 @Singleton
@@ -300,11 +300,11 @@ class RetentionCleanup @Inject constructor(
 
 Make worker resolve cutoff through `RetentionBounds`, delegate once, rethrow cancellation, and return failure only for genuine errors.
 
-- [ ] **Step 4: Add static coverage guard**
+- [x] **Step 4: Add static coverage guard**
 
 Extend `ProductionReadinessStaticTest` to assert all nine DAO deletions are owned by `RetentionCleanup`, preventing future entity omission.
 
-- [ ] **Step 5: Verify GREEN**
+- [x] **Step 5: Verify GREEN**
 
 Run:
 
@@ -314,11 +314,11 @@ Run:
 
 Expected: PASS.
 
-- [ ] **Step 6: Update privacy/data-flow docs**
+- [x] **Step 6: Update privacy/data-flow docs**
 
 State retention applies to every imported health-record table and backups contain only records present at backup time.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add app/src/main app/src/test internal-docs/DATA_FLOW.md docs/privacy.md docs/backup-and-data.md

@@ -126,6 +126,33 @@ class ProductionReadinessStaticTest {
         assertTrue("Google Drive integration refs remain: $offenders", offenders.isEmpty())
     }
 
+    @Test
+    fun `all nine DAO deletions are owned by RetentionCleanup`() {
+        val retentionCleanupFile = sourceFile("src/main/kotlin/app/readylytics/health/data/local/RetentionCleanup.kt")
+        val retentionCleanupContent = retentionCleanupFile.readText()
+
+        val expectedDaos = listOf(
+            "sleepDao.deleteBeforeTimestamp",
+            "heartRateDao.deleteBeforeTimestamp",
+            "hrvDao.deleteBeforeTimestamp",
+            "workoutDao.deleteBeforeTimestamp",
+            "dailySummaryDao.deleteBeforeTimestamp",
+            "weightDao.deleteBeforeTimestamp",
+            "bodyFatDao.deleteBeforeTimestamp",
+            "bloodPressureDao.deleteBeforeTimestamp",
+            "oxygenSaturationDao.deleteBeforeTimestamp"
+        )
+
+        val missingDaos = expectedDaos.filter { daoCall ->
+            !retentionCleanupContent.contains(daoCall)
+        }
+
+        assertTrue(
+            "RetentionCleanup must call deleteBeforeTimestamp for all nine sensitive DAOs: missing $missingDaos",
+            missingDaos.isEmpty()
+        )
+    }
+
     private fun sourceFile(path: String): File =
         listOf(File(path), File("app", path))
             .firstOrNull { it.exists() }

@@ -64,9 +64,9 @@ The app can store unlimited historical health data, but if you're concerned abou
 **Find it:** Settings → Data & Backup → Data Retention
 
 **Retention window** (180–1095 days, default 365):
-- Dates older than this window are automatically deleted from the app's local database.
+- Dates older than this window are automatically deleted from the app's local database. State retention applies to every imported health-record table.
 - Does **not** affect Health Connect—your original data stays in Health Connect unless you delete it there.
-- Does **not** affect backups—archived backups may contain older data.
+- Backups contain only records present in the local database at backup time (archived backups created before pruning may contain older data).
 
 **Retention disabled:**
 - Turn off "Enable Data Retention" to keep all historical data indefinitely.
