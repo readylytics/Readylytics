@@ -3,7 +3,6 @@ package app.readylytics.health
 import com.lemonappdev.konsist.api.Konsist
 import com.lemonappdev.konsist.api.ext.list.imports
 import com.lemonappdev.konsist.api.verify.assertTrue
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CleanArchTest {
@@ -44,7 +43,7 @@ class CleanArchTest {
                         }.map { import -> "${file.name}: ${import.name}" }
                 }
 
-        assertTrue(
+        org.junit.Assert.assertTrue(
             "Domain layer must stay pure Kotlin. Forbidden imports:\n${violations.joinToString("\n")}",
             violations.isEmpty(),
         )
