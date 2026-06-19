@@ -175,6 +175,11 @@ private fun openOssLicenses(
     )
 }
 
+private fun openPrivacyPolicy(context: android.content.Context) {
+    val url = context.getString(R.string.privacy_policy_url)
+    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+}
+
 @Composable
 fun SettingsRoute(
     thresholdViewModel: ThresholdSettingsViewModel = hiltViewModel(),
@@ -236,6 +241,9 @@ fun SettingsRoute(
         onNavigateToAbout = onNavigateToAbout,
         onNavigateToLicenses = {
             openOssLicenses(context, licensesTitle)
+        },
+        onOpenPrivacyPolicy = {
+            openPrivacyPolicy(context)
         },
     )
 
@@ -300,6 +308,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onNavigateToAbout: () -> Unit = {},
     onNavigateToLicenses: () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var expandState by rememberSaveable { mutableStateOf(SettingsExpandState()) }
@@ -642,6 +651,17 @@ fun SettingsScreen(
                                     )
                                 },
                                 modifier = Modifier.clickable { onNavigateToLicenses() },
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            ListItem(
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                headlineContent = {
+                                    Text(
+                                        text = stringResource(R.string.settings_item_privacy_policy),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                    )
+                                },
+                                modifier = Modifier.clickable { onOpenPrivacyPolicy() },
                             )
                         }
                     }

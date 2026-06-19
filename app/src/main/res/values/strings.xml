@@ -762,6 +762,8 @@
     <string name="settings_section_miscellaneous">Miscellaneous</string>
     <string name="settings_item_licenses">Open source licenses</string>
     <string name="settings_item_licenses_title">Open Source Licenses</string>
+    <string name="settings_item_privacy_policy">Privacy Policy</string>
+    <string name="privacy_policy_url" translatable="false">https://gregorlauritz.github.io/MyHealthStatus/privacy/</string>
     <string name="settings_label_app_theme">App Theme</string>
     <string name="settings_customize_palette_label">Customize secondary and tertiary colors</string>
     <string name="settings_customize_palette_desc">Manually override color formulas with custom selections</string>
