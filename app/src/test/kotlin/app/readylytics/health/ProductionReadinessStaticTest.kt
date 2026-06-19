@@ -87,11 +87,11 @@ class ProductionReadinessStaticTest {
     fun `google drive integration code is absent`() {
         val roots =
             listOf(
-                projectFile("AGENTS.md"),
                 projectFile("app/build.gradle.kts"),
                 projectFile("gradle/libs.versions.toml"),
                 projectFile("app/src/main/kotlin"),
                 projectFile("app/src/main/res"),
+                projectFile("app/src/main/AndroidManifest.xml"),
             )
         val forbidden =
             listOf(
