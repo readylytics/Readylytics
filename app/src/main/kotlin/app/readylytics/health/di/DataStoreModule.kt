@@ -193,7 +193,6 @@ object DataStoreModule {
                                         dynamicColorEnabled =
                                             it
                                     }
-                                    prefs[stringPreferencesKey("drive_account_email")]?.let { driveAccountEmail = it }
                                     prefs[stringPreferencesKey("backup_schedule")]?.let { value ->
                                         runCatching { BackupScheduleProto.valueOf("BACKUP_${value.uppercase()}") }
                                             .onSuccess { backupSchedule = it }
@@ -218,7 +217,6 @@ object DataStoreModule {
                                             it
                                     }
                                     prefs[intPreferencesKey("retention_days")]?.let { retentionDays = it }
-                                    prefs[booleanPreferencesKey("collapse_cloud_data")]?.let { collapseCloudData = it }
                                     prefs[booleanPreferencesKey("collapse_health_connect")]?.let {
                                         collapseHealthConnect =
                                             it

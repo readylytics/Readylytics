@@ -15,7 +15,7 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 ### Core Architecture & Tech Stack
 
 - **Data Flow:** Room DB is single source of truth. Health Connect is ingestion-only. UI must NEVER access Health Connect directly.
-- **Stack:** Kotlin, Compose (M3), Room, Health Connect API, WorkManager (sync/backup/historical resync), DataStore (prefs), Google Drive API (AppData), Vico (charts).
+- **Stack:** Kotlin, Compose (M3), Room, Health Connect API, WorkManager (sync/backup/historical resync), DataStore (prefs), local encrypted backup/restore, Vico (charts).
 - **Patterns:** Strict MVVM + Clean Architecture. ViewModels expose StateFlow/SharedFlow only. Compose uses `collectAsStateWithLifecycle`.
 - **Logic Isolation:** All business/calculation logic must be pure Kotlin (zero Android dependencies).
 
@@ -44,7 +44,7 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 - **Validation:** Centralized in `domain/validation/SettingsValidators`. No validation in composables. VMs validate defensively.
 - **UI & Charts:** `dynamicDarkColorScheme` mandatory. Always use native Material Design 3 (M3) components (e.g., `ListItem` for rows, `SegmentedButton` for toggle sets, chip components, etc.) instead of custom-built row/toggle layouts. Use standard container shape/rounding `MaterialTheme.shapes.large` (16dp) for cards, tables, highlight boxes, and banners. Map surfaces to explicit M3 container roles (`surfaceContainerLow` for collapsed/cards, `surfaceContainer` for expanded, `surfaceContainerHigh` for overlays/progress banners) rather than legacy tonal elevations. Vico charts require Cubic Bezier curves, bottom area gradient fills, and M3 tonal palette mapping (no hardcoded colors).
 - **Strings & i18n:** All user-facing strings (titles, labels, tooltips, descriptions) must be defined in `app/src/main/res/values/strings.xml`. Reference them in Compose with `stringResource(R.string.key_name)`. Never hardcode strings in code. This supports internationalization and improves maintainability.
-- **File Structure:** Target ≤ 400 lines/file, hard limit ≤ 800 lines (refactor if exceeded). Settings paths map to `ui/settings/{physiologyprofile,sleep,cloud,common}`.
+- **File Structure:** Target ≤ 400 lines/file, hard limit ≤ 800 lines (refactor if exceeded). Settings paths map to `ui/settings/{physiologyprofile,sleep,backup,common}`.
 
 ### Commands & Testing
 
@@ -54,8 +54,11 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 
 ### Documentation Sync
 
-- **`docs/DATA_FLOW.md` is load-bearing.** It is the authoritative end-to-end map of the data pipeline (Health Connect → Room → scoring engine → UI). Any change to the **ingestion pipeline** (`HealthConnectRepository*`, `data/healthconnect/*` mappers, `HealthSyncUseCase`/`ForegroundSyncController`/`workers/*`), the **Room schema** (`HealthDatabase`, `data/local/entity/**`, DAOs, DB version/migrations), the **scoring use-cases/coordinators** (`ScoringRepository*`, `domain/scoring/Compute*UseCase`), or the **scoring-engine formulas** (`domain/scoring/**`) MUST include a synchronous update to `docs/DATA_FLOW.md` in the same change. Treat a stale `DATA_FLOW.md` as a broken build.
-- **Keep the separation intact:** `DATA_FLOW.md` documents data flow and points to where each formula lives — it does not duplicate coefficients/derivations. The math source of truth stays in pure-Kotlin `domain/scoring/**`.
+- **`internal-docs/DATA_FLOW.md` is load-bearing.** It is the authoritative end-to-end map of the data pipeline (Health Connect → Room → scoring engine → UI). Any change to the **ingestion pipeline** (`HealthConnectRepository*`, `data/healthconnect/*` mappers, `HealthSyncUseCase`/`ForegroundSyncController`/`workers/*`), the **Room schema** (`HealthDatabase`, `data/local/entity/**`, DAOs, DB version/migrations), the **scoring use-cases/coordinators** (`ScoringRepository*`, `domain/scoring/Compute*UseCase`), or the **scoring-engine formulas** (`domain/scoring/**`) MUST include a synchronous update to `internal-docs/DATA_FLOW.md` in the same change. Treat a stale `DATA_FLOW.md` as a broken build.
+- **Keep the separation intact:** `internal-docs/DATA_FLOW.md` documents data flow and points to where each formula lives — it does not duplicate coefficients/derivations. The math source of truth stays in pure-Kotlin `domain/scoring/**`.
+- **Website and privacy docs:** `docs/index.md`, `docs/about.md`, and `docs/privacy.md` are the Readylytics Jekyll site source. Any change to app data collection, backup behavior, retention, sharing, telemetry, Play Store package/link, support/contact details, or public score-explanation copy MUST update those pages in the same change. Do not reintroduce Google Drive/OAuth/cloud-backup claims unless the feature exists again.
+- **Documentation Synchronization Rule:** Any PR that changes scoring formulas, thresholds, coefficients, the phase/confidence model, the profile set, the HRV-display baseline, or onboarding/score-explanation copy MUST update `ABOUT.md`, `docs/about.md`, the relevant `internal-docs/DATA_FLOW.md` section(s), and the in-app About strings (`about_*`/`tooltip_*` in `app/src/main/res/values/strings.xml`) in the same PR.
+- **Documentation Review Checklist:** Before approving such a PR, confirm: (1) the implementation matches `ABOUT.md`; (2) `docs/about.md` matches `ABOUT.md`; (3) the in-app About page, tooltips, and onboarding scoring explanations agree with `ABOUT.md`; (4) the documentation drift/presence tests (`domain/scoring/**DocumentationDriftTest*`) pass.
 
 ### File Lifecycle & Indexing
 

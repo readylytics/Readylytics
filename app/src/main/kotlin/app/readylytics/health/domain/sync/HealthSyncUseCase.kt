@@ -212,6 +212,8 @@ class HealthSyncUseCase
                         }
                         settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
                         Result.success(Unit)
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         Result.failure("Sync failed", "SYNC_ERROR")
                     }
@@ -451,7 +453,7 @@ class HealthSyncUseCase
                     }.groupBy { it.sessionId }
             val workoutEntities =
                 exerciseRecords.map { session ->
-                    val sessionSamples = hrBySession[session.metadata.id] ?: emptyList()
+                    val sessionSamples = hrBySession[session.id] ?: emptyList()
                     WorkoutMapper.mapExerciseSession(session, sessionSamples, thresholds)
                 }
             val hrvEntities = HrvMapper.mapToEntities(hrvRecords, sleepEntities)
@@ -567,6 +569,8 @@ class HealthSyncUseCase
                     "Day $day: scored (steps=${steps?.toString() ?: "preserved"}) and summary persisted"
                 }
                 Result.success(Unit)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logE("HealthSyncUseCase", e) { "Day $day sync failed" }
                 Result.failure("Day $day sync failed", "DAY_SYNC_ERROR")

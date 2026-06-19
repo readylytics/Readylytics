@@ -3,6 +3,7 @@ package app.readylytics.health.domain.sync
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.domain.model.getOrThrow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -176,6 +177,8 @@ class ForegroundSyncController
                 app.readylytics.health.domain.util
                     .logD("ForegroundSyncController") { "Sync success" }
                 _syncCompletedEvent.emit(Unit)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 app.readylytics.health.domain.util
                     .logD("ForegroundSyncController") { "Sync failed: ${e.message}" }

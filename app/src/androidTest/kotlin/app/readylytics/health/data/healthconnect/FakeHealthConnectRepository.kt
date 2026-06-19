@@ -11,6 +11,19 @@ import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
+import app.readylytics.health.domain.model.DomainBloodPressureRecord
+import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.domain.model.DomainHeartRateRecord
+import app.readylytics.health.domain.model.DomainHeartRateSample
+import app.readylytics.health.domain.model.DomainHrvRecord
+import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
+import app.readylytics.health.domain.model.DomainRestingHeartRateRecord
+import app.readylytics.health.domain.model.DomainSleepSessionRecord
+import app.readylytics.health.domain.model.DomainSleepStage
+import app.readylytics.health.domain.model.DomainSleepStageType
+import app.readylytics.health.domain.model.DomainStepsRecord
+import app.readylytics.health.domain.model.DomainWeightRecord
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.PermissionStatus
@@ -127,56 +140,56 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun readSleepSessions(
         from: Instant,
         to: Instant,
-    ): List<SleepSessionRecord> {
+    ): List<DomainSleepSessionRecord> {
         translateCritical(FakeOp.Sleep)
         val total = totalInRange(sleepCount, from, to)
         sleepPagesServed = pagesFor(total)
-        return stubList(total)
+        return stubList(total) { index -> placeholderSleep(index) }
     }
 
     override suspend fun readHeartRateSamples(
         from: Instant,
         to: Instant,
-    ): List<HeartRateRecord> {
+    ): List<DomainHeartRateRecord> {
         translateCritical(FakeOp.HeartRate)
         val total = totalInRange(hrCount, from, to)
         hrPagesServed = pagesFor(total)
-        return stubList(total)
+        return stubList(total) { index -> placeholderHeartRate(index) }
     }
 
     override suspend fun readRestingHeartRateSamples(
         from: Instant,
         to: Instant,
-    ): List<RestingHeartRateRecord> {
+    ): List<DomainRestingHeartRateRecord> {
         translateCritical(FakeOp.RestingHeartRate)
-        return stubList(totalInRange(rhrCount, from, to))
+        return stubList(totalInRange(rhrCount, from, to)) { index -> placeholderRestingHeartRate(index) }
     }
 
     override suspend fun readHrvSamples(
         from: Instant,
         to: Instant,
-    ): List<HeartRateVariabilityRmssdRecord> {
+    ): List<DomainHrvRecord> {
         translateCritical(FakeOp.Hrv)
-        return stubList(totalInRange(hrvCount, from, to))
+        return stubList(totalInRange(hrvCount, from, to)) { index -> placeholderHrv(index) }
     }
 
     override suspend fun readExerciseSessions(
         from: Instant,
         to: Instant,
-    ): List<ExerciseSessionRecord> {
+    ): List<DomainExerciseSessionRecord> {
         translateCritical(FakeOp.Exercise)
         val total = totalInRange(exerciseCount, from, to)
         exercisePagesServed = pagesFor(total)
-        return stubList(total)
+        return stubList(total) { index -> placeholderExercise(index) }
     }
 
     override suspend fun readStepsRecords(
         from: Instant,
         to: Instant,
-    ): List<StepsRecord> {
+    ): List<DomainStepsRecord> {
         translateCritical(FakeOp.Steps)
         val count = stepsByInstant.keys.count { inRange(it, from, to) }
-        return stubList(count)
+        return stubList(count) { index -> placeholderSteps(index) }
     }
 
     override suspend fun readSteps(
@@ -213,33 +226,33 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
     override suspend fun readWeightRecords(
         from: Instant,
         to: Instant,
-    ): List<WeightRecord> =
+    ): List<DomainWeightRecord> =
         runOptional(FakeOp.Weight) {
-            stubList(totalInRange(weightCount, from, to))
+            stubList(totalInRange(weightCount, from, to)) { index -> placeholderWeight(index) }
         }
 
     override suspend fun readBodyFatRecords(
         from: Instant,
         to: Instant,
-    ): List<BodyFatRecord> =
+    ): List<DomainBodyFatRecord> =
         runOptional(FakeOp.BodyFat) {
-            stubList(totalInRange(bodyFatCount, from, to))
+            stubList(totalInRange(bodyFatCount, from, to)) { index -> placeholderBodyFat(index) }
         }
 
     override suspend fun readBloodPressureRecords(
         from: Instant,
         to: Instant,
-    ): List<BloodPressureRecord> =
+    ): List<DomainBloodPressureRecord> =
         runOptional(FakeOp.BloodPressure) {
-            stubList(totalInRange(bpCount, from, to))
+            stubList(totalInRange(bpCount, from, to)) { index -> placeholderBloodPressure(index) }
         }
 
     override suspend fun readOxygenSaturationRecords(
         from: Instant,
         to: Instant,
-    ): List<OxygenSaturationRecord> =
+    ): List<DomainOxygenSaturationRecord> =
         runOptional(FakeOp.OxygenSaturation) {
-            stubList(totalInRange(spo2Count, from, to))
+            stubList(totalInRange(spo2Count, from, to)) { index -> placeholderOxygen(index) }
         }
 
     override suspend fun discoverDevices(windowDays: Int): List<String> {
@@ -295,15 +308,103 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
 
     private fun pagesFor(total: Int): Int = if (total == 0) 0 else (total + pageSize - 1) / pageSize
 
-    /**
-     * Build a typed list of [n] placeholder records. Tests only inspect [List.size];
-     * never the field values, so reusing an `Any` sentinel cast through an
-     * unchecked cast is safe for this suite.
-     */
-    @Suppress("UNCHECKED_CAST")
-    private fun <T> stubList(n: Int): List<T> = List(n) { SENTINEL as T }
+    private fun <T> stubList(
+        n: Int,
+        factory: (Int) -> T,
+    ): List<T> = List(n, factory)
+
+    private fun placeholderSleep(index: Int): DomainSleepSessionRecord =
+        DomainSleepSessionRecord(
+            id = "sleep-$index",
+            startTime = PLACEHOLDER_TIME,
+            endTime = PLACEHOLDER_TIME.plusSeconds(3600),
+            startZoneOffsetSeconds = 0,
+            endZoneOffsetSeconds = 0,
+            deviceName = PLACEHOLDER_DEVICE,
+            stages =
+                listOf(
+                    DomainSleepStage(
+                        startTime = PLACEHOLDER_TIME,
+                        endTime = PLACEHOLDER_TIME.plusSeconds(3600),
+                        stageType = DomainSleepStageType.UNKNOWN,
+                    ),
+                ),
+        )
+
+    private fun placeholderHeartRate(index: Int): DomainHeartRateRecord =
+        DomainHeartRateRecord(
+            id = "hr-$index",
+            deviceName = PLACEHOLDER_DEVICE,
+            samples = listOf(DomainHeartRateSample(time = PLACEHOLDER_TIME, beatsPerMinute = 60)),
+        )
+
+    private fun placeholderRestingHeartRate(index: Int): DomainRestingHeartRateRecord =
+        DomainRestingHeartRateRecord(
+            id = "rhr-$index",
+            time = PLACEHOLDER_TIME,
+            beatsPerMinute = 55,
+            deviceName = PLACEHOLDER_DEVICE,
+        )
+
+    private fun placeholderHrv(index: Int): DomainHrvRecord =
+        DomainHrvRecord(
+            id = "hrv-$index",
+            time = PLACEHOLDER_TIME,
+            rmssdMs = 42f,
+            deviceName = PLACEHOLDER_DEVICE,
+        )
+
+    private fun placeholderExercise(index: Int): DomainExerciseSessionRecord =
+        DomainExerciseSessionRecord(
+            id = "exercise-$index",
+            startTime = PLACEHOLDER_TIME,
+            endTime = PLACEHOLDER_TIME.plusSeconds(1800),
+            exerciseType = "running",
+            deviceName = PLACEHOLDER_DEVICE,
+        )
+
+    private fun placeholderSteps(index: Int): DomainStepsRecord =
+        DomainStepsRecord(
+            startTime = PLACEHOLDER_TIME.plusSeconds(index.toLong()),
+            count = 1L,
+            deviceName = PLACEHOLDER_DEVICE,
+        )
+
+    private fun placeholderWeight(index: Int): DomainWeightRecord =
+        DomainWeightRecord(
+            id = "weight-$index",
+            time = PLACEHOLDER_TIME,
+            weightKg = 70f,
+            deviceName = PLACEHOLDER_DEVICE,
+        )
+
+    private fun placeholderBodyFat(index: Int): DomainBodyFatRecord =
+        DomainBodyFatRecord(
+            id = "body-fat-$index",
+            time = PLACEHOLDER_TIME,
+            percentage = 0.2f,
+            deviceName = PLACEHOLDER_DEVICE,
+        )
+
+    private fun placeholderBloodPressure(index: Int): DomainBloodPressureRecord =
+        DomainBloodPressureRecord(
+            id = "bp-$index",
+            time = PLACEHOLDER_TIME,
+            systolicMmHg = 120,
+            diastolicMmHg = 80,
+            deviceName = PLACEHOLDER_DEVICE,
+        )
+
+    private fun placeholderOxygen(index: Int): DomainOxygenSaturationRecord =
+        DomainOxygenSaturationRecord(
+            id = "spo2-$index",
+            time = PLACEHOLDER_TIME,
+            percentage = 0.98f,
+            deviceName = PLACEHOLDER_DEVICE,
+        )
 
     private companion object {
-        private val SENTINEL: Any = Any()
+        private const val PLACEHOLDER_DEVICE = "fake-device"
+        private val PLACEHOLDER_TIME: Instant = Instant.parse("2026-01-01T00:00:00Z")
     }
 }

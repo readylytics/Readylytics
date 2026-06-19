@@ -53,16 +53,6 @@ internal class SyncPreferences
             dataStore.updateData { it.toBuilder().setLastSyncTimestamp(timestamp).build() }
         }
 
-        suspend fun updateDriveAccountEmail(email: String?) {
-            dataStore.updateData { builder ->
-                if (email != null) {
-                    builder.toBuilder().setDriveAccountEmail(email).build()
-                } else {
-                    builder.toBuilder().clearDriveAccountEmail().build()
-                }
-            }
-        }
-
         suspend fun updateInstallDate(date: LocalDate) {
             dataStore.updateData {
                 it

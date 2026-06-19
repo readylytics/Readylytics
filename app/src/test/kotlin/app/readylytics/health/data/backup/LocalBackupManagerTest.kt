@@ -27,6 +27,7 @@ import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.nio.charset.StandardCharsets
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -251,5 +252,29 @@ class LocalBackupManagerTest {
             assertTrue(recentFile.exists(), "Recent SAF file should be retained")
 
             safDir.deleteRecursively()
+        }
+
+    @Test
+    fun createBackup_missingPassword_removesPlaintextTempJson() =
+        runTest {
+            settingsRepo =
+                mockk<SettingsRepository>().apply {
+                    coEvery { userPreferences } returns
+                        flowOf(
+                            app.readylytics.health.data.preferences.UserPreferences(
+                                backupPasswordHash = null,
+                            ),
+                        )
+                }
+            manager = LocalBackupManager(context, db, settingsRepo, cardConfigRepo, encryptionManager)
+
+            val result = manager.createBackup()
+
+            assertTrue(result.isFailure)
+            val leakedJson =
+                context.cacheDir
+                    .listFiles { file -> file.name.startsWith("backup_") && file.name.endsWith(".json") }
+                    .orEmpty()
+            assertFalse(leakedJson.any(), "Plaintext backup JSON temp files must be removed after failure")
         }
 }

@@ -49,7 +49,6 @@ object UserPreferencesSerializer : Serializer<UserPreferencesProto> {
             .setStepGoal(SettingsDefaults.STEP_GOAL)
             .setRetentionDaysEnabled(SettingsDefaults.RETENTION_DAYS_ENABLED)
             .setRetentionDays(SettingsDefaults.RETENTION_DAYS)
-            .setCollapseCloudData(SettingsDefaults.COLLAPSE_CLOUD_DATA)
             .setCollapseHealthConnect(SettingsDefaults.COLLAPSE_HEALTH_CONNECT)
             .setCollapseBaselinesThresholds(SettingsDefaults.COLLAPSE_BASELINES_THRESHOLDS)
             .setCollapseDisplay(SettingsDefaults.COLLAPSE_DISPLAY)
@@ -140,7 +139,6 @@ fun UserPreferences.toProto(): UserPreferencesProto {
         .setStepGoal(domain.stepGoal)
         .setRetentionDaysEnabled(domain.retentionDaysEnabled)
         .setRetentionDays(domain.retentionDays)
-        .setCollapseCloudData(domain.collapseCloudData)
         .setCollapseHealthConnect(domain.collapseHealthConnect)
         .setCollapseBaselinesThresholds(domain.collapseBaselinesThresholds)
         .setCollapseDisplay(domain.collapseDisplay)
@@ -173,7 +171,6 @@ fun UserPreferences.toProto(): UserPreferencesProto {
     domain.primaryDeviceName?.let { builder.setPrimaryDeviceName(it) }
     domain.backupDirectoryUri?.let { builder.setBackupDirectoryUri(it) }
     domain.backupPasswordHash?.let { builder.setBackupPasswordHash(it) }
-    domain.driveAccountEmail?.let { builder.setDriveAccountEmail(it) }
     builder.setIsBirthdayConfigured(domain.isBirthdayConfigured)
     builder.setRestingHrPercentile(domain.restingHrPercentile)
     builder.setUnitSystem(

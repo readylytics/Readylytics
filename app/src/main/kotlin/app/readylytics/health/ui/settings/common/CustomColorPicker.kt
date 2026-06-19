@@ -181,8 +181,8 @@ fun CustomColorPicker(
                         }
                     }
                 },
-                label = { Text("Hex Code") },
-                placeholder = { Text("#AABBCC") },
+                label = { Text(stringResource(R.string.color_picker_hex_code_label)) },
+                placeholder = { Text(stringResource(R.string.color_picker_hex_code_placeholder)) },
                 singleLine = true,
                 enabled = enabled,
                 modifier = Modifier.weight(1f),

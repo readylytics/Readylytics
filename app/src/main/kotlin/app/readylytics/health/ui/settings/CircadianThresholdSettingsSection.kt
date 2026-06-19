@@ -224,7 +224,7 @@ fun CircadianThresholdSettingsSectionPreview() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text("Active", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.circadian_preview_active_label), style = MaterialTheme.typography.titleSmall)
             CircadianThresholdSettingsSection(
                 profile = PhysiologyProfile.ACTIVE,
                 currentOverride = null,
@@ -233,7 +233,7 @@ fun CircadianThresholdSettingsSectionPreview() {
 
             HorizontalDivider()
 
-            Text("Athlete", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.circadian_preview_athlete_label), style = MaterialTheme.typography.titleSmall)
             CircadianThresholdSettingsSection(
                 profile = PhysiologyProfile.ATHLETE,
                 currentOverride = 30,

@@ -1,8 +1,8 @@
 package app.readylytics.health.data.healthconnect
 
-import androidx.health.connect.client.records.ExerciseSessionRecord
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 
 object WorkoutMapper {
     private val ZONE_WEIGHTS = floatArrayOf(1f, 2f, 3f, 4f, 5f)
@@ -92,7 +92,7 @@ object WorkoutMapper {
     }
 
     fun mapExerciseSession(
-        session: ExerciseSessionRecord,
+        session: DomainExerciseSessionRecord,
         hrSamples: List<HeartRateRecordEntity>,
         thresholds: IntArray,
     ): WorkoutRecordEntity {
@@ -105,10 +105,10 @@ object WorkoutMapper {
             )
 
         return WorkoutRecordEntity(
-            id = session.metadata.id,
+            id = session.id,
             startTime = session.startTime.toEpochMilli(),
             endTime = session.endTime.toEpochMilli(),
-            exerciseType = session.exerciseType.toString(),
+            exerciseType = session.exerciseType,
             durationMinutes = metrics.durationMinutes,
             zone1Minutes = metrics.zoneMinutes[0],
             zone2Minutes = metrics.zoneMinutes[1],
@@ -117,7 +117,7 @@ object WorkoutMapper {
             zone5Minutes = metrics.zoneMinutes[4],
             trimp = metrics.trimp,
             avgHr = metrics.avgHr,
-            deviceName = DeviceLabel.from(session.metadata.device, session.metadata.dataOrigin),
+            deviceName = session.deviceName,
         )
     }
 }

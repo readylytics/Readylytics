@@ -110,9 +110,8 @@ message UserPreferencesProto {
     AppThemeProto app_theme = 31;
     bool dynamic_color_enabled = 51;
     
-    oneof drive_account_email_oneof {
-        string drive_account_email = 32;
-    }
+    reserved 32, 42;
+    reserved "drive_account_email", "collapse_cloud_data";
     
     BackupScheduleProto backup_schedule = 33;
     
@@ -127,7 +126,6 @@ message UserPreferencesProto {
     bool retention_days_enabled = 40;
     int32 retention_days = 41;
     
-    bool collapse_cloud_data = 42;
     bool collapse_health_connect = 43;
     bool collapse_baselines_thresholds = 44;
     bool collapse_display = 45;

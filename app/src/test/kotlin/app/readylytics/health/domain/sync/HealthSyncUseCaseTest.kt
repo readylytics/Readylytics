@@ -26,6 +26,7 @@ import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -34,6 +35,7 @@ import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.test.assertFailsWith
 
 class HealthSyncUseCaseTest {
     private val hcRepo = mockk<HealthConnectRepository>(relaxed = true)
@@ -428,6 +430,16 @@ class HealthSyncUseCaseTest {
                 dailySummaryDao.upsert(any())
                 scoringRepository.computeDailySummary(endDate)
                 dailySummaryDao.upsert(any())
+            }
+        }
+
+    @Test
+    fun `sync rethrows cancellation instead of converting to failure`() =
+        runTest {
+            coEvery { hcRepo.readSleepSessions(any(), any()) } throws CancellationException("cancelled")
+
+            assertFailsWith<CancellationException> {
+                useCase.sync(windowDays = 1)
             }
         }
 }

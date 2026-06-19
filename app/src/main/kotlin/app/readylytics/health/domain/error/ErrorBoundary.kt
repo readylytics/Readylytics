@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.error
 
-import android.util.Log
+import kotlinx.coroutines.CancellationException
 
 /**
  * Result wrapper for operations that may fail.
@@ -34,12 +34,14 @@ sealed interface SafeResult<T> {
  */
 inline fun <T> safeOperation(
     operationName: String,
-    onError: (Throwable) -> Unit = { Log.e("ErrorBoundary", "Error in $operationName", it) },
+    onError: (Throwable) -> Unit = {},
     operation: () -> T,
 ): SafeResult<T> =
     try {
         SafeResult.Success(operation())
-    } catch (e: Throwable) {
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
         onError(e)
         SafeResult.Failure(error = e, context = operationName)
     }
@@ -91,7 +93,9 @@ suspend inline fun <T> SafeResult.Failure<T>.recover(
                 kotlinx.coroutines.delay(strategy.delayMs)
                 try {
                     return SafeResult.Success(operation())
-                } catch (e: Throwable) {
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
                     // Continue to next attempt
                 }
             }

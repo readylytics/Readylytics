@@ -9,7 +9,9 @@ import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.backup.BackupFileInfo
+import app.readylytics.health.domain.backup.BackupLocation
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -44,7 +46,12 @@ class LocalBackupManager
 
         suspend fun createBackup(): Result<File?> =
             withContext(Dispatchers.IO) {
-                runCatching {
+                var tempJsonFile: File? = null
+                var tempZipFile: File? = null
+                var partialDefaultFile: File? = null
+                var partialSafFile: DocumentFile? = null
+                var backupCompleted = false
+                try {
                     val prefs = settingsRepository.userPreferences.first()
                     val customUri = prefs.backupDirectoryUri?.toUri()
 
@@ -57,8 +64,9 @@ class LocalBackupManager
                     val zipFilename = "backup_$timestamp.zip"
 
                     // 1. Write JSON to a temporary file
-                    val tempJsonFile = File(context.cacheDir, jsonFilename)
-                    FileOutputStream(tempJsonFile).use { fos ->
+                    val jsonFile = File(context.cacheDir, jsonFilename)
+                    tempJsonFile = jsonFile
+                    FileOutputStream(jsonFile).use { fos ->
                         writeJsonStreaming(fos)
                     }
 
@@ -70,6 +78,8 @@ class LocalBackupManager
 
                     // 3. Create ZIP file
                     val finalFile: File?
+                    tempZipFile = File(context.cacheDir, zipFilename)
+                    createZip(jsonFile, tempZipFile, password)
 
                     if (customUri != null) {
                         val dir =
@@ -78,32 +88,40 @@ class LocalBackupManager
                         val file =
                             dir.createFile("application/zip", zipFilename)
                                 ?: throw IllegalStateException("Could not create backup file in custom directory")
-
-                        val tempZipFile = File(context.cacheDir, zipFilename)
-                        createZip(tempJsonFile, tempZipFile, password)
+                        partialSafFile = file
 
                         context.contentResolver.openOutputStream(file.uri)?.use { os ->
                             tempZipFile.inputStream().use { it.copyTo(os) }
-                        }
-                        tempZipFile.delete()
+                        } ?: throw IllegalStateException("Could not write backup file")
+                        backupCompleted = true
                         finalFile = null
                     } else {
                         defaultBackupDir.mkdirs()
                         val file = File(defaultBackupDir, zipFilename)
-                        createZip(tempJsonFile, file, password)
+                        partialDefaultFile = file
+                        moveTempZipToFinal(tempZipFile, file)
+                        backupCompleted = true
                         finalFile = file
                     }
 
-                    // 4. Cleanup
-                    tempJsonFile.delete()
-
-                    finalFile
+                    Result.success(finalFile)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Result.failure(e)
+                } finally {
+                    tempJsonFile?.delete()
+                    tempZipFile?.delete()
+                    if (!backupCompleted) {
+                        partialDefaultFile?.delete()
+                        partialSafFile?.delete()
+                    }
                 }
             }
 
         suspend fun deleteBackup(uri: Uri): Result<Unit> =
             withContext(Dispatchers.IO) {
-                runCatching {
+                try {
                     if (uri.scheme == "content") {
                         val documentFile = DocumentFile.fromSingleUri(context, uri)
                         if (documentFile?.delete() == false) {
@@ -125,7 +143,12 @@ class LocalBackupManager
                             throw IllegalStateException("Failed to delete local file")
                         }
                     }
-                }.map { }
+                    Result.success(Unit)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
             }
 
         suspend fun reencryptBackups(
@@ -133,7 +156,7 @@ class LocalBackupManager
             newPassword: String?,
         ): Result<Unit> =
             withContext(Dispatchers.IO) {
-                runCatching {
+                try {
                     val backups = listBackups()
                     val tempDir = File(context.cacheDir, "reencrypt_temp")
                     tempDir.mkdirs()
@@ -143,14 +166,15 @@ class LocalBackupManager
                             val tempZip = File(tempDir, info.name)
                             val tempJson = File(tempDir, info.name.replace(".zip", ".json"))
                             val newZipPath = File(tempDir, "reencrypt_new_${System.currentTimeMillis()}.zip")
+                            val backupUri = info.location.value.toUri()
 
                             // 1. Copy to temp zip
-                            if (info.uri.scheme == "content") {
-                                context.contentResolver.openInputStream(info.uri)?.use { input ->
+                            if (backupUri.scheme == "content") {
+                                context.contentResolver.openInputStream(backupUri)?.use { input ->
                                     tempZip.outputStream().use { output -> input.copyTo(output) }
                                 } ?: throw IllegalStateException("Could not read backup")
                             } else {
-                                File(info.uri.path!!).inputStream().use { input ->
+                                File(backupUri.path!!).inputStream().use { input ->
                                     tempZip.outputStream().use { output -> input.copyTo(output) }
                                 }
                             }
@@ -179,12 +203,12 @@ class LocalBackupManager
                             }
 
                             // 4. Overwrite original (atomic rename-swap)
-                            if (info.uri.scheme == "content") {
-                                context.contentResolver.openOutputStream(info.uri, "wt")?.use { output ->
+                            if (backupUri.scheme == "content") {
+                                context.contentResolver.openOutputStream(backupUri, "wt")?.use { output ->
                                     newZipPath.inputStream().use { it.copyTo(output) }
-                                }
+                                } ?: throw IllegalStateException("Could not write re-encrypted backup")
                             } else {
-                                newZipPath.renameTo(File(info.uri.path!!))
+                                newZipPath.renameTo(File(backupUri.path!!))
                             }
 
                             // 5. Cleanup per-backup temp files
@@ -195,8 +219,24 @@ class LocalBackupManager
                     } finally {
                         tempDir.deleteRecursively()
                     }
-                }.map { }
+                    Result.success(Unit)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
             }
+
+        private fun moveTempZipToFinal(
+            tempZipFile: File,
+            finalFile: File,
+        ) {
+            finalFile.delete()
+            if (!tempZipFile.renameTo(finalFile)) {
+                tempZipFile.copyTo(finalFile, overwrite = true)
+                tempZipFile.delete()
+            }
+        }
 
         private fun createZip(
             inputFile: File,
@@ -393,7 +433,6 @@ class LocalBackupManager
                     rhrOptimalThreshold = prefs.rhrOptimalThreshold,
                     rhrWarningThreshold = prefs.rhrWarningThreshold,
                     appTheme = prefs.appTheme.name,
-                    driveAccountEmail = prefs.driveAccountEmail,
                     backupSchedule = prefs.backupSchedule.name,
                     lastBackupTimestamp = prefs.lastBackupTimestamp,
                     consistencyThresholdMinutes = prefs.consistencyThresholdMinutes,
@@ -403,7 +442,6 @@ class LocalBackupManager
                     stepGoal = prefs.stepGoal,
                     retentionDaysEnabled = prefs.retentionDaysEnabled,
                     retentionDays = prefs.retentionDays,
-                    collapseCloudData = prefs.collapseCloudData,
                     collapseHealthConnect = prefs.collapseHealthConnect,
                     collapseBaselinesThresholds = prefs.collapseBaselinesThresholds,
                     collapseDisplay = prefs.collapseDisplay,
@@ -435,15 +473,27 @@ class LocalBackupManager
                     dir
                         ?.listFiles()
                         ?.filter { it.name?.startsWith("backup_") == true && it.name?.endsWith(".zip") == true }
-                        ?.map { BackupFileInfo(it.name!!, it.lastModified(), it.length(), it.uri) }
-                        ?.sortedByDescending { it.lastModified }
+                        ?.map {
+                            BackupFileInfo(
+                                it.name!!,
+                                it.lastModified(),
+                                it.length(),
+                                BackupLocation(it.uri.toString()),
+                            )
+                        }?.sortedByDescending { it.lastModified }
                         ?: emptyList()
                 } else {
                     defaultBackupDir.mkdirs()
                     defaultBackupDir
                         .listFiles { f -> f.name.startsWith("backup_") && f.name.endsWith(".zip") }
-                        ?.map { BackupFileInfo(it.name, it.lastModified(), it.length(), Uri.fromFile(it)) }
-                        ?.sortedByDescending { it.lastModified }
+                        ?.map {
+                            BackupFileInfo(
+                                it.name,
+                                it.lastModified(),
+                                it.length(),
+                                BackupLocation(Uri.fromFile(it).toString()),
+                            )
+                        }?.sortedByDescending { it.lastModified }
                         ?: emptyList()
                 }
             }

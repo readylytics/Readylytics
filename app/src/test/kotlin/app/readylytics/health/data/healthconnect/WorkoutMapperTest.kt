@@ -1,9 +1,7 @@
 package app.readylytics.health.data.healthconnect
 
-import androidx.health.connect.client.records.ExerciseSessionRecord
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
-import io.mockk.every
-import io.mockk.mockk
+import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant
@@ -15,12 +13,13 @@ class WorkoutMapperTest {
         val endTime = Instant.parse("2026-05-09T11:00:00Z")
 
         val session =
-            mockk<ExerciseSessionRecord>(relaxed = true) {
-                every { metadata.id } returns "test_session"
-                every { this@mockk.startTime } returns startTime
-                every { this@mockk.endTime } returns endTime
-                every { exerciseType } returns ExerciseSessionRecord.EXERCISE_TYPE_RUNNING
-            }
+            DomainExerciseSessionRecord(
+                id = "test_session",
+                startTime = startTime,
+                endTime = endTime,
+                exerciseType = "RUNNING",
+                deviceName = "Watch",
+            )
 
         val thresholds =
             WorkoutMapper.zoneThresholds(
@@ -71,12 +70,13 @@ class WorkoutMapperTest {
         val endTime = Instant.parse("2026-05-09T10:10:00Z")
 
         val session =
-            mockk<ExerciseSessionRecord>(relaxed = true) {
-                every { metadata.id } returns "test_session"
-                every { this@mockk.startTime } returns startTime
-                every { this@mockk.endTime } returns endTime
-                every { exerciseType } returns ExerciseSessionRecord.EXERCISE_TYPE_RUNNING
-            }
+            DomainExerciseSessionRecord(
+                id = "test_session",
+                startTime = startTime,
+                endTime = endTime,
+                exerciseType = "RUNNING",
+                deviceName = "Watch",
+            )
 
         val thresholds = WorkoutMapper.zoneThresholds()
 

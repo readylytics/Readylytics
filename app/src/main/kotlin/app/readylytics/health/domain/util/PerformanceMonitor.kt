@@ -1,6 +1,5 @@
 package app.readylytics.health.domain.util
 
-import android.util.Log
 import kotlin.system.measureTimeMillis
 
 /**
@@ -57,7 +56,7 @@ object PerformanceMonitor {
                 durationMs > 100 -> "MEDIUM"
                 else -> "FAST"
             }
-        Log.d(TAG, "[$level] $operationName took ${durationMs}ms")
+        logD(TAG) { "[$level] $operationName took ${durationMs}ms" }
     }
 
     /**

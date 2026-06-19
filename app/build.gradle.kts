@@ -286,11 +286,6 @@ dependencies {
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
 
-    // Google Drive backup
-    implementation(libs.androidx.credentials)
-    implementation(libs.androidx.credentials.play.services)
-    implementation(libs.google.identity.googleid)
-    implementation(libs.play.services.auth)
     implementation(libs.play.services.oss.licenses)
     implementation(libs.retrofit)
     implementation(libs.retrofit.kotlinx.serialization)

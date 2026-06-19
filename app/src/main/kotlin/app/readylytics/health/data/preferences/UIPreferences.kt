@@ -11,10 +11,6 @@ internal class UIPreferences
         private val dataStore: DataStore<UserPreferencesProto>,
         private val healthDeviceRepository: HealthDeviceRepository,
     ) {
-        suspend fun updateCollapseCloudData(collapsed: Boolean) {
-            dataStore.updateData { it.toBuilder().setCollapseCloudData(collapsed).build() }
-        }
-
         suspend fun updateCollapseHealthConnect(collapsed: Boolean) {
             dataStore.updateData { it.toBuilder().setCollapseHealthConnect(collapsed).build() }
         }

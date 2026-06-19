@@ -13,6 +13,7 @@ import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.HealthSyncUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 
 /**
  * Short-lived periodic worker for "Background Sync": pulls the last 2 days of Health Connect
@@ -52,6 +53,8 @@ class PeriodicHealthSyncWorker
                 } else {
                     Result.retry()
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) Log.e(TAG, "Periodic sync worker failed", e)
                 if (e is SecurityException || e is HealthConnectPermissionRevokedException) {

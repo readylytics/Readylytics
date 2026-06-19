@@ -1,12 +1,12 @@
 package app.readylytics.health.data.healthconnect
 
-import androidx.health.connect.client.records.StepsRecord
+import app.readylytics.health.domain.model.DomainStepsRecord
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * Maps Health Connect [StepsRecord]s into lightweight, device-aware entries so
+ * Maps Health Connect domain step records into lightweight, device-aware entries so
  * step totals can respect the user's per-data-type source-device selection.
  *
  * The aggregate steps API ([androidx.health.connect.client.HealthConnectClient.aggregate])
@@ -20,11 +20,11 @@ object StepsMapper {
         val count: Long,
     )
 
-    fun toStepEntries(records: List<StepsRecord>): List<StepEntry> =
+    fun toStepEntries(records: List<DomainStepsRecord>): List<StepEntry> =
         records.map { record ->
             StepEntry(
                 startTimeMs = record.startTime.toEpochMilli(),
-                deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
+                deviceName = record.deviceName,
                 count = record.count,
             )
         }

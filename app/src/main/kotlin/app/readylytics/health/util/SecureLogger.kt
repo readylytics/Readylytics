@@ -29,14 +29,5 @@ object SecureLogger {
         throwable: Throwable? = null,
     ) {
         Log.e(TAG, message, throwable)
-        // In production: send to crash reporting with non-sensitive details only
-        reportToCrashlytics(message, throwable)
-    }
-
-    private fun reportToCrashlytics(
-        message: String,
-        throwable: Throwable?,
-    ) {
-        // TODO: Integrate Crashlytics or similar crash reporting
     }
 }

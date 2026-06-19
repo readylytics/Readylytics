@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import app.readylytics.health.data.preferences.SettingsRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.Period
@@ -33,6 +34,8 @@ class BirthdayCheckWorker
                     settingsRepo.updateAge(newAge)
                 }
                 Result.success()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Result.failure()
             }

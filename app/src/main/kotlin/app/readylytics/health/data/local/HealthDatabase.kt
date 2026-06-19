@@ -1,8 +1,6 @@
 package app.readylytics.health.data.local
 
-import android.content.Context
 import androidx.room.Database
-import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
@@ -70,11 +68,5 @@ abstract class HealthDatabase : RoomDatabase() {
 
     companion object {
         const val DATABASE_VERSION = 1
-
-        fun create(context: Context): HealthDatabase =
-            Room
-                .databaseBuilder(context, HealthDatabase::class.java, "health_db")
-                .addMigrations(*DatabaseMigrations.all)
-                .build()
     }
 }

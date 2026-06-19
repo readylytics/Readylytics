@@ -583,6 +583,10 @@
     <string name="fallback_color_purple_insight">Purple Insight</string>
     <string name="fallback_color_icon_signature">Icon Signature</string>
     <string name="fallback_color_icon_elements">Icon Elements</string>
+    <string name="color_picker_hex_code_label">Hex code</string>
+    <string name="color_picker_hex_code_placeholder">#AABBCC</string>
+    <string name="circadian_preview_active_label">Active</string>
+    <string name="circadian_preview_athlete_label">Athlete</string>
 
     <string name="onboarding_units_label">Measurement units</string>
     <string name="onboarding_hc_permissions_label">Health Connect permissions</string>

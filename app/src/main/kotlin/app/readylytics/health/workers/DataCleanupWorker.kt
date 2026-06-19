@@ -13,6 +13,7 @@ import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.util.RetentionBounds
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 @HiltWorker
@@ -29,7 +30,7 @@ class DataCleanupWorker
         private val settingsRepo: SettingsRepository,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
-            return runCatching {
+            return try {
                 val prefs = settingsRepo.userPreferences.first()
                 // Null cutoff means retention is disabled ("unlimited") — keep everything.
                 val cutoffMs = RetentionBounds.resolveRetentionCutoffMs(prefs) ?: return Result.success()
@@ -41,7 +42,9 @@ class DataCleanupWorker
                 dailySummaryDao.deleteBeforeTimestamp(cutoffMs)
 
                 Result.success()
-            }.getOrElse {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 Result.failure()
             }
         }
