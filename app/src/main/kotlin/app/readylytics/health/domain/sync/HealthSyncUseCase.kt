@@ -21,6 +21,7 @@ import app.readylytics.health.data.mapper.OxygenSaturationDataMapper
 import app.readylytics.health.data.mapper.WeightDataMapper
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.repository.HealthConnectRepository
@@ -31,7 +32,7 @@ import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.logE
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -71,6 +72,7 @@ class HealthSyncUseCase
         private val transactionRunner: app.readylytics.health.domain.repository.TransactionRunner,
         private val sessionLinkReconciler: SessionLinkReconciler,
         private val rasSourceModeBootstrapUseCase: RasSourceModeBootstrapUseCase,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val syncMutex = Mutex()
 
@@ -91,7 +93,7 @@ class HealthSyncUseCase
             onProgress: ((current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> =
             syncMutex.withLock {
-                withContext(Dispatchers.IO) {
+                withContext(ioDispatcher) {
                     try {
                         logD("HealthSyncUseCase") { "Starting sync (window=$windowDays days)..." }
                         val today = LocalDate.now(ZoneId.systemDefault())
@@ -242,7 +244,7 @@ class HealthSyncUseCase
             onProgress: ((current: Int, total: Int) -> Unit)? = null,
         ): Result<Unit> =
             syncMutex.withLock {
-                withContext(Dispatchers.IO) {
+                withContext(ioDispatcher) {
                     try {
                         val zoneId = ZoneId.systemDefault()
                         logD("HealthSyncUseCase") { "Full resync $startDate..$endDate (chunk=$chunkDays days)" }

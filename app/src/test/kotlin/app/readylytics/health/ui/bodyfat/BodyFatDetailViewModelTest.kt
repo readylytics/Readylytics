@@ -78,6 +78,7 @@ class BodyFatDetailViewModelTest {
             weightRepository = weightRepository,
             settingsRepo = settingsRepo,
             selectedDateRepository = selectedDateRepo,
+            ioDispatcher = testDispatcher,
         )
 
     @After

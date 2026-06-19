@@ -27,6 +27,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -82,6 +83,7 @@ class HealthSyncUseCaseTest {
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
                 sessionLinkReconciler = sessionLinkReconciler,
                 rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
+                ioDispatcher = Dispatchers.Unconfined,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
     }

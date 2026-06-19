@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.ui.theme.spacing
 
 @Composable
 fun SectionHeader(text: String) {
@@ -28,7 +29,7 @@ fun SectionHeader(text: String) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small),
     )
 }
 
@@ -42,7 +43,7 @@ fun SubHeader(text: String) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+                .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.extraSmall),
     )
 }
 
@@ -58,7 +59,7 @@ fun BodyText(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+                .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.extraSmall),
     )
 }
 
@@ -68,13 +69,13 @@ fun BulletItem(text: String) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 2.dp),
+                .padding(horizontal = MaterialTheme.spacing.medium, vertical = 2.dp),
     ) {
         Text(
             text = "•",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(end = 8.dp),
+            modifier = Modifier.padding(end = MaterialTheme.spacing.small),
         )
         Text(
             text = parseMarkdown(text),
@@ -91,18 +92,18 @@ fun HighlightBox(content: @Composable () -> Unit) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small),
         color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.large,
     ) {
-        Column(modifier = Modifier.padding(vertical = 8.dp)) { content() }
+        Column(modifier = Modifier.padding(vertical = MaterialTheme.spacing.small)) { content() }
     }
 }
 
 @Composable
 fun SectionDivider() {
     HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium, vertical = MaterialTheme.spacing.small),
         color = MaterialTheme.colorScheme.outlineVariant,
     )
 }

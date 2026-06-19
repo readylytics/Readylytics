@@ -611,6 +611,7 @@ fun FitDashboardTheme(
     CompositionLocalProvider(
         LocalExtendedColors provides extendedColors,
         LocalStatusColors provides semanticColors,
+        LocalSpacing provides Spacing(),
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

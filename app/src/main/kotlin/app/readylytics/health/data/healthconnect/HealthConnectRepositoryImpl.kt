@@ -16,6 +16,7 @@ import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.DomainBloodPressureRecord
 import app.readylytics.health.domain.model.DomainBodyFatRecord
 import app.readylytics.health.domain.model.DomainExerciseSessionRecord
@@ -34,7 +35,7 @@ import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.PermissionStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
@@ -48,6 +49,7 @@ class HealthConnectRepositoryImpl
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : HealthConnectRepository {
         override val criticalPermissions: Set<String> =
             setOf(
@@ -84,7 +86,7 @@ class HealthConnectRepositoryImpl
             HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
 
         override suspend fun checkPermissions(): PermissionStatus =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 app.readylytics.health.domain.util.logD(
                     "HealthConnectRepository",
                 ) { "Checking permissions..." }
@@ -260,7 +262,7 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
         ): List<DomainSleepSessionRecord> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 readAllPages<SleepSessionRecord>(from, to).map { it.toDomain() }
             }
 
@@ -268,7 +270,7 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
         ): List<DomainHeartRateRecord> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 readAllPages<HeartRateRecord>(from, to).map { it.toDomain() }
             }
 
@@ -276,7 +278,7 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
         ): List<DomainRestingHeartRateRecord> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 readAllPages<RestingHeartRateRecord>(from, to).map { it.toDomain() }
             }
 
@@ -284,7 +286,7 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
         ): List<DomainHrvRecord> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 readAllPages<HeartRateVariabilityRmssdRecord>(from, to).map { it.toDomain() }
             }
 
@@ -292,7 +294,7 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
         ): List<DomainExerciseSessionRecord> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 readAllPages<ExerciseSessionRecord>(from, to).map { it.toDomain() }
             }
 
@@ -300,7 +302,7 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
         ): List<DomainStepsRecord> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 readAllPages<StepsRecord>(from, to).map { it.toDomain() }
             }
 
@@ -308,7 +310,7 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
         ): Long =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 val result =
                     client.aggregate(
                         AggregateRequest(
@@ -323,7 +325,7 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
         ): Map<java.time.LocalDate, Long> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 try {
                     val records = readAllPages<StepsRecord>(from, to)
                     val zoneId = java.time.ZoneId.systemDefault()
@@ -349,7 +351,7 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
         ): List<DomainWeightRecord> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 try {
                     readAllPages<WeightRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
@@ -376,7 +378,7 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
         ): List<DomainBodyFatRecord> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 try {
                     readAllPages<BodyFatRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
@@ -403,7 +405,7 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
         ): List<DomainBloodPressureRecord> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 try {
                     readAllPages<BloodPressureRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
@@ -430,7 +432,7 @@ class HealthConnectRepositoryImpl
             from: Instant,
             to: Instant,
         ): List<DomainOxygenSaturationRecord> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 try {
                     readAllPages<OxygenSaturationRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
@@ -463,7 +465,7 @@ class HealthConnectRepositoryImpl
             }
 
         override suspend fun discoverDevices(windowDays: Int): List<String> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 try {
                     app.readylytics.health.domain.util.logD(
                         "HealthConnectRepository",

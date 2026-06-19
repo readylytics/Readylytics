@@ -60,6 +60,7 @@ class BloodPressureDetailViewModelTest {
         BloodPressureDetailViewModel(
             bloodPressureRepository = repository,
             selectedDateRepository = selectedDateRepo,
+            ioDispatcher = testDispatcher,
         )
 
     @After

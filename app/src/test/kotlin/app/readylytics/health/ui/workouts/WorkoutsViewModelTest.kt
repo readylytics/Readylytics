@@ -132,6 +132,7 @@ class WorkoutsViewModelTest {
             getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
             foregroundSyncController = foregroundSyncController,
             savedStateHandle = savedStateHandle,
+            ioDispatcher = testDispatcher,
         )
 
     @After

@@ -20,9 +20,10 @@ import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.SyncPreferenceProto
 import app.readylytics.health.data.preferences.TrimpMethodProto
 import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -45,6 +46,7 @@ class LocalRestoreManager
         private val cardConfigurationRepository: CardConfigurationRepository,
         private val workerScheduler: WorkerScheduler,
         private val encryptionManager: EncryptionManager,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val json = Json { ignoreUnknownKeys = true }
 
@@ -62,7 +64,7 @@ class LocalRestoreManager
             backupUri: Uri,
             providedPassword: String? = null,
         ): Result<BackupManifest> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 runCatching {
                     val tempZipFile = File(context.cacheDir, "validate_temp.zip")
                     copyUriToTempFile(backupUri, tempZipFile)
@@ -123,7 +125,7 @@ class LocalRestoreManager
             backupUri: Uri,
             providedPassword: String? = null,
         ): RestoreResult =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 runCatching {
                     val tempZipFile = File(context.cacheDir, "restore_temp.zip")
                     copyUriToTempFile(backupUri, tempZipFile)

@@ -105,6 +105,7 @@ class SleepViewModelTest {
             circadianRepo = circadianRepo,
             foregroundSyncController = foregroundSyncController,
             savedStateHandle = savedStateHandle,
+            ioDispatcher = testDispatcher,
         )
 
     @Test

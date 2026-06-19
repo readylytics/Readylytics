@@ -8,11 +8,12 @@ import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupLocation
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -40,12 +41,13 @@ class LocalBackupManager
         private val settingsRepository: SettingsRepository,
         private val cardConfigurationRepository: CardConfigurationRepository,
         private val encryptionManager: EncryptionManager,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val defaultBackupDir = File(context.filesDir, "backups")
         private val json = Json { encodeDefaults = true }
 
         suspend fun createBackup(): Result<File?> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 var tempJsonFile: File? = null
                 var tempZipFile: File? = null
                 var partialDefaultFile: File? = null
@@ -120,7 +122,7 @@ class LocalBackupManager
             }
 
         suspend fun deleteBackup(uri: Uri): Result<Unit> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 try {
                     if (uri.scheme == "content") {
                         val documentFile = DocumentFile.fromSingleUri(context, uri)
@@ -155,7 +157,7 @@ class LocalBackupManager
             oldPassword: String?,
             newPassword: String?,
         ): Result<Unit> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 try {
                     val backups = listBackups()
                     val tempDir = File(context.cacheDir, "reencrypt_temp")
@@ -464,7 +466,7 @@ class LocalBackupManager
         }
 
         suspend fun listBackups(): List<BackupFileInfo> =
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 val prefs = settingsRepository.userPreferences.first()
                 val customUri = prefs.backupDirectoryUri?.toUri()
 

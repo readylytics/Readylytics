@@ -3,6 +3,7 @@ package app.readylytics.health.ui.bloodpressure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
@@ -12,7 +13,7 @@ import app.readylytics.health.ui.common.DailyDataPoint
 import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.common.padToRange
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -47,6 +48,7 @@ class BloodPressureDetailViewModel
     constructor(
         private val bloodPressureRepository: BloodPressureRepository,
         private val selectedDateRepository: SelectedDateRepository,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val selectedRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
 
@@ -55,7 +57,7 @@ class BloodPressureDetailViewModel
                 selectedRangeFlow,
                 selectedDateRepository.selectedDate,
             ) { range, selectedDate ->
-                withContext(Dispatchers.IO) {
+                withContext(ioDispatcher) {
                     val zoneId = ZoneId.systemDefault()
                     val rangeStart =
                         selectedDate.minusDays((range.days - 1).toLong()).atStartOfDay(zoneId).toInstant()
