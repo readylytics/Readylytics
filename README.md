@@ -116,4 +116,4 @@ app/src/main/
 
 ## License
 
-[MIT License](LICENSE)[MIT License](LICENSE)
+[Apache License 2.0](LICENSE)

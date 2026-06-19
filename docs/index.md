@@ -29,9 +29,11 @@ title: Readylytics
     information.
   </p>
   <p>
-    Readylytics is fully open source and transparent. Every metric, score,
-    and calculation can be reviewed by the community, providing a level of
-    trust and openness rarely found in health and fitness applications.
+    Readylytics is fully open source and transparent, published under the
+    <a href="https://github.com/gregorlauritz/MyHealthStatus">Apache License 2.0</a>.
+    Every metric, score, and calculation can be reviewed by the community,
+    providing a level of trust and openness rarely found in health and
+    fitness applications.
   </p>
 </section>
 
