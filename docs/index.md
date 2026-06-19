@@ -54,6 +54,18 @@ title: Readylytics
 </section>
 
 <section class="panel">
+  <h2>Advanced features</h2>
+  <p>
+    Go beyond the dashboard. Readylytics lets you tune nearly every aspect of how your scores are calculated, manage your data with encrypted backups, and understand exactly what signals are affecting your readiness on any given day.
+  </p>
+  <ul class="feature-list">
+    <li><a href="{{ '/customization/' | relative_url }}">Customize thresholds and zones</a> — Heart rate zones, HRV/RHR baselines, sleep goals, and more</li>
+    <li><a href="{{ '/backup-and-data/' | relative_url }}">Backup & data management</a> — Encrypted local backups, sync control, data retention, and Health Connect filtering</li>
+    <li><a href="{{ '/insights/' | relative_url }}">Understanding insights</a> — Learn how the app identifies what's affecting your recovery and readiness</li>
+  </ul>
+</section>
+
+<section class="panel">
   <h2>Screenshots</h2>
   <div class="screenshot-gallery">
     <figure class="screenshot-card">
