@@ -14,7 +14,7 @@ what data Readylytics processes and how that data is handled.
 ## Who operates Readylytics
 
 Readylytics operates the app and this website. For privacy questions, contact
-`privacy@readylytics.app`.
+`readylytics@gmail.com`.
 
 ## Data Readylytics reads
 
@@ -53,8 +53,18 @@ Readylytics-hosted services.
 
 You can revoke Health Connect permissions in Android Health Connect settings.
 You can delete local app data through Android system settings. You can also
-delete local backup files from their storage location. If retention controls are
-enabled in the app, Readylytics uses them to limit locally stored history.
+delete local backup files from their storage location.
+
+Readylytics limits locally stored history using a retention setting. By
+default, retention is enabled at 365 days, and you can adjust it in Settings
+to any value between 180 days and 3 years (1095 days). If you turn retention
+limiting off, Readylytics keeps history up to a 10-year (3650-day) ceiling
+rather than indefinitely.
+
+## Age requirement
+
+Readylytics is intended for users aged 18 and older and is not directed at
+children. Readylytics does not knowingly collect data from children.
 
 ## Medical disclaimer
 

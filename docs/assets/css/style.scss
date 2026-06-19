@@ -205,3 +205,22 @@ h2 {
   object-position: top;
   width: 100%;
 }
+
+.feature-list {
+  columns: 2;
+  column-gap: 2rem;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.feature-list li {
+  margin-bottom: 0.5rem;
+}
+
+.closing-tagline {
+  color: var(--text);
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 3rem 0 2rem;
+  text-align: center;
+}
