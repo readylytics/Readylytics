@@ -3,24 +3,30 @@
 
 :root {
   color-scheme: light dark;
-  --bg: #f8faf7;
+  --bg: #f8f8fb;
   --surface: #ffffff;
-  --text: #15201a;
-  --muted: #5d6b63;
-  --line: #dce5dd;
-  --accent: #1f7a4d;
-  --accent-strong: #155c39;
+  --text: #15161f;
+  --muted: #5c6170;
+  --line: #dde1ea;
+  --accent: #4d83e8;
+  --accent-strong: #3a68c0;
+  --accent-violet: #b68bff;
+  --accent-cyan: #6dd7ff;
+  --brand-gradient: linear-gradient(135deg, var(--accent-violet), var(--accent));
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #101511;
-    --surface: #18201a;
-    --text: #edf4ee;
-    --muted: #b3c0b8;
-    --line: #2d3a31;
-    --accent: #7bdba5;
-    --accent-strong: #a1ecc0;
+    --bg: #11121a;
+    --surface: #191a24;
+    --text: #eef0fb;
+    --muted: #aab0c4;
+    --line: #2c2e3d;
+    --accent: #79b8ff;
+    --accent-strong: #b68bff;
+    --accent-violet: #c9a8ff;
+    --accent-cyan: #8fe3ff;
+    --brand-gradient: linear-gradient(135deg, var(--accent-violet), var(--accent));
   }
 }
 
@@ -128,8 +134,9 @@ h2 {
 }
 
 .button.primary {
-  background: var(--accent);
-  color: var(--surface);
+  background: var(--brand-gradient);
+  border-color: transparent;
+  color: #ffffff;
 }
 
 .button.disabled {
@@ -148,4 +155,53 @@ h2 {
 
 .policy-meta {
   color: var(--muted);
+}
+
+.brand-logo {
+  display: inline-block;
+  height: 28px;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+  width: 28px;
+}
+
+.screenshot-gallery {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-top: 2rem;
+}
+
+.screenshot-card {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.screenshot-card figcaption {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.phone-frame {
+  aspect-ratio: 9 / 19.5;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  box-shadow: 0 12px 32px -16px rgba(0, 0, 0, 0.35);
+  margin: 0 auto;
+  max-width: 240px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.phone-frame img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  width: 100%;
 }
