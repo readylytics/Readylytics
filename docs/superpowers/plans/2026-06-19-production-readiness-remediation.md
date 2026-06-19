@@ -338,7 +338,7 @@ git commit -m "fix: apply retention to all health data"
 - Modify: `docs/privacy.md`
 - Modify: `docs/backup-and-data.md`
 
-- [ ] **Step 1: Write failing manifest static test**
+- [x] **Step 1: Write failing manifest static test**
 
 Assert application contains:
 
@@ -350,27 +350,27 @@ android:fullBackupContent="@xml/full_backup_content"
 
 Assert `data_extraction_rules.xml` excludes `root`, `file`, `database`, `sharedpref`, `external`, `device_root`, `device_file`, `device_database`, and `device_sharedpref` for both cloud backup and device transfer. Assert `full_backup_content.xml` excludes `root`, `file`, `database`, `sharedpref`, and `external`. Assert unused `backup_rules.xml` is absent.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `.\gradlew testDebugUnitTest --tests "*ProductionReadinessStaticTest"`
 
 Expected: FAIL on missing manifest attributes.
 
-- [ ] **Step 3: Wire rules and remove sample**
+- [x] **Step 3: Wire rules and remove sample**
 
 Add both manifest attributes, retain `allowBackup=false`, and delete unused sample file. Expand exclusion XML only where Android schema permits; validate with lint.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 Run: `.\gradlew testDebugUnitTest --tests "*ProductionReadinessStaticTest" lintRelease`
 
 Expected: PASS; no `DataExtractionRules` or unused backup XML warning.
 
-- [ ] **Step 5: Perform device backup check**
+- [x] **Step 5: Perform device backup check**
 
 Use `adb shell bmgr` on test device and inspect restore set. Confirm DB, DataStore, Tink keyset, SQLCipher key preference, and local backup ZIP are absent. Record OEM device-to-device transfer as manual release checklist item.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add app/src/main app/src/test docs/privacy.md docs/backup-and-data.md

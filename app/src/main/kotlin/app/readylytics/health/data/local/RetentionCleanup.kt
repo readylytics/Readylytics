@@ -14,27 +14,30 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class RetentionCleanup @Inject constructor(
-    private val transactionRunner: TransactionRunner,
-    private val sleepDao: SleepSessionDao,
-    private val heartRateDao: HeartRateDao,
-    private val hrvDao: HrvDao,
-    private val workoutDao: WorkoutDao,
-    private val dailySummaryDao: DailySummaryDao,
-    private val weightDao: WeightRecordDao,
-    private val bodyFatDao: BodyFatRecordDao,
-    private val bloodPressureDao: BloodPressureRecordDao,
-    private val oxygenSaturationDao: OxygenSaturationRecordDao,
-) {
-    suspend fun deleteBefore(cutoffMs: Long) = transactionRunner.runInTransaction {
-        sleepDao.deleteBeforeTimestamp(cutoffMs)
-        heartRateDao.deleteBeforeTimestamp(cutoffMs)
-        hrvDao.deleteBeforeTimestamp(cutoffMs)
-        workoutDao.deleteBeforeTimestamp(cutoffMs)
-        dailySummaryDao.deleteBeforeTimestamp(cutoffMs)
-        weightDao.deleteBeforeTimestamp(cutoffMs)
-        bodyFatDao.deleteBeforeTimestamp(cutoffMs)
-        bloodPressureDao.deleteBeforeTimestamp(cutoffMs)
-        oxygenSaturationDao.deleteBeforeTimestamp(cutoffMs)
+class RetentionCleanup
+    @Inject
+    constructor(
+        private val transactionRunner: TransactionRunner,
+        private val sleepDao: SleepSessionDao,
+        private val heartRateDao: HeartRateDao,
+        private val hrvDao: HrvDao,
+        private val workoutDao: WorkoutDao,
+        private val dailySummaryDao: DailySummaryDao,
+        private val weightDao: WeightRecordDao,
+        private val bodyFatDao: BodyFatRecordDao,
+        private val bloodPressureDao: BloodPressureRecordDao,
+        private val oxygenSaturationDao: OxygenSaturationRecordDao,
+    ) {
+        suspend fun deleteBefore(cutoffMs: Long) =
+            transactionRunner.runInTransaction {
+                sleepDao.deleteBeforeTimestamp(cutoffMs)
+                heartRateDao.deleteBeforeTimestamp(cutoffMs)
+                hrvDao.deleteBeforeTimestamp(cutoffMs)
+                workoutDao.deleteBeforeTimestamp(cutoffMs)
+                dailySummaryDao.deleteBeforeTimestamp(cutoffMs)
+                weightDao.deleteBeforeTimestamp(cutoffMs)
+                bodyFatDao.deleteBeforeTimestamp(cutoffMs)
+                bloodPressureDao.deleteBeforeTimestamp(cutoffMs)
+                oxygenSaturationDao.deleteBeforeTimestamp(cutoffMs)
+            }
     }
-}

@@ -251,6 +251,7 @@ class DeleteByTimestampTest {
             assertEquals(1, remaining.size)
             assertEquals(newDateMs, remaining[0].dateMidnightMs)
         }
+
     @Test
     fun `weight delete before timestamp only deletes old records`() =
         runTest {
@@ -262,7 +263,7 @@ class DeleteByTimestampTest {
                 listOf(
                     WeightRecordEntity(id = "old", timestampMs = oldTime, weightKg = 70f),
                     WeightRecordEntity(id = "new", timestampMs = newTime, weightKg = 72f),
-                )
+                ),
             )
 
             val cutoffTime = now - (30L * 24 * 60 * 60 * 1000)
@@ -284,7 +285,7 @@ class DeleteByTimestampTest {
                 listOf(
                     BodyFatRecordEntity(id = "old", timestampMs = oldTime, bodyFatPercent = 15f),
                     BodyFatRecordEntity(id = "new", timestampMs = newTime, bodyFatPercent = 14f),
-                )
+                ),
             )
 
             val cutoffTime = now - (30L * 24 * 60 * 60 * 1000)
@@ -304,9 +305,19 @@ class DeleteByTimestampTest {
 
             bloodPressureDao.upsertAll(
                 listOf(
-                    BloodPressureRecordEntity(id = "old", timestampMs = oldTime, systolicMmHg = 120, diastolicMmHg = 80),
-                    BloodPressureRecordEntity(id = "new", timestampMs = newTime, systolicMmHg = 118, diastolicMmHg = 78),
-                )
+                    BloodPressureRecordEntity(
+                        id = "old",
+                        timestampMs = oldTime,
+                        systolicMmHg = 120,
+                        diastolicMmHg = 80,
+                    ),
+                    BloodPressureRecordEntity(
+                        id = "new",
+                        timestampMs = newTime,
+                        systolicMmHg = 118,
+                        diastolicMmHg = 78,
+                    ),
+                ),
             )
 
             val cutoffTime = now - (30L * 24 * 60 * 60 * 1000)
@@ -328,7 +339,7 @@ class DeleteByTimestampTest {
                 listOf(
                     OxygenSaturationRecordEntity(id = "old", timestampMs = oldTime, percentage = 98f),
                     OxygenSaturationRecordEntity(id = "new", timestampMs = newTime, percentage = 99f),
-                )
+                ),
             )
 
             val cutoffTime = now - (30L * 24 * 60 * 60 * 1000)

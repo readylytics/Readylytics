@@ -63,6 +63,8 @@ limiting off, Readylytics keeps history up to a 10-year (3650-day) ceiling
 rather than indefinitely. Backups contain only records present in the local
 database at backup time.
 
+To protect your privacy and prevent decryption or data corruption issues on new devices (since cryptographic keys are hardware-bound and do not transfer), all local app data—including databases, preferences, encryption keys, and local backup files—is explicitly excluded from standard Android Auto Backup (cloud backup) and device-to-device transfers.
+
 ## Age requirement
 
 Readylytics is intended for users aged 18 and older and is not directed at

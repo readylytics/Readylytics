@@ -202,6 +202,18 @@ Readylytics adds interpretive layers (scores, baselines, trends), but the raw nu
 
 ---
 
+## Cloud backup and device transfer exclusions
+
+To safeguard your sensitive health information and ensure the cryptographic security of the local database (which uses Android Keystore keys that cannot be transferred off the device), **Readylytics explicitly excludes all database files, preferences, encryption keys, and local backup files from Android Auto Backup and OEM device-to-device transfers.**
+
+### Manual Release Verification Checklist
+
+During release validation, the following checks should be performed:
+1. **Bmgr Verification:** Run `adb shell bmgr backupnow app.readylytics.health` followed by inspecting the backup sets to confirm that no databases, DataStores, Tink keysets, or backup ZIPs are included in the backup data.
+2. **OEM D2D Transfer:** Manually verify that local app data is not transferred during a device migration, and that a fresh install correctly prompts the user to restore from their manually-exported local backup file.
+
+---
+
 ## Privacy at a glance
 
 - **No account required** — No sign-up, no email verification.
