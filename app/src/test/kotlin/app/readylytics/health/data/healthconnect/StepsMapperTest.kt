@@ -1,10 +1,6 @@
 package app.readylytics.health.data.healthconnect
 
-import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.records.metadata.DataOrigin
-import androidx.health.connect.client.records.metadata.Device
-import io.mockk.every
-import io.mockk.mockk
+import app.readylytics.health.domain.model.DomainStepsRecord
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant
@@ -16,23 +12,19 @@ class StepsMapperTest {
     private fun stepsRecord(
         start: String,
         count: Long,
-        manufacturer: String? = null,
-        model: String? = null,
-        deviceType: Int = Device.TYPE_UNKNOWN,
-        packageName: String = "com.example.app",
-    ): StepsRecord =
-        mockk(relaxed = true) {
-            every { startTime } returns Instant.parse(start)
-            every { this@mockk.count } returns count
-            every { metadata.device } returns Device(manufacturer = manufacturer, model = model, type = deviceType)
-            every { metadata.dataOrigin } returns DataOrigin(packageName)
-        }
+        deviceName: String = "Watch",
+    ): DomainStepsRecord =
+        DomainStepsRecord(
+            startTime = Instant.parse(start),
+            count = count,
+            deviceName = deviceName,
+        )
 
     @Test
     fun `toStepEntries extracts device label, time and count`() {
         val records =
             listOf(
-                stepsRecord("2026-05-10T08:00:00Z", 1200, manufacturer = "Garmin", model = "Forerunner"),
+                stepsRecord("2026-05-10T08:00:00Z", 1200, deviceName = "Garmin Forerunner"),
             )
 
         val entries = StepsMapper.toStepEntries(records)
@@ -45,7 +37,7 @@ class StepsMapperTest {
 
     @Test
     fun `phone device with no manufacturer is labelled This Phone`() {
-        val records = listOf(stepsRecord("2026-05-10T08:00:00Z", 500, deviceType = Device.TYPE_PHONE))
+        val records = listOf(stepsRecord("2026-05-10T08:00:00Z", 500, deviceName = "This Phone"))
 
         val entries = StepsMapper.toStepEntries(records)
 

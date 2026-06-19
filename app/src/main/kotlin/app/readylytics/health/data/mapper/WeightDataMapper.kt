@@ -1,17 +1,16 @@
 package app.readylytics.health.data.mapper
 
-import androidx.health.connect.client.records.WeightRecord
-import app.readylytics.health.data.healthconnect.DeviceLabel
 import app.readylytics.health.data.local.entity.WeightRecordEntity
+import app.readylytics.health.domain.model.DomainWeightRecord
 
 object WeightDataMapper {
-    fun toEntity(record: WeightRecord): WeightRecordEntity =
+    fun toEntity(record: DomainWeightRecord): WeightRecordEntity =
         WeightRecordEntity(
-            id = "${record.metadata.id}_${record.time.toEpochMilli()}",
+            id = "${record.id}_${record.time.toEpochMilli()}",
             timestampMs = record.time.toEpochMilli(),
-            weightKg = record.weight.inKilograms.toFloat(),
-            deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
+            weightKg = record.weightKg,
+            deviceName = record.deviceName,
         )
 
-    fun toEntities(records: List<WeightRecord>): List<WeightRecordEntity> = records.map { toEntity(it) }
+    fun toEntities(records: List<DomainWeightRecord>): List<WeightRecordEntity> = records.map { toEntity(it) }
 }

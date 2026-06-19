@@ -24,7 +24,7 @@ import kotlin.test.assertTrue
 class DocumentationDriftTest {
     private val aboutMd = readRepoFile("ABOUT.md")
     private val stringsXml = readRepoFile("app/src/main/res/values/strings.xml")
-    private val dataFlowMd = readRepoFile("docs/DATA_FLOW.md")
+    private val dataFlowMd = readRepoFile("internal-docs/DATA_FLOW.md")
     private val configFactory = ScoringConfigFactory()
 
     @Test

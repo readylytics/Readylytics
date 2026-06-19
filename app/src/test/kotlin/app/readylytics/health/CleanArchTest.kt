@@ -20,4 +20,32 @@ class CleanArchTest {
                 !hasDaoImport
             }
     }
+
+    @Test
+    fun `domain package does not import Android Compose Health Connect or app util APIs`() {
+        val forbiddenPrefixes =
+            listOf(
+                "android.",
+                "androidx.compose.",
+                "androidx.health.",
+                "app.readylytics.health.util.",
+                "app.readylytics.health.BuildConfig",
+            )
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter { it.hasPackage("app.readylytics.health.domain..") }
+                .flatMap { file ->
+                    file.imports
+                        .filter { import ->
+                            forbiddenPrefixes.any { prefix -> import.name.startsWith(prefix) }
+                        }.map { import -> "${file.name}: ${import.name}" }
+                }
+
+        org.junit.Assert.assertTrue(
+            "Domain layer must stay pure Kotlin. Forbidden imports:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
 }

@@ -111,7 +111,7 @@ class LocalBackupViewModel
                     viewModelScope.launch {
                         transientState.update { it.copy(isRestoring = true, backupError = null) }
                         restoreService
-                            .validate(event.file.uri)
+                            .validate(event.file.location)
                             .onSuccess {
                                 transientState.update {
                                     it.copy(
@@ -136,7 +136,7 @@ class LocalBackupViewModel
                     val file = transientState.value.pendingRestoreFile ?: return
                     transientState.update { it.copy(showRestoreConfirmDialog = false, isRestoring = true) }
                     viewModelScope.launch {
-                        when (val result = restoreService.applyRestore(file.uri)) {
+                        when (val result = restoreService.applyRestore(file.location)) {
                             RestoreResult.SuccessRequiresRestart -> {
                                 _sideEffect.emit(SideEffect.RestartApp)
                             }
@@ -166,7 +166,7 @@ class LocalBackupViewModel
                 is SettingsEvent.DeleteLocalBackup -> {
                     viewModelScope.launch {
                         backupService
-                            .deleteBackup(event.file.uri)
+                            .deleteBackup(event.file.location)
                             .onFailure { e ->
                                 android.util.Log.e("LocalBackupViewModel", "Failed to delete backup", e)
                                 transientState.update { it.copy(backupError = e.message?.let { UiText.RawString(it) }) }

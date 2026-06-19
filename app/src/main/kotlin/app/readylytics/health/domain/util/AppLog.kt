@@ -1,13 +1,60 @@
 package app.readylytics.health.domain.util
 
-import android.util.Log
-import app.readylytics.health.BuildConfig
+interface DomainLogSink {
+    fun debug(
+        tag: String,
+        message: String,
+    )
+
+    fun error(
+        tag: String,
+        message: String,
+        throwable: Throwable?,
+    )
+}
+
+object DomainLogger {
+    private object NoOpSink : DomainLogSink {
+        override fun debug(
+            tag: String,
+            message: String,
+        ) = Unit
+
+        override fun error(
+            tag: String,
+            message: String,
+            throwable: Throwable?,
+        ) = Unit
+    }
+
+    @Volatile
+    private var sink: DomainLogSink = NoOpSink
+
+    fun installSink(newSink: DomainLogSink) {
+        sink = newSink
+    }
+
+    fun debug(
+        tag: String,
+        message: String,
+    ) {
+        sink.debug(tag, message)
+    }
+
+    fun error(
+        tag: String,
+        message: String,
+        throwable: Throwable?,
+    ) {
+        sink.error(tag, message, throwable)
+    }
+}
 
 inline fun logD(
     tag: String,
     msg: () -> String,
 ) {
-    if (BuildConfig.DEBUG) Log.d(tag, msg())
+    DomainLogger.debug(tag, msg())
 }
 
 inline fun logE(
@@ -15,5 +62,5 @@ inline fun logE(
     throwable: Throwable? = null,
     msg: () -> String,
 ) {
-    if (BuildConfig.DEBUG) Log.e(tag, msg(), throwable)
+    DomainLogger.error(tag, msg(), throwable)
 }

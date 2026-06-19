@@ -1,15 +1,15 @@
 package app.readylytics.health.domain.repository
 
-import androidx.health.connect.client.records.BloodPressureRecord
-import androidx.health.connect.client.records.BodyFatRecord
-import androidx.health.connect.client.records.ExerciseSessionRecord
-import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
-import androidx.health.connect.client.records.OxygenSaturationRecord
-import androidx.health.connect.client.records.RestingHeartRateRecord
-import androidx.health.connect.client.records.SleepSessionRecord
-import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.records.WeightRecord
+import app.readylytics.health.domain.model.DomainBloodPressureRecord
+import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.domain.model.DomainHeartRateRecord
+import app.readylytics.health.domain.model.DomainHrvRecord
+import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
+import app.readylytics.health.domain.model.DomainRestingHeartRateRecord
+import app.readylytics.health.domain.model.DomainSleepSessionRecord
+import app.readylytics.health.domain.model.DomainStepsRecord
+import app.readylytics.health.domain.model.DomainWeightRecord
 import java.time.Instant
 
 class HealthConnectPermissionRevokedException(
@@ -42,32 +42,32 @@ interface HealthConnectRepository {
     suspend fun readSleepSessions(
         from: Instant,
         to: Instant,
-    ): List<SleepSessionRecord>
+    ): List<DomainSleepSessionRecord>
 
     suspend fun readHeartRateSamples(
         from: Instant,
         to: Instant,
-    ): List<HeartRateRecord>
+    ): List<DomainHeartRateRecord>
 
     suspend fun readRestingHeartRateSamples(
         from: Instant,
         to: Instant,
-    ): List<RestingHeartRateRecord>
+    ): List<DomainRestingHeartRateRecord>
 
     suspend fun readHrvSamples(
         from: Instant,
         to: Instant,
-    ): List<HeartRateVariabilityRmssdRecord>
+    ): List<DomainHrvRecord>
 
     suspend fun readExerciseSessions(
         from: Instant,
         to: Instant,
-    ): List<ExerciseSessionRecord>
+    ): List<DomainExerciseSessionRecord>
 
     suspend fun readStepsRecords(
         from: Instant,
         to: Instant,
-    ): List<StepsRecord>
+    ): List<DomainStepsRecord>
 
     suspend fun readSteps(
         from: Instant,
@@ -84,20 +84,20 @@ interface HealthConnectRepository {
     suspend fun readWeightRecords(
         from: Instant,
         to: Instant,
-    ): List<WeightRecord>
+    ): List<DomainWeightRecord>
 
     suspend fun readBodyFatRecords(
         from: Instant,
         to: Instant,
-    ): List<BodyFatRecord>
+    ): List<DomainBodyFatRecord>
 
     suspend fun readBloodPressureRecords(
         from: Instant,
         to: Instant,
-    ): List<BloodPressureRecord>
+    ): List<DomainBloodPressureRecord>
 
     suspend fun readOxygenSaturationRecords(
         from: Instant,
         to: Instant,
-    ): List<OxygenSaturationRecord>
+    ): List<DomainOxygenSaturationRecord>
 }

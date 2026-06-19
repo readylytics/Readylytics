@@ -40,7 +40,6 @@ object SettingsDefaults {
     val APP_THEME = AppTheme.SYSTEM
     const val DYNAMIC_COLOR_ENABLED = true
     val FALLBACK_THEME_COLOR = FallbackThemeColor.GREEN_PERFORMANCE
-    val DRIVE_ACCOUNT_EMAIL: String? = null
     val BACKUP_SCHEDULE = BackupSchedule.MANUAL
     const val LAST_BACKUP_TIMESTAMP = 0L
     const val CONSISTENCY_THRESHOLD_MINUTES = 30
@@ -55,7 +54,6 @@ object SettingsDefaults {
     const val STEP_GOAL = 10000
     const val RETENTION_DAYS_ENABLED = true
     const val RETENTION_DAYS = 365
-    const val COLLAPSE_CLOUD_DATA = true
     const val COLLAPSE_HEALTH_CONNECT = true
     const val COLLAPSE_BASELINES_THRESHOLDS = true
     const val COLLAPSE_DISPLAY = true

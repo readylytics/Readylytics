@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.R
 import app.readylytics.health.data.backup.WrongBackupPasswordException
+import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.backup.RestoreService
 import app.readylytics.health.ui.common.UiText
@@ -46,12 +47,13 @@ class OnboardingRestoreViewModel
             password: String,
         ) {
             viewModelScope.launch {
+                val location = BackupLocation(uri.toString())
                 _state.update { it.copy(isValidating = true, error = null) }
                 restoreService
-                    .validate(uri, password)
+                    .validate(location, password)
                     .onSuccess {
                         _state.update { it.copy(isValidating = false, isRestoring = true) }
-                        when (val result = restoreService.applyRestore(uri, password)) {
+                        when (val result = restoreService.applyRestore(location, password)) {
                             RestoreResult.SuccessRequiresRestart -> _sideEffect.send(SideEffect.RestartApp)
                             RestoreResult.Success -> _state.update { it.copy(isRestoring = false) }
                             is RestoreResult.Failure ->

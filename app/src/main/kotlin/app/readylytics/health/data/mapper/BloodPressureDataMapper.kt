@@ -1,18 +1,18 @@
 package app.readylytics.health.data.mapper
 
-import androidx.health.connect.client.records.BloodPressureRecord
-import app.readylytics.health.data.healthconnect.DeviceLabel
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
+import app.readylytics.health.domain.model.DomainBloodPressureRecord
 
 object BloodPressureDataMapper {
-    fun toEntity(record: BloodPressureRecord): BloodPressureRecordEntity =
+    fun toEntity(record: DomainBloodPressureRecord): BloodPressureRecordEntity =
         BloodPressureRecordEntity(
-            id = "${record.metadata.id}_${record.time.toEpochMilli()}",
+            id = "${record.id}_${record.time.toEpochMilli()}",
             timestampMs = record.time.toEpochMilli(),
-            systolicMmHg = record.systolic.inMillimetersOfMercury.toInt(),
-            diastolicMmHg = record.diastolic.inMillimetersOfMercury.toInt(),
-            deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
+            systolicMmHg = record.systolicMmHg,
+            diastolicMmHg = record.diastolicMmHg,
+            deviceName = record.deviceName,
         )
 
-    fun toEntities(records: List<BloodPressureRecord>): List<BloodPressureRecordEntity> = records.map { toEntity(it) }
+    fun toEntities(records: List<DomainBloodPressureRecord>): List<BloodPressureRecordEntity> =
+        records.map { toEntity(it) }
 }

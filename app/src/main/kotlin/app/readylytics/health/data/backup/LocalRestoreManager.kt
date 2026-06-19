@@ -466,7 +466,6 @@ class LocalRestoreManager
                 backup.stepGoal?.let { stepGoal = it }
                 backup.retentionDaysEnabled?.let { retentionDaysEnabled = it }
                 backup.retentionDays?.let { retentionDays = it }
-                backup.collapseCloudData?.let { collapseCloudData = it }
                 backup.collapseHealthConnect?.let { collapseHealthConnect = it }
                 backup.collapseBaselinesThresholds?.let { collapseBaselinesThresholds = it }
                 backup.collapseDisplay?.let { collapseDisplay = it }

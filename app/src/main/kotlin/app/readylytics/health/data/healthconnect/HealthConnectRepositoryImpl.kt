@@ -16,10 +16,24 @@ import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import app.readylytics.health.domain.model.DomainBloodPressureRecord
+import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.domain.model.DomainHeartRateRecord
+import app.readylytics.health.domain.model.DomainHeartRateSample
+import app.readylytics.health.domain.model.DomainHrvRecord
+import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
+import app.readylytics.health.domain.model.DomainRestingHeartRateRecord
+import app.readylytics.health.domain.model.DomainSleepSessionRecord
+import app.readylytics.health.domain.model.DomainSleepStage
+import app.readylytics.health.domain.model.DomainSleepStageType
+import app.readylytics.health.domain.model.DomainStepsRecord
+import app.readylytics.health.domain.model.DomainWeightRecord
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.PermissionStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -135,52 +149,159 @@ class HealthConnectRepositoryImpl
             return all
         }
 
+        private fun SleepSessionRecord.toDomain(): DomainSleepSessionRecord =
+            DomainSleepSessionRecord(
+                id = metadata.id,
+                startTime = startTime,
+                endTime = endTime,
+                startZoneOffsetSeconds = startZoneOffset?.totalSeconds,
+                endZoneOffsetSeconds = endZoneOffset?.totalSeconds,
+                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+                stages =
+                    stages.map { stage ->
+                        DomainSleepStage(
+                            startTime = stage.startTime,
+                            endTime = stage.endTime,
+                            stageType =
+                                when (stage.stage) {
+                                    SleepSessionRecord.STAGE_TYPE_DEEP -> DomainSleepStageType.DEEP
+                                    SleepSessionRecord.STAGE_TYPE_REM -> DomainSleepStageType.REM
+                                    SleepSessionRecord.STAGE_TYPE_LIGHT,
+                                    SleepSessionRecord.STAGE_TYPE_SLEEPING,
+                                    -> DomainSleepStageType.LIGHT
+                                    SleepSessionRecord.STAGE_TYPE_AWAKE,
+                                    SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED,
+                                    -> DomainSleepStageType.AWAKE
+                                    else -> DomainSleepStageType.UNKNOWN
+                                },
+                        )
+                    },
+            )
+
+        private fun HeartRateRecord.toDomain(): DomainHeartRateRecord =
+            DomainHeartRateRecord(
+                id = metadata.id,
+                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+                samples =
+                    samples.map { sample ->
+                        DomainHeartRateSample(
+                            time = sample.time,
+                            beatsPerMinute = sample.beatsPerMinute.toInt(),
+                        )
+                    },
+            )
+
+        private fun RestingHeartRateRecord.toDomain(): DomainRestingHeartRateRecord =
+            DomainRestingHeartRateRecord(
+                id = metadata.id,
+                time = time,
+                beatsPerMinute = beatsPerMinute.toInt(),
+                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+            )
+
+        private fun HeartRateVariabilityRmssdRecord.toDomain(): DomainHrvRecord =
+            DomainHrvRecord(
+                id = metadata.id,
+                time = time,
+                rmssdMs = heartRateVariabilityMillis.toFloat(),
+                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+            )
+
+        private fun ExerciseSessionRecord.toDomain(): DomainExerciseSessionRecord =
+            DomainExerciseSessionRecord(
+                id = metadata.id,
+                startTime = startTime,
+                endTime = endTime,
+                exerciseType = exerciseType.toString(),
+                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+            )
+
+        private fun StepsRecord.toDomain(): DomainStepsRecord =
+            DomainStepsRecord(
+                startTime = startTime,
+                count = count,
+                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+            )
+
+        private fun WeightRecord.toDomain(): DomainWeightRecord =
+            DomainWeightRecord(
+                id = metadata.id,
+                time = time,
+                weightKg = weight.inKilograms.toFloat(),
+                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+            )
+
+        private fun BodyFatRecord.toDomain(): DomainBodyFatRecord =
+            DomainBodyFatRecord(
+                id = metadata.id,
+                time = time,
+                percentage = percentage.value.toFloat(),
+                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+            )
+
+        private fun BloodPressureRecord.toDomain(): DomainBloodPressureRecord =
+            DomainBloodPressureRecord(
+                id = metadata.id,
+                time = time,
+                systolicMmHg = systolic.inMillimetersOfMercury.toInt(),
+                diastolicMmHg = diastolic.inMillimetersOfMercury.toInt(),
+                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+            )
+
+        private fun OxygenSaturationRecord.toDomain(): DomainOxygenSaturationRecord =
+            DomainOxygenSaturationRecord(
+                id = metadata.id,
+                time = time,
+                percentage = percentage.value.toFloat(),
+                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+            )
+
         override suspend fun readSleepSessions(
             from: Instant,
             to: Instant,
-        ): List<SleepSessionRecord> =
+        ): List<DomainSleepSessionRecord> =
             withContext(Dispatchers.IO) {
-                readAllPages<SleepSessionRecord>(from, to)
+                readAllPages<SleepSessionRecord>(from, to).map { it.toDomain() }
             }
 
         override suspend fun readHeartRateSamples(
             from: Instant,
             to: Instant,
-        ): List<HeartRateRecord> =
+        ): List<DomainHeartRateRecord> =
             withContext(Dispatchers.IO) {
-                readAllPages<HeartRateRecord>(from, to)
+                readAllPages<HeartRateRecord>(from, to).map { it.toDomain() }
             }
 
         override suspend fun readRestingHeartRateSamples(
             from: Instant,
             to: Instant,
-        ): List<RestingHeartRateRecord> =
+        ): List<DomainRestingHeartRateRecord> =
             withContext(Dispatchers.IO) {
-                readAllPages<RestingHeartRateRecord>(from, to)
+                readAllPages<RestingHeartRateRecord>(from, to).map { it.toDomain() }
             }
 
         override suspend fun readHrvSamples(
             from: Instant,
             to: Instant,
-        ): List<HeartRateVariabilityRmssdRecord> =
+        ): List<DomainHrvRecord> =
             withContext(Dispatchers.IO) {
-                readAllPages<HeartRateVariabilityRmssdRecord>(from, to)
+                readAllPages<HeartRateVariabilityRmssdRecord>(from, to).map { it.toDomain() }
             }
 
         override suspend fun readExerciseSessions(
             from: Instant,
             to: Instant,
-        ): List<ExerciseSessionRecord> =
+        ): List<DomainExerciseSessionRecord> =
             withContext(Dispatchers.IO) {
-                readAllPages<ExerciseSessionRecord>(from, to)
+                readAllPages<ExerciseSessionRecord>(from, to).map { it.toDomain() }
             }
 
         override suspend fun readStepsRecords(
             from: Instant,
             to: Instant,
-        ): List<StepsRecord> =
+        ): List<DomainStepsRecord> =
             withContext(Dispatchers.IO) {
-                readAllPages<StepsRecord>(from, to)
+                readAllPages<StepsRecord>(from, to).map { it.toDomain() }
             }
 
         override suspend fun readSteps(
@@ -214,6 +335,8 @@ class HealthConnectRepositoryImpl
                         }
                 } catch (e: SecurityException) {
                     throw HealthConnectPermissionRevokedException(e)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Error batch fetching steps"
@@ -225,10 +348,10 @@ class HealthConnectRepositoryImpl
         override suspend fun readWeightRecords(
             from: Instant,
             to: Instant,
-        ): List<WeightRecord> =
+        ): List<DomainWeightRecord> =
             withContext(Dispatchers.IO) {
                 try {
-                    readAllPages(from, to)
+                    readAllPages<WeightRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     app.readylytics.health.domain.util.logD("HealthConnectRepository") {
                         "Weight record permission not granted: ${e.message}"
@@ -239,6 +362,8 @@ class HealthConnectRepositoryImpl
                         "Weight record permission not granted: ${e.message}"
                     }
                     emptyList()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading weight records"
@@ -250,10 +375,10 @@ class HealthConnectRepositoryImpl
         override suspend fun readBodyFatRecords(
             from: Instant,
             to: Instant,
-        ): List<BodyFatRecord> =
+        ): List<DomainBodyFatRecord> =
             withContext(Dispatchers.IO) {
                 try {
-                    readAllPages(from, to)
+                    readAllPages<BodyFatRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     app.readylytics.health.domain.util.logD("HealthConnectRepository") {
                         "Body fat record permission not granted: ${e.message}"
@@ -264,6 +389,8 @@ class HealthConnectRepositoryImpl
                         "Body fat record permission not granted: ${e.message}"
                     }
                     emptyList()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading body fat records"
@@ -275,10 +402,10 @@ class HealthConnectRepositoryImpl
         override suspend fun readBloodPressureRecords(
             from: Instant,
             to: Instant,
-        ): List<BloodPressureRecord> =
+        ): List<DomainBloodPressureRecord> =
             withContext(Dispatchers.IO) {
                 try {
-                    readAllPages(from, to)
+                    readAllPages<BloodPressureRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     app.readylytics.health.domain.util.logD("HealthConnectRepository") {
                         "Blood pressure record permission not granted: ${e.message}"
@@ -289,6 +416,8 @@ class HealthConnectRepositoryImpl
                         "Blood pressure record permission not granted: ${e.message}"
                     }
                     emptyList()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading blood pressure records"
@@ -300,10 +429,10 @@ class HealthConnectRepositoryImpl
         override suspend fun readOxygenSaturationRecords(
             from: Instant,
             to: Instant,
-        ): List<OxygenSaturationRecord> =
+        ): List<DomainOxygenSaturationRecord> =
             withContext(Dispatchers.IO) {
                 try {
-                    readAllPages(from, to)
+                    readAllPages<OxygenSaturationRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     app.readylytics.health.domain.util.logD("HealthConnectRepository") {
                         "Oxygen saturation record permission not granted: ${e.message}"
@@ -314,12 +443,23 @@ class HealthConnectRepositoryImpl
                         "Oxygen saturation record permission not granted: ${e.message}"
                     }
                     emptyList()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     app.readylytics.health.domain.util.logE("HealthConnectRepository", e) {
                         "Error reading oxygen saturation records"
                     }
                     emptyList()
                 }
+            }
+
+        private suspend fun <T> readOrEmpty(block: suspend () -> List<T>): List<T> =
+            try {
+                block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptyList()
             }
 
         override suspend fun discoverDevices(windowDays: Int): List<String> =
@@ -337,60 +477,60 @@ class HealthConnectRepositoryImpl
                         // Each read is wrapped so a single revoked/missing permission can't
                         // cancel the whole scope and collapse discovery to an empty list.
                         val sleepSessionsDeferred =
-                            async { runCatching { readSleepSessions(from, to) }.getOrDefault(emptyList()) }
+                            async { readOrEmpty { readSleepSessions(from, to) } }
                         val hrRecordsDeferred =
-                            async { runCatching { readHeartRateSamples(from, to) }.getOrDefault(emptyList()) }
+                            async { readOrEmpty { readHeartRateSamples(from, to) } }
                         val hrvRecordsDeferred =
-                            async { runCatching { readHrvSamples(from, to) }.getOrDefault(emptyList()) }
+                            async { readOrEmpty { readHrvSamples(from, to) } }
                         val workoutRecordsDeferred =
-                            async { runCatching { readExerciseSessions(from, to) }.getOrDefault(emptyList()) }
+                            async { readOrEmpty { readExerciseSessions(from, to) } }
                         val stepsRecordsDeferred =
-                            async { runCatching { readStepsRecords(from, to) }.getOrDefault(emptyList()) }
+                            async { readOrEmpty { readStepsRecords(from, to) } }
                         val weightRecordsDeferred =
-                            async { runCatching { readWeightRecords(from, to) }.getOrDefault(emptyList()) }
+                            async { readOrEmpty { readWeightRecords(from, to) } }
                         val bodyFatRecordsDeferred =
-                            async { runCatching { readBodyFatRecords(from, to) }.getOrDefault(emptyList()) }
+                            async { readOrEmpty { readBodyFatRecords(from, to) } }
                         val bloodPressureRecordsDeferred =
-                            async { runCatching { readBloodPressureRecords(from, to) }.getOrDefault(emptyList()) }
+                            async { readOrEmpty { readBloodPressureRecords(from, to) } }
                         val spo2RecordsDeferred =
-                            async { runCatching { readOxygenSaturationRecords(from, to) }.getOrDefault(emptyList()) }
+                            async { readOrEmpty { readOxygenSaturationRecords(from, to) } }
 
                         sleepSessionsDeferred.await().forEach { record ->
-                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                            devices.add(record.deviceName)
                         }
 
                         hrRecordsDeferred.await().forEach { record ->
-                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                            devices.add(record.deviceName)
                         }
 
                         hrvRecordsDeferred.await().forEach { record ->
-                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                            devices.add(record.deviceName)
                         }
 
                         workoutRecordsDeferred.await().forEach { record ->
-                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                            devices.add(record.deviceName)
                         }
 
                         // Steps are frequently the only data the phone records, so scanning
                         // them here is what surfaces the phone as a selectable source device.
                         stepsRecordsDeferred.await().forEach { record ->
-                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                            devices.add(record.deviceName)
                         }
 
                         weightRecordsDeferred.await().forEach { record ->
-                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                            devices.add(record.deviceName)
                         }
 
                         bodyFatRecordsDeferred.await().forEach { record ->
-                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                            devices.add(record.deviceName)
                         }
 
                         bloodPressureRecordsDeferred.await().forEach { record ->
-                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                            devices.add(record.deviceName)
                         }
 
                         spo2RecordsDeferred.await().forEach { record ->
-                            devices.add(DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin))
+                            devices.add(record.deviceName)
                         }
                     }
 
@@ -400,6 +540,8 @@ class HealthConnectRepositoryImpl
                     devices.sorted()
                 } catch (e: SecurityException) {
                     throw HealthConnectPermissionRevokedException(e)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     app.readylytics.health.domain.util.logE(
                         "HealthConnectRepository",

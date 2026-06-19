@@ -1,15 +1,13 @@
 package app.readylytics.health.domain.backup
 
-import android.net.Uri
-
 interface RestoreService {
     suspend fun validate(
-        uri: Uri,
+        location: BackupLocation,
         password: String? = null,
     ): Result<Unit>
 
     suspend fun applyRestore(
-        uri: Uri,
+        location: BackupLocation,
         password: String? = null,
     ): RestoreResult
 }

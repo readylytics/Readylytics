@@ -1,6 +1,5 @@
 package app.readylytics.health.domain.cache
 
-import android.os.SystemClock
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
@@ -25,7 +24,7 @@ class DailyMetricCache(
     private val clockMs: () -> Long,
 ) {
     @Inject
-    constructor() : this({ SystemClock.elapsedRealtime() })
+    constructor() : this({ System.nanoTime() / 1_000_000L })
 
     private val cache = mutableMapOf<LocalDate, CachedDailyMetrics>()
     private val mutex = Mutex()

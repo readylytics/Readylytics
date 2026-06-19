@@ -1,15 +1,15 @@
 package app.readylytics.health.data.healthconnect
 
-import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.RestingHeartRateRecord
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.domain.model.DomainHeartRateRecord
+import app.readylytics.health.domain.model.DomainRestingHeartRateRecord
 import app.readylytics.health.domain.model.RecordType
 
 object HeartRateMapper {
     fun mapToEntities(
-        records: List<HeartRateRecord>,
+        records: List<DomainHeartRateRecord>,
         sleepSessions: List<SleepSessionEntity>,
         workoutSessions: List<WorkoutRecordEntity>,
     ): List<HeartRateRecordEntity> {
@@ -63,18 +63,18 @@ object HeartRateMapper {
                     else -> RecordType.RESTING.name to null
                 }
             HeartRateRecordEntity(
-                id = "${record.metadata.id}_$sampleMs",
+                id = "${record.id}_$sampleMs",
                 timestampMs = sampleMs,
-                beatsPerMinute = sample.beatsPerMinute.toInt(),
+                beatsPerMinute = sample.beatsPerMinute,
                 recordType = recordType,
                 sessionId = sessionId,
-                deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
+                deviceName = record.deviceName,
             )
         }
     }
 
     fun mapRestingToEntities(
-        records: List<RestingHeartRateRecord>,
+        records: List<DomainRestingHeartRateRecord>,
         sleepSessions: List<SleepSessionEntity>,
     ): List<HeartRateRecordEntity> {
         val sortedSleep = sleepSessions.sortedWith(compareBy({ it.startTime }, { it.id }))
@@ -100,12 +100,12 @@ object HeartRateMapper {
                 if (sleepSession != null) RecordType.SLEEP.name to sleepSession.id else RecordType.RESTING.name to null
 
             HeartRateRecordEntity(
-                id = "RESTING_${record.metadata.id}_$timestampMs",
+                id = "RESTING_${record.id}_$timestampMs",
                 timestampMs = timestampMs,
-                beatsPerMinute = record.beatsPerMinute.toInt(),
+                beatsPerMinute = record.beatsPerMinute,
                 recordType = recordType,
                 sessionId = sessionId,
-                deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
+                deviceName = record.deviceName,
             )
         }
     }

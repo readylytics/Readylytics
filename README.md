@@ -25,7 +25,7 @@ All three scores adapt to your physiological profile (Athlete, Active, or Sedent
 - **Smart Syncing:** Configurable foreground sync on app return (Never, Always, or by time interval up to 24 hours).
 - **Detailed Charts:** Interactive Vico charts with 7-day, 30-day, 180-day, and 1-year views for trend analysis.
 - **Workouts Tracking:** View workout history with intensity badges and ACWR trends.
-- **Data Backup:** Optional Google Drive backup of your local database via AppData scope.
+- **Data Backup:** Encrypted local backup and restore for your app data.
 - **Background Workers:** Daily sync and cleanup tasks via WorkManager.
 
 ## Getting Started
@@ -53,7 +53,6 @@ All three scores adapt to your physiological profile (Athlete, Active, or Sedent
 
    ```properties
    sdk.dir=/path/to/Android/sdk
-   OAUTH_WEB_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
    ```
 
 5. Build and run:
@@ -79,7 +78,7 @@ This project follows clean architecture and MVVM patterns:
 - Dependency Injection: Hilt
 - State Management: StateFlow, SharedFlow
 - Background Work: WorkManager
-- Cloud Backup: Google Drive API (AppData scope)
+- Backup: Encrypted local backup and restore
 - Charting: Vico
 - Preferences: DataStore
 - Data Sync: Health Connect API
@@ -91,7 +90,7 @@ app/src/main/
   java/com/gregor/lauritz/healthdashboard/
     data/
       local/          # Room database entities and DAOs
-      remote/         # Health Connect and Drive API adapters
+      remote/         # Health Connect adapters
       repository/     # Data repositories
     domain/
       model/          # Domain models
@@ -113,7 +112,7 @@ app/src/main/
 - **Offline First:** All calculations run locally. No internet required after syncing from Health Connect.
 - **Calibration:** Scores are grayed out until at least 7 days of data is available for proper baseline calculation.
 - **Wellness, Not Medical:** Sleep stages and HRV are wearable estimates with measurement error. Scores are wellness indicators, not clinical diagnoses.
-- **Privacy:** All data is stored locally on your device. Optional Google Drive backups use AppData scope (not accessible to other apps).
+- **Privacy:** All data is stored locally on your device. Local backups are encrypted and controlled by you. See [Privacy Policy](docs/privacy.md).
 
 ## License
 

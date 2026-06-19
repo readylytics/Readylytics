@@ -1,10 +1,21 @@
 package app.readylytics.health.domain.backup
 
-import android.net.Uri
+@JvmInline
+value class BackupLocation(
+    val value: String,
+) {
+    init {
+        require(value.isNotBlank()) { "Backup location must not be blank" }
+    }
 
-data class BackupFileInfo(
+    override fun toString(): String = value
+}
+
+data class BackupFileRef(
     val name: String,
     val lastModified: Long,
     val sizeBytes: Long,
-    val uri: Uri,
+    val location: BackupLocation,
 )
+
+typealias BackupFileInfo = BackupFileRef

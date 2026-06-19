@@ -10,7 +10,7 @@ import app.readylytics.health.domain.scoring.components.EmergencyFlagThresholds
 import app.readylytics.health.domain.scoring.components.RestorationWeights
 import app.readylytics.health.domain.scoring.components.SleepArchitectureTargetFactory
 import app.readylytics.health.domain.scoring.components.SleepArchitectureTargets
-import app.readylytics.health.util.SecureLogger
+import app.readylytics.health.domain.util.logD
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.time.LocalDate
@@ -181,7 +181,7 @@ class ScoringConfigFactory
             update(hrvSaturationZ)
 
             // Log only hash for debugging
-            SecureLogger.debugEvent("Computing config hash (version: $CONFIG_SCHEMA_VERSION)")
+            logD("ScoringConfigFactory") { "Computing config hash (version: $CONFIG_SCHEMA_VERSION)" }
 
             val hash = digest.digest()
             return hash.take(4).foldIndexed(0) { i, acc, byte ->

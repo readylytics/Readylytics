@@ -30,11 +30,11 @@ All paths are rooted at `app/src/main/kotlin/app/readylytics/health/`.
 │                               ingestion fetch reaches windowDays+1 back to  │
 │                               capture cross-midnight sleep (recalc stays 1) │
 │   • resyncRange(...)        — full historical, chunked (30-day windows)    │
-│   • ingestWindow(...)       — read → map → device-filter → upsert (1 txn)  │
+│   • ingestWindow(...)       — read DTOs → map → filter → upsert (1 txn)    │
 │   • retryWithBackoff(...)   — bounded exponential backoff on HC/IO faults  │
 │   • syncMutex               — serializes daily sync vs. resync             │
 └──────────────┬─────────────────────────────────────────────────────────────┘
-               │ HC record → Entity (mappers; DeviceLabel; composite IDs)
+               │ Domain HC DTO → Entity (mappers; deviceName; composite IDs)
                ▼
 ┌──────────────────────────────┐
 │  RoomTransactionRunner       │   one atomic transaction per ingest window
@@ -72,8 +72,8 @@ All paths are rooted at `app/src/main/kotlin/app/readylytics/health/`.
 
 | Component                             | Path                                                | Responsibility                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | :------------------------------------ | :-------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `HealthConnectRepository` (interface) | `domain/repository/HealthConnectRepository.kt`      | Declares permission sets (critical / required / optional), `checkPermissions() → PermissionStatus` (Granted / Unavailable / Missing), and per-type read methods. Throws `HealthConnectPermissionRevokedException` when access is revoked mid-flight.                                                                                                                                                                                                     |
-| `HealthConnectRepositoryImpl`         | `data/healthconnect/HealthConnectRepositoryImpl.kt` | Concrete HC client wrapper. Generic `readAllPages<T>()` loops on HC `pageToken` until exhausted; catches `SecurityException` → `HealthConnectPermissionRevokedException`. Optional records (weight/body-fat/BP/SpO2) fall back to empty lists when their optional permission is missing. Steps use `AggregateRequest(StepsRecord.COUNT_TOTAL)` only when "All devices" is selected; selected-device paths read raw `StepsRecord`s and aggregate locally. |
+| `HealthConnectRepository` (interface) | `domain/repository/HealthConnectRepository.kt`      | Declares permission sets (critical / required / optional), `checkPermissions() → PermissionStatus` (Granted / Unavailable / Missing), and per-type read methods. Returns app-owned DTOs from `domain/model/HealthConnectRecords.kt`, not Android Health Connect SDK record types, so sync/domain code stays Android-free. Throws `HealthConnectPermissionRevokedException` when access is revoked mid-flight.                                      |
+| `HealthConnectRepositoryImpl`         | `data/healthconnect/HealthConnectRepositoryImpl.kt` | Concrete HC client wrapper. Generic `readAllPages<T>()` loops on HC `pageToken` until exhausted; catches `SecurityException` → `HealthConnectPermissionRevokedException`; converts native `androidx.health.connect.client.records.*` instances to domain DTOs before returning them. Optional records (weight/body-fat/BP/SpO2) fall back to empty lists when their optional permission is missing. Steps use `AggregateRequest(StepsRecord.COUNT_TOTAL)` only when "All devices" is selected; selected-device paths read raw `StepsRecord`s, convert to DTOs, and aggregate locally. |
 
 **Permission model** (declared in the interface):
 
@@ -124,21 +124,25 @@ the result a pure function of the data, independent of chunking.
 > already idempotent and bounded; switching to differential Changes-Token reads is a possible
 > future optimization but would touch the ingestion pipeline and is out of scope here.
 
-### 1.3 Mappers — HC record → Room entity
+### 1.3 Mappers — domain HC DTO → Room entity
 
-All mappers attach a stable device label via `DeviceLabel.from(device, dataOrigin)` and use
-deterministic composite IDs (`${hcRecordId}_${timestampMs}`) so re-ingestion is idempotent.
+All mappers consume the domain DTOs returned by `HealthConnectRepository`; those DTOs already
+carry the stable `deviceName` derived from `DeviceLabel.from(device, dataOrigin)` in the Health
+Connect adapter. Mappers copy that label and use deterministic composite IDs
+(`${hcRecordId}_${timestampMs}`) so re-ingestion is idempotent. Native Health Connect SDK records
+are intentionally confined to `data/healthconnect/HealthConnectRepositoryImpl.kt`.
 
-| Mapper                       | Path                                        | HC → Entity                                                                                                                                        |
+| Mapper                       | Path                                        | DTO → Entity                                                                                                                                       |
 | :--------------------------- | :------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SleepDataMapper`            | `data/healthconnect/SleepDataMapper.kt`     | `SleepSessionRecord` → `SleepSessionEntity` + `List<SleepStageEntity>` (sums deep/REM/light/awake, computes efficiency).                           |
-| `HeartRateMapper`            | `data/healthconnect/HeartRateMapper.kt`     | `List<HeartRateRecord>` → `List<HeartRateRecordEntity>`; assigns `recordType` (SLEEP / EXERCISE / RESTING) and `sessionId` by time-range matching. |
+| `SleepDataMapper`            | `data/healthconnect/SleepDataMapper.kt`     | `DomainSleepSessionRecord` → `SleepSessionEntity` + `List<SleepStageEntity>` (sums deep/REM/light/awake, computes efficiency).                     |
+| `HeartRateMapper`            | `data/healthconnect/HeartRateMapper.kt`     | `List<DomainHeartRateRecord>` → `List<HeartRateRecordEntity>`; assigns `recordType` (SLEEP / EXERCISE / RESTING) and `sessionId` by time matching. |
 | `HrvMapper`                  | `data/healthconnect/HrvMapper.kt`           | RMSSD records → `HrvRecordEntity`; links to sleep session or marks RESTING.                                                                        |
-| `WorkoutMapper`              | `data/healthconnect/WorkoutMapper.kt`       | `ExerciseSessionRecord` (+ HR samples) → `WorkoutRecordEntity`; derives zone minutes, avg HR, TRIMP.                                               |
-| `WeightDataMapper`           | `data/mapper/WeightDataMapper.kt`           | `WeightRecord` → `WeightRecordEntity` (kg).                                                                                                        |
-| `BodyFatDataMapper`          | `data/mapper/BodyFatDataMapper.kt`          | `BodyFatRecord` → `BodyFatRecordEntity` (%).                                                                                                       |
-| `BloodPressureDataMapper`    | `data/mapper/BloodPressureDataMapper.kt`    | `BloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg).                                                                     |
-| `OxygenSaturationDataMapper` | `data/mapper/OxygenSaturationDataMapper.kt` | `OxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                                     |
+| `WorkoutMapper`              | `data/healthconnect/WorkoutMapper.kt`       | `DomainExerciseSessionRecord` (+ HR samples) → `WorkoutRecordEntity`; derives zone minutes, avg HR, TRIMP.                                         |
+| `StepsMapper`                | `data/healthconnect/StepsMapper.kt`         | `DomainStepsRecord` or aggregate count → `StepRecordEntity`.                                                                                       |
+| `WeightDataMapper`           | `data/mapper/WeightDataMapper.kt`           | `DomainWeightRecord` → `WeightRecordEntity` (kg).                                                                                                  |
+| `BodyFatDataMapper`          | `data/mapper/BodyFatDataMapper.kt`          | `DomainBodyFatRecord` → `BodyFatRecordEntity` (%).                                                                                                 |
+| `BloodPressureDataMapper`    | `data/mapper/BloodPressureDataMapper.kt`    | `DomainBloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg).                                                               |
+| `OxygenSaturationDataMapper` | `data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 
 ### 1.4 Room storage — `HealthDatabase` (`@Database(version = 1)`)
 
@@ -368,6 +372,7 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | Source File Path                                                           | Layer / Responsibility                              | Associated Metric / Formula                                                              |
 | :------------------------------------------------------------------------- | :-------------------------------------------------- | :--------------------------------------------------------------------------------------- |
 | `domain/repository/HealthConnectRepository.kt`                             | Ingestion — HC contract, permissions                | —                                                                                        |
+| `domain/model/HealthConnectRecords.kt`                                      | Ingestion — Android-free HC DTO boundary            | app-owned sleep / HR / HRV / exercise / steps / optional metric records                  |
 | `data/healthconnect/HealthConnectRepositoryImpl.kt`                        | Ingestion — paginated HC reads                      | `readAllPages<T>()` (pageToken)                                                          |
 | `domain/sync/HealthSyncUseCase.kt`                                         | Ingestion — sync engine                             | `sync` / `resyncRange` / `ingestWindow` / `retryWithBackoff`                             |
 | `domain/sync/ForegroundSyncController.kt`                                  | Ingestion — foreground trigger + progress           | daily sync (1 day); recalc progress publish                                              |
@@ -384,6 +389,7 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | `data/healthconnect/HeartRateMapper.kt`                                    | Ingestion — mapper                                  | HR samples → SLEEP/EXERCISE/RESTING                                                      |
 | `data/healthconnect/HrvMapper.kt`                                          | Ingestion — mapper                                  | RMSSD samples                                                                            |
 | `data/healthconnect/WorkoutMapper.kt`                                      | Ingestion — mapper                                  | zone minutes + workout TRIMP                                                             |
+| `data/healthconnect/StepsMapper.kt`                                        | Ingestion — mapper                                  | raw selected-device steps / aggregate all-device steps                                   |
 | `data/mapper/{Weight,BodyFat,BloodPressure,OxygenSaturation}DataMapper.kt` | Ingestion — mappers                                 | weight / body fat / BP / SpO2                                                            |
 | `data/local/HealthDatabase.kt`                                             | Storage — Room DB (v1)                              | 11 entities, MVP baseline; future migrations remain wired through `DatabaseMigrations`   |
 | `data/local/entity/DailySummaryEntity.kt`                                  | Storage — computed-day snapshot                     | scores + frozen baselines                                                                |

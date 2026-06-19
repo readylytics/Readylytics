@@ -1,9 +1,6 @@
 package app.readylytics.health.data.mapper
 
-import androidx.health.connect.client.records.OxygenSaturationRecord
-import androidx.health.connect.client.units.Percentage
-import io.mockk.every
-import io.mockk.mockk
+import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant
@@ -13,13 +10,12 @@ class OxygenSaturationDataMapperTest {
     fun `toEntity maps Health Connect record to Room entity correctly`() {
         val testTime = Instant.parse("2026-06-01T04:00:00Z")
         val record =
-            mockk<OxygenSaturationRecord>(relaxed = true) {
-                every { metadata.id } returns "spo2_test_id"
-                every { time } returns testTime
-                every { percentage } returns Percentage(value = 98.5)
-                every { metadata.device } returns null
-                every { metadata.dataOrigin.packageName } returns "com.google.android.apps.fitness"
-            }
+            DomainOxygenSaturationRecord(
+                id = "spo2_test_id",
+                time = testTime,
+                percentage = 98.5f,
+                deviceName = "Google Fit",
+            )
 
         val entity = OxygenSaturationDataMapper.toEntity(record)
 
@@ -35,22 +31,20 @@ class OxygenSaturationDataMapperTest {
         val time2 = Instant.parse("2026-06-01T05:00:00Z")
 
         val record1 =
-            mockk<OxygenSaturationRecord>(relaxed = true) {
-                every { metadata.id } returns "id_1"
-                every { time } returns time1
-                every { percentage } returns Percentage(value = 99.0)
-                every { metadata.device } returns null
-                every { metadata.dataOrigin.packageName } returns "com.garmin.android.apps.connect"
-            }
+            DomainOxygenSaturationRecord(
+                id = "id_1",
+                time = time1,
+                percentage = 99.0f,
+                deviceName = "Garmin Connect",
+            )
 
         val record2 =
-            mockk<OxygenSaturationRecord>(relaxed = true) {
-                every { metadata.id } returns "id_2"
-                every { time } returns time2
-                every { percentage } returns Percentage(value = 94.0)
-                every { metadata.device } returns null
-                every { metadata.dataOrigin.packageName } returns "com.ouraring.ouraring"
-            }
+            DomainOxygenSaturationRecord(
+                id = "id_2",
+                time = time2,
+                percentage = 94.0f,
+                deviceName = "Oura",
+            )
 
         val entities = OxygenSaturationDataMapper.toEntities(listOf(record1, record2))
 

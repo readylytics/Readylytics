@@ -4,6 +4,7 @@ import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.preferences.UserPreferences
 import io.mockk.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
@@ -13,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.test.assertFailsWith
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ForegroundSyncControllerTest {
@@ -97,5 +99,16 @@ class ForegroundSyncControllerTest {
             controller.evaluateAndSync()
 
             coVerify(exactly = 1) { syncUseCase.sync(windowDays = 4, onProgress = any()) }
+        }
+
+    @Test
+    fun `triggerDailySync propagates coroutine cancellation`() =
+        runTest {
+            coEvery { syncUseCase.sync(windowDays = 1, onProgress = any()) } throws
+                CancellationException("cancelled")
+
+            assertFailsWith<CancellationException> {
+                controller.triggerDailySync()
+            }
         }
 }

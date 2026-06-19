@@ -124,7 +124,7 @@ class SqlCipherKeyManager
 
         /**
          * Exports a decrypted copy of the database to a plaintext file.
-         * Used for Google Drive backups so data remains accessible after Keystore key loss.
+         * Used only as an intermediate for encrypted local backups.
          */
         fun exportPlaintext(
             dbFile: File,

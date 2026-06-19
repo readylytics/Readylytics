@@ -132,8 +132,6 @@ class SettingsRepository
 
         suspend fun updateRetentionDays(days: Int) = sleep.updateRetentionDays(days)
 
-        suspend fun updateCollapseCloudData(collapsed: Boolean) = ui.updateCollapseCloudData(collapsed)
-
         suspend fun updateCollapseHealthConnect(collapsed: Boolean) = ui.updateCollapseHealthConnect(collapsed)
 
         suspend fun updateCollapseBaselinesThresholds(collapsed: Boolean) =
@@ -172,8 +170,6 @@ class SettingsRepository
 
         suspend fun updateBackgroundSyncIntervalMinutes(minutes: Int) =
             sync.updateBackgroundSyncIntervalMinutes(minutes)
-
-        suspend fun updateDriveAccountEmail(email: String?) = sync.updateDriveAccountEmail(email)
 
         suspend fun updateCircadianThresholdOverride(encryptedMinutes: String?) =
             sync.updateCircadianThresholdOverride(encryptedMinutes)

@@ -1,17 +1,16 @@
 package app.readylytics.health.data.mapper
 
-import androidx.health.connect.client.records.BodyFatRecord
-import app.readylytics.health.data.healthconnect.DeviceLabel
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
+import app.readylytics.health.domain.model.DomainBodyFatRecord
 
 object BodyFatDataMapper {
-    fun toEntity(record: BodyFatRecord): BodyFatRecordEntity =
+    fun toEntity(record: DomainBodyFatRecord): BodyFatRecordEntity =
         BodyFatRecordEntity(
-            id = "${record.metadata.id}_${record.time.toEpochMilli()}",
+            id = "${record.id}_${record.time.toEpochMilli()}",
             timestampMs = record.time.toEpochMilli(),
-            bodyFatPercent = record.percentage.value.toFloat(),
-            deviceName = DeviceLabel.from(record.metadata.device, record.metadata.dataOrigin),
+            bodyFatPercent = record.percentage,
+            deviceName = record.deviceName,
         )
 
-    fun toEntities(records: List<BodyFatRecord>): List<BodyFatRecordEntity> = records.map { toEntity(it) }
+    fun toEntities(records: List<DomainBodyFatRecord>): List<BodyFatRecordEntity> = records.map { toEntity(it) }
 }
