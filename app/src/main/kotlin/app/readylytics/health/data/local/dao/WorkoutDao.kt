@@ -1,10 +1,10 @@
 package app.readylytics.health.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.MapColumn
 import androidx.room.Query
 import androidx.room.Upsert
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.domain.model.TimestampedTrimp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -47,32 +47,14 @@ interface WorkoutDao {
     ): Float?
 
     @Query(
-        "SELECT SUM(trimp) FROM workout_records " +
+        "SELECT startTime AS timestampMs, trimp AS trimp FROM workout_records " +
             "WHERE startTime >= :fromMs AND startTime < :toMs " +
-            "GROUP BY (startTime + :tzOffsetMs) / 86400000 " +
-            "ORDER BY (startTime + :tzOffsetMs) / 86400000 ASC",
+            "AND trimp IS NOT NULL ORDER BY startTime ASC, id ASC",
     )
-    suspend fun getDailyTrimp(
+    suspend fun getTrimpPoints(
         fromMs: Long,
         toMs: Long,
-        tzOffsetMs: Long,
-    ): List<Float>
-
-    @Query(
-        "SELECT (startTime + :tzOffsetMs) / 86400000 AS epochDay, SUM(trimp) AS dailyTrimp " +
-            "FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs " +
-            "GROUP BY epochDay ORDER BY epochDay ASC",
-    )
-    suspend fun getDailyTrmpByEpochDay(
-        fromMs: Long,
-        toMs: Long,
-        tzOffsetMs: Long,
-    ): Map<
-        @MapColumn(columnName = "epochDay")
-        Long,
-        @MapColumn(columnName = "dailyTrimp")
-        Float,
-    >
+    ): List<TimestampedTrimp>
 
     @Query("SELECT * FROM workout_records WHERE startTime >= :fromMs AND startTime < :toMs ORDER BY startTime ASC")
     suspend fun getWorkoutsInRange(

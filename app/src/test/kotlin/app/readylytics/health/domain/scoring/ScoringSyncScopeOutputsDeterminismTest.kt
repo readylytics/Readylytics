@@ -267,7 +267,8 @@ class ScoringSyncScopeOutputsDeterminismTest {
         coEvery { dailySummaryDao.getSince(any()) } returns emptyList()
 
         coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
-        coEvery { workoutDao.getDailyTrmpByEpochDay(any(), any(), any()) } returns emptyMap()
+        coEvery { workoutDao.getTrimpPoints(any(), any()) } returns emptyList()
+        coEvery { dailySummaryDao.getEverydayTrimpPoints(any(), any()) } returns emptyList()
 
         coEvery { weightRecordDao.getLatestUpTo(any()) } returns null
         coEvery { bodyFatRecordDao.getLatestUpTo(any()) } returns null

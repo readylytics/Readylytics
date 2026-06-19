@@ -27,6 +27,7 @@ import app.readylytics.health.domain.scoring.RasCalculator
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConfigFactory
 import app.readylytics.health.domain.scoring.ScoringConstants
+import app.readylytics.health.domain.scoring.TrimpDateBucketer
 import app.readylytics.health.domain.scoring.components.Phase
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.util.HeartRateFormulas
@@ -340,10 +341,12 @@ class ScoringRepositoryImpl
                     return@withContext summary
                 }
 
-                val tzOffsetMs = zoneId.rules.getOffset(dayMidnight).totalSeconds * 1000L
                 val ctlFetchFrom = dayMidnight.minus(ScoringConstants.CHRONIC_DAYS * 2, ChronoUnit.DAYS).toEpochMilli()
-                val epochDayToTrimp = workoutDao.getDailyTrmpByEpochDay(ctlFetchFrom, nextDayMidnightMs, tzOffsetMs)
-                val dailyTrimpByDate = epochDayToTrimp.mapKeys { (epochDay, _) -> LocalDate.ofEpochDay(epochDay) }
+                val dailyTrimpByDate =
+                    TrimpDateBucketer.bucket(
+                        workoutDao.getTrimpPoints(ctlFetchFrom, nextDayMidnightMs),
+                        zoneId,
+                    )
 
                 val ctl = scoringCalculator.computeCtlEmaWithDecay(dailyTrimpByDate, targetDate)
                 val atl = scoringCalculator.computeAtlEmaWithDecay(dailyTrimpByDate, targetDate)
@@ -354,12 +357,12 @@ class ScoringRepositoryImpl
                 // Everyday-HR ATL/CTL: build the series from the persisted everyday TRIMP column, then
                 // inject the current day's freshly computed value (not yet persisted). A defensive copy
                 // (toMutableMap) ensures the workout-only series above is never mutated/contaminated.
-                val epochDayToTrimpEveryday =
-                    dailySummaryDao.getEverydayTrimpByEpochDay(ctlFetchFrom, nextDayMidnightMs, tzOffsetMs)
                 val everydayTrimpByDate =
-                    epochDayToTrimpEveryday
-                        .mapKeys { (epochDay, _) -> LocalDate.ofEpochDay(epochDay) }
-                        .toMutableMap()
+                    TrimpDateBucketer
+                        .bucket(
+                            dailySummaryDao.getEverydayTrimpPoints(ctlFetchFrom, nextDayMidnightMs),
+                            zoneId,
+                        ).toMutableMap()
                         .apply { put(targetDate, trimpEverydayHr) }
 
                 val ctlEverydayHr = scoringCalculator.computeCtlEmaWithDecay(everydayTrimpByDate, targetDate)

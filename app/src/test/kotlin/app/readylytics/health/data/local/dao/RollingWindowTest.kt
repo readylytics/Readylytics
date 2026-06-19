@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
+import app.readylytics.health.domain.scoring.TrimpDateBucketer
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -118,10 +119,9 @@ class RollingWindowTest {
         }
 
     @Test
-    fun `getDailyTrimp aggregates by day correctly`() =
+    fun `getTrimpInRange feeds local-date aggregation`() =
         runTest {
             val zoneId = ZoneId.systemDefault()
-            val tzOffsetMs = zoneId.rules.getOffset(java.time.Instant.now()).totalSeconds * 1000L
             val today = LocalDate.now(zoneId)
             val todayMs = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val yesterdayMs =
@@ -178,11 +178,14 @@ class RollingWindowTest {
                 ),
             )
 
-            val result = workoutDao.getDailyTrimp(yesterdayMs, todayMs + 86400000, tzOffsetMs)
+            val result =
+                TrimpDateBucketer.bucket(
+                    workoutDao.getTrimpPoints(yesterdayMs, todayMs + 86400000),
+                    zoneId,
+                )
 
-            // Should have 2 entries: yesterday (20) and today (25)
             assertEquals(2, result.size)
-            assertEquals(20f, result[0])
-            assertEquals(25f, result[1])
+            assertEquals(20f, result[today.minusDays(1)])
+            assertEquals(25f, result[today])
         }
 }

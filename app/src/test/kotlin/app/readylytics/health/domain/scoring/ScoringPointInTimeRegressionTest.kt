@@ -8,6 +8,7 @@ import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
+import app.readylytics.health.domain.model.TimestampedTrimp
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
@@ -16,7 +17,9 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.TimeZone
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -200,9 +203,9 @@ class ScoringPointInTimeRegressionTest {
             every { scoringConfigFactory.build(any(), any(), any(), any()) } returns mockConfig
 
             // Workout-only series for ATL/CTL; everyday series stays empty (no everyday HR present).
-            coEvery { workoutDao.getDailyTrmpByEpochDay(any(), any(), any()) } returns
-                mapOf(today.toEpochDay() to 20f)
-            coEvery { dailySummaryDao.getEverydayTrimpByEpochDay(any(), any(), any()) } returns emptyMap()
+            coEvery { workoutDao.getTrimpPoints(any(), any()) } returns
+                listOf(TimestampedTrimp(workout.startTime, 20f))
+            coEvery { dailySummaryDao.getEverydayTrimpPoints(any(), any()) } returns emptyList()
 
             val result = repo.computeDailySummary(today)
 
@@ -268,9 +271,18 @@ class ScoringPointInTimeRegressionTest {
 
             // Workout-only history has no entry for today; everyday history likewise empty. The everyday
             // path injects today's everyday TRIMP — the workout-only map must remain without it.
-            coEvery { workoutDao.getDailyTrmpByEpochDay(any(), any(), any()) } returns
-                mapOf(today.minusDays(1).toEpochDay() to 30f)
-            coEvery { dailySummaryDao.getEverydayTrimpByEpochDay(any(), any(), any()) } returns emptyMap()
+            coEvery { workoutDao.getTrimpPoints(any(), any()) } returns
+                listOf(
+                    TimestampedTrimp(
+                        today
+                            .minusDays(1)
+                            .atStartOfDay(zoneId)
+                            .toInstant()
+                            .toEpochMilli(),
+                        30f,
+                    ),
+                )
+            coEvery { dailySummaryDao.getEverydayTrimpPoints(any(), any()) } returns emptyList()
 
             repo.computeDailySummary(today)
 
@@ -280,5 +292,72 @@ class ScoringPointInTimeRegressionTest {
             val everydayMap = atlMaps[1]
             assertNull(workoutOnlyMap[today], "Workout-only series must NOT contain injected everyday value")
             assertEquals(0f, everydayMap[today], "Everyday series injects today's everyday TRIMP (0 with no HR)")
+        }
+
+    @Test
+    fun historicalAtlCtlIsDstSafeAndStableAcrossRepeatedCompute() =
+        runTest {
+            val originalTimeZone = TimeZone.getDefault()
+            val zoneId = ZoneId.of("Europe/Berlin")
+            TimeZone.setDefault(TimeZone.getTimeZone(zoneId))
+            try {
+                val targetDate = LocalDate.of(2025, 11, 3)
+                val targetMidnightMs = targetDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                val historicalDate = LocalDate.of(2025, 7, 1)
+                val historicalMidnightMs = historicalDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+                coEvery { dailySummaryDao.getByDate(targetMidnightMs) } returns
+                    DailySummaryEntity(
+                        dateMidnightMs = targetMidnightMs,
+                        baselineCalculatedAtDate = targetDate,
+                        hrMax = 190f,
+                        rasScalingFactor = 0.2f,
+                        rhrBpm = 60f,
+                        baselineObservationCount = 10,
+                    )
+                coEvery { sleepSessionDao.countSince(any()) } returns 10
+                coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
+                coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
+                coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+                coEvery { workoutDao.getTrimpPoints(any(), any()) } returns
+                    listOf(TimestampedTrimp(historicalMidnightMs, 30f))
+                coEvery { dailySummaryDao.getEverydayTrimpPoints(any(), any()) } returns
+                    listOf(TimestampedTrimp(historicalMidnightMs, 12f))
+
+                val prefs =
+                    UserPreferences(
+                        physiologyProfile = PhysiologyProfile.ATHLETE,
+                        maxHeartRate = 195,
+                        rasScalingFactor = 0.25f,
+                        rhrBaselineOverride = 55f,
+                        gender = Gender.MALE,
+                    )
+                coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
+                val mockConfig = mockk<ScoringConfig>(relaxed = true)
+                every { mockConfig.rasScalingFactor } returns 0.25f
+                every { scoringConfigFactory.build(any(), any(), any(), any()) } returns mockConfig
+
+                val atlMaps = mutableListOf<Map<LocalDate, Float>>()
+                val ctlMaps = mutableListOf<Map<LocalDate, Float>>()
+                every { scoringCalculator.computeAtlEmaWithDecay(capture(atlMaps), any()) } returns 5f
+                every { scoringCalculator.computeCtlEmaWithDecay(capture(ctlMaps), any()) } returns 5f
+                every { scoringCalculator.computeStrainRatio(any(), any()) } returns 1f
+                every { scoringCalculator.computeLoadScore(any()) } returns 50f
+
+                val first = repo.computeDailySummary(targetDate)
+                val second = repo.computeDailySummary(targetDate)
+
+                assertEquals(30f, atlMaps[0][historicalDate])
+                assertEquals(12f, atlMaps[1][historicalDate])
+                assertFalse(historicalDate.minusDays(1) in atlMaps[0])
+                assertFalse(historicalDate.minusDays(1) in atlMaps[1])
+                assertEquals(atlMaps.take(2), atlMaps.drop(2))
+                assertEquals(ctlMaps.take(2), ctlMaps.drop(2))
+                assertEquals(first.atlWorkoutOnly, second.atlWorkoutOnly)
+                assertEquals(first.ctlWorkoutOnly, second.ctlWorkoutOnly)
+                assertEquals(first.readinessWorkoutOnly, second.readinessWorkoutOnly)
+            } finally {
+                TimeZone.setDefault(originalTimeZone)
+            }
         }
 }
