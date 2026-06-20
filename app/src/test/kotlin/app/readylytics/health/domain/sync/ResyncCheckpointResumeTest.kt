@@ -9,7 +9,6 @@ import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
-import io.mockk.coJustRun
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every

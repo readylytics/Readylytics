@@ -16,7 +16,6 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.DailySummaryMapper
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.RecordType
-import app.readylytics.health.domain.model.RecoveryFlag
 import app.readylytics.health.domain.model.getOrNull
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.scoring.BaselineComputer

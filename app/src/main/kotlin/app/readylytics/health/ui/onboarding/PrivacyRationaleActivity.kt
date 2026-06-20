@@ -22,7 +22,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.R
-import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.ui.theme.FitDashboardTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -38,7 +37,7 @@ class PrivacyRationaleActivity : ComponentActivity() {
             FitDashboardTheme(appTheme = appTheme) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     PrivacyRationaleContent(
-                        onBackClick = { finish() }
+                        onBackClick = { finish() },
                     )
                 }
             }

@@ -58,8 +58,7 @@ class CleanArchTest {
                 .filter {
                     it.hasPackage("app.readylytics.health.domain..") &&
                         (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\"))
-                }
-                .flatMap { file ->
+                }.flatMap { file ->
                     file.imports
                         .filter { import ->
                             import.name.startsWith("app.readylytics.health.data.")

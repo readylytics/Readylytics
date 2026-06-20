@@ -1,8 +1,6 @@
 package app.readylytics.health.domain.dashboard
 
 import app.readylytics.health.R
-import app.readylytics.health.domain.preferences.UnitSystem
-import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
@@ -21,6 +19,8 @@ import app.readylytics.health.domain.model.rasStatus
 import app.readylytics.health.domain.model.restingHrStatus
 import app.readylytics.health.domain.model.rhrStatus
 import app.readylytics.health.domain.model.sleepDurationStatus
+import app.readylytics.health.domain.preferences.UnitSystem
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.domain.util.roundToPercentInt
 import app.readylytics.health.ui.dashboard.CardData

@@ -1,10 +1,10 @@
 package app.readylytics.health.ui.scaffold
 
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.DeviceConfigurationOverride
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.ForcedSize
-import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -36,17 +36,18 @@ class MainScaffoldTest {
     fun compactWidth_rendersBottomNavigation() {
         composeRule.setContent {
             DeviceConfigurationOverride(
-                DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp))
+                DeviceConfigurationOverride.ForcedSize(DpSize(400.dp, 800.dp)),
             ) {
                 MainScaffold()
             }
         }
 
         // Verify Dashboard item exists and is displayed
-        val dashboardNode = composeRule
-            .onAllNodesWithContentDescription("Dashboard", substring = true)
-            .onFirst()
-        
+        val dashboardNode =
+            composeRule
+                .onAllNodesWithContentDescription("Dashboard", substring = true)
+                .onFirst()
+
         dashboardNode.assertIsDisplayed()
 
         // In compact width (bottom navigation), the item should be at the bottom of the screen.
@@ -62,16 +63,17 @@ class MainScaffoldTest {
     fun mediumWidth_rendersNavigationRail() {
         composeRule.setContent {
             DeviceConfigurationOverride(
-                DeviceConfigurationOverride.ForcedSize(DpSize(700.dp, 800.dp))
+                DeviceConfigurationOverride.ForcedSize(DpSize(700.dp, 800.dp)),
             ) {
                 MainScaffold()
             }
         }
 
-        val dashboardNode = composeRule
-            .onAllNodesWithContentDescription("Dashboard", substring = true)
-            .onFirst()
-        
+        val dashboardNode =
+            composeRule
+                .onAllNodesWithContentDescription("Dashboard", substring = true)
+                .onFirst()
+
         dashboardNode.assertIsDisplayed()
 
         // In medium width (navigation rail), the item should be on the left/top of the screen.
@@ -87,16 +89,17 @@ class MainScaffoldTest {
     fun expandedWidth_rendersNavigationRailOrDrawer() {
         composeRule.setContent {
             DeviceConfigurationOverride(
-                DeviceConfigurationOverride.ForcedSize(DpSize(1000.dp, 800.dp))
+                DeviceConfigurationOverride.ForcedSize(DpSize(1000.dp, 800.dp)),
             ) {
                 MainScaffold()
             }
         }
 
-        val dashboardNode = composeRule
-            .onAllNodesWithContentDescription("Dashboard", substring = true)
-            .onFirst()
-        
+        val dashboardNode =
+            composeRule
+                .onAllNodesWithContentDescription("Dashboard", substring = true)
+                .onFirst()
+
         dashboardNode.assertIsDisplayed()
 
         // In expanded width, it renders rail/drawer, so the item should be on the left/top of the screen.

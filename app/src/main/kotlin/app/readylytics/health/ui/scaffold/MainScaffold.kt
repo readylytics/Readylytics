@@ -15,12 +15,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -85,11 +85,12 @@ fun MainScaffold(
         onRefresh = { syncViewModel.triggerManualSync() },
     ) {
         NavigationSuiteScaffold(
-            layoutType = if (showBottomBar) {
-                NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(currentWindowAdaptiveInfo())
-            } else {
-                NavigationSuiteType.None
-            },
+            layoutType =
+                if (showBottomBar) {
+                    NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(currentWindowAdaptiveInfo())
+                } else {
+                    NavigationSuiteType.None
+                },
             navigationSuiteItems = {
                 TabDestination.all.forEach { tab ->
                     val selected =

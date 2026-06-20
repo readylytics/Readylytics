@@ -133,7 +133,6 @@ class WorkerScheduler
             val request =
                 PeriodicWorkRequestBuilder<DataCleanupWorker>(1, TimeUnit.DAYS)
                     .setConstraints(constraints)
-                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
                     .build()
 
             workManager.get().enqueueUniquePeriodicWork(

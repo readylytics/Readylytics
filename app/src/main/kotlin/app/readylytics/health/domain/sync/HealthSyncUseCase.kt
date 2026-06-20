@@ -159,7 +159,10 @@ class HealthSyncUseCase
                                     ),
                                     stepsDevice,
                                 ) { it.deviceName }
-                            stepsMap.putAll(app.readylytics.health.data.healthconnect.StepsMapper.sumByDay(stepEntries, zoneId))
+                            stepsMap.putAll(
+                                app.readylytics.health.data.healthconnect.StepsMapper
+                                    .sumByDay(stepEntries, zoneId),
+                            )
                         }
 
                         // Single determinate progress track across both the migration and window loops.
@@ -486,10 +489,14 @@ class HealthSyncUseCase
                     }
                 val stepEntries =
                     DeviceSourceFilter.filterToDevice(
-                        app.readylytics.health.data.healthconnect.StepsMapper.toStepEntries(stepsRecords),
+                        app.readylytics.health.data.healthconnect.StepsMapper
+                            .toStepEntries(stepsRecords),
                         stepsDevice,
                     ) { it.deviceName }
-                stepsMap.putAll(app.readylytics.health.data.healthconnect.StepsMapper.sumByDay(stepEntries, zoneId))
+                stepsMap.putAll(
+                    app.readylytics.health.data.healthconnect.StepsMapper
+                        .sumByDay(stepEntries, zoneId),
+                )
                 chunkStart = chunkEndExclusive
                 yield()
             }
@@ -531,7 +538,13 @@ class HealthSyncUseCase
             prefs: UserPreferences,
         ) {
             val sleepSessions = hcRepo.readSleepSessions(windowStart, windowEnd)
-            val sleepEntities = sleepSessions.map { app.readylytics.health.data.healthconnect.SleepDataMapper.mapSleepSession(it) }
+            val sleepEntities =
+                sleepSessions.map {
+                    app.readylytics.health.data.healthconnect.SleepDataMapper
+                        .mapSleepSession(
+                            it,
+                        )
+                }
             val exerciseRecords = hcRepo.readExerciseSessions(windowStart, windowEnd)
             val hrRecords = hcRepo.readHeartRateSamples(windowStart, windowEnd)
             val hrvRecords = hcRepo.readHrvSamples(windowStart, windowEnd)
@@ -584,7 +597,11 @@ class HealthSyncUseCase
                         thresholds,
                     )
                 }
-            val hrvEntities = app.readylytics.health.data.healthconnect.HrvMapper.mapToEntities(hrvRecords, sleepEntities)
+            val hrvEntities =
+                app.readylytics.health.data.healthconnect.HrvMapper.mapToEntities(
+                    hrvRecords,
+                    sleepEntities,
+                )
 
             val deviceByType = prefs.deviceByDataType
 
@@ -611,14 +628,18 @@ class HealthSyncUseCase
                     deviceFor(HealthDataType.HRV),
                 ) { it.deviceName }
 
-            val weightEntities = app.readylytics.health.data.mapper.WeightDataMapper.toEntities(weightRecords)
+            val weightEntities =
+                app.readylytics.health.data.mapper.WeightDataMapper
+                    .toEntities(weightRecords)
             val filteredWeight =
                 DeviceSourceFilter.filterToDevice(
                     weightEntities,
                     deviceFor(HealthDataType.WEIGHT),
                 ) { it.deviceName }
 
-            val bodyFatEntities = app.readylytics.health.data.mapper.BodyFatDataMapper.toEntities(bodyFatRecords)
+            val bodyFatEntities =
+                app.readylytics.health.data.mapper.BodyFatDataMapper
+                    .toEntities(bodyFatRecords)
             val filteredBodyFat =
                 DeviceSourceFilter.filterToDevice(
                     bodyFatEntities,
@@ -626,7 +647,8 @@ class HealthSyncUseCase
                 ) { it.deviceName }
 
             val bloodPressureEntities =
-                app.readylytics.health.data.mapper.BloodPressureDataMapper.toEntities(bloodPressureRecords)
+                app.readylytics.health.data.mapper.BloodPressureDataMapper
+                    .toEntities(bloodPressureRecords)
             val filteredBloodPressure =
                 DeviceSourceFilter.filterToDevice(
                     bloodPressureEntities,
@@ -634,7 +656,8 @@ class HealthSyncUseCase
                 ) { it.deviceName }
 
             val spo2Entities =
-                app.readylytics.health.data.mapper.OxygenSaturationDataMapper.toEntities(spo2Records)
+                app.readylytics.health.data.mapper.OxygenSaturationDataMapper
+                    .toEntities(spo2Records)
             val filteredSpo2 =
                 DeviceSourceFilter.filterToDevice(
                     spo2Entities,
@@ -650,7 +673,8 @@ class HealthSyncUseCase
 
             val allStages =
                 sleepSessions.flatMap {
-                    app.readylytics.health.data.healthconnect.SleepDataMapper.mapSleepSessionStages(it)
+                    app.readylytics.health.data.healthconnect.SleepDataMapper
+                        .mapSleepSessionStages(it)
                 }
 
             healthIngestionStore.persist(

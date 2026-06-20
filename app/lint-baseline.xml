@@ -1,0 +1,1122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.2.1" type="baseline" client="gradle" dependencies="false" name="AGP (9.2.1)" variant="all" version="9.2.1">
+
+    <issue
+        id="ApplySharedPref"
+        message="Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background"
+        errorLine1="                .commit()"
+        errorLine2="                 ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/data/security/SqlCipherKeyManager.kt"
+            line="175"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="ApplySharedPref"
+        message="Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background"
+        errorLine1="                .commit()"
+        errorLine2="                 ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/data/security/SqlCipherKeyManager.kt"
+            line="244"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="InlinedApi"
+        message="Field requires API level 29 (current min is 26): `android.content.pm.ServiceInfo#FOREGROUND_SERVICE_TYPE_DATA_SYNC`"
+        errorLine1="                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/workers/HealthResyncWorker.kt"
+            line="88"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="RedundantLabel"
+        message="Redundant label can be removed"
+        errorLine1="            android:label=&quot;@string/app_name&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="56"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.compose.material3.adaptive:adaptive than 1.0.0 is available: 1.2.0"
+        errorLine1="adaptive = &quot;1.0.0&quot;"
+        errorLine2="           ~~~~~~~">
+        <location
+            file="$HOME/git/MyHealthStatus/gradle/libs.versions.toml"
+            line="43"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.compose.material3:material3-adaptive-navigation-suite than 1.0.0 is available: 1.4.0"
+        errorLine1="adaptive = &quot;1.0.0&quot;"
+        errorLine2="           ~~~~~~~">
+        <location
+            file="$HOME/git/MyHealthStatus/gradle/libs.versions.toml"
+            line="43"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.lemonappdev:konsist than 0.13.0 is available: 0.17.3"
+        errorLine1="    testImplementation(&quot;com.lemonappdev:konsist:0.13.0&quot;)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="373"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlin.plugin.compose than 2.3.21 is available: 2.4.0"
+        errorLine1="kotlin = &quot;2.3.21&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="$HOME/git/MyHealthStatus/gradle/libs.versions.toml"
+            line="3"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlin.plugin.serialization than 2.3.21 is available: 2.4.0"
+        errorLine1="kotlin = &quot;2.3.21&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="$HOME/git/MyHealthStatus/gradle/libs.versions.toml"
+            line="3"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.patrykandpatrick.vico:compose than 3.2.2 is available: 3.2.3"
+        errorLine1="vico = &quot;3.2.2&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="$HOME/git/MyHealthStatus/gradle/libs.versions.toml"
+            line="23"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.patrykandpatrick.vico:compose-m3 than 3.2.2 is available: 3.2.3"
+        errorLine1="vico = &quot;3.2.2&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="$HOME/git/MyHealthStatus/gradle/libs.versions.toml"
+            line="23"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="LocalContextResourcesRead"
+        message="Reading Resources using LocalContext.current.resources"
+        errorLine1="            val detailRepository = remember { InsightDetailRepository(context.resources) }"
+        errorLine2="                                                                      ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/dashboard/DashboardCardFactory.kt"
+            line="128"
+            column="71"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/workouts/AcwrChartOverlay.kt"
+            line="52"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/components/BloodPressureSplitChart.kt"
+            line="62"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/components/CircadianConsistencyCard.kt"
+            line="16"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/settings/CircadianThresholdSettingsSection.kt"
+            line="34"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/dashboard/DashboardScreen.kt"
+            line="130"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/components/SingleBloodPressureChart.kt"
+            line="80"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/sleep/SleepScreen.kt"
+            line="83"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/sleep/SleepTrendChart.kt"
+            line="78"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/sleep/SleepTrendChart.kt"
+            line="116"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/sleep/SleepTrendOverlay.kt"
+            line="38"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/components/TrendCharts.kt"
+            line="155"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/components/TrendCharts.kt"
+            line="420"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/components/TrendCharts.kt"
+            line="471"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/settings/common/ValidatingTextField.kt"
+            line="19"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/vitals/VitalsScreen.kt"
+            line="84"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/workouts/WorkoutStatsSection.kt"
+            line="114"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/workouts/WorkoutStatsSection.kt"
+            line="321"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/workouts/WorkoutStatsSection.kt"
+            line="360"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/workouts/WorkoutsScreen.kt"
+            line="56"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 26. Merge all the resources in this folder into `mipmap-anydpi`.">
+        <location
+            file="src/main/res/mipmap-anydpi-v26"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="        mutableStateOf((currentOverride ?: profileDefault).toFloat())"
+        errorLine2="        ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/settings/CircadianThresholdSettingsSection.kt"
+            line="38"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    var scaleX by remember { mutableStateOf(1f) }"
+        errorLine2="                             ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/components/HrTimelineChart.kt"
+            line="187"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    var offsetX by remember { mutableStateOf(0f) }"
+        errorLine2="                              ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/components/HrTimelineChart.kt"
+            line="188"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    var containerWidthPx by remember { mutableStateOf(0f) }"
+        errorLine2="                                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/components/VicoChartTooltipOverlay.kt"
+            line="125"
+            column="40"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    var containerHeightPx by remember { mutableStateOf(0f) }"
+        errorLine2="                                        ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/components/VicoChartTooltipOverlay.kt"
+            line="126"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.purple_200` appears to be unused"
+        errorLine1="    &lt;color name=&quot;purple_200&quot;>#FFBB86FC&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="3"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.purple_500` appears to be unused"
+        errorLine1="    &lt;color name=&quot;purple_500&quot;>#FF6200EE&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="4"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.purple_700` appears to be unused"
+        errorLine1="    &lt;color name=&quot;purple_700&quot;>#FF3700B3&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="5"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.teal_200` appears to be unused"
+        errorLine1="    &lt;color name=&quot;teal_200&quot;>#FF03DAC5&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="6"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.teal_700` appears to be unused"
+        errorLine1="    &lt;color name=&quot;teal_700&quot;>#FF018786&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="7"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.black` appears to be unused"
+        errorLine1="    &lt;color name=&quot;black&quot;>#FF000000&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="8"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.white` appears to be unused"
+        errorLine1="    &lt;color name=&quot;white&quot;>#FFFFFFFF&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="9"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.time_unit_hours` appears to be unused"
+        errorLine1="    &lt;string name=&quot;time_unit_hours&quot;>h&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="401"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.time_unit_minutes` appears to be unused"
+        errorLine1="    &lt;string name=&quot;time_unit_minutes&quot;>m&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="402"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.sleep_duration_format` appears to be unused"
+        errorLine1="    &lt;string name=&quot;sleep_duration_format&quot;>Your sleep duration: %1$dh %2$dm&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="403"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.sleep_duration_unknown` appears to be unused"
+        errorLine1="    &lt;string name=&quot;sleep_duration_unknown&quot;>Your sleep duration: --h --m&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="404"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.sleep_timeline_learn_more` appears to be unused"
+        errorLine1="    &lt;string name=&quot;sleep_timeline_learn_more&quot;>Learn more&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="408"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.sleep_hypnogram_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;sleep_hypnogram_title&quot;>Hypnogram&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="415"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.unit_imperial_ft` appears to be unused"
+        errorLine1="    &lt;string name=&quot;unit_imperial_ft&quot;>\&apos;&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="444"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.unit_imperial_in` appears to be unused"
+        errorLine1="    &lt;string name=&quot;unit_imperial_in&quot;>\&quot;&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="445"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.message_syncing_health_data` appears to be unused"
+        errorLine1="    &lt;string name=&quot;message_syncing_health_data&quot;>Syncing health data...&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="530"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.steps_goal_display` appears to be unused"
+        errorLine1="    &lt;string name=&quot;steps_goal_display&quot;>Goal: %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="654"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_sub_device` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_sub_device&quot;>Device&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="746"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.plurals.settings_retention_days_display` appears to be unused"
+        errorLine1="    &lt;plurals name=&quot;settings_retention_days_display&quot;>"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="785"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_resync_button` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_resync_button&quot;>Resync Health Connect Data&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="791"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_resync_description` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_resync_description&quot;>Clear all data from Health Connect and reload the"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="792"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_foreground_sync_label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_foreground_sync_label&quot;>Foreground Sync&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="794"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.sync_preference_never` appears to be unused"
+        errorLine1="    &lt;string name=&quot;sync_preference_never&quot;>Never&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="795"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.sync_preference_always` appears to be unused"
+        errorLine1="    &lt;string name=&quot;sync_preference_always&quot;>Always&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="796"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.sync_preference_by_time` appears to be unused"
+        errorLine1="    &lt;string name=&quot;sync_preference_by_time&quot;>By Time&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="797"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_sync_interval_label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_sync_interval_label&quot;>Sync Interval&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="798"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_sync_interval_display` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_sync_interval_display&quot;>%1$dh&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="799"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_primary_device_label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_primary_device_label&quot;>Primary Device&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="800"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_device_calibrating` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_device_calibrating&quot;>Calibrating...&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="801"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_device_select` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_device_select&quot;>Select a device&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="802"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_device_description` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_device_description&quot;>Device used for metrics calculation&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="803"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.threshold_consistency_window_label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;threshold_consistency_window_label&quot;>Consistency Window&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="842"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.threshold_consistency_window_desc` appears to be unused"
+        errorLine1="    &lt;string name=&quot;threshold_consistency_window_desc&quot;>±Grace period (in minutes) around your median"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="843"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.circadian_within_week_mode_label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;circadian_within_week_mode_label&quot;>Within-Week Regularity (Recommended)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="856"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.circadian_within_week_mode_desc` appears to be unused"
+        errorLine1="    &lt;string name=&quot;circadian_within_week_mode_desc&quot;>Compares same day-of-week across weeks&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="857"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.circadian_rolling_anchor_label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;circadian_rolling_anchor_label&quot;>Use Standard Rolling-Anchor&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="858"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.circadian_rolling_anchor_desc` appears to be unused"
+        errorLine1="    &lt;string name=&quot;circadian_rolling_anchor_desc&quot;>14-day rolling window (like other profiles)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="859"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.chart_accessibility_hrv_summary` appears to be unused"
+        errorLine1="    &lt;string name=&quot;chart_accessibility_hrv_summary&quot;>Heart rate variability timeline chart showing RMSSD values in milliseconds over the sleep period.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="884"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.chart_accessibility_selected_hrv` appears to be unused"
+        errorLine1="    &lt;string name=&quot;chart_accessibility_selected_hrv&quot;>Selected: %1$d ms at %2$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="893"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.accessibility_open_date_picker` appears to be unused"
+        errorLine1="    &lt;string name=&quot;accessibility_open_date_picker&quot;>Open date picker&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="908"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.plurals.ras_earned_today` appears to be unused"
+        errorLine1="    &lt;plurals name=&quot;ras_earned_today&quot;>"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="987"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="TypographyDashes"
+        message="Replace &quot;-&quot; with an &quot;en dash&quot; character (–, &amp;#8211;) ?"
+        errorLine1="    &lt;string name=&quot;about_readiness_intro&quot;>A daily 0-100 composite number summarising three signals.&lt;/string>"
+        errorLine2="                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="218"
+            column="42"/>
+    </issue>
+
+    <issue
+        id="TypographyDashes"
+        message="Replace &quot;-&quot; with an &quot;en dash&quot; character (–, &amp;#8211;) ?"
+        errorLine1="    &lt;string name=&quot;about_tooltip_maintain&quot;>*Maintain (60-84)* — manageable load increase.&lt;/string>"
+        errorLine2="                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="238"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="TypographyDashes"
+        message="Replace &quot;--&quot; with an &quot;em dash&quot; character (—, &amp;#8212;) ?"
+        errorLine1="    &lt;string name=&quot;sleep_duration_unknown&quot;>Your sleep duration: --h --m&lt;/string>"
+        errorLine2="                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="404"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="TypographyDashes"
+        message="Replace &quot;-&quot; with an &quot;en dash&quot; character (–, &amp;#8211;) ?"
+        errorLine1="    &lt;string name=&quot;height_range_hint_metric&quot;>Range: 120-250 cm&lt;/string>"
+        errorLine2="                                            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="548"
+            column="45"/>
+    </issue>
+
+    <issue
+        id="TypographyDashes"
+        message="Replace &quot;-&quot; with an &quot;en dash&quot; character (–, &amp;#8211;) ?"
+        errorLine1="    &lt;string name=&quot;card_bp_status_neutral&quot;>Elevated: 120-129/&amp;lt;80 mmHg&lt;/string>"
+        errorLine2="                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1028"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="TypographyDashes"
+        message="Replace &quot;-&quot; with an &quot;en dash&quot; character (–, &amp;#8211;) ?"
+        errorLine1="    &lt;string name=&quot;card_bp_status_warning&quot;>Hypertension Stage 1: 130-139/80-89 mmHg&lt;/string>"
+        errorLine2="                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1029"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="TypographyDashes"
+        message="Replace &quot;-&quot; with an &quot;en dash&quot; character (–, &amp;#8211;) ?"
+        errorLine1="        &lt;item>Watch the next 2-3 days rather than reacting to one morning.&lt;/item>"
+        errorLine2="              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1378"
+            column="15"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;backup_reencrypting_message&quot;>Updating existing backup passwords...&lt;/string>"
+        errorLine2="                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="474"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;recovery_restoring_message&quot;>Restoring database...&lt;/string>"
+        errorLine2="                                              ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="511"
+            column="47"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;message_syncing_health_data&quot;>Syncing health data...&lt;/string>"
+        errorLine2="                                               ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="530"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;settings_search_placeholder&quot;>Search settings...&lt;/string>"
+        errorLine2="                                               ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="531"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;settings_device_calibrating&quot;>Calibrating...&lt;/string>"
+        errorLine2="                                               ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="801"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toColorInt` instead?"
+        errorLine1="            Color(android.graphics.Color.parseColor(&quot;#FF$cleanHex&quot;))"
+        errorLine2="                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/settings/common/CustomColorPicker.kt"
+            line="63"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toColorInt` instead?"
+        errorLine1="            Color(android.graphics.Color.parseColor(&quot;#$cleanHex&quot;))"
+        errorLine2="                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/settings/common/CustomColorPicker.kt"
+            line="65"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="            Uri.parse(uiState.backupDirectory).path ?: uiState.backupDirectory"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/settings/backup/LocalBackupSettings.kt"
+            line="417"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))"
+        errorLine2="                                                     ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/settings/SettingsScreen.kt"
+            line="180"
+            column="54"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                    val uri = android.net.Uri.parse(effect.uri)"
+        errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/settings/SettingsScreen.kt"
+            line="216"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="            prefs"
+        errorLine2="            ^">
+        <location
+            file="src/main/kotlin/app/readylytics/health/data/security/SqlCipherKeyManager.kt"
+            line="171"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="            prefs"
+        errorLine2="            ^">
+        <location
+            file="src/main/kotlin/app/readylytics/health/data/security/SqlCipherKeyManager.kt"
+            line="240"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    testImplementation(&quot;com.lemonappdev:konsist:0.13.0&quot;)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="373"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    androidTestImplementation(&quot;androidx.compose.ui:ui-test&quot;)"
+        errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="390"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="ConstantLocale"
+        message="Assigning `Locale.getDefault()` to a final static field is suspicious; this code will not work correctly if the user changes locale while the app is running"
+        errorLine1="        DateTimeFormatter.ofPattern(DateFormatUtils.DATE_FORMAT_SHORT, Locale.getDefault())"
+        errorLine2="                                                                       ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/common/ChartUtils.kt"
+            line="12"
+            column="72"/>
+    </issue>
+
+    <issue
+        id="ConstantLocale"
+        message="Assigning `Locale.getDefault()` to a final static field is suspicious; this code will not work correctly if the user changes locale while the app is running"
+        errorLine1="        DateTimeFormatter.ofPattern(&quot;HH:mm&quot;).withLocale(Locale.getDefault())"
+        errorLine2="                                                        ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/common/DateFormatUtils.kt"
+            line="13"
+            column="57"/>
+    </issue>
+
+    <issue
+        id="ConstantLocale"
+        message="Assigning `Locale.getDefault()` to a final static field is suspicious; this code will not work correctly if the user changes locale while the app is running"
+        errorLine1="        DateTimeFormatter.ofPattern(&quot;EEEE, d MMMM&quot;).withLocale(Locale.getDefault())"
+        errorLine2="                                                               ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/app/readylytics/health/ui/common/DateFormatUtils.kt"
+            line="16"
+            column="64"/>
+    </issue>
+
+</issues>

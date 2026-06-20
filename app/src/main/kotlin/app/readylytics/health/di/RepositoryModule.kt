@@ -1,5 +1,7 @@
 package app.readylytics.health.di
 
+import app.readylytics.health.data.local.RoomHealthIngestionStore
+import app.readylytics.health.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.data.repository.BloodPressureRepositoryImpl
 import app.readylytics.health.data.repository.BodyFatRepositoryImpl
 import app.readylytics.health.data.repository.DailyMetricsRepositoryImpl
@@ -8,8 +10,6 @@ import app.readylytics.health.data.repository.HeartRateRepositoryImpl
 import app.readylytics.health.data.repository.InsightDismissalRepositoryImpl
 import app.readylytics.health.data.repository.WeightRepositoryImpl
 import app.readylytics.health.data.repository.WorkoutRepositoryImpl
-import app.readylytics.health.data.local.RoomHealthIngestionStore
-import app.readylytics.health.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.domain.repository.BloodPressureRepository
 import app.readylytics.health.domain.repository.BodyFatRepository
 import app.readylytics.health.domain.repository.DailyMetricsRepository

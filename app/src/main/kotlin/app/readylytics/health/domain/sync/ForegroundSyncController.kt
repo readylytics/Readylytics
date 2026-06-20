@@ -1,8 +1,8 @@
 package app.readylytics.health.domain.sync
 
+import app.readylytics.health.domain.model.getOrThrow
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.SyncPreference
-import app.readylytics.health.domain.model.getOrThrow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow

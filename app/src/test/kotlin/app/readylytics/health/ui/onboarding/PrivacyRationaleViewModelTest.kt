@@ -36,29 +36,31 @@ class PrivacyRationaleViewModelTest {
     }
 
     @Test
-    fun appTheme_exposesCorrectThemeFromPreferences() = runTest(testDispatcher) {
-        val userPreferences = UserPreferences(appTheme = AppTheme.DARK)
-        every { settingsRepository.userPreferences } returns flowOf(userPreferences)
+    fun appTheme_exposesCorrectThemeFromPreferences() =
+        runTest(testDispatcher) {
+            val userPreferences = UserPreferences(appTheme = AppTheme.DARK)
+            every { settingsRepository.userPreferences } returns flowOf(userPreferences)
 
-        viewModel = PrivacyRationaleViewModel(settingsRepository)
+            viewModel = PrivacyRationaleViewModel(settingsRepository)
 
-        val collectJob = launch { viewModel.appTheme.collect {} }
-        testScheduler.advanceUntilIdle()
+            val collectJob = launch { viewModel.appTheme.collect {} }
+            testScheduler.advanceUntilIdle()
 
-        assertEquals(AppTheme.DARK, viewModel.appTheme.value)
-        collectJob.cancel()
-    }
+            assertEquals(AppTheme.DARK, viewModel.appTheme.value)
+            collectJob.cancel()
+        }
 
     @Test
-    fun appTheme_defaultThemeIsSystem() = runTest(testDispatcher) {
-        every { settingsRepository.userPreferences } returns flowOf(UserPreferences(appTheme = AppTheme.SYSTEM))
+    fun appTheme_defaultThemeIsSystem() =
+        runTest(testDispatcher) {
+            every { settingsRepository.userPreferences } returns flowOf(UserPreferences(appTheme = AppTheme.SYSTEM))
 
-        viewModel = PrivacyRationaleViewModel(settingsRepository)
+            viewModel = PrivacyRationaleViewModel(settingsRepository)
 
-        val collectJob = launch { viewModel.appTheme.collect {} }
-        testScheduler.advanceUntilIdle()
+            val collectJob = launch { viewModel.appTheme.collect {} }
+            testScheduler.advanceUntilIdle()
 
-        assertEquals(AppTheme.SYSTEM, viewModel.appTheme.value)
-        collectJob.cancel()
-    }
+            assertEquals(AppTheme.SYSTEM, viewModel.appTheme.value)
+            collectJob.cancel()
+        }
 }

@@ -1,9 +1,9 @@
 package app.readylytics.health.domain.calculation
 
-import app.readylytics.health.domain.preferences.Gender
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.BodyFatStatus
+import app.readylytics.health.domain.preferences.Gender
 
 object HealthMetricsCalculator {
     fun calculateBmi(

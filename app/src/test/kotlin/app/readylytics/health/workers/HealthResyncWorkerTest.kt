@@ -7,8 +7,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.FullHistoricalResyncUseCase
-import io.mockk.every
-import io.mockk.mockk
+import io.mockk.*
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
@@ -29,6 +28,18 @@ class HealthResyncWorkerTest {
         context = ApplicationProvider.getApplicationContext()
         workerParams = mockk(relaxed = true)
         every { workerParams.taskExecutor } returns mockk(relaxed = true)
+
+        val progressUpdater = mockk<androidx.work.ProgressUpdater>()
+        every { workerParams.progressUpdater } returns progressUpdater
+        every { progressUpdater.updateProgress(any(), any(), any()) } returns
+            com.google.common.util.concurrent.Futures
+                .immediateFuture(null)
+
+        val foregroundUpdater = mockk<androidx.work.ForegroundUpdater>()
+        every { workerParams.foregroundUpdater } returns foregroundUpdater
+        every { foregroundUpdater.setForegroundAsync(any(), any(), any()) } returns
+            com.google.common.util.concurrent.Futures
+                .immediateFuture(null)
     }
 
     @Test
@@ -47,4 +58,50 @@ class HealthResyncWorkerTest {
         assertEquals("current", HealthResyncWorker.KEY_CURRENT)
         assertEquals("total", HealthResyncWorker.KEY_TOTAL)
     }
+
+    @Test
+    fun `doWork reports progress and returns success when resync usecase succeeds`() =
+        runBlocking {
+            coEvery { useCase.execute(any()) } answers {
+                val progressCallback = firstArg<(Int, Int) -> Unit>()
+                progressCallback(1, 10)
+                app.readylytics.health.domain.model.Result
+                    .Success(Unit)
+            }
+            val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
+            val result = worker.doWork()
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .success(),
+                result,
+            )
+        }
+
+    @Test
+    fun `doWork returns retry when resync usecase fails`() =
+        runBlocking {
+            coEvery { useCase.execute(any()) } returns
+                app.readylytics.health.domain.model.Result
+                    .Failure("error", "network error")
+            val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
+            val result = worker.doWork()
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .retry(),
+                result,
+            )
+        }
+
+    @Test
+    fun `doWork returns retry when resync usecase throws exception`() =
+        runBlocking {
+            coEvery { useCase.execute(any()) } throws RuntimeException("critical error")
+            val worker = HealthResyncWorker(context, workerParams, useCase, foregroundSyncController)
+            val result = worker.doWork()
+            assertEquals(
+                androidx.work.ListenableWorker.Result
+                    .retry(),
+                result,
+            )
+        }
 }

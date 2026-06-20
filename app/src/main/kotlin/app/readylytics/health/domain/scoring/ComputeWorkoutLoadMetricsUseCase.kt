@@ -1,8 +1,8 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.WorkoutData
 import java.time.LocalDate
 import javax.inject.Inject

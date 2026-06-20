@@ -1,18 +1,18 @@
 package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.domain.model.DailySummaryEntity
+import app.readylytics.health.domain.model.ReadinessResult
+import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.SleepSessionEntity
 import app.readylytics.health.domain.persistence.DailySummaryDao
 import app.readylytics.health.domain.persistence.HeartRateDao
 import app.readylytics.health.domain.preferences.UserPreferences
-import app.readylytics.health.domain.security.EncryptionManager
-import app.readylytics.health.domain.model.ReadinessResult
-import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.scoring.components.PhaseCalculator
 import app.readylytics.health.domain.scoring.sleep.CurrentNightHrvResolver
 import app.readylytics.health.domain.scoring.sleep.HrCoverageValidator
 import app.readylytics.health.domain.scoring.sleep.SleepNadirAnalyzer
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
+import app.readylytics.health.domain.security.EncryptionManager
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.stdev

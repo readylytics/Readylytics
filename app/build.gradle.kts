@@ -1,11 +1,5 @@
-import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
-import java.util.Locale
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 
 plugins {
     alias(libs.plugins.android.application)
@@ -19,54 +13,6 @@ plugins {
     alias(libs.plugins.google.oss.licenses)
     id("kotlin-parcelize")
     id("jacoco")
-}
-
-abstract class JacocoCoverageVerificationTask : DefaultTask() {
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val reportFile: RegularFileProperty
-
-    @TaskAction
-    fun verifyCoverage() {
-        val report = reportFile.get().asFile
-        if (!report.exists()) {
-            throw GradleException("Coverage report not found: ${report.absolutePath}")
-        }
-        val xml = report.readText()
-        // Find the last INSTRUCTION counter element (bundle-level); handles any attribute order/whitespace
-        val counterElement =
-            Regex("<counter[^>]*type=\"INSTRUCTION\"[^>]*/>")
-                .findAll(xml)
-                .lastOrNull()
-                ?.value
-                ?: throw GradleException(
-                    "Could not parse coverage report (report size: ${xml.length} bytes)",
-                )
-        val missed =
-            Regex("missed=\"(\\d+)\"")
-                .find(counterElement)
-                ?.groupValues
-                ?.get(1)
-                ?.toLong()
-                ?: throw GradleException("Could not parse missed count from: $counterElement")
-        val covered =
-            Regex("covered=\"(\\d+)\"")
-                .find(counterElement)
-                ?.groupValues
-                ?.get(1)
-                ?.toLong()
-                ?: throw GradleException("Could not parse covered count from: $counterElement")
-        val total = missed + covered
-        val pct = if (total > 0) covered.toDouble() / total.toDouble() * 100.0 else 0.0
-        val formatted = String.format(Locale.US, "%.2f", pct)
-        println("Coverage: $formatted% ($covered/$total instructions)")
-        if (pct < 4.0) {
-            throw GradleException(
-                "Coverage gate FAILED: $formatted% < 4% minimum required.",
-            )
-        }
-        println("Coverage gate PASSED: $formatted% >= 4%")
-    }
 }
 
 kotlin {
@@ -118,8 +64,9 @@ android {
     }
     lint {
         abortOnError = true
-        warningsAsErrors = false
+        warningsAsErrors = true
         xmlReport = true
+        baseline = file("lint-baseline.xml")
     }
 }
 
@@ -163,6 +110,8 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             "**/*_Impl*",
             "**/databinding/**",
             "**/di/**",
+            "**/*Proto*.*",
+            "**/*Serializer*.*",
         )
 
     // Search broadly across all known AGP output locations for compiled Kotlin/Java class files
@@ -170,6 +119,7 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         fileTree(layout.buildDirectory.get()) {
             include(
                 "tmp/kotlin-classes/debug/**/*.class",
+                "intermediates/classes/debug/**/*.class",
                 "intermediates/kotlinc/debug/**/*.class",
                 "intermediates/javac/debug/**/*.class",
             )
@@ -192,9 +142,13 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         }
     }
 
-    val mainSrc = "${project.projectDir}/src/main/java"
+    val mainSrc =
+        files(
+            "${project.projectDir}/src/main/java",
+            "${project.projectDir}/src/main/kotlin",
+        )
 
-    sourceDirectories.setFrom(files(mainSrc))
+    sourceDirectories.setFrom(mainSrc)
     classDirectories.setFrom(files(debugTree))
     executionData.setFrom(
         fileTree(layout.buildDirectory.get()) {
@@ -203,9 +157,117 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     )
 }
 
-tasks.register<JacocoCoverageVerificationTask>("jacocoCoverageVerification") {
+tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
     dependsOn("jacocoTestReport")
-    reportFile.set(layout.buildDirectory.file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml"))
+
+    val reportXmlFile = layout.buildDirectory.file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
+
+    val fileFilter =
+        listOf(
+            "**/R.class",
+            "**/R$*.class",
+            "**/BuildConfig.*",
+            "**/Manifest*.*",
+            "**/*Test*.*",
+            "android/**/*.*",
+            "**/hilt_aggregated_deps/**",
+            "**/*_HiltModules*",
+            "**/*_MembersInjector*",
+            "**/*Hilt_*",
+            "**/*_Factory*",
+            "**/Dagger*Component*.*",
+            "**/*ComposableSingletons*",
+            "**/*_Impl*",
+            "**/databinding/**",
+            "**/di/**",
+            "**/*Proto*.*",
+            "**/*Serializer*.*",
+        )
+
+    val debugTree =
+        fileTree(layout.buildDirectory.get()) {
+            include(
+                "tmp/kotlin-classes/debug/**/*.class",
+                "intermediates/classes/debug/**/*.class",
+                "intermediates/kotlinc/debug/**/*.class",
+                "intermediates/javac/debug/**/*.class",
+            )
+            fileFilter.forEach { exclude(it) }
+        }
+
+    val mainSrc =
+        files(
+            "${project.projectDir}/src/main/java",
+            "${project.projectDir}/src/main/kotlin",
+        )
+
+    executionData.setFrom(
+        fileTree(layout.buildDirectory.get()) {
+            include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
+        },
+    )
+    classDirectories.setFrom(files(debugTree))
+    sourceDirectories.setFrom(mainSrc)
+
+    violationRules {
+        rule {
+            limit {
+                counter = "INSTRUCTION"
+                value = "COVEREDRATIO"
+                minimum = 0.25.toBigDecimal()
+            }
+        }
+        rule {
+            element = "PACKAGE"
+            includes = listOf("app.readylytics.health.domain.scoring")
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = 0.80.toBigDecimal()
+            }
+        }
+        rule {
+            element = "PACKAGE"
+            includes = listOf("app.readylytics.health.domain.sync")
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = 0.70.toBigDecimal()
+            }
+        }
+        rule {
+            element = "PACKAGE"
+            includes = listOf("app.readylytics.health.workers")
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = 0.60.toBigDecimal()
+            }
+        }
+    }
+
+    doFirst {
+        val reportFile = reportXmlFile.get().asFile
+        if (!reportFile.exists()) {
+            throw GradleException("Coverage report XML not found at ${reportFile.absolutePath}")
+        }
+        val xml = reportFile.readText()
+        val requiredClasses =
+            listOf(
+                "app/readylytics/health/data/repository/ScoringRepositoryImpl",
+                "app/readylytics/health/domain/sync/HealthSyncUseCase",
+                "app/readylytics/health/workers/DataCleanupWorker",
+                "app/readylytics/health/ui/heartrate/HeartRateDetailViewModel",
+                "app/readylytics/health/ui/sleep/SleepViewModel",
+                "app/readylytics/health/ui/steps/StepDetailViewModel",
+            )
+        for (cls in requiredClasses) {
+            if (!xml.contains("name=\"$cls\"")) {
+                throw GradleException("Verification failed: Coverage report does not contain class $cls")
+            }
+        }
+        println("Coverage report contains all required classes.")
+    }
 }
 
 protobuf {
@@ -324,4 +386,12 @@ dependencies {
     androidTestImplementation(libs.play.services.stats)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+tasks.withType<org.gradle.api.tasks.testing.Test> {
+    systemProperty("robolectric.coverage.enabled", "true")
+    configure<JacocoTaskExtension> {
+        isIncludeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+    }
 }

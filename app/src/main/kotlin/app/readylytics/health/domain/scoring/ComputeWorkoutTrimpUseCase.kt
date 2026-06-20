@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.util.HeartRateFormulas
 import java.time.Instant
 import javax.inject.Inject
