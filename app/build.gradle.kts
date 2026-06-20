@@ -16,7 +16,11 @@ val releaseSigningEnvironmentVariables =
 
 val releaseSigningEnvironmentValues =
     releaseSigningEnvironmentVariables.associateWith {
-        providers.environmentVariable(it).orNull?.trim().orEmpty()
+        providers
+            .environmentVariable(it)
+            .orNull
+            ?.trim()
+            .orEmpty()
     }
 
 val releaseUploadSigningReady =
@@ -438,7 +442,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(kotlin("test"))
-    testImplementation("com.lemonappdev:konsist:0.13.0")
+    testImplementation(libs.konsist)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)
