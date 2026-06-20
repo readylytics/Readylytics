@@ -340,7 +340,7 @@ Document GitHub environment protection, secret names, fingerprint rotation, Play
 
 Run release workflow commands against temporary test keystore outside repository. Expected: `jarsigner -verify` reports signed; fingerprint matches supplied value. Remove disposable key afterward.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add app/build.gradle.kts .github/workflows/release.yml .gitignore README.md internal-docs/RELEASE_SIGNING.md
