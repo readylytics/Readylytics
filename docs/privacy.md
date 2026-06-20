@@ -6,7 +6,7 @@ permalink: /privacy/
 
 # Privacy Policy
 
-<p class="policy-meta">Last updated: 2026-06-19</p>
+<p class="policy-meta">Last updated: 2026-06-20</p>
 
 Readylytics is an offline-first wellness app for Android. This policy explains
 what data Readylytics processes and how that data is handled.
@@ -43,11 +43,19 @@ Readylytics may create encrypted local backup files when you use the backup
 feature. These backup files are controlled by you and remain local to your
 device or the storage location you choose.
 
+The production app does not request the Android `INTERNET` permission. It does
+not include analytics, advertising, telemetry uploads, or any Readylytics-run
+network service for your health data.
+
 ## Data sharing
 
 Readylytics does not sell health data, does not use advertising trackers, and
 does not upload Health Connect data to third-party sign-in, cloud backup, or
 Readylytics-hosted services.
+
+Diagnostic logging stays on-device and is only enabled in debug builds.
+Production error handling uses sanitized messages rather than exposing raw
+exception text from health data, storage, or cryptographic operations.
 
 ## Your controls
 

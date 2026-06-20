@@ -356,12 +356,12 @@ class HealthConnectRepositoryImpl
                     readAllPages<WeightRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     app.readylytics.health.domain.util.logD("HealthConnectRepository") {
-                        "Weight record permission not granted: ${e.message}"
+                        "Weight record permission not granted"
                     }
                     emptyList()
                 } catch (e: SecurityException) {
                     app.readylytics.health.domain.util.logD("HealthConnectRepository") {
-                        "Weight record permission not granted: ${e.message}"
+                        "Weight record permission not granted"
                     }
                     emptyList()
                 } catch (e: CancellationException) {
@@ -383,12 +383,12 @@ class HealthConnectRepositoryImpl
                     readAllPages<BodyFatRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     app.readylytics.health.domain.util.logD("HealthConnectRepository") {
-                        "Body fat record permission not granted: ${e.message}"
+                        "Body fat record permission not granted"
                     }
                     emptyList()
                 } catch (e: SecurityException) {
                     app.readylytics.health.domain.util.logD("HealthConnectRepository") {
-                        "Body fat record permission not granted: ${e.message}"
+                        "Body fat record permission not granted"
                     }
                     emptyList()
                 } catch (e: CancellationException) {
@@ -410,12 +410,12 @@ class HealthConnectRepositoryImpl
                     readAllPages<BloodPressureRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     app.readylytics.health.domain.util.logD("HealthConnectRepository") {
-                        "Blood pressure record permission not granted: ${e.message}"
+                        "Blood pressure record permission not granted"
                     }
                     emptyList()
                 } catch (e: SecurityException) {
                     app.readylytics.health.domain.util.logD("HealthConnectRepository") {
-                        "Blood pressure record permission not granted: ${e.message}"
+                        "Blood pressure record permission not granted"
                     }
                     emptyList()
                 } catch (e: CancellationException) {
@@ -437,12 +437,12 @@ class HealthConnectRepositoryImpl
                     readAllPages<OxygenSaturationRecord>(from, to).map { it.toDomain() }
                 } catch (e: HealthConnectPermissionRevokedException) {
                     app.readylytics.health.domain.util.logD("HealthConnectRepository") {
-                        "Oxygen saturation record permission not granted: ${e.message}"
+                        "Oxygen saturation record permission not granted"
                     }
                     emptyList()
                 } catch (e: SecurityException) {
                     app.readylytics.health.domain.util.logD("HealthConnectRepository") {
-                        "Oxygen saturation record permission not granted: ${e.message}"
+                        "Oxygen saturation record permission not granted"
                     }
                     emptyList()
                 } catch (e: CancellationException) {

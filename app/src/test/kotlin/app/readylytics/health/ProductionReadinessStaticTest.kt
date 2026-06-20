@@ -7,6 +7,80 @@ import java.io.File
 
 class ProductionReadinessStaticTest {
     @Test
+    fun `release build has no runtime network capability or client dependencies`() {
+        val manifest = projectFile("app/src/main/AndroidManifest.xml").readText()
+        val appBuild = projectFile("app/build.gradle.kts").readText()
+        val libs = projectFile("gradle/libs.versions.toml").readText()
+
+        assertFalse(manifest.contains("android.permission.INTERNET"))
+        assertFalse(appBuild.contains("libs.retrofit"))
+        assertFalse(appBuild.contains("libs.okhttp"))
+        assertFalse(libs.contains("retrofit = "))
+        assertFalse(libs.contains("retrofit-kotlinx-serialization"))
+        assertFalse(libs.contains("okhttp = "))
+    }
+
+    @Test
+    fun `production code uses centralized logging helpers only`() {
+        val kotlinRoot = projectFile("app/src/main/kotlin")
+        val allowedLogFiles =
+            setOf(
+                "app/readylytics/health/domain/util/AppLog.kt",
+            )
+
+        val offenders =
+            kotlinRoot
+                .walkTopDown()
+                .filter { it.isFile && it.extension == "kt" }
+                .filterNot { file ->
+                    file.relativeTo(kotlinRoot).invariantSeparatorsPath in allowedLogFiles
+                }.flatMap { file ->
+                    val text = file.readText()
+                    buildList {
+                        if (text.contains("import android.util.Log")) add("${file.path}: import android.util.Log")
+                        Regex("""(?<![A-Za-z])Log\.[A-Za-z]+\(""")
+                            .findAll(text)
+                            .forEach { add("${file.path}: ${it.value}") }
+                        Regex("""android\.util\.Log\.[A-Za-z]+\(""")
+                            .findAll(text)
+                            .forEach { add("${file.path}: ${it.value}") }
+                    }
+                }.toList()
+
+        assertTrue("Direct Log.* usage remains outside AppLog.kt: $offenders", offenders.isEmpty())
+    }
+
+    @Test
+    fun `ui code does not surface raw throwable messages`() {
+        val uiFiles =
+            listOf(
+                "app/src/main/kotlin/app/readylytics/health/ui/dashboard/DashboardViewModel.kt",
+                "app/src/main/kotlin/app/readylytics/health/ui/settings/LocalBackupViewModel.kt",
+                "app/src/main/kotlin/app/readylytics/health/ui/sync/SyncViewModel.kt",
+                "app/src/main/kotlin/app/readylytics/health/MainActivity.kt",
+            )
+
+        val offenders =
+            uiFiles.flatMap { path ->
+                val file = projectFile(path)
+                val text = file.readText()
+                buildList {
+                    Regex("""UiText\.RawString\([^)]*message""")
+                        .findAll(text)
+                        .forEach { add("${file.path}: ${it.value}") }
+                    Regex("""SyncUiState\.Error\([^)]*message""")
+                        .findAll(text)
+                        .forEach { add("${file.path}: ${it.value}") }
+                    Regex("""cause\.message""")
+                        .findAll(text)
+                        .forEach { add("${file.path}: ${it.value}") }
+                }
+            }
+
+        assertTrue("Raw throwable messages still reach UI state: $offenders", offenders.isEmpty())
+    }
+
+    @Test
     fun `workers rethrow coroutine cancellation before generic failure handling`() {
         val workerFiles =
             listOf(

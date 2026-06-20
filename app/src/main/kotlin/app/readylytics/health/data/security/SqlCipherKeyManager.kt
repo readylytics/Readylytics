@@ -5,6 +5,8 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.sqlite.db.SupportSQLiteOpenHelper
+import app.readylytics.health.domain.util.logE
+import app.readylytics.health.domain.util.logW
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileInputStream
@@ -34,11 +36,9 @@ class SqlCipherKeyManager
             try {
                 System.loadLibrary("sqlcipher")
             } catch (e: UnsatisfiedLinkError) {
-                android.util.Log.w(
-                    "SqlCipherKeyManager",
-                    "Could not load 'sqlcipher' library via System.loadLibrary. This is expected in tests or if the library is loaded automatically.",
-                    e,
-                )
+                logW("SqlCipherKeyManager", e) {
+                    "Could not load sqlcipher library via System.loadLibrary"
+                }
             }
         }
 
@@ -185,11 +185,9 @@ class SqlCipherKeyManager
                 try {
                     decryptKey()
                 } catch (e: Exception) {
-                    android.util.Log.e(
-                        "SqlCipherKeyManager",
-                        "Failed to decrypt database key. KeyStore key may have changed or data is corrupted.",
-                        e,
-                    )
+                    logE("SqlCipherKeyManager", e) {
+                        "Failed to decrypt database key. KeyStore key may have changed or data is corrupted."
+                    }
                     throw KeyDecryptionException("Database key decryption failed", e)
                 }
             } else {

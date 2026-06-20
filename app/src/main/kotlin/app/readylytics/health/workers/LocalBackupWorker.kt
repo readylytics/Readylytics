@@ -1,13 +1,13 @@
 package app.readylytics.health.workers
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import app.readylytics.health.BuildConfig
 import app.readylytics.health.data.backup.LocalBackupManager
+import app.readylytics.health.domain.util.logD
+import app.readylytics.health.domain.util.logE
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.io.IOException
@@ -25,18 +25,18 @@ class LocalBackupWorker
             val result = localBackupManager.createBackup()
             return when {
                 result.isSuccess -> {
-                    if (BuildConfig.DEBUG) Log.d(TAG, "Local backup created successfully")
+                    logD(TAG) { "Local backup created successfully" }
                     Result.success()
                 }
                 else -> {
                     val cause = result.exceptionOrNull()
-                    if (BuildConfig.DEBUG) Log.e(TAG, "Local backup failed", cause)
+                    logE(TAG, cause) { "Local backup failed" }
                     when (cause) {
                         is IOException, is InterruptedIOException -> {
                             Result.retry()
                         }
                         else -> {
-                            Result.failure(workDataOf("error" to (cause?.message ?: "Unknown error")))
+                            Result.failure(workDataOf("error" to "Local backup failed"))
                         }
                     }
                 }

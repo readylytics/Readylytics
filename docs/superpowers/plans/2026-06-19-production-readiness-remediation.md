@@ -678,29 +678,29 @@ git commit -m "feat: resume historical resync from durable checkpoints"
 - Modify: `app/src/test/kotlin/app/readylytics/health/ProductionReadinessStaticTest.kt`
 - Modify: `docs/privacy.md`
 
-- [ ] **Step 1: Write failing static privacy tests**
+- [x] **Step 1: Write failing static privacy tests**
 
 Assert merged/source manifest lacks `INTERNET`; Gradle lacks Retrofit/OkHttp dependencies; production Kotlin has no direct `android.util.Log`/`Log.*`; no ViewModel maps `Throwable.message` to `UiText.RawString`.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `.\gradlew testDebugUnitTest --tests "*ProductionReadinessStaticTest"`
 
 Expected: FAIL on current permission, dependencies, logs, and raw exception strings.
 
-- [ ] **Step 3: Remove unused network surface**
+- [x] **Step 3: Remove unused network surface**
 
 Delete manifest permission, three app dependencies, and now-unused catalog aliases/versions. Keep external privacy-policy `ACTION_VIEW`; it does not require app network permission.
 
-- [ ] **Step 4: Centralize debug-only sanitized logging**
+- [x] **Step 4: Centralize debug-only sanitized logging**
 
 Use existing `DomainLogger`/`logD`/`logE` path everywhere. Android sink remains guarded by `BuildConfig.DEBUG`. Production call sites pass stable messages and never interpolate health values, paths, decrypted content, or raw preference values.
 
-- [ ] **Step 5: Replace raw error UI**
+- [x] **Step 5: Replace raw error UI**
 
 Map known errors to localized `UiText.StringRes`; unknown errors use generic `R.string.error_generic`. Keep raw strings only for formatted non-sensitive values.
 
-- [ ] **Step 6: Verify GREEN**
+- [x] **Step 6: Verify GREEN**
 
 Run:
 
@@ -710,7 +710,7 @@ Run:
 
 Expected: PASS; merged manifest has no `INTERNET`; dependency report has no Retrofit/OkHttp.
 
-- [ ] **Step 7: Update privacy docs and commit**
+- [x] **Step 7: Update privacy docs and commit**
 
 ```powershell
 git add app/src/main app/src/test app/build.gradle.kts gradle/libs.versions.toml docs/privacy.md

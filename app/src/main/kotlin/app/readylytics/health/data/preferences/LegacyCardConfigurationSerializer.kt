@@ -1,7 +1,8 @@
 package app.readylytics.health.data.preferences
 
-import android.util.Log
 import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.domain.util.logE
+import app.readylytics.health.domain.util.logW
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -18,7 +19,7 @@ object LegacyCardConfigurationSerializer {
         return try {
             json.encodeToString(configurations)
         } catch (e: SerializationException) {
-            Log.e(TAG, "Failed to serialize card configurations: ${e.message}", e)
+            logE(TAG, e) { "Failed to serialize card configurations" }
             // Return empty string on failure; ReorderableCardGrid will filter out missing cards
             ""
         }
@@ -32,7 +33,7 @@ object LegacyCardConfigurationSerializer {
             try {
                 json.decodeFromString<List<CardConfiguration>>(jsonString)
             } catch (e: SerializationException) {
-                Log.w(TAG, "Failed to deserialize card configurations, using defaults: ${e.message}")
+                logW(TAG, e) { "Failed to deserialize card configurations, using defaults" }
                 // Return empty list on error; SettingsDefaults will provide default card layout
                 emptyList()
             }

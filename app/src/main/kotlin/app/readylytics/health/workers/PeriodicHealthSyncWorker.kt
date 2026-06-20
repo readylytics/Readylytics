@@ -2,15 +2,14 @@ package app.readylytics.health.workers
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import app.readylytics.health.BuildConfig
 import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.HealthSyncUseCase
+import app.readylytics.health.domain.util.logE
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
@@ -56,7 +55,7 @@ class PeriodicHealthSyncWorker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "Periodic sync worker failed", e)
+                logE(TAG, e) { "Periodic sync worker failed" }
                 if (e is SecurityException || e is HealthConnectPermissionRevokedException) {
                     Result.failure()
                 } else {

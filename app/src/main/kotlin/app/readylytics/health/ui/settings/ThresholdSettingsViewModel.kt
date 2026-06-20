@@ -1,6 +1,5 @@
 package app.readylytics.health.ui.settings
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.R
@@ -8,6 +7,7 @@ import app.readylytics.health.data.preferences.CircadianThresholdPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.circadian.CircadianThresholdValue
 import app.readylytics.health.domain.repository.ScoringRepository
+import app.readylytics.health.domain.util.logE
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
 import app.readylytics.health.ui.common.UiText
@@ -113,16 +113,17 @@ class ThresholdSettingsViewModel
                                 }.onFailure { _ ->
                                     transientState.update {
                                         it.copy(
+                                            isUpdating = false,
                                             error = UiText.StringRes(R.string.error_threshold_invalid_range),
                                         )
                                     }
                                 }
                         } catch (e: Exception) {
-                            Log.e("ThresholdViewModel", "Failed to update threshold", e)
+                            logE("ThresholdViewModel", e) { "Failed to update threshold" }
                             try {
                                 circadianThresholdPreferences.setOverride(minutes = previousValue)
                             } catch (rollbackError: Exception) {
-                                Log.e("ThresholdViewModel", "Rollback failed", rollbackError)
+                                logE("ThresholdViewModel", rollbackError) { "Threshold rollback failed" }
                             }
                             transientState.update {
                                 it.copy(

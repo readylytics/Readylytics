@@ -73,6 +73,6 @@ class OnboardingRestoreViewModel
             if (this is WrongBackupPasswordException) {
                 UiText.StringRes(R.string.error_backup_wrong_password)
             } else {
-                message?.let { UiText.RawString(it) } ?: UiText.StringRes(R.string.error_backup_restore_validation)
+                UiText.StringRes(R.string.error_backup_restore_validation)
             }
     }

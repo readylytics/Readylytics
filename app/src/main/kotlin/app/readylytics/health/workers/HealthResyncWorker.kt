@@ -3,16 +3,15 @@ package app.readylytics.health.workers
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.ServiceInfo
-import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import app.readylytics.health.BuildConfig
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.FullHistoricalResyncUseCase
+import app.readylytics.health.domain.util.logE
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
@@ -67,7 +66,7 @@ class HealthResyncWorker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "Resync worker failed", e)
+                logE(TAG, e) { "Resync worker failed" }
                 Result.retry()
             } finally {
                 foregroundSyncController.onBackgroundRecalcFinished(success)

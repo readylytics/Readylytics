@@ -107,7 +107,7 @@ class HealthChangeSynchronizerImpl
                 } catch (e: Exception) {
                     if (isTokenExpiredException(e)) {
                         logD("HealthChangeSynchronizer") {
-                            "Exception indicates expired token for $dataType: ${e.message}"
+                            "Change token expired for $dataType"
                         }
                         return HealthChangeSyncOutcome(
                             affectedDates = emptySet(),
