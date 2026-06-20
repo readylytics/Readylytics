@@ -1,0 +1,353 @@
+package app.readylytics.health.ui.theme
+
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import com.google.android.material.color.MaterialColors
+import com.materialkolor.hct.Hct
+import com.materialkolor.scheme.SchemeTonalSpot
+
+fun Color.harmonizeWith(primary: Color): Color = Color(MaterialColors.harmonize(this.toArgb(), primary.toArgb()))
+
+fun calculateSecondarySeedColor(primary: Color): Color {
+    val hsl = FloatArray(3)
+    primary.toHsl(hsl)
+    val sSat = maxOf(0.16f, hsl[1] * 0.35f)
+    return hslToColor(hsl[0], sSat, hsl[2])
+}
+
+fun calculateTertiarySeedColor(primary: Color): Color {
+    val hsl = FloatArray(3)
+    primary.toHsl(hsl)
+    val tHue = (hsl[0] + 60f) % 360f
+    val tSat = maxOf(0.24f, hsl[1] * 0.5f)
+    return hslToColor(tHue, tSat, hsl[2])
+}
+
+internal fun Color.toHsl(outHsl: FloatArray) {
+    val r = red
+    val g = green
+    val b = blue
+    val max = maxOf(r, maxOf(g, b))
+    val min = minOf(r, minOf(g, b))
+
+    var h: Float
+    val s: Float
+    val l = (max + min) / 2f
+
+    if (max == min) {
+        h = 0f
+        s = 0f
+    } else {
+        val d = max - min
+        s = if (l > 0.5f) d / (2f - max - min) else d / (max + min)
+        h =
+            when (max) {
+                r -> (g - b) / d + (if (g < b) 6f else 0f)
+                g -> (b - r) / d + 2f
+                else -> (r - g) / d + 4f
+            }
+        h /= 6f
+    }
+
+    outHsl[0] = h * 360f
+    outHsl[1] = s
+    outHsl[2] = l
+}
+
+internal fun hslToColor(
+    h: Float,
+    s: Float,
+    l: Float,
+    alpha: Float = 1f,
+): Color {
+    val r: Float
+    val g: Float
+    val b: Float
+
+    if (s == 0f) {
+        r = l
+        g = l
+        b = l
+    } else {
+        val q = if (l < 0.5f) l * (1f + s) else l + s - l * s
+        val p = 2f * l - q
+        r = hueToRgb(p, q, h / 360f + 1f / 3f)
+        g = hueToRgb(p, q, h / 360f)
+        b = hueToRgb(p, q, h / 360f - 1f / 3f)
+    }
+
+    return Color(
+        red = r.coerceIn(0f, 1f),
+        green = g.coerceIn(0f, 1f),
+        blue = b.coerceIn(0f, 1f),
+        alpha = alpha,
+    )
+}
+
+private fun hueToRgb(
+    p: Float,
+    q: Float,
+    t: Float,
+): Float {
+    var varT = t
+    if (varT < 0f) varT += 1f
+    if (varT > 1f) varT -= 1f
+    if (varT < 1f / 6f) return p + (q - p) * 6f * varT
+    if (varT < 1f / 2f) return q
+    if (varT < 2f / 3f) return p + (q - p) * (2f / 3f - varT) * 6f
+    return p
+}
+
+private fun onColorFor(seed: Color): Color = if (seed.luminance() > 0.179f) Color.Black else Color.White
+
+internal fun colorSchemeFromSeed(
+    primarySeed: Color,
+    secondarySeed: Color?,
+    tertiarySeed: Color?,
+    isDark: Boolean,
+): ColorScheme {
+    val hsl = FloatArray(3)
+    primarySeed.toHsl(hsl)
+    val hue = hsl[0]
+
+    // Neutral palette: pure gray (0% saturation) for untinted backgrounds/surfaces
+    val nSat = 0f
+    // Neutral Variant palette: pure gray (0% saturation) for untinted surface variants/borders
+    val nvSat = 0f
+
+    fun n(tone: Int): Color = hslToColor(hue, nSat, tone / 100f)
+
+    fun nv(tone: Int): Color = hslToColor(hue, nvSat, tone / 100f)
+
+    val pSat = maxOf(0.40f, hsl[1])
+
+    fun p(tone: Int): Color = hslToColor(hue, pSat, tone / 100f)
+
+    val sHue: Float
+    val sSat: Float
+    if (secondarySeed != null) {
+        val sHsl = FloatArray(3)
+        secondarySeed.toHsl(sHsl)
+        sHue = sHsl[0]
+        sSat = sHsl[1]
+    } else {
+        sHue = hue
+        sSat = maxOf(0.16f, hsl[1] * 0.35f)
+    }
+
+    fun s(tone: Int): Color = hslToColor(sHue, sSat, tone / 100f)
+
+    val tHueVal: Float
+    val tSatVal: Float
+    if (tertiarySeed != null) {
+        val tHsl = FloatArray(3)
+        tertiarySeed.toHsl(tHsl)
+        tHueVal = tHsl[0]
+        tSatVal = tHsl[1]
+    } else {
+        tHueVal = (hue + 60f) % 360f
+        tSatVal = maxOf(0.24f, hsl[1] * 0.5f)
+    }
+
+    fun t(tone: Int): Color = hslToColor(tHueVal, tSatVal, tone / 100f)
+
+    fun e(tone: Int): Color = hslToColor(0f, 0.85f, tone / 100f)
+
+    return if (isDark) {
+        val primaryColor = p(80)
+        darkColorScheme(
+            primary = primaryColor,
+            onPrimary = onColorFor(primaryColor),
+            primaryContainer = p(30),
+            onPrimaryContainer = p(90),
+            inversePrimary = p(40),
+            secondary = s(80),
+            onSecondary = s(20),
+            secondaryContainer = s(30),
+            onSecondaryContainer = s(90),
+            tertiary = t(80),
+            onTertiary = t(20),
+            tertiaryContainer = t(30),
+            onTertiaryContainer = t(90),
+            background = Color(0xFF0A0A0A),
+            onBackground = n(90),
+            surface = Color(0xFF0A0A0A),
+            onSurface = n(90),
+            surfaceVariant = nv(30),
+            onSurfaceVariant = nv(80),
+            surfaceTint = primaryColor,
+            inverseSurface = n(90),
+            inverseOnSurface = n(10),
+            outline = nv(50),
+            outlineVariant = nv(30),
+            error = e(80),
+            onError = e(20),
+            errorContainer = e(30),
+            onErrorContainer = e(90),
+            surfaceContainerLowest = n(4),
+            surfaceContainerLow = n(10),
+            surfaceContainer = n(12),
+            surfaceContainerHigh = n(17),
+            surfaceContainerHighest = n(22),
+        )
+    } else {
+        val primaryColor = p(40)
+        lightColorScheme(
+            primary = primaryColor,
+            onPrimary = onColorFor(primaryColor),
+            primaryContainer = p(90),
+            onPrimaryContainer = p(10),
+            inversePrimary = p(80),
+            secondary = s(40),
+            onSecondary = s(100),
+            secondaryContainer = s(90),
+            onSecondaryContainer = s(10),
+            tertiary = t(40),
+            onTertiary = t(100),
+            tertiaryContainer = t(90),
+            onTertiaryContainer = t(10),
+            background = Color(0xFFF5F5F5),
+            onBackground = n(10),
+            surface = Color(0xFFF5F5F5),
+            onSurface = n(10),
+            surfaceVariant = nv(90),
+            onSurfaceVariant = nv(30),
+            surfaceTint = primaryColor,
+            inverseSurface = n(20),
+            inverseOnSurface = n(95),
+            outline = nv(50),
+            outlineVariant = nv(80),
+            error = e(40),
+            onError = e(100),
+            errorContainer = e(90),
+            onErrorContainer = e(10),
+            surfaceContainerLowest = n(100),
+            surfaceContainerLow = n(96),
+            surfaceContainer = n(94),
+            surfaceContainerHigh = n(92),
+            surfaceContainerHighest = n(90),
+        )
+    }
+}
+
+internal fun mcuColorScheme(
+    seedColor: Color,
+    secondaryColor: Color?,
+    tertiaryColor: Color?,
+    isDark: Boolean,
+): ColorScheme {
+    val hct = Hct.fromInt(seedColor.toArgb())
+    val scheme = SchemeTonalSpot(hct, isDark, 0.0)
+
+    val hue = 0f
+    val nSat = 0f
+    val nvSat = 0f
+
+    fun n(tone: Int): Color = hslToColor(hue, nSat, tone / 100f)
+
+    fun nv(tone: Int): Color = hslToColor(hue, nvSat, tone / 100f)
+
+    fun e(tone: Int): Color = hslToColor(0f, 0.85f, tone / 100f)
+
+    return if (isDark) {
+        darkColorScheme(
+            primary = Color(scheme.primary),
+            onPrimary = Color(scheme.onPrimary),
+            primaryContainer = Color(scheme.primaryContainer),
+            onPrimaryContainer = Color(scheme.onPrimaryContainer),
+            inversePrimary = Color(scheme.inversePrimary),
+            secondary = secondaryColor ?: Color(scheme.secondary),
+            onSecondary = secondaryColor?.let { onColorFor(it) } ?: Color(scheme.onSecondary),
+            secondaryContainer = Color(scheme.secondaryContainer),
+            onSecondaryContainer = Color(scheme.onSecondaryContainer),
+            tertiary = tertiaryColor ?: Color(scheme.tertiary),
+            onTertiary = tertiaryColor?.let { onColorFor(it) } ?: Color(scheme.onTertiary),
+            tertiaryContainer = Color(scheme.tertiaryContainer),
+            onTertiaryContainer = Color(scheme.onTertiaryContainer),
+            background = Color(0xFF0A0A0A),
+            onBackground = n(90),
+            surface = Color(0xFF0A0A0A),
+            onSurface = n(90),
+            surfaceVariant = nv(30),
+            onSurfaceVariant = nv(80),
+            surfaceTint = Color(scheme.primary),
+            inverseSurface = n(90),
+            inverseOnSurface = n(10),
+            outline = nv(50),
+            outlineVariant = nv(30),
+            error = e(80),
+            onError = e(20),
+            errorContainer = e(30),
+            onErrorContainer = e(90),
+            surfaceContainerLowest = n(4),
+            surfaceContainerLow = n(10),
+            surfaceContainer = n(12),
+            surfaceContainerHigh = n(17),
+            surfaceContainerHighest = n(22),
+        )
+    } else {
+        lightColorScheme(
+            primary = Color(scheme.primary),
+            onPrimary = Color(scheme.onPrimary),
+            primaryContainer = Color(scheme.primaryContainer),
+            onPrimaryContainer = Color(scheme.onPrimaryContainer),
+            inversePrimary = Color(scheme.inversePrimary),
+            secondary = secondaryColor ?: Color(scheme.secondary),
+            onSecondary = Color(scheme.onSecondary),
+            secondaryContainer = Color(scheme.secondaryContainer),
+            onSecondaryContainer = Color(scheme.onSecondaryContainer),
+            tertiary = tertiaryColor ?: Color(scheme.tertiary),
+            onTertiary = Color(scheme.onTertiary),
+            tertiaryContainer = Color(scheme.tertiaryContainer),
+            onTertiaryContainer = Color(scheme.onTertiaryContainer),
+            background = Color(0xFFF5F5F5),
+            onBackground = n(10),
+            surface = Color(0xFFF5F5F5),
+            onSurface = n(10),
+            surfaceVariant = nv(90),
+            onSurfaceVariant = nv(30),
+            surfaceTint = Color(scheme.primary),
+            inverseSurface = n(20),
+            inverseOnSurface = n(95),
+            outline = nv(50),
+            outlineVariant = nv(80),
+            error = e(40),
+            onError = e(100),
+            errorContainer = e(90),
+            onErrorContainer = e(10),
+            surfaceContainerLowest = n(100),
+            surfaceContainerLow = n(96),
+            surfaceContainer = n(94),
+            surfaceContainerHigh = n(92),
+            surfaceContainerHighest = n(90),
+        )
+    }
+}
+
+internal fun fallbackLightScheme(
+    seed: Color,
+    secondarySeed: Color? = null,
+    tertiarySeed: Color? = null,
+): ColorScheme =
+    colorSchemeFromSeed(
+        primarySeed = seed,
+        secondarySeed = secondarySeed,
+        tertiarySeed = tertiarySeed,
+        isDark = false,
+    )
+
+internal fun fallbackDarkScheme(
+    seed: Color,
+    secondarySeed: Color? = null,
+    tertiarySeed: Color? = null,
+): ColorScheme =
+    colorSchemeFromSeed(
+        primarySeed = seed,
+        secondarySeed = secondarySeed,
+        tertiarySeed = tertiarySeed,
+        isDark = true,
+    )
