@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.insights
 
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 

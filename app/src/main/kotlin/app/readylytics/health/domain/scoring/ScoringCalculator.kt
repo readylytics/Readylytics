@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.preferences.PhysiologyProfile
+import app.readylytics.health.domain.preferences.PhysiologyProfile
 import app.readylytics.health.domain.model.RecoveryFlag
 import app.readylytics.health.domain.scoring.components.EmergencyFlagThresholds
 import app.readylytics.health.domain.scoring.components.SleepArchitectureTargets

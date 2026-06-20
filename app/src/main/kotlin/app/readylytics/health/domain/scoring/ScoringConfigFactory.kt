@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.preferences.PhysiologyProfile
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.PhysiologyProfile
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
 import app.readylytics.health.domain.scoring.components.AuditTrail
 import app.readylytics.health.domain.scoring.components.AuditTrailFactory

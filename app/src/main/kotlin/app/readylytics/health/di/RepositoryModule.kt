@@ -8,6 +8,8 @@ import app.readylytics.health.data.repository.HeartRateRepositoryImpl
 import app.readylytics.health.data.repository.InsightDismissalRepositoryImpl
 import app.readylytics.health.data.repository.WeightRepositoryImpl
 import app.readylytics.health.data.repository.WorkoutRepositoryImpl
+import app.readylytics.health.data.local.RoomHealthIngestionStore
+import app.readylytics.health.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.domain.repository.BloodPressureRepository
 import app.readylytics.health.domain.repository.BodyFatRepository
 import app.readylytics.health.domain.repository.DailyMetricsRepository
@@ -74,4 +76,16 @@ abstract class RepositoryModule {
     abstract fun bindResyncCheckpointStore(
         impl: app.readylytics.health.data.preferences.ResyncCheckpointStoreImpl,
     ): app.readylytics.health.domain.sync.ResyncCheckpointStore
+
+    @Binds
+    @Singleton
+    abstract fun bindHealthIngestionStore(
+        impl: RoomHealthIngestionStore,
+    ): app.readylytics.health.domain.sync.HealthIngestionStore
+
+    @Binds
+    @Singleton
+    abstract fun bindSessionLinkReconciler(
+        impl: SessionLinkReconcilerImpl,
+    ): app.readylytics.health.domain.sync.link.SessionLinkReconciler
 }

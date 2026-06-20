@@ -12,6 +12,8 @@ import app.readylytics.health.data.local.dao.WorkoutDao
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.scoringZone
+import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.DailySummaryMapper
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.model.RecoveryFlag
@@ -71,11 +73,11 @@ class ScoringRepositoryImpl
         override suspend fun computeAndPersistDailySummary(targetDate: LocalDate) {
             calculationMutex.withLock {
                 val summary = computeDailySummary(targetDate)
-                dailySummaryDao.upsert(summary)
+                persist(summary)
             }
         }
 
-        override suspend fun computeDailySummary(targetDate: LocalDate): DailySummaryEntity =
+        override suspend fun computeDailySummary(targetDate: LocalDate): DailySummary =
             withContext(Dispatchers.Default) {
                 val prefs = settingsRepo.userPreferences.first()
                 val zoneId = prefs.scoringZone()
@@ -338,7 +340,7 @@ class ScoringRepositoryImpl
                         )
                     logD("ScoringConfig") { "Telemetry: $updatedAudit" }
 
-                    return@withContext summary
+                    return@withContext DailySummaryMapper.toDomain(summary, zoneId)
                 }
 
                 val ctlFetchFrom = dayMidnight.minus(ScoringConstants.CHRONIC_DAYS * 2, ChronoUnit.DAYS).toEpochMilli()
@@ -460,23 +462,15 @@ class ScoringRepositoryImpl
                     )
                 logD("ScoringConfig") { "Telemetry: $updatedAudit" }
 
-                summary
+                DailySummaryMapper.toDomain(summary, zoneId)
             }
 
-        override suspend fun toReadinessResult(summary: DailySummaryEntity): ReadinessResult {
-            val flags: Set<RecoveryFlag> =
-                summary.recoveryFlags
-                    ?.split(',')
-                    ?.mapNotNull { token ->
-                        runCatching { RecoveryFlag.valueOf(token.trim()) }.getOrNull()
-                    }?.toSet()
-                    ?: emptySet()
-            return ReadinessResult(
-                recoveryFlags = flags,
-                contributors = summary.contributors,
-                diagnostics = summary.diagnostics,
-            )
+        override suspend fun persist(summary: DailySummary) {
+            val zoneId = settingsRepo.userPreferences.first().scoringZone()
+            dailySummaryDao.upsert(DailySummaryMapper.toEntity(summary, zoneId))
         }
+
+        override suspend fun toReadinessResult(summary: DailySummary): ReadinessResult = summary.readinessResult
 
         private suspend fun sumRasLastSixDays(
             targetDate: LocalDate,

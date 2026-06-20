@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.model
 
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.util.UnitConverter

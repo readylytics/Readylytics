@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.sync
 
-import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.util.RetentionBounds
 import kotlinx.coroutines.flow.first

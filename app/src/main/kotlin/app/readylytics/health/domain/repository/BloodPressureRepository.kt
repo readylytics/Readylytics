@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.repository
 
-import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
+import app.readylytics.health.domain.model.BloodPressureRecordEntity
 import kotlinx.coroutines.flow.Flow
 
 interface BloodPressureRepository {

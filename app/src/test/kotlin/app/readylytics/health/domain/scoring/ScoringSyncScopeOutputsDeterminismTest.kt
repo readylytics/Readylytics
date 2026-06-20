@@ -10,7 +10,9 @@ import app.readylytics.health.data.local.dao.SleepHrSample
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
-import app.readylytics.health.data.local.entity.DailySummaryEntity
+import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.DailySummaryMapper
+import app.readylytics.health.domain.model.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.preferences.Gender
@@ -101,7 +103,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                     label = "frozen replay",
                     fixture = fixture,
                     scopeDays = 60,
-                    existingTargetSummary = live,
+                    existingTargetSummary = DailySummaryMapper.toEntity(live, zoneId),
                 ).summary
 
             assertMatrixPopulated(live)
@@ -137,7 +139,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
                     label = "frozen snapshot replay",
                     fixture = fixture,
                     scopeDays = 365,
-                    existingTargetSummary = frozenSnapshot,
+                    existingTargetSummary = DailySummaryMapper.toEntity(frozenSnapshot, zoneId),
                 ).summary
 
             assertEquals(123, recomputed.hrvBaseline, "Frozen HRV display baseline must not be recomputed.")
@@ -332,7 +334,7 @@ class ScoringSyncScopeOutputsDeterminismTest {
         return ScopeResult(label = label, summary = repo.computeDailySummary(targetDate))
     }
 
-    private fun assertMatrixPopulated(summary: DailySummaryEntity) {
+    private fun assertMatrixPopulated(summary: DailySummary) {
         assertNotNull(summary.sleepScore, "sleepScore should be populated by the determinism fixture")
         // US-03: readiness now lives in the workout-only variant column; legacy readinessScore is frozen.
         assertNotNull(
@@ -354,18 +356,18 @@ class ScoringSyncScopeOutputsDeterminismTest {
     private fun assertSameMatrix(results: List<ScopeResult>) {
         val fields =
             listOf(
-                "sleepScore" to { it: DailySummaryEntity -> it.sleepScore },
-                "readinessWorkoutOnly" to { it: DailySummaryEntity -> it.readinessWorkoutOnly },
-                "rhrBpm" to { it: DailySummaryEntity -> it.rhrBpm },
-                "rhrSigma" to { it: DailySummaryEntity -> it.rhrSigma },
-                "hrvMuMssd" to { it: DailySummaryEntity -> it.hrvMuMssd },
-                "hrvSigmaMssd" to { it: DailySummaryEntity -> it.hrvSigmaMssd },
-                "restingHeartRate" to { it: DailySummaryEntity -> it.restingHeartRate },
-                "nocturnalHrv" to { it: DailySummaryEntity -> it.nocturnalHrv },
-                "baselineObservationCount" to { it: DailySummaryEntity -> it.baselineObservationCount },
-                "zLnHrv" to { it: DailySummaryEntity -> it.zLnHrv },
-                "zRhr" to { it: DailySummaryEntity -> it.zRhr },
-                "sRest" to { it: DailySummaryEntity -> it.sRest },
+                "sleepScore" to { it: DailySummary -> it.sleepScore },
+                "readinessWorkoutOnly" to { it: DailySummary -> it.readinessWorkoutOnly },
+                "rhrBpm" to { it: DailySummary -> it.rhrBpm },
+                "rhrSigma" to { it: DailySummary -> it.rhrSigma },
+                "hrvMuMssd" to { it: DailySummary -> it.hrvMuMssd },
+                "hrvSigmaMssd" to { it: DailySummary -> it.hrvSigmaMssd },
+                "restingHeartRate" to { it: DailySummary -> it.restingHeartRate },
+                "nocturnalHrv" to { it: DailySummary -> it.nocturnalHrv },
+                "baselineObservationCount" to { it: DailySummary -> it.baselineObservationCount },
+                "zLnHrv" to { it: DailySummary -> it.zLnHrv },
+                "zRhr" to { it: DailySummary -> it.zRhr },
+                "sRest" to { it: DailySummary -> it.sRest },
             )
 
         val baseline = results.first()
@@ -492,6 +494,6 @@ class ScoringSyncScopeOutputsDeterminismTest {
 
     private data class ScopeResult(
         val label: String,
-        val summary: DailySummaryEntity,
+        val summary: DailySummary,
     )
 }

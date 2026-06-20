@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.preferences.Gender
-import app.readylytics.health.data.preferences.PhysiologyProfile
+import app.readylytics.health.domain.preferences.Gender
+import app.readylytics.health.domain.preferences.PhysiologyProfile
 import kotlin.math.exp
 
 object RasCalculator {

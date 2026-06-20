@@ -1,10 +1,10 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.preferences.SettingsDefaults
-import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.data.preferences.scoringZone
-import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.domain.preferences.SettingsDefaults
+import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.scoringZone
+import app.readylytics.health.domain.security.EncryptionManager
 import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.SleepSessionData

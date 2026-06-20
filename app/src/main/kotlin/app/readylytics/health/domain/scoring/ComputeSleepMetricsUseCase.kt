@@ -1,11 +1,11 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.local.dao.DailySummaryDao
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.entity.DailySummaryEntity
-import app.readylytics.health.data.local.entity.SleepSessionEntity
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.domain.model.DailySummaryEntity
+import app.readylytics.health.domain.model.SleepSessionEntity
+import app.readylytics.health.domain.persistence.DailySummaryDao
+import app.readylytics.health.domain.persistence.HeartRateDao
+import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.domain.security.EncryptionManager
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.scoring.components.PhaseCalculator

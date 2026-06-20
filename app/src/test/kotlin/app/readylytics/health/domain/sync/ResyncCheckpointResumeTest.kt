@@ -1,18 +1,8 @@
 package app.readylytics.health.domain.sync
 
-import app.readylytics.health.data.local.dao.BloodPressureRecordDao
-import app.readylytics.health.data.local.dao.BodyFatRecordDao
-import app.readylytics.health.data.local.dao.DailySummaryDao
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
-import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
-import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.dao.SleepStageDao
-import app.readylytics.health.data.local.dao.WeightRecordDao
-import app.readylytics.health.data.local.dao.WorkoutDao
-import app.readylytics.health.data.local.entity.DailySummaryEntity
-import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.TransactionRunner
@@ -39,19 +29,10 @@ import java.time.ZoneId
 
 class ResyncCheckpointResumeTest {
     private val hcRepo = mockk<HealthConnectRepository>(relaxed = true)
-    private val sleepDao = mockk<SleepSessionDao>(relaxed = true)
-    private val sleepStageDao = mockk<SleepStageDao>(relaxed = true)
-    private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
-    private val hrvDao = mockk<HrvDao>(relaxed = true)
-    private val workoutDao = mockk<WorkoutDao>(relaxed = true)
-    private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
+    private val healthIngestionStore = mockk<HealthIngestionStore>(relaxed = true)
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val scoringRepository = mockk<ScoringRepository>(relaxed = true)
     private val transactionRunner = mockk<TransactionRunner>(relaxed = true)
-    private val weightRecordDao = mockk<WeightRecordDao>(relaxed = true)
-    private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
-    private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
-    private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
     private val sessionLinkReconciler = mockk<SessionLinkReconciler>(relaxed = true)
     private val rasSourceModeBootstrapUseCase = mockk<RasSourceModeBootstrapUseCase>(relaxed = true)
     private val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
@@ -69,25 +50,15 @@ class ResyncCheckpointResumeTest {
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
         coEvery { changeSynchronizer.refreshTokensAfterFullResync() } returns Unit
-        coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
-        coJustRun { dailySummaryDao.clearFrozenBaselinesBetween(any(), any()) }
+        coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummary(LocalDate.of(1970, 1, 1))
 
         useCase =
             HealthSyncUseCase(
                 hcRepo = hcRepo,
-                sleepSessionDao = sleepDao,
-                sleepStageDao = sleepStageDao,
-                heartRateDao = heartRateDao,
-                hrvDao = hrvDao,
-                workoutDao = workoutDao,
-                weightRecordDao = weightRecordDao,
-                bodyFatRecordDao = bodyFatRecordDao,
-                bloodPressureRecordDao = bloodPressureRecordDao,
-                dailySummaryDao = dailySummaryDao,
+                healthIngestionStore = healthIngestionStore,
                 settingsRepo = settingsRepo,
                 scoringRepository = scoringRepository,
                 transactionRunner = transactionRunner,
-                oxygenSaturationRecordDao = oxygenSaturationRecordDao,
                 sessionLinkReconciler = sessionLinkReconciler,
                 rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
                 changeSynchronizer = changeSynchronizer,

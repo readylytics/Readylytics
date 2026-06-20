@@ -1,29 +1,10 @@
 package app.readylytics.health.domain.sync
 
-import app.readylytics.health.data.healthconnect.HeartRateMapper
-import app.readylytics.health.data.healthconnect.HrvMapper
-import app.readylytics.health.data.healthconnect.SleepDataMapper
-import app.readylytics.health.data.healthconnect.StepsMapper
-import app.readylytics.health.data.healthconnect.WorkoutMapper
-import app.readylytics.health.data.local.dao.BloodPressureRecordDao
-import app.readylytics.health.data.local.dao.BodyFatRecordDao
-import app.readylytics.health.data.local.dao.DailySummaryDao
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
-import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
-import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.dao.SleepStageDao
-import app.readylytics.health.data.local.dao.WeightRecordDao
-import app.readylytics.health.data.local.dao.WorkoutDao
-import app.readylytics.health.data.mapper.BloodPressureDataMapper
-import app.readylytics.health.data.mapper.BodyFatDataMapper
-import app.readylytics.health.data.mapper.OxygenSaturationDataMapper
-import app.readylytics.health.data.mapper.WeightDataMapper
-import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
@@ -58,16 +39,7 @@ class HealthSyncUseCase
     @Inject
     constructor(
         private val hcRepo: HealthConnectRepository,
-        private val sleepSessionDao: SleepSessionDao,
-        private val sleepStageDao: SleepStageDao,
-        private val heartRateDao: HeartRateDao,
-        private val hrvDao: HrvDao,
-        private val workoutDao: WorkoutDao,
-        private val weightRecordDao: WeightRecordDao,
-        private val bodyFatRecordDao: BodyFatRecordDao,
-        private val bloodPressureRecordDao: BloodPressureRecordDao,
-        private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
-        private val dailySummaryDao: DailySummaryDao,
+        private val healthIngestionStore: HealthIngestionStore,
         private val settingsRepo: SettingsRepository,
         private val scoringRepository: ScoringRepository,
         private val transactionRunner: app.readylytics.health.domain.repository.TransactionRunner,
@@ -139,7 +111,7 @@ class HealthSyncUseCase
                             startMs = ingestStart.toEpochMilli(),
                             endMs = windowEnd.toEpochMilli() - 1,
                             zoneThresholds =
-                                WorkoutMapper.zoneThresholds(
+                                app.readylytics.health.data.healthconnect.WorkoutMapper.zoneThresholds(
                                     prefs.zone1MinBpm,
                                     prefs.zone1MaxBpm,
                                     prefs.zone2MaxBpm,
@@ -182,10 +154,12 @@ class HealthSyncUseCase
                         } else {
                             val stepEntries =
                                 DeviceSourceFilter.filterToDevice(
-                                    StepsMapper.toStepEntries(hcRepo.readStepsRecords(windowStart, windowEnd)),
+                                    app.readylytics.health.data.healthconnect.StepsMapper.toStepEntries(
+                                        hcRepo.readStepsRecords(windowStart, windowEnd),
+                                    ),
                                     stepsDevice,
                                 ) { it.deviceName }
-                            stepsMap.putAll(StepsMapper.sumByDay(stepEntries, zoneId))
+                            stepsMap.putAll(app.readylytics.health.data.healthconnect.StepsMapper.sumByDay(stepEntries, zoneId))
                         }
 
                         // Single determinate progress track across both the migration and window loops.
@@ -196,8 +170,7 @@ class HealthSyncUseCase
                         var successCount = 0
                         var failureCount = 0
 
-                        val scoringStartMs = oldestTargetDay.atStartOfDay(zoneId).toInstant().toEpochMilli()
-                        dailySummaryDao.clearFrozenBaselinesBetween(scoringStartMs, windowEnd.toEpochMilli())
+                        healthIngestionStore.clearFrozenBaselines(oldestTargetDay, today.plusDays(1))
 
                         var dayToScore = oldestTargetDay
                         while (!dayToScore.isAfter(today)) {
@@ -407,7 +380,7 @@ class HealthSyncUseCase
                                         .toInstant()
                                         .toEpochMilli() - 1
                                 val zoneThresholds =
-                                    WorkoutMapper.zoneThresholds(
+                                    app.readylytics.health.data.healthconnect.WorkoutMapper.zoneThresholds(
                                         prefs.zone1MinBpm,
                                         prefs.zone1MaxBpm,
                                         prefs.zone2MaxBpm,
@@ -442,15 +415,7 @@ class HealthSyncUseCase
                             )
                         }
                         if (checkpoint == null || checkpoint.phase != ResyncPhase.RECOMPUTE) {
-                            dailySummaryDao.clearFrozenBaselinesBetween(
-                                fromMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
-                                toExclusiveMs =
-                                    endDate
-                                        .plusDays(1)
-                                        .atStartOfDay(zoneId)
-                                        .toInstant()
-                                        .toEpochMilli(),
-                            )
+                            healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1))
                         }
                         var day = recomputeStartDate
                         var recomputedDays = completedDays
@@ -521,10 +486,10 @@ class HealthSyncUseCase
                     }
                 val stepEntries =
                     DeviceSourceFilter.filterToDevice(
-                        StepsMapper.toStepEntries(stepsRecords),
+                        app.readylytics.health.data.healthconnect.StepsMapper.toStepEntries(stepsRecords),
                         stepsDevice,
                     ) { it.deviceName }
-                stepsMap.putAll(StepsMapper.sumByDay(stepEntries, zoneId))
+                stepsMap.putAll(app.readylytics.health.data.healthconnect.StepsMapper.sumByDay(stepEntries, zoneId))
                 chunkStart = chunkEndExclusive
                 yield()
             }
@@ -566,7 +531,7 @@ class HealthSyncUseCase
             prefs: UserPreferences,
         ) {
             val sleepSessions = hcRepo.readSleepSessions(windowStart, windowEnd)
-            val sleepEntities = sleepSessions.map { SleepDataMapper.mapSleepSession(it) }
+            val sleepEntities = sleepSessions.map { app.readylytics.health.data.healthconnect.SleepDataMapper.mapSleepSession(it) }
             val exerciseRecords = hcRepo.readExerciseSessions(windowStart, windowEnd)
             val hrRecords = hcRepo.readHeartRateSamples(windowStart, windowEnd)
             val hrvRecords = hcRepo.readHrvSamples(windowStart, windowEnd)
@@ -582,7 +547,7 @@ class HealthSyncUseCase
             }
 
             val thresholds =
-                WorkoutMapper.zoneThresholds(
+                app.readylytics.health.data.healthconnect.WorkoutMapper.zoneThresholds(
                     prefs.zone1MinBpm,
                     prefs.zone1MaxBpm,
                     prefs.zone2MaxBpm,
@@ -592,13 +557,18 @@ class HealthSyncUseCase
 
             val initialWorkouts =
                 exerciseRecords.map {
-                    WorkoutMapper.mapExerciseSession(
+                    app.readylytics.health.data.healthconnect.WorkoutMapper.mapExerciseSession(
                         it,
                         emptyList(),
                         thresholds,
                     )
                 }
-            val hrEntities = HeartRateMapper.mapToEntities(hrRecords, sleepEntities, initialWorkouts)
+            val hrEntities =
+                app.readylytics.health.data.healthconnect.HeartRateMapper.mapToEntities(
+                    hrRecords,
+                    sleepEntities,
+                    initialWorkouts,
+                )
             val hrBySession =
                 hrEntities
                     .asSequence()
@@ -608,9 +578,13 @@ class HealthSyncUseCase
             val workoutEntities =
                 exerciseRecords.map { session ->
                     val sessionSamples = hrBySession[session.id] ?: emptyList()
-                    WorkoutMapper.mapExerciseSession(session, sessionSamples, thresholds)
+                    app.readylytics.health.data.healthconnect.WorkoutMapper.mapExerciseSession(
+                        session,
+                        sessionSamples,
+                        thresholds,
+                    )
                 }
-            val hrvEntities = HrvMapper.mapToEntities(hrvRecords, sleepEntities)
+            val hrvEntities = app.readylytics.health.data.healthconnect.HrvMapper.mapToEntities(hrvRecords, sleepEntities)
 
             val deviceByType = prefs.deviceByDataType
 
@@ -637,28 +611,30 @@ class HealthSyncUseCase
                     deviceFor(HealthDataType.HRV),
                 ) { it.deviceName }
 
-            val weightEntities = WeightDataMapper.toEntities(weightRecords)
+            val weightEntities = app.readylytics.health.data.mapper.WeightDataMapper.toEntities(weightRecords)
             val filteredWeight =
                 DeviceSourceFilter.filterToDevice(
                     weightEntities,
                     deviceFor(HealthDataType.WEIGHT),
                 ) { it.deviceName }
 
-            val bodyFatEntities = BodyFatDataMapper.toEntities(bodyFatRecords)
+            val bodyFatEntities = app.readylytics.health.data.mapper.BodyFatDataMapper.toEntities(bodyFatRecords)
             val filteredBodyFat =
                 DeviceSourceFilter.filterToDevice(
                     bodyFatEntities,
                     deviceFor(HealthDataType.BODY_FAT),
                 ) { it.deviceName }
 
-            val bloodPressureEntities = BloodPressureDataMapper.toEntities(bloodPressureRecords)
+            val bloodPressureEntities =
+                app.readylytics.health.data.mapper.BloodPressureDataMapper.toEntities(bloodPressureRecords)
             val filteredBloodPressure =
                 DeviceSourceFilter.filterToDevice(
                     bloodPressureEntities,
                     deviceFor(HealthDataType.BLOOD_PRESSURE),
                 ) { it.deviceName }
 
-            val spo2Entities = OxygenSaturationDataMapper.toEntities(spo2Records)
+            val spo2Entities =
+                app.readylytics.health.data.mapper.OxygenSaturationDataMapper.toEntities(spo2Records)
             val filteredSpo2 =
                 DeviceSourceFilter.filterToDevice(
                     spo2Entities,
@@ -672,30 +648,24 @@ class HealthSyncUseCase
                     "bp=${filteredBloodPressure.size} spo2=${filteredSpo2.size}"
             }
 
-            transactionRunner.runInTransaction {
-                sleepSessionDao.upsertAll(filteredSleep)
-                val allStages = sleepSessions.flatMap { SleepDataMapper.mapSleepSessionStages(it) }
+            val allStages =
+                sleepSessions.flatMap {
+                    app.readylytics.health.data.healthconnect.SleepDataMapper.mapSleepSessionStages(it)
+                }
 
-                // FILTER STAGES TO MATCH DEVICE-FILTERED SESSIONS (prevents orphaned stages)
-                // Use Set for O(1) lookup instead of O(N) linear search (improves O(N×M) to O(N))
-                val filteredSessionIds = filteredSleep.map { it.id }.toSet()
-                val filteredStages =
-                    allStages.filter { stage ->
-                        stage.sessionId in filteredSessionIds
-                    }
-
-                // DELETE OLD STAGES BEFORE UPSERT (prevents stale stage accumulation)
-                sleepStageDao.deleteForSessions(filteredSessionIds.toList())
-
-                sleepStageDao.upsertAll(filteredStages)
-                workoutDao.upsertAll(filteredWorkouts)
-                heartRateDao.upsertAll(filteredHr)
-                hrvDao.upsertAll(filteredHrv)
-                weightRecordDao.upsertAll(filteredWeight)
-                bodyFatRecordDao.upsertAll(filteredBodyFat)
-                bloodPressureRecordDao.upsertAll(filteredBloodPressure)
-                oxygenSaturationRecordDao.upsertAll(filteredSpo2)
-            }
+            healthIngestionStore.persist(
+                HealthIngestionBatch(
+                    sleepSessions = filteredSleep.map { it.toInput() },
+                    sleepStages = allStages.map { it.toInput() },
+                    heartRateSamples = filteredHr.map { it.toInput() },
+                    hrvSamples = filteredHrv.map { it.toInput() },
+                    workouts = filteredWorkouts.map { it.toInput() },
+                    weights = filteredWeight.map { it.toInput() },
+                    bodyFatSamples = filteredBodyFat.map { it.toInput() },
+                    bloodPressureSamples = filteredBloodPressure.map { it.toInput() },
+                    oxygenSaturationSamples = filteredSpo2.map { it.toInput() },
+                ),
+            )
         }
 
         // Already invoked from the IO context established in [sync]; computeDailySummary
@@ -717,7 +687,7 @@ class HealthSyncUseCase
                     } else {
                         afterScoring
                     }
-                dailySummaryDao.upsert(finalSummary)
+                scoringRepository.persist(finalSummary)
 
                 logD("HealthSyncUseCase") {
                     "Day $day: scored (steps=${steps?.toString() ?: "preserved"}) and summary persisted"
@@ -739,4 +709,100 @@ class HealthSyncUseCase
                 }
             }
         }
+
+        private fun app.readylytics.health.data.local.entity.SleepSessionEntity.toInput() =
+            SleepSessionInput(
+                id = id,
+                startTime = startTime,
+                endTime = endTime,
+                durationMinutes = durationMinutes,
+                efficiency = efficiency,
+                deepSleepMinutes = deepSleepMinutes,
+                remSleepMinutes = remSleepMinutes,
+                lightSleepMinutes = lightSleepMinutes,
+                awakeMinutes = awakeMinutes,
+                sleepScore = sleepScore,
+                startZoneOffsetSeconds = startZoneOffsetSeconds,
+                endZoneOffsetSeconds = endZoneOffsetSeconds,
+                deviceName = deviceName,
+            )
+
+        private fun app.readylytics.health.data.local.entity.SleepStageEntity.toInput() =
+            SleepStageInput(
+                sessionId = sessionId,
+                stageType = stageType,
+                startTime = startTime,
+                endTime = endTime,
+                durationMinutes = durationMinutes,
+            )
+
+        private fun app.readylytics.health.data.local.entity.HeartRateRecordEntity.toInput() =
+            HeartRateInput(
+                id = id,
+                timestampMs = timestampMs,
+                beatsPerMinute = beatsPerMinute,
+                recordType = recordType,
+                sessionId = sessionId,
+                deviceName = deviceName,
+            )
+
+        private fun app.readylytics.health.data.local.entity.HrvRecordEntity.toInput() =
+            HrvInput(
+                id = id,
+                timestampMs = timestampMs,
+                rmssdMs = rmssdMs,
+                recordType = recordType,
+                sessionId = sessionId,
+                deviceName = deviceName,
+            )
+
+        private fun app.readylytics.health.data.local.entity.WorkoutRecordEntity.toInput() =
+            WorkoutInput(
+                id = id,
+                startTime = startTime,
+                endTime = endTime,
+                exerciseType = exerciseType,
+                durationMinutes = durationMinutes,
+                zone1Minutes = zone1Minutes,
+                zone2Minutes = zone2Minutes,
+                zone3Minutes = zone3Minutes,
+                zone4Minutes = zone4Minutes,
+                zone5Minutes = zone5Minutes,
+                trimp = trimp,
+                avgHr = avgHr,
+                deviceName = deviceName,
+            )
+
+        private fun app.readylytics.health.data.local.entity.WeightRecordEntity.toInput() =
+            WeightInput(
+                id = id,
+                timestampMs = timestampMs,
+                weightKg = weightKg,
+                deviceName = deviceName,
+            )
+
+        private fun app.readylytics.health.data.local.entity.BodyFatRecordEntity.toInput() =
+            BodyFatInput(
+                id = id,
+                timestampMs = timestampMs,
+                bodyFatPercent = bodyFatPercent,
+                deviceName = deviceName,
+            )
+
+        private fun app.readylytics.health.data.local.entity.BloodPressureRecordEntity.toInput() =
+            BloodPressureInput(
+                id = id,
+                timestampMs = timestampMs,
+                systolicMmHg = systolicMmHg,
+                diastolicMmHg = diastolicMmHg,
+                deviceName = deviceName,
+            )
+
+        private fun app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity.toInput() =
+            OxygenSaturationInput(
+                id = id,
+                timestampMs = timestampMs,
+                percentage = percentage,
+                deviceName = deviceName,
+            )
     }

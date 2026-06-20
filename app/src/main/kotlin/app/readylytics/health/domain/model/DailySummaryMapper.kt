@@ -1,6 +1,5 @@
 package app.readylytics.health.domain.model
 
-import app.readylytics.health.data.local.entity.DailySummaryEntity
 import java.time.Instant
 import java.time.ZoneId
 

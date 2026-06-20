@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.heartrate.HrZoneClassifier
 import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase.HeartRateSample
 import kotlin.math.roundToInt

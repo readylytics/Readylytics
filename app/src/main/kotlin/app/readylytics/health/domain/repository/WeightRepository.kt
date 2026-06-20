@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.repository
 
-import app.readylytics.health.data.local.entity.WeightRecordEntity
+import app.readylytics.health.domain.model.WeightRecordEntity
 import kotlinx.coroutines.flow.Flow
 
 interface WeightRepository {

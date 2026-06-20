@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.util
 
-import app.readylytics.health.data.preferences.UnitSystem
+import app.readylytics.health.domain.preferences.UnitSystem
 import kotlin.math.floor
 
 object UnitConverter {

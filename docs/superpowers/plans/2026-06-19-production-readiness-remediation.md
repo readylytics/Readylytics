@@ -904,7 +904,7 @@ git commit -m "feat: add adaptive navigation and rationale state"
 - Modify Hilt binding modules
 - Modify: `internal-docs/DATA_FLOW.md`
 
-- [ ] **Step 1: Add failing architecture rule**
+- [x] **Step 1: Add failing architecture rule**
 
 ```kotlin
 @Test
@@ -915,11 +915,11 @@ fun `domain package does not import data package`() {
 
 Run `CleanArchTest`; expected FAIL with complete import list.
 
-- [ ] **Step 2: Remove Room entity from scoring contract**
+- [x] **Step 2: Remove Room entity from scoring contract**
 
 Introduce domain `DailySummary` and map at data boundary. `ScoringRepository` returns domain model; `DailySummaryRepositoryImpl` owns entity mapping. Preserve all values and rounding exactly.
 
-- [ ] **Step 3: Hide DAO/mappers behind ingestion port**
+- [x] **Step 3: Hide DAO/mappers behind ingestion port**
 
 Define narrow domain contract:
 
@@ -993,11 +993,11 @@ data class OxygenSaturationInput(
 
 Create these contracts in `domain/sync/HealthIngestionStore.kt`. The data implementation maps them to the current entity fields without changing precision, nullability, or identifiers, and owns DAOs plus the Room transaction. `HealthSyncUseCase` coordinates repository ports only.
 
-- [ ] **Step 4: Move preference models/contracts to domain**
+- [x] **Step 4: Move preference models/contracts to domain**
 
 Move domain-relevant enums/config snapshots from `data.preferences` to `domain.preferences`; keep Proto conversion in data. Update imports mechanically with no behavior change.
 
-- [ ] **Step 5: Split orchestration by responsibility**
+- [x] **Step 5: Split orchestration by responsibility**
 
 Extract from `HealthSyncUseCase` only when tests are green:
 
@@ -1009,7 +1009,7 @@ WalkForwardRecalculator   baseline clear + daily scoring/progress
 
 Keep shared mutex at outer coordinator and full-range session reconciliation between ingest/prune and recompute.
 
-- [ ] **Step 6: Verify architecture and determinism**
+- [x] **Step 6: Verify architecture and determinism**
 
 Run:
 
@@ -1019,7 +1019,7 @@ Run:
 
 Expected: PASS; zero domain imports from data; serialized summary outputs unchanged for fixed fixtures.
 
-- [ ] **Step 7: Update docs, sync index, commit**
+- [x] **Step 7: Update docs, sync index, commit**
 
 ```powershell
 codegraph sync
