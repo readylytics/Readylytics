@@ -102,6 +102,8 @@ All paths are rooted at `app/src/main/kotlin/app/readylytics/health/`.
 | `RoomTransactionRunner`       | `data/local/RoomTransactionRunner.kt`        | Wraps `HealthDatabase.withTransaction { … }` so an entire ingest window upserts atomically. |
 | `HealthChangeSynchronizer`    | `domain/sync/HealthChangeSynchronizer.kt`    | Reconciles differential Health Connect Changes API responses (upsertions and deletions) incrementally during daily/foreground sync. Resolves dates of deleted records via local DB lookup to properly invalidate and queue recompute of those dates. Non-selected device updates trigger active deletion of the corresponding local records to avoid device contamination. |
 | `HealthChangeTokenStore`      | `domain/sync/HealthChangeTokenStore.kt`      | Stores and advances differential Changes Tokens per Health Connect data type after successful transaction persistence. |
+| `SelectedSourcePruner`        | `domain/sync/SelectedSourcePruner.kt`        | Executes transactional, device-scoped deletes of records not matching the selected device within the resync date range. |
+| `SelectedSourcePrunerImpl`    | `data/local/SelectedSourcePrunerImpl.kt`     | Concrete implementation of `SelectedSourcePruner`. Loops through the active selections, and for each data type with a non-null device selection, deletes records from Room that do not match the specified device name within the specified date range. |
 
 ### 1.2.1 Session-link reconciliation — chunk-independent determinism
 

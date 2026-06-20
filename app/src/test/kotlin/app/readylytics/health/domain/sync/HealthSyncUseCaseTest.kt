@@ -58,6 +58,7 @@ class HealthSyncUseCaseTest {
     private val sessionLinkReconciler = mockk<SessionLinkReconciler>(relaxed = true)
     private val rasSourceModeBootstrapUseCase = mockk<RasSourceModeBootstrapUseCase>(relaxed = true)
     private val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
+    private val selectedSourcePruner = mockk<SelectedSourcePruner>(relaxed = true)
 
     private lateinit var useCase: HealthSyncUseCase
 
@@ -88,6 +89,7 @@ class HealthSyncUseCaseTest {
                 sessionLinkReconciler = sessionLinkReconciler,
                 rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
                 changeSynchronizer = changeSynchronizer,
+                selectedSourcePruner = selectedSourcePruner,
                 ioDispatcher = Dispatchers.Unconfined,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
@@ -447,6 +449,23 @@ class HealthSyncUseCaseTest {
 
             assertFailsWith<CancellationException> {
                 useCase.sync(windowDays = 1)
+            }
+        }
+
+    @Test
+    fun `resyncRange calls SelectedSourcePruner after ingestion and before session linkage reconciliation`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 3)
+
+            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
+
+            useCase.resyncRange(startDate = startDate, endDate = endDate)
+
+            coVerifyOrder {
+                selectedSourcePruner.prune(startDate, endDate, any())
+                sessionLinkReconciler.reconcile(any(), any(), any())
+                scoringRepository.computeDailySummary(startDate)
             }
         }
 }

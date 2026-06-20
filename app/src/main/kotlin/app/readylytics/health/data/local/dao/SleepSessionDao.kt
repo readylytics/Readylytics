@@ -91,6 +91,15 @@ interface SleepSessionDao {
     @Query("SELECT DISTINCT deviceName FROM sleep_sessions WHERE deviceName IS NOT NULL AND deviceName != ''")
     suspend fun getDistinctDeviceNames(): List<String>
 
+    @Query(
+        "DELETE FROM sleep_sessions WHERE endTime >= :fromMs AND endTime < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
+    )
+    suspend fun deleteRecordsNotMatchingDevice(
+        fromMs: Long,
+        toMs: Long,
+        deviceName: String,
+    ): Int
+
     @Query("SELECT MIN(startTime) FROM sleep_sessions")
     fun observeEarliestSessionTime(): Flow<Long?>
 }

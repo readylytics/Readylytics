@@ -117,6 +117,15 @@ interface HrvDao {
     @Query("SELECT DISTINCT deviceName FROM hrv_records WHERE deviceName IS NOT NULL AND deviceName != ''")
     suspend fun getDistinctDeviceNames(): List<String>
 
+    @Query(
+        "DELETE FROM hrv_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
+    )
+    suspend fun deleteRecordsNotMatchingDevice(
+        fromMs: Long,
+        toMs: Long,
+        deviceName: String,
+    ): Int
+
     @Query("SELECT MIN(timestampMs) FROM hrv_records")
     fun observeEarliestHrvTime(): Flow<Long?>
 }

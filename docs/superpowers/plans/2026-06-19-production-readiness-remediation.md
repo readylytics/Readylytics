@@ -528,11 +528,11 @@ git commit -m "feat: reconcile Health Connect changes and deletions"
 - Modify: `app/src/main/kotlin/app/readylytics/health/ui/settings/data/DataSourceSettingsViewModel.kt`
 - Modify: `internal-docs/DATA_FLOW.md`
 
-- [ ] **Step 1: Write failing A-to-B device integration test**
+- [x] **Step 1: Write failing A-to-B device integration test**
 
 Seed device A across every data type, set selection B, ingest B, and assert A remains until full historical ingest/reconcile succeeds. After final prune, assert only selected B contributes to summaries. For `null` selection, retain all devices.
 
-- [ ] **Step 2: Define finalization port**
+- [x] **Step 2: Define finalization port**
 
 ```kotlin
 interface SelectedSourcePruner {
@@ -544,15 +544,15 @@ interface SelectedSourcePruner {
 }
 ```
 
-- [ ] **Step 3: Implement scoped transactional deletes**
+- [x] **Step 3: Implement scoped transactional deletes**
 
 Add DAO deletes bounded by retention range and selected device for each type. Do not delete before full ingest succeeds. Run prune once after all chunks and before full-range session-link reconciliation/recompute. `null`/blank selection performs no prune.
 
-- [ ] **Step 4: Keep settings on durable worker path**
+- [x] **Step 4: Keep settings on durable worker path**
 
 Retain `DataSourceSettingsViewModel` behavior that schedules `WorkerScheduler.RESYNC_WORK_NAME`; add test proving apply persists selections then enqueues unique full resync. Never calculate historical data in ViewModel.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run:
 
@@ -562,7 +562,7 @@ Run:
 
 Expected: PASS; killed ingest before finalization leaves prior valid rows intact.
 
-- [ ] **Step 6: Update docs and commit**
+- [x] **Step 6: Update docs and commit**
 
 ```powershell
 git add app/src/main app/src/test internal-docs/DATA_FLOW.md

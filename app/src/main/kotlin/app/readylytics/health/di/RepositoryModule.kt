@@ -62,4 +62,10 @@ abstract class RepositoryModule {
     abstract fun bindHealthChangeTokenStore(
         impl: app.readylytics.health.data.preferences.HealthChangeTokenStoreImpl,
     ): app.readylytics.health.domain.sync.HealthChangeTokenStore
+
+    @Binds
+    @Singleton
+    abstract fun bindSelectedSourcePruner(
+        impl: app.readylytics.health.data.local.SelectedSourcePrunerImpl,
+    ): app.readylytics.health.domain.sync.SelectedSourcePruner
 }

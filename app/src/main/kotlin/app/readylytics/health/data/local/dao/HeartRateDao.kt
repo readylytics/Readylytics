@@ -146,6 +146,15 @@ interface HeartRateDao {
     @Query("SELECT DISTINCT deviceName FROM heart_rate_records WHERE deviceName IS NOT NULL AND deviceName != ''")
     suspend fun getDistinctDeviceNames(): List<String>
 
+    @Query(
+        "DELETE FROM heart_rate_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
+    )
+    suspend fun deleteRecordsNotMatchingDevice(
+        fromMs: Long,
+        toMs: Long,
+        deviceName: String,
+    ): Int
+
     /**
      * Batch fetch all sleep HR samples for multiple sessions in a single query.
      * Used to fix N+1 query pattern in baseline computation.

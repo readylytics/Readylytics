@@ -75,6 +75,15 @@ interface WeightRecordDao {
     @Query("SELECT COUNT(*) FROM weight_records")
     suspend fun count(): Int
 
+    @Query(
+        "DELETE FROM weight_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
+    )
+    suspend fun deleteRecordsNotMatchingDevice(
+        fromMs: Long,
+        toMs: Long,
+        deviceName: String,
+    ): Int
+
     @Query("DELETE FROM weight_records")
     suspend fun deleteAll(): Int
 }

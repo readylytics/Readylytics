@@ -75,6 +75,15 @@ interface BloodPressureRecordDao {
     @Query("DELETE FROM blood_pressure_records")
     suspend fun deleteAll(): Int
 
+    @Query(
+        "DELETE FROM blood_pressure_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
+    )
+    suspend fun deleteRecordsNotMatchingDevice(
+        fromMs: Long,
+        toMs: Long,
+        deviceName: String,
+    ): Int
+
     @Query("SELECT MIN(timestampMs) FROM blood_pressure_records")
     fun observeEarliestBpTime(): Flow<Long?>
 }

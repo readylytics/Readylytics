@@ -73,6 +73,7 @@ class HealthSyncUseCase
         private val sessionLinkReconciler: SessionLinkReconciler,
         private val rasSourceModeBootstrapUseCase: RasSourceModeBootstrapUseCase,
         private val changeSynchronizer: HealthChangeSynchronizer,
+        private val selectedSourcePruner: SelectedSourcePruner,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val syncMutex = Mutex()
@@ -324,6 +325,17 @@ class HealthSyncUseCase
                             }
                             chunkStart = chunkEndExclusive
                         }
+
+                        // --- Prune phase: remove stale data from non-selected devices ---
+                        val prunerSelections =
+                            HealthDataType.entries.associateWith { type ->
+                                prefs.deviceByDataType[type.name]
+                            }
+                        selectedSourcePruner.prune(
+                            start = startDate,
+                            endInclusive = endDate,
+                            selections = prunerSelections,
+                        )
 
                         // --- Reconcile phase: chunk-independent session linkage ---
                         // Re-derives (recordType, sessionId) for every HR/HRV sample in range from the
