@@ -949,11 +949,11 @@ git commit -m "refactor: enforce domain and persistence boundaries"
 - Modify: lint findings across `app/src/main`
 - Modify/add tests for uncovered critical packages
 
-- [ ] **Step 1: Correct JaCoCo inputs**
+- [x] **Step 1: Correct JaCoCo inputs**
 
 Include Kotlin sources/classes and print included class count. Add verification assertion that report contains `ScoringRepositoryImpl`, `HealthSyncUseCase`, `DataCleanupWorker`, and chart ViewModels. Remove generated-only outputs and keep only justified exclusions.
 
-- [ ] **Step 2: Replace 4% custom gate with standard package gates**
+- [x] **Step 2: Replace 4% custom gate with standard package gates**
 
 Use `JacocoCoverageVerification` rules:
 
@@ -966,15 +966,15 @@ workers line coverage >= 60%
 
 Add tests until thresholds pass; never lower thresholds to fit current output. Make CI label match code.
 
-- [ ] **Step 3: Resolve release lint backlog**
+- [x] **Step 3: Resolve release lint backlog**
 
 Remove 42 unused resources, correct modifier parameter ordering, use plurals, fix typography/KTX/locale findings, and re-run after each category. Set `warningsAsErrors=true` only after report reaches zero warnings/hints or establish a reviewed baseline that excludes no privacy, correctness, performance, accessibility, or API compatibility rule.
 
-- [ ] **Step 4: Narrow R8 rules incrementally**
+- [x] **Step 4: Narrow R8 rules incrementally**
 
 Delete blanket keeps for Room, Hilt ViewModels, Health Connect records, Vico, SQLCipher, and whole repositories unless release smoke proves reflection requires them. After each group removal run `assembleRelease`, install minified APK generated from bundle, and exercise startup, Room, Hilt, WorkManager, backup/restore, and charts.
 
-- [ ] **Step 5: Verify final gates**
+- [x] **Step 5: Verify final gates**
 
 Run:
 
@@ -984,7 +984,7 @@ Run:
 
 Expected: all PASS; release lint has no unreviewed warning; R8 mapping generated; app startup smoke passes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add app/build.gradle.kts app/proguard-rules.pro .github/workflows/ci.yml app/src/main app/src/test
