@@ -299,7 +299,7 @@ git commit -m "fix: exclude health data from backup and transfer"
 - Modify: `README.md`
 - Create: `internal-docs/RELEASE_SIGNING.md`
 
-- [ ] **Step 1: Add fail-closed signing input validation**
+- [x] **Step 1: Add fail-closed signing input validation**
 
 Read these environment variables only for release signing:
 
@@ -313,7 +313,7 @@ READYLYTICS_UPLOAD_CERT_SHA256
 
 Register `verifyReleaseSigningInputs`; it must fail when any value is missing for release workflow. Debug/local verification remains unaffected.
 
-- [ ] **Step 2: Configure release signing without secrets in source**
+- [x] **Step 2: Configure release signing without secrets in source**
 
 ```kotlin
 signingConfigs {
@@ -328,15 +328,15 @@ signingConfigs {
 
 Assign to release only when validation passes. Never fall back to debug key.
 
-- [ ] **Step 3: Add protected release workflow**
+- [x] **Step 3: Add protected release workflow**
 
 Trigger manually and on version tags. Decode base64 keystore into runner temp directory, set environment variables, run unit/lint/release bundle, verify JAR signature, compare SHA-256 certificate fingerprint, upload signed AAB artifact, then delete temp key in `always()` step.
 
-- [ ] **Step 4: Document external setup**
+- [x] **Step 4: Document external setup**
 
 Document GitHub environment protection, secret names, fingerprint rotation, Play App Signing enrollment, and internal-track dry run. Add keystore extensions to `.gitignore`.
 
-- [ ] **Step 5: Verify locally with disposable key only**
+- [x] **Step 5: Verify locally with disposable key only**
 
 Run release workflow commands against temporary test keystore outside repository. Expected: `jarsigner -verify` reports signed; fingerprint matches supplied value. Remove disposable key afterward.
 

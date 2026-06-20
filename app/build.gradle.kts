@@ -1,5 +1,38 @@
 import org.gradle.api.GradleException
+import org.gradle.api.DefaultTask
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.TaskAction
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+
+val releaseSigningEnvironmentVariables =
+    listOf(
+        "READYLYTICS_UPLOAD_STORE_FILE",
+        "READYLYTICS_UPLOAD_STORE_PASSWORD",
+        "READYLYTICS_UPLOAD_KEY_ALIAS",
+        "READYLYTICS_UPLOAD_KEY_PASSWORD",
+        "READYLYTICS_UPLOAD_CERT_SHA256",
+    )
+
+val releaseUploadSigningReady =
+    releaseSigningEnvironmentVariables
+        .dropLast(1)
+        .all { System.getenv(it)?.isNotBlank() == true }
+
+abstract class VerifyReleaseSigningInputsTask : DefaultTask() {
+    @get:Input
+    abstract val signingInputs: MapProperty<String, String>
+
+    @TaskAction
+    fun verify() {
+        val missingVariables = signingInputs.get().filterValues(String::isBlank).keys.sorted()
+        if (missingVariables.isNotEmpty()) {
+            throw GradleException(
+                "Missing required release signing environment variables: ${missingVariables.joinToString(", ")}",
+            )
+        }
+    }
+}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -26,6 +59,15 @@ android {
     namespace = "app.readylytics.health"
     compileSdk = 37
 
+    signingConfigs {
+        create("releaseUpload") {
+            storeFile = providers.environmentVariable("READYLYTICS_UPLOAD_STORE_FILE").map(::file).orNull
+            storePassword = providers.environmentVariable("READYLYTICS_UPLOAD_STORE_PASSWORD").orNull
+            keyAlias = providers.environmentVariable("READYLYTICS_UPLOAD_KEY_ALIAS").orNull
+            keyPassword = providers.environmentVariable("READYLYTICS_UPLOAD_KEY_PASSWORD").orNull
+        }
+    }
+
     defaultConfig {
         applicationId = "app.readylytics.health"
         minSdk = 26
@@ -45,6 +87,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (releaseUploadSigningReady) {
+                signingConfig = signingConfigs.getByName("releaseUpload")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -67,6 +112,29 @@ android {
         warningsAsErrors = true
         xmlReport = true
         baseline = file("lint-baseline.xml")
+    }
+}
+
+val verifyReleaseSigningInputs =
+    tasks.register<VerifyReleaseSigningInputsTask>("verifyReleaseSigningInputs") {
+        group = "verification"
+        description = "Fails release artifact tasks when required signing inputs are missing."
+        signingInputs.putAll(
+            releaseSigningEnvironmentVariables.associateWith {
+                System.getenv(it)?.trim().orEmpty()
+            },
+        )
+    }
+
+listOf(
+    "assembleRelease",
+    "bundleRelease",
+    "packageRelease",
+    "packageReleaseBundle",
+    "signReleaseBundle",
+).forEach { taskName ->
+    tasks.matching { it.name == taskName }.configureEach {
+        dependsOn(verifyReleaseSigningInputs)
     }
 }
 
