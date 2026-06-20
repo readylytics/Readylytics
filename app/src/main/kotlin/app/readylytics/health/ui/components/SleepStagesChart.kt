@@ -18,10 +18,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
@@ -252,6 +255,10 @@ fun SleepStagesChart(
 
     var selectedSegment by remember { mutableStateOf<SelectedSegmentState?>(null) }
 
+    LaunchedEffect(session) {
+        selectedSegment = null
+    }
+
     // Resolved here (composable scope) via stringResource so locale changes recompose correctly;
     // the remember block below only consumes plain strings, never LocalContext.
     val selectedStageName = selectedSegment?.let { stageDisplayName(it.stage.stageType) }
@@ -296,21 +303,15 @@ fun SleepStagesChart(
             val tooltipData =
                 remember(
                     selectedSegment,
-                    scrollState.value,
-                    viewportWidthPx,
                     selectedStageName,
                     selectedDurationStr,
                 ) {
                     val sel = selectedSegment ?: return@remember null
-                    val viewportX = (sel.segmentCenterXPx - scrollState.value).roundToInt()
-                    // Hide when the selected segment has scrolled outside the visible viewport
-                    if (viewportX !in 0..viewportWidthPx) return@remember null
-
                     DataPointTooltipData(
                         valueText = selectedStageName ?: "",
                         dateText = timeFormatter.format(Instant.ofEpochMilli(sel.stage.startTime)),
                         extraLine = selectedDurationStr,
-                        offset = IntOffset(viewportX, 0),
+                        offset = IntOffset(0, 0),
                     )
                 }
 
@@ -514,11 +515,20 @@ fun SleepStagesChart(
                 }
             }
 
-            if (tooltipData != null) {
+            if (tooltipData != null && selectedSegment != null) {
+                val selectedCenterPx = selectedSegment!!.segmentCenterXPx
                 DataPointTooltip(
                     isVisible = true,
                     data = tooltipData,
                     onDismissRequest = { selectedSegment = null },
+                    modifier = Modifier
+                        .offset {
+                            IntOffset((selectedCenterPx - scrollState.value).roundToInt(), 0)
+                        }
+                        .graphicsLayer {
+                            val x = selectedCenterPx - scrollState.value
+                            alpha = if (x in 0f..viewportWidthPx.toFloat()) 1f else 0f
+                        }
                 )
             }
         }

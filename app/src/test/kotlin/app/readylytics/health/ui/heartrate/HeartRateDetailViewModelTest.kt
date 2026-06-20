@@ -63,6 +63,7 @@ class HeartRateDetailViewModelTest {
             heartRateRepository = heartRateRepository,
             settingsRepository = settingsRepo,
             selectedDateRepository = selectedDateRepo,
+            clock = java.time.Clock.systemDefaultZone(),
         )
 
     @After

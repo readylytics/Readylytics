@@ -730,8 +730,7 @@ git commit -m "security: remove network capability and sanitize errors"
 - Modify: `app/src/test/kotlin/app/readylytics/health/ui/components/SleepStagesChartTest.kt`
 - Modify: `DashboardScreen.kt` and `HeartRateDetailScreen.kt`
 
-- [ ] **Step 1: Write failing DST timeline tests**
-
+- [x] **Step 1: Write failing DST timeline tests**
 Define:
 
 ```kotlin
@@ -746,21 +745,21 @@ data class DayTimelineScale(
 
 Test 23-, 24-, and 25-hour days from `LocalDate.atStartOfDay(zone)` to next local day. No clamping to 1439 minutes.
 
-- [ ] **Step 2: Verify RED and implement scale**
+- [x] **Step 2: Verify RED and implement scale**
 
 Run: `.\gradlew testDebugUnitTest --tests "*DayTimelineScaleTest"`
 
 Expected: FAIL, then implement fraction from actual duration and rerun to PASS.
 
-- [ ] **Step 3: Replace fixed 1440-minute HR mapping**
+- [x] **Step 3: Replace fixed 1440-minute HR mapping**
 
 Pass day end or `LocalDate` plus zone into chart. Convert taps/samples using actual epoch duration. Add deterministic axis labels for repeated/missing DST hour.
 
-- [ ] **Step 4: Reset stale chart state**
+- [x] **Step 4: Reset stale chart state**
 
 Use `LaunchedEffect(dayStartMs, samples)` to clear selected sample when date changes or selected ID disappears. Use `LaunchedEffect(stages)` to clear selected sleep segment when session changes. Reset zoom/pan on date change.
 
-- [ ] **Step 5: Move scroll-state reads out of composition**
+- [x] **Step 5: Move scroll-state reads out of composition**
 
 Remove `scrollState.value` from `remember` keys. Position tooltip with layout-phase offset:
 
@@ -772,11 +771,11 @@ Modifier.offset {
 
 Compute selected value text only from selected stage. Clip/hide through layout bounds, not compositional scroll reads.
 
-- [ ] **Step 6: Replace frozen remembered current date**
+- [x] **Step 6: Replace frozen remembered current date**
 
 Use existing date-transition/timezone flow or injected clock-backed UI state; do not `remember { LocalDate.now() }` in screens.
 
-- [ ] **Step 7: Verify**
+- [x] **Step 7: Verify**
 
 Run:
 
@@ -787,7 +786,7 @@ Run:
 
 Expected: PASS; no `FrequentlyChangingValue` warning.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add app/src/main app/src/test

@@ -53,6 +53,7 @@ class DashboardViewModelTest {
                 dailyMetricCache = dailyMetricCache,
                 heartRateRepository = heartRateRepository,
                 insightDismissalRepository = insightDismissalRepository,
+                clock = java.time.Clock.systemDefaultZone(),
             )
     }
 

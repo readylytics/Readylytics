@@ -68,10 +68,18 @@ fun HeartRateDetailScreen(
     onNextDay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val today = remember { LocalDate.now(ZoneId.systemDefault()) }
+    val today = uiState.today
     val dayStartMs =
         remember(uiState.selectedDate) {
             uiState.selectedDate
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+        }
+    val dayEndMs =
+        remember(uiState.selectedDate) {
+            uiState.selectedDate
+                .plusDays(1)
                 .atStartOfDay(ZoneId.systemDefault())
                 .toInstant()
                 .toEpochMilli()
@@ -146,6 +154,7 @@ fun HeartRateDetailScreen(
                     HrTimelineChart(
                         samples = uiState.samples,
                         dayStartMs = dayStartMs,
+                        dayEndMs = dayEndMs,
                         zone1MinBpm = uiState.zone1MinBpm,
                         zone1MaxBpm = uiState.zone1MaxBpm,
                         zone2MaxBpm = uiState.zone2MaxBpm,
