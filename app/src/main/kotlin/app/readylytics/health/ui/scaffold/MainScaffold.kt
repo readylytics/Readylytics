@@ -1,8 +1,5 @@
 package app.readylytics.health.ui.scaffold
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,11 +12,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -85,76 +84,76 @@ fun MainScaffold(
         isRefreshing = isSyncing,
         onRefresh = { syncViewModel.triggerManualSync() },
     ) {
-        Scaffold(
-            modifier = modifier,
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-            bottomBar = {
-                AnimatedVisibility(
-                    visible = showBottomBar,
-                    enter = slideInVertically { it },
-                    exit = slideOutVertically { it },
-                ) {
-                    NavigationBar {
-                        TabDestination.all.forEach { tab ->
-                            val selected =
-                                currentDestination
-                                    ?.hierarchy
-                                    ?.any { it.hasRoute(tab::class) } == true
+        NavigationSuiteScaffold(
+            layoutType = if (showBottomBar) {
+                NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(currentWindowAdaptiveInfo())
+            } else {
+                NavigationSuiteType.None
+            },
+            navigationSuiteItems = {
+                TabDestination.all.forEach { tab ->
+                    val selected =
+                        currentDestination
+                            ?.hierarchy
+                            ?.any { it.hasRoute(tab::class) } == true
 
-                            NavigationBarItem(
-                                icon = {
-                                    Icon(
-                                        imageVector = if (selected) tab.selectedIcon else tab.icon,
-                                        contentDescription = stringResource(tab.labelRes),
-                                    )
-                                },
-                                label = { Text(stringResource(tab.labelRes)) },
-                                selected = selected,
-                                onClick = {
-                                    navController.navigate(tab) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
+                    item(
+                        icon = {
+                            Icon(
+                                imageVector = if (selected) tab.selectedIcon else tab.icon,
+                                contentDescription = stringResource(tab.labelRes),
                             )
-                        }
-                    }
+                        },
+                        label = { Text(stringResource(tab.labelRes)) },
+                        selected = selected,
+                        onClick = {
+                            navController.navigate(tab) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                    )
                 }
             },
-        ) { innerPadding ->
-            val layoutDirection = LocalLayoutDirection.current
-            // Keep padding stable to prevent list jumping when bottom bar hides
-            val bottomPadding =
-                remember(innerPadding.calculateBottomPadding()) {
-                    innerPadding.calculateBottomPadding()
-                }
+            modifier = modifier,
+        ) {
+            Scaffold(
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            ) { innerPadding ->
+                val layoutDirection = LocalLayoutDirection.current
+                // Keep padding stable to prevent list jumping when bottom bar hides
+                val bottomPadding =
+                    remember(innerPadding.calculateBottomPadding()) {
+                        innerPadding.calculateBottomPadding()
+                    }
 
-            Box(modifier = Modifier.fillMaxSize()) {
-                MainNavHost(
-                    navController = navController,
-                    modifier =
-                        Modifier.padding(
-                            start = innerPadding.calculateStartPadding(layoutDirection),
-                            top = innerPadding.calculateTopPadding(),
-                            end = innerPadding.calculateEndPadding(layoutDirection),
-                            bottom = bottomPadding,
-                        ),
-                )
-
-                // Determinate "day X of Y" banner shown while a historical recalculation walks
-                // forward, so the recompute surfaces visible progress instead of a silent spinner.
-                recalcProgress?.takeIf { it.total > 0 }?.let { progress ->
-                    RecalcProgressBanner(
-                        current = progress.current,
-                        total = progress.total,
+                Box(modifier = Modifier.fillMaxSize()) {
+                    MainNavHost(
+                        navController = navController,
                         modifier =
-                            Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = bottomPadding),
+                            Modifier.padding(
+                                start = innerPadding.calculateStartPadding(layoutDirection),
+                                top = innerPadding.calculateTopPadding(),
+                                end = innerPadding.calculateEndPadding(layoutDirection),
+                                bottom = bottomPadding,
+                            ),
                     )
+
+                    // Determinate "day X of Y" banner shown while a historical recalculation walks
+                    // forward, so the recompute surfaces visible progress instead of a silent spinner.
+                    recalcProgress?.takeIf { it.total > 0 }?.let { progress ->
+                        RecalcProgressBanner(
+                            current = progress.current,
+                            total = progress.total,
+                            modifier =
+                                Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = bottomPadding),
+                        )
+                    }
                 }
             }
         }

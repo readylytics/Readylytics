@@ -854,19 +854,19 @@ git commit -m "feat: make health charts accessible and localizable"
 - Modify: `app/src/androidTest/kotlin/app/readylytics/health/ui/scaffold/MainScaffoldTest.kt`
 - Create: `app/src/test/kotlin/app/readylytics/health/ui/onboarding/PrivacyRationaleViewModelTest.kt`
 
-- [ ] **Step 1: Write failing adaptive navigation tests**
+- [x] **Step 1: Write failing adaptive navigation tests**
 
 Assert compact width renders bottom navigation, medium renders navigation rail, and expanded renders rail/drawer per chosen M3 suite defaults. Assert all destinations and selected state remain identical.
 
-- [ ] **Step 2: Add adaptive navigation dependency and implementation**
+- [x] **Step 2: Add adaptive navigation dependency and implementation**
 
 Use Material3 adaptive navigation suite and `currentWindowAdaptiveInfo()` as documented at <https://developer.android.com/develop/ui/compose/layouts/adaptive/build-adaptive-navigation>. Replace custom bottom-only scaffold with `NavigationSuiteScaffold`; keep content/insets edge-to-edge safe.
 
-- [ ] **Step 3: Write failing rationale ViewModel test**
+- [x] **Step 3: Write failing rationale ViewModel test**
 
 Assert ViewModel exposes theme state from settings and Activity/Composable only consumes UI state/callbacks.
 
-- [ ] **Step 4: Move repository access out of Activity composition**
+- [x] **Step 4: Move repository access out of Activity composition**
 
 ```kotlin
 @HiltViewModel
@@ -881,11 +881,11 @@ class PrivacyRationaleViewModel @Inject constructor(
 
 Activity collects with lifecycle and passes `appTheme` to stateless content.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run unit/connected scaffold tests and manual API 37 tablet/foldable portrait/landscape smoke tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add gradle/libs.versions.toml app/build.gradle.kts app/src/main app/src/test app/src/androidTest

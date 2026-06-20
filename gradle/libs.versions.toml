@@ -40,6 +40,7 @@ playServicesOssLicenses = "17.5.1"
 ossLicensesPlugin = "0.12.0"
 appcompat = "1.7.1"
 materialColorUtilities = "4.1.1"
+adaptive = "1.0.0"
 
 
 
@@ -101,6 +102,8 @@ androidx-test-runner = { group = "androidx.test", name = "runner", version.ref =
 google-tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 material = { group = "com.google.android.material", name = "material", version = "1.14.0" }
 material-color-utilities = { group = "com.materialkolor", name = "material-color-utilities", version.ref = "materialColorUtilities" }
+androidx-compose-material3-adaptive-navigation = { group = "androidx.compose.material3", name = "material3-adaptive-navigation-suite", version.ref = "adaptive" }
+androidx-compose-material3-adaptive = { group = "androidx.compose.material3.adaptive", name = "adaptive", version.ref = "adaptive" }
 
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 androidx-arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "archCore" }
