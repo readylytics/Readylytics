@@ -45,7 +45,6 @@ import app.readylytics.health.ui.components.ReorderableCardGrid
 import app.readylytics.health.ui.components.StatusLegend
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.ZoneId
 
 @Composable
 fun DashboardRoute(

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -125,7 +126,7 @@ fun StepDetailScreen(
                     maxScore = (stepGoal * 1.5f),
                     status = stepCount?.let { stepsStatus(it, stepGoal) },
                     deltaText = stepsDelta,
-                    tooltipDescription = stringResource(R.string.tooltip_steps_today, stepGoal),
+                    tooltipDescription = pluralStringResource(R.plurals.tooltip_steps_today, stepGoal, stepGoal),
                 )
             }
 
@@ -168,7 +169,7 @@ fun StepDetailScreen(
                         points = uiState.dailySteps,
                         rangeStartMs = uiState.rangeStartMs,
                         rangeDays = uiState.selectedRange.days,
-                        metricName = "Steps",
+                        metricName = stringResource(R.string.label_steps),
                         baselineUnit = "steps",
                         baseline = uiState.stepGoal.toFloat(),
                         baselineLabel = stringResource(R.string.label_goal),

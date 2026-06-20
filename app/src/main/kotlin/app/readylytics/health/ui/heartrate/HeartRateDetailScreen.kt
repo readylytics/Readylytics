@@ -41,7 +41,6 @@ import app.readylytics.health.ui.common.SkeletonCard
 import app.readylytics.health.ui.components.HrTimelineChart
 import app.readylytics.health.ui.components.SectionHeader
 import app.readylytics.health.ui.theme.LocalExtendedColors
-import java.time.LocalDate
 import java.time.ZoneId
 
 @Composable

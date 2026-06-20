@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -158,7 +159,8 @@ private fun ThresholdSlider(
         }
 
         val contentDesc = stringResource(R.string.accessibility_circadian_threshold_adjustment)
-        val stateDesc = stringResource(R.string.accessibility_circadian_threshold_state, value.toInt())
+        val stateDesc =
+            pluralStringResource(R.plurals.accessibility_circadian_threshold_state, value.toInt(), value.toInt())
 
         // Slider
         Slider(

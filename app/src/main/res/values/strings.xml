@@ -655,7 +655,10 @@
     <string name="label_goal">Goal</string>
     <string name="steps_fraction_display">%1$s / %2$s</string>
     <string name="label_steps_today">Steps Today</string>
-    <string name="tooltip_steps_today">Total steps recorded today.\nGoal: %1$d steps.</string>
+    <plurals name="tooltip_steps_today">
+        <item quantity="one">Total steps recorded today.\nGoal: %1$d step.</item>
+        <item quantity="other">Total steps recorded today.\nGoal: %1$d steps.</item>
+    </plurals>
 
     <!-- Heart Rate Card & Detail -->
     <string name="tooltip_heart_rate_card">Today\'s heart rate range across all activities. Tap to
@@ -779,7 +782,10 @@
     <!-- Data Management & Sync Settings -->
     <string name="settings_retention_enabled_label">Retention Enabled</string>
     <string name="settings_retention_period_label">Retention Period</string>
-    <string name="settings_retention_days_display">%1$d days</string>
+    <plurals name="settings_retention_days_display">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
     <string name="settings_retention_description">Automatically delete data older than the retention
         period.</string>
     <string name="settings_resync_button">Resync Health Connect Data</string>
@@ -859,6 +865,40 @@
     <string name="circadian_using_profile_default">Using profile default</string>
     <string name="circadian_using_custom_setting">Using custom setting</string>
 
+    <!-- Vitals and Device Display Labels -->
+    <string name="label_rhr">RHR</string>
+    <string name="label_hrv">HRV</string>
+    <string name="label_steps">Steps</string>
+    <string name="label_spo2">SpO2</string>
+    <string name="provider_google_fit">Google Fit</string>
+    <string name="provider_samsung_health_watch">Samsung Health (Watch)</string>
+    <string name="provider_samsung_health_phone">Samsung Health (Phone)</string>
+    <string name="provider_garmin_connect">Garmin Connect</string>
+    <string name="provider_whoop">Whoop</string>
+    <string name="provider_oura">Oura</string>
+    <string name="provider_strava">Strava</string>
+    <string name="provider_withings">Withings</string>
+
+    <!-- Chart Accessibility Summary Descriptions -->
+    <string name="chart_accessibility_rhr_summary">Resting heart rate timeline chart showing heart rate values in beats per minute over the sleep period.</string>
+    <string name="chart_accessibility_hrv_summary">Heart rate variability timeline chart showing RMSSD values in milliseconds over the sleep period.</string>
+    <string name="chart_accessibility_sleep_stages_summary">Sleep stages timeline chart showing Awake, REM, Light, and Deep sleep segments.</string>
+    <string name="chart_accessibility_trimp_summary">Heart rate intensity timeline chart showing workout heart rate over the duration of the exercise.</string>
+    <string name="chart_accessibility_steps_summary">Steps progress bar showing steps count against daily goal.</string>
+    <string name="chart_accessibility_ras_summary">RAS weekly breakdown bar showing daily Readylytics Activity Score contribution.</string>
+    <string name="chart_accessibility_sleep_architecture_summary">Sleep architecture bar showing proportion of sleep spent in Deep, REM, Light, and Awake stages.</string>
+
+    <string name="chart_accessibility_no_selection">No point selected</string>
+    <string name="chart_accessibility_selected_rhr">Selected: %1$d bpm at %2$s</string>
+    <string name="chart_accessibility_selected_hrv">Selected: %1$d ms at %2$s</string>
+    <string name="chart_accessibility_selected_sleep_stage">Selected: %1$s stage, duration %2$s, starting at %3$s</string>
+    <string name="chart_accessibility_selected_trimp">Selected: %1$s at %2$s</string>
+    <string name="chart_accessibility_selected_steps">Selected: %1$s steps, goal %2$s</string>
+
+    <string name="action_previous_point">Previous point</string>
+    <string name="action_next_point">Next point</string>
+    <string name="action_clear_selection">Clear selection</string>
+
     <!-- Audited Strings -->
     <string name="manage_cards">Manage Cards</string>
     <string name="action_reset_to_defaults">Reset to defaults</string>
@@ -873,7 +913,10 @@
     <string name="date_switcher_label_selected">Selected date</string>
     <string name="accessibility_circadian_threshold_adjustment">Circadian threshold adjustment.
         Range: 0 to 90 minutes</string>
-    <string name="accessibility_circadian_threshold_state">Current value: %1$d minutes</string>
+    <plurals name="accessibility_circadian_threshold_state">
+        <item quantity="one">Current value: %1$d minute</item>
+        <item quantity="other">Current value: %1$d minutes</item>
+    </plurals>
     <string name="unit_system_label">Unit system</string>
     <string name="unit_system_metric_label">Metric (cm, kg)</string>
     <string name="unit_system_imperial_label">Imperial (ft/in, lbs)</string>
@@ -941,7 +984,10 @@
     <string name="workout_tooltip_gained_strain">Total strain gained from this workout.</string>
     <string name="workout_tooltip_ras">Readylytics Activity Score (RAS) points gained from this
         workout. RAS summarizes meaningful cardiovascular activity.</string>
-    <string name="ras_earned_today">+%1$d today</string>
+    <plurals name="ras_earned_today">
+        <item quantity="one">+%1$d today</item>
+        <item quantity="other">+%1$d today</item>
+    </plurals>
     <string name="workout_stats_acwr_title">Training Load &amp; Strain Ratio (ACWR)</string>
 
     <!-- Workout Intensities -->
@@ -1008,11 +1054,20 @@
     <string name="insight_rest_day_no_impact_title">Rest Day</string>
     <string name="insight_rest_day_no_impact_body">Your rest day did not lead to a significant HRV rebound.</string>
     <string name="insight_circadian_shift_title">Circadian Shift Delayed Recovery</string>
-    <string name="insight_circadian_shift_body">No recovery signal triggered despite a rest day. This correlates with a bedtime %1$d min later than your average, which shifted your circadian rhythm and impacted overnight recovery.</string>
+    <plurals name="insight_circadian_shift_body">
+        <item quantity="one">No recovery signal triggered despite a rest day. This correlates with a bedtime %1$d min later than your average, which shifted your circadian rhythm and impacted overnight recovery.</item>
+        <item quantity="other">No recovery signal triggered despite a rest day. This correlates with a bedtime %1$d min later than your average, which shifted your circadian rhythm and impacted overnight recovery.</item>
+    </plurals>
     <string name="insight_high_strain_sleep_deficit_title">High Strain and Sleep Deficit</string>
-    <string name="insight_high_strain_sleep_deficit_body">Your acute strain ratio of %1$.1f combined with %2$d minutes less sleep than your goal is suppressing your recovery.</string>
+    <plurals name="insight_high_strain_sleep_deficit_body">
+        <item quantity="one">Your acute strain ratio of %1$.1f combined with %2$d minute less sleep than your goal is suppressing your recovery.</item>
+        <item quantity="other">Your acute strain ratio of %1$.1f combined with %2$d minutes less sleep than your goal is suppressing your recovery.</item>
+    </plurals>
     <string name="insight_late_nadir_short_sleep_title">Late Recovery and Short Sleep</string>
-    <string name="insight_late_nadir_short_sleep_body">Your heart rate nadir occurred late in the night, and you slept %1$d minutes less than your %2$d minute goal, limiting overnight restoration.</string>
+    <plurals name="insight_late_nadir_short_sleep_body">
+        <item quantity="one">Your heart rate nadir occurred late in the night, and you slept %1$d minute less than your %2$d minute goal, limiting overnight restoration.</item>
+        <item quantity="other">Your heart rate nadir occurred late in the night, and you slept %1$d minutes less than your %2$d minute goal, limiting overnight restoration.</item>
+    </plurals>
     <string name="insight_recovery_hrv_missing_title">HRV Data Missing</string>
     <string name="insight_recovery_hrv_missing_body">Today\'s readiness score is based on resting heart rate and sleep only because no HRV reading was recorded last night.</string>
     <string name="insight_recovery_stages_missing_title">Sleep Stage Data Missing</string>
@@ -1026,9 +1081,15 @@
     <string name="insight_ras_depletion_high_strain_title">RAS Depleted Despite Training Load</string>
     <string name="insight_ras_depletion_high_strain_body">Your RAS score of %1$.0f is low even though your strain ratio of %2$.1f shows a high training load, suggesting your effort isn\'t translating into RAS gains.</string>
     <string name="insight_hrv_decline_streak_title">HRV Below Baseline Multiple Nights</string>
-    <string name="insight_hrv_decline_streak_body">Your HRV has been below your baseline for %1$d consecutive nights, which can signal accumulating fatigue.</string>
+    <plurals name="insight_hrv_decline_streak_body">
+        <item quantity="one">Your HRV has been below your baseline for %1$d consecutive night, which can signal accumulating fatigue.</item>
+        <item quantity="other">Your HRV has been below your baseline for %1$d consecutive nights, which can signal accumulating fatigue.</item>
+    </plurals>
     <string name="insight_step_shortfall_title">Low Daily Activity</string>
-    <string name="insight_step_shortfall_body">You took %1$d steps today, well short of your %2$d step goal.</string>
+    <plurals name="insight_step_shortfall_body">
+        <item quantity="one">You took %1$d step today, well short of your %2$d step goal.</item>
+        <item quantity="other">You took %1$d steps today, well short of your %2$d step goal.</item>
+    </plurals>
     <string name="insight_ras_weekly_underperformance_title">Weekly RAS Below Target</string>
     <string name="insight_ras_weekly_underperformance_body">Your rolling weekly RAS total of %1$.0f is below the recommended target of %2$.0f.</string>
     <string name="insight_weight_drift_training_load_title">Weight Change Under High Training Load</string>
@@ -1396,7 +1457,7 @@
     </string-array>
 
     <!-- WEIGHT_DRIFT_TRAINING_LOAD -->
-    <string name="insight_detail_weight_drift_training_load_observed">Your weight changed by more than 2% over the past week while training strain is high.</string>
+    <string name="insight_detail_weight_drift_training_load_observed" formatted="false">Your weight changed by more than 2% over the past week while training strain is high.</string>
     <string name="insight_detail_weight_drift_training_load_meaning">During high training load, short-term weight changes often reflect fluid balance, glycogen, food volume, or recovery stress rather than true tissue change.</string>
     <string-array name="insight_detail_weight_drift_training_load_causes">
         <item>Fluid loss|Sweat and hydration changes can move weight quickly.|GENERIC</item>

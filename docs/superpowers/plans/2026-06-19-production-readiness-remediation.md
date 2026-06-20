@@ -804,15 +804,15 @@ git commit -m "fix: make chart time and selection state resilient"
 - Modify: `app/src/main/res/values/strings.xml`
 - Create: `app/src/androidTest/kotlin/app/readylytics/health/ui/components/ChartAccessibilityTest.kt`
 
-- [ ] **Step 1: Write failing semantics tests**
+- [x] **Step 1: Write failing semantics tests**
 
 For HR, sleep stages, and TRIMP charts assert a chart summary description, collection/value semantics, next/previous accessible actions, selected-value state description, and dismiss action.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run focused connected semantics test. Expected: nodes/actions not found.
 
-- [ ] **Step 3: Add accessible chart contract**
+- [x] **Step 3: Add accessible chart contract**
 
 Every interactive chart exposes:
 
@@ -826,15 +826,15 @@ Modifier.semantics {
 
 Provide a visible or screen-reader-accessible textual value list for charts where point traversal would be excessive. Announce selection changes through state description, not transient toast.
 
-- [ ] **Step 4: Localize labels**
+- [x] **Step 4: Localize labels**
 
 Move `RHR`, `HRV`, `Steps`, `This Phone`, and provider display labels to resources. Keep package names and enum identifiers nonlocalized internally. Add plurals for candidate counts/durations flagged by lint.
 
-- [ ] **Step 5: Verify GREEN and manual accessibility**
+- [x] **Step 5: Verify GREEN and manual accessibility**
 
 Run connected tests. Manually verify TalkBack, Switch Access, keyboard/D-pad, 200% font, dark mode, and high contrast on compact and expanded devices.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add app/src/main app/src/androidTest

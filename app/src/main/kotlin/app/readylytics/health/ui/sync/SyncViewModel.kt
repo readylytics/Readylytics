@@ -8,8 +8,8 @@ import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedEx
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.PermissionStatus
 import app.readylytics.health.domain.sync.ForegroundSyncController
-import app.readylytics.health.ui.common.UiText
 import app.readylytics.health.ui.common.BaseViewModel
+import app.readylytics.health.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -98,7 +98,11 @@ class SyncViewModel
                 } catch (e: Exception) {
                     app.readylytics.health.domain.util
                         .logE("SyncViewModel", e) { "Manual sync failed" }
-                    _uiState.update { SyncUiState.Error(UiText.StringRes(app.readylytics.health.R.string.error_sync_failed)) }
+                    _uiState.update {
+                        SyncUiState.Error(
+                            UiText.StringRes(app.readylytics.health.R.string.error_sync_failed),
+                        )
+                    }
                 }
             }
         }
@@ -181,7 +185,11 @@ class SyncViewModel
                     } catch (e: Exception) {
                         app.readylytics.health.domain.util
                             .logE("SyncViewModel", e) { "Foreground sync failed" }
-                        _uiState.update { SyncUiState.Error(UiText.StringRes(app.readylytics.health.R.string.error_sync_failed)) }
+                        _uiState.update {
+                            SyncUiState.Error(
+                                UiText.StringRes(app.readylytics.health.R.string.error_sync_failed),
+                            )
+                        }
                     }
                 }
         }

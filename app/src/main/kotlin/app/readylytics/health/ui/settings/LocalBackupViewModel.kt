@@ -128,7 +128,10 @@ class LocalBackupViewModel
                                 transientState.update {
                                     it.copy(
                                         isRestoring = false,
-                                        backupError = e.toBackupError(defaultRes = R.string.error_backup_restore_validation),
+                                        backupError =
+                                            e.toBackupError(
+                                                defaultRes = R.string.error_backup_restore_validation,
+                                            ),
                                     )
                                 }
                             }
@@ -146,7 +149,10 @@ class LocalBackupViewModel
                                 transientState.update {
                                     it.copy(
                                         isRestoring = false,
-                                        backupError = result.cause.toBackupError(defaultRes = R.string.error_backup_restore_failed),
+                                        backupError =
+                                            result.cause.toBackupError(
+                                                defaultRes = R.string.error_backup_restore_failed,
+                                            ),
                                     )
                                 }
                             }

@@ -33,12 +33,20 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.readylytics.health.R
 import app.readylytics.health.ui.heartrate.HrSample
 import java.time.Instant
 import java.time.ZoneId
@@ -194,9 +202,10 @@ private fun HrTimelineChartContent(
     }
 
     val segments = remember(samples) { HrChartHelper.splitIntoSegments(samples, GAP_THRESHOLD_MS) }
-    val hourLabels = remember(dayStartMs, dayEndMs, zoneId) {
-        HrChartHelper.generateHourLabels(dayStartMs, dayEndMs, zoneId)
-    }
+    val hourLabels =
+        remember(dayStartMs, dayEndMs, zoneId) {
+            HrChartHelper.generateHourLabels(dayStartMs, dayEndMs, zoneId)
+        }
     val yLabels =
         remember(zone1MinBpm, zone1MaxBpm, zone2MaxBpm, zone3MaxBpm, zone4MaxBpm) {
             listOf(zone1MinBpm, zone1MaxBpm, zone2MaxBpm, zone3MaxBpm, zone4MaxBpm)
@@ -239,12 +248,68 @@ private fun HrTimelineChartContent(
                     offset = IntOffset(sampleX.roundToInt(), sampleY.roundToInt()),
                 )
             }
+        val prevActionLabel = stringResource(R.string.action_previous_point)
+        val nextActionLabel = stringResource(R.string.action_next_point)
+        val clearActionLabel = stringResource(R.string.action_clear_selection)
+
+        val customActionsList =
+            remember(selectedSample, samples) {
+                val list = mutableListOf<CustomAccessibilityAction>()
+                if (samples.isNotEmpty()) {
+                    list.add(
+                        CustomAccessibilityAction(prevActionLabel) {
+                            val currentIndex = samples.indexOfFirst { it.timeMs == selectedSample?.timeMs }
+                            selectedSample =
+                                if (currentIndex > 0) {
+                                    samples[currentIndex - 1]
+                                } else {
+                                    samples.last()
+                                }
+                            true
+                        },
+                    )
+                    list.add(
+                        CustomAccessibilityAction(nextActionLabel) {
+                            val currentIndex = samples.indexOfFirst { it.timeMs == selectedSample?.timeMs }
+                            selectedSample =
+                                if (currentIndex != -1 && currentIndex < samples.lastIndex) {
+                                    samples[currentIndex + 1]
+                                } else {
+                                    samples.first()
+                                }
+                            true
+                        },
+                    )
+                }
+                if (selectedSample != null) {
+                    list.add(
+                        CustomAccessibilityAction(clearActionLabel) {
+                            selectedSample = null
+                            true
+                        },
+                    )
+                }
+                list
+            }
+
+        val chartSummary = stringResource(R.string.chart_accessibility_rhr_summary)
+        val selectedValueDescription =
+            selectedSample?.let { sample ->
+                val timeStr = Instant.ofEpochMilli(sample.timeMs).atZone(zoneId).format(hourFormatter)
+                stringResource(R.string.chart_accessibility_selected_rhr, sample.bpm, timeStr)
+            } ?: stringResource(R.string.chart_accessibility_no_selection)
+
         Canvas(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .height(220.dp)
-                    .pointerInput(Unit) {
+                    .testTag("HrTimelineChartCanvas")
+                    .semantics {
+                        contentDescription = chartSummary
+                        stateDescription = selectedValueDescription
+                        customActions = customActionsList
+                    }.pointerInput(Unit) {
                         detectTransformGestures { centroid, pan, zoom, _ ->
                             scaleX = (scaleX * zoom).coerceIn(1f, 5f)
                             val maxOffset = (scaleX - 1f) * plotW

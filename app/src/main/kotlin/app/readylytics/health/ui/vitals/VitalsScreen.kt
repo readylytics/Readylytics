@@ -180,7 +180,7 @@ fun VitalsScreen(
 
                         M3ScoreGaugeCard(
                             modifier = Modifier.weight(1f),
-                            title = "RHR",
+                            title = stringResource(R.string.label_rhr),
                             score = rhrFill,
                             displayText = currentRhr?.toString() ?: "—",
                             unitText = stringResource(R.string.unit_bpm),
@@ -217,7 +217,7 @@ fun VitalsScreen(
 
                         M3ScoreGaugeCard(
                             modifier = Modifier.weight(1f),
-                            title = "HRV",
+                            title = stringResource(R.string.label_hrv),
                             score = currentHrv?.toFloat(),
                             displayText = currentHrv?.toString() ?: "—",
                             unitText = stringResource(R.string.unit_ms),
@@ -279,7 +279,7 @@ fun VitalsScreen(
                             points = uiState.dailyHrv,
                             rangeStartMs = uiState.rangeStartMs,
                             rangeDays = uiState.selectedRange.days,
-                            metricName = "HRV",
+                            metricName = stringResource(R.string.label_hrv),
                             baselineUnit = "ms",
                             baseline = baselineHrv,
                             showBaseline = !isCalibrating,
@@ -313,7 +313,7 @@ fun VitalsScreen(
                             points = uiState.dailyRhr,
                             rangeStartMs = uiState.rangeStartMs,
                             rangeDays = uiState.selectedRange.days,
-                            metricName = "RHR",
+                            metricName = stringResource(R.string.label_rhr),
                             baselineUnit = "bpm",
                             baseline = baselineRhr?.toFloat(),
                             showBaseline = !isCalibrating,
@@ -346,7 +346,7 @@ fun VitalsScreen(
                             points = uiState.dailySpo2,
                             rangeStartMs = uiState.rangeStartMs,
                             rangeDays = uiState.selectedRange.days,
-                            metricName = "SpO2",
+                            metricName = stringResource(R.string.label_spo2),
                             baselineUnit = "%",
                             baseline = 95f,
                             baselineLabel = stringResource(R.string.label_normal_limit),

@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,8 +36,14 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -315,6 +321,88 @@ fun SleepStagesChart(
                     )
                 }
 
+            val density = LocalDensity.current
+            val prevActionLabel = stringResource(R.string.action_previous_point)
+            val nextActionLabel = stringResource(R.string.action_next_point)
+            val clearActionLabel = stringResource(R.string.action_clear_selection)
+            val customActionsList =
+                remember(selectedSegment, mergedTimeline, session, chartWidth, density) {
+                    val list = mutableListOf<CustomAccessibilityAction>()
+                    if (mergedTimeline.isNotEmpty() && session != null) {
+                        val sessionDuration = (session.endTime - session.startTime).coerceAtLeast(1L)
+                        val laneHeightPx = with(density) { LANE_HEIGHT.toPx() }
+                        val minW = with(density) { 4.dp.toPx() }
+                        val canvasWidth = with(density) { chartWidth.toPx() }
+
+                        fun selectIndex(idx: Int) {
+                            val it = mergedTimeline[idx]
+                            val laneIdx = getStageLaneIndex(it.stageType)
+                            val startDiff = (it.startTime - session.startTime).toFloat()
+                            val sx = startDiff / sessionDuration * canvasWidth
+                            val duration = (it.endTime - it.startTime).toFloat()
+                            val w = (duration / sessionDuration * canvasWidth).coerceAtLeast(minW)
+                            selectedSegment =
+                                SelectedSegmentState(
+                                    stage = it,
+                                    segmentCenterXPx = sx + w / 2f,
+                                    segmentCenterYPx = (laneIdx + 0.5f) * laneHeightPx,
+                                )
+                        }
+
+                        list.add(
+                            CustomAccessibilityAction(prevActionLabel) {
+                                val currentStage = selectedSegment?.stage
+                                val currentIndex =
+                                    mergedTimeline.indexOfFirst {
+                                        it.startTime == currentStage?.startTime
+                                    }
+                                if (currentIndex > 0) {
+                                    selectIndex(currentIndex - 1)
+                                    true
+                                } else {
+                                    selectIndex(mergedTimeline.lastIndex)
+                                    true
+                                }
+                            },
+                        )
+                        list.add(
+                            CustomAccessibilityAction(nextActionLabel) {
+                                val currentStage = selectedSegment?.stage
+                                val currentIndex =
+                                    mergedTimeline.indexOfFirst {
+                                        it.startTime == currentStage?.startTime
+                                    }
+                                val lastIdx = mergedTimeline.lastIndex
+                                if (currentIndex != -1 && currentIndex < lastIdx) {
+                                    selectIndex(currentIndex + 1)
+                                    true
+                                } else {
+                                    selectIndex(0)
+                                    true
+                                }
+                            },
+                        )
+                    }
+                    if (selectedSegment != null) {
+                        list.add(
+                            CustomAccessibilityAction(clearActionLabel) {
+                                selectedSegment = null
+                                true
+                            },
+                        )
+                    }
+                    list
+                }
+
+            val chartSummary = stringResource(R.string.chart_accessibility_sleep_stages_summary)
+            val selectedValueDescription =
+                selectedSegment?.let { sel ->
+                    val timeStr = timeFormatter.format(Instant.ofEpochMilli(sel.stage.startTime))
+                    val stageName = stageDisplayName(sel.stage.stageType)
+                    val durationStr = formatStageDuration(sel.stage.durationMinutes)
+                    stringResource(R.string.chart_accessibility_selected_sleep_stage, stageName, durationStr, timeStr)
+                } ?: stringResource(R.string.chart_accessibility_no_selection)
+
             Column(
                 modifier =
                     if (needsScroll) {
@@ -329,7 +417,11 @@ fun SleepStagesChart(
                             .width(chartWidth)
                             .height(CHART_TOTAL_HEIGHT)
                             .testTag("SleepStagesChartCanvas")
-                            .pointerInput(mergedTimeline, session) {
+                            .semantics {
+                                contentDescription = chartSummary
+                                stateDescription = selectedValueDescription
+                                customActions = customActionsList
+                            }.pointerInput(mergedTimeline, session) {
                                 detectTapGestures { tapOffset ->
                                     val canvasWidth = size.width.toFloat()
                                     val laneHeightPx = LANE_HEIGHT.toPx()
@@ -521,14 +613,14 @@ fun SleepStagesChart(
                     isVisible = true,
                     data = tooltipData,
                     onDismissRequest = { selectedSegment = null },
-                    modifier = Modifier
-                        .offset {
-                            IntOffset((selectedCenterPx - scrollState.value).roundToInt(), 0)
-                        }
-                        .graphicsLayer {
-                            val x = selectedCenterPx - scrollState.value
-                            alpha = if (x in 0f..viewportWidthPx.toFloat()) 1f else 0f
-                        }
+                    modifier =
+                        Modifier
+                            .offset {
+                                IntOffset((selectedCenterPx - scrollState.value).roundToInt(), 0)
+                            }.graphicsLayer {
+                                val x = selectedCenterPx - scrollState.value
+                                alpha = if (x in 0f..viewportWidthPx.toFloat()) 1f else 0f
+                            },
                 )
             }
         }

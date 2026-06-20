@@ -6,13 +6,17 @@ import java.time.ZoneId
 import kotlin.test.assertEquals
 
 class DayTimelineScaleTest {
-
     @Test
     fun testNormal24HourDay() {
         val zone = ZoneId.of("Europe/Berlin")
         val date = LocalDate.of(2026, 6, 20)
         val startMs = date.atStartOfDay(zone).toInstant().toEpochMilli()
-        val endExclusiveMs = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val endExclusiveMs =
+            date
+                .plusDays(1)
+                .atStartOfDay(zone)
+                .toInstant()
+                .toEpochMilli()
 
         val scale = DayTimelineScale(startMs, endExclusiveMs)
         assertEquals(24L * 60 * 60 * 1000, scale.durationMs)
@@ -26,7 +30,12 @@ class DayTimelineScaleTest {
         val zone = ZoneId.of("Europe/Berlin")
         val date = LocalDate.of(2026, 3, 29) // Spring forward DST
         val startMs = date.atStartOfDay(zone).toInstant().toEpochMilli()
-        val endExclusiveMs = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val endExclusiveMs =
+            date
+                .plusDays(1)
+                .atStartOfDay(zone)
+                .toInstant()
+                .toEpochMilli()
 
         val scale = DayTimelineScale(startMs, endExclusiveMs)
         assertEquals(23L * 60 * 60 * 1000, scale.durationMs)
@@ -40,7 +49,12 @@ class DayTimelineScaleTest {
         val zone = ZoneId.of("Europe/Berlin")
         val date = LocalDate.of(2026, 10, 25) // Fall back DST
         val startMs = date.atStartOfDay(zone).toInstant().toEpochMilli()
-        val endExclusiveMs = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val endExclusiveMs =
+            date
+                .plusDays(1)
+                .atStartOfDay(zone)
+                .toInstant()
+                .toEpochMilli()
 
         val scale = DayTimelineScale(startMs, endExclusiveMs)
         assertEquals(25L * 60 * 60 * 1000, scale.durationMs)

@@ -2,6 +2,7 @@ package app.readylytics.health
 
 import android.app.Application
 import android.os.StrictMode
+import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -14,8 +15,9 @@ import app.readylytics.health.di.ApplicationScope
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.scoring.BackfillHistoricalBaselinesUseCase
 import app.readylytics.health.domain.sync.ForegroundSyncController
+import app.readylytics.health.domain.util.DomainLogSink
+import app.readylytics.health.domain.util.DomainLogger
 import app.readylytics.health.domain.util.logD
-import app.readylytics.health.domain.util.installAndroidLogSink
 import app.readylytics.health.domain.util.logE
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.HiltAndroidApp
@@ -111,6 +113,41 @@ class HealthDashboardApplication :
                 .detectLeakedClosableObjects()
                 .penaltyLog()
                 .build(),
+        )
+    }
+
+    private fun installAndroidLogSink() {
+        DomainLogger.installSink(
+            object : DomainLogSink {
+                override fun debug(
+                    tag: String,
+                    message: String,
+                ) {
+                    if (BuildConfig.DEBUG) {
+                        Log.d(tag, message)
+                    }
+                }
+
+                override fun warn(
+                    tag: String,
+                    message: String,
+                    throwable: Throwable?,
+                ) {
+                    if (BuildConfig.DEBUG) {
+                        Log.w(tag, message, throwable)
+                    }
+                }
+
+                override fun error(
+                    tag: String,
+                    message: String,
+                    throwable: Throwable?,
+                ) {
+                    if (BuildConfig.DEBUG) {
+                        Log.e(tag, message, throwable)
+                    }
+                }
+            },
         )
     }
 }

@@ -1,8 +1,5 @@
 package app.readylytics.health.domain.util
 
-import android.util.Log
-import app.readylytics.health.BuildConfig
-
 interface DomainLogSink {
     fun debug(
         tag: String,
@@ -71,41 +68,6 @@ object DomainLogger {
     ) {
         sink.error(tag, message, throwable)
     }
-}
-
-fun installAndroidLogSink() {
-    DomainLogger.installSink(
-        object : DomainLogSink {
-            override fun debug(
-                tag: String,
-                message: String,
-            ) {
-                if (BuildConfig.DEBUG) {
-                    Log.d(tag, message)
-                }
-            }
-
-            override fun warn(
-                tag: String,
-                message: String,
-                throwable: Throwable?,
-            ) {
-                if (BuildConfig.DEBUG) {
-                    Log.w(tag, message, throwable)
-                }
-            }
-
-            override fun error(
-                tag: String,
-                message: String,
-                throwable: Throwable?,
-            ) {
-                if (BuildConfig.DEBUG) {
-                    Log.e(tag, message, throwable)
-                }
-            }
-        },
-    )
 }
 
 inline fun logD(

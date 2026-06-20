@@ -26,6 +26,7 @@ class ProductionReadinessStaticTest {
         val allowedLogFiles =
             setOf(
                 "app/readylytics/health/domain/util/AppLog.kt",
+                "app/readylytics/health/HealthDashboardApplication.kt",
             )
 
         val offenders =

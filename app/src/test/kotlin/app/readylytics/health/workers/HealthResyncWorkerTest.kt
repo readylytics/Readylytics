@@ -1,7 +1,7 @@
 package app.readylytics.health.workers
 
-import android.content.pm.ServiceInfo
 import android.content.Context
+import android.content.pm.ServiceInfo
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters

@@ -24,7 +24,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.R
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.util.roundToPercentInt
 
@@ -52,12 +56,17 @@ fun RasWeeklyBar(
 
     if (dailyBreakdown.isEmpty()) return
 
+    val chartSummary = stringResource(R.string.chart_accessibility_ras_summary)
+
     Column(modifier = modifier) {
         Canvas(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(28.dp),
+                    .height(28.dp)
+                    .semantics {
+                        contentDescription = chartSummary
+                    },
         ) {
             val totalWidth = size.width
             val barHeight = size.height

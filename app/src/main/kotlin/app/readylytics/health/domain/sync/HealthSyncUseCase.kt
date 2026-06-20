@@ -269,7 +269,10 @@ class HealthSyncUseCase
                         val initialPrefs = settingsRepo.userPreferences.first()
                         updateCalculatedMetrics(initialPrefs)
                         val prefs = settingsRepo.userPreferences.first()
-                        val selectionHash = prefs.deviceByDataType.toSortedMap().entries.joinToString("|") { (type, device) -> "$type=${device.orEmpty()}" }
+                        val selectionHash =
+                            prefs.deviceByDataType.toSortedMap().entries.joinToString(
+                                "|",
+                            ) { (type, device) -> "$type=${device.orEmpty()}" }
                         val savedCheckpoint = checkpointStore.checkpoint.first()
                         val checkpoint =
                             savedCheckpoint
@@ -312,7 +315,8 @@ class HealthSyncUseCase
                             var chunkStart = checkpoint?.nextDate?.coerceAtLeast(startDate) ?: startDate
                             while (!chunkStart.isAfter(endDate)) {
                                 ensureActive()
-                                val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
+                                val chunkEndExclusive =
+                                    minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
                                 val ingestFromDate = chunkStart.minusDays(1)
                                 val windowStart = ingestFromDate.atStartOfDay(zoneId).toInstant()
                                 val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
@@ -335,7 +339,14 @@ class HealthSyncUseCase
                                         startDate = startDate,
                                         endDate = endDate,
                                         phase = nextPhase,
-                                        nextDate = if (nextPhase == ResyncPhase.INGEST) chunkEndExclusive else startDate,
+                                        nextDate =
+                                            if (nextPhase ==
+                                                ResyncPhase.INGEST
+                                            ) {
+                                                chunkEndExclusive
+                                            } else {
+                                                startDate
+                                            },
                                         selectionHash = selectionHash,
                                     ),
                                 )
@@ -348,7 +359,10 @@ class HealthSyncUseCase
                             HealthDataType.entries.associateWith { type ->
                                 prefs.deviceByDataType[type.name]
                             }
-                        if (checkpoint == null || checkpoint.phase == ResyncPhase.INGEST || checkpoint.phase == ResyncPhase.PRUNE) {
+                        if (checkpoint == null ||
+                            checkpoint.phase == ResyncPhase.INGEST ||
+                            checkpoint.phase == ResyncPhase.PRUNE
+                        ) {
                             selectedSourcePruner.prune(
                                 start = startDate,
                                 endInclusive = endDate,

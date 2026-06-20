@@ -21,7 +21,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
 import app.readylytics.health.ui.components.ChartDefaults
@@ -83,9 +89,34 @@ private fun HrChart(
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
+    var selectedIndex by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(tooltipState) {
         if (tooltipState == null) {
+            selectedPointOffset = null
+            selectedIndex = null
+        }
+    }
+
+    LaunchedEffect(selectedIndex) {
+        val idx = selectedIndex
+        if (idx != null && idx in chartData.indices) {
+            val point = chartData[idx]
+            val minute = point.first.toInt()
+            val bpm = point.second.toInt()
+            tooltipState =
+                DataPointTooltipData(
+                    valueText = "$bpm bpm",
+                    dateText = "$minute min",
+                    offset =
+                        selectedPointOffset?.let {
+                            androidx.compose.ui.unit
+                                .IntOffset(it.x.toInt(), it.y.toInt())
+                        } ?: androidx.compose.ui.unit
+                            .IntOffset(0, 0),
+                )
+        } else {
+            tooltipState = null
             selectedPointOffset = null
         }
     }
@@ -154,27 +185,83 @@ private fun HrChart(
         rememberChartMarkerVisibilityListener(
             onPointSelected = { x, y, canvasX, canvasY ->
                 val minute = x.toInt().coerceIn(0, durationMinutes - 1)
-                val valueText = "${y.toInt()} bpm"
-                val dateText = "$minute min"
                 selectedPointOffset = Offset(canvasX, canvasY)
-                tooltipState =
-                    DataPointTooltipData(
-                        valueText = valueText,
-                        dateText = dateText,
-                        offset =
-                            androidx.compose.ui.unit.IntOffset(
-                                canvasX.toInt(),
-                                canvasY.toInt(),
-                            ),
-                    )
+                val idx =
+                    chartData.indexOfFirst { it.first.roundToInt() == minute }.takeIf { it != -1 }
+                        ?: chartData.indexOfFirst { it.first >= minute }.takeIf { it != -1 }
+                        ?: 0
+                selectedIndex = idx
             },
         )
+    val prevActionLabel = stringResource(R.string.action_previous_point)
+    val nextActionLabel = stringResource(R.string.action_next_point)
+    val clearActionLabel = stringResource(R.string.action_clear_selection)
+
+    val customActionsList =
+        remember(selectedIndex, chartData) {
+            val list = mutableListOf<CustomAccessibilityAction>()
+            if (chartData.isNotEmpty()) {
+                list.add(
+                    CustomAccessibilityAction(prevActionLabel) {
+                        val curr = selectedIndex ?: -1
+                        selectedIndex =
+                            if (curr > 0) {
+                                curr - 1
+                            } else {
+                                chartData.lastIndex
+                            }
+                        true
+                    },
+                )
+                list.add(
+                    CustomAccessibilityAction(nextActionLabel) {
+                        val curr = selectedIndex ?: -1
+                        selectedIndex =
+                            if (curr != -1 && curr < chartData.lastIndex) {
+                                curr + 1
+                            } else {
+                                0
+                            }
+                        true
+                    },
+                )
+            }
+            if (selectedIndex != null) {
+                list.add(
+                    CustomAccessibilityAction(clearActionLabel) {
+                        selectedIndex = null
+                        true
+                    },
+                )
+            }
+            list
+        }
+
+    val chartSummary = stringResource(R.string.chart_accessibility_trimp_summary)
+    val selectedValueDescription =
+        selectedIndex?.let { idx ->
+            val point = chartData.getOrNull(idx)
+            if (point != null) {
+                stringResource(
+                    R.string.chart_accessibility_selected_trimp,
+                    "${point.second.toInt()} bpm",
+                    "${point.first.toInt()} min",
+                )
+            } else {
+                null
+            }
+        } ?: stringResource(R.string.chart_accessibility_no_selection)
 
     Box(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .pointerInput(Unit) {
+                .testTag("TrimpBreakdownChartCanvas")
+                .semantics {
+                    contentDescription = chartSummary
+                    stateDescription = selectedValueDescription
+                    customActions = customActionsList
+                }.pointerInput(Unit) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
                         var isMultiTouch = false

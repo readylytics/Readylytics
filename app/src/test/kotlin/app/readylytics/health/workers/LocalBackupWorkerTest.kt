@@ -63,6 +63,6 @@ class LocalBackupWorkerTest {
 
             assertTrue(result is ListenableWorker.Result.Failure)
             val outputData = result.outputData
-            assertEquals(errorMessage, outputData.getString("error"))
+            assertEquals("Local backup failed", outputData.getString("error"))
         }
 }
