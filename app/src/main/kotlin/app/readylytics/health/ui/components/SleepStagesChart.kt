@@ -331,7 +331,7 @@ fun SleepStagesChart(
             val customActionsList =
                 remember(selectedSegment, mergedTimeline, session, chartWidth, density) {
                     val list = mutableListOf<CustomAccessibilityAction>()
-                    if (mergedTimeline.isNotEmpty() && session != null) {
+                    if (mergedTimeline.isNotEmpty()) {
                         val sessionDuration = (session.endTime - session.startTime).coerceAtLeast(1L)
                         val laneHeightPx = with(density) { LANE_HEIGHT.toPx() }
                         val minW = with(density) { 4.dp.toPx() }

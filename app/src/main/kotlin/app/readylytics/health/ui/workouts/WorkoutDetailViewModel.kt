@@ -79,7 +79,7 @@ class WorkoutDetailViewModel
                         .readHeartRateSamples(start, endPlus3Min)
                         .asSequence()
                         .flatMap { record ->
-                            record.samples.map { HeartRatePoint(it.time, it.beatsPerMinute.toInt()) }
+                            record.samples.map { HeartRatePoint(it.time, it.beatsPerMinute) }
                         }.toList()
                 val dbSamples =
                     heartRateRepository
