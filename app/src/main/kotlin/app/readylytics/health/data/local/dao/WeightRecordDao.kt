@@ -66,6 +66,12 @@ interface WeightRecordDao {
     @Query("DELETE FROM weight_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
+    @Query("DELETE FROM weight_records WHERE id = :id")
+    suspend fun deleteById(id: String): Int
+
+    @Query("SELECT * FROM weight_records WHERE id = :id")
+    suspend fun getById(id: String): WeightRecordEntity?
+
     @Query("SELECT COUNT(*) FROM weight_records")
     suspend fun count(): Int
 

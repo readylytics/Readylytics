@@ -72,6 +72,7 @@ class HealthSyncUseCase
         private val transactionRunner: app.readylytics.health.domain.repository.TransactionRunner,
         private val sessionLinkReconciler: SessionLinkReconciler,
         private val rasSourceModeBootstrapUseCase: RasSourceModeBootstrapUseCase,
+        private val changeSynchronizer: HealthChangeSynchronizer,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val syncMutex = Mutex()
@@ -107,6 +108,18 @@ class HealthSyncUseCase
                         updateCalculatedMetrics(initialPrefs)
                         // Re-fetch preferences in case they were updated by updateCalculatedMetrics
                         val prefs = settingsRepo.userPreferences.first()
+
+                        val outcome = changeSynchronizer.applyPendingChanges()
+                        if (outcome.requiresFullResync) {
+                            return@withContext Result.failure(
+                                "Requires historical resync",
+                                "REQUIRES_HISTORICAL_RESYNC",
+                            )
+                        }
+
+                        val standardDays = (0 until windowDays).map { today.minusDays(it.toLong()) }.toSet()
+                        val allTargetDays = (standardDays + outcome.affectedDates).sorted()
+                        val oldestTargetDay = allTargetDays.firstOrNull() ?: today
 
                         val windowStart = today.minusDays((windowDays - 1).toLong()).atStartOfDay(zoneId).toInstant()
                         val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
@@ -173,39 +186,40 @@ class HealthSyncUseCase
                         }
 
                         // Single determinate progress track across both the migration and window loops.
-                        val totalDays = windowDays
+                        val totalDays = ChronoUnit.DAYS.between(oldestTargetDay, today).toInt() + 1
                         var processedDays = 0
                         onProgress?.invoke(processedDays, totalDays)
 
                         var successCount = 0
                         var failureCount = 0
 
-                        val scoringStartMs =
-                            today
-                                .minusDays((windowDays - 1).coerceAtLeast(0).toLong())
-                                .atStartOfDay(zoneId)
-                                .toInstant()
-                                .toEpochMilli()
+                        val scoringStartMs = oldestTargetDay.atStartOfDay(zoneId).toInstant().toEpochMilli()
                         dailySummaryDao.clearFrozenBaselinesBetween(scoringStartMs, windowEnd.toEpochMilli())
 
-                        for (i in (windowDays - 1) downTo 0) {
+                        var dayToScore = oldestTargetDay
+                        while (!dayToScore.isAfter(today)) {
                             ensureActive()
-                            val day = today.minusDays(i.toLong())
-                            val steps = stepsMap[day] ?: 0L
-                            val result = syncDayScoring(day, steps)
+                            val steps =
+                                if (dayToScore in standardDays) {
+                                    stepsMap[dayToScore] ?: 0L
+                                } else {
+                                    null
+                                }
+                            val result = syncDayScoring(dayToScore, steps)
 
                             when (result) {
                                 is Result.Success -> {
                                     successCount++
-                                    logD("HealthSyncUseCase") { "Day $day: SUCCESS" }
+                                    logD("HealthSyncUseCase") { "Day $dayToScore: SUCCESS" }
                                 }
                                 is Result.Failure -> {
                                     failureCount++
-                                    logD("HealthSyncUseCase") { "Day $day: FAILED - ${result.reason}" }
+                                    logD("HealthSyncUseCase") { "Day $dayToScore: FAILED - ${result.reason}" }
                                 }
                             }
                             processedDays++
                             onProgress?.invoke(processedDays, totalDays)
+                            dayToScore = dayToScore.plusDays(1)
                             yield()
                         }
 
@@ -367,6 +381,7 @@ class HealthSyncUseCase
                             yield()
                         }
 
+                        changeSynchronizer.refreshTokensAfterFullResync()
                         settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
                         logD("HealthSyncUseCase") { "Full resync complete ($totalDays days)" }
                         Result.success(Unit)

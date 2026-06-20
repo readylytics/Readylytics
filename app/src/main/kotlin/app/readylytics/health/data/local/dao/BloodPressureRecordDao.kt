@@ -63,6 +63,12 @@ interface BloodPressureRecordDao {
     @Query("DELETE FROM blood_pressure_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
+    @Query("DELETE FROM blood_pressure_records WHERE id = :id")
+    suspend fun deleteById(id: String): Int
+
+    @Query("SELECT * FROM blood_pressure_records WHERE id = :id")
+    suspend fun getById(id: String): BloodPressureRecordEntity?
+
     @Query("SELECT COUNT(*) FROM blood_pressure_records")
     suspend fun count(): Int
 

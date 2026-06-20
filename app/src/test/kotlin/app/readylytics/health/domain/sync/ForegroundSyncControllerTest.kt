@@ -20,7 +20,8 @@ import kotlin.test.assertFailsWith
 class ForegroundSyncControllerTest {
     private val settingsRepo = mockk<SettingsRepository>()
     private val syncUseCase = mockk<HealthSyncUseCase>()
-    private val controller = ForegroundSyncController(settingsRepo, syncUseCase)
+    private val workerScheduler = mockk<app.readylytics.health.workers.WorkerScheduler>(relaxed = true)
+    private val controller = ForegroundSyncController(settingsRepo, syncUseCase, dagger.Lazy { workerScheduler })
 
     @Test
     fun `evaluateAndSync should not run multiple syncs concurrently`() =

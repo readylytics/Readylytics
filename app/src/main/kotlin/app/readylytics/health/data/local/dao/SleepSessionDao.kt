@@ -28,6 +28,9 @@ interface SleepSessionDao {
     @Query("DELETE FROM sleep_sessions WHERE id = :id")
     suspend fun deleteById(id: String): Int
 
+    @Query("SELECT * FROM sleep_sessions WHERE id = :id")
+    suspend fun getById(id: String): SleepSessionEntity?
+
     @Query("SELECT COUNT(*) FROM sleep_sessions WHERE startTime >= :fromMs")
     suspend fun countSince(fromMs: Long): Int
 

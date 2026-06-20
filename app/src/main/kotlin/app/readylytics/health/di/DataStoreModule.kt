@@ -285,4 +285,20 @@ object DataStoreModule {
     @Provides
     @Singleton
     fun provideClock(): Clock = Clock.systemDefaultZone()
+
+    @Provides
+    @Singleton
+    fun provideHealthChangeTokensDataStore(
+        @ApplicationContext context: Context,
+        @ApplicationScope appScope: CoroutineScope,
+    ): DataStore<HealthChangeTokensProto> =
+        DataStoreFactory.create(
+            serializer = HealthChangeTokensSerializer,
+            corruptionHandler =
+                ReplaceFileCorruptionHandler {
+                    HealthChangeTokensProto.getDefaultInstance()
+                },
+            scope = appScope,
+            produceFile = { context.dataStoreFile("health_change_tokens.pb") },
+        )
 }

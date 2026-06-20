@@ -18,6 +18,8 @@ import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
+import app.readylytics.health.domain.sync.HealthChangeSyncOutcome
+import app.readylytics.health.domain.sync.HealthChangeSynchronizer
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
 import io.mockk.coJustRun
@@ -55,6 +57,7 @@ class HealthSyncUseCaseTest {
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
     private val sessionLinkReconciler = mockk<SessionLinkReconciler>(relaxed = true)
     private val rasSourceModeBootstrapUseCase = mockk<RasSourceModeBootstrapUseCase>(relaxed = true)
+    private val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
 
     private lateinit var useCase: HealthSyncUseCase
 
@@ -64,6 +67,7 @@ class HealthSyncUseCaseTest {
             val block = firstArg<suspend () -> Any>()
             block()
         }
+        coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
 
         useCase =
             HealthSyncUseCase(
@@ -83,6 +87,7 @@ class HealthSyncUseCaseTest {
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
                 sessionLinkReconciler = sessionLinkReconciler,
                 rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
+                changeSynchronizer = changeSynchronizer,
                 ioDispatcher = Dispatchers.Unconfined,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())

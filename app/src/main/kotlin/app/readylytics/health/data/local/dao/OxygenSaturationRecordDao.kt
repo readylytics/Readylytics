@@ -64,6 +64,12 @@ interface OxygenSaturationRecordDao {
     @Query("DELETE FROM oxygen_saturation_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
+    @Query("DELETE FROM oxygen_saturation_records WHERE id = :id")
+    suspend fun deleteById(id: String): Int
+
+    @Query("SELECT * FROM oxygen_saturation_records WHERE id = :id")
+    suspend fun getById(id: String): OxygenSaturationRecordEntity?
+
     @Query("SELECT COUNT(*) FROM oxygen_saturation_records")
     suspend fun count(): Int
 

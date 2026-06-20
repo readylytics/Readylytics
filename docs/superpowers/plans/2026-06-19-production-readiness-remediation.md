@@ -452,7 +452,7 @@ git commit -m "build: add fail-closed release signing pipeline"
 - Modify: Hilt binding module under `app/src/main/kotlin/app/readylytics/health/di/`
 - Modify: `internal-docs/DATA_FLOW.md`
 
-- [ ] **Step 1: Define domain port and outcome**
+- [x] **Step 1: Define domain port and outcome**
 
 ```kotlin
 interface HealthChangeSynchronizer {
@@ -475,29 +475,29 @@ interface HealthChangeTokenStore {
 
 Keep Android HC record classes inside data implementation.
 
-- [ ] **Step 2: Write failing tests**
+- [x] **Step 2: Write failing tests**
 
 Cover one per-type token, paginated `getChanges`, `UpsertionChange`, `DeletionChange`, revoked permission isolation, token expiry, transaction failure, cancellation, and token persistence. Verify token advances only after DAO transaction succeeds.
 
-- [ ] **Step 3: Verify RED**
+- [x] **Step 3: Verify RED**
 
 Run: `.\gradlew testDebugUnitTest --tests "*HealthChangeSynchronizerImplTest"`
 
 Expected: FAIL because synchronizer/token fields do not exist.
 
-- [ ] **Step 4: Persist separate token per data type**
+- [x] **Step 4: Persist separate token per data type**
 
 Create dedicated `health_change_tokens.proto` with a token map keyed by `HealthDataType.name` and a last-success timestamp map. Bind it through `HealthChangeTokenStore`; do not place operational tokens in user preferences or local backup export. Keep token write atomic with successful page application from caller perspective: apply page in Room transaction, then persist returned next token. If token write fails, page safely replays through stable-ID upsert/delete.
 
-- [ ] **Step 5: Implement official change loop**
+- [x] **Step 5: Implement official change loop**
 
 Use `getChangesToken` and `getChanges` per record type. Follow <https://developer.android.com/health-and-fitness/guides/health-connect/develop/sync-data>. Map upsertions through existing mappers and selected-device filter. Apply deletions by stable HC record ID. For a non-selected upsertion, delete same local ID if present instead of retaining stale prior-source value.
 
-- [ ] **Step 6: Integrate with daily/full sync**
+- [x] **Step 6: Integrate with daily/full sync**
 
 Daily sync applies pending changes before current-day ingest, unions affected dates with today, and recomputes through `ScoringRepository.computeDailySummary`. Successful full resync refreshes all per-type tokens. Expired token returns `requiresFullResync=true`; foreground controller enqueues existing unique resync worker, never runs historical resync inline.
 
-- [ ] **Step 7: Verify GREEN and idempotency**
+- [x] **Step 7: Verify GREEN and idempotency**
 
 Run:
 
@@ -507,7 +507,7 @@ Run:
 
 Expected: PASS; replayed page produces identical DB and summaries.
 
-- [ ] **Step 8: Update data-flow docs and commit**
+- [x] **Step 8: Update data-flow docs and commit**
 
 ```powershell
 git add app/src/main app/src/test internal-docs/DATA_FLOW.md

@@ -56,4 +56,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindInsightDismissalRepository(impl: InsightDismissalRepositoryImpl): InsightDismissalRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindHealthChangeTokenStore(
+        impl: app.readylytics.health.data.preferences.HealthChangeTokenStoreImpl,
+    ): app.readylytics.health.domain.sync.HealthChangeTokenStore
 }

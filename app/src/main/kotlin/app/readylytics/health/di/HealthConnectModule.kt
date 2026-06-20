@@ -14,4 +14,10 @@ abstract class HealthConnectModule {
     @Binds
     @Singleton
     abstract fun bindHealthConnectRepository(impl: HealthConnectRepositoryImpl): HealthConnectRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindHealthChangeSynchronizer(
+        impl: app.readylytics.health.data.healthconnect.HealthChangeSynchronizerImpl,
+    ): app.readylytics.health.domain.sync.HealthChangeSynchronizer
 }

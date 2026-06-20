@@ -26,6 +26,7 @@ class ForegroundSyncController
     constructor(
         private val settingsRepo: SettingsRepository,
         private val syncUseCase: HealthSyncUseCase,
+        private val workerScheduler: dagger.Lazy<app.readylytics.health.workers.WorkerScheduler>,
     ) {
         private val syncMutex = Mutex()
 
@@ -164,19 +165,31 @@ class ForegroundSyncController
             }
             try {
                 _isSyncing.value = true
-                if (isFirstSync) {
-                    app.readylytics.health.domain.util.logD(
-                        "ForegroundSyncController",
-                    ) { "Running catch-up sync..." }
-                    syncUseCase.catchUpSync(onProgress).getOrThrow()
-                } else if (windowDays != null) {
-                    syncUseCase.sync(windowDays = windowDays, onProgress = onProgress).getOrThrow()
+                val result =
+                    if (isFirstSync) {
+                        app.readylytics.health.domain.util.logD(
+                            "ForegroundSyncController",
+                        ) { "Running catch-up sync..." }
+                        syncUseCase.catchUpSync(onProgress)
+                    } else if (windowDays != null) {
+                        syncUseCase.sync(windowDays = windowDays, onProgress = onProgress)
+                    } else {
+                        syncUseCase.sync(onProgress = onProgress)
+                    }
+
+                if (result is app.readylytics.health.domain.model.Result.Failure &&
+                    result.code == "REQUIRES_HISTORICAL_RESYNC"
+                ) {
+                    app.readylytics.health.domain.util.logD("ForegroundSyncController") {
+                        "Sync requires historical resync, enqueuing worker"
+                    }
+                    workerScheduler.get().scheduleResyncWorker()
                 } else {
-                    syncUseCase.sync(onProgress = onProgress).getOrThrow()
+                    result.getOrThrow()
+                    app.readylytics.health.domain.util
+                        .logD("ForegroundSyncController") { "Sync success" }
+                    _syncCompletedEvent.emit(Unit)
                 }
-                app.readylytics.health.domain.util
-                    .logD("ForegroundSyncController") { "Sync success" }
-                _syncCompletedEvent.emit(Unit)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

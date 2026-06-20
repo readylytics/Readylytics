@@ -100,6 +100,8 @@ All paths are rooted at `app/src/main/kotlin/app/readylytics/health/`.
 | `RetentionCleanup`            | `data/local/RetentionCleanup.kt`             | Executes transactional deletions of data strictly older than the cutoff across all 9 sensitive tables. |
 | `RetentionBounds`             | `domain/util/RetentionBounds.kt`             | Single source of truth for retention→date math: enabled → `today − retentionDays`; disabled → `today − ABSOLUTE_MAX_DAYS` (3650 / 10y). |
 | `RoomTransactionRunner`       | `data/local/RoomTransactionRunner.kt`        | Wraps `HealthDatabase.withTransaction { … }` so an entire ingest window upserts atomically. |
+| `HealthChangeSynchronizer`    | `domain/sync/HealthChangeSynchronizer.kt`    | Reconciles differential Health Connect Changes API responses (upsertions and deletions) incrementally during daily/foreground sync. Resolves dates of deleted records via local DB lookup to properly invalidate and queue recompute of those dates. Non-selected device updates trigger active deletion of the corresponding local records to avoid device contamination. |
+| `HealthChangeTokenStore`      | `domain/sync/HealthChangeTokenStore.kt`      | Stores and advances differential Changes Tokens per Health Connect data type after successful transaction persistence. |
 
 ### 1.2.1 Session-link reconciliation — chunk-independent determinism
 
@@ -121,9 +123,10 @@ the result a pure function of the data, independent of chunking.
 > resync (`resyncRange`, retention-bounded, foreground service), and periodic background sync
 > (`PeriodicHealthSyncWorker`, 2 days, `ExistingPeriodicWorkPolicy.UPDATE`). All three call into
 > `HealthSyncUseCase` and share `syncMutex`; ingestion stays upsert-by-HC-id, so overlapping
-> windows are idempotent. Health Connect Changes Tokens are not used — the 2-day window read is
-> already idempotent and bounded; switching to differential Changes-Token reads is a possible
-> future optimization but would touch the ingestion pipeline and is out of scope here.
+> windows are idempotent. Health Connect Changes Tokens are used for incremental synchronization:
+> daily and periodic sync flows apply differential changes (upsertions and deletions) since the last token,
+> recomputing only the union of the standard sync window and any affected dates. Full resync
+> refreshes and persists next tokens at the end of its run.
 
 ### 1.3 Mappers — domain HC DTO → Room entity
 
@@ -376,6 +379,11 @@ resync dialog (via `WorkInfo` observed through `getWorkInfosForUniqueWorkFlow`).
 | `domain/model/HealthConnectRecords.kt`                                      | Ingestion — Android-free HC DTO boundary            | app-owned sleep / HR / HRV / exercise / steps / optional metric records                  |
 | `data/healthconnect/HealthConnectRepositoryImpl.kt`                        | Ingestion — paginated HC reads                      | `readAllPages<T>()` (pageToken)                                                          |
 | `domain/sync/HealthSyncUseCase.kt`                                         | Ingestion — sync engine                             | `sync` / `resyncRange` / `ingestWindow` / `retryWithBackoff`                             |
+| `domain/sync/HealthChangeSynchronizer.kt`                                  | Ingestion — sync changes port                       | Port for applying pending changes and deletions                                         |
+| `data/healthconnect/HealthChangeSynchronizerImpl.kt`                       | Ingestion — sync changes implementation             | Implements the changes loop and applies upsertions/deletions                            |
+| `domain/sync/HealthChangeTokenStore.kt`                                    | Ingestion — token store port                        | Port for storing sync tokens                                                            |
+| `data/preferences/HealthChangeTokenStoreImpl.kt`                           | Ingestion — token store implementation              | Proto DataStore implementation of change token storage                                  |
+| `proto/health_change_tokens.proto`                                         | Ingestion — change token schema                     | Proto schema for change tokens                                                          |
 | `domain/sync/ForegroundSyncController.kt`                                  | Ingestion — foreground trigger + progress           | daily sync (1 day); recalc progress publish                                              |
 | `domain/sync/FullHistoricalResyncUseCase.kt`                               | Ingestion — resync orchestration                    | retention-bounded range                                                                  |
 | `domain/util/RetentionBounds.kt`                                           | Ingestion — retention math                          | `today − retentionDays` / `ABSOLUTE_MAX_DAYS`                                            |
