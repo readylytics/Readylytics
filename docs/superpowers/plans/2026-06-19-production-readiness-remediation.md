@@ -999,11 +999,11 @@ git commit -m "build: enforce production quality gates"
 - Split: `TrendCharts.kt`, `SettingsScreen.kt`, `WorkoutStatsSection.kt`, `Theme.kt`, `BaselineComputer.kt`, `LocalBackupManager.kt`, `LocalRestoreManager.kt`
 - Modify tests only for moved symbols/imports
 
-- [ ] **Step 1: Record behavior baseline**
+- [x] **Step 1: Record behavior baseline**
 
 Run relevant unit/UI tests and capture public/internal symbol callers with CodeGraph before each split.
 
-- [ ] **Step 2: Split one file per commit**
+- [x] **Step 2: Split one file per commit**
 
 Use these boundaries:
 
@@ -1019,15 +1019,15 @@ LocalRestoreManager.kt -> archive validation, JSON reader, transactional apply
 
 Do not change public behavior, formulas, serialization keys, backup format, or resource IDs.
 
-- [ ] **Step 3: Keep file limits**
+- [x] **Step 3: Keep file limits**
 
 Target <=400 lines per production file; no new file may exceed 800 lines. Add no abstraction unless it removes a real responsibility or duplication.
 
-- [ ] **Step 4: Verify after each split**
+- [x] **Step 4: Verify after each split**
 
 Run focused tests plus `ktlintCheck`. Run backup round-trip and documentation drift tests after backup/scoring splits.
 
-- [ ] **Step 5: Sync index and commit final split batch**
+- [x] **Step 5: Sync index and commit final split batch**
 
 ```powershell
 codegraph sync
