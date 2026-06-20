@@ -585,7 +585,7 @@ git commit -m "fix: finalize device-source changes after resync"
 - Modify: DataStore Hilt module
 - Modify: `internal-docs/DATA_FLOW.md`
 
-- [ ] **Step 1: Define checkpoint schema**
+- [x] **Step 1: Define checkpoint schema**
 
 ```proto
 enum ResyncPhase {
@@ -619,17 +619,17 @@ data class ResyncCheckpoint(
 )
 ```
 
-- [ ] **Step 2: Write failing resume tests**
+- [x] **Step 2: Write failing resume tests**
 
 Inject failure after chunk N, during prune, during reconcile, and after recompute day N. Assert retry resumes correct phase, does not skip work, does not duplicate rows, and produces same final summaries as uninterrupted run. Selection/range hash mismatch must discard checkpoint and restart.
 
-- [ ] **Step 3: Verify RED**
+- [x] **Step 3: Verify RED**
 
 Run: `.\gradlew testDebugUnitTest --tests "*ResyncCheckpointResumeTest"`
 
 Expected: FAIL because every retry begins at range start.
 
-- [ ] **Step 4: Implement checkpoint contract**
+- [x] **Step 4: Implement checkpoint contract**
 
 ```kotlin
 interface ResyncCheckpointStore {
@@ -641,11 +641,11 @@ interface ResyncCheckpointStore {
 
 Advance ingest checkpoint after each successful 30-day transaction. `PRUNE` and `RECONCILE` are idempotent whole-phase operations. Advance recompute checkpoint after each successfully persisted day. Keep `ensureActive()` and `yield()`.
 
-- [ ] **Step 5: Preserve progress and failure semantics**
+- [x] **Step 5: Preserve progress and failure semantics**
 
 Worker progress derives from original total days and checkpoint position. Transient failures still return `Result.retry()`. Cancellation rethrows. Clear checkpoint only after recompute and token refresh complete.
 
-- [ ] **Step 6: Verify GREEN and timeout behavior**
+- [x] **Step 6: Verify GREEN and timeout behavior**
 
 Run:
 
@@ -655,7 +655,7 @@ Run:
 
 Expected: PASS; interrupted and uninterrupted database snapshots are equal.
 
-- [ ] **Step 7: Update docs and commit**
+- [x] **Step 7: Update docs and commit**
 
 ```powershell
 git add app/src/main app/src/test internal-docs/DATA_FLOW.md

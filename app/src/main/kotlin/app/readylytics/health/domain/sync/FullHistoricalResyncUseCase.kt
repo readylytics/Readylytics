@@ -13,8 +13,9 @@ import javax.inject.Singleton
  * Full historical resync triggered from the Settings "Resync Health Connect data" button (via
  * [app.readylytics.health.workers.HealthResyncWorker]). Resolves how far back to go from
  * the user's data-retention setting ([RetentionBounds]) and delegates the heavy lifting — chunked
- * Health Connect re-fetch + walk-forward recompute — to [HealthSyncUseCase.resyncRange]. No scoring
- * math is altered.
+ * Health Connect re-fetch + walk-forward recompute — to [HealthSyncUseCase.resyncRange]. That path
+ * owns durable phase checkpoints so worker retries can resume instead of restarting. No scoring math
+ * is altered.
  */
 @Singleton
 class FullHistoricalResyncUseCase

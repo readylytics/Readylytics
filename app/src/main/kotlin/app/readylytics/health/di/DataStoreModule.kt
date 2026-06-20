@@ -301,4 +301,20 @@ object DataStoreModule {
             scope = appScope,
             produceFile = { context.dataStoreFile("health_change_tokens.pb") },
         )
+
+    @Provides
+    @Singleton
+    fun provideResyncCheckpointDataStore(
+        @ApplicationContext context: Context,
+        @ApplicationScope appScope: CoroutineScope,
+    ): DataStore<ResyncCheckpointProto> =
+        DataStoreFactory.create(
+            serializer = ResyncCheckpointSerializer,
+            corruptionHandler =
+                ReplaceFileCorruptionHandler {
+                    ResyncCheckpointProto.getDefaultInstance()
+                },
+            scope = appScope,
+            produceFile = { context.dataStoreFile("resync_checkpoint.pb") },
+        )
 }

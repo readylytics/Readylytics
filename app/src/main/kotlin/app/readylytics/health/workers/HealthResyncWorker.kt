@@ -22,7 +22,7 @@ import kotlinx.coroutines.CancellationException
  * the Settings "Resync Health Connect data" button. Runs as a foreground service (data-sync type) so
  * it survives the app being backgrounded, shows a determinate "day X of Y" notification, publishes
  * progress for the in-app banner via [ForegroundSyncController], and exposes progress through
- * WorkInfo so the Settings screen can render it.
+ * WorkInfo so the Settings screen can render it. Retries resume from the persisted resync checkpoint.
  */
 @HiltWorker
 class HealthResyncWorker

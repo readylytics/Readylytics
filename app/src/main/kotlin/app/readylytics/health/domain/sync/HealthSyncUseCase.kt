@@ -36,6 +36,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
@@ -74,6 +75,7 @@ class HealthSyncUseCase
         private val rasSourceModeBootstrapUseCase: RasSourceModeBootstrapUseCase,
         private val changeSynchronizer: HealthChangeSynchronizer,
         private val selectedSourcePruner: SelectedSourcePruner,
+        private val checkpointStore: ResyncCheckpointStore,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val syncMutex = Mutex()
@@ -267,63 +269,78 @@ class HealthSyncUseCase
                         val initialPrefs = settingsRepo.userPreferences.first()
                         updateCalculatedMetrics(initialPrefs)
                         val prefs = settingsRepo.userPreferences.first()
+                        val selectionHash = prefs.deviceByDataType.toSortedMap().entries.joinToString("|") { (type, device) -> "$type=${device.orEmpty()}" }
+                        val savedCheckpoint = checkpointStore.checkpoint.first()
+                        val checkpoint =
+                            savedCheckpoint
+                                ?.takeIf {
+                                    it.startDate == startDate &&
+                                        it.endDate == endDate &&
+                                        it.selectionHash == selectionHash
+                                }?.also {
+                                    logD("HealthSyncUseCase") {
+                                        "Resuming resync from ${it.phase} at ${it.nextDate}"
+                                    }
+                                }
+                        if (savedCheckpoint != null && checkpoint == null) {
+                            checkpointStore.clear()
+                        }
 
                         val totalDays = (ChronoUnit.DAYS.between(startDate, endDate) + 1).toInt().coerceAtLeast(0)
-                        onProgress?.invoke(0, totalDays)
+                        val recomputeStartDate =
+                            if (checkpoint?.phase == ResyncPhase.RECOMPUTE) {
+                                minOf(checkpoint.nextDate, endDate.plusDays(1))
+                            } else {
+                                startDate
+                            }
+                        val completedDays =
+                            ChronoUnit
+                                .DAYS
+                                .between(startDate, recomputeStartDate)
+                                .toInt()
+                                .coerceIn(0, totalDays)
+                        onProgress?.invoke(completedDays, totalDays)
 
                         // --- Ingestion phase: chunked HC re-fetch + idempotent upsert ---
-                        val stepsMap = mutableMapOf<LocalDate, Long>()
                         val deviceByType = prefs.deviceByDataType
 
                         fun deviceFor(type: HealthDataType): String? =
                             deviceByType[type.name]?.takeIf { it.isNotBlank() }
 
                         val stepsDevice = deviceFor(HealthDataType.STEPS)
-                        var chunkStart = startDate
-                        while (!chunkStart.isAfter(endDate)) {
-                            ensureActive()
-                            // Exclusive upper bound, capped at the day after endDate.
-                            val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
-
-                            // Ingest from the previous day for every chunk to capture overnight sleep
-                            // sessions that began before this chunk's lower boundary.
-                            val ingestFromDate = chunkStart.minusDays(1)
-                            val windowStart = ingestFromDate.atStartOfDay(zoneId).toInstant()
-                            val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
-
-                            retryWithBackoff {
-                                ingestWindow(
-                                    windowStart = windowStart,
-                                    windowEnd = windowEnd,
-                                    prefs = prefs,
-                                )
-                            }
-                            if (stepsDevice != null) {
-                                val stepsWindowStart = chunkStart.atStartOfDay(zoneId).toInstant()
-                                val stepsRecords =
-                                    retryWithBackoff {
-                                        hcRepo.readStepsRecords(stepsWindowStart, windowEnd)
-                                    }
-                                val stepEntries =
-                                    DeviceSourceFilter.filterToDevice(
-                                        StepsMapper.toStepEntries(stepsRecords),
-                                        stepsDevice,
-                                    ) { it.deviceName }
-                                stepsMap.putAll(StepsMapper.sumByDay(stepEntries, zoneId))
-                            }
-
-                            var day = chunkStart
-                            while (day.isBefore(chunkEndExclusive)) {
+                        if (checkpoint == null || checkpoint.phase == ResyncPhase.INGEST) {
+                            var chunkStart = checkpoint?.nextDate?.coerceAtLeast(startDate) ?: startDate
+                            while (!chunkStart.isAfter(endDate)) {
                                 ensureActive()
-                                if (stepsDevice == null) {
-                                    val dayStart = day.atStartOfDay(zoneId).toInstant()
-                                    val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
-                                    stepsMap[day] = retryWithBackoff { hcRepo.readSteps(dayStart, dayEnd) }
+                                val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
+                                val ingestFromDate = chunkStart.minusDays(1)
+                                val windowStart = ingestFromDate.atStartOfDay(zoneId).toInstant()
+                                val windowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
+
+                                retryWithBackoff {
+                                    ingestWindow(
+                                        windowStart = windowStart,
+                                        windowEnd = windowEnd,
+                                        prefs = prefs,
+                                    )
                                 }
-                                day = day.plusDays(1)
-                                yield()
+                                val nextPhase =
+                                    if (chunkEndExclusive.isAfter(endDate)) {
+                                        ResyncPhase.PRUNE
+                                    } else {
+                                        ResyncPhase.INGEST
+                                    }
+                                checkpointStore.save(
+                                    ResyncCheckpoint(
+                                        startDate = startDate,
+                                        endDate = endDate,
+                                        phase = nextPhase,
+                                        nextDate = if (nextPhase == ResyncPhase.INGEST) chunkEndExclusive else startDate,
+                                        selectionHash = selectionHash,
+                                    ),
+                                )
+                                chunkStart = chunkEndExclusive
                             }
-                            chunkStart = chunkEndExclusive
                         }
 
                         // --- Prune phase: remove stale data from non-selected devices ---
@@ -331,11 +348,22 @@ class HealthSyncUseCase
                             HealthDataType.entries.associateWith { type ->
                                 prefs.deviceByDataType[type.name]
                             }
-                        selectedSourcePruner.prune(
-                            start = startDate,
-                            endInclusive = endDate,
-                            selections = prunerSelections,
-                        )
+                        if (checkpoint == null || checkpoint.phase == ResyncPhase.INGEST || checkpoint.phase == ResyncPhase.PRUNE) {
+                            selectedSourcePruner.prune(
+                                start = startDate,
+                                endInclusive = endDate,
+                                selections = prunerSelections,
+                            )
+                            checkpointStore.save(
+                                ResyncCheckpoint(
+                                    startDate = startDate,
+                                    endDate = endDate,
+                                    phase = ResyncPhase.RECONCILE,
+                                    nextDate = startDate,
+                                    selectionHash = selectionHash,
+                                ),
+                            )
+                        }
 
                         // --- Reconcile phase: chunk-independent session linkage ---
                         // Re-derives (recordType, sessionId) for every HR/HRV sample in range from the
@@ -344,50 +372,88 @@ class HealthSyncUseCase
                         // samples split across two Health Connect fetch windows, each tagging only the
                         // subset it saw - making linkage (and everything derived from it) depend on
                         // chunk alignment, which itself depends on the retention setting.
-                        run {
-                            val reconcileStartMs =
-                                startDate
-                                    .minusDays(
-                                        1,
-                                    ).atStartOfDay(zoneId)
-                                    .toInstant()
-                                    .toEpochMilli()
-                            val reconcileEndMs =
-                                endDate
-                                    .plusDays(1)
-                                    .atStartOfDay(zoneId)
-                                    .toInstant()
-                                    .toEpochMilli() - 1
-                            val zoneThresholds =
-                                WorkoutMapper.zoneThresholds(
-                                    prefs.zone1MinBpm,
-                                    prefs.zone1MaxBpm,
-                                    prefs.zone2MaxBpm,
-                                    prefs.zone3MaxBpm,
-                                    prefs.zone4MaxBpm,
-                                )
-                            sessionLinkReconciler.reconcile(reconcileStartMs, reconcileEndMs, zoneThresholds)
+                        if (
+                            checkpoint == null ||
+                            checkpoint.phase == ResyncPhase.INGEST ||
+                            checkpoint.phase == ResyncPhase.PRUNE ||
+                            checkpoint.phase == ResyncPhase.RECONCILE
+                        ) {
+                            run {
+                                val reconcileStartMs =
+                                    startDate
+                                        .minusDays(
+                                            1,
+                                        ).atStartOfDay(zoneId)
+                                        .toInstant()
+                                        .toEpochMilli()
+                                val reconcileEndMs =
+                                    endDate
+                                        .plusDays(1)
+                                        .atStartOfDay(zoneId)
+                                        .toInstant()
+                                        .toEpochMilli() - 1
+                                val zoneThresholds =
+                                    WorkoutMapper.zoneThresholds(
+                                        prefs.zone1MinBpm,
+                                        prefs.zone1MaxBpm,
+                                        prefs.zone2MaxBpm,
+                                        prefs.zone3MaxBpm,
+                                        prefs.zone4MaxBpm,
+                                    )
+                                sessionLinkReconciler.reconcile(reconcileStartMs, reconcileEndMs, zoneThresholds)
+                            }
+                            checkpointStore.save(
+                                ResyncCheckpoint(
+                                    startDate = startDate,
+                                    endDate = endDate,
+                                    phase = ResyncPhase.RECOMPUTE,
+                                    nextDate = startDate,
+                                    selectionHash = selectionHash,
+                                ),
+                            )
                         }
 
                         // --- Recompute phase: walk-forward over the full range ---
                         // Clear frozen snapshots for the exact range so bounded baseline variants
                         // recompute per day and recent sync/resync use the same baseline path.
-                        dailySummaryDao.clearFrozenBaselinesBetween(
-                            fromMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
-                            toExclusiveMs =
-                                endDate
-                                    .plusDays(1)
-                                    .atStartOfDay(zoneId)
-                                    .toInstant()
-                                    .toEpochMilli(),
-                        )
-                        var day = startDate
-                        var recomputedDays = 0
+                        val stepsMap = mutableMapOf<LocalDate, Long>()
+                        if (!recomputeStartDate.isAfter(endDate)) {
+                            populateStepsMapForRange(
+                                startDate = recomputeStartDate,
+                                endDate = endDate,
+                                chunkDays = chunkDays,
+                                stepsDevice = stepsDevice,
+                                zoneId = zoneId,
+                                stepsMap = stepsMap,
+                            )
+                        }
+                        if (checkpoint == null || checkpoint.phase != ResyncPhase.RECOMPUTE) {
+                            dailySummaryDao.clearFrozenBaselinesBetween(
+                                fromMs = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
+                                toExclusiveMs =
+                                    endDate
+                                        .plusDays(1)
+                                        .atStartOfDay(zoneId)
+                                        .toInstant()
+                                        .toEpochMilli(),
+                            )
+                        }
+                        var day = recomputeStartDate
+                        var recomputedDays = completedDays
                         while (!day.isAfter(endDate)) {
                             ensureActive()
                             val stepsForDay = if (stepsDevice != null) stepsMap[day] ?: 0L else stepsMap[day]
                             syncDayScoring(day, stepsForDay)
                             recomputedDays++
+                            checkpointStore.save(
+                                ResyncCheckpoint(
+                                    startDate = startDate,
+                                    endDate = endDate,
+                                    phase = ResyncPhase.RECOMPUTE,
+                                    nextDate = day.plusDays(1),
+                                    selectionHash = selectionHash,
+                                ),
+                            )
                             onProgress?.invoke(recomputedDays, totalDays)
                             day = day.plusDays(1)
                             yield()
@@ -395,6 +461,7 @@ class HealthSyncUseCase
 
                         changeSynchronizer.refreshTokensAfterFullResync()
                         settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
+                        checkpointStore.clear()
                         logD("HealthSyncUseCase") { "Full resync complete ($totalDays days)" }
                         Result.success(Unit)
                     } catch (e: CancellationException) {
@@ -404,6 +471,50 @@ class HealthSyncUseCase
                     }
                 }
             }
+
+        private suspend fun populateStepsMapForRange(
+            startDate: LocalDate,
+            endDate: LocalDate,
+            chunkDays: Int,
+            stepsDevice: String?,
+            zoneId: ZoneId,
+            stepsMap: MutableMap<LocalDate, Long>,
+        ) {
+            if (startDate.isAfter(endDate)) return
+
+            if (stepsDevice == null) {
+                var day = startDate
+                while (!day.isAfter(endDate)) {
+                    currentCoroutineContext().ensureActive()
+                    val dayStart = day.atStartOfDay(zoneId).toInstant()
+                    val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
+                    stepsMap[day] = retryWithBackoff { hcRepo.readSteps(dayStart, dayEnd) }
+                    day = day.plusDays(1)
+                    yield()
+                }
+                return
+            }
+
+            var chunkStart = startDate
+            while (!chunkStart.isAfter(endDate)) {
+                currentCoroutineContext().ensureActive()
+                val chunkEndExclusive = minOf(chunkStart.plusDays(chunkDays.toLong()), endDate.plusDays(1))
+                val stepsWindowStart = chunkStart.atStartOfDay(zoneId).toInstant()
+                val stepsWindowEnd = chunkEndExclusive.atStartOfDay(zoneId).toInstant()
+                val stepsRecords =
+                    retryWithBackoff {
+                        hcRepo.readStepsRecords(stepsWindowStart, stepsWindowEnd)
+                    }
+                val stepEntries =
+                    DeviceSourceFilter.filterToDevice(
+                        StepsMapper.toStepEntries(stepsRecords),
+                        stepsDevice,
+                    ) { it.deviceName }
+                stepsMap.putAll(StepsMapper.sumByDay(stepEntries, zoneId))
+                chunkStart = chunkEndExclusive
+                yield()
+            }
+        }
 
         /**
          * Retries [block] with bounded exponential backoff. Used to ride out transient Health Connect

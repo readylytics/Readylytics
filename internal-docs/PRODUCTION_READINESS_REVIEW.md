@@ -473,7 +473,7 @@ Repair deterministic instrumented tests; move Macrobenchmark into dedicated modu
 - [ ] Establish secret-backed release signing and signed-artifact CI verification.
 - [ ] Repair/split connected functional, Macrobenchmark, battery, and performance gates until full device suite is green.
 - [ ] Add HC deletion and selected-device reconciliation without weakening killed-worker idempotency.
-- [ ] Add durable resync checkpoints compatible with full-range reconciliation and Android FGS time limits.
+- [x] Add durable resync checkpoints compatible with full-range reconciliation and Android FGS time limits.
 - [ ] Remove runtime network permission/dependencies and centralize sanitized release logging.
 - [ ] Add chart accessibility, DST-aware axes, state reset, and scroll-performance fixes.
 - [ ] Enforce domain/data dependency direction and split sync orchestration after correctness is protected by tests.

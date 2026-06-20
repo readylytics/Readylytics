@@ -59,6 +59,7 @@ class HealthSyncUseCaseTest {
     private val rasSourceModeBootstrapUseCase = mockk<RasSourceModeBootstrapUseCase>(relaxed = true)
     private val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
     private val selectedSourcePruner = mockk<SelectedSourcePruner>(relaxed = true)
+    private val checkpointStore = mockk<ResyncCheckpointStore>(relaxed = true)
 
     private lateinit var useCase: HealthSyncUseCase
 
@@ -69,6 +70,7 @@ class HealthSyncUseCaseTest {
             block()
         }
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
+        every { checkpointStore.checkpoint } returns flowOf(null)
 
         useCase =
             HealthSyncUseCase(
@@ -90,6 +92,7 @@ class HealthSyncUseCaseTest {
                 rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
                 changeSynchronizer = changeSynchronizer,
                 selectedSourcePruner = selectedSourcePruner,
+                checkpointStore = checkpointStore,
                 ioDispatcher = Dispatchers.Unconfined,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())

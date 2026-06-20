@@ -68,4 +68,10 @@ abstract class RepositoryModule {
     abstract fun bindSelectedSourcePruner(
         impl: app.readylytics.health.data.local.SelectedSourcePrunerImpl,
     ): app.readylytics.health.domain.sync.SelectedSourcePruner
+
+    @Binds
+    @Singleton
+    abstract fun bindResyncCheckpointStore(
+        impl: app.readylytics.health.data.preferences.ResyncCheckpointStoreImpl,
+    ): app.readylytics.health.domain.sync.ResyncCheckpointStore
 }
