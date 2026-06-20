@@ -55,7 +55,7 @@ class HealthChangeSynchronizerImpl
 
             val affectedDates = mutableSetOf<LocalDate>()
 
-            for (dataType in HealthDataType.values()) {
+            for (dataType in HealthDataType.entries) {
                 val token = tokenStore.get(dataType)
                 if (token.isNullOrBlank()) {
                     logD("HealthChangeSynchronizer") { "Token for $dataType is missing, requesting full resync" }
@@ -123,7 +123,7 @@ class HealthChangeSynchronizerImpl
 
         override suspend fun refreshTokensAfterFullResync() {
             logD("HealthChangeSynchronizer") { "Refreshing all change tokens after successful full resync" }
-            for (dataType in HealthDataType.values()) {
+            for (dataType in HealthDataType.entries) {
                 try {
                     val recordClass = recordClassFor(dataType)
                     val token =

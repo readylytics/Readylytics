@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -210,6 +211,28 @@ class HealthSyncUseCaseTest {
                     .toInstant()
             assertEquals(yesterdayMidnight, hrvFromSlot.captured)
             assertEquals(yesterdayMidnight, hrFromSlot.captured)
+        }
+
+    @Test
+    fun `daily sync expands fetch and scoring range for older affected change dates`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(zoneId)
+            val oldestAffectedDay = today.minusDays(5)
+            val hrFromSlot = slot<Instant>()
+            val scoredDays = mutableListOf<LocalDate>()
+
+            coEvery { changeSynchronizer.applyPendingChanges() } returns
+                HealthChangeSyncOutcome(setOf(oldestAffectedDay), false)
+            coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
+            coEvery { scoringRepository.computeDailySummary(capture(scoredDays)) } answers {
+                summary(firstArg())
+            }
+
+            useCase.sync(windowDays = 1)
+
+            assertEquals(oldestAffectedDay.minusDays(1).atStartOfDay(zoneId).toInstant(), hrFromSlot.captured)
+            assertTrue(scoredDays.contains(oldestAffectedDay))
         }
 
     @Test

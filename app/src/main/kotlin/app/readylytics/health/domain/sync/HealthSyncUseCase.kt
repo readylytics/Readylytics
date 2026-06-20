@@ -92,19 +92,24 @@ class HealthSyncUseCase
                             )
                         }
 
-                        val standardDays = (0 until windowDays).map { today.minusDays(it.toLong()) }.toSet()
-                        val allTargetDays = (standardDays + outcome.affectedDates).sorted()
+                        val initialStandardDays = (0 until windowDays).map { today.minusDays(it.toLong()) }.toSet()
+                        val allTargetDays = (initialStandardDays + outcome.affectedDates).sorted()
                         val oldestTargetDay = allTargetDays.firstOrNull() ?: today
+                        val standardDays =
+                            generateSequence(oldestTargetDay) { current ->
+                                current
+                                    .plusDays(1)
+                                    .takeIf { !it.isAfter(today) }
+                            }.toSet()
 
-                        val windowStart = today.minusDays((windowDays - 1).toLong()).atStartOfDay(zoneId).toInstant()
+                        val windowStart = oldestTargetDay.atStartOfDay(zoneId).toInstant()
                         val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
 
-                        // Overnight sleep sessions cross midnight: a session ending today began the
-                        // previous evening. Reach the raw-sample fetch back one extra day so the
-                        // pre-midnight HR/HRV samples of the earliest in-window night are captured
-                        // (windowDays = 1 → ingest today + yesterday). Scoring scope stays = windowDays
-                        // (current-day-only refresh is unchanged); only the ingestion read widens.
-                        val ingestStart = today.minusDays(windowDays.toLong()).atStartOfDay(zoneId).toInstant()
+                        // Overnight sleep sessions cross midnight: a session ending inside the
+                        // recompute range may begin the previous evening. Reach the raw-sample fetch
+                        // back one extra day from the earliest target day so pre-midnight HR/HRV
+                        // samples of the earliest in-range night are captured.
+                        val ingestStart = oldestTargetDay.minusDays(1).atStartOfDay(zoneId).toInstant()
 
                         ingestWindow(ingestStart, windowEnd, prefs)
                         sessionLinkReconciler.reconcile(

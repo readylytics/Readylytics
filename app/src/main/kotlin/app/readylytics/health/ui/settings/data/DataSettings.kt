@@ -280,7 +280,7 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
     // device (e.g. inactive within the discovery window) stays visible and re-selectable.
     val options =
         remember(availableDevices, deviceByDataType, allDevicesLabel) {
-            (listOf(allDevicesLabel) + availableDevices + deviceByDataType.values).distinct()
+            (listOf(allDevicesLabel) + availableDevices + deviceByDataType.values.filter { it.isNotBlank() }).distinct()
         }
     val optionsDisplay =
         remember(

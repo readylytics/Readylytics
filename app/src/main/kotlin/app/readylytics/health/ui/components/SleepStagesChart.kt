@@ -309,15 +309,19 @@ fun SleepStagesChart(
             val tooltipData =
                 remember(
                     selectedSegment,
+                    scrollState.value,
+                    viewportWidthPx,
                     selectedStageName,
                     selectedDurationStr,
                 ) {
                     val sel = selectedSegment ?: return@remember null
+                    val viewportX = (sel.segmentCenterXPx - scrollState.value).roundToInt()
+                    if (viewportX !in 0..viewportWidthPx) return@remember null
                     DataPointTooltipData(
                         valueText = selectedStageName ?: "",
                         dateText = timeFormatter.format(Instant.ofEpochMilli(sel.stage.startTime)),
                         extraLine = selectedDurationStr,
-                        offset = IntOffset(0, 0),
+                        offset = IntOffset(viewportX, 0),
                     )
                 }
 
@@ -608,19 +612,10 @@ fun SleepStagesChart(
             }
 
             if (tooltipData != null && selectedSegment != null) {
-                val selectedCenterPx = selectedSegment!!.segmentCenterXPx
                 DataPointTooltip(
                     isVisible = true,
                     data = tooltipData,
                     onDismissRequest = { selectedSegment = null },
-                    modifier =
-                        Modifier
-                            .offset {
-                                IntOffset((selectedCenterPx - scrollState.value).roundToInt(), 0)
-                            }.graphicsLayer {
-                                val x = selectedCenterPx - scrollState.value
-                                alpha = if (x in 0f..viewportWidthPx.toFloat()) 1f else 0f
-                            },
                 )
             }
         }

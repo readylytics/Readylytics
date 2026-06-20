@@ -14,10 +14,15 @@ val releaseSigningEnvironmentVariables =
         "READYLYTICS_UPLOAD_CERT_SHA256",
     )
 
+val releaseSigningEnvironmentValues =
+    releaseSigningEnvironmentVariables.associateWith {
+        providers.environmentVariable(it).orNull?.trim().orEmpty()
+    }
+
 val releaseUploadSigningReady =
     releaseSigningEnvironmentVariables
         .dropLast(1)
-        .all { System.getenv(it)?.isNotBlank() == true }
+        .all { releaseSigningEnvironmentValues.getValue(it).isNotBlank() }
 
 abstract class VerifyReleaseSigningInputsTask : DefaultTask() {
     @get:Input
@@ -124,11 +129,7 @@ val verifyReleaseSigningInputs =
     tasks.register<VerifyReleaseSigningInputsTask>("verifyReleaseSigningInputs") {
         group = "verification"
         description = "Fails release artifact tasks when required signing inputs are missing."
-        signingInputs.putAll(
-            releaseSigningEnvironmentVariables.associateWith {
-                System.getenv(it)?.trim().orEmpty()
-            },
-        )
+        signingInputs.putAll(releaseSigningEnvironmentValues)
     }
 
 listOf(

@@ -294,7 +294,7 @@ class HealthChangeSynchronizerImplTest {
 
             synchronizer.refreshTokensAfterFullResync()
 
-            coVerify(exactly = HealthDataType.values().size) {
+            coVerify(exactly = HealthDataType.entries.size) {
                 client.getChangesToken(any<ChangesTokenRequest>())
                 tokenStore.put(any(), any(), any())
             }
