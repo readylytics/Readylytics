@@ -61,8 +61,8 @@ internal fun AcwrChartCard(
     rangeDays: Int,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
-    parentScrollInProgress: Boolean = false,
     modifier: Modifier = Modifier,
+    parentScrollInProgress: Boolean = false,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -100,8 +100,8 @@ private fun AcwrChart(
     rangeDays: Int,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
-    parentScrollInProgress: Boolean = false,
     modifier: Modifier = Modifier,
+    parentScrollInProgress: Boolean = false,
 ) {
     // Selection state is keyed on the data inputs so it clears automatically when the
     // chart range or underlying data changes, preventing stale coordinates and values.

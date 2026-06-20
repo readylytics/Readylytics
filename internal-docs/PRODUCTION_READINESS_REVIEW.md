@@ -480,3 +480,48 @@ Repair deterministic instrumented tests; move Macrobenchmark into dedicated modu
 - [ ] Raise verified coverage gates, resolve lint backlog, and add Android 17 large-screen matrix.
 
 **Release gate:** Do not submit to Play until all P0 findings are closed, connected tests complete green, signed AAB is verified, and P1 health-data deletion/device-source behavior has explicit product acceptance or remediation.
+
+# 15. 2026-06-20 Closure Status Snapshot
+
+## P0 Status
+
+| Finding | Status | Fixing Commit(s) | Evidence |
+|---|---|---|---|
+| DST corrupts historical ATL/CTL date buckets | Closed | `8c79e034` | `.\gradlew testDebugUnitTest --tests "*TrimpDateBucketerTest" --tests "*ScoringPointInTimeRegressionTest" --tests "*ScoringSyncScopeOutputsDeterminismTest"` |
+| Retention cleanup leaves four sensitive tables unbounded | Closed | `17a04263` | `.\gradlew testDebugUnitTest --tests "*RetentionCleanupTest" --tests "*DeleteByTimestampTest" --tests "*ProductionReadinessStaticTest"` |
+| Device-transfer exclusion rules are unused | Closed | `3c75c660` | `.\gradlew testDebugUnitTest --tests "*ProductionReadinessStaticTest"` and `.\gradlew lintRelease` |
+| Release artifacts are unsigned | Closed locally; external workflow/Play upload still unverified | `805b6f14` | `.\gradlew ktlintCheck jacocoCoverageVerification lint lintRelease assembleRelease bundleRelease` with release signing env vars, `jarsigner -verify app\build\outputs\bundle\release\app-release.aab`, artifact `app\build\outputs\bundle\release\app-release.aab` |
+| Connected release verification is red | Open | None | `adb devices -l` returned no connected devices on 2026-06-20; Task 16 device matrix and macrobenchmark run not executed in this environment |
+
+## P1 Status
+
+| Finding | Status | Fixing Commit(s) | Evidence |
+|---|---|---|---|
+| Source deletions and device changes leave stale records | Closed | `46b488da`, `6dc69a48` | `.\gradlew testDebugUnitTest --tests "*HealthChangeSynchronizerImplTest" --tests "*HealthSyncUseCaseTest" --tests "*SyncScopeDeterminismTest"` |
+| Historical resync has no durable checkpoint against FGS timeout | Closed | `5e317e5b` | `.\gradlew testDebugUnitTest` plus durable-checkpoint implementation under `domain/sync` and `data/preferences` |
+| Runtime network capability conflicts with local-only claim | Closed | `eed70258` | `.\gradlew lint lintRelease assembleRelease bundleRelease`; no `INTERNET` permission in merged release build, signed local release artifacts generated |
+| Release logging is not centrally sanitized | Closed locally | `eed70258` | `.\gradlew testDebugUnitTest` and signed local release gate on 2026-06-20; no new release-log regression surfaced in local acceptance run |
+| Domain boundary depends on data and Room implementations | Closed | `08304180` | `.\gradlew testDebugUnitTest --tests "*CleanArchTest" --tests "*Scoring*Determinism*" --tests "*HealthSyncUseCaseTest"` |
+| Interactive charts are pointer-only | Implementation landed; device/manual verification still pending | `bb230e8f` | Connected accessibility verification from Task 11 not rerun on 2026-06-20 because no device matrix available |
+| Coverage gate does not protect critical behavior | Closed | `d33cee11` | `.\gradlew jacocoCoverageVerification` and full signed local gate on 2026-06-20 |
+
+## P2 Status
+
+| Finding | Status | Fixing Commit(s) | Evidence |
+|---|---|---|---|
+| Chart time and selection state become stale | Closed | `c1af1eb0` | `.\gradlew testDebugUnitTest --tests "*DayTimelineScaleTest" --tests "*SleepStagesChartTest" --tests "*HrTimelineChartStateTest"` |
+| Sleep chart recomputes during every scroll pixel | Closed | `c1af1eb0` | `.\gradlew lint lintRelease` passed on 2026-06-20 |
+| Android 17 large-screen readiness is unverified | Implementation landed; device/manual verification still pending | `7ccc0194` | No API 37 device/emulator attached on 2026-06-20; adaptive navigation code present but matrix not executed |
+| User-facing labels remain hardcoded | Closed | `bb230e8f` | `.\gradlew testDebugUnitTest` and current lint gate passed on 2026-06-20 |
+| Privacy rationale UI reads data repository directly | Closed | `7ccc0194` | `PrivacyRationaleViewModel` added; `.\gradlew testDebugUnitTest` passed on 2026-06-20 |
+| R8 rules defeat much of release shrinking | Closed | `d33cee11` | `.\gradlew assembleRelease bundleRelease` passed on 2026-06-20 |
+| Release lint warnings are allowed to accumulate | Closed | `d33cee11` | `.\gradlew lint lintRelease` passed on 2026-06-20 |
+
+## Release Acceptance Verdict
+
+Local source/build acceptance is now green for signed release gates. Final release acceptance remains blocked by missing external evidence:
+
+- No connected-device functional matrix was available on 2026-06-20.
+- No macrobenchmark run was executed on a benchmark-capable device/emulator.
+- Protected GitHub release workflow was not run in this environment.
+- Play internal-track upload, upgrade retention check, OEM device-transfer validation, and manual accessibility/privacy QA remain unverified.

@@ -1045,7 +1045,7 @@ git commit -m "refactor: split oversized production components"
 - Modify: `ABOUT.md`, `docs/about.md`, and `strings.xml` only if implementation changed public scoring explanation
 - Create: `internal-docs/RELEASE_ACCEPTANCE.md`
 
-- [ ] **Step 1: Run mandatory formatting and unit gate**
+- [x] **Step 1: Run mandatory formatting and unit gate**
 
 ```powershell
 .\gradlew ktlintFormat
@@ -1054,7 +1054,7 @@ git commit -m "refactor: split oversized production components"
 
 Expected: PASS.
 
-- [ ] **Step 2: Run complete static/release gate**
+- [x] **Step 2: Run complete static/release gate**
 
 ```powershell
 .\gradlew ktlintCheck jacocoCoverageVerification lint lintRelease assembleRelease bundleRelease
@@ -1080,15 +1080,15 @@ Confirm Play/store copy does not advertise widgets because no widget implementat
 
 Verify compact/medium/expanded windows, portrait/landscape/fold, dynamic light/dark, 200% font, TalkBack, Switch Access, keyboard/D-pad, chart selection reset, DST days, empty/loading/error/permission states.
 
-- [ ] **Step 7: Close review findings with evidence**
+- [x] **Step 7: Close review findings with evidence**
 
 For each P0/P1/P2 item in `PRODUCTION_READINESS_REVIEW.md`, append status, fixing commit, test command, and artifact/report link. Do not mark external Play/OEM blindspots verified without evidence.
 
-- [ ] **Step 8: Create release acceptance record**
+- [x] **Step 8: Create release acceptance record**
 
 Record commit SHA, version code/name, AAB SHA-256, signing certificate SHA-256, Gradle command results, device matrix, Play internal-track result, remaining accepted P3 debt, and approver.
 
-- [ ] **Step 9: Index/sync and final commit**
+- [x] **Step 9: Index/sync and final commit**
 
 ```powershell
 codegraph index

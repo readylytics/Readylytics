@@ -56,6 +56,7 @@ fun BloodPressureTrendChart(
     diastolicPoints: List<DailyDataPoint>,
     rangeStartMs: Long,
     rangeDays: Int,
+    modifier: Modifier = Modifier,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
     // Same fix as TrendChart: Zoom.min(Zoom.Content, Zoom.fixed(1f)) as minZoom floor.
     // See TrendChart's zoomState comment for the full rationale.
@@ -74,7 +75,6 @@ fun BloodPressureTrendChart(
                 },
         ),
     parentScrollInProgress: Boolean = false,
-    modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }

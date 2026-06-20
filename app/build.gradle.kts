@@ -1,5 +1,5 @@
-import org.gradle.api.GradleException
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
@@ -25,7 +25,12 @@ abstract class VerifyReleaseSigningInputsTask : DefaultTask() {
 
     @TaskAction
     fun verify() {
-        val missingVariables = signingInputs.get().filterValues(String::isBlank).keys.sorted()
+        val missingVariables =
+            signingInputs
+                .get()
+                .filterValues(String::isBlank)
+                .keys
+                .sorted()
         if (missingVariables.isNotEmpty()) {
             throw GradleException(
                 "Missing required release signing environment variables: ${missingVariables.joinToString(", ")}",
