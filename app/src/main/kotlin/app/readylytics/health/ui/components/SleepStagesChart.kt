@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -305,17 +306,16 @@ fun SleepStagesChart(
             val chartWidth = if (needsScroll) naturalWidth * scaleFactor else naturalWidth
 
             val viewportWidthPx = constraints.maxWidth
-            val tooltipData =
-                remember(
-                    selectedSegment,
-                    scrollState.value,
-                    viewportWidthPx,
-                    selectedStageName,
-                    selectedDurationStr,
-                ) {
-                    val sel = selectedSegment ?: return@remember null
+            val tooltipData by remember(
+                selectedSegment,
+                viewportWidthPx,
+                selectedStageName,
+                selectedDurationStr,
+            ) {
+                derivedStateOf {
+                    val sel = selectedSegment ?: return@derivedStateOf null
                     val viewportX = (sel.segmentCenterXPx - scrollState.value).roundToInt()
-                    if (viewportX !in 0..viewportWidthPx) return@remember null
+                    if (viewportX !in 0..viewportWidthPx) return@derivedStateOf null
                     DataPointTooltipData(
                         valueText = selectedStageName ?: "",
                         dateText = timeFormatter.format(Instant.ofEpochMilli(sel.stage.startTime)),
@@ -323,6 +323,7 @@ fun SleepStagesChart(
                         offset = IntOffset(viewportX, 0),
                     )
                 }
+            }
 
             val density = LocalDensity.current
             val prevActionLabel = stringResource(R.string.action_previous_point)
@@ -610,10 +611,11 @@ fun SleepStagesChart(
                 }
             }
 
-            if (tooltipData != null && selectedSegment != null) {
+            val currentTooltipData = tooltipData
+            if (currentTooltipData != null && selectedSegment != null) {
                 DataPointTooltip(
                     isVisible = true,
-                    data = tooltipData,
+                    data = currentTooltipData,
                     onDismissRequest = { selectedSegment = null },
                 )
             }

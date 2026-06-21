@@ -46,83 +46,6 @@
     </issue>
 
     <issue
-        id="GradleDependency"
-        message="A newer version of androidx.compose.material3.adaptive:adaptive than 1.0.0 is available: 1.2.0"
-        errorLine1="adaptive = &quot;1.0.0&quot;"
-        errorLine2="           ~~~~~~~">
-        <location
-            file="$HOME/git/MyHealthStatus/gradle/libs.versions.toml"
-            line="43"
-            column="12"/>
-    </issue>
-
-    <issue
-        id="GradleDependency"
-        message="A newer version of androidx.compose.material3:material3-adaptive-navigation-suite than 1.0.0 is available: 1.4.0"
-        errorLine1="adaptive = &quot;1.0.0&quot;"
-        errorLine2="           ~~~~~~~">
-        <location
-            file="$HOME/git/MyHealthStatus/gradle/libs.versions.toml"
-            line="43"
-            column="12"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of com.lemonappdev:konsist than 0.13.0 is available: 0.17.3"
-        errorLine1="    testImplementation(&quot;com.lemonappdev:konsist:0.13.0&quot;)"
-        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="build.gradle.kts"
-            line="373"
-            column="24"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of org.jetbrains.kotlin.plugin.compose than 2.3.21 is available: 2.4.0"
-        errorLine1="kotlin = &quot;2.3.21&quot;"
-        errorLine2="         ~~~~~~~~">
-        <location
-            file="$HOME/git/MyHealthStatus/gradle/libs.versions.toml"
-            line="3"
-            column="10"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of org.jetbrains.kotlin.plugin.serialization than 2.3.21 is available: 2.4.0"
-        errorLine1="kotlin = &quot;2.3.21&quot;"
-        errorLine2="         ~~~~~~~~">
-        <location
-            file="$HOME/git/MyHealthStatus/gradle/libs.versions.toml"
-            line="3"
-            column="10"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of com.patrykandpatrick.vico:compose than 3.2.2 is available: 3.2.3"
-        errorLine1="vico = &quot;3.2.2&quot;"
-        errorLine2="       ~~~~~~~">
-        <location
-            file="$HOME/git/MyHealthStatus/gradle/libs.versions.toml"
-            line="23"
-            column="8"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of com.patrykandpatrick.vico:compose-m3 than 3.2.2 is available: 3.2.3"
-        errorLine1="vico = &quot;3.2.2&quot;"
-        errorLine2="       ~~~~~~~">
-        <location
-            file="$HOME/git/MyHealthStatus/gradle/libs.versions.toml"
-            line="23"
-            column="8"/>
-    </issue>
-
-    <issue
         id="LocalContextResourcesRead"
         message="Reading Resources using LocalContext.current.resources"
         errorLine1="            val detailRepository = remember { InsightDetailRepository(context.resources) }"
@@ -250,7 +173,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/app/readylytics/health/ui/components/TrendCharts.kt"
-            line="155"
+            line="99"
             column="5"/>
     </issue>
 
@@ -261,18 +184,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/app/readylytics/health/ui/components/TrendCharts.kt"
-            line="420"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/app/readylytics/health/ui/components/TrendCharts.kt"
-            line="471"
+            line="364"
             column="5"/>
     </issue>
 
@@ -305,29 +217,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/kotlin/app/readylytics/health/ui/workouts/WorkoutStatsSection.kt"
-            line="114"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/app/readylytics/health/ui/workouts/WorkoutStatsSection.kt"
-            line="321"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/kotlin/app/readylytics/health/ui/workouts/WorkoutStatsSection.kt"
-            line="360"
+            line="79"
             column="5"/>
     </issue>
 
@@ -1027,7 +917,7 @@
         errorLine2="                                                     ~~~~~~~~~~~~~~">
         <location
             file="src/main/kotlin/app/readylytics/health/ui/settings/SettingsScreen.kt"
-            line="180"
+            line="81"
             column="54"/>
     </issue>
 
@@ -1038,7 +928,7 @@
         errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/kotlin/app/readylytics/health/ui/settings/SettingsScreen.kt"
-            line="216"
+            line="117"
             column="31"/>
     </issue>
 
@@ -1067,22 +957,11 @@
     <issue
         id="UseTomlInstead"
         message="Use version catalog instead"
-        errorLine1="    testImplementation(&quot;com.lemonappdev:konsist:0.13.0&quot;)"
-        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="build.gradle.kts"
-            line="373"
-            column="24"/>
-    </issue>
-
-    <issue
-        id="UseTomlInstead"
-        message="Use version catalog instead"
         errorLine1="    androidTestImplementation(&quot;androidx.compose.ui:ui-test&quot;)"
         errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="build.gradle.kts"
-            line="390"
+            line="462"
             column="31"/>
     </issue>
 
