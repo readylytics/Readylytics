@@ -8,6 +8,9 @@ import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.response.ChangesResponse
 import app.readylytics.health.data.local.dao.*
+import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.data.local.entity.HrvRecordEntity
+import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.HealthDataType
@@ -22,6 +25,8 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.util.TimeZone
 
 class HealthChangeSynchronizerImplTest {
     private val context = mockk<Context>(relaxed = true)
@@ -299,4 +304,232 @@ class HealthChangeSynchronizerImplTest {
                 tokenStore.put(any(), any(), any())
             }
         }
+
+    @Test
+    fun `applyPendingChanges deletes all heart rate rows for one source record id`() =
+        runTest {
+            seedTokens()
+            val recordId = "hr-record"
+            val change =
+                mockk<DeletionChange>(relaxed = true) {
+                    every { this@mockk.recordId } returns recordId
+                }
+            routeOneChange(dataType = HealthDataType.HEART_RATE, change = change)
+            coEvery { heartRateDao.getBySourceRecordId(recordId) } returns
+                listOf(
+                    HeartRateRecordEntity("${recordId}_1000", 1000L, 60, "SLEEP"),
+                    HeartRateRecordEntity("${recordId}_2000", 2000L, 61, "SLEEP"),
+                )
+            coEvery { heartRateDao.deleteBySourceRecordId(recordId) } returns 2
+
+            val outcome = synchronizer.applyPendingChanges()
+
+            assertEquals(setOf(epochDay(1000L), epochDay(2000L)), outcome.affectedDates)
+            coVerifyOrder {
+                heartRateDao.getBySourceRecordId(recordId)
+                heartRateDao.deleteBySourceRecordId(recordId)
+            }
+            coVerify(exactly = 0) { heartRateDao.deleteById(any()) }
+        }
+
+    @Test
+    fun `applyPendingChanges deletes all hrv rows for one source record id`() =
+        runTest {
+            seedTokens()
+            val recordId = "hrv-record"
+            val change =
+                mockk<DeletionChange>(relaxed = true) {
+                    every { this@mockk.recordId } returns recordId
+                }
+            routeOneChange(dataType = HealthDataType.HRV, change = change)
+            coEvery { hrvDao.getBySourceRecordId(recordId) } returns
+                listOf(
+                    HrvRecordEntity("${recordId}_3000", 3000L, 40f, "SLEEP"),
+                    HrvRecordEntity("${recordId}_4000", 4000L, 41f, "SLEEP"),
+                )
+            coEvery { hrvDao.deleteBySourceRecordId(recordId) } returns 2
+
+            val outcome = synchronizer.applyPendingChanges()
+
+            assertEquals(setOf(epochDay(3000L), epochDay(4000L)), outcome.affectedDates)
+            coVerifyOrder {
+                hrvDao.getBySourceRecordId(recordId)
+                hrvDao.deleteBySourceRecordId(recordId)
+            }
+            coVerify(exactly = 0) { hrvDao.deleteById(any()) }
+        }
+
+    @Test
+    fun `applyPendingChanges replaces changed heart rate source record before upsert`() =
+        runTest {
+            seedTokens()
+            val recordId = "hr-record"
+            val oldEntity = HeartRateRecordEntity("${recordId}_1000", 1000L, 55, "SLEEP")
+            val sampleTime = Instant.parse("2026-06-20T09:00:00Z")
+            val record =
+                mockk<HeartRateRecord>(relaxed = true) {
+                    every { metadata.id } returns recordId
+                    every { metadata.device } returns null
+                    every { metadata.dataOrigin.packageName } returns "pkg"
+                    every { startTime } returns sampleTime
+                    every { endTime } returns sampleTime
+                    every { samples } returns
+                        listOf(
+                            mockk {
+                                every { time } returns sampleTime
+                                every { beatsPerMinute } returns 63L
+                            },
+                        )
+                }
+            val change =
+                mockk<UpsertionChange>(relaxed = true) {
+                    every { this@mockk.record } returns record
+                }
+            routeOneChange(dataType = HealthDataType.HEART_RATE, change = change)
+            coEvery { heartRateDao.getBySourceRecordId(recordId) } returns listOf(oldEntity)
+            coEvery { heartRateDao.deleteBySourceRecordId(recordId) } returns 1
+
+            val outcome = synchronizer.applyPendingChanges()
+
+            assertEquals(
+                setOf(epochDay(oldEntity.timestampMs), sampleTime.atZone(ZoneId.systemDefault()).toLocalDate()),
+                outcome.affectedDates,
+            )
+            coVerifyOrder {
+                heartRateDao.getBySourceRecordId(recordId)
+                heartRateDao.deleteBySourceRecordId(recordId)
+                heartRateDao.upsertAll(
+                    match {
+                        it.map(HeartRateRecordEntity::id) == listOf("${recordId}_${sampleTime.toEpochMilli()}")
+                    },
+                )
+            }
+        }
+
+    @Test
+    fun `applyPendingChanges replaces changed weight source record before upsert`() =
+        runTest {
+            seedTokens()
+            val recordId = "weight-record"
+            val oldEntity = WeightRecordEntity("${recordId}_1000", 1000L, 70f)
+            val newTime = Instant.parse("2026-06-21T09:00:00Z")
+            val record =
+                mockk<WeightRecord>(relaxed = true) {
+                    every { metadata.id } returns recordId
+                    every { metadata.device } returns null
+                    every { metadata.dataOrigin.packageName } returns "pkg"
+                    every { time } returns newTime
+                    every { weight.inKilograms } returns 72.5
+                }
+            val change =
+                mockk<UpsertionChange>(relaxed = true) {
+                    every { this@mockk.record } returns record
+                }
+            routeOneChange(dataType = HealthDataType.WEIGHT, change = change)
+            coEvery { weightRecordDao.getBySourceRecordId(recordId) } returns listOf(oldEntity)
+            coEvery { weightRecordDao.deleteBySourceRecordId(recordId) } returns 1
+
+            val outcome = synchronizer.applyPendingChanges()
+
+            assertEquals(
+                setOf(epochDay(oldEntity.timestampMs), newTime.atZone(ZoneId.systemDefault()).toLocalDate()),
+                outcome.affectedDates,
+            )
+            coVerifyOrder {
+                weightRecordDao.getBySourceRecordId(recordId)
+                weightRecordDao.deleteBySourceRecordId(recordId)
+                weightRecordDao.upsertAll(
+                    match {
+                        it.map(WeightRecordEntity::id) == listOf("${recordId}_${newTime.toEpochMilli()}")
+                    },
+                )
+            }
+        }
+
+    @Test
+    fun `applyPendingChanges uses scoring zone from preferences for affected dates`() =
+        runTest {
+            val originalZone = TimeZone.getDefault()
+            TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+            try {
+                every { settingsRepo.userPreferences } returns
+                    flowOf(UserPreferences(scoringZoneId = "Pacific/Kiritimati"))
+                seedTokens()
+                val recordId = "weight-zone-record"
+                val recordTime = Instant.parse("2026-01-01T12:30:00Z")
+                val record =
+                    mockk<WeightRecord>(relaxed = true) {
+                        every { metadata.id } returns recordId
+                        every { metadata.device } returns null
+                        every { metadata.dataOrigin.packageName } returns "pkg"
+                        every { time } returns recordTime
+                        every { weight.inKilograms } returns 72.5
+                    }
+                val change =
+                    mockk<UpsertionChange>(relaxed = true) {
+                        every { this@mockk.record } returns record
+                    }
+                routeOneChange(dataType = HealthDataType.WEIGHT, change = change)
+                coEvery { weightRecordDao.getBySourceRecordId(recordId) } returns emptyList()
+                coEvery { weightRecordDao.deleteBySourceRecordId(recordId) } returns 0
+
+                val outcome = synchronizer.applyPendingChanges()
+
+                assertEquals(setOf(LocalDate.of(2026, 1, 2)), outcome.affectedDates)
+            } finally {
+                TimeZone.setDefault(originalZone)
+            }
+        }
+
+    private fun seedTokens() {
+        coEvery { tokenStore.get(HealthDataType.SLEEP) } returns "sleep-token"
+        coEvery { tokenStore.get(HealthDataType.HEART_RATE) } returns "heart-token"
+        coEvery { tokenStore.get(HealthDataType.HRV) } returns "hrv-token"
+        coEvery { tokenStore.get(HealthDataType.EXERCISE) } returns "exercise-token"
+        coEvery { tokenStore.get(HealthDataType.WEIGHT) } returns "weight-token"
+        coEvery { tokenStore.get(HealthDataType.BODY_FAT) } returns "bodyfat-token"
+        coEvery { tokenStore.get(HealthDataType.BLOOD_PRESSURE) } returns "bp-token"
+        coEvery { tokenStore.get(HealthDataType.OXYGEN_SATURATION) } returns "spo2-token"
+        coEvery { tokenStore.get(HealthDataType.STEPS) } returns "steps-token"
+    }
+
+    private fun routeOneChange(
+        dataType: HealthDataType,
+        change: androidx.health.connect.client.changes.Change,
+    ) {
+        HealthDataType.entries.forEach { current ->
+            val token = tokenFor(current)
+            val changes =
+                if (current == dataType) {
+                    listOf(change)
+                } else {
+                    emptyList()
+                }
+            coEvery { client.getChanges(token) } returns changesResponse(changes)
+        }
+    }
+
+    private fun tokenFor(dataType: HealthDataType): String =
+        when (dataType) {
+            HealthDataType.SLEEP -> "sleep-token"
+            HealthDataType.HEART_RATE -> "heart-token"
+            HealthDataType.HRV -> "hrv-token"
+            HealthDataType.EXERCISE -> "exercise-token"
+            HealthDataType.WEIGHT -> "weight-token"
+            HealthDataType.BODY_FAT -> "bodyfat-token"
+            HealthDataType.BLOOD_PRESSURE -> "bp-token"
+            HealthDataType.OXYGEN_SATURATION -> "spo2-token"
+            HealthDataType.STEPS -> "steps-token"
+        }
+
+    private fun changesResponse(changes: List<androidx.health.connect.client.changes.Change>) =
+        mockk<ChangesResponse>(relaxed = true) {
+            every { changesTokenExpired } returns false
+            every { this@mockk.changes } returns changes
+            every { nextChangesToken } returns "next-token"
+            every { hasMore } returns false
+        }
+
+    private fun epochDay(timestampMs: Long): LocalDate =
+        Instant.ofEpochMilli(timestampMs).atZone(ZoneId.systemDefault()).toLocalDate()
 }

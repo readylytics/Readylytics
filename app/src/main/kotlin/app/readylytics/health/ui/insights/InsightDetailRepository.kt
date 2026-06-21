@@ -16,6 +16,7 @@ class InsightDetailRepository(
     private val ranker: InsightCauseRanker = InsightCauseRanker(),
 ) {
     private val resources: Resources get() = context.resources
+
     fun getDetail(
         id: InsightType,
         context: DailyInsightContext,

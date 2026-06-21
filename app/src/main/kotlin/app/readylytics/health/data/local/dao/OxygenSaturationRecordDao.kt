@@ -70,6 +70,21 @@ interface OxygenSaturationRecordDao {
     @Query("SELECT * FROM oxygen_saturation_records WHERE id = :id")
     suspend fun getById(id: String): OxygenSaturationRecordEntity?
 
+    @Query(
+        "SELECT * FROM oxygen_saturation_records " +
+            "WHERE id = :sourceRecordId " +
+            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_' " +
+            "ORDER BY timestampMs ASC",
+    )
+    suspend fun getBySourceRecordId(sourceRecordId: String): List<OxygenSaturationRecordEntity>
+
+    @Query(
+        "DELETE FROM oxygen_saturation_records " +
+            "WHERE id = :sourceRecordId " +
+            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_'",
+    )
+    suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
+
     @Query("SELECT COUNT(*) FROM oxygen_saturation_records")
     suspend fun count(): Int
 

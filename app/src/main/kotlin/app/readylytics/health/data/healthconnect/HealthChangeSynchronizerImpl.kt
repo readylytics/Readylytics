@@ -13,6 +13,7 @@ import app.readylytics.health.data.mapper.BodyFatDataMapper
 import app.readylytics.health.data.mapper.OxygenSaturationDataMapper
 import app.readylytics.health.data.mapper.WeightDataMapper
 import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.data.preferences.scoringZone
 import app.readylytics.health.domain.model.*
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.sync.HealthChangeSyncOutcome
@@ -49,8 +50,8 @@ class HealthChangeSynchronizerImpl
         private val client by lazy { HealthConnectClient.getOrCreate(context) }
 
         override suspend fun applyPendingChanges(): HealthChangeSyncOutcome {
-            val zoneId = ZoneId.systemDefault()
             val prefs = settingsRepo.userPreferences.first()
+            val zoneId = prefs.scoringZone()
             val deviceByType = prefs.deviceByDataType
 
             val affectedDates = mutableSetOf<LocalDate>()
@@ -158,12 +159,12 @@ class HealthChangeSynchronizerImpl
                         val id = record.metadata.id
 
                         if (selectedDevice == null || deviceLabel == selectedDevice) {
-                            // Gather affected dates from record
+                            val deletedDates = getAffectedDatesForDeletedRecord(dataType, id, zoneId)
+                            affectedDates.addAll(deletedDates)
+                            deleteRecordLocal(dataType, id)
                             affectedDates.addAll(getDatesForRecord(record, zoneId))
-                            // Map and upsert
                             upsertRecord(dataType, record, prefs)
                         } else {
-                            // Non-selected source: delete if present
                             val deletedDates = getAffectedDatesForDeletedRecord(dataType, id, zoneId)
                             affectedDates.addAll(deletedDates)
                             deleteRecordLocal(dataType, id)
@@ -327,14 +328,14 @@ class HealthChangeSynchronizerImpl
                     } ?: emptySet()
                 }
                 HealthDataType.HEART_RATE -> {
-                    heartRateDao.getById(id)?.let {
-                        getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId)
-                    } ?: emptySet()
+                    heartRateDao
+                        .getBySourceRecordId(id)
+                        .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                 }
                 HealthDataType.HRV -> {
-                    hrvDao.getById(id)?.let {
-                        getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId)
-                    } ?: emptySet()
+                    hrvDao
+                        .getBySourceRecordId(id)
+                        .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                 }
                 HealthDataType.EXERCISE -> {
                     workoutDao.getById(id)?.let {
@@ -342,24 +343,24 @@ class HealthChangeSynchronizerImpl
                     } ?: emptySet()
                 }
                 HealthDataType.WEIGHT -> {
-                    weightRecordDao.getById(id)?.let {
-                        getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId)
-                    } ?: emptySet()
+                    weightRecordDao
+                        .getBySourceRecordId(id)
+                        .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                 }
                 HealthDataType.BODY_FAT -> {
-                    bodyFatRecordDao.getById(id)?.let {
-                        getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId)
-                    } ?: emptySet()
+                    bodyFatRecordDao
+                        .getBySourceRecordId(id)
+                        .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                 }
                 HealthDataType.BLOOD_PRESSURE -> {
-                    bloodPressureRecordDao.getById(id)?.let {
-                        getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId)
-                    } ?: emptySet()
+                    bloodPressureRecordDao
+                        .getBySourceRecordId(id)
+                        .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                 }
                 HealthDataType.OXYGEN_SATURATION -> {
-                    oxygenSaturationRecordDao.getById(id)?.let {
-                        getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId)
-                    } ?: emptySet()
+                    oxygenSaturationRecordDao
+                        .getBySourceRecordId(id)
+                        .mapTo(mutableSetOf()) { getDateFor(Instant.ofEpochMilli(it.timestampMs), zoneId).single() }
                 }
                 HealthDataType.STEPS -> emptySet()
             }
@@ -370,13 +371,13 @@ class HealthChangeSynchronizerImpl
         ) {
             when (dataType) {
                 HealthDataType.SLEEP -> sleepSessionDao.deleteById(id)
-                HealthDataType.HEART_RATE -> heartRateDao.deleteById(id)
-                HealthDataType.HRV -> hrvDao.deleteById(id)
+                HealthDataType.HEART_RATE -> heartRateDao.deleteBySourceRecordId(id)
+                HealthDataType.HRV -> hrvDao.deleteBySourceRecordId(id)
                 HealthDataType.EXERCISE -> workoutDao.deleteById(id)
-                HealthDataType.WEIGHT -> weightRecordDao.deleteById(id)
-                HealthDataType.BODY_FAT -> bodyFatRecordDao.deleteById(id)
-                HealthDataType.BLOOD_PRESSURE -> bloodPressureRecordDao.deleteById(id)
-                HealthDataType.OXYGEN_SATURATION -> oxygenSaturationRecordDao.deleteById(id)
+                HealthDataType.WEIGHT -> weightRecordDao.deleteBySourceRecordId(id)
+                HealthDataType.BODY_FAT -> bodyFatRecordDao.deleteBySourceRecordId(id)
+                HealthDataType.BLOOD_PRESSURE -> bloodPressureRecordDao.deleteBySourceRecordId(id)
+                HealthDataType.OXYGEN_SATURATION -> oxygenSaturationRecordDao.deleteBySourceRecordId(id)
                 HealthDataType.STEPS -> Unit
             }
         }

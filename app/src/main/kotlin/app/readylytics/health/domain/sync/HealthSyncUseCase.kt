@@ -227,7 +227,7 @@ class HealthSyncUseCase
          * Full historical resync over [startDate]..[endDate] (inclusive), bounded by the caller from
          * the user's data-retention setting. Health Connect is re-read in [chunkDays]-day chunks (with
          * bounded backoff to ride out rate limits), then a single walk-forward recompute rebuilds every
-         * day's scores via the unchanged [ScoringRepository.computeDailySummary] path.
+         * day's scores via the unchanged scoring-engine formulas.
          *
          * Idempotent by construction: ingestion upserts by stable Health Connect record id (overlaps
          * replace, never duplicate) and no blanket delete is performed, so a worker killed/failed
@@ -697,29 +697,19 @@ class HealthSyncUseCase
             )
         }
 
-        // Already invoked from the IO context established in [sync]; computeDailySummary
-        // switches to Dispatchers.Default internally for the CPU-heavy scoring.
+        // Already invoked from the IO context established in [sync]; repository scoring
+        // switches to Dispatchers.Default internally for the CPU-heavy computation.
         //
         // [steps] is null when no fresh step count is available for [day] (older historical days
-        // outside the sync window). In that case the existing step count is preserved — note that
-        // computeDailySummary copies the stored summary forward without touching stepCount — so a
-        // historical recompute never zeroes out the user's step history.
+        // outside the sync window). In that case the repository preserves the stored step count.
         private suspend fun syncDayScoring(
             day: LocalDate,
             steps: Long?,
         ): Result<Unit> =
             try {
-                val afterScoring = scoringRepository.computeDailySummary(day)
-                val finalSummary =
-                    if (steps != null) {
-                        afterScoring.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
-                    } else {
-                        afterScoring
-                    }
-                scoringRepository.persist(finalSummary)
-
+                scoringRepository.computeAndPersistDailySummary(day, steps)
                 logD("HealthSyncUseCase") {
-                    "Day $day: scored (steps=${steps?.toString() ?: "preserved"}) and summary persisted"
+                    "Day $day: scored atomically (steps=${steps?.toString() ?: "preserved"})"
                 }
                 Result.success(Unit)
             } catch (e: CancellationException) {

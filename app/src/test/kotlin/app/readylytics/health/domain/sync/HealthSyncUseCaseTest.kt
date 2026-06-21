@@ -85,17 +85,12 @@ class HealthSyncUseCaseTest {
             val day1 = today.minusDays(1)
             val day2 = today
 
-            coEvery { scoringRepository.computeDailySummary(any()) } returns summary()
-
             useCase.sync(windowDays = windowDays)
 
             coVerifyOrder {
-                scoringRepository.computeDailySummary(day0)
-                scoringRepository.persist(any())
-                scoringRepository.computeDailySummary(day1)
-                scoringRepository.persist(any())
-                scoringRepository.computeDailySummary(day2)
-                scoringRepository.persist(any())
+                scoringRepository.computeAndPersistDailySummary(day0, 0L)
+                scoringRepository.computeAndPersistDailySummary(day1, 0L)
+                scoringRepository.computeAndPersistDailySummary(day2, 0L)
             }
         }
 
@@ -118,16 +113,12 @@ class HealthSyncUseCaseTest {
                     .toInstant()
                     .toEpochMilli()
 
-            coEvery { scoringRepository.computeDailySummary(any()) } returns summary()
-
             useCase.sync(windowDays = windowDays)
 
             coVerifyOrder {
                 healthIngestionStore.clearFrozenBaselines(today.minusDays(1), today.plusDays(1))
-                scoringRepository.computeDailySummary(today.minusDays(1))
-                scoringRepository.persist(any())
-                scoringRepository.computeDailySummary(today)
-                scoringRepository.persist(any())
+                scoringRepository.computeAndPersistDailySummary(today.minusDays(1), 0L)
+                scoringRepository.computeAndPersistDailySummary(today, 0L)
             }
         }
 
@@ -150,7 +141,6 @@ class HealthSyncUseCaseTest {
                     .toInstant()
                     .toEpochMilli()
 
-            coEvery { scoringRepository.computeDailySummary(any()) } returns summary()
             coJustRun { sessionLinkReconciler.reconcile(any(), any(), any()) }
 
             useCase.sync(windowDays = windowDays)
@@ -162,16 +152,13 @@ class HealthSyncUseCaseTest {
                     zoneThresholds = any(),
                 )
                 healthIngestionStore.clearFrozenBaselines(today, today.plusDays(1))
-                scoringRepository.computeDailySummary(today)
-                scoringRepository.persist(any())
+                scoringRepository.computeAndPersistDailySummary(today, 0L)
             }
         }
 
     @Test
     fun `sync fetches and upserts all heart-related record types`() =
         runTest {
-            coEvery { scoringRepository.computeDailySummary(any()) } returns summary()
-
             // Mock non-empty returns to ensure mapping logic is triggered
             coEvery { hcRepo.readHeartRateSamples(any(), any()) } returns listOf(mockk(relaxed = true))
             coEvery { hcRepo.readHrvSamples(any(), any()) } returns listOf(mockk(relaxed = true))
@@ -190,8 +177,6 @@ class HealthSyncUseCaseTest {
     @Test
     fun `daily sync windowDays 1 fetches samples from yesterday to cover cross-midnight sleep`() =
         runTest {
-            coEvery { scoringRepository.computeDailySummary(any()) } returns summary()
-
             val hrvFromSlot = slot<Instant>()
             val hrFromSlot = slot<Instant>()
             coEvery { hcRepo.readHrvSamples(capture(hrvFromSlot), any()) } returns emptyList()
@@ -225,9 +210,7 @@ class HealthSyncUseCaseTest {
             coEvery { changeSynchronizer.applyPendingChanges() } returns
                 HealthChangeSyncOutcome(setOf(oldestAffectedDay), false)
             coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
-            coEvery { scoringRepository.computeDailySummary(capture(scoredDays)) } answers {
-                summary(firstArg())
-            }
+            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any()) }
 
             useCase.sync(windowDays = 1)
 
@@ -248,8 +231,6 @@ class HealthSyncUseCaseTest {
             coEvery { hcRepo.readSleepSessions(capture(sleepFromSlot), any()) } returns emptyList()
             coEvery { hcRepo.readHrvSamples(capture(hrvFromSlot), any()) } returns emptyList()
             coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
-            coEvery { scoringRepository.computeDailySummary(any()) } returns summary()
-
             useCase.resyncRange(startDate, endDate)
 
             // The first chunk of resyncRange must reach back one extra day to capture
@@ -276,8 +257,6 @@ class HealthSyncUseCaseTest {
             val hrFromInstants = mutableListOf<Instant>()
             coEvery { hcRepo.readHrvSamples(capture(hrvFromInstants), any()) } returns emptyList()
             coEvery { hcRepo.readHeartRateSamples(capture(hrFromInstants), any()) } returns emptyList()
-            coEvery { scoringRepository.computeDailySummary(any()) } returns summary()
-
             useCase.resyncRange(startDate, endDate, chunkDays = chunkDays)
 
             val secondChunkStart = startDate.plusDays(chunkDays.toLong())
@@ -310,8 +289,6 @@ class HealthSyncUseCaseTest {
             coEvery { hcRepo.readExerciseSessions(any(), capture(workoutToInstants)) } returns emptyList()
             coEvery { hcRepo.readHrvSamples(any(), capture(hrvToInstants)) } returns emptyList()
             coEvery { hcRepo.readHeartRateSamples(any(), capture(hrToInstants)) } returns emptyList()
-            coEvery { scoringRepository.computeDailySummary(any()) } returns summary()
-
             useCase.resyncRange(
                 startDate = startDate,
                 endDate = LocalDate.of(2024, 7, 2),
@@ -333,8 +310,6 @@ class HealthSyncUseCaseTest {
                         deviceByDataType = mapOf(HealthDataType.STEPS.name to "Watch"),
                     ),
                 )
-            coEvery { scoringRepository.computeDailySummary(any()) } returns summary()
-
             useCase.resyncRange(
                 startDate = LocalDate.of(2024, 6, 1),
                 endDate = LocalDate.of(2024, 6, 1),
@@ -353,7 +328,6 @@ class HealthSyncUseCaseTest {
                         deviceByDataType = mapOf(HealthDataType.STEPS.name to "Watch"),
                     ),
                 )
-            coEvery { scoringRepository.computeDailySummary(any()) } returns summary()
             coEvery { hcRepo.readStepsRecords(any(), any()) } throws RuntimeException("rate limited") andThen
                 emptyList()
 
@@ -375,25 +349,19 @@ class HealthSyncUseCaseTest {
                     ),
                 )
             coEvery { hcRepo.readStepsRecords(any(), any()) } returns emptyList()
-            coEvery { scoringRepository.computeDailySummary(any()) } returns
-                summary(
-                    stepCount = 999,
-                )
-            val summarySlot = slot<DailySummary>()
-            coJustRun { scoringRepository.persist(capture(summarySlot)) }
+            val date = LocalDate.of(2024, 6, 1)
 
             useCase.resyncRange(
-                startDate = LocalDate.of(2024, 6, 1),
-                endDate = LocalDate.of(2024, 6, 1),
+                startDate = date,
+                endDate = date,
             )
 
-            assertEquals(0, summarySlot.captured.stepCount)
+            coVerify { scoringRepository.computeAndPersistDailySummary(date, 0L) }
         }
 
     @Test
     fun `resyncRange progress reports calendar days not internal two phase steps`() =
         runTest {
-            coEvery { scoringRepository.computeDailySummary(any()) } returns summary()
             val progress = mutableListOf<Pair<Int, Int>>()
 
             useCase.resyncRange(
@@ -422,18 +390,13 @@ class HealthSyncUseCaseTest {
                     .toInstant()
                     .toEpochMilli()
 
-            coEvery { scoringRepository.computeDailySummary(any()) } returns summary()
-
             useCase.resyncRange(startDate = startDate, endDate = endDate)
 
             coVerifyOrder {
                 healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1))
-                scoringRepository.computeDailySummary(startDate)
-                scoringRepository.persist(any())
-                scoringRepository.computeDailySummary(startDate.plusDays(1))
-                scoringRepository.persist(any())
-                scoringRepository.computeDailySummary(endDate)
-                scoringRepository.persist(any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any())
+                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any())
             }
         }
 
@@ -453,14 +416,12 @@ class HealthSyncUseCaseTest {
             val startDate = LocalDate.of(2024, 6, 1)
             val endDate = LocalDate.of(2024, 6, 3)
 
-            coEvery { scoringRepository.computeDailySummary(any()) } returns summary()
-
             useCase.resyncRange(startDate = startDate, endDate = endDate)
 
             coVerifyOrder {
                 selectedSourcePruner.prune(startDate, endDate, any())
                 sessionLinkReconciler.reconcile(any(), any(), any())
-                scoringRepository.computeDailySummary(startDate)
+                scoringRepository.computeAndPersistDailySummary(startDate, any())
             }
         }
 }

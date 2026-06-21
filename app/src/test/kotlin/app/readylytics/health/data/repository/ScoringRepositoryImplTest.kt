@@ -9,12 +9,14 @@ import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.scoring.*
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
 class ScoringRepositoryImplTest {
@@ -313,5 +315,33 @@ class ScoringRepositoryImplTest {
             // Should not throw
             val result = repo.computeDailySummary(today)
             kotlin.test.assertNull(result.restingHeartRate)
+        }
+
+    @Test
+    fun `computeAndPersistDailySummary persists using same scoring zone snapshot as computation`() =
+        runTest {
+            val zoneA = ZoneId.of("Pacific/Kiritimati")
+            val zoneB = ZoneId.of("UTC")
+            val targetDate = LocalDate.of(2026, 1, 2)
+            val prefsFlow = MutableStateFlow(UserPreferences(scoringZoneId = zoneA.id))
+            val entitySlot = slot<DailySummaryEntity>()
+
+            every { settingsRepo.userPreferences } returns prefsFlow
+            coEvery { dailySummaryDao.getByDate(any()) } returns null
+            coEvery { sleepSessionDao.countSince(any()) } coAnswers {
+                prefsFlow.value = UserPreferences(scoringZoneId = zoneB.id)
+                10
+            }
+            coEvery { dailySummaryDao.upsert(capture(entitySlot)) } returns Unit
+
+            repo.computeAndPersistDailySummary(targetDate)
+
+            assertEquals(
+                targetDate
+                    .atStartOfDay(zoneA)
+                    .toInstant()
+                    .toEpochMilli(),
+                entitySlot.captured.dateMidnightMs,
+            )
         }
 }

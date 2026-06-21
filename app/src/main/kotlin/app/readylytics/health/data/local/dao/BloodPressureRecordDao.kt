@@ -69,6 +69,21 @@ interface BloodPressureRecordDao {
     @Query("SELECT * FROM blood_pressure_records WHERE id = :id")
     suspend fun getById(id: String): BloodPressureRecordEntity?
 
+    @Query(
+        "SELECT * FROM blood_pressure_records " +
+            "WHERE id = :sourceRecordId " +
+            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_' " +
+            "ORDER BY timestampMs ASC",
+    )
+    suspend fun getBySourceRecordId(sourceRecordId: String): List<BloodPressureRecordEntity>
+
+    @Query(
+        "DELETE FROM blood_pressure_records " +
+            "WHERE id = :sourceRecordId " +
+            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_'",
+    )
+    suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
+
     @Query("SELECT COUNT(*) FROM blood_pressure_records")
     suspend fun count(): Int
 

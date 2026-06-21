@@ -137,6 +137,21 @@ interface HeartRateDao {
     @Query("SELECT * FROM heart_rate_records WHERE id = :id")
     suspend fun getById(id: String): HeartRateRecordEntity?
 
+    @Query(
+        "SELECT * FROM heart_rate_records " +
+            "WHERE id = :sourceRecordId " +
+            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_' " +
+            "ORDER BY timestampMs ASC, id ASC",
+    )
+    suspend fun getBySourceRecordId(sourceRecordId: String): List<HeartRateRecordEntity>
+
+    @Query(
+        "DELETE FROM heart_rate_records " +
+            "WHERE id = :sourceRecordId " +
+            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_'",
+    )
+    suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
+
     @Query("SELECT COUNT(*) FROM heart_rate_records")
     suspend fun count(): Int
 

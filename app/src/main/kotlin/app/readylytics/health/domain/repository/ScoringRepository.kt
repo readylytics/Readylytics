@@ -5,7 +5,10 @@ import app.readylytics.health.domain.model.ReadinessResult
 import java.time.LocalDate
 
 interface ScoringRepository {
-    suspend fun computeAndPersistDailySummary(targetDate: LocalDate = LocalDate.now())
+    suspend fun computeAndPersistDailySummary(
+        targetDate: LocalDate = LocalDate.now(),
+        steps: Long? = null,
+    )
 
     suspend fun computeDailySummary(targetDate: LocalDate = LocalDate.now()): DailySummary
 

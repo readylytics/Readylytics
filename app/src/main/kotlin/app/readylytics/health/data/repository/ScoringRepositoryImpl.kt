@@ -69,16 +69,33 @@ class ScoringRepositoryImpl
     ) : ScoringRepository {
         private val calculationMutex = Mutex()
 
-        override suspend fun computeAndPersistDailySummary(targetDate: LocalDate) {
+        override suspend fun computeAndPersistDailySummary(
+            targetDate: LocalDate,
+            steps: Long?,
+        ) {
             calculationMutex.withLock {
-                val summary = computeDailySummary(targetDate)
-                persist(summary)
+                val prefs = settingsRepo.userPreferences.first()
+                val zoneId = prefs.scoringZone()
+                val summary =
+                    computeDailySummary(targetDate, prefs).let { computed ->
+                        if (steps != null) {
+                            computed.copy(stepCount = steps.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+                        } else {
+                            computed
+                        }
+                    }
+                persist(summary, zoneId)
             }
         }
 
         override suspend fun computeDailySummary(targetDate: LocalDate): DailySummary =
+            computeDailySummary(targetDate, settingsRepo.userPreferences.first())
+
+        private suspend fun computeDailySummary(
+            targetDate: LocalDate,
+            prefs: app.readylytics.health.data.preferences.UserPreferences,
+        ): DailySummary =
             withContext(Dispatchers.Default) {
-                val prefs = settingsRepo.userPreferences.first()
                 val zoneId = prefs.scoringZone()
                 val dayMidnight = targetDate.atStartOfDay(zoneId).toInstant()
                 val nextDayMidnight = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant()
@@ -342,7 +359,12 @@ class ScoringRepositoryImpl
                     return@withContext DailySummaryMapper.toDomain(summary, zoneId)
                 }
 
-                val ctlFetchFrom = dayMidnight.minus(ScoringConstants.CHRONIC_DAYS * 2, ChronoUnit.DAYS).toEpochMilli()
+                val ctlFetchFrom =
+                    targetDate
+                        .minusDays(ScoringConstants.CHRONIC_DAYS * 2)
+                        .atStartOfDay(zoneId)
+                        .toInstant()
+                        .toEpochMilli()
                 val dailyTrimpByDate =
                     TrimpDateBucketer.bucket(
                         workoutDao.getTrimpPoints(ctlFetchFrom, nextDayMidnightMs),
@@ -464,8 +486,13 @@ class ScoringRepositoryImpl
                 DailySummaryMapper.toDomain(summary, zoneId)
             }
 
-        override suspend fun persist(summary: DailySummary) {
-            val zoneId = settingsRepo.userPreferences.first().scoringZone()
+        override suspend fun persist(summary: DailySummary) =
+            persist(summary, settingsRepo.userPreferences.first().scoringZone())
+
+        private suspend fun persist(
+            summary: DailySummary,
+            zoneId: ZoneId,
+        ) {
             dailySummaryDao.upsert(DailySummaryMapper.toEntity(summary, zoneId))
         }
 

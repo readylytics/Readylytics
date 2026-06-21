@@ -4,13 +4,12 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.core.content.edit
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import app.readylytics.health.domain.util.logE
 import app.readylytics.health.domain.util.logW
 import dagger.hilt.android.qualifiers.ApplicationContext
-import androidx.core.content.edit
 import java.io.File
-import androidx.core.content.edit
 import java.io.FileInputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption

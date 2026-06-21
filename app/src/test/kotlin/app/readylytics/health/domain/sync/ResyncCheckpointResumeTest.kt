@@ -49,8 +49,6 @@ class ResyncCheckpointResumeTest {
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
         coEvery { changeSynchronizer.refreshTokensAfterFullResync() } returns Unit
-        coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummary(LocalDate.of(1970, 1, 1))
-
         useCase =
             HealthSyncUseCase(
                 hcRepo = hcRepo,
@@ -114,11 +112,11 @@ class ResyncCheckpointResumeTest {
             }
 
             assertEquals(2 to 4, progress.first())
-            coVerify(exactly = 0) { scoringRepository.computeDailySummary(startDate) }
-            coVerify(exactly = 0) { scoringRepository.computeDailySummary(startDate.plusDays(1)) }
+            coVerify(exactly = 0) { scoringRepository.computeAndPersistDailySummary(startDate, any()) }
+            coVerify(exactly = 0) { scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any()) }
             coVerifyOrder {
-                scoringRepository.computeDailySummary(startDate.plusDays(2))
-                scoringRepository.computeDailySummary(endDate)
+                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(2), any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any())
             }
         }
 

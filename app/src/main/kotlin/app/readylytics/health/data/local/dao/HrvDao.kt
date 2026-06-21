@@ -108,6 +108,21 @@ interface HrvDao {
     @Query("SELECT * FROM hrv_records WHERE id = :id")
     suspend fun getById(id: String): HrvRecordEntity?
 
+    @Query(
+        "SELECT * FROM hrv_records " +
+            "WHERE id = :sourceRecordId " +
+            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_' " +
+            "ORDER BY timestampMs ASC, id ASC",
+    )
+    suspend fun getBySourceRecordId(sourceRecordId: String): List<HrvRecordEntity>
+
+    @Query(
+        "DELETE FROM hrv_records " +
+            "WHERE id = :sourceRecordId " +
+            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_'",
+    )
+    suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
+
     @Query("SELECT COUNT(*) FROM hrv_records")
     suspend fun count(): Int
 

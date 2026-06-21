@@ -115,6 +115,7 @@ object DailySummaryMapper {
             diagnostics = domain.readinessResult.diagnostics,
             contributors = domain.readinessResult.contributors,
             sRest = domain.sRest,
+            isCalibrating = domain.isCalibrating,
             weightKg = domain.weightKg,
             bodyFatPercent = domain.bodyFatPercent,
             bloodPressureSystolic = domain.bloodPressureSystolic,

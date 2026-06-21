@@ -135,7 +135,9 @@ private fun AcwrChartOverlayContent(
                     topLeft = Offset(selectedState.canvasX - (barWidthPx / 2), yTop),
                     size = Size(barWidthPx, layerBounds.bottom - yTop),
                     cornerRadius = CornerRadius(4.dp.toPx()),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth),
+                    style =
+                        androidx.compose.ui.graphics.drawscope
+                            .Stroke(width = strokeWidth),
                 )
             }
         }

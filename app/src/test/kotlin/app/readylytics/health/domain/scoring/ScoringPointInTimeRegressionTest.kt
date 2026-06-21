@@ -360,4 +360,58 @@ class ScoringPointInTimeRegressionTest {
                 TimeZone.setDefault(originalTimeZone)
             }
         }
+
+    @Test
+    fun ctlHistoryFetchStartsAtLocalMidnightAcrossDstTransitions() =
+        runTest {
+            val zoneId = ZoneId.of("Europe/Berlin")
+            val prefs =
+                UserPreferences(
+                    scoringZoneId = zoneId.id,
+                    physiologyProfile = PhysiologyProfile.ATHLETE,
+                    maxHeartRate = 195,
+                    rasScalingFactor = 0.25f,
+                    rhrBaselineOverride = 55f,
+                    gender = Gender.MALE,
+                )
+            val mockConfig = mockk<ScoringConfig>(relaxed = true)
+            every { mockConfig.rasScalingFactor } returns 0.25f
+            every { settingsRepo.userPreferences } returns flowOf(prefs)
+            every { scoringConfigFactory.build(any(), any(), any(), any()) } returns mockConfig
+            every { scoringCalculator.computeAtlEmaWithDecay(any(), any()) } returns 5f
+            every { scoringCalculator.computeCtlEmaWithDecay(any(), any()) } returns 5f
+            every { scoringCalculator.computeStrainRatio(any(), any()) } returns 1f
+            every { scoringCalculator.computeLoadScore(any()) } returns 50f
+            coEvery { sleepSessionDao.countSince(any()) } returns 10
+            coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
+            coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
+            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { dailySummaryDao.getEverydayTrimpPoints(any(), any()) } returns emptyList()
+
+            listOf(LocalDate.of(2025, 3, 31), LocalDate.of(2025, 10, 27)).forEach { targetDate ->
+                val targetMidnightMs = targetDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+                val fromMs = slot<Long>()
+                coEvery { dailySummaryDao.getByDate(targetMidnightMs) } returns
+                    DailySummaryEntity(
+                        dateMidnightMs = targetMidnightMs,
+                        baselineCalculatedAtDate = targetDate,
+                        hrMax = 190f,
+                        rasScalingFactor = 0.2f,
+                        rhrBpm = 60f,
+                        baselineObservationCount = 10,
+                    )
+                coEvery { workoutDao.getTrimpPoints(capture(fromMs), any()) } returns emptyList()
+
+                repo.computeDailySummary(targetDate)
+
+                assertEquals(
+                    targetDate
+                        .minusDays((ScoringConstants.CHRONIC_DAYS * 2).toLong())
+                        .atStartOfDay(zoneId)
+                        .toInstant()
+                        .toEpochMilli(),
+                    fromMs.captured,
+                )
+            }
+        }
 }
