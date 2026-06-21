@@ -667,3 +667,61 @@ fun SleepStagesChartPreview() {
         )
     }
 }
+
+internal fun resolveNonOverlappingLabels(
+    labelTimestamps: List<Long>,
+    startTime: Long,
+    sessionDurationMs: Long,
+    totalWidthPx: Int,
+    labelWidthsPx: List<Int>,
+    spacingPx: Float,
+): List<Int> {
+    if (labelTimestamps.isEmpty()) return emptyList()
+
+    class LabelBounds(
+        val index: Int,
+        val left: Int,
+        val right: Int,
+    )
+
+    val allBounds =
+        labelTimestamps.mapIndexed { i, ts ->
+            val fraction = (ts - startTime).toFloat() / sessionDurationMs.toFloat()
+            val centerX = fraction * totalWidthPx
+            val width = labelWidthsPx.getOrElse(i) { 0 }
+            val left =
+                (centerX - width / 2f)
+                    .roundToInt()
+                    .coerceIn(0, totalWidthPx - width)
+            val right = left + width
+            LabelBounds(i, left, right)
+        }
+
+    val accepted = mutableListOf<LabelBounds>()
+
+    accepted.add(allBounds.first())
+
+    if (allBounds.size > 1) {
+        val last = allBounds.last()
+        val first = accepted.first()
+        val overlaps =
+            last.left < first.right + spacingPx && first.left < last.right + spacingPx
+        if (!overlaps) {
+            accepted.add(last)
+        }
+    }
+
+    for (i in 1 until allBounds.size - 1) {
+        val candidate = allBounds[i]
+        val overlaps =
+            accepted.any { acc ->
+                candidate.left < acc.right + spacingPx && acc.left < candidate.right + spacingPx
+            }
+        if (!overlaps) {
+            accepted.add(candidate)
+        }
+    }
+
+    return accepted.map { it.index }.sorted()
+}
+
