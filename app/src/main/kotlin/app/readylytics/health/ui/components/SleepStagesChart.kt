@@ -697,7 +697,7 @@ internal fun resolveNonOverlappingLabels(
     labelWidthsPx: List<Int>,
     spacingPx: Float,
 ): List<Int> {
-    if (labelTimestamps.isEmpty()) return emptyList()
+    if (labelTimestamps.isEmpty() || sessionDurationMs <= 0) return emptyList()
 
     class LabelBounds(
         val index: Int,
