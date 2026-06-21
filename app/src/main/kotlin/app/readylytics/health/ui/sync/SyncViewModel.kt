@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import javax.inject.Inject
 
 sealed interface SyncUiState {
@@ -110,10 +109,10 @@ class SyncViewModel
         fun onAppForeground() {
             foregroundCheckJob?.cancel()
             viewModelScope.launch {
-                // Only reset to today if the system date has changed (past midnight)
-                if (selectedDateRepository.selectedDate.value != LocalDate.now()) {
-                    selectedDateRepository.resetToToday()
-                }
+                // Advances to the new "today" only if the user was passively on
+                // today and the calendar day rolled over while backgrounded; an
+                // explicit historical date pick is left untouched.
+                selectedDateRepository.advanceTodayIfNeeded()
             }
             // onPermissionsGranted() sets SyncingCatchUp synchronously before launching
             // its coroutine. If that already happened, skip the permission re-check.
