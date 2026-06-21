@@ -51,9 +51,9 @@ fun WorkoutsScreen(
     onPreviousPage: () -> Unit,
     onNextPage: () -> Unit,
     onWorkoutClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
     onDateSelected: (java.time.LocalDate) -> Unit = {},
     earliestDate: java.time.LocalDate? = null,
-    modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
 

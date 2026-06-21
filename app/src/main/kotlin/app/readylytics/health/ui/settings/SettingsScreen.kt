@@ -1,8 +1,8 @@
 package app.readylytics.health.ui.settings
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
+import androidx.core.net.toUri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -78,7 +78,7 @@ private fun openOssLicenses(
 
 private fun openPrivacyPolicy(context: android.content.Context) {
     val url = context.getString(R.string.privacy_policy_url)
-    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
 }
 
 @Composable
@@ -114,7 +114,7 @@ fun SettingsRoute(
                     context.startActivity(restartIntent)
                 }
                 is SideEffect.TakePersistableUriPermission -> {
-                    val uri = android.net.Uri.parse(effect.uri)
+                    val uri = effect.uri.toUri()
                     context.contentResolver.takePersistableUriPermission(
                         uri,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,

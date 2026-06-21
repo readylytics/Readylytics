@@ -8,7 +8,9 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import app.readylytics.health.domain.util.logE
 import app.readylytics.health.domain.util.logW
 import dagger.hilt.android.qualifiers.ApplicationContext
+import androidx.core.content.edit
 import java.io.File
+import androidx.core.content.edit
 import java.io.FileInputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -168,11 +170,10 @@ class SqlCipherKeyManager
         }
 
         fun resetKeyAndDatabase(dbFile: File) {
-            prefs
-                .edit()
-                .remove(PREF_ENCRYPTED_KEY)
-                .remove(PREF_IV)
-                .commit()
+            prefs.edit {
+                remove(PREF_ENCRYPTED_KEY)
+                remove(PREF_IV)
+            }
             if (dbFile.exists()) {
                 dbFile.delete()
                 File("${dbFile.absolutePath}-wal").delete()
@@ -237,11 +238,10 @@ class SqlCipherKeyManager
             val iv = cipher.iv
             val encryptedKey = cipher.doFinal(rawKey)
 
-            prefs
-                .edit()
-                .putString(PREF_ENCRYPTED_KEY, Base64.encodeToString(encryptedKey, Base64.NO_WRAP))
-                .putString(PREF_IV, Base64.encodeToString(iv, Base64.NO_WRAP))
-                .commit()
+            prefs.edit {
+                putString(PREF_ENCRYPTED_KEY, Base64.encodeToString(encryptedKey, Base64.NO_WRAP))
+                putString(PREF_IV, Base64.encodeToString(iv, Base64.NO_WRAP))
+            }
         }
 
         private fun decryptKey(): ByteArray {

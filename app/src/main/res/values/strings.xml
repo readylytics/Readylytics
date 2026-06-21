@@ -215,7 +215,7 @@
         this rule has imperfect coverage of every sleep pattern.</string>
 
     <string name="about_header_readiness">## Readiness</string>
-    <string name="about_readiness_intro">A daily 0-100 composite number summarising three signals.</string>
+    <string name="about_readiness_intro">A daily 0–100 composite number summarising three signals.</string>
     <string name="about_readiness_formula">**Readiness = 0.4 × Restoration + 0.3 × Sleep Score +
         0.3 × Load Score.** Restoration carries the largest single weight, so your overnight
         recovery markers are the biggest lever — but a significant load spike or poor sleep will
@@ -235,7 +235,7 @@
     <string name="about_readiness_tooltips_label">**Tooltips**</string>
     <string name="about_tooltip_peak">*Peak (85-100)* — your recent load is consistent with your
         fitness.</string>
-    <string name="about_tooltip_maintain">*Maintain (60-84)* — manageable load increase.</string>
+    <string name="about_tooltip_maintain">*Maintain (60–84)* — manageable load increase.</string>
     <string name="about_tooltip_caution">*Caution (30-59)* — meaningful load spike; consider an
         easier day.</string>
     <string name="about_tooltip_fatigue">*High Fatigue (&lt;30)* — large spike vs. your norm.</string>
@@ -398,21 +398,18 @@
         consult a qualified healthcare provider.</string>
 
     <!-- Sleep Detail Screen -->
-    <string name="time_unit_hours">h</string>
-    <string name="time_unit_minutes">m</string>
-    <string name="sleep_duration_format">Your sleep duration: %1$dh %2$dm</string>
-    <string name="sleep_duration_unknown">Your sleep duration: --h --m</string>
+
     <string name="sleep_duration_hours_minutes">%1$dh %2$dm</string>
     <string name="sleep_duration_minutes_only">%1$dm</string>
     <string name="sleep_timeline_title">Sleep timeline</string>
-    <string name="sleep_timeline_learn_more">Learn more</string>
+
     <string name="sleep_breakdown_title">Sleep breakdown</string>
     <string name="sleep_stage_awake">Awake</string>
     <string name="sleep_stage_rem">REM</string>
     <string name="sleep_stage_light">Light</string>
     <string name="sleep_stage_deep">Deep</string>
     <string name="sleep_breakdown_row_format">%1$s • %2$s</string>
-    <string name="sleep_hypnogram_title">Hypnogram</string>
+
 
     <!-- Sleep Trend Chart -->
     <string name="sleep_trend_section_title">Sleep durations and bedtimes</string>
@@ -441,8 +438,7 @@
     <!-- Unit System -->
     <string name="unit_metric_cm">cm</string>
     <string name="unit_metric_kg">kg</string>
-    <string name="unit_imperial_ft">\'</string>
-    <string name="unit_imperial_in">\"</string>
+
     <string name="unit_imperial_lbs">lbs</string>
 
     <!-- Heart Rate Detail Screen -->
@@ -471,7 +467,7 @@
     <string name="backup_description">Backups are stored locally on your device. You can create a
         new backup at any time or restore from a previous one.</string>
     <string name="backup_create_button">Create new backup</string>
-    <string name="backup_reencrypting_message">Updating existing backup passwords...</string>
+    <string name="backup_reencrypting_message">Updating existing backup passwords…</string>
     <string name="backup_section_available">Available backups</string>
     <string name="backup_none_found">No backups found.</string>
     <string name="backup_security_section">Security</string>
@@ -508,7 +504,7 @@
     <string name="recovery_success">Database restored. Restart the app.</string>
     <string name="recovery_error_default">Could not restore backup. Make sure you selected the
         correct file.</string>
-    <string name="recovery_restoring_message">Restoring database...</string>
+    <string name="recovery_restoring_message">Restoring database…</string>
     <string name="recovery_recommended_title">Recommended recovery option</string>
     <string name="recovery_recommended_body">If you have a previously exported backup file (.zip),
         you can select it to restore your data safely.</string>
@@ -527,8 +523,8 @@
     <string name="accessibility_clear">Clear</string>
 
     <!-- Settings Screen -->
-    <string name="message_syncing_health_data">Syncing health data...</string>
-    <string name="settings_search_placeholder">Search settings...</string>
+
+    <string name="settings_search_placeholder">Search settings…</string>
 
     <!-- Gender display labels (display only; domain/stored values remain English keys) -->
     <string name="gender_male">Male</string>
@@ -545,7 +541,7 @@
     <string name="label_inches">Inches</string>
     <string name="unit_ft">ft</string>
     <string name="unit_in">in</string>
-    <string name="height_range_hint_metric">Range: 120-250 cm</string>
+    <string name="height_range_hint_metric">Range: 120–250 cm</string>
     <string name="height_range_hint_imperial">Range: 3\'11\" - 8\'2\"</string>
     <string name="height_bmi_note">Used for BMI calculation in weight tracking</string>
     <string name="error_height_feet">Feet: 3–8</string>
@@ -651,7 +647,7 @@
 
     <!-- Steps -->
     <string name="label_daily_steps">Daily Steps</string>
-    <string name="steps_goal_display">Goal: %1$s</string>
+
     <string name="label_goal">Goal</string>
     <string name="steps_fraction_display">%1$s / %2$s</string>
     <string name="label_steps_today">Steps Today</string>
@@ -743,7 +739,7 @@
     <!-- Settings Screen Sections & Sub-headers -->
     <string name="settings_section_data_backup">Data &amp; backup</string>
     <string name="settings_sub_local_backup">Local backup</string>
-    <string name="settings_sub_device">Device</string>
+
     <string name="settings_sub_data_management">Data management</string>
     <string name="settings_sub_health_connect">Health Connect</string>
     <string name="settings_section_baselines_thresholds">Baselines &amp; thresholds</string>
@@ -782,25 +778,11 @@
     <!-- Data Management & Sync Settings -->
     <string name="settings_retention_enabled_label">Retention Enabled</string>
     <string name="settings_retention_period_label">Retention Period</string>
-    <plurals name="settings_retention_days_display">
-        <item quantity="one">%1$d day</item>
-        <item quantity="other">%1$d days</item>
-    </plurals>
+
     <string name="settings_retention_description">Automatically delete data older than the retention
         period.</string>
-    <string name="settings_resync_button">Resync Health Connect Data</string>
-    <string name="settings_resync_description">Clear all data from Health Connect and reload the
-        last 60 days.</string>
-    <string name="settings_foreground_sync_label">Foreground Sync</string>
-    <string name="sync_preference_never">Never</string>
-    <string name="sync_preference_always">Always</string>
-    <string name="sync_preference_by_time">By Time</string>
-    <string name="settings_sync_interval_label">Sync Interval</string>
-    <string name="settings_sync_interval_display">%1$dh</string>
-    <string name="settings_primary_device_label">Primary Device</string>
-    <string name="settings_device_calibrating">Calibrating...</string>
-    <string name="settings_device_select">Select a device</string>
-    <string name="settings_device_description">Device used for metrics calculation</string>
+
+
 
     <!-- Advanced Settings -->
     <string name="advanced_baseline_overrides_title">Baseline Overrides</string>
@@ -839,9 +821,7 @@
     <string name="threshold_rhr_warning_label">RHR Warning</string>
     <string name="threshold_rhr_warning_desc">RHR ratio to baseline to be considered Warning (e.g.
         100-120%%).</string>
-    <string name="threshold_consistency_window_label">Consistency Window</string>
-    <string name="threshold_consistency_window_desc">±Grace period (in minutes) around your median
-        bedtime and wake time before your score starts to drop. Default: 30 min.</string>
+
     <string name="threshold_evaluation_period_label">Evaluation Period</string>
     <string name="threshold_evaluation_period_desc">Number of recent sleep sessions scored to
         compute your current consistency. Default: 7.</string>
@@ -853,10 +833,7 @@
     <string name="label_sleep_goal">Sleep Goal</string>
 
     <!-- Circadian Threshold Settings Section -->
-    <string name="circadian_within_week_mode_label">Within-Week Regularity (Recommended)</string>
-    <string name="circadian_within_week_mode_desc">Compares same day-of-week across weeks</string>
-    <string name="circadian_rolling_anchor_label">Use Standard Rolling-Anchor</string>
-    <string name="circadian_rolling_anchor_desc">14-day rolling window (like other profiles)</string>
+
     <string name="circadian_threshold_window_label">Threshold Window</string>
     <string name="circadian_profile_default">Profile default: %1$dmin</string>
     <string name="circadian_current_value">Current: %1$d min</string>
@@ -881,7 +858,7 @@
 
     <!-- Chart Accessibility Summary Descriptions -->
     <string name="chart_accessibility_rhr_summary">Resting heart rate timeline chart showing heart rate values in beats per minute over the sleep period.</string>
-    <string name="chart_accessibility_hrv_summary">Heart rate variability timeline chart showing RMSSD values in milliseconds over the sleep period.</string>
+
     <string name="chart_accessibility_sleep_stages_summary">Sleep stages timeline chart showing Awake, REM, Light, and Deep sleep segments.</string>
     <string name="chart_accessibility_trimp_summary">Heart rate intensity timeline chart showing workout heart rate over the duration of the exercise.</string>
     <string name="chart_accessibility_steps_summary">Steps progress bar showing steps count against daily goal.</string>
@@ -890,7 +867,7 @@
 
     <string name="chart_accessibility_no_selection">No point selected</string>
     <string name="chart_accessibility_selected_rhr">Selected: %1$d bpm at %2$s</string>
-    <string name="chart_accessibility_selected_hrv">Selected: %1$d ms at %2$s</string>
+
     <string name="chart_accessibility_selected_sleep_stage">Selected: %1$s stage, duration %2$s, starting at %3$s</string>
     <string name="chart_accessibility_selected_trimp">Selected: %1$s at %2$s</string>
     <string name="chart_accessibility_selected_steps">Selected: %1$s steps, goal %2$s</string>
@@ -905,7 +882,7 @@
     <string name="accessibility_more_information">More information</string>
     <string name="accessibility_drag_to_reorder">Drag to reorder</string>
     <string name="accessibility_prev_day">Previous day</string>
-    <string name="accessibility_open_date_picker">Open date picker</string>
+
     <string name="accessibility_next_day">Next day</string>
     <string name="accessibility_date_pill">%1$s, %2$s. Tap to open date picker.</string>
     <string name="date_switcher_label_today">Today</string>
@@ -984,10 +961,7 @@
     <string name="workout_tooltip_gained_strain">Total strain gained from this workout.</string>
     <string name="workout_tooltip_ras">Readylytics Activity Score (RAS) points gained from this
         workout. RAS summarizes meaningful cardiovascular activity.</string>
-    <plurals name="ras_earned_today">
-        <item quantity="one">+%1$d today</item>
-        <item quantity="other">+%1$d today</item>
-    </plurals>
+
     <string name="workout_stats_acwr_title">Training Load &amp; Strain Ratio (ACWR)</string>
 
     <!-- Workout Intensities -->
@@ -1025,8 +999,8 @@
     <string name="card_tooltip_bp_no_data">Blood pressure from Health Connect</string>
     <string name="card_tooltip_bp_latest">Latest blood pressure reading.\n\n</string>
     <string name="card_bp_status_optimal">Optimal: &lt;120/80 mmHg</string>
-    <string name="card_bp_status_neutral">Elevated: 120-129/&lt;80 mmHg</string>
-    <string name="card_bp_status_warning">Hypertension Stage 1: 130-139/80-89 mmHg</string>
+    <string name="card_bp_status_neutral">Elevated: 120–129/&lt;80 mmHg</string>
+    <string name="card_bp_status_warning">Hypertension Stage 1: 130–139/80–89 mmHg</string>
     <string name="card_bp_status_poor">Hypertension Stage 2+: \u2265140/90 mmHg</string>
 
     <!-- Additional Duration Formats -->
@@ -1375,7 +1349,7 @@
         <item>Normal HRV variation|One morning can vary because of normal measurement noise.|GENERIC</item>
     </string-array>
     <string-array name="insight_detail_rest_day_no_impact_recommendations">
-        <item>Watch the next 2-3 days rather than reacting to one morning.</item>
+        <item>Watch the next 2–3 days rather than reacting to one morning.</item>
     </string-array>
     <string-array name="insight_detail_rest_day_no_impact_caveats">
         <item>This does not mean the rest day failed.</item>

@@ -1,5 +1,6 @@
 package app.readylytics.health.ui.insights
 
+import android.content.Context
 import android.content.res.Resources
 import app.readylytics.health.R
 import app.readylytics.health.domain.insights.InsightParams
@@ -11,9 +12,10 @@ import app.readylytics.health.domain.insights.detail.InsightDetailContent
 import app.readylytics.health.domain.model.InsightType
 
 class InsightDetailRepository(
-    private val resources: Resources,
+    private val context: Context,
     private val ranker: InsightCauseRanker = InsightCauseRanker(),
 ) {
+    private val resources: Resources get() = context.resources
     fun getDetail(
         id: InsightType,
         context: DailyInsightContext,

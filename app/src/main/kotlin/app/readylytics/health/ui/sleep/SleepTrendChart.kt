@@ -74,8 +74,8 @@ fun SleepTrendCard(
     rangeStartMs: Long,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
-    parentScrollInProgress: Boolean = false,
     modifier: Modifier = Modifier,
+    parentScrollInProgress: Boolean = false,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -112,8 +112,8 @@ fun SleepTrendChart(
     rangeStartMs: Long,
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
-    parentScrollInProgress: Boolean = false,
     modifier: Modifier = Modifier,
+    parentScrollInProgress: Boolean = false,
 ) {
     val rangeDays = selectedRange.days
     var selectedState by remember(startOffsetPoints, durationSpanPoints, actualDurationPoints, rangeStartMs) {

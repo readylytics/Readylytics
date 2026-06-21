@@ -33,9 +33,9 @@ fun SleepTrendOverlay(
     barColor: Color,
     lineColor: Color,
     layerBounds: Rect?,
+    modifier: Modifier = Modifier,
     barThicknessDp: Dp = 8.dp,
     chartHeight: Dp = 220.dp,
-    modifier: Modifier = Modifier,
 ) {
     Box(
         modifier =

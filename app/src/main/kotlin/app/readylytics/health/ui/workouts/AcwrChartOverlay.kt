@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.dp
  *                       null means nothing is drawn and no animation runs.
  * @param trimpColor     Fill colour for the TRIMP bar series (used for bar outline).
  * @param ratioColor     Fill colour for the Strain Ratio line series (used for dot halo).
+ * @param layerBounds    The bounding box of the chart data area.
+ * @param modifier       The modifier to be applied to the layout.
  * @param barThicknessDp Width of the column bars as declared in the Vico layer (default 8 dp).
  * @param chartHeight    Height of the chart host; the overlay must match this exactly.
  */
@@ -47,9 +49,9 @@ fun AcwrChartOverlay(
     trimpColor: Color,
     ratioColor: Color,
     layerBounds: Rect?,
+    modifier: Modifier = Modifier,
     barThicknessDp: Dp = 8.dp,
     chartHeight: Dp = 220.dp,
-    modifier: Modifier = Modifier,
 ) {
     Box(
         modifier =
@@ -83,76 +85,81 @@ private fun AcwrChartOverlayContent(
     layerBounds: Rect?,
     barThicknessDp: Dp,
 ) {
-    // Animations only run while a point is selected; they start from their
-    // initial values on every new tap, giving a predictable "fresh pulse" feel.
-    val infiniteTransition = rememberInfiniteTransition(label = "acwrHaloTransition")
-    val haloRadiusCoeff by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 1.6f,
+    val infiniteTransition = rememberInfiniteTransition(label = "AcwrOverlay")
+
+    // Pulse animation for bar stroke and dot halo
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 0.9f,
         animationSpec =
             infiniteRepeatable(
                 animation = tween(1200, easing = EaseInOutSine),
                 repeatMode = RepeatMode.Reverse,
             ),
-        label = "acwrHaloRadiusCoeff",
+        label = "PulseAlpha",
     )
-    val haloAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.15f,
-        targetValue = 0.4f,
+
+    // Breathing effect for halo radius
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 1.3f,
         animationSpec =
             infiniteRepeatable(
                 animation = tween(1200, easing = EaseInOutSine),
                 repeatMode = RepeatMode.Reverse,
             ),
-        label = "acwrHaloAlpha",
+        label = "PulseScale",
     )
 
     Canvas(modifier = Modifier.fillMaxSize()) {
-        // size.width is used directly — no external measurement state needed.
-        val canvasX = selectedState.canvasX.coerceIn(0f, size.width)
+        val strokeWidth = 2.dp.toPx()
+        val barWidthPx = barThicknessDp.toPx()
+        val guideColor = Color.White.copy(alpha = 0.3f)
 
-        // 1. Vertical guideline
-        drawLine(
-            color = ratioColor.copy(alpha = 0.35f),
-            start = Offset(canvasX, 0f),
-            end = Offset(canvasX, size.height),
-            strokeWidth = 1.5.dp.toPx(),
-        )
+        // 1. Draw Vertical Guideline
+        // Clip to layer bounds if provided so we don't draw over axes
+        if (layerBounds != null) {
+            drawLine(
+                color = guideColor,
+                start = Offset(selectedState.canvasX, layerBounds.top),
+                end = Offset(selectedState.canvasX, layerBounds.bottom),
+                strokeWidth = 1.dp.toPx(),
+            )
+        }
 
-        // 2. Pulsing outer glow (matches the hypnogram selection pulse)
-        selectedState.barCanvasYTop?.let { barTop ->
-            val halfBar = (barThicknessDp / 2).toPx()
-            val barLeft = canvasX - halfBar
-            // Bottom of the plotting area; fall back to an approximate axis inset if the
-            // layer bounds have not been captured yet.
-            val barBottom = layerBounds?.bottom ?: (size.height - 28.dp.toPx())
-            val barHeight = barBottom - barTop
-            if (barHeight > 0f) {
-                val currentHaloPadding = 4.dp.toPx() * haloRadiusCoeff
-                // Pulsing filled outer glow/halo that matches the hypnogram selection pulse!
+        // 2. Draw Pulsing TRIMP Bar Outline
+        selectedState.barCanvasYTop?.let { yTop ->
+            if (layerBounds != null) {
                 drawRoundRect(
-                    color = trimpColor.copy(alpha = haloAlpha),
-                    topLeft = Offset(barLeft - currentHaloPadding, barTop - currentHaloPadding),
-                    size = Size(barThicknessDp.toPx() + 2 * currentHaloPadding, barHeight + 2 * currentHaloPadding),
-                    cornerRadius = CornerRadius(2.dp.toPx() + currentHaloPadding),
+                    color = trimpColor.copy(alpha = pulseAlpha),
+                    topLeft = Offset(selectedState.canvasX - (barWidthPx / 2), yTop),
+                    size = Size(barWidthPx, layerBounds.bottom - yTop),
+                    cornerRadius = CornerRadius(4.dp.toPx()),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth),
                 )
             }
         }
 
-        // 3. Pulsing halo + solid dot on the Strain Ratio line node
-        selectedState.lineCanvasY?.let { dotY ->
-            val dotCenter = Offset(canvasX, dotY)
-            // Breathing outer halo
+        // 3. Draw Pulsing Ratio Dot
+        selectedState.lineCanvasY?.let { yLine ->
+            val ratioPoint = Offset(selectedState.canvasX, yLine)
+            // Halo
             drawCircle(
-                color = ratioColor.copy(alpha = haloAlpha),
-                center = dotCenter,
-                radius = 8.dp.toPx() * haloRadiusCoeff,
+                color = ratioColor.copy(alpha = pulseAlpha * 0.5f),
+                radius = 8.dp.toPx() * pulseScale,
+                center = ratioPoint,
             )
-            // Solid inner dot
+            // Inner Glow
             drawCircle(
-                color = ratioColor,
-                center = dotCenter,
-                radius = 4.dp.toPx(),
+                color = ratioColor.copy(alpha = pulseAlpha),
+                radius = 6.dp.toPx(),
+                center = ratioPoint,
+            )
+            // Solid Core
+            drawCircle(
+                color = Color.White,
+                radius = 3.dp.toPx(),
+                center = ratioPoint,
             )
         }
     }

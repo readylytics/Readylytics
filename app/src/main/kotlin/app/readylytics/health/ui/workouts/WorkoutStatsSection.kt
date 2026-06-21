@@ -57,6 +57,7 @@ private fun RasSummaryValueTextStyle.asTextStyle(): TextStyle =
 fun WorkoutStatsSection(
     uiState: WorkoutsUiState,
     onRangeSelected: (TimeRange) -> Unit,
+    modifier: Modifier = Modifier,
     rangeDays: Int = uiState.selectedRange.days,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
     zoomState: VicoZoomState =
@@ -76,7 +77,6 @@ fun WorkoutStatsSection(
                 },
         ),
     parentScrollInProgress: Boolean = false,
-    modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
         CardLoader(

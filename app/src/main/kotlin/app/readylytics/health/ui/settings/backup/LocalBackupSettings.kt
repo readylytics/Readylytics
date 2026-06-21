@@ -1,9 +1,9 @@
 package app.readylytics.health.ui.settings.backup
 
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
+import androidx.core.net.toUri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -414,7 +414,7 @@ private fun BackupDirectoryItem(
         if (uiState.backupDirectory.isNullOrBlank()) {
             stringResource(R.string.backup_directory_default)
         } else {
-            Uri.parse(uiState.backupDirectory).path ?: uiState.backupDirectory
+            uiState.backupDirectory.toUri().path ?: uiState.backupDirectory
         }
 
     ListItem(

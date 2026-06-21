@@ -13,10 +13,10 @@ fun ValidatingTextField(
     value: String,
     onValueChange: (String) -> Unit,
     rule: ValidationRule<String>,
+    modifier: Modifier = Modifier,
     label: @Composable (() -> Unit)? = null,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     singleLine: Boolean = false,
-    modifier: Modifier = Modifier,
 ) {
     val result = rule.validate(value)
     val isError = value.isNotEmpty() && result is ValidationResult.Invalid

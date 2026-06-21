@@ -12,8 +12,8 @@ import app.readylytics.health.domain.util.roundToPercentInt
 @Composable
 fun CircadianConsistencyCard(
     result: CircadianConsistencyResult,
-    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     val scoreText =
         when (result) {

@@ -64,6 +64,7 @@ fun TrendChart(
     rangeDays: Int,
     metricName: String,
     baselineUnit: String,
+    modifier: Modifier = Modifier,
     baseline: Float? = null,
     baselineLabel: String? = null,
     baselineDecimalPlaces: Int = 0,
@@ -96,7 +97,6 @@ fun TrendChart(
     minYOverride: Double? = null,
     maxYOverride: Double? = null,
     parentScrollInProgress: Boolean = false,
-    modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
@@ -358,10 +358,10 @@ fun TrendChart(
 fun BaselineLegend(
     value: Float,
     unit: String,
-    label: String = "Baseline",
     color: Color,
-    decimalPlaces: Int = 0,
     modifier: Modifier = Modifier,
+    label: String = "Baseline",
+    decimalPlaces: Int = 0,
 ) {
     Row(
         modifier = modifier,

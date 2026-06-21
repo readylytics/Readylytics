@@ -112,6 +112,7 @@ fun DashboardScreen(
     onNavigateToWorkouts: () -> Unit,
     onNavigateToRhr: () -> Unit,
     onNavigateToSteps: () -> Unit,
+    modifier: Modifier = Modifier,
     onNavigateToHeartRate: () -> Unit = {},
     onNavigateToHrv: () -> Unit = {},
     onNavigateToWeight: () -> Unit = {},
@@ -127,7 +128,6 @@ fun DashboardScreen(
     earliestDate: LocalDate? = null,
     onDismissInsight: (InsightType) -> Unit = {},
     onRestoreInsights: () -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     val summary = uiState.summary
     val scope = rememberCoroutineScope()

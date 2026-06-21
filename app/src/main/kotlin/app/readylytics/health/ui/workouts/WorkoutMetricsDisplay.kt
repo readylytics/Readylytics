@@ -105,9 +105,9 @@ private fun WorkoutHeader(workout: WorkoutData) {
             val startInstant = Instant.ofEpochMilli(workout.startTime).atZone(ZoneId.systemDefault())
             val endInstant = Instant.ofEpochMilli(workout.endTime).atZone(ZoneId.systemDefault())
             Triple(
-                startInstant.format(DateFormatUtils.WORKOUT_TIME_FORMATTER),
-                endInstant.format(DateFormatUtils.WORKOUT_TIME_FORMATTER),
-                startInstant.format(DateFormatUtils.WORKOUT_DATE_FORMATTER),
+                startInstant.format(DateFormatUtils.getWorkoutTimeFormatter()),
+                endInstant.format(DateFormatUtils.getWorkoutTimeFormatter()),
+                startInstant.format(DateFormatUtils.getWorkoutDateFormatter()),
             )
         }
 

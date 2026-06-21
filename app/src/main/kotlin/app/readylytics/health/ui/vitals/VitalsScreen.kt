@@ -79,9 +79,9 @@ fun VitalsScreen(
     onNextDay: () -> Unit,
     onNavigateToHrv: () -> Unit,
     onNavigateToRhr: () -> Unit,
+    modifier: Modifier = Modifier,
     onDateSelected: (java.time.LocalDate) -> Unit = {},
     earliestDate: java.time.LocalDate? = null,
-    modifier: Modifier = Modifier,
 ) {
     // Single shared scroll + zoom state so all three trend charts stay in sync.
     // Keyed on selectedRange so state resets when the user switches time ranges.

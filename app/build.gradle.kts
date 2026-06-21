@@ -126,6 +126,7 @@ android {
         warningsAsErrors = true
         xmlReport = true
         baseline = file("lint-baseline.xml")
+        disable += listOf("GradleDependency", "NewerVersionAvailable")
     }
 }
 
@@ -459,7 +460,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    androidTestImplementation("androidx.compose.ui:ui-test")
+    androidTestImplementation(libs.androidx.compose.ui.test)
     androidTestImplementation(libs.androidx.benchmark.macro)
     androidTestImplementation(libs.play.services.stats)
     debugImplementation(libs.androidx.compose.ui.tooling)

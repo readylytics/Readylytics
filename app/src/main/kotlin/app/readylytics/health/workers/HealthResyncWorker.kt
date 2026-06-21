@@ -82,11 +82,18 @@ class HealthResyncWorker
             current: Int,
             total: Int,
         ): ForegroundInfo =
-            ForegroundInfo(
-                SyncNotifications.NOTIFICATION_ID,
-                SyncNotifications.buildProgressNotification(appContext, current, total),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
-            )
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                ForegroundInfo(
+                    SyncNotifications.NOTIFICATION_ID,
+                    SyncNotifications.buildProgressNotification(appContext, current, total),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+                )
+            } else {
+                ForegroundInfo(
+                    SyncNotifications.NOTIFICATION_ID,
+                    SyncNotifications.buildProgressNotification(appContext, current, total),
+                )
+            }
 
         companion object {
             private const val TAG = "HealthResyncWorker"

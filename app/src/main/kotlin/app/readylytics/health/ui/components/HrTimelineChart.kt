@@ -17,7 +17,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -184,8 +187,8 @@ private fun HrTimelineChartContent(
 
     val scale = remember(dayStartMs, dayEndMs) { DayTimelineScale(dayStartMs, dayEndMs) }
 
-    var scaleX by remember { mutableStateOf(1f) }
-    var offsetX by remember { mutableStateOf(0f) }
+    var scaleX by remember { mutableFloatStateOf(1f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
     var selectedSample by remember { mutableStateOf<HrSample?>(null) }
 
     // Clear selected sample on date/data changes
