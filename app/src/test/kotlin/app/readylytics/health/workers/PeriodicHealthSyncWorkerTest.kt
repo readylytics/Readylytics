@@ -10,6 +10,7 @@ import app.readylytics.health.domain.sync.HealthSyncUseCase
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
@@ -23,6 +24,7 @@ class PeriodicHealthSyncWorkerTest {
     private lateinit var workerParams: WorkerParameters
     private val healthSyncUseCase = mockk<HealthSyncUseCase>()
     private val foregroundSyncController = mockk<ForegroundSyncController>(relaxed = true)
+    private val workerScheduler = mockk<WorkerScheduler>(relaxed = true)
 
     @Before
     fun setUp() {
@@ -38,7 +40,7 @@ class PeriodicHealthSyncWorkerTest {
                 app.readylytics.health.domain.model.Result
                     .Success(Unit)
 
-            val worker = PeriodicHealthSyncWorker(context, workerParams, healthSyncUseCase, foregroundSyncController)
+            val worker = createWorker()
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
@@ -51,7 +53,7 @@ class PeriodicHealthSyncWorkerTest {
                 app.readylytics.health.domain.model.Result
                     .Failure("error", "network error")
 
-            val worker = PeriodicHealthSyncWorker(context, workerParams, healthSyncUseCase, foregroundSyncController)
+            val worker = createWorker()
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.retry(), result)
@@ -63,7 +65,7 @@ class PeriodicHealthSyncWorkerTest {
             coEvery { healthSyncUseCase.sync(windowDays = 2) } throws
                 HealthConnectPermissionRevokedException(SecurityException("permission revoked"))
 
-            val worker = PeriodicHealthSyncWorker(context, workerParams, healthSyncUseCase, foregroundSyncController)
+            val worker = createWorker()
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.failure(), result)
@@ -74,9 +76,32 @@ class PeriodicHealthSyncWorkerTest {
         runBlocking {
             coEvery { healthSyncUseCase.sync(windowDays = 2) } throws RuntimeException("unknown error")
 
-            val worker = PeriodicHealthSyncWorker(context, workerParams, healthSyncUseCase, foregroundSyncController)
+            val worker = createWorker()
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.retry(), result)
         }
+
+    @Test
+    fun `doWork schedules historical resync when bounded sync detects older changes`() =
+        runBlocking {
+            coEvery { healthSyncUseCase.sync(windowDays = 2) } returns
+                app.readylytics.health.domain.model.Result
+                    .Failure("Requires historical resync", "REQUIRES_HISTORICAL_RESYNC")
+
+            val result = createWorker().doWork()
+
+            verify(exactly = 1) { workerScheduler.scheduleResyncWorker() }
+            verify(exactly = 1) { foregroundSyncController.onBackgroundRecalcFinished(false) }
+            assertEquals(ListenableWorker.Result.success(), result)
+        }
+
+    private fun createWorker() =
+        PeriodicHealthSyncWorker(
+            appContext = context,
+            params = workerParams,
+            healthSyncUseCase = healthSyncUseCase,
+            foregroundSyncController = foregroundSyncController,
+            workerScheduler = workerScheduler,
+        )
 }

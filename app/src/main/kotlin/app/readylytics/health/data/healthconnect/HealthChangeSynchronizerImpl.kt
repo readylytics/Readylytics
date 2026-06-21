@@ -55,6 +55,7 @@ class HealthChangeSynchronizerImpl
             val deviceByType = prefs.deviceByDataType
 
             val affectedDates = mutableSetOf<LocalDate>()
+            val nextTokens = mutableMapOf<HealthDataType, String>()
 
             for (dataType in HealthDataType.entries) {
                 val token = tokenStore.get(dataType)
@@ -92,9 +93,10 @@ class HealthChangeSynchronizerImpl
                             )
                         }
 
-                        // Advance token only after Room transaction succeeds
+                        // Return candidate token only after Room transaction succeeds. The sync
+                        // coordinator persists candidates after derived summaries are durable.
                         currentToken = response.nextChangesToken
-                        tokenStore.put(dataType, currentToken, System.currentTimeMillis())
+                        nextTokens[dataType] = currentToken
                         hasMore = response.hasMore
                     }
                 } catch (e: SecurityException) {
@@ -119,29 +121,25 @@ class HealthChangeSynchronizerImpl
                 }
             }
 
-            return HealthChangeSyncOutcome(affectedDates, requiresFullResync = false)
+            return HealthChangeSyncOutcome(
+                affectedDates = affectedDates,
+                requiresFullResync = false,
+                nextTokens = nextTokens,
+            )
         }
 
-        override suspend fun refreshTokensAfterFullResync() {
-            logD("HealthChangeSynchronizer") { "Refreshing all change tokens after successful full resync" }
-            for (dataType in HealthDataType.entries) {
-                try {
-                    val recordClass = recordClassFor(dataType)
-                    val token =
-                        client.getChangesToken(
-                            ChangesTokenRequest(recordTypes = setOf(recordClass)),
-                        )
-                    tokenStore.put(dataType, token, System.currentTimeMillis())
-                } catch (e: SecurityException) {
-                    logE(
-                        "HealthChangeSynchronizer",
-                        e,
-                    ) { "Failed to refresh token for $dataType due to security exception" }
-                } catch (e: Exception) {
-                    logE("HealthChangeSynchronizer", e) { "Failed to refresh token for $dataType" }
-                }
+        override suspend fun commitTokens(tokens: Map<HealthDataType, String>) {
+            if (tokens.isNotEmpty()) {
+                tokenStore.putAll(tokens, System.currentTimeMillis())
             }
         }
+
+        override suspend fun captureChangesTokens(): Map<HealthDataType, String> =
+            HealthDataType.entries.associateWith { dataType ->
+                client.getChangesToken(
+                    ChangesTokenRequest(recordTypes = setOf(recordClassFor(dataType))),
+                )
+            }
 
         private suspend fun processChangesPage(
             dataType: HealthDataType,

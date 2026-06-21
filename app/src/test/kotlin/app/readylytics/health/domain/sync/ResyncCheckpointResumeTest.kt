@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.sync
 
-import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
@@ -37,6 +37,7 @@ class ResyncCheckpointResumeTest {
     private val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
     private val selectedSourcePruner = mockk<SelectedSourcePruner>(relaxed = true)
     private val checkpointStore = InMemoryResyncCheckpointStore()
+    private val baselineTokens = mapOf(HealthDataType.SLEEP to "baseline-sleep-token")
 
     private lateinit var useCase: HealthSyncUseCase
 
@@ -48,7 +49,8 @@ class ResyncCheckpointResumeTest {
         }
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
-        coEvery { changeSynchronizer.refreshTokensAfterFullResync() } returns Unit
+        coEvery { changeSynchronizer.captureChangesTokens() } returns baselineTokens
+        coEvery { changeSynchronizer.commitTokens(any()) } returns Unit
         useCase =
             HealthSyncUseCase(
                 hcRepo = hcRepo,
@@ -79,6 +81,7 @@ class ResyncCheckpointResumeTest {
                     phase = ResyncPhase.INGEST,
                     nextDate = resumedChunkStart,
                     selectionHash = "",
+                    baselineChangeTokens = baselineTokens,
                 )
 
             val sleepFromSlot = slot<Instant>()
@@ -104,6 +107,7 @@ class ResyncCheckpointResumeTest {
                     phase = ResyncPhase.RECOMPUTE,
                     nextDate = startDate.plusDays(2),
                     selectionHash = "",
+                    baselineChangeTokens = baselineTokens,
                 )
             val progress = mutableListOf<Pair<Int, Int>>()
 
@@ -133,6 +137,7 @@ class ResyncCheckpointResumeTest {
                     phase = ResyncPhase.INGEST,
                     nextDate = LocalDate.of(2024, 7, 1),
                     selectionHash = "stale",
+                    baselineChangeTokens = baselineTokens,
                 )
 
             val sleepFromInstants = mutableListOf<Instant>()
@@ -144,6 +149,37 @@ class ResyncCheckpointResumeTest {
                 startDate.minusDays(1).atStartOfDay(zoneId).toInstant(),
                 sleepFromInstants.first(),
             )
+        }
+
+    @Test
+    fun `resyncRange captures baseline tokens before ingest and promotes them after recompute`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+
+            useCase.resyncRange(startDate = startDate, endDate = startDate)
+
+            coVerifyOrder {
+                changeSynchronizer.captureChangesTokens()
+                hcRepo.readSleepSessions(any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any())
+                changeSynchronizer.commitTokens(baselineTokens)
+            }
+            assertEquals(null, checkpointStore.value)
+        }
+
+    @Test
+    fun `resyncRange keeps checkpoint and tokens when recompute fails`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            coEvery { scoringRepository.computeAndPersistDailySummary(startDate, any()) } throws
+                IllegalStateException("scoring failed")
+
+            val result = useCase.resyncRange(startDate = startDate, endDate = startDate)
+
+            assertEquals(false, result.isSuccess)
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+            assertEquals(ResyncPhase.RECOMPUTE, checkpointStore.value?.phase)
+            assertEquals(startDate, checkpointStore.value?.nextDate)
         }
 
     private class InMemoryResyncCheckpointStore : ResyncCheckpointStore {

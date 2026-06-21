@@ -3,6 +3,7 @@ package app.readylytics.health.data.preferences
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
+import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.sync.ResyncCheckpoint
 import app.readylytics.health.domain.sync.ResyncCheckpointStore
 import app.readylytics.health.domain.sync.ResyncPhase
@@ -74,6 +75,7 @@ private fun ResyncCheckpointProto.toDomain(): ResyncCheckpoint =
             },
         nextDate = LocalDate.ofEpochDay(nextEpochDay),
         selectionHash = selectionHash,
+        baselineChangeTokens = baselineChangeTokensMap.mapKeys { (dataType, _) -> HealthDataType.valueOf(dataType) },
     )
 
 private fun ResyncCheckpoint.toProto(): ResyncCheckpointProto =
@@ -90,4 +92,5 @@ private fun ResyncCheckpoint.toProto(): ResyncCheckpointProto =
             },
         ).setNextEpochDay(nextDate.toEpochDay())
         .setSelectionHash(selectionHash)
+        .putAllBaselineChangeTokens(baselineChangeTokens.mapKeys { (dataType, _) -> dataType.name })
         .build()

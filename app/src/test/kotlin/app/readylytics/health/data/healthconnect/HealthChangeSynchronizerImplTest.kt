@@ -120,7 +120,7 @@ class HealthChangeSynchronizerImplTest {
         }
 
     @Test
-    fun `applyPendingChanges processes paginated changes and advances token only after transaction succeeds`() =
+    fun `applyPendingChanges processes paginated changes without persisting candidate tokens`() =
         runTest {
             val dataType = HealthDataType.SLEEP
             coEvery { tokenStore.get(any()) } returns "token1"
@@ -146,12 +146,12 @@ class HealthChangeSynchronizerImplTest {
             val outcome = synchronizer.applyPendingChanges()
 
             assertFalse(outcome.requiresFullResync)
+            assertEquals("token3", outcome.nextTokens[dataType])
             coVerifyOrder {
                 client.getChanges("token1")
-                tokenStore.put(any(), "token2", any())
                 client.getChanges("token2")
-                tokenStore.put(any(), "token3", any())
             }
+            coVerify(exactly = 0) { tokenStore.put(any(), any(), any()) }
         }
 
     @Test
@@ -293,16 +293,18 @@ class HealthChangeSynchronizerImplTest {
         }
 
     @Test
-    fun `refreshTokensAfterFullResync fetches and stores tokens`() =
+    fun `captureChangesTokens fetches tokens without storing them`() =
         runTest {
-            coJustRun { tokenStore.put(any(), any(), any()) }
+            coEvery { client.getChangesToken(any<ChangesTokenRequest>()) } returns "baseline-token"
 
-            synchronizer.refreshTokensAfterFullResync()
+            val tokens = synchronizer.captureChangesTokens()
 
+            assertEquals(HealthDataType.entries.size, tokens.size)
             coVerify(exactly = HealthDataType.entries.size) {
                 client.getChangesToken(any<ChangesTokenRequest>())
-                tokenStore.put(any(), any(), any())
             }
+            coVerify(exactly = 0) { tokenStore.put(any(), any(), any()) }
+            coVerify(exactly = 0) { tokenStore.putAll(any(), any()) }
         }
 
     @Test

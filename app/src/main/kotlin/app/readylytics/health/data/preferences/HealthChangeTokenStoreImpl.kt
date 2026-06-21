@@ -56,6 +56,20 @@ class HealthChangeTokenStoreImpl
             }
         }
 
+        override suspend fun putAll(
+            tokens: Map<HealthDataType, String>,
+            syncedAtMs: Long,
+        ) {
+            dataStore.updateData { current ->
+                current
+                    .toBuilder()
+                    .putAllTokens(tokens.mapKeys { (dataType, _) -> dataType.name })
+                    .putAllLastSuccessTimestampsMs(
+                        tokens.keys.associate { dataType -> dataType.name to syncedAtMs },
+                    ).build()
+            }
+        }
+
         override suspend fun clear(dataType: HealthDataType) {
             dataStore.updateData { current ->
                 current

@@ -5,6 +5,7 @@ import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
@@ -92,15 +93,9 @@ class HealthSyncUseCase
                             )
                         }
 
-                        val initialStandardDays = (0 until windowDays).map { today.minusDays(it.toLong()) }.toSet()
-                        val allTargetDays = (initialStandardDays + outcome.affectedDates).sorted()
-                        val oldestTargetDay = allTargetDays.firstOrNull() ?: today
-                        val standardDays =
-                            generateSequence(oldestTargetDay) { current ->
-                                current
-                                    .plusDays(1)
-                                    .takeIf { !it.isAfter(today) }
-                            }.toSet()
+                        val standardDays = (0 until windowDays).map { today.minusDays(it.toLong()) }.toSet()
+                        val oldestTargetDay = standardDays.minOrNull() ?: today
+                        val requiresHistoricalResync = outcome.affectedDates.any { it !in standardDays }
 
                         val windowStart = oldestTargetDay.atStartOfDay(zoneId).toInstant()
                         val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
@@ -210,8 +205,24 @@ class HealthSyncUseCase
                         logD("HealthSyncUseCase") {
                             "Sync complete: $successCount succeeded, $failureCount failed"
                         }
+                        if (failureCount > 0) {
+                            return@withContext Result.failure(
+                                "One or more daily summaries failed",
+                                "SYNC_PARTIAL_FAILURE",
+                            )
+                        }
+                        if (!requiresHistoricalResync) {
+                            changeSynchronizer.commitTokens(outcome.nextTokens)
+                        }
                         settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
-                        Result.success(Unit)
+                        if (requiresHistoricalResync) {
+                            Result.failure(
+                                "Requires historical resync",
+                                "REQUIRES_HISTORICAL_RESYNC",
+                            )
+                        } else {
+                            Result.success(Unit)
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -260,7 +271,8 @@ class HealthSyncUseCase
                                 ?.takeIf {
                                     it.startDate == startDate &&
                                         it.endDate == endDate &&
-                                        it.selectionHash == selectionHash
+                                        it.selectionHash == selectionHash &&
+                                        it.baselineChangeTokens.isNotEmpty()
                                 }?.also {
                                     logD("HealthSyncUseCase") {
                                         "Resuming resync from ${it.phase} at ${it.nextDate}"
@@ -269,6 +281,20 @@ class HealthSyncUseCase
                         if (savedCheckpoint != null && checkpoint == null) {
                             checkpointStore.clear()
                         }
+                        val baselineChangeTokens =
+                            checkpoint?.baselineChangeTokens
+                                ?: changeSynchronizer.captureChangesTokens().also { tokens ->
+                                    checkpointStore.save(
+                                        ResyncCheckpoint(
+                                            startDate = startDate,
+                                            endDate = endDate,
+                                            phase = ResyncPhase.INGEST,
+                                            nextDate = startDate,
+                                            selectionHash = selectionHash,
+                                            baselineChangeTokens = tokens,
+                                        ),
+                                    )
+                                }
 
                         val totalDays = (ChronoUnit.DAYS.between(startDate, endDate) + 1).toInt().coerceAtLeast(0)
                         val recomputeStartDate =
@@ -329,6 +355,7 @@ class HealthSyncUseCase
                                                 startDate
                                             },
                                         selectionHash = selectionHash,
+                                        baselineChangeTokens = baselineChangeTokens,
                                     ),
                                 )
                                 chunkStart = chunkEndExclusive
@@ -348,6 +375,7 @@ class HealthSyncUseCase
                                 start = startDate,
                                 endInclusive = endDate,
                                 selections = prunerSelections,
+                                zoneId = prefs.scoringZone(),
                             )
                             checkpointStore.save(
                                 ResyncCheckpoint(
@@ -356,6 +384,7 @@ class HealthSyncUseCase
                                     phase = ResyncPhase.RECONCILE,
                                     nextDate = startDate,
                                     selectionHash = selectionHash,
+                                    baselineChangeTokens = baselineChangeTokens,
                                 ),
                             )
                         }
@@ -404,6 +433,7 @@ class HealthSyncUseCase
                                     phase = ResyncPhase.RECOMPUTE,
                                     nextDate = startDate,
                                     selectionHash = selectionHash,
+                                    baselineChangeTokens = baselineChangeTokens,
                                 ),
                             )
                         }
@@ -430,7 +460,10 @@ class HealthSyncUseCase
                         while (!day.isAfter(endDate)) {
                             ensureActive()
                             val stepsForDay = if (stepsDevice != null) stepsMap[day] ?: 0L else stepsMap[day]
-                            syncDayScoring(day, stepsForDay)
+                            val dayResult = syncDayScoring(day, stepsForDay)
+                            if (dayResult is Result.Failure) {
+                                return@withContext dayResult
+                            }
                             recomputedDays++
                             checkpointStore.save(
                                 ResyncCheckpoint(
@@ -439,6 +472,7 @@ class HealthSyncUseCase
                                     phase = ResyncPhase.RECOMPUTE,
                                     nextDate = day.plusDays(1),
                                     selectionHash = selectionHash,
+                                    baselineChangeTokens = baselineChangeTokens,
                                 ),
                             )
                             onProgress?.invoke(recomputedDays, totalDays)
@@ -446,7 +480,7 @@ class HealthSyncUseCase
                             yield()
                         }
 
-                        changeSynchronizer.refreshTokensAfterFullResync()
+                        changeSynchronizer.commitTokens(baselineChangeTokens)
                         settingsRepo.updateLastSyncTimestamp(System.currentTimeMillis())
                         checkpointStore.clear()
                         logD("HealthSyncUseCase") { "Full resync complete ($totalDays days)" }

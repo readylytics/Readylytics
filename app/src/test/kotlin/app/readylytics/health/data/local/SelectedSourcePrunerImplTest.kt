@@ -22,6 +22,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.TimeZone
 
 @RunWith(AndroidJUnit4::class)
 class SelectedSourcePrunerImplTest {
@@ -138,7 +139,7 @@ class SelectedSourcePrunerImplTest {
                     HealthDataType.HEART_RATE to "Device B",
                 )
 
-            pruner.prune(date, date, selections)
+            pruner.prune(date, date, selections, zoneId)
 
             val remainingSleep = sleepDao.getSince(0)
             assertEquals(1, remainingSleep.size)
@@ -190,9 +191,48 @@ class SelectedSourcePrunerImplTest {
                     HealthDataType.SLEEP to null,
                 )
 
-            pruner.prune(date, date, selections)
+            pruner.prune(date, date, selections, zoneId)
 
             val remainingSleep = sleepDao.getSince(0)
             assertEquals(2, remainingSleep.size)
+        }
+
+    @Test
+    fun pruneUsesScoringZoneForRangeBoundaries() =
+        runTest {
+            val originalTimeZone = TimeZone.getDefault()
+            TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+            try {
+                val scoringZone = ZoneId.of("Pacific/Kiritimati")
+                val date = LocalDate.of(2024, 6, 1)
+                val timestamp =
+                    date
+                        .atStartOfDay(scoringZone)
+                        .plusHours(1)
+                        .toInstant()
+                        .toEpochMilli()
+                heartRateDao.upsertAll(
+                    listOf(
+                        HeartRateRecordEntity(
+                            id = "scoring-zone-record",
+                            timestampMs = timestamp,
+                            beatsPerMinute = 70,
+                            recordType = "RESTING",
+                            deviceName = "Device A",
+                        ),
+                    ),
+                )
+
+                pruner.prune(
+                    start = date,
+                    endInclusive = date,
+                    selections = mapOf(HealthDataType.HEART_RATE to "Device B"),
+                    zoneId = scoringZone,
+                )
+
+                assertEquals(emptyList<HeartRateRecordEntity>(), heartRateDao.getByTimeRange(0, Long.MAX_VALUE))
+            } finally {
+                TimeZone.setDefault(originalTimeZone)
+            }
         }
 }

@@ -52,6 +52,7 @@ class HealthSyncUseCaseTest {
             block()
         }
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
+        coJustRun { changeSynchronizer.commitTokens(any()) }
         every { checkpointStore.checkpoint } returns flowOf(null)
 
         useCase =
@@ -91,6 +92,25 @@ class HealthSyncUseCaseTest {
                 scoringRepository.computeAndPersistDailySummary(day0, 0L)
                 scoringRepository.computeAndPersistDailySummary(day1, 0L)
                 scoringRepository.computeAndPersistDailySummary(day2, 0L)
+            }
+        }
+
+    @Test
+    fun `sync commits candidate change tokens after scoring succeeds`() =
+        runTest {
+            val nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token")
+            coEvery { changeSynchronizer.applyPendingChanges() } returns
+                HealthChangeSyncOutcome(
+                    affectedDates = emptySet(),
+                    requiresFullResync = false,
+                    nextTokens = nextTokens,
+                )
+
+            useCase.sync(windowDays = 1)
+
+            coVerifyOrder {
+                scoringRepository.computeAndPersistDailySummary(any(), any())
+                changeSynchronizer.commitTokens(nextTokens)
             }
         }
 
@@ -199,7 +219,7 @@ class HealthSyncUseCaseTest {
         }
 
     @Test
-    fun `daily sync expands fetch and scoring range for older affected change dates`() =
+    fun `daily sync keeps current-day range and requests historical resync for older changes`() =
         runTest {
             val zoneId = ZoneId.systemDefault()
             val today = LocalDate.now(zoneId)
@@ -208,14 +228,24 @@ class HealthSyncUseCaseTest {
             val scoredDays = mutableListOf<LocalDate>()
 
             coEvery { changeSynchronizer.applyPendingChanges() } returns
-                HealthChangeSyncOutcome(setOf(oldestAffectedDay), false)
+                HealthChangeSyncOutcome(
+                    affectedDates = setOf(oldestAffectedDay),
+                    requiresFullResync = false,
+                    nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token"),
+                )
             coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
             coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any()) }
 
-            useCase.sync(windowDays = 1)
+            val result = useCase.sync(windowDays = 1)
 
-            assertEquals(oldestAffectedDay.minusDays(1).atStartOfDay(zoneId).toInstant(), hrFromSlot.captured)
-            assertTrue(scoredDays.contains(oldestAffectedDay))
+            assertEquals(today.minusDays(1).atStartOfDay(zoneId).toInstant(), hrFromSlot.captured)
+            assertEquals(listOf(today), scoredDays)
+            assertTrue(result is app.readylytics.health.domain.model.Result.Failure)
+            assertEquals(
+                "REQUIRES_HISTORICAL_RESYNC",
+                (result as app.readylytics.health.domain.model.Result.Failure).code,
+            )
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
         }
 
     @Test
@@ -419,7 +449,7 @@ class HealthSyncUseCaseTest {
             useCase.resyncRange(startDate = startDate, endDate = endDate)
 
             coVerifyOrder {
-                selectedSourcePruner.prune(startDate, endDate, any())
+                selectedSourcePruner.prune(startDate, endDate, any(), any())
                 sessionLinkReconciler.reconcile(any(), any(), any())
                 scoringRepository.computeAndPersistDailySummary(startDate, any())
             }

@@ -34,8 +34,8 @@ class SelectedSourcePrunerImpl
             start: LocalDate,
             endInclusive: LocalDate,
             selections: Map<HealthDataType, String?>,
+            zoneId: ZoneId,
         ) {
-            val zoneId = ZoneId.systemDefault()
             val fromMs = start.atStartOfDay(zoneId).toInstant().toEpochMilli()
             val toMs =
                 endInclusive

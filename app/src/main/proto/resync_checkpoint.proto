@@ -20,4 +20,5 @@ message ResyncCheckpointProto {
   ResyncPhaseProto phase = 3;
   int64 next_epoch_day = 4;
   string selection_hash = 5;
+  map<string, string> baseline_change_tokens = 6;
 }

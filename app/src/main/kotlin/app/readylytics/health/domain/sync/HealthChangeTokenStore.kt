@@ -11,6 +11,11 @@ interface HealthChangeTokenStore {
         syncedAtMs: Long,
     )
 
+    suspend fun putAll(
+        tokens: Map<HealthDataType, String>,
+        syncedAtMs: Long,
+    )
+
     suspend fun clear(dataType: HealthDataType)
 
     suspend fun clearAll()
