@@ -110,4 +110,51 @@ class SleepStagesChartTest {
         assertEquals(start, labels.first())
         assertEquals(end, labels.last())
     }
+
+    @Test
+    fun resolveNonOverlappingLabels_allLabelsFit_returnsAllIndices() {
+        val timestamps = listOf(1000L, 2000L, 3000L)
+        val startTime = 1000L
+        val duration = 2000L
+        val totalWidth = 300
+        val widths = listOf(50, 50, 50)
+        val spacing = 10f
+
+        val result =
+            resolveNonOverlappingLabels(
+                labelTimestamps = timestamps,
+                startTime = startTime,
+                sessionDurationMs = duration,
+                totalWidthPx = totalWidth,
+                labelWidthsPx = widths,
+                spacingPx = spacing,
+            )
+
+        assertEquals(listOf(0, 1, 2), result)
+    }
+
+    @Test
+    fun resolveNonOverlappingLabels_middleOverlaps_skipsMiddle() {
+        val timestamps = listOf(1000L, 2000L, 3000L)
+        val startTime = 1000L
+        val duration = 2000L
+        val totalWidth = 110
+        val widths = listOf(50, 50, 50)
+        val spacing = 10f
+
+        // First label: center 0 -> left 0, right 50
+        // Last label: center 100 -> left 50, right 100
+        // Middle label: center 50 -> left 25, right 75. Overlaps with both.
+        val result =
+            resolveNonOverlappingLabels(
+                labelTimestamps = timestamps,
+                startTime = startTime,
+                sessionDurationMs = duration,
+                totalWidthPx = totalWidth,
+                labelWidthsPx = widths,
+                spacingPx = spacing,
+            )
+
+        assertEquals(listOf(0, 2), result)
+    }
 }
