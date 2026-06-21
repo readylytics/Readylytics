@@ -713,7 +713,7 @@ internal fun resolveNonOverlappingLabels(
             val left =
                 (centerX - width / 2f)
                     .roundToInt()
-                    .coerceIn(0, totalWidthPx - width)
+                    .coerceIn(0, maxOf(0, totalWidthPx - width))
             val right = left + width
             LabelBounds(i, left, right)
         }
