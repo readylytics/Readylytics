@@ -3,16 +3,15 @@ package app.readylytics.health.workers
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.ServiceInfo
-import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import app.readylytics.health.BuildConfig
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.FullHistoricalResyncUseCase
+import app.readylytics.health.domain.util.logE
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
@@ -22,7 +21,7 @@ import kotlinx.coroutines.CancellationException
  * the Settings "Resync Health Connect data" button. Runs as a foreground service (data-sync type) so
  * it survives the app being backgrounded, shows a determinate "day X of Y" notification, publishes
  * progress for the in-app banner via [ForegroundSyncController], and exposes progress through
- * WorkInfo so the Settings screen can render it.
+ * WorkInfo so the Settings screen can render it. Retries resume from the persisted resync checkpoint.
  */
 @HiltWorker
 class HealthResyncWorker
@@ -67,7 +66,7 @@ class HealthResyncWorker
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "Resync worker failed", e)
+                logE(TAG, e) { "Resync worker failed" }
                 Result.retry()
             } finally {
                 foregroundSyncController.onBackgroundRecalcFinished(success)
@@ -83,11 +82,18 @@ class HealthResyncWorker
             current: Int,
             total: Int,
         ): ForegroundInfo =
-            ForegroundInfo(
-                SyncNotifications.NOTIFICATION_ID,
-                SyncNotifications.buildProgressNotification(appContext, current, total),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
-            )
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                ForegroundInfo(
+                    SyncNotifications.NOTIFICATION_ID,
+                    SyncNotifications.buildProgressNotification(appContext, current, total),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+                )
+            } else {
+                ForegroundInfo(
+                    SyncNotifications.NOTIFICATION_ID,
+                    SyncNotifications.buildProgressNotification(appContext, current, total),
+                )
+            }
 
         companion object {
             private const val TAG = "HealthResyncWorker"

@@ -1,8 +1,8 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.LoadSourceSelector
+import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData

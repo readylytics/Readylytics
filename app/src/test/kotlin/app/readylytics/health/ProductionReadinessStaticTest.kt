@@ -7,6 +7,81 @@ import java.io.File
 
 class ProductionReadinessStaticTest {
     @Test
+    fun `release build has no runtime network capability or client dependencies`() {
+        val manifest = projectFile("app/src/main/AndroidManifest.xml").readText()
+        val appBuild = projectFile("app/build.gradle.kts").readText()
+        val libs = projectFile("gradle/libs.versions.toml").readText()
+
+        assertFalse(manifest.contains("android.permission.INTERNET"))
+        assertFalse(appBuild.contains("libs.retrofit"))
+        assertFalse(appBuild.contains("libs.okhttp"))
+        assertFalse(libs.contains("retrofit = "))
+        assertFalse(libs.contains("retrofit-kotlinx-serialization"))
+        assertFalse(libs.contains("okhttp = "))
+    }
+
+    @Test
+    fun `production code uses centralized logging helpers only`() {
+        val kotlinRoot = projectFile("app/src/main/kotlin")
+        val allowedLogFiles =
+            setOf(
+                "app/readylytics/health/domain/util/AppLog.kt",
+                "app/readylytics/health/HealthDashboardApplication.kt",
+            )
+
+        val offenders =
+            kotlinRoot
+                .walkTopDown()
+                .filter { it.isFile && it.extension == "kt" }
+                .filterNot { file ->
+                    file.relativeTo(kotlinRoot).invariantSeparatorsPath in allowedLogFiles
+                }.flatMap { file ->
+                    val text = file.readText()
+                    buildList {
+                        if (text.contains("import android.util.Log")) add("${file.path}: import android.util.Log")
+                        Regex("""(?<![A-Za-z])Log\.[A-Za-z]+\(""")
+                            .findAll(text)
+                            .forEach { add("${file.path}: ${it.value}") }
+                        Regex("""android\.util\.Log\.[A-Za-z]+\(""")
+                            .findAll(text)
+                            .forEach { add("${file.path}: ${it.value}") }
+                    }
+                }.toList()
+
+        assertTrue("Direct Log.* usage remains outside AppLog.kt: $offenders", offenders.isEmpty())
+    }
+
+    @Test
+    fun `ui code does not surface raw throwable messages`() {
+        val uiFiles =
+            listOf(
+                "app/src/main/kotlin/app/readylytics/health/ui/dashboard/DashboardViewModel.kt",
+                "app/src/main/kotlin/app/readylytics/health/ui/settings/LocalBackupViewModel.kt",
+                "app/src/main/kotlin/app/readylytics/health/ui/sync/SyncViewModel.kt",
+                "app/src/main/kotlin/app/readylytics/health/MainActivity.kt",
+            )
+
+        val offenders =
+            uiFiles.flatMap { path ->
+                val file = projectFile(path)
+                val text = file.readText()
+                buildList {
+                    Regex("""UiText\.RawString\([^)]*message""")
+                        .findAll(text)
+                        .forEach { add("${file.path}: ${it.value}") }
+                    Regex("""SyncUiState\.Error\([^)]*message""")
+                        .findAll(text)
+                        .forEach { add("${file.path}: ${it.value}") }
+                    Regex("""cause\.message""")
+                        .findAll(text)
+                        .forEach { add("${file.path}: ${it.value}") }
+                }
+            }
+
+        assertTrue("Raw throwable messages still reach UI state: $offenders", offenders.isEmpty())
+    }
+
+    @Test
     fun `workers rethrow coroutine cancellation before generic failure handling`() {
         val workerFiles =
             listOf(
@@ -124,6 +199,117 @@ class ProductionReadinessStaticTest {
                 }
 
         assertTrue("Google Drive integration refs remain: $offenders", offenders.isEmpty())
+    }
+
+    @Test
+    fun `all nine DAO deletions are owned by RetentionCleanup`() {
+        val retentionCleanupFile = sourceFile("src/main/kotlin/app/readylytics/health/data/local/RetentionCleanup.kt")
+        val retentionCleanupContent = retentionCleanupFile.readText()
+
+        val expectedDaos =
+            listOf(
+                "sleepDao.deleteBeforeTimestamp",
+                "heartRateDao.deleteBeforeTimestamp",
+                "hrvDao.deleteBeforeTimestamp",
+                "workoutDao.deleteBeforeTimestamp",
+                "dailySummaryDao.deleteBeforeTimestamp",
+                "weightDao.deleteBeforeTimestamp",
+                "bodyFatDao.deleteBeforeTimestamp",
+                "bloodPressureDao.deleteBeforeTimestamp",
+                "oxygenSaturationDao.deleteBeforeTimestamp",
+            )
+
+        val missingDaos =
+            expectedDaos.filter { daoCall ->
+                !retentionCleanupContent.contains(daoCall)
+            }
+
+        assertTrue(
+            "RetentionCleanup must call deleteBeforeTimestamp for all nine sensitive DAOs: missing $missingDaos",
+            missingDaos.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `data backup and transfer exclusions are fully configured`() {
+        val manifestFile = projectFile("app/src/main/AndroidManifest.xml")
+        val dbFactory =
+            javax.xml.parsers.DocumentBuilderFactory
+                .newInstance()
+        val dBuilder = dbFactory.newDocumentBuilder()
+        val doc = dBuilder.parse(manifestFile)
+        doc.documentElement.normalize()
+        val applicationNode = doc.getElementsByTagName("application").item(0) as org.w3c.dom.Element
+        val allowBackup = applicationNode.getAttribute("android:allowBackup")
+        val dataExtractionRules = applicationNode.getAttribute("android:dataExtractionRules")
+        val fullBackupContent = applicationNode.getAttribute("android:fullBackupContent")
+
+        org.junit.Assert.assertEquals("false", allowBackup)
+        org.junit.Assert.assertEquals("@xml/data_extraction_rules", dataExtractionRules)
+        org.junit.Assert.assertEquals("@xml/full_backup_content", fullBackupContent)
+
+        val dataRulesFile = projectFile("app/src/main/res/xml/data_extraction_rules.xml")
+        val rulesDoc = dBuilder.parse(dataRulesFile)
+        rulesDoc.documentElement.normalize()
+
+        val cloudBackupNode = rulesDoc.getElementsByTagName("cloud-backup").item(0) as? org.w3c.dom.Element
+        val cloudExcludes = mutableSetOf<String>()
+        if (cloudBackupNode != null) {
+            val excludesList = cloudBackupNode.getElementsByTagName("exclude")
+            for (i in 0 until excludesList.length) {
+                val excludeEl = excludesList.item(i) as org.w3c.dom.Element
+                cloudExcludes.add(excludeEl.getAttribute("domain"))
+            }
+        }
+        val expectedCloudDomains = listOf("root", "file", "database", "sharedpref", "external")
+        for (domain in expectedCloudDomains) {
+            assertTrue("data_extraction_rules.xml cloud-backup should exclude $domain", cloudExcludes.contains(domain))
+        }
+
+        val deviceTransferNode = rulesDoc.getElementsByTagName("device-transfer").item(0) as? org.w3c.dom.Element
+        val transferExcludes = mutableSetOf<String>()
+        if (deviceTransferNode != null) {
+            val excludesList = deviceTransferNode.getElementsByTagName("exclude")
+            for (i in 0 until excludesList.length) {
+                val excludeEl = excludesList.item(i) as org.w3c.dom.Element
+                transferExcludes.add(excludeEl.getAttribute("domain"))
+            }
+        }
+        val expectedTransferDomains =
+            listOf(
+                "root",
+                "file",
+                "database",
+                "sharedpref",
+                "external",
+                "device_root",
+                "device_file",
+                "device_database",
+                "device_sharedpref",
+            )
+        for (domain in expectedTransferDomains) {
+            assertTrue(
+                "data_extraction_rules.xml device-transfer should exclude $domain",
+                transferExcludes.contains(domain),
+            )
+        }
+
+        val fullBackupFile = projectFile("app/src/main/res/xml/full_backup_content.xml")
+        val fullDoc = dBuilder.parse(fullBackupFile)
+        fullDoc.documentElement.normalize()
+        val fullExcludes = mutableSetOf<String>()
+        val fullExcludesList = fullDoc.getElementsByTagName("exclude")
+        for (i in 0 until fullExcludesList.length) {
+            val excludeEl = fullExcludesList.item(i) as org.w3c.dom.Element
+            fullExcludes.add(excludeEl.getAttribute("domain"))
+        }
+        val expectedFullBackupDomains = listOf("root", "file", "database", "sharedpref", "external")
+        for (domain in expectedFullBackupDomains) {
+            assertTrue("full_backup_content.xml should exclude $domain", fullExcludes.contains(domain))
+        }
+
+        val backupRulesFile = File(projectFile("app/src/main/res/xml").absolutePath, "backup_rules.xml")
+        assertFalse("Unused backup_rules.xml should be absent", backupRulesFile.exists())
     }
 
     private fun sourceFile(path: String): File =

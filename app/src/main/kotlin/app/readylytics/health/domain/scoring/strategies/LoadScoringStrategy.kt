@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.scoring.strategies
 
-import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.model.RecoveryFlag
+import app.readylytics.health.domain.preferences.PhysiologyProfile
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.scoring.ScoringConstants.Readiness

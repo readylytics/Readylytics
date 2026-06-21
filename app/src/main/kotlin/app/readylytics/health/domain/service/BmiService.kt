@@ -1,8 +1,8 @@
 package app.readylytics.health.domain.service
 
-import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.preferences.UnitSystem
 import javax.inject.Inject
 
 /**

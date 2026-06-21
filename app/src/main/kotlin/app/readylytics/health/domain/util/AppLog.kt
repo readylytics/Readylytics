@@ -6,6 +6,12 @@ interface DomainLogSink {
         message: String,
     )
 
+    fun warn(
+        tag: String,
+        message: String,
+        throwable: Throwable?,
+    )
+
     fun error(
         tag: String,
         message: String,
@@ -18,6 +24,12 @@ object DomainLogger {
         override fun debug(
             tag: String,
             message: String,
+        ) = Unit
+
+        override fun warn(
+            tag: String,
+            message: String,
+            throwable: Throwable?,
         ) = Unit
 
         override fun error(
@@ -41,6 +53,14 @@ object DomainLogger {
         sink.debug(tag, message)
     }
 
+    fun warn(
+        tag: String,
+        message: String,
+        throwable: Throwable?,
+    ) {
+        sink.warn(tag, message, throwable)
+    }
+
     fun error(
         tag: String,
         message: String,
@@ -55,6 +75,14 @@ inline fun logD(
     msg: () -> String,
 ) {
     DomainLogger.debug(tag, msg())
+}
+
+inline fun logW(
+    tag: String,
+    throwable: Throwable? = null,
+    msg: () -> String,
+) {
+    DomainLogger.warn(tag, msg(), throwable)
 }
 
 inline fun logE(

@@ -25,6 +25,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
 import app.readylytics.health.domain.repository.SleepSessionData
@@ -75,12 +77,17 @@ fun SleepArchitectureBar(
     val primaryColor = MaterialTheme.colorScheme.primary
     val resolvedColors = segments.map { it.color() }
 
+    val chartSummary = stringResource(R.string.chart_accessibility_sleep_architecture_summary)
+
     Column(modifier = modifier) {
         Canvas(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(28.dp),
+                    .height(28.dp)
+                    .semantics {
+                        contentDescription = chartSummary
+                    },
         ) {
             val totalWidth = size.width
             val barHeight = size.height

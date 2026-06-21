@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.scoring.sleep
 
-import app.readylytics.health.data.local.entity.HeartRateRecordEntity
+import app.readylytics.health.domain.model.HeartRateRecordEntity
 import javax.inject.Inject
 import javax.inject.Singleton
 

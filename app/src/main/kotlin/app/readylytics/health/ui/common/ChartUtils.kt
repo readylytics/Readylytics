@@ -8,7 +8,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 object ChartUtils {
-    private val dateFormatter: DateTimeFormatter =
+    private fun getDateFormatter(): DateTimeFormatter =
         DateTimeFormatter.ofPattern(DateFormatUtils.DATE_FORMAT_SHORT, Locale.getDefault())
 
     fun dayOffsetToLocalDate(
@@ -21,7 +21,7 @@ object ChartUtils {
             .toLocalDate()
             .plusDays(dayOffset.toLong())
 
-    fun formatTooltipDate(localDate: LocalDate): String = localDate.format(dateFormatter)
+    fun formatTooltipDate(localDate: LocalDate): String = localDate.format(getDateFormatter())
 
     fun formatTooltipValue(
         value: Float,

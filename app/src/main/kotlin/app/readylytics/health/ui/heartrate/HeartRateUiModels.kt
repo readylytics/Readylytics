@@ -28,6 +28,7 @@ data class HeartRateDetailUiState(
     val avgBpm: Int? = null,
     val zoneTotals: Map<Int, ZoneTotal> = emptyMap(),
     val selectedDate: LocalDate = LocalDate.now(),
+    val today: LocalDate = LocalDate.now(),
     val isLoading: Boolean = true,
     val zone1MinBpm: Int = 95,
     val zone1MaxBpm: Int = 114,

@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.dashboard
 
-import app.readylytics.health.data.preferences.CardConfigurationRepository
-import app.readylytics.health.data.preferences.SettingsDefaults
+import app.readylytics.health.domain.preferences.CardConfigurationRepository
+import app.readylytics.health.domain.preferences.SettingsDefaults
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow

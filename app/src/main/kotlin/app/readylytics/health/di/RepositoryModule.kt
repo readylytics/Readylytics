@@ -1,5 +1,7 @@
 package app.readylytics.health.di
 
+import app.readylytics.health.data.local.RoomHealthIngestionStore
+import app.readylytics.health.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.data.repository.BloodPressureRepositoryImpl
 import app.readylytics.health.data.repository.BodyFatRepositoryImpl
 import app.readylytics.health.data.repository.DailyMetricsRepositoryImpl
@@ -56,4 +58,34 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindInsightDismissalRepository(impl: InsightDismissalRepositoryImpl): InsightDismissalRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindHealthChangeTokenStore(
+        impl: app.readylytics.health.data.preferences.HealthChangeTokenStoreImpl,
+    ): app.readylytics.health.domain.sync.HealthChangeTokenStore
+
+    @Binds
+    @Singleton
+    abstract fun bindSelectedSourcePruner(
+        impl: app.readylytics.health.data.local.SelectedSourcePrunerImpl,
+    ): app.readylytics.health.domain.sync.SelectedSourcePruner
+
+    @Binds
+    @Singleton
+    abstract fun bindResyncCheckpointStore(
+        impl: app.readylytics.health.data.preferences.ResyncCheckpointStoreImpl,
+    ): app.readylytics.health.domain.sync.ResyncCheckpointStore
+
+    @Binds
+    @Singleton
+    abstract fun bindHealthIngestionStore(
+        impl: RoomHealthIngestionStore,
+    ): app.readylytics.health.domain.sync.HealthIngestionStore
+
+    @Binds
+    @Singleton
+    abstract fun bindSessionLinkReconciler(
+        impl: SessionLinkReconcilerImpl,
+    ): app.readylytics.health.domain.sync.link.SessionLinkReconciler
 }

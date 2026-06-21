@@ -4,10 +4,14 @@ import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
+import app.readylytics.health.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.HrvRecordEntity
+import app.readylytics.health.data.local.entity.OxygenSaturationRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.data.local.entity.WeightRecordEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -27,6 +31,10 @@ class DeleteByTimestampTest {
     private lateinit var hrvDao: HrvDao
     private lateinit var workoutDao: WorkoutDao
     private lateinit var dailySummaryDao: DailySummaryDao
+    private lateinit var weightDao: WeightRecordDao
+    private lateinit var bodyFatDao: BodyFatRecordDao
+    private lateinit var bloodPressureDao: BloodPressureRecordDao
+    private lateinit var oxygenSaturationDao: OxygenSaturationRecordDao
 
     @Before
     fun setup() {
@@ -41,6 +49,10 @@ class DeleteByTimestampTest {
         hrvDao = database.hrvDao()
         workoutDao = database.workoutDao()
         dailySummaryDao = database.dailySummaryDao()
+        weightDao = database.weightRecordDao()
+        bodyFatDao = database.bodyFatRecordDao()
+        bloodPressureDao = database.bloodPressureRecordDao()
+        oxygenSaturationDao = database.oxygenSaturationRecordDao()
     }
 
     @After
@@ -238,6 +250,104 @@ class DeleteByTimestampTest {
             val remaining = dailySummaryDao.getSince(0)
             assertEquals(1, remaining.size)
             assertEquals(newDateMs, remaining[0].dateMidnightMs)
+        }
+
+    @Test
+    fun `weight delete before timestamp only deletes old records`() =
+        runTest {
+            val now = System.currentTimeMillis()
+            val oldTime = now - (60L * 24 * 60 * 60 * 1000)
+            val newTime = now - (10L * 24 * 60 * 60 * 1000)
+
+            weightDao.upsertAll(
+                listOf(
+                    WeightRecordEntity(id = "old", timestampMs = oldTime, weightKg = 70f),
+                    WeightRecordEntity(id = "new", timestampMs = newTime, weightKg = 72f),
+                ),
+            )
+
+            val cutoffTime = now - (30L * 24 * 60 * 60 * 1000)
+            weightDao.deleteBeforeTimestamp(cutoffTime)
+
+            val remaining = weightDao.getSince(0)
+            assertEquals(1, remaining.size)
+            assertEquals("new", remaining[0].id)
+        }
+
+    @Test
+    fun `body fat delete before timestamp only deletes old records`() =
+        runTest {
+            val now = System.currentTimeMillis()
+            val oldTime = now - (60L * 24 * 60 * 60 * 1000)
+            val newTime = now - (10L * 24 * 60 * 60 * 1000)
+
+            bodyFatDao.upsertAll(
+                listOf(
+                    BodyFatRecordEntity(id = "old", timestampMs = oldTime, bodyFatPercent = 15f),
+                    BodyFatRecordEntity(id = "new", timestampMs = newTime, bodyFatPercent = 14f),
+                ),
+            )
+
+            val cutoffTime = now - (30L * 24 * 60 * 60 * 1000)
+            bodyFatDao.deleteBeforeTimestamp(cutoffTime)
+
+            val remaining = bodyFatDao.getSince(0)
+            assertEquals(1, remaining.size)
+            assertEquals("new", remaining[0].id)
+        }
+
+    @Test
+    fun `blood pressure delete before timestamp only deletes old records`() =
+        runTest {
+            val now = System.currentTimeMillis()
+            val oldTime = now - (60L * 24 * 60 * 60 * 1000)
+            val newTime = now - (10L * 24 * 60 * 60 * 1000)
+
+            bloodPressureDao.upsertAll(
+                listOf(
+                    BloodPressureRecordEntity(
+                        id = "old",
+                        timestampMs = oldTime,
+                        systolicMmHg = 120,
+                        diastolicMmHg = 80,
+                    ),
+                    BloodPressureRecordEntity(
+                        id = "new",
+                        timestampMs = newTime,
+                        systolicMmHg = 118,
+                        diastolicMmHg = 78,
+                    ),
+                ),
+            )
+
+            val cutoffTime = now - (30L * 24 * 60 * 60 * 1000)
+            bloodPressureDao.deleteBeforeTimestamp(cutoffTime)
+
+            val remaining = bloodPressureDao.getSince(0)
+            assertEquals(1, remaining.size)
+            assertEquals("new", remaining[0].id)
+        }
+
+    @Test
+    fun `oxygen saturation delete before timestamp only deletes old records`() =
+        runTest {
+            val now = System.currentTimeMillis()
+            val oldTime = now - (60L * 24 * 60 * 60 * 1000)
+            val newTime = now - (10L * 24 * 60 * 60 * 1000)
+
+            oxygenSaturationDao.upsertAll(
+                listOf(
+                    OxygenSaturationRecordEntity(id = "old", timestampMs = oldTime, percentage = 98f),
+                    OxygenSaturationRecordEntity(id = "new", timestampMs = newTime, percentage = 99f),
+                ),
+            )
+
+            val cutoffTime = now - (30L * 24 * 60 * 60 * 1000)
+            oxygenSaturationDao.deleteBeforeTimestamp(cutoffTime)
+
+            val remaining = oxygenSaturationDao.getSince(0)
+            assertEquals(1, remaining.size)
+            assertEquals("new", remaining[0].id)
         }
 
     @Test

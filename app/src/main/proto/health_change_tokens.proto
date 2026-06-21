@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package app.readylytics.health.data.preferences;
+
+option java_package = "app.readylytics.health.data.preferences";
+option java_multiple_files = true;
+option java_outer_classname = "HealthChangeTokensProtoFile";
+
+message HealthChangeTokensProto {
+  map<string, string> tokens = 1;
+  map<string, int64> last_success_timestamps_ms = 2;
+}

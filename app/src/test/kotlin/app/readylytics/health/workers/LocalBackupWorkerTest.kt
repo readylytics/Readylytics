@@ -6,63 +6,64 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import app.readylytics.health.data.backup.LocalBackupManager
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import java.io.File
 import java.io.IOException
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 class LocalBackupWorkerTest {
     private lateinit var context: Context
-    private lateinit var mockBackupManager: LocalBackupManager
     private lateinit var workerParams: WorkerParameters
+    private val localBackupManager = mockk<LocalBackupManager>()
 
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        mockBackupManager = mockk()
         workerParams = mockk(relaxed = true)
+        every { workerParams.taskExecutor } returns mockk(relaxed = true)
     }
 
     @Test
-    fun doWork_success_returnsSuccess() =
-        runTest {
-            coEvery { mockBackupManager.createBackup() } returns Result.success(File("backup.zip"))
+    fun `doWork returns success when backup succeeds`() =
+        runBlocking {
+            coEvery { localBackupManager.createBackup() } returns Result.success<java.io.File?>(null)
 
-            val worker = LocalBackupWorker(context, workerParams, mockBackupManager)
+            val worker = LocalBackupWorker(context, workerParams, localBackupManager)
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.success(), result)
         }
 
     @Test
-    fun doWork_ioException_returnsRetry() =
-        runTest {
-            coEvery { mockBackupManager.createBackup() } returns Result.failure(IOException("Disk full"))
+    fun `doWork returns retry when backup fails with IOException`() =
+        runBlocking {
+            coEvery { localBackupManager.createBackup() } returns
+                Result.failure<java.io.File?>(IOException("Disk full"))
 
-            val worker = LocalBackupWorker(context, workerParams, mockBackupManager)
+            val worker = LocalBackupWorker(context, workerParams, localBackupManager)
             val result = worker.doWork()
 
             assertEquals(ListenableWorker.Result.retry(), result)
         }
 
     @Test
-    fun doWork_otherException_returnsFailure() =
-        runTest {
-            val errorMessage = "Fatal error"
-            coEvery { mockBackupManager.createBackup() } returns Result.failure(Exception(errorMessage))
+    fun `doWork returns failure when backup fails with non-IOException`() =
+        runBlocking {
+            coEvery { localBackupManager.createBackup() } returns
+                Result.failure<java.io.File?>(RuntimeException("Encryption error"))
 
-            val worker = LocalBackupWorker(context, workerParams, mockBackupManager)
+            val worker = LocalBackupWorker(context, workerParams, localBackupManager)
             val result = worker.doWork()
 
-            assertTrue(result is ListenableWorker.Result.Failure)
-            val outputData = result.outputData
-            assertEquals(errorMessage, outputData.getString("error"))
+            assertEquals(
+                ListenableWorker.Result.failure(androidx.work.workDataOf("error" to "Local backup failed")),
+                result,
+            )
         }
 }

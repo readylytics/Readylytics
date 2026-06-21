@@ -98,8 +98,7 @@ class ScoringRepositoryN1Test {
         coEvery { sleepSessionDao.getSince(any()) } returns historicSessions + todaySession
         coEvery { sleepSessionDao.getBetween(any(), any()) } returns historicSessions + todaySession
 
-        coEvery { workoutDao.getDailyTrimp(any(), any(), any()) } returns emptyList()
-        coEvery { workoutDao.getDailyTrmpByEpochDay(any(), any(), any()) } returns emptyMap()
+        coEvery { workoutDao.getTrimpPoints(any(), any()) } returns emptyList()
         coEvery { workoutDao.getTotalTrimp(any(), any()) } returns 0f
         coEvery { workoutDao.getTotalDurationMinutes(any(), any()) } returns 0
         coEvery { workoutDao.getWeightedAvgHr(any(), any()) } returns 0f
@@ -126,7 +125,7 @@ class ScoringRepositoryN1Test {
 
         coEvery { dailySummaryDao.getByDate(any()) } returns null
         coEvery { dailySummaryDao.getByDates(any()) } returns emptyList()
-        coEvery { dailySummaryDao.getEverydayTrimpByEpochDay(any(), any(), any()) } returns emptyMap()
+        coEvery { dailySummaryDao.getEverydayTrimpPoints(any(), any()) } returns emptyList()
         coEvery { dailySummaryDao.upsert(any()) } returns Unit
 
         scoringCalculator =

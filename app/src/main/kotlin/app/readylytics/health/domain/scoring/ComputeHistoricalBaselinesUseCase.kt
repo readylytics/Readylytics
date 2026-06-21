@@ -1,8 +1,8 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.local.entity.DailySummaryEntity
-import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.data.preferences.scoringZone
+import app.readylytics.health.domain.model.DailySummaryEntity
+import app.readylytics.health.domain.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.stdev

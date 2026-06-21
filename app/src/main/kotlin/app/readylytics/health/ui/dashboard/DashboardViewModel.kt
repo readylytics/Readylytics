@@ -1,6 +1,5 @@
 package app.readylytics.health.ui.dashboard
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.R
@@ -44,6 +43,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -63,6 +63,7 @@ class DashboardViewModel
         private val dailyMetricCache: DailyMetricCache,
         private val heartRateRepository: HeartRateRepository,
         private val insightDismissalRepository: InsightDismissalRepository,
+        private val clock: Clock,
     ) : BaseViewModel() {
         fun validateSelectedDate(date: LocalDate): Result<LocalDate> =
             if (date <= LocalDate.now()) {
@@ -163,6 +164,7 @@ class DashboardViewModel
             return DashboardUiState(
                 summary = basicInputs.summary,
                 selectedDate = selectedDate,
+                today = LocalDate.now(clock),
                 cardDataMap = cards?.cardDataMap ?: emptyMap(),
                 circadianConsistency = basicInputs.circadianResult,
                 restingHrCard = cards?.cardDataMap?.get(CardId.RESTING_HR),
@@ -299,9 +301,9 @@ class DashboardViewModel
                     // "Resync Health Connect data" button drives the full historical resync.
                     foregroundSyncController.triggerDailySync()
                 } catch (e: Exception) {
-                    Log.e(TAG, "Refresh failed", e)
-                    _errorMessage.value = e.message?.let { UiText.RawString(it) }
-                        ?: UiText.StringRes(R.string.error_sync_failed)
+                    app.readylytics.health.domain.util
+                        .logE(TAG, e) { "Refresh failed" }
+                    _errorMessage.value = UiText.StringRes(R.string.error_sync_failed)
                 } finally {
                     // Always clear cached derived metrics, even if the sync failed partway, so the
                     // dashboard never serves stale sleep/load scores from a previous recalculation.
@@ -322,6 +324,7 @@ class DashboardViewModel
 data class DashboardUiState(
     val summary: DailySummary? = null,
     val selectedDate: LocalDate = LocalDate.now(),
+    val today: LocalDate = LocalDate.now(),
     val cardDataMap: Map<CardId, CardData> = emptyMap(),
     val circadianConsistency: CircadianConsistencyResult? = null,
     val restingHrCard: CardData? = null,

@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.heartrate
 
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.UserPreferences
 
 object HrZoneClassifier {
     /**

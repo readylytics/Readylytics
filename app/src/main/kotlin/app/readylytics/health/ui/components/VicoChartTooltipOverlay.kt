@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -122,8 +122,8 @@ fun VicoChartTooltipOverlay(
     minY: Double? = null,
     maxY: Double? = null,
 ) {
-    var containerWidthPx by remember { mutableStateOf(0f) }
-    var containerHeightPx by remember { mutableStateOf(0f) }
+    var containerWidthPx by remember { mutableFloatStateOf(0f) }
+    var containerHeightPx by remember { mutableFloatStateOf(0f) }
 
     // Breathing halo animation on selection
     val infiniteTransition = rememberInfiniteTransition(label = "vicoHaloTransition")

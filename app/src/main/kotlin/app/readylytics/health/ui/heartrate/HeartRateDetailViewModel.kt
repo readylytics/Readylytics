@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Clock
+import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 
@@ -26,6 +28,7 @@ class HeartRateDetailViewModel
         private val heartRateRepository: HeartRateRepository,
         private val settingsRepository: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
+        private val clock: Clock,
     ) : ViewModel() {
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState: StateFlow<HeartRateDetailUiState> =
@@ -47,6 +50,7 @@ class HeartRateDetailViewModel
                         if (entities.isEmpty()) {
                             return@map HeartRateDetailUiState(
                                 selectedDate = date,
+                                today = LocalDate.now(clock),
                                 isLoading = false,
                                 zone1MinBpm = prefs.zone1MinBpm,
                                 zone1MaxBpm = prefs.zone1MaxBpm,
@@ -75,6 +79,7 @@ class HeartRateDetailViewModel
                             avgBpm = bpms.sum() / bpms.size,
                             zoneTotals = zoneTotals,
                             selectedDate = date,
+                            today = LocalDate.now(clock),
                             isLoading = false,
                             zone1MinBpm = prefs.zone1MinBpm,
                             zone1MaxBpm = prefs.zone1MaxBpm,

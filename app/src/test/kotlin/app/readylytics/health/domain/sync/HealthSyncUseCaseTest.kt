@@ -1,23 +1,15 @@
 package app.readylytics.health.domain.sync
 
-import app.readylytics.health.data.local.dao.BloodPressureRecordDao
-import app.readylytics.health.data.local.dao.BodyFatRecordDao
-import app.readylytics.health.data.local.dao.DailySummaryDao
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
-import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
-import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.dao.SleepStageDao
-import app.readylytics.health.data.local.dao.WeightRecordDao
-import app.readylytics.health.data.local.dao.WorkoutDao
-import app.readylytics.health.data.local.entity.DailySummaryEntity
-import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.HealthDataType
+import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.TransactionRunner
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
+import app.readylytics.health.domain.sync.HealthChangeSyncOutcome
+import app.readylytics.health.domain.sync.HealthChangeSynchronizer
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
 import io.mockk.coJustRun
@@ -31,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -40,21 +33,15 @@ import kotlin.test.assertFailsWith
 
 class HealthSyncUseCaseTest {
     private val hcRepo = mockk<HealthConnectRepository>(relaxed = true)
-    private val sleepDao = mockk<SleepSessionDao>(relaxed = true)
-    private val sleepStageDao = mockk<SleepStageDao>(relaxed = true)
-    private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
-    private val hrvDao = mockk<HrvDao>(relaxed = true)
-    private val workoutDao = mockk<WorkoutDao>(relaxed = true)
-    private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
+    private val healthIngestionStore = mockk<HealthIngestionStore>(relaxed = true)
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val scoringRepository = mockk<ScoringRepository>(relaxed = true)
     private val transactionRunner = mockk<TransactionRunner>(relaxed = true)
-    private val weightRecordDao = mockk<WeightRecordDao>(relaxed = true)
-    private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
-    private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
-    private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
     private val sessionLinkReconciler = mockk<SessionLinkReconciler>(relaxed = true)
     private val rasSourceModeBootstrapUseCase = mockk<RasSourceModeBootstrapUseCase>(relaxed = true)
+    private val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
+    private val selectedSourcePruner = mockk<SelectedSourcePruner>(relaxed = true)
+    private val checkpointStore = mockk<ResyncCheckpointStore>(relaxed = true)
 
     private lateinit var useCase: HealthSyncUseCase
 
@@ -64,29 +51,31 @@ class HealthSyncUseCaseTest {
             val block = firstArg<suspend () -> Any>()
             block()
         }
+        coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
+        coJustRun { changeSynchronizer.commitTokens(any()) }
+        every { checkpointStore.checkpoint } returns flowOf(null)
 
         useCase =
             HealthSyncUseCase(
                 hcRepo = hcRepo,
-                sleepSessionDao = sleepDao,
-                sleepStageDao = sleepStageDao,
-                heartRateDao = heartRateDao,
-                hrvDao = hrvDao,
-                workoutDao = workoutDao,
-                weightRecordDao = weightRecordDao,
-                bodyFatRecordDao = bodyFatRecordDao,
-                bloodPressureRecordDao = bloodPressureRecordDao,
-                dailySummaryDao = dailySummaryDao,
+                healthIngestionStore = healthIngestionStore,
                 settingsRepo = settingsRepo,
                 scoringRepository = scoringRepository,
                 transactionRunner = transactionRunner,
-                oxygenSaturationRecordDao = oxygenSaturationRecordDao,
                 sessionLinkReconciler = sessionLinkReconciler,
                 rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
+                changeSynchronizer = changeSynchronizer,
+                selectedSourcePruner = selectedSourcePruner,
+                checkpointStore = checkpointStore,
                 ioDispatcher = Dispatchers.Unconfined,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
     }
+
+    private fun summary(
+        date: LocalDate = LocalDate.of(1970, 1, 1),
+        stepCount: Int? = null,
+    ): DailySummary = DailySummary(date = date, stepCount = stepCount)
 
     @Test
     fun `sync processes days in chronological order`() =
@@ -97,17 +86,31 @@ class HealthSyncUseCaseTest {
             val day1 = today.minusDays(1)
             val day2 = today
 
-            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
-
             useCase.sync(windowDays = windowDays)
 
             coVerifyOrder {
-                scoringRepository.computeDailySummary(day0)
-                dailySummaryDao.upsert(any())
-                scoringRepository.computeDailySummary(day1)
-                dailySummaryDao.upsert(any())
-                scoringRepository.computeDailySummary(day2)
-                dailySummaryDao.upsert(any())
+                scoringRepository.computeAndPersistDailySummary(day0, 0L)
+                scoringRepository.computeAndPersistDailySummary(day1, 0L)
+                scoringRepository.computeAndPersistDailySummary(day2, 0L)
+            }
+        }
+
+    @Test
+    fun `sync commits candidate change tokens after scoring succeeds`() =
+        runTest {
+            val nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token")
+            coEvery { changeSynchronizer.applyPendingChanges() } returns
+                HealthChangeSyncOutcome(
+                    affectedDates = emptySet(),
+                    requiresFullResync = false,
+                    nextTokens = nextTokens,
+                )
+
+            useCase.sync(windowDays = 1)
+
+            coVerifyOrder {
+                scoringRepository.computeAndPersistDailySummary(any(), any())
+                changeSynchronizer.commitTokens(nextTokens)
             }
         }
 
@@ -130,17 +133,12 @@ class HealthSyncUseCaseTest {
                     .toInstant()
                     .toEpochMilli()
 
-            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
-            coJustRun { dailySummaryDao.clearFrozenBaselinesBetween(any(), any()) }
-
             useCase.sync(windowDays = windowDays)
 
             coVerifyOrder {
-                dailySummaryDao.clearFrozenBaselinesBetween(windowStartMs, windowEndExclusiveMs)
-                scoringRepository.computeDailySummary(today.minusDays(1))
-                dailySummaryDao.upsert(any())
-                scoringRepository.computeDailySummary(today)
-                dailySummaryDao.upsert(any())
+                healthIngestionStore.clearFrozenBaselines(today.minusDays(1), today.plusDays(1))
+                scoringRepository.computeAndPersistDailySummary(today.minusDays(1), 0L)
+                scoringRepository.computeAndPersistDailySummary(today, 0L)
             }
         }
 
@@ -163,8 +161,6 @@ class HealthSyncUseCaseTest {
                     .toInstant()
                     .toEpochMilli()
 
-            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
-            coJustRun { dailySummaryDao.clearFrozenBaselinesBetween(any(), any()) }
             coJustRun { sessionLinkReconciler.reconcile(any(), any(), any()) }
 
             useCase.sync(windowDays = windowDays)
@@ -175,20 +171,14 @@ class HealthSyncUseCaseTest {
                     endMs = windowEndExclusiveMs - 1,
                     zoneThresholds = any(),
                 )
-                dailySummaryDao.clearFrozenBaselinesBetween(
-                    today.atStartOfDay(zoneId).toInstant().toEpochMilli(),
-                    windowEndExclusiveMs,
-                )
-                scoringRepository.computeDailySummary(today)
-                dailySummaryDao.upsert(any())
+                healthIngestionStore.clearFrozenBaselines(today, today.plusDays(1))
+                scoringRepository.computeAndPersistDailySummary(today, 0L)
             }
         }
 
     @Test
     fun `sync fetches and upserts all heart-related record types`() =
         runTest {
-            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
-
             // Mock non-empty returns to ensure mapping logic is triggered
             coEvery { hcRepo.readHeartRateSamples(any(), any()) } returns listOf(mockk(relaxed = true))
             coEvery { hcRepo.readHrvSamples(any(), any()) } returns listOf(mockk(relaxed = true))
@@ -200,16 +190,13 @@ class HealthSyncUseCaseTest {
                 hcRepo.readHeartRateSamples(any(), any())
                 hcRepo.readHrvSamples(any(), any())
                 hcRepo.readSteps(any(), any())
-                heartRateDao.upsertAll(any())
-                hrvDao.upsertAll(any())
+                healthIngestionStore.persist(any())
             }
         }
 
     @Test
     fun `daily sync windowDays 1 fetches samples from yesterday to cover cross-midnight sleep`() =
         runTest {
-            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
-
             val hrvFromSlot = slot<Instant>()
             val hrFromSlot = slot<Instant>()
             coEvery { hcRepo.readHrvSamples(capture(hrvFromSlot), any()) } returns emptyList()
@@ -232,6 +219,36 @@ class HealthSyncUseCaseTest {
         }
 
     @Test
+    fun `daily sync keeps current-day range and requests historical resync for older changes`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(zoneId)
+            val oldestAffectedDay = today.minusDays(5)
+            val hrFromSlot = slot<Instant>()
+            val scoredDays = mutableListOf<LocalDate>()
+
+            coEvery { changeSynchronizer.applyPendingChanges() } returns
+                HealthChangeSyncOutcome(
+                    affectedDates = setOf(oldestAffectedDay),
+                    requiresFullResync = false,
+                    nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token"),
+                )
+            coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
+            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any()) }
+
+            val result = useCase.sync(windowDays = 1)
+
+            assertEquals(today.minusDays(1).atStartOfDay(zoneId).toInstant(), hrFromSlot.captured)
+            assertEquals(listOf(today), scoredDays)
+            assertTrue(result is app.readylytics.health.domain.model.Result.Failure)
+            assertEquals(
+                "REQUIRES_HISTORICAL_RESYNC",
+                (result as app.readylytics.health.domain.model.Result.Failure).code,
+            )
+            coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+        }
+
+    @Test
     fun `resyncRange first chunk fetches samples from startDate minus 1 to cover cross-midnight sleep`() =
         runTest {
             val zoneId = ZoneId.systemDefault()
@@ -244,8 +261,6 @@ class HealthSyncUseCaseTest {
             coEvery { hcRepo.readSleepSessions(capture(sleepFromSlot), any()) } returns emptyList()
             coEvery { hcRepo.readHrvSamples(capture(hrvFromSlot), any()) } returns emptyList()
             coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
-            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
-
             useCase.resyncRange(startDate, endDate)
 
             // The first chunk of resyncRange must reach back one extra day to capture
@@ -272,8 +287,6 @@ class HealthSyncUseCaseTest {
             val hrFromInstants = mutableListOf<Instant>()
             coEvery { hcRepo.readHrvSamples(capture(hrvFromInstants), any()) } returns emptyList()
             coEvery { hcRepo.readHeartRateSamples(capture(hrFromInstants), any()) } returns emptyList()
-            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
-
             useCase.resyncRange(startDate, endDate, chunkDays = chunkDays)
 
             val secondChunkStart = startDate.plusDays(chunkDays.toLong())
@@ -306,8 +319,6 @@ class HealthSyncUseCaseTest {
             coEvery { hcRepo.readExerciseSessions(any(), capture(workoutToInstants)) } returns emptyList()
             coEvery { hcRepo.readHrvSamples(any(), capture(hrvToInstants)) } returns emptyList()
             coEvery { hcRepo.readHeartRateSamples(any(), capture(hrToInstants)) } returns emptyList()
-            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
-
             useCase.resyncRange(
                 startDate = startDate,
                 endDate = LocalDate.of(2024, 7, 2),
@@ -329,8 +340,6 @@ class HealthSyncUseCaseTest {
                         deviceByDataType = mapOf(HealthDataType.STEPS.name to "Watch"),
                     ),
                 )
-            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
-
             useCase.resyncRange(
                 startDate = LocalDate.of(2024, 6, 1),
                 endDate = LocalDate.of(2024, 6, 1),
@@ -349,7 +358,6 @@ class HealthSyncUseCaseTest {
                         deviceByDataType = mapOf(HealthDataType.STEPS.name to "Watch"),
                     ),
                 )
-            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
             coEvery { hcRepo.readStepsRecords(any(), any()) } throws RuntimeException("rate limited") andThen
                 emptyList()
 
@@ -371,26 +379,19 @@ class HealthSyncUseCaseTest {
                     ),
                 )
             coEvery { hcRepo.readStepsRecords(any(), any()) } returns emptyList()
-            coEvery { scoringRepository.computeDailySummary(any()) } returns
-                DailySummaryEntity(
-                    dateMidnightMs = 0L,
-                    stepCount = 999,
-                )
-            val summarySlot = slot<DailySummaryEntity>()
-            coJustRun { dailySummaryDao.upsert(capture(summarySlot)) }
+            val date = LocalDate.of(2024, 6, 1)
 
             useCase.resyncRange(
-                startDate = LocalDate.of(2024, 6, 1),
-                endDate = LocalDate.of(2024, 6, 1),
+                startDate = date,
+                endDate = date,
             )
 
-            assertEquals(0, summarySlot.captured.stepCount)
+            coVerify { scoringRepository.computeAndPersistDailySummary(date, 0L) }
         }
 
     @Test
     fun `resyncRange progress reports calendar days not internal two phase steps`() =
         runTest {
-            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
             val progress = mutableListOf<Pair<Int, Int>>()
 
             useCase.resyncRange(
@@ -419,19 +420,13 @@ class HealthSyncUseCaseTest {
                     .toInstant()
                     .toEpochMilli()
 
-            coEvery { scoringRepository.computeDailySummary(any()) } returns DailySummaryEntity(dateMidnightMs = 0L)
-            coJustRun { dailySummaryDao.clearFrozenBaselinesBetween(any(), any()) }
-
             useCase.resyncRange(startDate = startDate, endDate = endDate)
 
             coVerifyOrder {
-                dailySummaryDao.clearFrozenBaselinesBetween(clearFromMs, clearToExclusiveMs)
-                scoringRepository.computeDailySummary(startDate)
-                dailySummaryDao.upsert(any())
-                scoringRepository.computeDailySummary(startDate.plusDays(1))
-                dailySummaryDao.upsert(any())
-                scoringRepository.computeDailySummary(endDate)
-                dailySummaryDao.upsert(any())
+                healthIngestionStore.clearFrozenBaselines(startDate, endDate.plusDays(1))
+                scoringRepository.computeAndPersistDailySummary(startDate, any())
+                scoringRepository.computeAndPersistDailySummary(startDate.plusDays(1), any())
+                scoringRepository.computeAndPersistDailySummary(endDate, any())
             }
         }
 
@@ -442,6 +437,21 @@ class HealthSyncUseCaseTest {
 
             assertFailsWith<CancellationException> {
                 useCase.sync(windowDays = 1)
+            }
+        }
+
+    @Test
+    fun `resyncRange calls SelectedSourcePruner after ingestion and before session linkage reconciliation`() =
+        runTest {
+            val startDate = LocalDate.of(2024, 6, 1)
+            val endDate = LocalDate.of(2024, 6, 3)
+
+            useCase.resyncRange(startDate = startDate, endDate = endDate)
+
+            coVerifyOrder {
+                selectedSourcePruner.prune(startDate, endDate, any(), any())
+                sessionLinkReconciler.reconcile(any(), any(), any())
+                scoringRepository.computeAndPersistDailySummary(startDate, any())
             }
         }
 }

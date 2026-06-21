@@ -14,6 +14,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import app.readylytics.health.data.preferences.*
+import app.readylytics.health.domain.util.logE
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -36,7 +37,7 @@ object DataStoreModule {
     fun provideApplicationScope(): CoroutineScope {
         val handler =
             kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
-                android.util.Log.e("ApplicationScope", "Uncaught exception in app scope", throwable)
+                logE("ApplicationScope", throwable) { "Uncaught exception in app scope" }
             }
         return CoroutineScope(SupervisorJob() + Dispatchers.IO + handler)
     }
@@ -285,4 +286,36 @@ object DataStoreModule {
     @Provides
     @Singleton
     fun provideClock(): Clock = Clock.systemDefaultZone()
+
+    @Provides
+    @Singleton
+    fun provideHealthChangeTokensDataStore(
+        @ApplicationContext context: Context,
+        @ApplicationScope appScope: CoroutineScope,
+    ): DataStore<HealthChangeTokensProto> =
+        DataStoreFactory.create(
+            serializer = HealthChangeTokensSerializer,
+            corruptionHandler =
+                ReplaceFileCorruptionHandler {
+                    HealthChangeTokensProto.getDefaultInstance()
+                },
+            scope = appScope,
+            produceFile = { context.dataStoreFile("health_change_tokens.pb") },
+        )
+
+    @Provides
+    @Singleton
+    fun provideResyncCheckpointDataStore(
+        @ApplicationContext context: Context,
+        @ApplicationScope appScope: CoroutineScope,
+    ): DataStore<ResyncCheckpointProto> =
+        DataStoreFactory.create(
+            serializer = ResyncCheckpointSerializer,
+            corruptionHandler =
+                ReplaceFileCorruptionHandler {
+                    ResyncCheckpointProto.getDefaultInstance()
+                },
+            scope = appScope,
+            produceFile = { context.dataStoreFile("resync_checkpoint.pb") },
+        )
 }

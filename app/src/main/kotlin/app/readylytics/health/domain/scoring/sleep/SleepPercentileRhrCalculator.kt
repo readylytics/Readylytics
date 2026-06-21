@@ -1,9 +1,9 @@
 package app.readylytics.health.domain.scoring.sleep
 
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.SleepHrSample
-import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.domain.model.SleepSessionEntity
+import app.readylytics.health.domain.persistence.HeartRateDao
+import app.readylytics.health.domain.persistence.SleepHrSample
+import app.readylytics.health.domain.persistence.SleepSessionDao
 import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.util.median
 import java.time.Instant

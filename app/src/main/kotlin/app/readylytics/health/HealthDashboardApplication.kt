@@ -18,6 +18,7 @@ import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.util.DomainLogSink
 import app.readylytics.health.domain.util.DomainLogger
 import app.readylytics.health.domain.util.logD
+import app.readylytics.health.domain.util.logE
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -61,7 +62,7 @@ class HealthDashboardApplication :
 
     override fun onCreate() {
         super.onCreate()
-        installDomainLogger()
+        installAndroidLogSink()
         if (BuildConfig.DEBUG) {
             setupPerformanceMonitoring()
         }
@@ -80,7 +81,7 @@ class HealthDashboardApplication :
                     logD("HealthDashboardApplication") { "Backfilled $backfilled historical baselines" }
                 }
             }.onFailure { e ->
-                logD("HealthDashboardApplication") { "Backfill failed: ${e.message}" }
+                logE("HealthDashboardApplication", e) { "Historical baseline backfill failed" }
             }
 
             val schedule = settingsRepo.backupSchedule.first()
@@ -88,27 +89,6 @@ class HealthDashboardApplication :
             workerScheduler.scheduleBirthdayWorker()
             workerScheduler.scheduleDataCleanupWorker()
         }
-    }
-
-    private fun installDomainLogger() {
-        DomainLogger.installSink(
-            object : DomainLogSink {
-                override fun debug(
-                    tag: String,
-                    message: String,
-                ) {
-                    if (BuildConfig.DEBUG) Log.d(tag, message)
-                }
-
-                override fun error(
-                    tag: String,
-                    message: String,
-                    throwable: Throwable?,
-                ) {
-                    if (BuildConfig.DEBUG) Log.e(tag, message, throwable)
-                }
-            },
-        )
     }
 
     override fun onStateChanged(
@@ -133,6 +113,41 @@ class HealthDashboardApplication :
                 .detectLeakedClosableObjects()
                 .penaltyLog()
                 .build(),
+        )
+    }
+
+    private fun installAndroidLogSink() {
+        DomainLogger.installSink(
+            object : DomainLogSink {
+                override fun debug(
+                    tag: String,
+                    message: String,
+                ) {
+                    if (BuildConfig.DEBUG) {
+                        Log.d(tag, message)
+                    }
+                }
+
+                override fun warn(
+                    tag: String,
+                    message: String,
+                    throwable: Throwable?,
+                ) {
+                    if (BuildConfig.DEBUG) {
+                        Log.w(tag, message, throwable)
+                    }
+                }
+
+                override fun error(
+                    tag: String,
+                    message: String,
+                    throwable: Throwable?,
+                ) {
+                    if (BuildConfig.DEBUG) {
+                        Log.e(tag, message, throwable)
+                    }
+                }
+            },
         )
     }
 }

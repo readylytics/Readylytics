@@ -267,15 +267,48 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
     val allDevicesLabel = stringResource(R.string.data_sources_all_devices)
     val calibratingLabel = stringResource(R.string.data_sources_calibrating)
     val phoneLabel = stringResource(R.string.device_this_phone)
+    val googleFitLabel = stringResource(R.string.provider_google_fit)
+    val samsungHealthWatchLabel = stringResource(R.string.provider_samsung_health_watch)
+    val samsungHealthPhoneLabel = stringResource(R.string.provider_samsung_health_phone)
+    val garminConnectLabel = stringResource(R.string.provider_garmin_connect)
+    val whoopLabel = stringResource(R.string.provider_whoop)
+    val ouraLabel = stringResource(R.string.provider_oura)
+    val stravaLabel = stringResource(R.string.provider_strava)
+    val withingsLabel = stringResource(R.string.provider_withings)
+
     // Include currently selected devices so a previously chosen but no-longer-detected
     // device (e.g. inactive within the discovery window) stays visible and re-selectable.
     val options =
         remember(availableDevices, deviceByDataType, allDevicesLabel) {
-            (listOf(allDevicesLabel) + availableDevices + deviceByDataType.values).distinct()
+            (listOf(allDevicesLabel) + availableDevices + deviceByDataType.values.filter { it.isNotBlank() }).distinct()
         }
     val optionsDisplay =
-        remember(options, phoneLabel) {
-            options.associateWith { if (it == "This Phone") phoneLabel else it }
+        remember(
+            options,
+            phoneLabel,
+            googleFitLabel,
+            samsungHealthWatchLabel,
+            samsungHealthPhoneLabel,
+            garminConnectLabel,
+            whoopLabel,
+            ouraLabel,
+            stravaLabel,
+            withingsLabel,
+        ) {
+            options.associateWith {
+                when (it) {
+                    "This Phone" -> phoneLabel
+                    "Google Fit" -> googleFitLabel
+                    "Samsung Health (Watch)" -> samsungHealthWatchLabel
+                    "Samsung Health (Phone)" -> samsungHealthPhoneLabel
+                    "Garmin Connect" -> garminConnectLabel
+                    "Whoop" -> whoopLabel
+                    "Oura" -> ouraLabel
+                    "Strava" -> stravaLabel
+                    "Withings" -> withingsLabel
+                    else -> it
+                }
+            }
         }
 
     Column {
@@ -302,7 +335,7 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
                             when {
                                 !hasDevices && selected == null -> calibratingLabel
                                 selected != null -> {
-                                    if (selected == "This Phone") phoneLabel else selected
+                                    optionsDisplay[selected] ?: selected
                                 }
                                 else -> allDevicesLabel
                             },

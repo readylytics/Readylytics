@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.scoring.sleep
 
-import app.readylytics.health.data.local.dao.HrvDao
-import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.domain.model.SleepSessionEntity
+import app.readylytics.health.domain.persistence.HrvDao
 import app.readylytics.health.domain.util.mean
 import javax.inject.Inject
 import javax.inject.Singleton

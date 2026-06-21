@@ -1,10 +1,10 @@
 package app.readylytics.health.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.MapColumn
 import androidx.room.Query
 import androidx.room.Upsert
 import app.readylytics.health.data.local.entity.DailySummaryEntity
+import app.readylytics.health.domain.model.TimestampedTrimp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -163,18 +163,12 @@ interface DailySummaryDao {
     suspend fun hasAnyWorkoutOnlyTrimpData(): Boolean
 
     @Query(
-        "SELECT (dateMidnightMs + :tzOffsetMs) / 86400000 AS epochDay, trimpEverydayHr AS dailyTrimp " +
+        "SELECT dateMidnightMs AS timestampMs, trimpEverydayHr AS trimp " +
             "FROM daily_summaries WHERE dateMidnightMs >= :fromMs AND dateMidnightMs < :toMs " +
-            "AND trimpEverydayHr IS NOT NULL ORDER BY epochDay ASC",
+            "AND trimpEverydayHr IS NOT NULL ORDER BY dateMidnightMs ASC",
     )
-    suspend fun getEverydayTrimpByEpochDay(
+    suspend fun getEverydayTrimpPoints(
         fromMs: Long,
         toMs: Long,
-        tzOffsetMs: Long,
-    ): Map<
-        @MapColumn(columnName = "epochDay")
-        Long,
-        @MapColumn(columnName = "dailyTrimp")
-        Float,
-    >
+    ): List<TimestampedTrimp>
 }

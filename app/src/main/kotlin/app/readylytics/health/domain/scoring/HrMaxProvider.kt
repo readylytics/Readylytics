@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.local.dao.DailySummaryDao
-import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.persistence.DailySummaryDao
+import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.util.HeartRateFormulas
 import app.readylytics.health.domain.util.toMidnightEpochMilli
 import kotlinx.coroutines.flow.first

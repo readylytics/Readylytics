@@ -64,9 +64,9 @@ The app can store unlimited historical health data, but if you're concerned abou
 **Find it:** Settings → Data & Backup → Data Retention
 
 **Retention window** (180–1095 days, default 365):
-- Dates older than this window are automatically deleted from the app's local database.
+- Dates older than this window are automatically deleted from the app's local database. State retention applies to every imported health-record table.
 - Does **not** affect Health Connect—your original data stays in Health Connect unless you delete it there.
-- Does **not** affect backups—archived backups may contain older data.
+- Backups contain only records present in the local database at backup time (archived backups created before pruning may contain older data).
 
 **Retention disabled:**
 - Turn off "Enable Data Retention" to keep all historical data indefinitely.
@@ -199,6 +199,18 @@ Readylytics will detect missing permissions and show a recovery flow directing y
 4. Use Health Connect's export features to download CSV or other formats.
 
 Readylytics adds interpretive layers (scores, baselines, trends), but the raw numbers come straight from your devices via Health Connect.
+
+---
+
+## Cloud backup and device transfer exclusions
+
+To safeguard your sensitive health information and ensure the cryptographic security of the local database (which uses Android Keystore keys that cannot be transferred off the device), **Readylytics explicitly excludes all database files, preferences, encryption keys, and local backup files from Android Auto Backup and OEM device-to-device transfers.**
+
+### Manual Release Verification Checklist
+
+During release validation, the following checks should be performed:
+1. **Bmgr Verification:** Run `adb shell bmgr backupnow app.readylytics.health` followed by inspecting the backup sets to confirm that no databases, DataStores, Tink keysets, or backup ZIPs are included in the backup data.
+2. **OEM D2D Transfer:** Manually verify that local app data is not transferred during a device migration, and that a fresh install correctly prompts the user to restore from their manually-exported local backup file.
 
 ---
 

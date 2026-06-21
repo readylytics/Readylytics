@@ -62,6 +62,7 @@ fun SingleBloodPressureChart(
     rangeStartMs: Long,
     rangeDays: Int,
     isDiastolic: Boolean,
+    modifier: Modifier = Modifier,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
     zoomState: VicoZoomState =
         rememberVicoZoomState(
@@ -77,7 +78,6 @@ fun SingleBloodPressureChart(
                     }
                 },
         ),
-    modifier: Modifier = Modifier,
     onDaySelected: ((dayOffset: Int, canvasX: Float, canvasY: Float) -> Unit)? = null,
     externalSelectedDayOffset: Int? = null,
     externalSelectedCanvasX: Float? = null,

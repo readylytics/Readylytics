@@ -60,6 +60,13 @@ All three scores adapt to your physiological profile (Athlete, Active, or Sedent
    ./gradlew installDebug
    ```
 
+### Release Signing
+
+- Release artifacts are signed only when `READYLYTICS_UPLOAD_STORE_FILE`, `READYLYTICS_UPLOAD_STORE_PASSWORD`, `READYLYTICS_UPLOAD_KEY_ALIAS`, `READYLYTICS_UPLOAD_KEY_PASSWORD`, and `READYLYTICS_UPLOAD_CERT_SHA256` are present.
+- `assembleRelease` and `bundleRelease` fail closed through `verifyReleaseSigningInputs`; release builds never fall back to debug signing.
+- GitHub Actions release builds also require `READYLYTICS_UPLOAD_STORE_BASE64` so workflow can decode keystore into runner temp directory.
+- Full setup, rotation, and dry-run instructions live in `internal-docs/RELEASE_SIGNING.md`.
+
 ## Architecture
 
 This project follows clean architecture and MVVM patterns:

@@ -77,10 +77,10 @@ fun SleepScreen(
     circadianConsistency: CircadianConsistencyResult,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
+    modifier: Modifier = Modifier,
     onDateSelected: (java.time.LocalDate) -> Unit = {},
     onTrendRangeSelected: (TimeRange) -> Unit = {},
     earliestDate: java.time.LocalDate? = null,
-    modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
     val (trendScrollState, trendZoomState) =

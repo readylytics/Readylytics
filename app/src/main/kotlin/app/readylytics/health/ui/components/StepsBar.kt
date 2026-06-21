@@ -28,7 +28,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
 import app.readylytics.health.domain.model.MetricStatus
@@ -80,6 +86,81 @@ fun StepsBar(
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
     val primaryColor = MaterialTheme.colorScheme.primary
 
+    val prevActionLabel = stringResource(R.string.action_previous_point)
+    val nextActionLabel = stringResource(R.string.action_next_point)
+    val clearActionLabel = stringResource(R.string.action_clear_selection)
+
+    val formattedCount =
+        stepCount?.let {
+            java.text.NumberFormat
+                .getNumberInstance()
+                .format(it)
+        } ?: "--"
+    val formattedGoal =
+        java.text.NumberFormat
+            .getNumberInstance()
+            .format(stepGoal)
+
+    val selectedValueDescription =
+        if (activeTapOffset != null) {
+            stringResource(R.string.chart_accessibility_selected_steps, formattedCount, formattedGoal)
+        } else {
+            stringResource(R.string.chart_accessibility_no_selection)
+        }
+
+    val customActionsList =
+        remember(activeTapOffset, stepCount) {
+            val list = mutableListOf<CustomAccessibilityAction>()
+            if (stepCount != null) {
+                list.add(
+                    CustomAccessibilityAction(prevActionLabel) {
+                        if (activeTapOffset == null) {
+                            activeTapOffset = Offset(0f, 0f)
+                            val dateString = dateForTooltip?.let { ChartUtils.formatTooltipDate(it) } ?: ""
+                            tooltipState =
+                                DataPointTooltipData(
+                                    valueText = "$stepCount",
+                                    dateText = dateString,
+                                    offset =
+                                        androidx.compose.ui.unit
+                                            .IntOffset(0, 0),
+                                )
+                        }
+                        true
+                    },
+                )
+                list.add(
+                    CustomAccessibilityAction(nextActionLabel) {
+                        if (activeTapOffset == null) {
+                            activeTapOffset = Offset(0f, 0f)
+                            val dateString = dateForTooltip?.let { ChartUtils.formatTooltipDate(it) } ?: ""
+                            tooltipState =
+                                DataPointTooltipData(
+                                    valueText = "$stepCount",
+                                    dateText = dateString,
+                                    offset =
+                                        androidx.compose.ui.unit
+                                            .IntOffset(0, 0),
+                                )
+                        }
+                        true
+                    },
+                )
+            }
+            if (activeTapOffset != null) {
+                list.add(
+                    CustomAccessibilityAction(clearActionLabel) {
+                        activeTapOffset = null
+                        tooltipState = null
+                        true
+                    },
+                )
+            }
+            list
+        }
+
+    val chartSummary = stringResource(R.string.chart_accessibility_steps_summary)
+
     Column(modifier = modifier) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Canvas(
@@ -87,7 +168,12 @@ fun StepsBar(
                     Modifier
                         .fillMaxWidth()
                         .height(28.dp)
-                        .detectCanvasTap(
+                        .testTag("StepsBarCanvas")
+                        .semantics {
+                            contentDescription = chartSummary
+                            stateDescription = selectedValueDescription
+                            customActions = customActionsList
+                        }.detectCanvasTap(
                             segments =
                                 remember {
                                     listOf(

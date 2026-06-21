@@ -1,6 +1,5 @@
 package app.readylytics.health.domain.model
 
-import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.ScoringConstants
 

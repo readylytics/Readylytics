@@ -61,7 +61,7 @@ class MainActivity : ComponentActivity() {
                                 ) {
                                     onResult(true, null)
                                 } else if (result is LocalRestoreManager.RestoreResult.Failure) {
-                                    onResult(false, result.cause.message)
+                                    onResult(false, getString(R.string.recovery_error_default))
                                 }
                             }
                         },

@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,12 +34,20 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.readylytics.health.R
 import app.readylytics.health.ui.heartrate.HrSample
 import java.time.Instant
 import java.time.ZoneId
@@ -47,18 +57,59 @@ import kotlin.math.roundToInt
 
 private const val GAP_THRESHOLD_MS = 10 * 60 * 1000L // 10 minutes
 private val hourFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-private val HOUR_LABELS = listOf(0, 4, 8, 12, 16, 20)
+
+object HrChartHelper {
+    fun splitIntoSegments(
+        samples: List<HrSample>,
+        gapThresholdMs: Long,
+    ): List<List<HrSample>> {
+        if (samples.isEmpty()) return emptyList()
+        val segments = mutableListOf<MutableList<HrSample>>()
+        var current = mutableListOf(samples[0])
+        for (i in 1 until samples.size) {
+            if (samples[i].timeMs - samples[i - 1].timeMs > gapThresholdMs) {
+                segments.add(current)
+                current = mutableListOf(samples[i])
+            } else {
+                current.add(samples[i])
+            }
+        }
+        segments.add(current)
+        return segments
+    }
+
+    fun generateHourLabels(
+        dayStartMs: Long,
+        endExclusiveMs: Long,
+        zoneId: ZoneId,
+    ): List<Pair<Long, String>> {
+        val formatter = DateTimeFormatter.ofPattern("HH:mm")
+        val labels = mutableListOf<Pair<Long, String>>()
+        val startZdt = Instant.ofEpochMilli(dayStartMs).atZone(zoneId)
+        var currentZdt = startZdt
+        while (currentZdt.toInstant().toEpochMilli() < endExclusiveMs) {
+            val hour = currentZdt.hour
+            if (hour % 4 == 0) {
+                labels.add(currentZdt.toInstant().toEpochMilli() to currentZdt.format(formatter))
+            }
+            currentZdt = currentZdt.plusHours(1)
+        }
+        return labels
+    }
+}
 
 @Composable
 fun HrTimelineChart(
     samples: List<HrSample>,
     dayStartMs: Long,
+    dayEndMs: Long,
     zone1MinBpm: Int,
     zone1MaxBpm: Int,
     zone2MaxBpm: Int,
     zone3MaxBpm: Int,
     zone4MaxBpm: Int,
     modifier: Modifier = Modifier,
+    zoneId: ZoneId = ZoneId.systemDefault(),
 ) {
     if (samples.isEmpty()) {
         EmptyChartPlaceholder(modifier = modifier)
@@ -66,12 +117,14 @@ fun HrTimelineChart(
         HrTimelineChartContent(
             samples = samples,
             dayStartMs = dayStartMs,
+            dayEndMs = dayEndMs,
             zone1MinBpm = zone1MinBpm,
             zone1MaxBpm = zone1MaxBpm,
             zone2MaxBpm = zone2MaxBpm,
             zone3MaxBpm = zone3MaxBpm,
             zone4MaxBpm = zone4MaxBpm,
             modifier = modifier,
+            zoneId = zoneId,
         )
     }
 }
@@ -80,12 +133,14 @@ fun HrTimelineChart(
 private fun HrTimelineChartContent(
     samples: List<HrSample>,
     dayStartMs: Long,
+    dayEndMs: Long,
     zone1MinBpm: Int,
     zone1MaxBpm: Int,
     zone2MaxBpm: Int,
     zone3MaxBpm: Int,
     zone4MaxBpm: Int,
     modifier: Modifier = Modifier,
+    zoneId: ZoneId = ZoneId.systemDefault(),
 ) {
     // Pulsing animation for selected point highlight
     val infiniteTransition = rememberInfiniteTransition(label = "hrPulseTransition")
@@ -128,11 +183,30 @@ private fun HrTimelineChartContent(
             maxOf(samples.maxOf { it.bpm }, zone4MaxBpm) + 10
         }
 
-    var scaleX by remember { mutableStateOf(1f) }
-    var offsetX by remember { mutableStateOf(0f) }
+    val scale = remember(dayStartMs, dayEndMs) { DayTimelineScale(dayStartMs, dayEndMs) }
+
+    var scaleX by remember { mutableFloatStateOf(1f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
     var selectedSample by remember { mutableStateOf<HrSample?>(null) }
 
-    val segments = remember(samples) { splitIntoSegments(samples, GAP_THRESHOLD_MS) }
+    // Clear selected sample on date/data changes
+    LaunchedEffect(dayStartMs, samples) {
+        if (selectedSample != null && samples.none { it.timeMs == selectedSample?.timeMs }) {
+            selectedSample = null
+        }
+    }
+
+    // Reset zoom/pan on date change
+    LaunchedEffect(dayStartMs) {
+        scaleX = 1f
+        offsetX = 0f
+    }
+
+    val segments = remember(samples) { HrChartHelper.splitIntoSegments(samples, GAP_THRESHOLD_MS) }
+    val hourLabels =
+        remember(dayStartMs, dayEndMs, zoneId) {
+            HrChartHelper.generateHourLabels(dayStartMs, dayEndMs, zoneId)
+        }
     val yLabels =
         remember(zone1MinBpm, zone1MaxBpm, zone2MaxBpm, zone3MaxBpm, zone4MaxBpm) {
             listOf(zone1MinBpm, zone1MaxBpm, zone2MaxBpm, zone3MaxBpm, zone4MaxBpm)
@@ -143,28 +217,30 @@ private fun HrTimelineChartContent(
         val leftLabelWidthPx = with(density) { 36.dp.toPx() }
         val plotW = chartWidthPx - leftLabelWidthPx
 
-        fun minuteToX(minute: Int): Float = leftLabelWidthPx + minute / 1440f * plotW
+        fun timestampToX(timestampMs: Long): Float {
+            val frac = scale.fraction(timestampMs)
+            return leftLabelWidthPx + frac * plotW
+        }
 
-        fun zoomedX(minute: Int): Float = leftLabelWidthPx + (minuteToX(minute) - leftLabelWidthPx) * scaleX + offsetX
+        fun zoomedX(timestampMs: Long): Float =
+            leftLabelWidthPx + (timestampToX(timestampMs) - leftLabelWidthPx) * scaleX + offsetX
 
         val tooltipState =
-            remember(selectedSample, scaleX, offsetX, plotW) {
+            remember(selectedSample, scaleX, offsetX, plotW, scale, yMin, yMax, zoneId) {
                 val sample = selectedSample ?: return@remember null
-                val nearestMinute = ((sample.timeMs - dayStartMs) / 60_000L).toInt()
                 val bottomLabelHeightPx = with(density) { 20.dp.toPx() }
                 val canvasHeightPx = with(density) { 220.dp.toPx() }
-                val plotLeft = leftLabelWidthPx
                 val plotTop = 0f
                 val plotBottom = canvasHeightPx - bottomLabelHeightPx
                 val plotH = plotBottom - plotTop
 
-                val sampleX = zoomedX(nearestMinute)
+                val sampleX = zoomedX(sample.timeMs)
                 val sampleY = plotTop + (1f - (sample.bpm - yMin).toFloat() / (yMax - yMin).toFloat()) * plotH
 
                 val timeStr =
                     Instant
                         .ofEpochMilli(sample.timeMs)
-                        .atZone(ZoneId.systemDefault())
+                        .atZone(zoneId)
                         .format(hourFormatter)
 
                 DataPointTooltipData(
@@ -173,18 +249,74 @@ private fun HrTimelineChartContent(
                     offset = IntOffset(sampleX.roundToInt(), sampleY.roundToInt()),
                 )
             }
+        val prevActionLabel = stringResource(R.string.action_previous_point)
+        val nextActionLabel = stringResource(R.string.action_next_point)
+        val clearActionLabel = stringResource(R.string.action_clear_selection)
+
+        val customActionsList =
+            remember(selectedSample, samples) {
+                val list = mutableListOf<CustomAccessibilityAction>()
+                if (samples.isNotEmpty()) {
+                    list.add(
+                        CustomAccessibilityAction(prevActionLabel) {
+                            val currentIndex = samples.indexOfFirst { it.timeMs == selectedSample?.timeMs }
+                            selectedSample =
+                                if (currentIndex > 0) {
+                                    samples[currentIndex - 1]
+                                } else {
+                                    samples.last()
+                                }
+                            true
+                        },
+                    )
+                    list.add(
+                        CustomAccessibilityAction(nextActionLabel) {
+                            val currentIndex = samples.indexOfFirst { it.timeMs == selectedSample?.timeMs }
+                            selectedSample =
+                                if (currentIndex != -1 && currentIndex < samples.lastIndex) {
+                                    samples[currentIndex + 1]
+                                } else {
+                                    samples.first()
+                                }
+                            true
+                        },
+                    )
+                }
+                if (selectedSample != null) {
+                    list.add(
+                        CustomAccessibilityAction(clearActionLabel) {
+                            selectedSample = null
+                            true
+                        },
+                    )
+                }
+                list
+            }
+
+        val chartSummary = stringResource(R.string.chart_accessibility_rhr_summary)
+        val selectedValueDescription =
+            selectedSample?.let { sample ->
+                val timeStr = Instant.ofEpochMilli(sample.timeMs).atZone(zoneId).format(hourFormatter)
+                stringResource(R.string.chart_accessibility_selected_rhr, sample.bpm, timeStr)
+            } ?: stringResource(R.string.chart_accessibility_no_selection)
+
         Canvas(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .height(220.dp)
-                    .pointerInput(Unit) {
+                    .testTag("HrTimelineChartCanvas")
+                    .semantics {
+                        contentDescription = chartSummary
+                        stateDescription = selectedValueDescription
+                        customActions = customActionsList
+                    }.pointerInput(Unit) {
                         detectTransformGestures { centroid, pan, zoom, _ ->
                             scaleX = (scaleX * zoom).coerceIn(1f, 5f)
                             val maxOffset = (scaleX - 1f) * plotW
                             offsetX = (offsetX + pan.x).coerceIn(-maxOffset, 0f)
                         }
-                    }.pointerInput(samples, dayStartMs, scaleX, offsetX) {
+                    }.pointerInput(samples, dayStartMs, scaleX, offsetX, scale) {
                         detectTapGestures { tapOffset ->
                             val tappedZoomedX = tapOffset.x
                             val tappedUnscaledX =
@@ -198,11 +330,8 @@ private fun HrTimelineChartContent(
                             val plotRect = Rect(plotLeft, plotTop, plotRight, plotBottom)
                             if (!plotRect.contains(tapOffset)) return@detectTapGestures
 
-                            val tapMinuteOfDay =
-                                ((tappedUnscaledX - plotLeft) / plotW * 1440f)
-                                    .toInt()
-                                    .coerceIn(0, 1439)
-                            val tapMs = dayStartMs + tapMinuteOfDay * 60_000L
+                            val tapFrac = ((tappedUnscaledX - plotLeft) / plotW).coerceIn(0f, 1f)
+                            val tapMs = dayStartMs + (tapFrac * scale.durationMs).toLong()
 
                             val nearest =
                                 samples.minByOrNull { abs(it.timeMs - tapMs) } ?: return@detectTapGestures
@@ -247,8 +376,8 @@ private fun HrTimelineChartContent(
             }
 
             // Vertical grid lines at hour labels (zoomed and panned)
-            for (hour in HOUR_LABELS) {
-                val x = zoomedX(hour * 60)
+            for ((ts, _) in hourLabels) {
+                val x = zoomedX(ts)
                 if (x in plotLeft..plotRight) {
                     drawLine(
                         color = gridLineColor,
@@ -284,10 +413,9 @@ private fun HrTimelineChartContent(
             }
 
             // Draw x-axis hour labels (every 4 hours, zoomed and panned)
-            for (hour in HOUR_LABELS) {
-                val x = zoomedX(hour * 60)
+            for ((ts, label) in hourLabels) {
+                val x = zoomedX(ts)
                 if (x in plotLeft..plotRight) {
-                    val label = "%02d:00".format(hour)
                     val measured = textMeasurer.measure(label, labelStyle)
                     drawText(
                         textLayoutResult = measured,
@@ -304,8 +432,7 @@ private fun HrTimelineChartContent(
             clipRect(left = plotLeft, top = plotTop, right = plotRight, bottom = plotBottom) {
                 for (segment in segments) {
                     if (segment.size == 1) {
-                        val minute = ((segment[0].timeMs - dayStartMs) / 60_000L).toInt().coerceIn(0, 1439)
-                        val x = zoomedX(minute)
+                        val x = zoomedX(segment[0].timeMs)
                         drawCircle(
                             color = lineColor,
                             radius = 3.dp.toPx(),
@@ -314,8 +441,7 @@ private fun HrTimelineChartContent(
                     } else {
                         val path = Path()
                         segment.forEachIndexed { i, sample ->
-                            val minute = ((sample.timeMs - dayStartMs) / 60_000L).toInt().coerceIn(0, 1439)
-                            val x = zoomedX(minute)
+                            val x = zoomedX(sample.timeMs)
                             val y = bpmToY(sample.bpm)
                             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
                         }
@@ -335,8 +461,7 @@ private fun HrTimelineChartContent(
 
             // Draw vertical pointer line and pulsing selected point on tap
             if (selectedSample != null) {
-                val nearestMinute = ((selectedSample!!.timeMs - dayStartMs) / 60_000L).toInt()
-                val selectedX = zoomedX(nearestMinute)
+                val selectedX = zoomedX(selectedSample!!.timeMs)
                 val selectedY = bpmToY(selectedSample!!.bpm)
 
                 if (selectedX in plotLeft..plotRight) {
@@ -400,24 +525,7 @@ private fun DrawScope.drawZoneBand(
     }
 }
 
-private fun splitIntoSegments(
-    samples: List<HrSample>,
-    gapThresholdMs: Long,
-): List<List<HrSample>> {
-    if (samples.isEmpty()) return emptyList()
-    val segments = mutableListOf<MutableList<HrSample>>()
-    var current = mutableListOf(samples[0])
-    for (i in 1 until samples.size) {
-        if (samples[i].timeMs - samples[i - 1].timeMs > gapThresholdMs) {
-            segments.add(current)
-            current = mutableListOf(samples[i])
-        } else {
-            current.add(samples[i])
-        }
-    }
-    segments.add(current)
-    return segments
-}
+// HrChartHelper handles splitIntoSegments now
 
 @Composable
 fun HrSparkline(

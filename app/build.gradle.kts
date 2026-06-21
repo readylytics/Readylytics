@@ -1,11 +1,52 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
-import java.util.Locale
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+
+val releaseSigningEnvironmentVariables =
+    listOf(
+        "READYLYTICS_UPLOAD_STORE_FILE",
+        "READYLYTICS_UPLOAD_STORE_PASSWORD",
+        "READYLYTICS_UPLOAD_KEY_ALIAS",
+        "READYLYTICS_UPLOAD_KEY_PASSWORD",
+        "READYLYTICS_UPLOAD_CERT_SHA256",
+    )
+
+val releaseSigningEnvironmentValues =
+    releaseSigningEnvironmentVariables.associateWith {
+        providers
+            .environmentVariable(it)
+            .orNull
+            ?.trim()
+            .orEmpty()
+    }
+
+val releaseUploadSigningReady =
+    releaseSigningEnvironmentVariables
+        .dropLast(1)
+        .all { releaseSigningEnvironmentValues.getValue(it).isNotBlank() }
+
+abstract class VerifyReleaseSigningInputsTask : DefaultTask() {
+    @get:Input
+    abstract val signingInputs: MapProperty<String, String>
+
+    @TaskAction
+    fun verify() {
+        val missingVariables =
+            signingInputs
+                .get()
+                .filterValues(String::isBlank)
+                .keys
+                .sorted()
+        if (missingVariables.isNotEmpty()) {
+            throw GradleException(
+                "Missing required release signing environment variables: ${missingVariables.joinToString(", ")}",
+            )
+        }
+    }
+}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -21,54 +62,6 @@ plugins {
     id("jacoco")
 }
 
-abstract class JacocoCoverageVerificationTask : DefaultTask() {
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val reportFile: RegularFileProperty
-
-    @TaskAction
-    fun verifyCoverage() {
-        val report = reportFile.get().asFile
-        if (!report.exists()) {
-            throw GradleException("Coverage report not found: ${report.absolutePath}")
-        }
-        val xml = report.readText()
-        // Find the last INSTRUCTION counter element (bundle-level); handles any attribute order/whitespace
-        val counterElement =
-            Regex("<counter[^>]*type=\"INSTRUCTION\"[^>]*/>")
-                .findAll(xml)
-                .lastOrNull()
-                ?.value
-                ?: throw GradleException(
-                    "Could not parse coverage report (report size: ${xml.length} bytes)",
-                )
-        val missed =
-            Regex("missed=\"(\\d+)\"")
-                .find(counterElement)
-                ?.groupValues
-                ?.get(1)
-                ?.toLong()
-                ?: throw GradleException("Could not parse missed count from: $counterElement")
-        val covered =
-            Regex("covered=\"(\\d+)\"")
-                .find(counterElement)
-                ?.groupValues
-                ?.get(1)
-                ?.toLong()
-                ?: throw GradleException("Could not parse covered count from: $counterElement")
-        val total = missed + covered
-        val pct = if (total > 0) covered.toDouble() / total.toDouble() * 100.0 else 0.0
-        val formatted = String.format(Locale.US, "%.2f", pct)
-        println("Coverage: $formatted% ($covered/$total instructions)")
-        if (pct < 4.0) {
-            throw GradleException(
-                "Coverage gate FAILED: $formatted% < 4% minimum required.",
-            )
-        }
-        println("Coverage gate PASSED: $formatted% >= 4%")
-    }
-}
-
 kotlin {
     jvmToolchain(17)
     compilerOptions {
@@ -79,6 +72,15 @@ kotlin {
 android {
     namespace = "app.readylytics.health"
     compileSdk = 37
+
+    signingConfigs {
+        create("releaseUpload") {
+            storeFile = providers.environmentVariable("READYLYTICS_UPLOAD_STORE_FILE").map(::file).orNull
+            storePassword = providers.environmentVariable("READYLYTICS_UPLOAD_STORE_PASSWORD").orNull
+            keyAlias = providers.environmentVariable("READYLYTICS_UPLOAD_KEY_ALIAS").orNull
+            keyPassword = providers.environmentVariable("READYLYTICS_UPLOAD_KEY_PASSWORD").orNull
+        }
+    }
 
     defaultConfig {
         applicationId = "app.readylytics.health"
@@ -99,6 +101,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (releaseUploadSigningReady) {
+                signingConfig = signingConfigs.getByName("releaseUpload")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -118,8 +123,29 @@ android {
     }
     lint {
         abortOnError = true
-        warningsAsErrors = false
+        warningsAsErrors = true
         xmlReport = true
+        baseline = file("lint-baseline.xml")
+        disable += listOf("GradleDependency", "NewerVersionAvailable")
+    }
+}
+
+val verifyReleaseSigningInputs =
+    tasks.register<VerifyReleaseSigningInputsTask>("verifyReleaseSigningInputs") {
+        group = "verification"
+        description = "Fails release artifact tasks when required signing inputs are missing."
+        signingInputs.putAll(releaseSigningEnvironmentValues)
+    }
+
+listOf(
+    "assembleRelease",
+    "bundleRelease",
+    "packageRelease",
+    "packageReleaseBundle",
+    "signReleaseBundle",
+).forEach { taskName ->
+    tasks.matching { it.name == taskName }.configureEach {
+        dependsOn(verifyReleaseSigningInputs)
     }
 }
 
@@ -163,6 +189,8 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             "**/*_Impl*",
             "**/databinding/**",
             "**/di/**",
+            "**/*Proto*.*",
+            "**/*Serializer*.*",
         )
 
     // Search broadly across all known AGP output locations for compiled Kotlin/Java class files
@@ -170,6 +198,7 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         fileTree(layout.buildDirectory.get()) {
             include(
                 "tmp/kotlin-classes/debug/**/*.class",
+                "intermediates/classes/debug/**/*.class",
                 "intermediates/kotlinc/debug/**/*.class",
                 "intermediates/javac/debug/**/*.class",
             )
@@ -192,9 +221,13 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         }
     }
 
-    val mainSrc = "${project.projectDir}/src/main/java"
+    val mainSrc =
+        files(
+            "${project.projectDir}/src/main/java",
+            "${project.projectDir}/src/main/kotlin",
+        )
 
-    sourceDirectories.setFrom(files(mainSrc))
+    sourceDirectories.setFrom(mainSrc)
     classDirectories.setFrom(files(debugTree))
     executionData.setFrom(
         fileTree(layout.buildDirectory.get()) {
@@ -203,9 +236,117 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     )
 }
 
-tasks.register<JacocoCoverageVerificationTask>("jacocoCoverageVerification") {
+tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
     dependsOn("jacocoTestReport")
-    reportFile.set(layout.buildDirectory.file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml"))
+
+    val reportXmlFile = layout.buildDirectory.file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
+
+    val fileFilter =
+        listOf(
+            "**/R.class",
+            "**/R$*.class",
+            "**/BuildConfig.*",
+            "**/Manifest*.*",
+            "**/*Test*.*",
+            "android/**/*.*",
+            "**/hilt_aggregated_deps/**",
+            "**/*_HiltModules*",
+            "**/*_MembersInjector*",
+            "**/*Hilt_*",
+            "**/*_Factory*",
+            "**/Dagger*Component*.*",
+            "**/*ComposableSingletons*",
+            "**/*_Impl*",
+            "**/databinding/**",
+            "**/di/**",
+            "**/*Proto*.*",
+            "**/*Serializer*.*",
+        )
+
+    val debugTree =
+        fileTree(layout.buildDirectory.get()) {
+            include(
+                "tmp/kotlin-classes/debug/**/*.class",
+                "intermediates/classes/debug/**/*.class",
+                "intermediates/kotlinc/debug/**/*.class",
+                "intermediates/javac/debug/**/*.class",
+            )
+            fileFilter.forEach { exclude(it) }
+        }
+
+    val mainSrc =
+        files(
+            "${project.projectDir}/src/main/java",
+            "${project.projectDir}/src/main/kotlin",
+        )
+
+    executionData.setFrom(
+        fileTree(layout.buildDirectory.get()) {
+            include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
+        },
+    )
+    classDirectories.setFrom(files(debugTree))
+    sourceDirectories.setFrom(mainSrc)
+
+    violationRules {
+        rule {
+            limit {
+                counter = "INSTRUCTION"
+                value = "COVEREDRATIO"
+                minimum = 0.25.toBigDecimal()
+            }
+        }
+        rule {
+            element = "PACKAGE"
+            includes = listOf("app.readylytics.health.domain.scoring")
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = 0.80.toBigDecimal()
+            }
+        }
+        rule {
+            element = "PACKAGE"
+            includes = listOf("app.readylytics.health.domain.sync")
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = 0.70.toBigDecimal()
+            }
+        }
+        rule {
+            element = "PACKAGE"
+            includes = listOf("app.readylytics.health.workers")
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = 0.60.toBigDecimal()
+            }
+        }
+    }
+
+    doFirst {
+        val reportFile = reportXmlFile.get().asFile
+        if (!reportFile.exists()) {
+            throw GradleException("Coverage report XML not found at ${reportFile.absolutePath}")
+        }
+        val xml = reportFile.readText()
+        val requiredClasses =
+            listOf(
+                "app/readylytics/health/data/repository/ScoringRepositoryImpl",
+                "app/readylytics/health/domain/sync/HealthSyncUseCase",
+                "app/readylytics/health/workers/DataCleanupWorker",
+                "app/readylytics/health/ui/heartrate/HeartRateDetailViewModel",
+                "app/readylytics/health/ui/sleep/SleepViewModel",
+                "app/readylytics/health/ui/steps/StepDetailViewModel",
+            )
+        for (cls in requiredClasses) {
+            if (!xml.contains("name=\"$cls\"")) {
+                throw GradleException("Verification failed: Coverage report does not contain class $cls")
+            }
+        }
+        println("Coverage report contains all required classes.")
+    }
 }
 
 protobuf {
@@ -244,6 +385,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material3.adaptive.navigation)
+    implementation(libs.androidx.compose.material3.adaptive)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.material)
     implementation(libs.material.color.utilities)
@@ -287,9 +430,6 @@ dependencies {
     implementation(libs.vico.compose.m3)
 
     implementation(libs.play.services.oss.licenses)
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.kotlinx.serialization)
-    implementation(libs.okhttp)
 
     // WorkManager + Hilt integration
     implementation(libs.androidx.work.runtime.ktx)
@@ -303,7 +443,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(kotlin("test"))
-    testImplementation("com.lemonappdev:konsist:0.13.0")
+    testImplementation(libs.konsist)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)
@@ -320,9 +460,17 @@ dependencies {
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    androidTestImplementation("androidx.compose.ui:ui-test")
+    androidTestImplementation(libs.androidx.compose.ui.test)
     androidTestImplementation(libs.androidx.benchmark.macro)
     androidTestImplementation(libs.play.services.stats)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+tasks.withType<org.gradle.api.tasks.testing.Test> {
+    systemProperty("robolectric.coverage.enabled", "true")
+    configure<JacocoTaskExtension> {
+        isIncludeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+    }
 }

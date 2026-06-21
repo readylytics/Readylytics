@@ -1,6 +1,5 @@
 package app.readylytics.health.ui.settings.backup
 
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
@@ -43,6 +42,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import app.readylytics.health.R
 import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.domain.backup.BackupFileInfo
@@ -414,7 +414,7 @@ private fun BackupDirectoryItem(
         if (uiState.backupDirectory.isNullOrBlank()) {
             stringResource(R.string.backup_directory_default)
         } else {
-            Uri.parse(uiState.backupDirectory).path ?: uiState.backupDirectory
+            uiState.backupDirectory.toUri().path ?: uiState.backupDirectory
         }
 
     ListItem(

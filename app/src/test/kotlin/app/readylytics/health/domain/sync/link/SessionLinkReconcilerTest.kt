@@ -1,6 +1,7 @@
 package app.readylytics.health.domain.sync.link
 
 import app.readylytics.health.data.healthconnect.WorkoutMapper
+import app.readylytics.health.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
@@ -68,7 +69,7 @@ class SessionLinkReconcilerTest {
         coEvery { workoutDao.getOverlapping(any(), any()) } returns listOf(workoutSession)
         coEvery { workoutDao.getById("workout_1") } returns workoutSession
 
-        reconciler = SessionLinkReconciler(sleepSessionDao, workoutDao, heartRateDao, hrvDao, transactionRunner)
+        reconciler = SessionLinkReconcilerImpl(sleepSessionDao, workoutDao, heartRateDao, hrvDao, transactionRunner)
     }
 
     @Test

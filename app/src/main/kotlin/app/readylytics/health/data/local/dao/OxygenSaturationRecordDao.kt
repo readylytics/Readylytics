@@ -64,11 +64,41 @@ interface OxygenSaturationRecordDao {
     @Query("DELETE FROM oxygen_saturation_records WHERE timestampMs < :beforeMs")
     suspend fun deleteBeforeTimestamp(beforeMs: Long): Int
 
+    @Query("DELETE FROM oxygen_saturation_records WHERE id = :id")
+    suspend fun deleteById(id: String): Int
+
+    @Query("SELECT * FROM oxygen_saturation_records WHERE id = :id")
+    suspend fun getById(id: String): OxygenSaturationRecordEntity?
+
+    @Query(
+        "SELECT * FROM oxygen_saturation_records " +
+            "WHERE id = :sourceRecordId " +
+            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_' " +
+            "ORDER BY timestampMs ASC",
+    )
+    suspend fun getBySourceRecordId(sourceRecordId: String): List<OxygenSaturationRecordEntity>
+
+    @Query(
+        "DELETE FROM oxygen_saturation_records " +
+            "WHERE id = :sourceRecordId " +
+            "OR substr(id, 1, length(:sourceRecordId) + 1) = :sourceRecordId || '_'",
+    )
+    suspend fun deleteBySourceRecordId(sourceRecordId: String): Int
+
     @Query("SELECT COUNT(*) FROM oxygen_saturation_records")
     suspend fun count(): Int
 
     @Query("DELETE FROM oxygen_saturation_records")
     suspend fun deleteAll(): Int
+
+    @Query(
+        "DELETE FROM oxygen_saturation_records WHERE timestampMs >= :fromMs AND timestampMs < :toMs AND (deviceName != :deviceName OR deviceName IS NULL)",
+    )
+    suspend fun deleteRecordsNotMatchingDevice(
+        fromMs: Long,
+        toMs: Long,
+        deviceName: String,
+    ): Int
 
     @Query("SELECT MIN(timestampMs) FROM oxygen_saturation_records")
     fun observeEarliestSpo2Time(): Flow<Long?>

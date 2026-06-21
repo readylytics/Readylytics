@@ -10,6 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
@@ -20,7 +21,8 @@ import kotlin.test.assertFailsWith
 class ForegroundSyncControllerTest {
     private val settingsRepo = mockk<SettingsRepository>()
     private val syncUseCase = mockk<HealthSyncUseCase>()
-    private val controller = ForegroundSyncController(settingsRepo, syncUseCase)
+    private val workerScheduler = mockk<app.readylytics.health.workers.WorkerScheduler>(relaxed = true)
+    private val controller = ForegroundSyncController(settingsRepo, syncUseCase, dagger.Lazy { workerScheduler })
 
     @Test
     fun `evaluateAndSync should not run multiple syncs concurrently`() =
@@ -110,5 +112,130 @@ class ForegroundSyncControllerTest {
             assertFailsWith<CancellationException> {
                 controller.triggerDailySync()
             }
+        }
+
+    @Test
+    fun `evaluateAndSync should not run when sync preference is NEVER`() =
+        runTest {
+            val prefs = UserPreferences(syncPreference = SyncPreference.NEVER)
+            coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
+
+            controller.evaluateAndSync()
+
+            coVerify(exactly = 0) { syncUseCase.sync(any(), any()) }
+            coVerify(exactly = 0) { syncUseCase.catchUpSync(any()) }
+        }
+
+    @Test
+    fun `evaluateAndSync should sync when sync preference is BY_TIME and interval met`() =
+        runTest {
+            val lastSyncMs = System.currentTimeMillis() - 4 * 3600_000L // 4 hours ago
+            val prefs =
+                UserPreferences(
+                    syncPreference = SyncPreference.BY_TIME,
+                    syncIntervalHours = 2, // 2 hour interval
+                    lastSyncTimestamp = lastSyncMs,
+                )
+            coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
+            coEvery { syncUseCase.sync(any(), any()) } returns
+                app.readylytics.health.domain.model.Result
+                    .Success(Unit)
+
+            controller.evaluateAndSync()
+
+            coVerify(exactly = 1) { syncUseCase.sync(any(), any()) }
+        }
+
+    @Test
+    fun `evaluateAndSync should not sync when sync preference is BY_TIME and interval not met`() =
+        runTest {
+            val lastSyncMs = System.currentTimeMillis() - 1 * 3600_000L // 1 hour ago
+            val prefs =
+                UserPreferences(
+                    syncPreference = SyncPreference.BY_TIME,
+                    syncIntervalHours = 2, // 2 hour interval
+                    lastSyncTimestamp = lastSyncMs,
+                )
+            coEvery { settingsRepo.userPreferences } returns flowOf(prefs)
+
+            controller.evaluateAndSync()
+
+            coVerify(exactly = 0) { syncUseCase.sync(any(), any()) }
+        }
+
+    @Test
+    fun `triggerImmediateSync executes catchUpSync and propagates progress`() =
+        runTest {
+            coEvery { syncUseCase.catchUpSync(any()) } coAnswers {
+                val progress = firstArg<(Int, Int) -> Unit>()
+                progress(1, 5)
+                kotlinx.coroutines.yield()
+                app.readylytics.health.domain.model.Result
+                    .Success(Unit)
+            }
+
+            val observedProgresses = mutableListOf<RecalcProgress?>()
+            val job =
+                launch {
+                    controller.recalcProgress.collect { observedProgresses.add(it) }
+                }
+            runCurrent()
+
+            controller.triggerImmediateSync()
+            runCurrent()
+
+            val progressList = observedProgresses.filterNotNull()
+            kotlin.test.assertTrue(progressList.isNotEmpty())
+            kotlin.test.assertEquals(RecalcProgress(1, 5), progressList.first())
+
+            job.cancel()
+        }
+
+    @Test
+    fun `executeSync scheduling resync worker on REQUIRES_HISTORICAL_RESYNC result`() =
+        runTest {
+            coEvery { syncUseCase.sync(windowDays = 1, onProgress = any()) } returns
+                app.readylytics.health.domain.model.Result.Failure(
+                    reason = "Need full resync",
+                    code = "REQUIRES_HISTORICAL_RESYNC",
+                )
+
+            controller.triggerDailySync()
+
+            verify(exactly = 1) { workerScheduler.scheduleResyncWorker() }
+        }
+
+    @Test
+    fun `background recalculation flows publish correctly`() =
+        runTest {
+            var isSyncing = false
+            var progress: RecalcProgress? = null
+            var completedCount = 0
+
+            val job1 = launch { controller.isSyncing.collect { isSyncing = it } }
+            val job2 = launch { controller.recalcProgress.collect { progress = it } }
+            val job3 = launch { controller.syncCompletedEvent.collect { completedCount++ } }
+            runCurrent()
+
+            controller.onBackgroundRecalcStarted()
+            runCurrent()
+            kotlin.test.assertTrue(isSyncing)
+            kotlin.test.assertNull(progress)
+
+            controller.onBackgroundRecalcProgress(3, 10)
+            runCurrent()
+            kotlin.test.assertNotNull(progress)
+            kotlin.test.assertEquals(3, progress?.current)
+            kotlin.test.assertEquals(10, progress?.total)
+
+            controller.onBackgroundRecalcFinished(success = true)
+            runCurrent()
+            kotlin.test.assertFalse(isSyncing)
+            kotlin.test.assertNull(progress)
+            kotlin.test.assertEquals(1, completedCount)
+
+            job1.cancel()
+            job2.cancel()
+            job3.cancel()
         }
 }

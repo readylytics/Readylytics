@@ -4,7 +4,10 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.core.content.edit
 import androidx.sqlite.db.SupportSQLiteOpenHelper
+import app.readylytics.health.domain.util.logE
+import app.readylytics.health.domain.util.logW
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileInputStream
@@ -34,11 +37,9 @@ class SqlCipherKeyManager
             try {
                 System.loadLibrary("sqlcipher")
             } catch (e: UnsatisfiedLinkError) {
-                android.util.Log.w(
-                    "SqlCipherKeyManager",
-                    "Could not load 'sqlcipher' library via System.loadLibrary. This is expected in tests or if the library is loaded automatically.",
-                    e,
-                )
+                logW("SqlCipherKeyManager", e) {
+                    "Could not load sqlcipher library via System.loadLibrary"
+                }
             }
         }
 
@@ -168,11 +169,10 @@ class SqlCipherKeyManager
         }
 
         fun resetKeyAndDatabase(dbFile: File) {
-            prefs
-                .edit()
-                .remove(PREF_ENCRYPTED_KEY)
-                .remove(PREF_IV)
-                .commit()
+            prefs.edit {
+                remove(PREF_ENCRYPTED_KEY)
+                remove(PREF_IV)
+            }
             if (dbFile.exists()) {
                 dbFile.delete()
                 File("${dbFile.absolutePath}-wal").delete()
@@ -185,11 +185,9 @@ class SqlCipherKeyManager
                 try {
                     decryptKey()
                 } catch (e: Exception) {
-                    android.util.Log.e(
-                        "SqlCipherKeyManager",
-                        "Failed to decrypt database key. KeyStore key may have changed or data is corrupted.",
-                        e,
-                    )
+                    logE("SqlCipherKeyManager", e) {
+                        "Failed to decrypt database key. KeyStore key may have changed or data is corrupted."
+                    }
                     throw KeyDecryptionException("Database key decryption failed", e)
                 }
             } else {
@@ -239,11 +237,10 @@ class SqlCipherKeyManager
             val iv = cipher.iv
             val encryptedKey = cipher.doFinal(rawKey)
 
-            prefs
-                .edit()
-                .putString(PREF_ENCRYPTED_KEY, Base64.encodeToString(encryptedKey, Base64.NO_WRAP))
-                .putString(PREF_IV, Base64.encodeToString(iv, Base64.NO_WRAP))
-                .commit()
+            prefs.edit {
+                putString(PREF_ENCRYPTED_KEY, Base64.encodeToString(encryptedKey, Base64.NO_WRAP))
+                putString(PREF_IV, Base64.encodeToString(iv, Base64.NO_WRAP))
+            }
         }
 
         private fun decryptKey(): ByteArray {

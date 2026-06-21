@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.Uri
 import android.util.JsonReader
 import android.util.JsonToken
-import android.util.Log
 import androidx.room.withTransaction
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.entity.DailySummaryEntity
@@ -21,6 +20,7 @@ import app.readylytics.health.data.preferences.SyncPreferenceProto
 import app.readylytics.health.data.preferences.TrimpMethodProto
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.di.IoDispatcher
+import app.readylytics.health.domain.util.logW
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -376,7 +376,7 @@ class LocalRestoreManager
                     try {
                         syncPreference = SyncPreferenceProto.valueOf(it)
                     } catch (e: IllegalArgumentException) {
-                        Log.w("LocalRestoreManager", "Invalid SyncPreference: $it", e)
+                        logW("LocalRestoreManager", e) { "Ignoring invalid sync preference in backup settings" }
                     }
                 }
                 backup.syncIntervalHours?.let { syncIntervalHours = it }
@@ -448,7 +448,7 @@ class LocalRestoreManager
                     try {
                         appTheme = AppThemeProto.valueOf(it)
                     } catch (e: IllegalArgumentException) {
-                        Log.w("LocalRestoreManager", "Invalid AppTheme: $it", e)
+                        logW("LocalRestoreManager", e) { "Ignoring invalid app theme in backup settings" }
                     }
                 }
 
@@ -456,7 +456,7 @@ class LocalRestoreManager
                     try {
                         backupSchedule = BackupScheduleProto.valueOf(it)
                     } catch (e: IllegalArgumentException) {
-                        Log.w("LocalRestoreManager", "Invalid BackupSchedule: $it", e)
+                        logW("LocalRestoreManager", e) { "Ignoring invalid backup schedule in backup settings" }
                     }
                 }
 
@@ -478,7 +478,7 @@ class LocalRestoreManager
                     try {
                         physiologyProfile = PhysiologyProfileProto.valueOf(it)
                     } catch (e: IllegalArgumentException) {
-                        Log.w("LocalRestoreManager", "Invalid PhysiologyProfile: $it", e)
+                        logW("LocalRestoreManager", e) { "Ignoring invalid physiology profile in backup settings" }
                     }
                 }
 
@@ -493,7 +493,7 @@ class LocalRestoreManager
                     try {
                         trimpMethod = TrimpMethodProto.valueOf(it)
                     } catch (e: IllegalArgumentException) {
-                        Log.w("LocalRestoreManager", "Invalid TrimpModel: $it", e)
+                        logW("LocalRestoreManager", e) { "Ignoring invalid trimp model in backup settings" }
                     }
                 }
 

@@ -5,6 +5,8 @@ import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class DailySummaryMapperTest {
     @Test
@@ -40,5 +42,31 @@ class DailySummaryMapperTest {
                 .toEpochMilli(),
             entity.dateMidnightMs,
         )
+    }
+
+    @Test
+    fun toEntityPreservesCalibratingState() {
+        val scoringZone = ZoneId.of("Europe/Berlin")
+        val scoringDate = LocalDate.of(2026, 3, 29)
+        val domain = DailySummary(date = scoringDate, isCalibrating = true)
+
+        val entity = DailySummaryMapper.toEntity(domain, scoringZone)
+        val roundTrip = DailySummaryMapper.toDomain(entity, scoringZone)
+
+        assertTrue(entity.isCalibrating == true)
+        assertTrue(roundTrip.isCalibrating)
+    }
+
+    @Test
+    fun toEntityPreservesNonCalibratingState() {
+        val scoringZone = ZoneId.of("Europe/Berlin")
+        val scoringDate = LocalDate.of(2026, 3, 29)
+        val domain = DailySummary(date = scoringDate, isCalibrating = false)
+
+        val entity = DailySummaryMapper.toEntity(domain, scoringZone)
+        val roundTrip = DailySummaryMapper.toDomain(entity, scoringZone)
+
+        assertTrue(entity.isCalibrating == false)
+        assertFalse(roundTrip.isCalibrating)
     }
 }

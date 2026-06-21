@@ -43,6 +43,7 @@ fun BloodPressureSplitChart(
     diastolicPoints: List<DailyDataPoint>,
     rangeStartMs: Long,
     rangeDays: Int,
+    modifier: Modifier = Modifier,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
     zoomState: VicoZoomState =
         rememberVicoZoomState(
@@ -59,7 +60,6 @@ fun BloodPressureSplitChart(
                 },
         ),
     parentScrollInProgress: Boolean = false,
-    modifier: Modifier = Modifier,
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedDayOffset by remember { mutableStateOf<Int?>(null) }

@@ -1,7 +1,7 @@
 package app.readylytics.health.util
 
-import android.util.Log
-import app.readylytics.health.BuildConfig
+import app.readylytics.health.domain.util.logD
+import app.readylytics.health.domain.util.logE
 
 /**
  * Logging utility that prevents leakage of sensitive health data.
@@ -15,9 +15,7 @@ object SecureLogger {
      * Use descriptive messages instead of logging actual values.
      */
     fun debugEvent(event: String) {
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, event)
-        }
+        logD(TAG) { event }
     }
 
     /**
@@ -28,6 +26,6 @@ object SecureLogger {
         message: String,
         throwable: Throwable? = null,
     ) {
-        Log.e(TAG, message, throwable)
+        logE(TAG, throwable) { message }
     }
 }

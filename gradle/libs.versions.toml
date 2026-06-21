@@ -1,5 +1,7 @@
 [versions]
 agp = "9.2.1"
+konsist = "0.17.3"
+#noinspection NewerVersionAvailable
 kotlin = "2.3.21"
 ktlint = "14.2.0"
 ksp = "2.3.7"
@@ -20,13 +22,11 @@ healthConnect = "1.1.0"
 navigationCompose = "2.9.8"
 hiltNavigationCompose = "1.3.0"
 kotlinxSerialization = "1.11.0"
-vico = "3.2.2"
-retrofit = "3.0.0"
+vico = "3.2.3"
 splashscreen = "1.2.0"
 securityCrypto = "1.1.0"
 protobufPlugin = "0.10.0"
 workManager = "2.11.2"
-okhttp = "5.4.0"
 protobuf = "4.35.1"
 tink = "1.22.0"
 zip4j = "2.11.6"
@@ -42,6 +42,8 @@ playServicesOssLicenses = "17.5.1"
 ossLicensesPlugin = "0.12.0"
 appcompat = "1.7.1"
 materialColorUtilities = "4.1.1"
+#noinspection GradleDependency
+adaptive = "1.2.0"
 
 
 
@@ -55,6 +57,7 @@ androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecyc
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-test = { group = "androidx.compose.ui", name = "ui-test" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
@@ -67,6 +70,7 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
@@ -89,14 +93,11 @@ androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscree
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
 vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
-retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
-retrofit-kotlinx-serialization = { group = "com.squareup.retrofit2", name = "converter-kotlinx-serialization", version.ref = "retrofit" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
 hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltNavigationCompose" }
 hilt-work-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltNavigationCompose" }
 hilt-android-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hilt" }
-okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
@@ -106,6 +107,8 @@ androidx-test-runner = { group = "androidx.test", name = "runner", version.ref =
 google-tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 material = { group = "com.google.android.material", name = "material", version = "1.14.0" }
 material-color-utilities = { group = "com.materialkolor", name = "material-color-utilities", version.ref = "materialColorUtilities" }
+androidx-compose-material3-adaptive-navigation = { group = "androidx.compose.material3", name = "material3-adaptive-navigation-suite", version.ref = "adaptive" }
+androidx-compose-material3-adaptive = { group = "androidx.compose.material3.adaptive", name = "adaptive", version.ref = "adaptive" }
 
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 androidx-arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "archCore" }

@@ -1,10 +1,10 @@
 package app.readylytics.health.domain.service
 
-import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.BodyFatStatus
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.preferences.Gender
 
 /**
  * Pure-Kotlin facade for cross-metric health calculations.

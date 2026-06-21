@@ -125,7 +125,7 @@ fun buildCardDataMap(
         cardMap[CardId.INSIGHTS] = {
             var selectedInsightForDetails by remember { mutableStateOf<InsightType?>(null) }
             val context = LocalContext.current
-            val detailRepository = remember { InsightDetailRepository(context.resources) }
+            val detailRepository = remember(context) { InsightDetailRepository(context) }
             val detailContext =
                 remember(
                     uiState.summary,

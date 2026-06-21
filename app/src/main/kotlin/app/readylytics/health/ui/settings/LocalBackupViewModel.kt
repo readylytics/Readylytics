@@ -3,6 +3,7 @@ package app.readylytics.health.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.R
+import app.readylytics.health.data.backup.WrongBackupPasswordException
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.di.IoDispatcher
@@ -10,6 +11,7 @@ import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupService
 import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.backup.RestoreService
+import app.readylytics.health.domain.util.logE
 import app.readylytics.health.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -127,8 +129,9 @@ class LocalBackupViewModel
                                     it.copy(
                                         isRestoring = false,
                                         backupError =
-                                            e.message?.let { UiText.RawString(it) }
-                                                ?: UiText.StringRes(R.string.error_backup_restore_validation),
+                                            e.toBackupError(
+                                                defaultRes = R.string.error_backup_restore_validation,
+                                            ),
                                     )
                                 }
                             }
@@ -146,7 +149,10 @@ class LocalBackupViewModel
                                 transientState.update {
                                     it.copy(
                                         isRestoring = false,
-                                        backupError = result.cause.message?.let { UiText.RawString(it) },
+                                        backupError =
+                                            result.cause.toBackupError(
+                                                defaultRes = R.string.error_backup_restore_failed,
+                                            ),
                                     )
                                 }
                             }
@@ -170,8 +176,10 @@ class LocalBackupViewModel
                         backupService
                             .deleteBackup(event.file.location)
                             .onFailure { e ->
-                                android.util.Log.e("LocalBackupViewModel", "Failed to delete backup", e)
-                                transientState.update { it.copy(backupError = e.message?.let { UiText.RawString(it) }) }
+                                logE("LocalBackupViewModel", e) { "Failed to delete backup" }
+                                transientState.update {
+                                    it.copy(backupError = UiText.StringRes(R.string.error_backup_delete_failed))
+                                }
                             }
                         // Force refresh the list
                         transientState.update { it.copy(refreshTrigger = it.refreshTrigger + 1) }
@@ -200,7 +208,10 @@ class LocalBackupViewModel
                         backupService
                             .reencryptBackups(oldPassword, event.raw)
                             .onFailure { e ->
-                                android.util.Log.e("LocalBackupViewModel", "Re-encryption failed", e)
+                                logE("LocalBackupViewModel", e) { "Backup re-encryption failed" }
+                                transientState.update {
+                                    it.copy(backupError = UiText.StringRes(R.string.error_backup_reencrypt_failed))
+                                }
                             }
 
                         // 2. Update master password hash
@@ -248,14 +259,19 @@ class LocalBackupViewModel
                 }.onFailure { e ->
                     transientState.update {
                         it.copy(
-                            backupError =
-                                e.message?.let { UiText.RawString(it) }
-                                    ?: UiText.StringRes(R.string.error_backup_create_failed),
+                            backupError = e.toBackupError(defaultRes = R.string.error_backup_create_failed),
                         )
                     }
                 }
             transientState.update { it.copy(isBackingUp = false) }
         }
+
+        private fun Throwable.toBackupError(defaultRes: Int): UiText =
+            if (this is WrongBackupPasswordException) {
+                UiText.StringRes(R.string.error_backup_wrong_password)
+            } else {
+                UiText.StringRes(defaultRes)
+            }
 
         private data class TransientBackupState(
             val isBackingUp: Boolean = false,

@@ -1,5 +1,6 @@
 package app.readylytics.health.ui.insights
 
+import androidx.annotation.AnyRes
 import androidx.annotation.ArrayRes
 import androidx.annotation.StringRes
 import app.readylytics.health.R
@@ -11,7 +12,7 @@ data class InsightDetailResourceSpec(
     val id: InsightType,
     val type: InsightDetailType,
     @StringRes val titleRes: Int,
-    @StringRes val cardDescriptionRes: Int,
+    @AnyRes val cardDescriptionRes: Int,
     @StringRes val observedSignalTitleRes: Int,
     @StringRes val observedSignalRes: Int,
     @StringRes val meaningTitleRes: Int?,
@@ -44,7 +45,7 @@ data class InsightDetailResourceSpec(
                 physiology(
                     InsightType.CIRCADIAN_SHIFT_RECOVERY_MISS,
                     R.string.insight_circadian_shift_title,
-                    R.string.insight_circadian_shift_body,
+                    R.plurals.insight_circadian_shift_body,
                     R.string.insight_detail_circadian_shift_recovery_miss_observed,
                     InsightConfidence.MEDIUM,
                     R.array.insight_detail_circadian_shift_recovery_miss_causes,
@@ -56,7 +57,7 @@ data class InsightDetailResourceSpec(
                 physiology(
                     InsightType.HIGH_STRAIN_SLEEP_DEFICIT,
                     R.string.insight_high_strain_sleep_deficit_title,
-                    R.string.insight_high_strain_sleep_deficit_body,
+                    R.plurals.insight_high_strain_sleep_deficit_body,
                     R.string.insight_detail_high_strain_sleep_deficit_observed,
                     InsightConfidence.MEDIUM,
                     R.array.insight_detail_high_strain_sleep_deficit_causes,
@@ -68,7 +69,7 @@ data class InsightDetailResourceSpec(
                 physiology(
                     InsightType.HRV_DECLINE_STREAK,
                     R.string.insight_hrv_decline_streak_title,
-                    R.string.insight_hrv_decline_streak_body,
+                    R.plurals.insight_hrv_decline_streak_body,
                     R.string.insight_detail_hrv_decline_streak_observed,
                     InsightConfidence.MEDIUM,
                     R.array.insight_detail_hrv_decline_streak_causes,
@@ -117,7 +118,7 @@ data class InsightDetailResourceSpec(
                 physiology(
                     InsightType.LATE_NADIR_SHORT_SLEEP,
                     R.string.insight_late_nadir_short_sleep_title,
-                    R.string.insight_late_nadir_short_sleep_body,
+                    R.plurals.insight_late_nadir_short_sleep_body,
                     R.string.insight_detail_late_nadir_short_sleep_observed,
                     InsightConfidence.MEDIUM,
                     R.array.insight_detail_late_nadir_short_sleep_causes,
@@ -215,7 +216,7 @@ data class InsightDetailResourceSpec(
                 training(
                     InsightType.STEP_SHORTFALL,
                     R.string.insight_step_shortfall_title,
-                    R.string.insight_step_shortfall_body,
+                    R.plurals.insight_step_shortfall_body,
                     R.string.insight_detail_step_shortfall_observed,
                     R.array.insight_detail_step_shortfall_causes,
                     R.array.insight_detail_step_shortfall_recommendations,
@@ -271,7 +272,7 @@ data class InsightDetailResourceSpec(
         private fun physiology(
             id: InsightType,
             @StringRes title: Int,
-            @StringRes card: Int,
+            @AnyRes card: Int,
             @StringRes observed: Int,
             confidence: InsightConfidence,
             @ArrayRes causes: Int,
@@ -302,7 +303,7 @@ data class InsightDetailResourceSpec(
         private fun training(
             id: InsightType,
             @StringRes title: Int,
-            @StringRes card: Int,
+            @AnyRes card: Int,
             @StringRes observed: Int,
             @ArrayRes causes: Int,
             @ArrayRes recommendations: Int,
@@ -331,7 +332,7 @@ data class InsightDetailResourceSpec(
         private fun dataQuality(
             id: InsightType,
             @StringRes title: Int,
-            @StringRes card: Int,
+            @AnyRes card: Int,
             @StringRes missing: Int,
             @ArrayRes causes: Int,
             @ArrayRes recommendations: Int,

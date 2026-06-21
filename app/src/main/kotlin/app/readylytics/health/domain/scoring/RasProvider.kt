@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.scoring
 
-import app.readylytics.health.data.local.dao.DailySummaryDao
+import app.readylytics.health.domain.persistence.DailySummaryDao
 import app.readylytics.health.domain.util.toMidnightEpochMilli
 import java.time.LocalDate
 import javax.inject.Inject

@@ -48,4 +48,26 @@ class CleanArchTest {
             violations.isEmpty(),
         )
     }
+
+    @Test
+    fun `domain package does not import data package`() {
+        val violations =
+            Konsist
+                .scopeFromProject()
+                .files
+                .filter {
+                    it.hasPackage("app.readylytics.health.domain..") &&
+                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\"))
+                }.flatMap { file ->
+                    file.imports
+                        .filter { import ->
+                            import.name.startsWith("app.readylytics.health.data.")
+                        }.map { import -> "${file.name}: ${import.name}" }
+                }
+
+        org.junit.Assert.assertTrue(
+            "Domain layer must not import data package. Forbidden imports:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
 }

@@ -40,6 +40,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.toColorInt
 import app.readylytics.health.R
 import app.readylytics.health.data.preferences.FallbackThemeColor
 import app.readylytics.health.ui.theme.toHexCode
@@ -60,9 +61,9 @@ private fun parseHexColor(hex: String): Color? {
     val cleanHex = hex.trim().removePrefix("#")
     return try {
         if (cleanHex.length == 6) {
-            Color(android.graphics.Color.parseColor("#FF$cleanHex"))
+            Color("#FF$cleanHex".toColorInt())
         } else if (cleanHex.length == 8) {
-            Color(android.graphics.Color.parseColor("#$cleanHex"))
+            Color("#$cleanHex".toColorInt())
         } else {
             null
         }
