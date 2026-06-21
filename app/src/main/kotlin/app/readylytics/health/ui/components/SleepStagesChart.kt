@@ -35,6 +35,8 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -586,27 +588,46 @@ fun SleepStagesChart(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // X-axis time labels
-                Box(modifier = Modifier.width(chartWidth).height(24.dp)) {
-                    labelTimestamps.forEach { ts ->
-                        val fraction = (ts - session.startTime).toFloat() / sessionDurationMs
-                        Text(
-                            text = timeFormatter.format(Instant.ofEpochMilli(ts)),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = colorScheme.onSurfaceVariant,
-                            modifier =
-                                Modifier.layout { measurable, constraints ->
-                                    val placeable = measurable.measure(constraints)
-                                    layout(constraints.maxWidth, placeable.height) {
-                                        val x = (fraction * constraints.maxWidth).toInt()
-                                        val left =
-                                            (x - placeable.width / 2).coerceIn(
-                                                0,
-                                                constraints.maxWidth - placeable.width,
-                                            )
-                                        placeable.placeRelative(left, 0)
-                                    }
-                                },
-                        )
+                Layout(
+                    content = {
+                        labelTimestamps.forEach { ts ->
+                            Text(
+                                text = timeFormatter.format(Instant.ofEpochMilli(ts)),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                            )
+                        }
+                    },
+                    modifier = Modifier.width(chartWidth).height(24.dp),
+                ) { measurables, constraints ->
+                    val placeables = measurables.map { it.measure(constraints.copy(minWidth = 0)) }
+
+                    layout(constraints.maxWidth, constraints.maxHeight) {
+                        val totalWidth = constraints.maxWidth
+                        val spacingPx = 8.dp.toPx()
+
+                        val labelWidths = placeables.map { it.width }
+                        val acceptedIndices = resolveNonOverlappingLabels(
+                            labelTimestamps = labelTimestamps,
+                            startTime = session.startTime,
+                            sessionDurationMs = sessionDurationMs,
+                            totalWidthPx = totalWidth,
+                            labelWidthsPx = labelWidths,
+                            spacingPx = spacingPx
+                        ).toSet()
+
+                        placeables.forEachIndexed { index, placeable ->
+                            if (index in acceptedIndices) {
+                                val ts = labelTimestamps[index]
+                                val fraction = (ts - session.startTime).toFloat() / sessionDurationMs
+                                val centerX = fraction * totalWidth
+                                val left = (centerX - placeable.width / 2f)
+                                    .roundToInt()
+                                    .coerceIn(0, totalWidth - placeable.width)
+                                placeable.placeRelative(left, 0)
+                            }
+                        }
                     }
                 }
             }
