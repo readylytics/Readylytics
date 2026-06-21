@@ -624,7 +624,7 @@ fun SleepStagesChart(
                                 val left =
                                     (centerX - placeable.width / 2f)
                                         .roundToInt()
-                                        .coerceIn(0, totalWidth - placeable.width)
+                                        .coerceIn(0, maxOf(0, totalWidth - placeable.width))
                                 placeable.placeRelative(left, 0)
                             }
                         }
