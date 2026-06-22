@@ -205,9 +205,15 @@ fun DashboardScreen(
                 }
             } else {
                 item(key = "metric_grid") {
-                    ReorderableCardGrid(
-                        cardConfigurations = CardConfigurationsList(uiState.cardConfigurations),
-                        cardDataMap =
+                    // Memoize the card data map so it is only rebuilt when a field the cards
+                    // actually render changes. Keying on the single DashboardCardInputs holder
+                    // (instead of a multi-key vararg) avoids an Any?[] allocation per
+                    // recomposition while still excluding the high-frequency sync fields
+                    // (isRefreshing/recalcProgress) that previously forced ReorderableCardGrid
+                    // and every child card to recompose each frame during a resync.
+                    val cardInputs = uiState.cardInputs()
+                    val cardDataMap =
+                        remember(cardInputs) {
                             CardDataMap(
                                 buildCardDataMap(
                                     uiState = uiState,
@@ -226,7 +232,11 @@ fun DashboardScreen(
                                     onDismissInsight = onDismissInsight,
                                     onRestoreInsights = onRestoreInsights,
                                 ),
-                            ),
+                            )
+                        }
+                    ReorderableCardGrid(
+                        cardConfigurations = CardConfigurationsList(uiState.cardConfigurations),
+                        cardDataMap = cardDataMap,
                         isEditing = uiState.isManagingCards,
                         onCardRemove = { cardId ->
                             onCardVisibilityChanged(cardId, false)
