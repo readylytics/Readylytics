@@ -80,6 +80,7 @@ class SelectedDateRepository
                     date.coerceAtMost(today).let { d ->
                         if (earliest != null) d.coerceAtLeast(earliest) else d
                     }
+                lastKnownToday = today
             }
         }
 
@@ -99,7 +100,9 @@ class SelectedDateRepository
             dateMutex.withLock {
                 val today = LocalDate.now()
                 val previousToday = lastKnownToday
-                if (_selectedDate.value == previousToday && today.isAfter(previousToday)) {
+                if (_selectedDate.value == previousToday && today != previousToday) {
+                    _selectedDate.value = today
+                } else if (_selectedDate.value.isAfter(today)) {
                     _selectedDate.value = today
                 }
                 lastKnownToday = today
@@ -113,6 +116,7 @@ class SelectedDateRepository
                 if (earliest == null || candidate >= earliest) {
                     _selectedDate.value = candidate
                 }
+                lastKnownToday = LocalDate.now()
             }
         }
 
@@ -122,6 +126,7 @@ class SelectedDateRepository
                 if (_selectedDate.value < today) {
                     _selectedDate.value = _selectedDate.value.plusDays(1)
                 }
+                lastKnownToday = today
             }
         }
     }

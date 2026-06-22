@@ -8,6 +8,7 @@ import app.readylytics.health.domain.repository.PermissionStatus
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -106,5 +107,19 @@ class SyncViewModelTest {
         viewModel.onAppForeground()
         testDispatcher.scheduler.advanceUntilIdle()
         coVerify(exactly = 0) { selectedDateRepository.resetToToday() }
+    }
+
+    @Test
+    fun onAppForeground_advancesDateBeforeSyncWhenPermissionsGranted() {
+        viewModel.onPermissionsGranted()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onAppForeground()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerifyOrder {
+            selectedDateRepository.advanceTodayIfNeeded()
+            foregroundSyncController.evaluateAndSync()
+        }
     }
 }
