@@ -199,11 +199,25 @@ class CompositeScoringCalculator
             windowDays: Long,
         ): Float = rasStrategy.computeCtlEmaWithDecay(dailyTrimpByDate, rangeEnd, windowDays)
 
+        override fun computeCtlEmaSeries(
+            dailyTrimpByDate: Map<LocalDate, Float>,
+            rangeStart: LocalDate,
+            rangeEnd: LocalDate,
+            windowDays: Long,
+        ): Map<LocalDate, Float> = rasStrategy.computeCtlEmaSeries(dailyTrimpByDate, rangeStart, rangeEnd, windowDays)
+
         override fun computeAtlEmaWithDecay(
             dailyTrimpByDate: Map<LocalDate, Float>,
             rangeEnd: LocalDate,
             windowDays: Long,
         ): Float = rasStrategy.computeAtlEmaWithDecay(dailyTrimpByDate, rangeEnd, windowDays)
+
+        override fun computeAtlEmaSeries(
+            dailyTrimpByDate: Map<LocalDate, Float>,
+            rangeStart: LocalDate,
+            rangeEnd: LocalDate,
+            windowDays: Long,
+        ): Map<LocalDate, Float> = rasStrategy.computeAtlEmaSeries(dailyTrimpByDate, rangeStart, rangeEnd, windowDays)
 
         override fun validateNight(
             rmssdMs: Float?,

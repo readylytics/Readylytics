@@ -219,7 +219,7 @@ class ScoringRepositoryN1Test {
                         sessionId = "w1",
                     )
                 }
-            coEvery { heartRateDao.getByTimeRange(workout.startTime, workout.endTime) } returns samples
+            coEvery { heartRateDao.getByTimeRange(any(), any()) } returns samples
 
             val capturedSummaries = mutableListOf<DailySummaryEntity>()
             coEvery { dailySummaryDao.upsert(capture(capturedSummaries)) } returns Unit

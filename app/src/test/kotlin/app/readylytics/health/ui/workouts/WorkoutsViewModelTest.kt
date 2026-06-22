@@ -392,13 +392,14 @@ class WorkoutsViewModelTest {
                     .toInstant()
                     .toEpochMilli()
 
-            every { scoringCalculator.computeCtlEmaWithDecay(any(), today) } returns 10f
+            every { scoringCalculator.computeCtlEmaSeries(any(), any(), any()) } returns mapOf(today to 10f)
+            every { scoringCalculator.computeAtlEmaSeries(any(), any(), any()) } returns mapOf(today to 15f)
             every { scoringCalculator.computeStrainRatio(15f, 10f) } returns 1.5f
             every { scoringCalculator.computeStrainRatio(12f, 10f) } returns 1.2f
 
             // Distinguish atlWith and atlWithout calls
             every { scoringCalculator.computeAtlEmaWithDecay(match { it[today] == 0f }, today) } returns 12f
-            every { scoringCalculator.computeAtlEmaWithDecay(match { it[today] != 0f }, today) } returns 15f
+            every { scoringCalculator.computeCtlEmaWithDecay(match { it[today] == 0f }, today) } returns 10f
 
             viewModel = createViewModel()
             val collectJob = launch { viewModel.uiState.collect {} }

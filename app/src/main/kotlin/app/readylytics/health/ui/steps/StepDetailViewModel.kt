@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.util.toMidnightEpochMilli
@@ -12,7 +13,7 @@ import app.readylytics.health.ui.common.DailyDataPoint
 import app.readylytics.health.ui.common.TimeRange
 import app.readylytics.health.ui.common.padToRange
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -44,6 +45,7 @@ class StepDetailViewModel
         private val dailySummaryRepository: DailySummaryRepository,
         private val selectedDateRepository: SelectedDateRepository,
         private val settingsRepo: SettingsRepository,
+        @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
         val selectedRange: StateFlow<TimeRange> = _selectedRange.asStateFlow()
@@ -95,7 +97,7 @@ class StepDetailViewModel
                     }
                 }
                 // Keep the map/sort/padToRange transform off the (Main) collector context.
-                .flowOn(Dispatchers.Default)
+                .flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
