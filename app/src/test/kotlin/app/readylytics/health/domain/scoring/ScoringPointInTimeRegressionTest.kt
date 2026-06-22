@@ -406,7 +406,7 @@ class ScoringPointInTimeRegressionTest {
 
                 assertEquals(
                     targetDate
-                        .minusDays((ScoringConstants.CHRONIC_DAYS * 2).toLong())
+                        .minusDays(ScoringConstants.CHRONIC_DAYS * 2)
                         .atStartOfDay(zoneId)
                         .toInstant()
                         .toEpochMilli(),

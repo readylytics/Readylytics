@@ -40,6 +40,11 @@ class SelectedDateRepository
         private val _selectedDate = MutableStateFlow(LocalDate.now())
         val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
+        // Tracks what "today" was as of the last foreground check, so
+        // advanceTodayIfNeeded() can tell "passively viewing today" (selectedDate
+        // == lastKnownToday) apart from an explicit historical pick.
+        private var lastKnownToday: LocalDate = _selectedDate.value
+
         val earliestDate: StateFlow<LocalDate?> =
             combine(
                 dao.observeEarliestDateMs(),
@@ -75,12 +80,32 @@ class SelectedDateRepository
                     date.coerceAtMost(today).let { d ->
                         if (earliest != null) d.coerceAtLeast(earliest) else d
                     }
+                lastKnownToday = today
             }
         }
 
         suspend fun resetToToday() {
             dateMutex.withLock {
-                _selectedDate.value = LocalDate.now()
+                val today = LocalDate.now()
+                _selectedDate.value = today
+                lastKnownToday = today
+            }
+        }
+
+        // Called on app foreground. Advances to the new "today" only if the user
+        // was passively on the previously-known today and the calendar day has
+        // actually moved forward since the last check; an explicit historical
+        // selection is left untouched.
+        suspend fun advanceTodayIfNeeded() {
+            dateMutex.withLock {
+                val today = LocalDate.now()
+                val previousToday = lastKnownToday
+                if (_selectedDate.value == previousToday && today != previousToday) {
+                    _selectedDate.value = today
+                } else if (_selectedDate.value.isAfter(today)) {
+                    _selectedDate.value = today
+                }
+                lastKnownToday = today
             }
         }
 
@@ -91,6 +116,7 @@ class SelectedDateRepository
                 if (earliest == null || candidate >= earliest) {
                     _selectedDate.value = candidate
                 }
+                lastKnownToday = LocalDate.now()
             }
         }
 
@@ -100,6 +126,7 @@ class SelectedDateRepository
                 if (_selectedDate.value < today) {
                     _selectedDate.value = _selectedDate.value.plusDays(1)
                 }
+                lastKnownToday = today
             }
         }
     }

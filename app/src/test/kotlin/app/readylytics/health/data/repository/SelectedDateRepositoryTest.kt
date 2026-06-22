@@ -43,6 +43,35 @@ class SelectedDateRepositoryTest {
         }
 
     @Test
+    fun `advanceTodayIfNeeded does nothing when already on today and day unchanged`() =
+        runTest {
+            repository.advanceTodayIfNeeded()
+            assertEquals(LocalDate.now(), repository.selectedDate.value)
+        }
+
+    @Test
+    fun `advanceTodayIfNeeded leaves explicit past-date selection alone when day unchanged`() =
+        runTest {
+            val pastDate = LocalDate.now().minusDays(3)
+            repository.updateSelectedDate(pastDate)
+
+            repository.advanceTodayIfNeeded()
+
+            assertEquals(pastDate, repository.selectedDate.value)
+        }
+
+    @Test
+    fun `advanceTodayIfNeeded leaves explicit past-date selection alone across repeated foreground events`() =
+        runTest {
+            val pastDate = LocalDate.now().minusDays(2)
+            repository.updateSelectedDate(pastDate)
+
+            repeat(5) { repository.advanceTodayIfNeeded() }
+
+            assertEquals(pastDate, repository.selectedDate.value)
+        }
+
+    @Test
     fun `updateSelectedDate prevents future dates`() =
         runTest {
             val futureDate = LocalDate.now().plusDays(10)

@@ -16,6 +16,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -71,6 +72,7 @@ class StepDetailViewModelTest {
     fun tearDown() {
         if (::viewModel.isInitialized) {
             viewModel.viewModelScope.cancel()
+            testDispatcher.scheduler.advanceUntilIdle()
         }
         Dispatchers.resetMain()
     }

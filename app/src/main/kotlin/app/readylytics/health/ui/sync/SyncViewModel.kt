@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import javax.inject.Inject
 
 sealed interface SyncUiState {
@@ -109,34 +108,32 @@ class SyncViewModel
 
         fun onAppForeground() {
             foregroundCheckJob?.cancel()
-            viewModelScope.launch {
-                // Only reset to today if the system date has changed (past midnight)
-                if (selectedDateRepository.selectedDate.value != LocalDate.now()) {
-                    selectedDateRepository.resetToToday()
-                }
-            }
-            // onPermissionsGranted() sets SyncingCatchUp synchronously before launching
-            // its coroutine. If that already happened, skip the permission re-check.
-            // Samsung's getGrantedPermissions() returns stale Missing immediately after
-            // granting, so this prevents it from overwriting a valid grant result.
-            if (_uiState.value is SyncUiState.SyncingCatchUp) return
-            if (_uiState.value is SyncUiState.PermissionsGranted) {
-                viewModelScope.launch {
-                    try {
-                        foregroundSyncController.evaluateAndSync()
-                    } catch (e: HealthConnectPermissionRevokedException) {
-                        _uiState.update { SyncUiState.NeedsPermissions }
-                    } catch (e: Exception) {
-                        app.readylytics.health.domain.util.logE(
-                            "SyncViewModel",
-                            e,
-                        ) { "Foreground sync eval failed" }
-                    }
-                }
-                return
-            }
             foregroundCheckJob =
                 viewModelScope.launch {
+                    // Advances to the new "today" only if the user was passively on
+                    // today and the calendar day rolled over while backgrounded; an
+                    // explicit historical date pick is left untouched. Awaited before
+                    // any permission check / sync below so they never read a stale date.
+                    selectedDateRepository.advanceTodayIfNeeded()
+
+                    // onPermissionsGranted() sets SyncingCatchUp synchronously before launching
+                    // its coroutine. If that already happened, skip the permission re-check.
+                    // Samsung's getGrantedPermissions() returns stale Missing immediately after
+                    // granting, so this prevents it from overwriting a valid grant result.
+                    if (_uiState.value is SyncUiState.SyncingCatchUp) return@launch
+                    if (_uiState.value is SyncUiState.PermissionsGranted) {
+                        try {
+                            foregroundSyncController.evaluateAndSync()
+                        } catch (e: HealthConnectPermissionRevokedException) {
+                            _uiState.update { SyncUiState.NeedsPermissions }
+                        } catch (e: Exception) {
+                            app.readylytics.health.domain.util.logE(
+                                "SyncViewModel",
+                                e,
+                            ) { "Foreground sync eval failed" }
+                        }
+                        return@launch
+                    }
                     app.readylytics.health.domain.util.logD("SyncViewModel") {
                         "App foregrounded. Starting permission check..."
                     }

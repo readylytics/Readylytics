@@ -4,7 +4,11 @@ import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
+import app.readylytics.health.domain.repository.PermissionStatus
 import app.readylytics.health.domain.sync.ForegroundSyncController
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +38,7 @@ class SyncViewModelTest {
         hcRepo = mockk(relaxed = true)
         every { hcRepo.requiredPermissions } returns emptySet()
         every { hcRepo.allPermissions } returns emptySet()
+        coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Unavailable
 
         foregroundSyncController = mockk(relaxed = true)
         every { foregroundSyncController.syncCompletedEvent } returns MutableSharedFlow()
@@ -88,5 +93,33 @@ class SyncViewModelTest {
     @Test
     fun isSyncing_flowExists() {
         assertNotNull(viewModel.isSyncing)
+    }
+
+    @Test
+    fun onAppForeground_delegatesToAdvanceTodayIfNeeded() {
+        viewModel.onAppForeground()
+        testDispatcher.scheduler.advanceUntilIdle()
+        coVerify { selectedDateRepository.advanceTodayIfNeeded() }
+    }
+
+    @Test
+    fun onAppForeground_doesNotResetToTodayUnconditionally() {
+        viewModel.onAppForeground()
+        testDispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 0) { selectedDateRepository.resetToToday() }
+    }
+
+    @Test
+    fun onAppForeground_advancesDateBeforeSyncWhenPermissionsGranted() {
+        viewModel.onPermissionsGranted()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onAppForeground()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerifyOrder {
+            selectedDateRepository.advanceTodayIfNeeded()
+            foregroundSyncController.evaluateAndSync()
+        }
     }
 }
