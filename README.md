@@ -1,18 +1,28 @@
 # Health Recovery Dashboard
 
-[![CI](https://github.com/gregorlauritz/MyHealthStatus/actions/workflows/ci.yml/badge.svg)](https://github.com/gregorlauritz/MyHealthStatus/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-25%25%2B-brightgreen)](https://github.com/gregorlauritz/MyHealthStatus/actions/workflows/ci.yml)
+![Readylytics Logo](docs/assets/img/logo.png)
 
-An offline-first Android health and recovery dashboard that turns biometric data into actionable insights. Integrates with Android Health Connect to read sleep, heart rate, and workout data, then calculates three daily scores to answer: "How is your body doing today, and what should you do with that information?"
+[![GitHub stars](https://img.shields.io/github/stars/gregorlauritz/MyHealthStatus?style=social)](https://github.com/gregorlauritz/MyHealthStatus)
 
-## Three Core Scores
+An offline‑first Android app that turns health data from Android **Health Connect** into daily wellness scores.
 
-The app tracks three evidence-based metrics:
+**Key features**
 
-- **Sleep Score (0-100):** Quality of last night's sleep, combining duration (50%), sleep architecture—deep and REM sleep (25%)—and physiological recovery markers like HRV and resting heart rate (25%).
-- **Circadian Consistency (0-100):** Regularity of your sleep schedule. Measures how close bedtime and wake time stay to your median over the last 14 days.
-- **Readiness (0-100):** How prepared your body is for today's training load, based on the acute-to-chronic workload ratio (Strain Ratio) from workout TRIMP calculations.
+- Health Connect ingestion (sleep, HR, HRV, exercise)
+- Pure‑Kotlin scoring engine (no internet required)
+- Material 3 UI with dark mode & interactive Vico charts
+- Encrypted local backups
 
+🛠 **Getting Started**
+Prerequisites: Android 8.0+ device, Android Studio, Health Connect installed.
+
+```bash
+git clone https://github.com/gregorlauritz/MyHealthStatus.git
+cd MyHealthStatus
+./gradlew installDebug
+```
+
+More details, documentation, and the latest releases are on the [website](https://readylytics.com) and in the `docs/` folder.
 All three scores adapt to your physiological profile (Athlete, Active, or Sedentary) for fair, personalized interpretation.
 
 ## Key Features
@@ -56,6 +66,7 @@ All three scores adapt to your physiological profile (Athlete, Active, or Sedent
    ```
 
 5. Build and run:
+
    ```bash
    ./gradlew installDebug
    ```
@@ -116,9 +127,9 @@ app/src/main/
 
 ## Notes
 
-- **Offline First:** All calculations run locally. No internet required after syncing from Health Connect.
+- **Offline First:** All calculations run locally. No internet required for scoring engine.
 - **Calibration:** Scores are grayed out until at least 7 days of data is available for proper baseline calculation.
-- **Wellness, Not Medical:** Sleep stages and HRV are wearable estimates with measurement error. Scores are wellness indicators, not clinical diagnoses.
+- **Wellness, Not Medical:** All metrics are wearable estimates with measurement error. Scores are wellness indicators, not clinical diagnoses.
 - **Privacy:** All data is stored locally on your device. Local backups are encrypted and controlled by you. See [Privacy Policy](docs/privacy.md).
 
 ## License
