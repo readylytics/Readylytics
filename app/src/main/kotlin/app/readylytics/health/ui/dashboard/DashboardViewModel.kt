@@ -107,7 +107,8 @@ class DashboardViewModel
                         recalcProgress = realtimeState.recalcProgress,
                         isComputingMetrics = realtimeState.isSyncing && coreState.summary == null,
                     )
-                }.flowOn(Dispatchers.Default).stateIn(
+                }.flowOn(Dispatchers.Default)
+                .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
                     initialValue = DashboardUiState(),
