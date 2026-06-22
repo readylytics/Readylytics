@@ -195,33 +195,6 @@ fun createDashboardRealtimeStateFlow(
         DashboardRealtimeState(isSyncing = isSyncing, recalcProgress = recalcProgress)
     }
 
-/**
- * Combines all three dashboard input flows into a single aggregation.
- *
- * This is the single aggregation point where all three layers
- * (basic inputs, card state, realtime state) are combined.
- * Everything else is tested and validated separately.
- */
-fun combineDashboardInputs(
-    basicInputs: Flow<DashboardBasicInputs>,
-    cardState: Flow<DashboardCardState>,
-    realtimeState: Flow<DashboardRealtimeState>,
-): Flow<DashboardCombinedInputs> =
-    combine(basicInputs, cardState, realtimeState) { basic, card, realtime ->
-        DashboardCombinedInputs(basic, card, realtime)
-    }
-
-/**
- * Container for all combined inputs before final transformation.
- * Used internally during flow composition.
- */
-@Immutable
-data class DashboardCombinedInputs(
-    val basicInputs: DashboardBasicInputs,
-    val cardState: DashboardCardState,
-    val realtimeState: DashboardRealtimeState,
-)
-
 @OptIn(ExperimentalCoroutinesApi::class)
 fun createDashboardHrFlow(
     selectedDate: Flow<LocalDate>,

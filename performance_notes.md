@@ -46,3 +46,30 @@ deferred fix, and why it is off-limits.
 - **`ZoneBand` (`domain/model/HealthZone.kt`)** was *not* annotated `@Immutable`:
   it is pure-Kotlin domain (zero-Android-deps rule) and its fields are already
   stable primitives the Compose compiler auto-infers as stable.
+
+## Increment 2 — flow dedup: what was (and was NOT) done
+
+The original increment-2 idea was "add `distinctUntilChanged()` to combine inputs."
+Investigation showed most of that would be **dead code** in this codebase:
+
+- **Every Room DAO `observe*` flow already calls `.distinctUntilChanged()`**
+  (DailySummaryDao, HeartRateDao, HrvDao, SleepSessionDao, Weight/BodyFat/BP/SpO2,
+  Workout, InsightDismissal). So DB-backed flows only emit on genuine data changes.
+- **All detail-screen ViewModels** (`Step`, `HeartRate`, `Weight`, `BodyFat`,
+  `Vitals`, `Sleep`) feed their `combine` from a `MutableStateFlow` range + the
+  `selectedDate` `StateFlow`. `StateFlow` already dedupes by `equals`, so adding
+  `distinctUntilChanged()` on those inputs is a no-op. `stateIn` likewise dedupes
+  the downstream emission, so a trailing `distinctUntilChanged()` before `stateIn`
+  is also redundant. **No changes made to these VMs** — adding the calls would be
+  cargo-cult.
+
+The one place a real redundant **recomputation** survived all of the above was the
+**dashboard**: `createDashboardRealtimeStateFlow` (isSyncing / recalcProgress) was
+part of the same `combine` as the expensive transform, so every sync-progress tick
+during a historical resync re-ran `InsightEngine.evaluate` + `GetDashboardDataUseCase`
+even though the underlying summary/cards/insights were unchanged. Fixed by splitting
+`DashboardViewModel.uiState` into a heavy core flow (`basic`/`card`/`hr` →
+`transformToUiState`, guarded by `distinctUntilChanged()`) and a cheap realtime
+merge step that only `.copy()`s the three sync-dependent fields. Final `uiState`
+behaviour is identical; the heavy work no longer runs on realtime ticks. Removed the
+now-dead `DashboardCombinedInputs` / `combineDashboardInputs` helpers.

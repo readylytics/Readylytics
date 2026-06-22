@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -77,6 +78,11 @@ class DashboardViewModel
         val isManagingCards: StateFlow<Boolean> = cardManagementDelegate.isManagingCards
 
         val uiState: StateFlow<DashboardUiState> =
+            // The expensive transform (InsightEngine + GetDashboardDataUseCase) is driven only
+            // by the data flows (basic/card/hr). Realtime sync state is merged in afterwards via
+            // a cheap copy, so recalcProgress/isSyncing ticks during a resync no longer re-run
+            // insight evaluation and card building. distinctUntilChanged guards the derived core
+            // flow (a cold combine of multiple sources) against equal re-emissions.
             combine(
                 createDashboardBasicInputsFlow(
                     selectedDateRepository.selectedDate,
@@ -91,31 +97,31 @@ class DashboardViewModel
                     cardConfigRepository,
                     dailySummaryRepository,
                 ),
-                createDashboardRealtimeStateFlow(foregroundSyncController),
                 createDashboardHrFlow(selectedDateRepository.selectedDate, heartRateRepository),
-            ) { basicInputs, cardState, realtimeState, hrSummary ->
-                val combined =
-                    DashboardCombinedInputs(
-                        basicInputs = basicInputs,
-                        cardState = cardState,
-                        realtimeState = realtimeState,
+            ) { basicInputs, cardState, hrSummary ->
+                transformToUiState(basicInputs, cardState, basicInputs.selectedDate, hrSummary)
+            }.distinctUntilChanged()
+                .combine(createDashboardRealtimeStateFlow(foregroundSyncController)) { coreState, realtimeState ->
+                    coreState.copy(
+                        isRefreshing = realtimeState.isSyncing,
+                        recalcProgress = realtimeState.recalcProgress,
+                        isComputingMetrics = realtimeState.isSyncing && coreState.summary == null,
                     )
-                transformToUiState(combined, basicInputs.selectedDate, hrSummary)
-            }.flowOn(Dispatchers.Default).stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = DashboardUiState(),
-            )
+                }.flowOn(Dispatchers.Default).stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = DashboardUiState(),
+                )
 
+        // Builds everything that depends on persisted/derived data. Realtime sync fields
+        // (isRefreshing/recalcProgress/isComputingMetrics) are left at defaults here and
+        // filled in by the realtime merge step above.
         private fun transformToUiState(
-            combined: DashboardCombinedInputs,
+            basicInputs: DashboardBasicInputs,
+            cardState: DashboardCardState,
             selectedDate: LocalDate,
             hrSummary: HeartRateDaySummary? = null,
         ): DashboardUiState {
-            val basicInputs = combined.basicInputs
-            val cardState = combined.cardState
-            val realtimeState = combined.realtimeState
-
             val sessionSummary =
                 cardState.lastSleepSession?.let {
                     SleepSessionSummary(
@@ -174,9 +180,8 @@ class DashboardViewModel
                 lastSleepSession = sessionSummary,
                 cardConfigurations = cardState.pendingConfiguration ?: cardState.cardConfiguration,
                 isManagingCards = cardState.isManagingCards,
-                isRefreshing = realtimeState.isSyncing,
-                recalcProgress = realtimeState.recalcProgress,
-                isComputingMetrics = realtimeState.isSyncing && basicInputs.summary == null,
+                // isRefreshing / recalcProgress / isComputingMetrics are populated by the
+                // realtime merge step; left at defaults here.
                 isCalibrating = basicInputs.summary?.isCalibrating ?: false,
                 errorMessage = if (cardsResult.isFailure) "Failed to load dashboard data" else null,
                 heartRateDaySummary = hrSummary,
