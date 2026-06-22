@@ -1,5 +1,8 @@
 package app.readylytics.health.ui.common
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class DailyDataPoint(
     val dayOffset: Int,
     val value: Float?,
