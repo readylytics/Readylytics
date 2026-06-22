@@ -347,7 +347,7 @@ This document defines the user-facing details, signal meanings, possible causes,
 ## REST_DAY_NO_IMPACT
 
 - **Type**: `PHYSIOLOGY`
-- **Trigger**: Yesterday was a low-load day, but today's HRV did not clearly improve.
+- **Trigger**: Yesterday was a low-load day, today's HRV did not clearly improve, and today's HRV is not already in the optimal range.
 - **Card title**: No Clear Recovery Rebound Yet
 - **Card description**: After a light day, your HRV did not clearly rebound yet.
 - **Observed signal**: Yesterday was a low-load day, but today's HRV did not clearly improve.
@@ -372,7 +372,7 @@ This document defines the user-facing details, signal meanings, possible causes,
 ## REST_DAY_SUCCESS
 
 - **Type**: `PHYSIOLOGY`
-- **Trigger**: Yesterday was a low-load day and today's HRV improved.
+- **Trigger**: Yesterday was a low-load day, and either today's HRV rose significantly versus yesterday, or today's HRV newly reached the optimal range after not being optimal yesterday. If HRV was already optimal on both days with no significant further rise, no insight is shown.
 - **Card title**: Recovery Rebound
 - **Card description**: After a light day, your HRV improved, which may suggest a positive recovery response.
 - **Observed signal**: Yesterday was a low-load day and today's HRV improved.

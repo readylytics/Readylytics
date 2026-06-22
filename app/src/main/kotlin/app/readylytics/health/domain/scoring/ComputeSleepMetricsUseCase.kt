@@ -318,6 +318,13 @@ class ComputeSleepMetricsUseCase
                     val isCurrentRhrOptimal =
                         baselineRhrValue > 0f &&
                             currentNocturnalRhr.toFloat() / baselineRhrValue <= prefs.rhrOptimalThreshold
+                    val yesterdayHrvBaseline = prefs.hrvBaselineOverride ?: yesterdaySummary?.hrvMuMssd?.let { exp(it) }
+                    val isPreviousHrvOptimal =
+                        yesterdaySummary?.nocturnalHrv != null &&
+                            yesterdayHrvBaseline != null &&
+                            yesterdayHrvBaseline > 0f &&
+                            yesterdaySummary.nocturnalHrv.toFloat() / yesterdayHrvBaseline >=
+                            prefs.hrvOptimalThreshold
 
                     val recoveryFlags =
                         scoringCalculator.computeRecoveryFlags(
@@ -341,6 +348,7 @@ class ComputeSleepMetricsUseCase
                             hrvOptimalThreshold = prefs.hrvOptimalThreshold,
                             isCurrentHrvOptimal = isCurrentHrvOptimal,
                             isCurrentRhrOptimal = isCurrentRhrOptimal,
+                            isPreviousHrvOptimal = isPreviousHrvOptimal,
                         )
 
                     readinessScore =

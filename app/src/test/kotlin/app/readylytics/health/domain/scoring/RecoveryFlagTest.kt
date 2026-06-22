@@ -192,6 +192,7 @@ class RecoveryFlagTest {
         hrvOptimalThreshold: Float = 1.10f,
         isCurrentHrvOptimal: Boolean = false,
         isCurrentRhrOptimal: Boolean = true,
+        isPreviousHrvOptimal: Boolean = false,
     ) = calculator.computeRecoveryFlags(
         zLnHrv = 0f,
         zRhr = 0f,
@@ -209,6 +210,7 @@ class RecoveryFlagTest {
         hrvOptimalThreshold = hrvOptimalThreshold,
         isCurrentHrvOptimal = isCurrentHrvOptimal,
         isCurrentRhrOptimal = isCurrentRhrOptimal,
+        isPreviousHrvOptimal = isPreviousHrvOptimal,
     )
 
     @Test
@@ -251,6 +253,51 @@ class RecoveryFlagTest {
             )
         assertFalse(RecoveryFlag.REST_DAY_NO_IMPACT in result)
         assertTrue(RecoveryFlag.REST_DAY_SUCCESS in result)
+    }
+
+    @Test
+    fun `rest day success suppressed when already optimal both days and increase is not significant`() {
+        // currentHrv 51 is barely above yesterdayHrv 50 but well below the 1.10 target (55),
+        // and HRV was already optimal yesterday -- nothing meaningfully changed.
+        val result =
+            restDayFlags(
+                yesterdayTrimp = 5f,
+                yesterdayHrv = 50f,
+                currentHrv = 51f,
+                isCurrentHrvOptimal = true,
+                isPreviousHrvOptimal = true,
+            )
+        assertFalse(RecoveryFlag.REST_DAY_SUCCESS in result)
+        assertFalse(RecoveryFlag.REST_DAY_NO_IMPACT in result)
+    }
+
+    @Test
+    fun `rest day success fires when hrv newly becomes optimal`() {
+        val result =
+            restDayFlags(
+                yesterdayTrimp = 5f,
+                yesterdayHrv = 50f,
+                currentHrv = 51f,
+                isCurrentHrvOptimal = true,
+                isPreviousHrvOptimal = false,
+            )
+        assertTrue(RecoveryFlag.REST_DAY_SUCCESS in result)
+        assertFalse(RecoveryFlag.REST_DAY_NO_IMPACT in result)
+    }
+
+    @Test
+    fun `rest day success fires on significant increase even when already optimal`() {
+        // currentHrv 56 clears the 1.10 target (55) despite both days already being optimal.
+        val result =
+            restDayFlags(
+                yesterdayTrimp = 5f,
+                yesterdayHrv = 50f,
+                currentHrv = 56f,
+                isCurrentHrvOptimal = true,
+                isPreviousHrvOptimal = true,
+            )
+        assertTrue(RecoveryFlag.REST_DAY_SUCCESS in result)
+        assertFalse(RecoveryFlag.REST_DAY_NO_IMPACT in result)
     }
 
     @Test
