@@ -114,6 +114,7 @@ class LoadScoringStrategy
             hrvOptimalThreshold: Float = 1.0f,
             isCurrentHrvOptimal: Boolean = false,
             isCurrentRhrOptimal: Boolean = false,
+            isPreviousHrvOptimal: Boolean = false,
         ): Set<RecoveryFlag> {
             val flags = mutableSetOf<RecoveryFlag>()
             if (isCalibrating) flags += RecoveryFlag.CALIBRATING
@@ -165,11 +166,15 @@ class LoadScoringStrategy
             } else if (yesterdayTrimp != null && yesterdayTrimp < 10f) {
                 if (currentHrv != null && yesterdayHrv != null && yesterdayHrv > 0) {
                     val targetHrv = yesterdayHrv * hrvOptimalThreshold
-                    if (isCurrentHrvOptimal || currentHrv >= targetHrv) {
+                    val significantIncrease = currentHrv >= targetHrv
+                    val newlyOptimal = isCurrentHrvOptimal && !isPreviousHrvOptimal
+                    if (significantIncrease || newlyOptimal) {
                         flags.add(RecoveryFlag.REST_DAY_SUCCESS)
-                    } else {
+                    } else if (!isCurrentHrvOptimal) {
                         flags.add(RecoveryFlag.REST_DAY_NO_IMPACT)
                     }
+                    // else: HRV already optimal on both days with no significant further
+                    // rise — nothing changed, so no insight is surfaced either way.
                 }
             }
 

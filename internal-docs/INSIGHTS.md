@@ -219,7 +219,7 @@ Trigger:
 Generated when:
 - `RecoveryFlag.REST_DAY_NO_IMPACT` is present in today's recovery flags.
 - Where `RecoveryFlag.REST_DAY_NO_IMPACT` is triggered when:
-  `yesterdayTrimp` < `10.0f` AND `currentHrv` < `yesterdayHrv * hrvOptimalThreshold` (1.0f).
+  `yesterdayTrimp` < `10.0f` AND `currentHrv` < `yesterdayHrv * hrvOptimalThreshold` (1.10f default) AND `isCurrentHrvOptimal` is `false`.
 
 ---
 
@@ -234,8 +234,10 @@ Your dedicated rest day resulted in an optimal HRV rebound. [Note: The app appen
 Trigger:
 Generated when:
 - `RecoveryFlag.REST_DAY_SUCCESS` is present in today's recovery flags.
-- Where `RecoveryFlag.REST_DAY_SUCCESS` is triggered when:
-  `yesterdayTrimp` < `10.0f` AND `currentHrv` >= `yesterdayHrv * hrvOptimalThreshold` (1.0f).
+- Where `RecoveryFlag.REST_DAY_SUCCESS` is triggered when `yesterdayTrimp` < `10.0f` AND either:
+  - `currentHrv` >= `yesterdayHrv * hrvOptimalThreshold` (1.10f default) — a significant relative HRV increase, regardless of optimal status, OR
+  - `isCurrentHrvOptimal` is `true` AND `isPreviousHrvOptimal` is `false` — a genuine transition into the optimal HRV range.
+- Note: if `isCurrentHrvOptimal` is `true` but neither condition above holds (HRV was already optimal yesterday and today, with no significant further rise), **no insight is shown** — `RecoveryFlag.REST_DAY_NO_IMPACT` is also suppressed in this case, since nothing meaningfully changed.
 
 ---
 
