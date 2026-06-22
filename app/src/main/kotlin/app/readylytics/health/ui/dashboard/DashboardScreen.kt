@@ -205,42 +205,15 @@ fun DashboardScreen(
                 }
             } else {
                 item(key = "metric_grid") {
-                    // Memoize the card data map so it is only rebuilt when a field the
-                    // cards actually render changes. Keying on these specific fields (rather
-                    // than the whole uiState) means high-frequency, card-irrelevant updates
-                    // such as recalcProgress/isRefreshing ticks during a sync no longer
-                    // produce a brand-new CardDataMap, which previously forced
-                    // ReorderableCardGrid and every child card to recompose each frame.
+                    // Memoize the card data map so it is only rebuilt when a field the cards
+                    // actually render changes. Keying on the single DashboardCardInputs holder
+                    // (instead of a multi-key vararg) avoids an Any?[] allocation per
+                    // recomposition while still excluding the high-frequency sync fields
+                    // (isRefreshing/recalcProgress) that previously forced ReorderableCardGrid
+                    // and every child card to recompose each frame during a resync.
+                    val cardInputs = uiState.cardInputs()
                     val cardDataMap =
-                        remember(
-                            uiState.summary,
-                            uiState.cardDataMap,
-                            uiState.restingHrCard,
-                            uiState.circadianConsistency,
-                            uiState.heartRateDaySummary,
-                            uiState.stepCount,
-                            uiState.stepGoal,
-                            uiState.goalSleepHours,
-                            uiState.selectedDate,
-                            uiState.userPreferences,
-                            uiState.activeInsightTypes,
-                            uiState.currentInsight,
-                            uiState.currentInsightParams,
-                            uiState.dismissedInsightCount,
-                            uiState.yesterdaySleepScoreRounded,
-                            uiState.yesterdayReadiness,
-                            uiState.isManagingCards,
-                            uiState.isComputingMetrics,
-                            // Defensive keys: not currently read by buildCardDataMap, but included so
-                            // future card changes that consume them can't produce a stale grid. These
-                            // only change on genuine data updates, never on high-frequency sync ticks,
-                            // so the recomposition optimization is preserved.
-                            uiState.lastSleepSession,
-                            uiState.rasDailyBreakdown,
-                            uiState.isCalibrating,
-                            uiState.errorMessage,
-                            uiState.visibleInsightQueue,
-                        ) {
+                        remember(cardInputs) {
                             CardDataMap(
                                 buildCardDataMap(
                                     uiState = uiState,

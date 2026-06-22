@@ -356,6 +356,53 @@ data class DashboardUiState(
     val yesterdayReadiness: Float? = null,
 )
 
+/**
+ * The exact subset of [DashboardUiState] that `buildCardDataMap` reads. Used as a single
+ * `remember` key on the dashboard so the card map is rebuilt only when card-relevant content
+ * changes — never on high-frequency sync ticks (isRefreshing/recalcProgress), and without the
+ * per-recomposition `Any?[]` allocation a multi-key vararg `remember` would incur.
+ *
+ * Fields derivable from others are intentionally omitted: restingHrCard/stepCount/stepGoal/
+ * goalSleepHours are covered by cardDataMap/summary/userPreferences. heartRateDaySummary,
+ * circadianConsistency and the insight fields are kept because the cards read them directly and
+ * they are NOT part of the ViewModel-computed cardDataMap.
+ */
+@Immutable
+data class DashboardCardInputs(
+    val cardDataMap: Map<CardId, CardData>,
+    val summary: DailySummary?,
+    val circadianConsistency: CircadianConsistencyResult?,
+    val heartRateDaySummary: HeartRateDaySummary?,
+    val selectedDate: LocalDate,
+    val userPreferences: UserPreferences,
+    val activeInsightTypes: Set<InsightType>,
+    val currentInsight: InsightType?,
+    val currentInsightParams: InsightParams,
+    val dismissedInsightCount: Int,
+    val yesterdaySleepScoreRounded: Int?,
+    val yesterdayReadiness: Float?,
+    val isManagingCards: Boolean,
+    val isComputingMetrics: Boolean,
+)
+
+fun DashboardUiState.cardInputs(): DashboardCardInputs =
+    DashboardCardInputs(
+        cardDataMap = cardDataMap,
+        summary = summary,
+        circadianConsistency = circadianConsistency,
+        heartRateDaySummary = heartRateDaySummary,
+        selectedDate = selectedDate,
+        userPreferences = userPreferences,
+        activeInsightTypes = activeInsightTypes,
+        currentInsight = currentInsight,
+        currentInsightParams = currentInsightParams,
+        dismissedInsightCount = dismissedInsightCount,
+        yesterdaySleepScoreRounded = yesterdaySleepScoreRounded,
+        yesterdayReadiness = yesterdayReadiness,
+        isManagingCards = isManagingCards,
+        isComputingMetrics = isComputingMetrics,
+    )
+
 @Immutable
 data class CardData(
     val title: String,

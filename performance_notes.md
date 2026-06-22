@@ -112,3 +112,14 @@ Default), so it was not refactored.
   cost nothing on the hot path (they never change on sync ticks).
 - **MEDIUM** ×2 (`transformToUiState` redundant `selectedDate`): removed the parameter
   and derive `val selectedDate = basicInputs.selectedDate` inside the function.
+- **HIGH** (follow-up: 23-key `remember` vararg allocates an `Any?[]` per recomposition):
+  consolidated the keys into a single `@Immutable DashboardCardInputs` holder
+  (`DashboardUiState.cardInputs()`), so the memo uses the single-key `remember` overload
+  (one small object instead of a 23-element array) and is no longer a fragile key list.
+  The bot's suggested 3-key set (`cardDataMap`, `isManagingCards`, `isComputingMetrics`)
+  was **not** adopted because it is incorrect: `heartRateDaySummary`,
+  `circadianConsistency` and the insight fields are read directly by the cards and are
+  **not** part of the ViewModel-computed `cardDataMap` (not inputs to
+  `getDashboardDataUseCase`), so keying on `cardDataMap` alone would leave HR/circadian/
+  insight cards stale when only that data changes. Fields derivable from the holder's
+  members (restingHrCard, stepCount, stepGoal, goalSleepHours) are omitted.
