@@ -111,6 +111,15 @@ class RasScoringStrategy
                 }
                 return result
             }
+            if (dailyTrimpByDate.size == 1) {
+                val singleValue = dailyTrimpByDate.values.first()
+                var date = seriesStart
+                while (!date.isAfter(seriesEnd)) {
+                    result[date] = singleValue
+                    date = date.plusDays(1)
+                }
+                return result
+            }
 
             val earliestDataDate = dailyTrimpByDate.keys.minOrNull() ?: seriesEnd
             val defaultStart = seriesEnd.minusDays(windowDays - 1)

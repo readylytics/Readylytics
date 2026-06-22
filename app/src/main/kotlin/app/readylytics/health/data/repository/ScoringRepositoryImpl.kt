@@ -135,10 +135,16 @@ class ScoringRepositoryImpl
 
                 val workouts = workoutDao.getWorkoutsInRange(dayMidnightMs, nextDayMidnightMs)
                 val allDayExerciseHrSamples =
-                    heartRateDao
-                        .getByTimeRange(dayMidnightMs, nextDayMidnightMs)
-                        .filter { it.recordType == RecordType.EXERCISE.name }
-                        .sortedBy { it.timestampMs }
+                    if (workouts.isNotEmpty()) {
+                        val minStart = workouts.minOf { it.startTime }
+                        val maxEnd = workouts.maxOf { it.endTime }
+                        heartRateDao
+                            .getByTimeRange(minStart, maxEnd)
+                            .filter { it.recordType == RecordType.EXERCISE.name }
+                            .sortedBy { it.timestampMs }
+                    } else {
+                        emptyList()
+                    }
                 var dailyTrimpRaw = 0f
 
                 workouts.forEach { workout ->

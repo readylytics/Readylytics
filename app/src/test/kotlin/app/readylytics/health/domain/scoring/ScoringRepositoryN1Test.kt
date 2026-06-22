@@ -317,7 +317,7 @@ class ScoringRepositoryN1Test {
             // Two batch fetches: one for the everyday-HR load window (full day) and one for the
             // sleep-metrics wake-HR window. The key invariant is that no per-session getMinHrInRange
             // calls are used.
-            coVerify(exactly = 3) { heartRateDao.getByTimeRange(any(), any()) }
+            coVerify(exactly = 2) { heartRateDao.getByTimeRange(any(), any()) }
             coVerify(exactly = 0) { heartRateDao.getMinHrInRange(any(), any()) }
         }
 
