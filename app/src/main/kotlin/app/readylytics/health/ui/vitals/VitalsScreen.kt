@@ -287,7 +287,7 @@ fun VitalsScreen(
                             scrollState = chartScrollState,
                             zoomState = chartZoomState,
                             zoneBands = uiState.hrvZoneBands,
-                            parentScrollInProgress = scrollState.isScrollInProgress,
+                            parentScrollInProgress = { scrollState.isScrollInProgress },
                         )
                     }
                 },
@@ -321,7 +321,7 @@ fun VitalsScreen(
                             scrollState = chartScrollState,
                             zoomState = chartZoomState,
                             zoneBands = uiState.rhrZoneBands,
-                            parentScrollInProgress = scrollState.isScrollInProgress,
+                            parentScrollInProgress = { scrollState.isScrollInProgress },
                         )
                     }
                 },
@@ -359,7 +359,7 @@ fun VitalsScreen(
                             baselineDecimalPlaces = 0,
                             minYOverride = 90.0,
                             maxYOverride = 100.0,
-                            parentScrollInProgress = scrollState.isScrollInProgress,
+                            parentScrollInProgress = { scrollState.isScrollInProgress },
                         )
                     }
                 },

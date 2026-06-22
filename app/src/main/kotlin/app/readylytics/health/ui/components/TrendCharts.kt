@@ -96,7 +96,7 @@ fun TrendChart(
     zoneBands: List<ZoneBand>? = null,
     minYOverride: Double? = null,
     maxYOverride: Double? = null,
-    parentScrollInProgress: Boolean = false,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
@@ -117,13 +117,15 @@ fun TrendChart(
     }
 
     // Clear tooltip when the parent list scrolls vertically.
-    // We fire on BOTH true and false transitions:
-    //   true  → scroll started, clear immediately
-    //   false → scroll ended; clear again to invalidate any stale state that
-    //           slipped through while the frame was mid-scroll
-    LaunchedEffect(parentScrollInProgress) {
-        tooltipState = null
-        selectedPointOffset = null
+    // parentScrollInProgress is a deferred read: collecting it via snapshotFlow keeps the
+    // isScrollInProgress state subscription OUT of the parent's composition scope, so the
+    // chart no longer recomposes on every scroll start/stop. snapshotFlow conflates to
+    // distinct values, so this still fires on BOTH transitions (true → false → true).
+    LaunchedEffect(Unit) {
+        snapshotFlow { parentScrollInProgress() }.collect {
+            tooltipState = null
+            selectedPointOffset = null
+        }
     }
 
     val resolvedBaselineLabel = baselineLabel ?: stringResource(R.string.label_baseline)

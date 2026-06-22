@@ -175,7 +175,7 @@ fun StepDetailScreen(
                         baselineLabel = stringResource(R.string.label_goal),
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
-                        parentScrollInProgress = scrollState.isScrollInProgress,
+                        parentScrollInProgress = { scrollState.isScrollInProgress },
                     )
                 }
             }

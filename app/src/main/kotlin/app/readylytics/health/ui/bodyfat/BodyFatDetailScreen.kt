@@ -190,7 +190,7 @@ fun BodyFatDetailScreen(
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         zoneBands = bodyFatBands,
-                        parentScrollInProgress = scrollState.isScrollInProgress,
+                        parentScrollInProgress = { scrollState.isScrollInProgress },
                     )
                 }
             }
