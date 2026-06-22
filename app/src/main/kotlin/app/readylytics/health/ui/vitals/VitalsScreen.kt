@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -273,7 +274,7 @@ fun VitalsScreen(
                     val isCalibrating = uiState.latestSummary?.isCalibrating ?: false
                     TrendCard(
                         title = stringResource(R.string.label_hrv_rmssd),
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp).graphicsLayer { },
                     ) {
                         TrendChart(
                             points = uiState.dailyHrv,
@@ -286,7 +287,7 @@ fun VitalsScreen(
                             scrollState = chartScrollState,
                             zoomState = chartZoomState,
                             zoneBands = uiState.hrvZoneBands,
-                            parentScrollInProgress = scrollState.isScrollInProgress,
+                            parentScrollInProgress = { scrollState.isScrollInProgress },
                         )
                     }
                 },
@@ -307,7 +308,7 @@ fun VitalsScreen(
                     val isCalibrating = uiState.latestSummary?.isCalibrating ?: false
                     TrendCard(
                         title = stringResource(R.string.label_resting_heart_rate),
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp).graphicsLayer { },
                     ) {
                         TrendChart(
                             points = uiState.dailyRhr,
@@ -320,7 +321,7 @@ fun VitalsScreen(
                             scrollState = chartScrollState,
                             zoomState = chartZoomState,
                             zoneBands = uiState.rhrZoneBands,
-                            parentScrollInProgress = scrollState.isScrollInProgress,
+                            parentScrollInProgress = { scrollState.isScrollInProgress },
                         )
                     }
                 },
@@ -340,7 +341,7 @@ fun VitalsScreen(
                 content = {
                     TrendCard(
                         title = stringResource(R.string.label_oxygen_saturation),
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp).graphicsLayer { },
                     ) {
                         TrendChart(
                             points = uiState.dailySpo2,
@@ -358,7 +359,7 @@ fun VitalsScreen(
                             baselineDecimalPlaces = 0,
                             minYOverride = 90.0,
                             maxYOverride = 100.0,
-                            parentScrollInProgress = scrollState.isScrollInProgress,
+                            parentScrollInProgress = { scrollState.isScrollInProgress },
                         )
                     }
                 },

@@ -264,7 +264,7 @@ fun WeightDetailScreen(
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
                         zoneBands = weightBands,
-                        parentScrollInProgress = scrollState.isScrollInProgress,
+                        parentScrollInProgress = { scrollState.isScrollInProgress },
                     )
                 }
             }

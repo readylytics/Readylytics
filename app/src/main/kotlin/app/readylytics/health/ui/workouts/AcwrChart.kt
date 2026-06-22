@@ -15,6 +15,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -62,7 +63,7 @@ internal fun AcwrChartCard(
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
-    parentScrollInProgress: Boolean = false,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -101,7 +102,7 @@ private fun AcwrChart(
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
-    parentScrollInProgress: Boolean = false,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     // Selection state is keyed on the data inputs so it clears automatically when the
     // chart range or underlying data changes, preventing stale coordinates and values.
@@ -114,8 +115,11 @@ private fun AcwrChart(
             selectedState = null
         }
     }
-    LaunchedEffect(parentScrollInProgress) {
-        if (parentScrollInProgress) selectedState = null
+    val currentParentScrollInProgress by rememberUpdatedState(parentScrollInProgress)
+    LaunchedEffect(Unit) {
+        snapshotFlow { currentParentScrollInProgress() }.collect { inProgress ->
+            if (inProgress) selectedState = null
+        }
     }
 
     var layerBounds by remember { mutableStateOf<Rect?>(null) }

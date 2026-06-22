@@ -95,7 +95,7 @@ fun WorkoutDetailScreen(
         TrimpBreakdownChart(
             uiState.hrChartData,
             uiState.durationMinutes,
-            parentScrollInProgress = scrollState.isScrollInProgress,
+            parentScrollInProgress = { scrollState.isScrollInProgress },
         )
 
         WorkoutRecoverySection(uiState)

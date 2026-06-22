@@ -245,7 +245,7 @@ fun SleepScreen(
                 rangeStartMs = uiState.trendRangeStartMs,
                 scrollState = trendScrollState,
                 zoomState = trendZoomState,
-                parentScrollInProgress = scrollState.isScrollInProgress,
+                parentScrollInProgress = { scrollState.isScrollInProgress },
                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.medium),
             )
         }

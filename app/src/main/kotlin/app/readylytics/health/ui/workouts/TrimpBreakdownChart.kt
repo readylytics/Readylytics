@@ -16,7 +16,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -59,7 +61,7 @@ private const val TARGET_X_AXIS_LABELS = 6
 fun TrimpBreakdownChart(
     chartData: List<Pair<Double, Double>>,
     durationMinutes: Int,
-    parentScrollInProgress: Boolean = false,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -85,7 +87,7 @@ fun TrimpBreakdownChart(
 private fun HrChart(
     chartData: List<Pair<Double, Double>>,
     durationMinutes: Int,
-    parentScrollInProgress: Boolean = false,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
@@ -122,10 +124,13 @@ private fun HrChart(
     }
 
     // Clear tooltip when the parent list scrolls vertically
-    LaunchedEffect(parentScrollInProgress) {
-        if (parentScrollInProgress) {
-            tooltipState = null
-            selectedPointOffset = null
+    val currentParentScrollInProgress by rememberUpdatedState(parentScrollInProgress)
+    LaunchedEffect(Unit) {
+        snapshotFlow { currentParentScrollInProgress() }.collect { inProgress ->
+            if (inProgress) {
+                tooltipState = null
+                selectedPointOffset = null
+            }
         }
     }
 
