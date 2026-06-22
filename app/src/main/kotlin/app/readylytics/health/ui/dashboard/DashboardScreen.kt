@@ -205,9 +205,33 @@ fun DashboardScreen(
                 }
             } else {
                 item(key = "metric_grid") {
-                    ReorderableCardGrid(
-                        cardConfigurations = CardConfigurationsList(uiState.cardConfigurations),
-                        cardDataMap =
+                    // Memoize the card data map so it is only rebuilt when a field the
+                    // cards actually render changes. Keying on these specific fields (rather
+                    // than the whole uiState) means high-frequency, card-irrelevant updates
+                    // such as recalcProgress/isRefreshing ticks during a sync no longer
+                    // produce a brand-new CardDataMap, which previously forced
+                    // ReorderableCardGrid and every child card to recompose each frame.
+                    val cardDataMap =
+                        remember(
+                            uiState.summary,
+                            uiState.cardDataMap,
+                            uiState.restingHrCard,
+                            uiState.circadianConsistency,
+                            uiState.heartRateDaySummary,
+                            uiState.stepCount,
+                            uiState.stepGoal,
+                            uiState.goalSleepHours,
+                            uiState.selectedDate,
+                            uiState.userPreferences,
+                            uiState.activeInsightTypes,
+                            uiState.currentInsight,
+                            uiState.currentInsightParams,
+                            uiState.dismissedInsightCount,
+                            uiState.yesterdaySleepScoreRounded,
+                            uiState.yesterdayReadiness,
+                            uiState.isManagingCards,
+                            uiState.isComputingMetrics,
+                        ) {
                             CardDataMap(
                                 buildCardDataMap(
                                     uiState = uiState,
@@ -226,7 +250,11 @@ fun DashboardScreen(
                                     onDismissInsight = onDismissInsight,
                                     onRestoreInsights = onRestoreInsights,
                                 ),
-                            ),
+                            )
+                        }
+                    ReorderableCardGrid(
+                        cardConfigurations = CardConfigurationsList(uiState.cardConfigurations),
+                        cardDataMap = cardDataMap,
                         isEditing = uiState.isManagingCards,
                         onCardRemove = { cardId ->
                             onCardVisibilityChanged(cardId, false)
