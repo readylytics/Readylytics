@@ -4,7 +4,7 @@ title: Readylytics
 ---
 
 <section class="hero">
-  <img src="{{ '/assets/img/logo_slogan.png' | relative_url }}" alt="Readylytics Logo">
+  <img src="{{ '/assets/img/logo_slogan.png' | relative_url }}" alt="Readylytics Logo" width="100%">
   <p class="lead">
     Know your readiness, balance your training load, and optimize recovery
     with advanced health and performance analytics. Readylytics transforms
