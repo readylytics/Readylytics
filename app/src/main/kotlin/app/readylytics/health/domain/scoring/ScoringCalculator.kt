@@ -135,11 +135,25 @@ interface ScoringCalculator {
         windowDays: Long = ScoringConstants.CHRONIC_DAYS,
     ): Float
 
+    fun computeCtlEmaSeries(
+        dailyTrimpByDate: Map<LocalDate, Float>,
+        rangeStart: LocalDate,
+        rangeEnd: LocalDate,
+        windowDays: Long = ScoringConstants.CHRONIC_DAYS,
+    ): Map<LocalDate, Float>
+
     fun computeAtlEmaWithDecay(
         dailyTrimpByDate: Map<LocalDate, Float>,
         rangeEnd: LocalDate,
         windowDays: Long = ScoringConstants.ACUTE_DAYS,
     ): Float
+
+    fun computeAtlEmaSeries(
+        dailyTrimpByDate: Map<LocalDate, Float>,
+        rangeStart: LocalDate,
+        rangeEnd: LocalDate,
+        windowDays: Long = ScoringConstants.ACUTE_DAYS,
+    ): Map<LocalDate, Float>
 
     data class NightValidationResult(
         val rmssdValid: Boolean,

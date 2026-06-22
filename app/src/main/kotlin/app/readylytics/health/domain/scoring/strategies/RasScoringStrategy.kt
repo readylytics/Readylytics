@@ -53,11 +53,25 @@ class RasScoringStrategy
             windowDays: Long = ScoringConstants.CHRONIC_DAYS,
         ): Float = computeEmaWithDecay(dailyTrimpByDate, windowDays, rangeEnd)
 
+        fun computeCtlEmaSeries(
+            dailyTrimpByDate: Map<LocalDate, Float>,
+            rangeStart: LocalDate,
+            rangeEnd: LocalDate,
+            windowDays: Long = ScoringConstants.CHRONIC_DAYS,
+        ): Map<LocalDate, Float> = computeEmaSeries(dailyTrimpByDate, windowDays, rangeStart, rangeEnd)
+
         fun computeAtlEmaWithDecay(
             dailyTrimpByDate: Map<LocalDate, Float>,
             rangeEnd: LocalDate,
             windowDays: Long = ScoringConstants.ACUTE_DAYS,
         ): Float = computeEmaWithDecay(dailyTrimpByDate, windowDays, rangeEnd)
+
+        fun computeAtlEmaSeries(
+            dailyTrimpByDate: Map<LocalDate, Float>,
+            rangeStart: LocalDate,
+            rangeEnd: LocalDate,
+            windowDays: Long = ScoringConstants.ACUTE_DAYS,
+        ): Map<LocalDate, Float> = computeEmaSeries(dailyTrimpByDate, windowDays, rangeStart, rangeEnd)
 
         private fun computeEmaWithDecay(
             dailyTrimpByDate: Map<LocalDate, Float>,
@@ -80,5 +94,51 @@ class RasScoringStrategy
                 date = date.plusDays(1)
             }
             return ewma.toFloat()
+        }
+
+        private fun computeEmaSeries(
+            dailyTrimpByDate: Map<LocalDate, Float>,
+            windowDays: Long,
+            seriesStart: LocalDate,
+            seriesEnd: LocalDate,
+        ): Map<LocalDate, Float> {
+            val result = mutableMapOf<LocalDate, Float>()
+            if (dailyTrimpByDate.isEmpty()) {
+                var date = seriesStart
+                while (!date.isAfter(seriesEnd)) {
+                    result[date] = ScoringConstants.DEFAULT_FITNESS_LEVEL
+                    date = date.plusDays(1)
+                }
+                return result
+            }
+
+            val earliestDataDate = dailyTrimpByDate.keys.minOrNull() ?: seriesEnd
+            val defaultStart = seriesEnd.minusDays(windowDays - 1)
+            val calcStart = if (earliestDataDate.isBefore(defaultStart)) earliestDataDate else defaultStart
+
+            val alpha = 2.0 / (windowDays + 1)
+            var ewma = dailyTrimpByDate[calcStart]?.toDouble() ?: 0.0
+
+            if (!calcStart.isBefore(seriesStart) && !calcStart.isAfter(seriesEnd)) {
+                result[calcStart] = ewma.toFloat()
+            }
+
+            var date = calcStart.plusDays(1)
+            while (!date.isAfter(seriesEnd)) {
+                val trimp = dailyTrimpByDate[date]?.toDouble() ?: 0.0
+                ewma = trimp * alpha + ewma * (1.0 - alpha)
+                if (!date.isBefore(seriesStart)) {
+                    result[date] = ewma.toFloat()
+                }
+                date = date.plusDays(1)
+            }
+
+            var fillDate = seriesStart
+            while (fillDate.isBefore(calcStart) && !fillDate.isAfter(seriesEnd)) {
+                result[fillDate] = ScoringConstants.DEFAULT_FITNESS_LEVEL
+                fillDate = fillDate.plusDays(1)
+            }
+
+            return result
         }
     }

@@ -193,24 +193,21 @@ class WorkoutsViewModel
                                     it.startTime <
                                         selectedMidnightMs + TimeUnit.DAYS.toMillis(1)
                                 }
-                            val trimpByDay: Map<Long, Float> =
-                                trimpSummaries
-                                    .associate { summary ->
-                                        val dayMs =
-                                            summary.date
-                                                .atStartOfDay(zoneId)
-                                                .toInstant()
-                                                .toEpochMilli()
-                                        dayMs to
-                                            (LoadSourceSelector.selectTrimp(summary, prefs.strainLoadSourceMode) ?: 0f)
-                                    }
-
                             val trimpByDate: Map<LocalDate, Float> =
-                                trimpSummaries
-                                    .associate { summary ->
-                                        summary.date to
-                                            (LoadSourceSelector.selectTrimp(summary, prefs.strainLoadSourceMode) ?: 0f)
-                                    }
+                                trimpSummaries.associate { summary ->
+                                    summary.date to
+                                        (LoadSourceSelector.selectTrimp(summary, prefs.strainLoadSourceMode) ?: 0f)
+                                }
+
+                            val trimpByDay: Map<Long, Float> =
+                                trimpSummaries.associate { summary ->
+                                    val dayMs =
+                                        summary.date
+                                            .atStartOfDay(zoneId)
+                                            .toInstant()
+                                            .toEpochMilli()
+                                    dayMs to (trimpByDate[summary.date] ?: 0f)
+                                }
 
                             val displayDayMidnights =
                                 buildList<Long> {
@@ -221,6 +218,25 @@ class WorkoutsViewModel
                                         current = current.plusDays(1)
                                     }
                                 }
+
+                            val displayStartDayDate =
+                                Instant
+                                    .ofEpochMilli(
+                                        displayStartDayMs,
+                                    ).atZone(zoneId)
+                                    .toLocalDate()
+                            val ctlSeries =
+                                scoringCalculator.computeCtlEmaSeries(
+                                    trimpByDate,
+                                    displayStartDayDate,
+                                    date,
+                                )
+                            val atlSeries =
+                                scoringCalculator.computeAtlEmaSeries(
+                                    trimpByDate,
+                                    displayStartDayDate,
+                                    date,
+                                )
 
                             val dailyTrimp = mutableListOf<DailyDataPoint>()
                             val dailyStrainRatio = mutableListOf<DailyDataPoint>()
@@ -252,16 +268,8 @@ class WorkoutsViewModel
 
                                 val sr =
                                     if (dataTenureDays >= 7) {
-                                        val ctl =
-                                            scoringCalculator.computeCtlEmaWithDecay(
-                                                trimpByDate,
-                                                currentDayDate,
-                                            )
-                                        val atl =
-                                            scoringCalculator.computeAtlEmaWithDecay(
-                                                trimpByDate,
-                                                currentDayDate,
-                                            )
+                                        val ctl = ctlSeries[currentDayDate] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
+                                        val atl = atlSeries[currentDayDate] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
                                         scoringCalculator.computeStrainRatio(atl, ctl)
                                     } else {
                                         null
@@ -337,8 +345,8 @@ class WorkoutsViewModel
                             val todayStrainIncrease =
                                 if (dataTenureDaysForDate >= 7) {
                                     val trimpByDateWithout = trimpByDate.toMutableMap().apply { put(date, 0f) }
-                                    val ctlWith = scoringCalculator.computeCtlEmaWithDecay(trimpByDate, date)
-                                    val atlWith = scoringCalculator.computeAtlEmaWithDecay(trimpByDate, date)
+                                    val ctlWith = ctlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
+                                    val atlWith = atlSeries[date] ?: ScoringConstants.DEFAULT_FITNESS_LEVEL
                                     val srWith = scoringCalculator.computeStrainRatio(atlWith, ctlWith)
 
                                     val ctlWithout = scoringCalculator.computeCtlEmaWithDecay(trimpByDateWithout, date)

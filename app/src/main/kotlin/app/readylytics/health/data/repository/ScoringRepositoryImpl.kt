@@ -134,14 +134,16 @@ class ScoringRepositoryImpl
                 logD("ScoringRepository") { "RAS CALC START [$targetDate]" }
 
                 val workouts = workoutDao.getWorkoutsInRange(dayMidnightMs, nextDayMidnightMs)
+                val allDayExerciseHrSamples =
+                    heartRateDao
+                        .getByTimeRange(dayMidnightMs, nextDayMidnightMs)
+                        .filter { it.recordType == RecordType.EXERCISE.name }
+                        .sortedBy { it.timestampMs }
                 var dailyTrimpRaw = 0f
 
                 workouts.forEach { workout ->
                     val workoutHrSamples =
-                        heartRateDao
-                            .getByTimeRange(workout.startTime, workout.endTime)
-                            .filter { it.recordType == RecordType.EXERCISE.name }
-                            .sortedBy { it.timestampMs }
+                        allDayExerciseHrSamples.filter { it.timestampMs in workout.startTime..workout.endTime }
 
                     val workoutAvgHr =
                         workoutHrSamples
