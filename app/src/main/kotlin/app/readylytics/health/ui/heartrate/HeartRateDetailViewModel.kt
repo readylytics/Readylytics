@@ -4,11 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.heartrate.HrZoneClassifier
 import app.readylytics.health.domain.repository.HeartRateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +32,7 @@ class HeartRateDetailViewModel
         private val settingsRepository: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
         private val clock: Clock,
+        @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState: StateFlow<HeartRateDetailUiState> =
@@ -93,7 +95,7 @@ class HeartRateDetailViewModel
                 }
                 // Per-sample zone classification + zone-total aggregation can span hundreds of
                 // samples; run it on Default so it never executes in the (Main) collector context.
-                .flowOn(Dispatchers.Default)
+                .flowOn(defaultDispatcher)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5_000),
