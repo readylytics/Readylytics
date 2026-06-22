@@ -77,7 +77,7 @@ fun WorkoutStatsSection(
                     }
                 },
         ),
-    parentScrollInProgress: Boolean = false,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     Column(modifier = modifier) {
         CardLoader(

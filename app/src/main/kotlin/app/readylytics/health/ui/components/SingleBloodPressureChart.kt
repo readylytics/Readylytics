@@ -82,7 +82,7 @@ fun SingleBloodPressureChart(
     externalSelectedDayOffset: Int? = null,
     externalSelectedCanvasX: Float? = null,
     showTooltip: Boolean = true,
-    parentScrollInProgress: Boolean = false,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
@@ -108,9 +108,11 @@ fun SingleBloodPressureChart(
     // Clear tooltip when the parent list scrolls vertically.
     // Fires on both true (scroll started) and false (scroll ended) to
     // eliminate stale tooltip state that slips through mid-scroll recompositions.
-    LaunchedEffect(parentScrollInProgress) {
-        tooltipState = null
-        selectedPointOffset = null
+    LaunchedEffect(Unit) {
+        snapshotFlow { parentScrollInProgress() }.collect {
+            tooltipState = null
+            selectedPointOffset = null
+        }
     }
 
     if (points.none { it.value != null }) {

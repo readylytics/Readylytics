@@ -62,7 +62,7 @@ internal fun AcwrChartCard(
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
-    parentScrollInProgress: Boolean = false,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -101,7 +101,7 @@ private fun AcwrChart(
     scrollState: VicoScrollState,
     zoomState: VicoZoomState,
     modifier: Modifier = Modifier,
-    parentScrollInProgress: Boolean = false,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     // Selection state is keyed on the data inputs so it clears automatically when the
     // chart range or underlying data changes, preventing stale coordinates and values.
@@ -114,8 +114,10 @@ private fun AcwrChart(
             selectedState = null
         }
     }
-    LaunchedEffect(parentScrollInProgress) {
-        if (parentScrollInProgress) selectedState = null
+    LaunchedEffect(Unit) {
+        snapshotFlow { parentScrollInProgress() }.collect { inProgress ->
+            if (inProgress) selectedState = null
+        }
     }
 
     var layerBounds by remember { mutableStateOf<Rect?>(null) }

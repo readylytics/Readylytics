@@ -213,7 +213,7 @@ fun BloodPressureDetailScreen(
                         rangeDays = uiState.selectedRange.days,
                         scrollState = chartScrollState,
                         zoomState = chartZoomState,
-                        parentScrollInProgress = scrollState.isScrollInProgress,
+                        parentScrollInProgress = { scrollState.isScrollInProgress },
                     )
                 }
             }

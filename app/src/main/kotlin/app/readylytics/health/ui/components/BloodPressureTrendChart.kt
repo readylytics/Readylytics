@@ -74,7 +74,7 @@ fun BloodPressureTrendChart(
                     }
                 },
         ),
-    parentScrollInProgress: Boolean = false,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedPointOffset by remember { mutableStateOf<Offset?>(null) }
@@ -95,9 +95,11 @@ fun BloodPressureTrendChart(
 
     // Clear tooltip when the parent list scrolls vertically.
     // Fire on both transitions to eliminate stale tooltip state at scroll-end.
-    LaunchedEffect(parentScrollInProgress) {
-        tooltipState = null
-        selectedPointOffset = null
+    LaunchedEffect(Unit) {
+        snapshotFlow { parentScrollInProgress() }.collect {
+            tooltipState = null
+            selectedPointOffset = null
+        }
     }
 
     if (systolicPoints.none { it.value != null } || diastolicPoints.none { it.value != null }) {

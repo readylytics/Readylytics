@@ -59,7 +59,7 @@ fun BloodPressureSplitChart(
                     }
                 },
         ),
-    parentScrollInProgress: Boolean = false,
+    parentScrollInProgress: () -> Boolean = { false },
 ) {
     var tooltipState by remember { mutableStateOf<DataPointTooltipData?>(null) }
     var selectedDayOffset by remember { mutableStateOf<Int?>(null) }
@@ -87,10 +87,12 @@ fun BloodPressureSplitChart(
 
     // Clear tooltip on vertical scroll — fires on both start (true) and end (false)
     // to eliminate any stale state that slips through mid-scroll recompositions.
-    LaunchedEffect(parentScrollInProgress) {
-        tooltipState = null
-        selectedDayOffset = null
-        selectedCanvasX = null
+    LaunchedEffect(Unit) {
+        snapshotFlow { parentScrollInProgress() }.collect {
+            tooltipState = null
+            selectedDayOffset = null
+            selectedCanvasX = null
+        }
     }
 
     // Early‑exit placeholder when no data
