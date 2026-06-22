@@ -231,6 +231,15 @@ fun DashboardScreen(
                             uiState.yesterdayReadiness,
                             uiState.isManagingCards,
                             uiState.isComputingMetrics,
+                            // Defensive keys: not currently read by buildCardDataMap, but included so
+                            // future card changes that consume them can't produce a stale grid. These
+                            // only change on genuine data updates, never on high-frequency sync ticks,
+                            // so the recomposition optimization is preserved.
+                            uiState.lastSleepSession,
+                            uiState.rasDailyBreakdown,
+                            uiState.isCalibrating,
+                            uiState.errorMessage,
+                            uiState.visibleInsightQueue,
                         ) {
                             CardDataMap(
                                 buildCardDataMap(

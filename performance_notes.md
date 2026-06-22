@@ -73,3 +73,42 @@ even though the underlying summary/cards/insights were unchanged. Fixed by split
 merge step that only `.copy()`s the three sync-dependent fields. Final `uiState`
 behaviour is identical; the heavy work no longer runs on realtime ticks. Removed the
 now-dead `DashboardCombinedInputs` / `combineDashboardInputs` helpers.
+
+## Increment 3 — move detail-VM transforms off the main thread
+
+The planned "extract heavy `groupBy/map/sort/pad` transforms onto `flowOn(io)`" turned
+out to already be done in most detail VMs. A dispatcher audit:
+
+| ViewModel | Already off-main? |
+|-----------|-------------------|
+| BloodPressure / Weight / BodyFat | yes — `withContext(ioDispatcher)` around the transform |
+| Vitals / Sleep | yes — `.flowOn(Dispatchers.Default)` on the inner combine |
+| **HeartRate** | **no** — fixed |
+| **Step** | **no** — fixed |
+
+Only two VMs actually ran their transform in the `stateIn` collector context
+(`viewModelScope` → `Dispatchers.Main`):
+
+- **`HeartRateDetailViewModel`** — the `.map { entities -> ... }` does per-sample
+  `HrZoneClassifier.classify` plus `computeZoneTotals` (a second pass), over potentially
+  hundreds of HR samples, on Main. Added `.flowOn(Dispatchers.Default)` before `stateIn`.
+  `Dispatchers.Default` (CPU) is correct here — Room already runs the query on IO; this
+  work is pure computation.
+- **`StepDetailViewModel`** — lighter `filter/map/sort/padToRange` over ≤90 summaries,
+  but still on Main. Added `.flowOn(Dispatchers.Default)` for correctness/consistency.
+
+The other detail VMs were left unchanged: their transforms are already off-main and run
+only on genuine input changes (range/date are `StateFlow`s; DB flows dedupe at the DAO),
+so "extracting" them further would be churn with no benefit. The `VitalsViewModel` triple
+`mapNotNull/sort/pad` repetition is a readability nit, not a perf bottleneck (O(n) on
+Default), so it was not refactored.
+
+## PR #101 review comments addressed (gemini-code-assist)
+
+- **HIGH** (DashboardScreen `cardDataMap` remember keys): added `lastSleepSession`,
+  `rasDailyBreakdown`, `isCalibrating`, `errorMessage`, `visibleInsightQueue` as keys.
+  These are *not* actually read by `buildCardDataMap` today (verified), so the original
+  keys were not stale — but they are added defensively against future card changes and
+  cost nothing on the hot path (they never change on sync ticks).
+- **MEDIUM** ×2 (`transformToUiState` redundant `selectedDate`): removed the parameter
+  and derive `val selectedDate = basicInputs.selectedDate` inside the function.

@@ -99,7 +99,7 @@ class DashboardViewModel
                 ),
                 createDashboardHrFlow(selectedDateRepository.selectedDate, heartRateRepository),
             ) { basicInputs, cardState, hrSummary ->
-                transformToUiState(basicInputs, cardState, basicInputs.selectedDate, hrSummary)
+                transformToUiState(basicInputs, cardState, hrSummary)
             }.distinctUntilChanged()
                 .combine(createDashboardRealtimeStateFlow(foregroundSyncController)) { coreState, realtimeState ->
                     coreState.copy(
@@ -119,9 +119,9 @@ class DashboardViewModel
         private fun transformToUiState(
             basicInputs: DashboardBasicInputs,
             cardState: DashboardCardState,
-            selectedDate: LocalDate,
             hrSummary: HeartRateDaySummary? = null,
         ): DashboardUiState {
+            val selectedDate = basicInputs.selectedDate
             val sessionSummary =
                 cardState.lastSleepSession?.let {
                     SleepSessionSummary(
