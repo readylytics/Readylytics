@@ -1,11 +1,13 @@
-# Readylytics — Health Recovery Dashboard
+# Readylytics
 
-![Readylytics Logo](docs/assets/img/logo.png)
+![Readylytics Logo](docs/assets/img/logo_slogan.png)
 
 [![GitHub stars](https://img.shields.io/github/stars/gregorlauritz/MyHealthStatus?style=social)](https://github.com/gregorlauritz/MyHealthStatus)
 [![CI](https://github.com/gregorlauritz/MyHealthStatus/actions/workflows/ci.yml/badge.svg)](https://github.com/gregorlauritz/MyHealthStatus/actions/workflows/ci.yml)
 
-An offline‑first Android app that turns health data from Android **Health Connect** into daily wellness scores (Sleep, Readiness, and Circadian Consistency).
+Know your readiness, balance your training load, and optimize recovery with advanced health and performance analytics. Readylytics transforms sleep, HRV, resting heart rate, strain, and training data into actionable insights that help you train smarter and recover better.
+
+This is an offline‑first Android app that turns health data from Android **Health Connect** into daily wellness scores (Sleep, Readiness, Strain, and more).
 
 For full details and user guides, please visit our [website](https://readylytics.com) or explore the local [docs/](docs/) directory.
 

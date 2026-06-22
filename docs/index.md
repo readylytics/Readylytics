@@ -4,8 +4,7 @@ title: Readylytics
 ---
 
 <section class="hero">
-  <p class="eyebrow">Be ready to train smarter.</p>
-  <h1>Readylytics</h1>
+  <img src="{{ '/assets/img/logo_slogan.png' | relative_url }}" alt="Readylytics Logo" width="240">
   <p class="lead">
     Know your readiness, balance your training load, and optimize recovery
     with advanced health and performance analytics. Readylytics transforms
