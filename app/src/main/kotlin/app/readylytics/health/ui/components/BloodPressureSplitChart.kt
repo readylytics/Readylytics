@@ -17,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -87,8 +88,9 @@ fun BloodPressureSplitChart(
 
     // Clear tooltip on vertical scroll — fires on both start (true) and end (false)
     // to eliminate any stale state that slips through mid-scroll recompositions.
+    val currentParentScrollInProgress by rememberUpdatedState(parentScrollInProgress)
     LaunchedEffect(Unit) {
-        snapshotFlow { parentScrollInProgress() }.collect {
+        snapshotFlow { currentParentScrollInProgress() }.collect {
             tooltipState = null
             selectedDayOffset = null
             selectedCanvasX = null

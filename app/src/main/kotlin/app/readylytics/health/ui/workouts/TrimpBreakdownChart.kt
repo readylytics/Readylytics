@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -123,8 +124,9 @@ private fun HrChart(
     }
 
     // Clear tooltip when the parent list scrolls vertically
+    val currentParentScrollInProgress by rememberUpdatedState(parentScrollInProgress)
     LaunchedEffect(Unit) {
-        snapshotFlow { parentScrollInProgress() }.collect { inProgress ->
+        snapshotFlow { currentParentScrollInProgress() }.collect { inProgress ->
             if (inProgress) {
                 tooltipState = null
                 selectedPointOffset = null

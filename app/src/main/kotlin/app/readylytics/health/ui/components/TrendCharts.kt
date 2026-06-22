@@ -21,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -121,8 +122,9 @@ fun TrendChart(
     // isScrollInProgress state subscription OUT of the parent's composition scope, so the
     // chart no longer recomposes on every scroll start/stop. snapshotFlow conflates to
     // distinct values, so this still fires on BOTH transitions (true → false → true).
+    val currentParentScrollInProgress by rememberUpdatedState(parentScrollInProgress)
     LaunchedEffect(Unit) {
-        snapshotFlow { parentScrollInProgress() }.collect {
+        snapshotFlow { currentParentScrollInProgress() }.collect {
             tooltipState = null
             selectedPointOffset = null
         }

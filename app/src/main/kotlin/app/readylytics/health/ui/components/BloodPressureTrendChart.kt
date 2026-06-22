@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -95,8 +96,9 @@ fun BloodPressureTrendChart(
 
     // Clear tooltip when the parent list scrolls vertically.
     // Fire on both transitions to eliminate stale tooltip state at scroll-end.
+    val currentParentScrollInProgress by rememberUpdatedState(parentScrollInProgress)
     LaunchedEffect(Unit) {
-        snapshotFlow { parentScrollInProgress() }.collect {
+        snapshotFlow { currentParentScrollInProgress() }.collect {
             tooltipState = null
             selectedPointOffset = null
         }
