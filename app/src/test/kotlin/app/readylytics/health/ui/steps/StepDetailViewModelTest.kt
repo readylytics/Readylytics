@@ -66,6 +66,7 @@ class StepDetailViewModelTest {
             dailySummaryRepository = repository,
             selectedDateRepository = selectedDateRepo,
             settingsRepo = settingsRepo,
+            defaultDispatcher = testDispatcher,
         )
 
     @After
