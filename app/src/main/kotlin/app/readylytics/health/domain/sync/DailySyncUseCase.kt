@@ -4,6 +4,7 @@ import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.scoringZone
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import app.readylytics.health.domain.util.logD
@@ -13,7 +14,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
-import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -59,8 +59,6 @@ class DailySyncUseCase
             withContext(ioDispatcher) {
                 try {
                     logD("DailySyncUseCase") { "Starting sync (window=$windowDays days)..." }
-                    val today = java.time.LocalDate.now(ZoneId.systemDefault())
-                    val zoneId = ZoneId.systemDefault()
                     // Migrate any legacy global "primary device" into the per-data-type map.
                     settingsRepo.migrateDeviceSelectionIfNeeded()
                     // One-time bootstrap of rasSourceMode for existing users (no-op after first run).
@@ -70,6 +68,12 @@ class DailySyncUseCase
                     recomputeSupport.refreshAutoMaxHr(initialPrefs)
                     // Re-fetch preferences in case they were updated by refreshAutoMaxHr
                     val prefs = settingsRepo.userPreferences.first()
+
+                    // Resolve day boundaries via the stored scoring timezone (falls back to the
+                    // device zone when un-seeded) so the recompute window stays aligned with the
+                    // scoring engine even if the device timezone changes.
+                    val zoneId = prefs.scoringZone()
+                    val today = java.time.LocalDate.now(zoneId)
 
                     val outcome = changeSynchronizer.applyPendingChanges()
                     if (outcome.requiresFullResync) {

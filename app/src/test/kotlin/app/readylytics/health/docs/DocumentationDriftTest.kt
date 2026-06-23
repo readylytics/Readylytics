@@ -248,8 +248,8 @@ class DocumentationDriftTest {
         for (path in governanceDocPaths) {
             val text = readRepoFile(path)
             assertTrue(
-                "expected $path to declare minSdk=$minSdk, targetSdk=$targetSdk",
                 text.contains("minSdk=$minSdk, targetSdk=$targetSdk"),
+                "expected $path to declare minSdk=$minSdk, targetSdk=$targetSdk",
             )
         }
     }

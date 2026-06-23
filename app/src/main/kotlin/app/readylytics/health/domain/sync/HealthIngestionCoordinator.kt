@@ -159,11 +159,17 @@ class HealthIngestionCoordinator
                     "bp=${filteredBloodPressure.size} spo2=${filteredSpo2.size}"
             }
 
+            // Only persist stages whose parent session survived device filtering. Stages carry a
+            // foreign key (sessionId) to SleepSessionEntity, so emitting stages for a filtered-out
+            // session would orphan them (or violate the FK constraint). Filter on the stage's own
+            // sessionId so the match is against the exact FK target, not the raw DTO id.
+            val filteredSleepIds = filteredSleep.mapTo(HashSet()) { it.id }
             val allStages =
-                sleepSessions.flatMap {
-                    app.readylytics.health.data.healthconnect.SleepDataMapper
-                        .mapSleepSessionStages(it)
-                }
+                sleepSessions
+                    .flatMap {
+                        app.readylytics.health.data.healthconnect.SleepDataMapper
+                            .mapSleepSessionStages(it)
+                    }.filter { it.sessionId in filteredSleepIds }
 
             healthIngestionStore.persist(
                 HealthIngestionBatch(

@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -58,12 +57,15 @@ class ResyncRangeUseCase
         ): Result<Unit> =
             withContext(ioDispatcher) {
                 try {
-                    val zoneId = ZoneId.systemDefault()
                     logD("ResyncRangeUseCase") { "Full resync $startDate..$endDate (chunk=$chunkDays days)" }
 
                     val initialPrefs = settingsRepo.userPreferences.first()
                     recomputeSupport.refreshAutoMaxHr(initialPrefs)
                     val prefs = settingsRepo.userPreferences.first()
+                    // Resolve day boundaries via the stored scoring timezone (falls back to the
+                    // device zone when un-seeded) so chunked ingest, reconcile, and prune all use
+                    // the same boundaries as the scoring engine.
+                    val zoneId = prefs.scoringZone()
                     val selectionHash =
                         prefs.deviceByDataType.toSortedMap().entries.joinToString(
                             "|",

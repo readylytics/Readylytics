@@ -57,7 +57,7 @@ class StepCountFetcher
                             val dayEnd = day.plusDays(1).atStartOfDay(zoneId).toInstant()
                             async {
                                 stepsSemaphore.withPermit {
-                                    day to hcRepo.readSteps(dayStart, dayEnd)
+                                    day to retryWithBackoff { hcRepo.readSteps(dayStart, dayEnd) }
                                 }
                             }
                         }
@@ -67,11 +67,10 @@ class StepCountFetcher
                 val oldestTargetDay = today.minusDays((windowDays - 1).toLong())
                 val windowStart = oldestTargetDay.atStartOfDay(zoneId).toInstant()
                 val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
+                val stepsRecords = retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) }
                 val stepEntries =
                     DeviceSourceFilter.filterToDevice(
-                        app.readylytics.health.data.healthconnect.StepsMapper.toStepEntries(
-                            hcRepo.readStepsRecords(windowStart, windowEnd),
-                        ),
+                        app.readylytics.health.data.healthconnect.StepsMapper.toStepEntries(stepsRecords),
                         stepsDevice,
                     ) { it.deviceName }
                 stepsMap.putAll(
