@@ -27,8 +27,9 @@ All paths are rooted at `app/src/main/kotlin/app/readylytics/health/`.
 ┌──────────────────────────────────────────────────────────────────────────┐
 │  domain/sync/HealthSyncUseCase                                             │
 │   • sync(windowDays)        — recent window (foreground; daily = 1 day);   │
-│                               ingestion fetch reaches windowDays+1 back to  │
-│                               capture cross-midnight sleep (recalc stays 1) │
+│                               ingest reaches 1 day back for cross-midnight │
+│                               sleep; recalc widens to absorb recent out-of-│
+│                               window affected days (≤7d) else full resync  │
 │   • resyncRange(...)        — full historical, chunked (30-day windows)    │
 │   • ingestWindow(...)       — read DTOs → map → filter → upsert (1 txn)    │
 │   • retryWithBackoff(...)   — bounded exponential backoff on HC/IO faults  │
@@ -128,9 +129,13 @@ the result a pure function of the data, independent of chunking.
 > (`PeriodicHealthSyncWorker`, 2 days, `ExistingPeriodicWorkPolicy.UPDATE`). All three call into
 > `HealthSyncUseCase` and share `syncMutex`; ingestion stays upsert-by-HC-id, so overlapping
 > windows are idempotent. Health Connect Changes Tokens are used for incremental synchronization:
-> daily and periodic sync flows apply differential changes since the last committed token but score
-> only their requested 1-day/2-day windows. Candidate tokens advance only after that requested window
-> succeeds. Any older affected date keeps tokens replayable and schedules full historical resync.
+> daily and periodic sync flows apply differential changes since the last committed token and score
+> their requested 1-day/2-day window, widened down to the earliest **recent** out-of-window affected
+> day (within `MAX_INLINE_RECOMPUTE_DAYS` = 7 of today) so last night's sleep (dated yesterday) or
+> backfilled HR/HRV is recomputed inline and tokens commit normally — no full resync. Candidate
+> tokens advance only after that (possibly widened) window succeeds. Only an affected date older than
+> that inline bound — or an expired/missing token — keeps tokens replayable and schedules full
+> historical resync.
 > Full resync captures baseline tokens before its first HC read, stores them in every checkpoint phase,
 > and promotes them only after walk-forward recompute succeeds. Changes made during the scan therefore
 > remain visible from that baseline on the next sync; killed workers resume with the same baseline.
