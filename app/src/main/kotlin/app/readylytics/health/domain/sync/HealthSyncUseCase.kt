@@ -56,6 +56,13 @@ class HealthSyncUseCase
         private companion object {
             // Max concurrent Health Connect step reads during a catch-up sync.
             const val STEPS_FETCH_CONCURRENCY = 4
+
+            // How far back a foreground sync will widen its walk-forward recompute to absorb
+            // recent out-of-window Health Connect changes (e.g. last night's sleep dated
+            // yesterday, HR/HRV backfilled for the prior day) inline instead of escalating to a
+            // full historical resync. This is a foreground-cost guard, not a correctness bound:
+            // changes older than this still recompute correctly via the durable resync worker.
+            const val MAX_INLINE_RECOMPUTE_DAYS = 7
         }
 
         /**
@@ -94,8 +101,23 @@ class HealthSyncUseCase
                         }
 
                         val standardDays = (0 until windowDays).map { today.minusDays(it.toLong()) }.toSet()
-                        val oldestTargetDay = standardDays.minOrNull() ?: today
-                        val requiresHistoricalResync = outcome.affectedDates.any { it !in standardDays }
+                        val standardOldest = standardDays.minOrNull() ?: today
+
+                        // HC changes can legitimately touch recent past days (last night's sleep is
+                        // dated yesterday; HR/HRV backfilled for the prior day). Absorb those inline by
+                        // widening the walk-forward down to the earliest recent affected day - contiguous
+                        // to today so frozen baselines and acute/chronic averages propagate correctly.
+                        // Only changes older than the inline bound (which would make one foreground HC
+                        // read + recompute too large) escalate to the durable historical resync.
+                        val inlineFloor = today.minusDays(MAX_INLINE_RECOMPUTE_DAYS.toLong())
+                        val outOfWindowAffected = outcome.affectedDates.filter { it.isBefore(standardOldest) }
+                        val requiresHistoricalResync = outOfWindowAffected.any { it.isBefore(inlineFloor) }
+                        val oldestTargetDay =
+                            if (requiresHistoricalResync) {
+                                standardOldest
+                            } else {
+                                outOfWindowAffected.minOrNull() ?: standardOldest
+                            }
 
                         val windowStart = oldestTargetDay.atStartOfDay(zoneId).toInstant()
                         val windowEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant()
