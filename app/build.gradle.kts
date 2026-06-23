@@ -1,3 +1,4 @@
+import com.github.triplet.gradle.androidpublisher.ReleaseStatus
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.provider.MapProperty
@@ -57,6 +58,7 @@ plugins {
     alias(libs.plugins.ktlint)
     alias(libs.plugins.protobuf)
     alias(libs.plugins.google.oss.licenses)
+    alias(libs.plugins.play.publisher)
     id("kotlin-parcelize")
     id("jacoco")
 }
@@ -177,6 +179,19 @@ listOf(
     tasks.matching { it.name == taskName }.configureEach {
         dependsOn(verifyReleaseSigningInputs)
     }
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
+}
+
+play {
+    serviceAccountCredentials.set(
+        providers.environmentVariable("PLAY_SERVICE_ACCOUNT_JSON_FILE").map(::file),
+    )
+    track.set("production")
+    releaseStatus.set(ReleaseStatus.COMPLETED)
+    defaultToAppBundles.set(true)
 }
 
 ktlint {

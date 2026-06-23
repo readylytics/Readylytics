@@ -56,22 +56,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: ./gradlew jacocoCoverageVerification
 
-      # --- Build Phase ---
-
-      - name: Build debug APK
-        id: build_apk # Added an ID so we can verify if this specific step succeeded
-        if: ${{ !cancelled() }}
-        run: ./gradlew assembleDebug
-
       # --- Artifact Upload Phase ---
-
-      - name: Upload debug APK
-        # This explicitly checks if the build step worked, allowing the upload even if lint failed!
-        if: ${{ !cancelled() && steps.build_apk.outcome == 'success' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.3.3
-        with:
-          name: debug-apk
-          path: app/build/outputs/apk/debug/**/*.apk
 
       - name: Upload coverage report
         if: ${{ !cancelled() }}
