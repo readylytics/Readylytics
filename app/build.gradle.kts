@@ -62,6 +62,38 @@ plugins {
     id("jacoco")
 }
 
+fun envVar(name: String): String? = providers.environmentVariable(name).orNull
+
+fun computeVersion(): Pair<Int, String> {
+    val isCI = envVar("GITHUB_ACTIONS") == "true"
+    val isTag = isCI && envVar("GITHUB_REF_TYPE") == "tag"
+    val refName = envVar("GITHUB_REF_NAME") ?: ""
+    val isReleaseTag = isTag && refName.matches(Regex("^v?\\d+\\.\\d+\\.\\d+$"))
+
+    val baseVersionName = project.findProperty("baseVersionName")?.toString() ?: "0.1.0"
+    val epochSeconds = System.currentTimeMillis() / 1000
+
+    return if (isReleaseTag) {
+        val cleanTag = refName.removePrefix("v")
+        val parts = cleanTag.split(".")
+        val major = parts[0].toIntOrNull() ?: 1
+        val minor = parts[1].toIntOrNull() ?: 0
+        val patch = parts[2].toIntOrNull() ?: 0
+        val code = major * 1000000 + minor * 10000 + patch
+        Pair(code, cleanTag)
+    } else if (isCI) {
+        val runNumber = envVar("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+        val code = 100000 + runNumber
+        Pair(code, "$baseVersionName.$epochSeconds")
+    } else {
+        Pair(epochSeconds.toInt(), "$baseVersionName.$epochSeconds")
+    }
+}
+
+val resolvedVersion = computeVersion()
+val computedVersionCode = resolvedVersion.first
+val computedVersionName = resolvedVersion.second
+
 kotlin {
     jvmToolchain(17)
     compilerOptions {
@@ -86,8 +118,8 @@ android {
         applicationId = "app.readylytics.health"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = computedVersionCode
+        versionName = computedVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
