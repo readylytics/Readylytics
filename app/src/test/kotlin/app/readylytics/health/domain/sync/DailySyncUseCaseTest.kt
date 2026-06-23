@@ -198,7 +198,9 @@ class DailySyncUseCaseTest {
         runTest {
             val zoneId = ZoneId.systemDefault()
             val today = LocalDate.now(zoneId)
-            val oldestAffectedDay = today.minusDays(5)
+            // Beyond the inline-recompute floor: must escalate to the durable historical resync
+            // rather than being absorbed by the foreground walk-forward.
+            val oldestAffectedDay = today.minusDays(8)
             val hrFromSlot = slot<Instant>()
             val scoredDays = mutableListOf<LocalDate>()
 
@@ -221,6 +223,61 @@ class DailySyncUseCaseTest {
                 (result as app.readylytics.health.domain.model.Result.Failure).code,
             )
             coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }
+        }
+
+    @Test
+    fun `daily sync absorbs recent out-of-window change inline without historical resync`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(zoneId)
+            val yesterday = today.minusDays(1)
+            val nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token")
+            val hrFromSlot = slot<Instant>()
+            val scoredDays = mutableListOf<LocalDate>()
+
+            coEvery { changeSynchronizer.applyPendingChanges() } returns
+                HealthChangeSyncOutcome(
+                    affectedDates = setOf(yesterday),
+                    requiresFullResync = false,
+                    nextTokens = nextTokens,
+                )
+            coEvery { hcRepo.readHeartRateSamples(capture(hrFromSlot), any()) } returns emptyList()
+            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any()) }
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            // Walk-forward widens to the affected day and recomputes it through today, contiguously.
+            assertEquals(listOf(yesterday, today), scoredDays)
+            // Ingestion reaches one extra day back from the widened oldest target day.
+            assertEquals(today.minusDays(2).atStartOfDay(zoneId).toInstant(), hrFromSlot.captured)
+            assertTrue(result is app.readylytics.health.domain.model.Result.Success)
+            coVerify(exactly = 1) { changeSynchronizer.commitTokens(nextTokens) }
+        }
+
+    @Test
+    fun `daily sync absorbs change exactly at the inline floor inline`() =
+        runTest {
+            val zoneId = ZoneId.systemDefault()
+            val today = LocalDate.now(zoneId)
+            // Exactly MAX_INLINE_RECOMPUTE_DAYS (7) back: the floor is inclusive, so still inline.
+            val floorDay = today.minusDays(7)
+            val nextTokens = mapOf(HealthDataType.SLEEP to "next-sleep-token")
+            val scoredDays = mutableListOf<LocalDate>()
+
+            coEvery { changeSynchronizer.applyPendingChanges() } returns
+                HealthChangeSyncOutcome(
+                    affectedDates = setOf(floorDay),
+                    requiresFullResync = false,
+                    nextTokens = nextTokens,
+                )
+            coJustRun { scoringRepository.computeAndPersistDailySummary(capture(scoredDays), any()) }
+
+            val result = useCase.run(windowDays = 1, onProgress = null)
+
+            assertEquals(floorDay, scoredDays.first())
+            assertEquals(today, scoredDays.last())
+            assertTrue(result is app.readylytics.health.domain.model.Result.Success)
+            coVerify(exactly = 1) { changeSynchronizer.commitTokens(nextTokens) }
         }
 
     @Test
