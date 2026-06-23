@@ -281,6 +281,25 @@ class LocalRestoreManagerTest {
         }
 
     @Test
+    fun applyRestore_rollsBackDbChangesWhenPreferencesRestoreFails() =
+        runTest {
+            val json = createValidBackupJson()
+            val zipFile = createBackupZipFile("rollback_backup.zip", json)
+
+            val failure = RuntimeException("simulated preferences restore failure")
+            coEvery { settingsRepo.batchUpdate(any()) } throws failure
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is LocalRestoreManager.RestoreResult.Failure)
+            assertEquals(failure, (result as LocalRestoreManager.RestoreResult.Failure).cause)
+
+            val sessions = db.sleepSessionDao().getSince(0)
+            assertTrue(sessions.isEmpty())
+            zipFile.delete()
+        }
+
+    @Test
     fun applyRestore_restoresBackupScheduleAndSchedulesBackupWorker() =
         runTest {
             val json = createValidBackupJson()
