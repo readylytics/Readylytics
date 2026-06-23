@@ -70,7 +70,8 @@ class StepCountFetcher
                 val stepsRecords = retryWithBackoff { hcRepo.readStepsRecords(windowStart, windowEnd) }
                 val stepEntries =
                     DeviceSourceFilter.filterToDevice(
-                        app.readylytics.health.data.healthconnect.StepsMapper.toStepEntries(stepsRecords),
+                        app.readylytics.health.data.healthconnect.StepsMapper
+                            .toStepEntries(stepsRecords),
                         stepsDevice,
                     ) { it.deviceName }
                 stepsMap.putAll(
