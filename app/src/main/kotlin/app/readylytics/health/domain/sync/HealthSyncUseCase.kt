@@ -116,7 +116,7 @@ class HealthSyncUseCase
                             if (requiresHistoricalResync) {
                                 standardOldest
                             } else {
-                                minOf(standardOldest, outOfWindowAffected.minOrNull() ?: standardOldest)
+                                outOfWindowAffected.minOrNull() ?: standardOldest
                             }
 
                         val windowStart = oldestTargetDay.atStartOfDay(zoneId).toInstant()
