@@ -7,7 +7,20 @@ Tracking branch: `claude/admiring-galileo-kujbv2` (PR #106). Source: `internal-d
 > so `ktlintFormat` / `testDebugUnitTest` / `lint` were never executed there — **run them first** on
 > this branch before trusting anything below as green.
 
-## Done
+## Phase 1 — DONE before this session (for completeness)
+
+Landed earlier on this branch; not open, listed so the audit's full item set is accounted for:
+- **M2** — governance/doc drift: stale `minSdk`/`targetSdk` fixed (`38ccd8a`), stale Google-Drive
+  backup refs removed (`b4cf88f`), and a doc-vs-actual SDK assertion added
+  (`app/src/test/.../docs/DocumentationDriftTest.kt`, `17cc30d`).
+- **M4** — restore atomicity fix (`a48973a`). ⚠️ This is the commit that introduced the
+  DataStore-write-inside-`withTransaction` anti-pattern later flagged in PR #106 review → see the
+  **M-Restore** follow-up below (deferred).
+- **M5 (start)** — baseline-profile generator + dashboard recomposition guard (`b8861d1`):
+  `app/src/androidTest/.../performance/BaselineProfileGenerator.kt` and `DashboardRecompositionTest.kt`.
+- **m3** — hardcoded units / debug English strings cleanup (`17cc30d`).
+
+## Done (this session)
 
 - **M1 — Decompose `HealthSyncUseCase` god-class.** Facade now delegates to
   `HealthIngestionCoordinator`, `StepCountFetcher`, `RetryWithBackoff`, `DailyRecomputeSupport`,
@@ -51,10 +64,14 @@ Not done; both need a real build environment to do safely:
    - Target surfaces once runnable: the dashboard's heavy charts (e.g. trend charts consuming
      `List<DailyDataPoint>`, `ReorderableCardGrid` consuming `CardConfigurationsList`) — assert
      recomposition count stays flat when an equal-but-newly-allocated list/data class is re-emitted.
-2. **Startup metric (Macrobenchmark).** Needs a new `:macrobenchmark` Gradle module + Baseline
-   Profile generation + an emulator-backed CI job. This is a build-topology change with real
-   blast radius (a misconfigured module/CI step can break the whole build), so it should be done
-   incrementally with the build runnable at each step, not blind.
+2. **Startup metric (Macrobenchmark).** Note: a `BaselineProfileGenerator` **already exists** from
+   M5-start (`app/src/androidTest/.../performance/BaselineProfileGenerator.kt`, with the supporting
+   deps added to `app/build.gradle.kts` in `b8861d1`) — so this is *not* a from-scratch build. What
+   remains: add a **`StartupTimingMetric` macrobenchmark** (`MacrobenchmarkRule` measuring cold/warm
+   startup) and **wire it into CI as a tracked metric** via an emulator-backed job. Decide whether
+   the generator/benchmark stay in `app`'s `androidTest` or move into a dedicated
+   `com.android.test` `:macrobenchmark` module (the cleaner long-term home, but a build-topology
+   change with real blast radius). Do this incrementally with the build runnable at each step.
 
 ### m1 — Domain history ports for `BaselineComputer` (DEFERRED — scope finding)
 
