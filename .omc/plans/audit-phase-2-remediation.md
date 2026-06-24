@@ -77,6 +77,61 @@ Recommended approach when picked back up:
    it was assembled by reading tests, not by a full call-graph sweep) before committing to a port
    interface shape.
 
+## Phase 3 — Scalability Improvements (mid-term, NOT STARTED)
+
+Per `internal-docs/ARCHITECTURE_AUDIT.md` (Phase 3, lines ~303–311). Goal: enforce
+Clean-Architecture boundaries via real Gradle modules, speed up builds, deepen tests. None of
+this is started. Recommended order within the phase: **M3 first cut → m6 → m7**. Pairs naturally
+with **m1** above (the `:core:scoring` extraction is the right moment to introduce the domain
+history ports). Strangler pattern throughout — **one module per PR, `:app` assembles green at
+every step**. This is build-topology work; do it only with Gradle runnable.
+
+### M3 — Incremental modularization (extract `:core:*` modules)
+
+- **Root cause:** the whole app is one Gradle module (`:app`, ~47k LOC main / ~26k LOC test), so
+  every change recompiles everything and the Clean-Architecture layers are enforced by convention
+  only — nothing stops a UI class importing a DAO.
+- **First cut (the recommended scope — Medium, not the full feature-modularization):**
+  1. `:core:model` — pure data/model types.
+  2. `:core:scoring` — `domain/scoring/**`, which **already has zero `android.*` imports**, so it
+     should extract cleanly; this is the highest-value boundary to harden (off-limits formulas get
+     a compiler-enforced wall).
+  3. `:core:database` — Room (`HealthDatabase`, entities, DAOs, migrations).
+  4. `:core:healthconnect` — `data/healthconnect/**` mappers + HC repo.
+  - Feature modules (per-screen) are **Phase 4**, not here.
+- **Prerequisite already met:** version catalog (`gradle/libs.versions.toml`) is in place.
+- **Gotchas to expect:** Hilt across modules (module-level `@InstallIn` components must still
+  resolve), KSP/Room codegen per module, `internal` visibility that silently widened to
+  cross-module callers, and the `codegraph index`/`sync` step CLAUDE.md requires after structural
+  moves. `internal-docs/DATA_FLOW.md` is load-bearing — update it for any ingestion/Room/scoring
+  file moves in the same PR.
+- **Verification per module PR:** `./gradlew :app:assembleDebug` green + full `testDebugUnitTest`
+  + `lint` after each extraction; the scoring determinism suite is the gate when `:core:scoring`
+  moves (it must still pass byte-for-byte — no formula drift).
+
+### m6 — Re-trial KSP incremental compilation
+
+- `ksp.incremental` is currently disabled in `gradle.properties`. Re-enable, build, and **measure**
+  the build-time delta (best done *after* the module split, since incremental KSP wins compound
+  with smaller compilation units). Small / Low risk. Revert if it reintroduces stale-codegen flakiness.
+
+### m7 — Raise the coverage floor
+
+- Per-package coverage gates are strong, but the **overall instruction floor is only 25%**. Thin
+  spots: mappers/converters and some UI-state transitions. Raise the global floor gradually and add
+  pure-math / mapper unit tests (these are Android-free and cheap to run in CI). Pairs well with the
+  `:core:scoring` / `:core:model` extraction, where the mappers become easy isolated test targets.
+
+## Phase 4 — Long-Term Hardening (NOT STARTED, out of current scope)
+
+Per audit lines ~313–321. Listed here only so the roadmap is complete — do **not** pick these up
+before Phase 3 lands:
+- Per-feature modularization + Gradle convention plugins (the back half of M3).
+- **m5** — key hardening: StrongBox-when-available, optional app-lock binding, key rotation, plus a
+  backup/restore audit trail.
+- **m4** — full accessibility program: contrast tests; forms / onboarding / nav coverage.
+- Health Connect rate-limit-aware backoff loop; partial / staged restore UX.
+
 ## M-Restore — `LocalRestoreManager`: decouple DataStore writes from the SQLite restore transaction
 
 > **Sequencing: DEFERRED.** Do not start until M5/m1 above are finished. This is a standalone
