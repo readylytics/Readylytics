@@ -62,6 +62,10 @@ verified by a real build.
 
 ### M5 — finish the rest (device-level, needs Gradle + emulator)
 
+> **Sequencing: DEFERRED.** Punted to another day — emulator/device-level test work
+> (`connectedAndroidTest` wiring or Robolectric Compose) needs its own session with an emulator
+> on hand. Not picked up in this pass.
+
 Not done; both need a real build environment to do safely:
 
 1. **Device-level recomposition-count tests** (`createComposeRule`). `androidx.compose.ui.test
