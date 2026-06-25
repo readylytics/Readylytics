@@ -100,7 +100,7 @@ object HeartRateMapper {
                 if (sleepSession != null) RecordType.SLEEP.name to sleepSession.id else RecordType.RESTING.name to null
 
             HeartRateRecordEntity(
-                id = "RESTING_${record.id}_$timestampMs",
+                id = record.id,
                 timestampMs = timestampMs,
                 beatsPerMinute = record.beatsPerMinute,
                 recordType = recordType,

@@ -126,10 +126,9 @@ class DailySyncUseCase
 
                     val stepsDevice =
                         prefs.deviceByDataType[HealthDataType.STEPS.name]?.takeIf { it.isNotBlank() }
-                    val stepsMap = stepCountFetcher.fetchWindow(today, windowDays, zoneId, stepsDevice)
-
-                    // Single determinate progress track across both the migration and window loops.
                     val totalDays = ChronoUnit.DAYS.between(oldestTargetDay, today).toInt() + 1
+                    val stepsMap = stepCountFetcher.fetchWindow(today, totalDays, zoneId, stepsDevice)
+
                     var processedDays = 0
                     onProgress?.invoke(processedDays, totalDays)
 
@@ -141,12 +140,7 @@ class DailySyncUseCase
                     var dayToScore = oldestTargetDay
                     while (!dayToScore.isAfter(today)) {
                         ensureActive()
-                        val steps =
-                            if (dayToScore in standardDays) {
-                                stepsMap[dayToScore] ?: 0L
-                            } else {
-                                null
-                            }
+                        val steps = stepsMap[dayToScore] ?: 0L
                         val result = recomputeSupport.recomputeDay(dayToScore, steps)
 
                         when (result) {

@@ -137,7 +137,7 @@ class HealthChangeSynchronizerImpl
         override suspend fun captureChangesTokens(): Map<HealthDataType, String> =
             HealthDataType.entries.associateWith { dataType ->
                 client.getChangesToken(
-                    ChangesTokenRequest(recordTypes = setOf(recordClassFor(dataType))),
+                    ChangesTokenRequest(recordTypes = recordClassesFor(dataType)),
                 )
             }
 
@@ -196,10 +196,17 @@ class HealthChangeSynchronizerImpl
                     }
                 }
                 HealthDataType.HEART_RATE -> {
-                    if (record is HeartRateRecord) {
-                        val domainHr = record.toDomain()
-                        val entities = HeartRateMapper.mapToEntities(listOf(domainHr), emptyList(), emptyList())
-                        heartRateDao.upsertAll(entities)
+                    when (record) {
+                        is HeartRateRecord -> {
+                            val domainHr = record.toDomain()
+                            val entities = HeartRateMapper.mapToEntities(listOf(domainHr), emptyList(), emptyList())
+                            heartRateDao.upsertAll(entities)
+                        }
+                        is RestingHeartRateRecord -> {
+                            val domainResting = record.toDomain()
+                            val entities = HeartRateMapper.mapRestingToEntities(listOf(domainResting), emptyList())
+                            heartRateDao.upsertAll(entities)
+                        }
                     }
                 }
                 HealthDataType.HRV -> {
@@ -258,17 +265,17 @@ class HealthChangeSynchronizerImpl
             }
         }
 
-        private fun recordClassFor(dataType: HealthDataType): kotlin.reflect.KClass<out Record> =
+        private fun recordClassesFor(dataType: HealthDataType): Set<kotlin.reflect.KClass<out Record>> =
             when (dataType) {
-                HealthDataType.EXERCISE -> ExerciseSessionRecord::class
-                HealthDataType.STEPS -> StepsRecord::class
-                HealthDataType.BODY_FAT -> BodyFatRecord::class
-                HealthDataType.WEIGHT -> WeightRecord::class
-                HealthDataType.SLEEP -> SleepSessionRecord::class
-                HealthDataType.BLOOD_PRESSURE -> BloodPressureRecord::class
-                HealthDataType.HEART_RATE -> HeartRateRecord::class
-                HealthDataType.HRV -> HeartRateVariabilityRmssdRecord::class
-                HealthDataType.OXYGEN_SATURATION -> OxygenSaturationRecord::class
+                HealthDataType.EXERCISE -> setOf(ExerciseSessionRecord::class)
+                HealthDataType.STEPS -> setOf(StepsRecord::class)
+                HealthDataType.BODY_FAT -> setOf(BodyFatRecord::class)
+                HealthDataType.WEIGHT -> setOf(WeightRecord::class)
+                HealthDataType.SLEEP -> setOf(SleepSessionRecord::class)
+                HealthDataType.BLOOD_PRESSURE -> setOf(BloodPressureRecord::class)
+                HealthDataType.HEART_RATE -> setOf(HeartRateRecord::class, RestingHeartRateRecord::class)
+                HealthDataType.HRV -> setOf(HeartRateVariabilityRmssdRecord::class)
+                HealthDataType.OXYGEN_SATURATION -> setOf(OxygenSaturationRecord::class)
             }
 
         private fun isTokenExpiredException(e: Exception): Boolean {
@@ -306,6 +313,7 @@ class HealthChangeSynchronizerImpl
                 is ExerciseSessionRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
                 is StepsRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
                 is HeartRateRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
+                is RestingHeartRateRecord -> getDateFor(record.time, zoneId)
                 is HeartRateVariabilityRmssdRecord -> getDateFor(record.time, zoneId)
                 is WeightRecord -> getDateFor(record.time, zoneId)
                 is BodyFatRecord -> getDateFor(record.time, zoneId)
@@ -469,6 +477,14 @@ class HealthChangeSynchronizerImpl
                 id = metadata.id,
                 time = time,
                 percentage = percentage.value.toFloat(),
+                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
+            )
+
+        private fun RestingHeartRateRecord.toDomain(): DomainRestingHeartRateRecord =
+            DomainRestingHeartRateRecord(
+                id = metadata.id,
+                time = time,
+                beatsPerMinute = beatsPerMinute.toInt(),
                 deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
             )
     }

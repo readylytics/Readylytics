@@ -43,7 +43,7 @@ class HeartRateMapperTest {
         assertEquals(1, result.size)
         assertEquals("SLEEP", result[0].recordType)
         assertEquals("sleep_1", result[0].sessionId)
-        assertEquals("RESTING_r1_${ts.toEpochMilli()}", result[0].id)
+        assertEquals("r1", result[0].id)
         assertEquals(55, result[0].beatsPerMinute)
     }
 
