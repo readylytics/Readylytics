@@ -25,7 +25,8 @@ class HrvBaselineProvider
             val mu = dao.getPreciseHrvMu(dateMs)
             if (mu != null) return exp(mu)
 
-            if (prefs.hrvBaselineOverride != null) return prefs.hrvBaselineOverride.toDouble()
+            val override = prefs.hrvBaselineOverride
+            if (override != null) return override.toDouble()
 
             val dayMidnight = date.atStartOfDay(zone).toInstant()
             val calculated = baselineComputer.computeHrvBaseline(dayMidnight, null)

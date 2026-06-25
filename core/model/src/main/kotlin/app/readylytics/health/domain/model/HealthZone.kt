@@ -1,6 +1,6 @@
 package app.readylytics.health.domain.model
 
-import app.readylytics.health.domain.preferences.Gender
+import app.readylytics.health.data.preferences.Gender
 
 enum class HealthZone { OPTIMAL, NEUTRAL, WARNING, CRITICAL }
 

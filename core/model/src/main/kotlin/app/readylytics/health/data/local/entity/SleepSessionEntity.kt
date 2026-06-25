@@ -1,12 +1,10 @@
 package app.readylytics.health.data.local.entity
 
-import androidx.compose.runtime.Stable
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
-@Stable
 @Serializable
 @Entity(
     tableName = "sleep_sessions",

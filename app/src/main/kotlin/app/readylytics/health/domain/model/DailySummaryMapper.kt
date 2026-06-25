@@ -112,8 +112,8 @@ object DailySummaryMapper {
                     null
                 },
             hrvSigma = domain.hrvSigma,
-            diagnostics = domain.readinessResult.diagnostics,
-            contributors = domain.readinessResult.contributors,
+            diagnosticsEmbedded = domain.readinessResult.diagnostics,
+            contributorsEmbedded = domain.readinessResult.contributors,
             sRest = domain.sRest,
             isCalibrating = domain.isCalibrating,
             weightKg = domain.weightKg,

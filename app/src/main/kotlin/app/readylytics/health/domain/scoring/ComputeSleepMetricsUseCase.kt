@@ -319,11 +319,12 @@ class ComputeSleepMetricsUseCase
                         baselineRhrValue > 0f &&
                             currentNocturnalRhr.toFloat() / baselineRhrValue <= prefs.rhrOptimalThreshold
                     val yesterdayHrvBaseline = prefs.hrvBaselineOverride ?: yesterdaySummary?.hrvMuMssd?.let { exp(it) }
+                    val prevHrv = yesterdaySummary?.nocturnalHrv
                     val isPreviousHrvOptimal =
-                        yesterdaySummary?.nocturnalHrv != null &&
+                        prevHrv != null &&
                             yesterdayHrvBaseline != null &&
                             yesterdayHrvBaseline > 0f &&
-                            yesterdaySummary.nocturnalHrv.toFloat() / yesterdayHrvBaseline >=
+                            prevHrv.toFloat() / yesterdayHrvBaseline >=
                             prefs.hrvOptimalThreshold
 
                     val recoveryFlags =
@@ -558,8 +559,8 @@ class ComputeSleepMetricsUseCase
                         recoveryFlags = persistedFlags,
                         hrvSigma = hrvSigma,
                         snapshotCalibrationPhase = sessionPhase.name,
-                        diagnostics = readinessResult.diagnostics,
-                        contributors = readinessResult.contributors,
+                        diagnosticsEmbedded = readinessResult.diagnostics,
+                        contributorsEmbedded = readinessResult.contributors,
                         sRest = sRest,
                     ),
                 )

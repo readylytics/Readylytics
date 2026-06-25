@@ -64,9 +64,10 @@ class LoadSpikeRecoveryStrainRule : InsightRule {
     private fun hasRecoveryStrain(context: InsightContext): Boolean {
         val today = context.today
         val rhrDelta = today.readinessResult.diagnostics.rhrDeltaBpm
+        val sleepMinutes = today.sleepDurationMinutes
         val shortSleep =
-            today.sleepDurationMinutes != null &&
-                today.sleepDurationMinutes < context.goalSleepMinutes * InsightConstants.SLEEP_DEFICIT_RATIO
+            sleepMinutes != null &&
+                sleepMinutes < context.goalSleepMinutes * InsightConstants.SLEEP_DEFICIT_RATIO
         val readiness = LoadSourceSelector.selectReadiness(today, context.prefs.strainLoadSourceMode)
 
         return (today.zLnHrv ?: 0f) <= InsightConstants.RECOVERY_STRAIN_LOW_HRV_Z ||

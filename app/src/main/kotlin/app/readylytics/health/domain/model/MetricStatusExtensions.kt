@@ -29,22 +29,26 @@ fun SleepSessionSummary.efficiencyStatus(): MetricStatus {
     }
 }
 
-fun DailySummary.deepSleepStatus(): MetricStatus =
-    when (deepSleepPercent) {
+fun DailySummary.deepSleepStatus(): MetricStatus {
+    val pct = deepSleepPercent
+    return when (pct) {
         null -> if (sleepDurationMinutes != null && isCalibrating) MetricStatus.CALIBRATING else MetricStatus.NO_DATA
         in 25f..30f -> MetricStatus.NEUTRAL
         in 15f..25f -> MetricStatus.OPTIMAL
         in 10f..15f -> MetricStatus.NEUTRAL
         else -> MetricStatus.WARNING
     }
+}
 
-fun DailySummary.remSleepStatus(): MetricStatus =
-    when (remSleepPercent) {
+fun DailySummary.remSleepStatus(): MetricStatus {
+    val pct = remSleepPercent
+    return when (pct) {
         null -> if (sleepDurationMinutes != null && isCalibrating) MetricStatus.CALIBRATING else MetricStatus.NO_DATA
         in 20f..25f -> MetricStatus.OPTIMAL
         in 15f..20f -> MetricStatus.NEUTRAL
         else -> MetricStatus.WARNING
     }
+}
 
 fun DailySummary.rhrStatus(
     optimalThreshold: Float,
@@ -93,8 +97,9 @@ fun DailySummary.hrvStatus(
 }
 
 fun DailySummary.sleepDurationStatus(goalMinutes: Int): MetricStatus {
-    if (sleepDurationMinutes == null || goalMinutes <= 0) return MetricStatus.CALIBRATING
-    val ratio = sleepDurationMinutes.toFloat() / goalMinutes
+    val duration = sleepDurationMinutes
+    if (duration == null || goalMinutes <= 0) return MetricStatus.CALIBRATING
+    val ratio = duration.toFloat() / goalMinutes
     return when {
         ratio >= ScoringConstants.Sleep.DURATION_OPTIMAL_RATIO -> MetricStatus.OPTIMAL
         ratio >= ScoringConstants.Sleep.DURATION_NEUTRAL_RATIO -> MetricStatus.NEUTRAL

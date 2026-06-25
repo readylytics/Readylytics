@@ -30,9 +30,9 @@ data class DailySummaryEntity(
     val recoveryFlags: String? = null,
     val hrvSigma: Float? = null,
     @Embedded(prefix = "diag_")
-    val diagnostics: ReadinessResult.Diagnostics = ReadinessResult.Diagnostics(),
+    val diagnosticsEmbedded: ReadinessResult.Diagnostics? = ReadinessResult.Diagnostics(),
     @Embedded(prefix = "contrib_")
-    val contributors: ReadinessResult.Contributors = ReadinessResult.Contributors(),
+    val contributorsEmbedded: ReadinessResult.Contributors? = ReadinessResult.Contributors(),
     val rollingMu: Float? = null,
     val rhrDeltaBpm: Float? = null,
     val lateNadir: Boolean? = null,
@@ -91,4 +91,9 @@ data class DailySummaryEntity(
     val readinessEverydayHr: Float? = null,
     val everydayCoverageMinutes: Int? = null,
     val everydayLoadConfidence: String? = null,
-)
+) {
+    val diagnostics: ReadinessResult.Diagnostics
+        get() = diagnosticsEmbedded ?: ReadinessResult.Diagnostics()
+    val contributors: ReadinessResult.Contributors
+        get() = contributorsEmbedded ?: ReadinessResult.Contributors()
+}

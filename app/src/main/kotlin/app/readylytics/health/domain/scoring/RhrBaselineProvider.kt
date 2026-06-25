@@ -34,7 +34,8 @@ class AdaptiveRhrBaselineProvider
             val dbValue = dao.getPreciseRhrBaseline(dateMs)
             if (dbValue != null) return dbValue
 
-            if (prefs.rhrBaselineOverride != null) return prefs.rhrBaselineOverride.toDouble()
+            val override = prefs.rhrBaselineOverride
+            if (override != null) return override.toDouble()
 
             val dayMidnight = date.atStartOfDay(zone).toInstant()
             val rhrValues = baselineComputer.rhrHistory(dayMidnight, prefs.restingHrPercentile)
@@ -53,7 +54,8 @@ class AdaptiveRhrBaselineProvider
             val dbValue = dao.getRoundedRhrBaseline(dateMs)
             if (dbValue != null) return dbValue
 
-            if (prefs.rhrBaselineOverride != null) return Math.round(prefs.rhrBaselineOverride)
+            val override = prefs.rhrBaselineOverride
+            if (override != null) return Math.round(override)
 
             val dayMidnight = date.atStartOfDay(zone).toInstant()
             val rhrValues = baselineComputer.rhrHistory(dayMidnight, prefs.restingHrPercentile)
