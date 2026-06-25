@@ -23,13 +23,17 @@ data class StatusColors(
     val poor: Color,
 )
 
+// Fallback only. Live, theme-aware values (dark/light + dynamic color) are always supplied by
+// [FitDashboardTheme]. A `staticCompositionLocalOf` default cannot read the runtime ColorScheme,
+// so this mirrors the provider's light branch as a coherent fallback for the rare read outside
+// the theme (e.g. an unwrapped @Preview) rather than the previous mismatched hardcoded values.
 val LocalStatusColors =
     staticCompositionLocalOf {
         StatusColors(
-            optimal = Color(0xFF2E7D32),
-            neutral = Color(0xFF1976D2),
-            warning = Color(0xFFED6C02),
-            poor = Color.Red,
+            optimal = SuccessGreenLight,
+            neutral = Color(0xFF0061A4), // M3 Blue 40 — matches FitDashboardTheme light branch
+            warning = WarningOrangeLight,
+            poor = Color(0xFFBA1A1A), // M3 Error 40
         )
     }
 
@@ -46,19 +50,21 @@ data class ExtendedColors(
     val onNeutralContainer: Color,
 )
 
+// Fallback only — see [LocalStatusColors]. Mirrors [FitDashboardTheme]'s light branch; the
+// previous default used Dark variants, which is incoherent as a theme-agnostic fallback.
 val LocalExtendedColors =
     staticCompositionLocalOf {
         ExtendedColors(
-            success = SuccessGreenDark,
-            onSuccess = OnSuccessGreenDark,
-            successContainer = SuccessGreenContainerDark,
-            onSuccessContainer = OnSuccessGreenContainerDark,
-            warning = WarningOrangeDark,
-            onWarning = OnWarningOrangeDark,
-            warningContainer = WarningOrangeContainerDark,
-            onWarningContainer = OnWarningOrangeContainerDark,
-            neutralContainer = PrimaryContainerDark,
-            onNeutralContainer = OnPrimaryContainerDark,
+            success = SuccessGreenLight,
+            onSuccess = OnSuccessGreenLight,
+            successContainer = SuccessGreenContainerLight,
+            onSuccessContainer = OnSuccessGreenContainerLight,
+            warning = WarningOrangeLight,
+            onWarning = OnWarningOrangeLight,
+            warningContainer = WarningOrangeContainerLight,
+            onWarningContainer = OnWarningOrangeContainerLight,
+            neutralContainer = PrimaryContainerLight,
+            onNeutralContainer = OnPrimaryContainerLight,
         )
     }
 

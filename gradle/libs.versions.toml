@@ -37,6 +37,7 @@ androidxTestRunner = "1.7.0"
 archCore = "2.2.0"
 documentfile = "1.1.0"
 benchmarkMacro = "1.4.1"
+profileinstaller = "1.4.1"
 playServicesStats = "17.1.0"
 playServicesOssLicenses = "17.5.1"
 ossLicensesPlugin = "0.12.0"
@@ -113,6 +114,7 @@ androidx-compose-material3-adaptive = { group = "androidx.compose.material3.adap
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 androidx-arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "archCore" }
 androidx-benchmark-macro = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmarkMacro" }
+androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
 play-services-stats = { group = "com.google.android.gms", name = "play-services-stats", version.ref = "playServicesStats" }
 play-services-oss-licenses = { group = "com.google.android.gms", name = "play-services-oss-licenses", version.ref = "playServicesOssLicenses" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }

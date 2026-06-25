@@ -281,7 +281,7 @@ fun VitalsScreen(
                             rangeStartMs = uiState.rangeStartMs,
                             rangeDays = uiState.selectedRange.days,
                             metricName = stringResource(R.string.label_hrv),
-                            baselineUnit = "ms",
+                            baselineUnit = stringResource(R.string.unit_ms),
                             baseline = baselineHrv,
                             showBaseline = !isCalibrating,
                             scrollState = chartScrollState,

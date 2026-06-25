@@ -5,8 +5,6 @@ import app.readylytics.health.domain.preferences.SettingsRepository
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.repository.TransactionRunner
-import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -31,38 +29,31 @@ class ResyncCheckpointResumeTest {
     private val healthIngestionStore = mockk<HealthIngestionStore>(relaxed = true)
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val scoringRepository = mockk<ScoringRepository>(relaxed = true)
-    private val transactionRunner = mockk<TransactionRunner>(relaxed = true)
     private val sessionLinkReconciler = mockk<SessionLinkReconciler>(relaxed = true)
-    private val rasSourceModeBootstrapUseCase = mockk<RasSourceModeBootstrapUseCase>(relaxed = true)
     private val changeSynchronizer = mockk<HealthChangeSynchronizer>(relaxed = true)
     private val selectedSourcePruner = mockk<SelectedSourcePruner>(relaxed = true)
     private val checkpointStore = InMemoryResyncCheckpointStore()
     private val baselineTokens = mapOf(HealthDataType.SLEEP to "baseline-sleep-token")
 
-    private lateinit var useCase: HealthSyncUseCase
+    private lateinit var useCase: ResyncRangeUseCase
 
     @Before
     fun setup() {
-        coEvery { transactionRunner.runInTransaction<Any>(any()) } coAnswers {
-            val block = firstArg<suspend () -> Any>()
-            block()
-        }
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { changeSynchronizer.applyPendingChanges() } returns HealthChangeSyncOutcome(emptySet(), false)
         coEvery { changeSynchronizer.captureChangesTokens() } returns baselineTokens
         coEvery { changeSynchronizer.commitTokens(any()) } returns Unit
         useCase =
-            HealthSyncUseCase(
-                hcRepo = hcRepo,
-                healthIngestionStore = healthIngestionStore,
+            ResyncRangeUseCase(
                 settingsRepo = settingsRepo,
-                scoringRepository = scoringRepository,
-                transactionRunner = transactionRunner,
                 sessionLinkReconciler = sessionLinkReconciler,
-                rasSourceModeBootstrapUseCase = rasSourceModeBootstrapUseCase,
                 changeSynchronizer = changeSynchronizer,
                 selectedSourcePruner = selectedSourcePruner,
                 checkpointStore = checkpointStore,
+                healthIngestionStore = healthIngestionStore,
+                ingestionCoordinator = HealthIngestionCoordinator(hcRepo, healthIngestionStore),
+                stepCountFetcher = StepCountFetcher(hcRepo),
+                recomputeSupport = DailyRecomputeSupport(scoringRepository, settingsRepo),
                 ioDispatcher = Dispatchers.Unconfined,
             )
     }
@@ -87,7 +78,7 @@ class ResyncCheckpointResumeTest {
             val sleepFromSlot = slot<Instant>()
             coEvery { hcRepo.readSleepSessions(capture(sleepFromSlot), any()) } returns emptyList()
 
-            useCase.resyncRange(startDate = startDate, endDate = endDate, chunkDays = 30)
+            useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
             assertEquals(
                 resumedChunkStart.minusDays(1).atStartOfDay(zoneId).toInstant(),
@@ -111,7 +102,7 @@ class ResyncCheckpointResumeTest {
                 )
             val progress = mutableListOf<Pair<Int, Int>>()
 
-            useCase.resyncRange(startDate = startDate, endDate = endDate) { current, total ->
+            useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30) { current, total ->
                 progress += current to total
             }
 
@@ -143,7 +134,7 @@ class ResyncCheckpointResumeTest {
             val sleepFromInstants = mutableListOf<Instant>()
             coEvery { hcRepo.readSleepSessions(capture(sleepFromInstants), any()) } returns emptyList()
 
-            useCase.resyncRange(startDate = startDate, endDate = endDate, chunkDays = 30)
+            useCase.run(startDate = startDate, endDate = endDate, chunkDays = 30, onProgress = null)
 
             assertEquals(
                 startDate.minusDays(1).atStartOfDay(zoneId).toInstant(),
@@ -156,7 +147,7 @@ class ResyncCheckpointResumeTest {
         runTest {
             val startDate = LocalDate.of(2024, 6, 1)
 
-            useCase.resyncRange(startDate = startDate, endDate = startDate)
+            useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
 
             coVerifyOrder {
                 changeSynchronizer.captureChangesTokens()
@@ -174,7 +165,7 @@ class ResyncCheckpointResumeTest {
             coEvery { scoringRepository.computeAndPersistDailySummary(startDate, any()) } throws
                 IllegalStateException("scoring failed")
 
-            val result = useCase.resyncRange(startDate = startDate, endDate = startDate)
+            val result = useCase.run(startDate = startDate, endDate = startDate, chunkDays = 30, onProgress = null)
 
             assertEquals(false, result.isSuccess)
             coVerify(exactly = 0) { changeSynchronizer.commitTokens(any()) }

@@ -1,6 +1,6 @@
 # Health & Recovery Dashboard (Readylytics Context)
 
-Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35.
+Offline-first Android health app (Health Connect + Room DB). minSdk=26, targetSdk=37.
 
 ## Core Architecture & Tech Stack
 

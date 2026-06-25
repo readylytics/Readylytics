@@ -143,16 +143,16 @@ class LocalRestoreManager
                             zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
                                 ?: throw IllegalStateException("No JSON file found in backup ZIP")
 
-                        var prefsBackup: UserPreferencesBackup? = null
                         healthDatabase.withTransaction {
+                            var prefsBackup: UserPreferencesBackup? = null
                             zipFile.getInputStream(header).use { inputStream ->
                                 val reader = JsonReader(InputStreamReader(inputStream, "UTF-8"))
                                 performStreamingRestore(reader) { parsedPreferences ->
                                     prefsBackup = parsedPreferences
                                 }
                             }
+                            prefsBackup?.let { restorePreferences(it, providedPassword) }
                         }
-                        prefsBackup?.let { restorePreferences(it, providedPassword) }
 
                         RestoreResult.SuccessRequiresRestart
                     } finally {
