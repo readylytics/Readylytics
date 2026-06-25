@@ -1,12 +1,12 @@
 package app.readylytics.health.data.repository
 
-import app.readylytics.health.data.local.dao.DailySummaryDao
-import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
-import app.readylytics.health.data.local.dao.SleepHrSample
-import app.readylytics.health.data.local.dao.SleepSessionDao
-import app.readylytics.health.data.local.entity.DailySummaryEntity
-import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.domain.model.DailySummaryEntity
+import app.readylytics.health.domain.model.SleepSessionEntity
+import app.readylytics.health.domain.persistence.DailySummaryDao
+import app.readylytics.health.domain.persistence.HeartRateDao
+import app.readylytics.health.domain.persistence.HrvDao
+import app.readylytics.health.domain.persistence.SleepHrSample
+import app.readylytics.health.domain.persistence.SleepSessionDao
 import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import javax.inject.Inject
 import javax.inject.Singleton
