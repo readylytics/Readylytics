@@ -292,7 +292,9 @@ class LocalRestoreManagerTest {
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is LocalRestoreManager.RestoreResult.Failure)
-            assertEquals(failure, (result as LocalRestoreManager.RestoreResult.Failure).cause)
+            val cause = (result as LocalRestoreManager.RestoreResult.Failure).cause
+            assertEquals(failure.message, cause.message)
+            assertEquals(failure::class, cause::class)
 
             val sessions = db.sleepSessionDao().getSince(0)
             assertTrue(sessions.isEmpty())

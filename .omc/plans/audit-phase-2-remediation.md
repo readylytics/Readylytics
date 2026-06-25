@@ -4,8 +4,21 @@ Tracking branch: `claude/admiring-galileo-kujbv2` (PR #106). Source: `internal-d
 
 > Written so work can continue in a normal local environment (Gradle/AGP/emulator available).
 > The cloud session that produced M1/m2/M5 could not run Gradle at all (Maven host network-blocked),
-> so `ktlintFormat` / `testDebugUnitTest` / `lint` were never executed there — **run them first** on
-> this branch before trusting anything below as green.
+> so `ktlintFormat` / `testDebugUnitTest` / `lint` were never executed there.
+>
+> **Verified locally on 2026-06-25:** `./gradlew ktlintFormat` (no reformatting needed) →
+> `./gradlew testDebugUnitTest` (1609 tests, 1 pre-existing failure found and fixed, see below) →
+> `./gradlew lint` ("Lint found no errors or warnings"). M1/m2/M5(partial) are now confirmed green by
+> a real build.
+>
+> **Bug found and fixed during verification (pre-existing, unrelated to M1/m2/M5):**
+> `LocalRestoreManagerTest.applyRestore_rollsBackDbChangesWhenPreferencesRestoreFails` asserted
+> `assertEquals(failure, cause)` on a `Throwable` (identity-based `equals`). kotlinx.coroutines'
+> stack-trace recovery (on by default under Gradle's `-ea` test JVM) copies an exception into a new
+> instance with the same class/message when it crosses a suspend boundary, so `cause` was never the
+> same *instance* as `failure` — the test was asserting identity it could never get. Pre-existing
+> since the M4 commit (`a48973a`) that introduced this test; never run for real until now. Fixed by
+> comparing `message` and `::class` instead of identity — no production code changed.
 
 ## Phase 1 — DONE before this session (for completeness)
 
