@@ -193,22 +193,22 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             "**/*Serializer*.*",
         )
 
-    val debugTree =
-        zipTree(
+    doFirst {
+        val classesJar =
             layout.buildDirectory.file(
                 "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
-            ),
-        ).matching {
-            fileFilter.forEach { exclude(it) }
-        }
-
-    doFirst {
-        val count = debugTree.files.size
-        println("jacocoTestReport: classDirectories has $count class file(s)")
-        if (count == 0) {
+            ).get().asFile
+        if (!classesJar.exists()) {
             println(
-                "  class jar missing or empty: intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
+                "  class jar missing: intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
             )
+        } else {
+            val debugTree =
+                zipTree(classesJar).matching {
+                    fileFilter.forEach { exclude(it) }
+                }
+            val count = debugTree.files.size
+            println("jacocoTestReport: classDirectories has $count class file(s)")
         }
     }
 
@@ -219,7 +219,15 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         )
 
     sourceDirectories.setFrom(mainSrc)
-    classDirectories.setFrom(debugTree)
+    classDirectories.setFrom(
+        zipTree(
+            layout.buildDirectory.file(
+                "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
+            ),
+        ).matching {
+            fileFilter.forEach { exclude(it) }
+        },
+    )
     executionData.setFrom(
         fileTree(layout.buildDirectory.get()) {
             include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
@@ -254,15 +262,6 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
             "**/*Serializer*.*",
         )
 
-    val debugTree =
-        zipTree(
-            layout.buildDirectory.file(
-                "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
-            ),
-        ).matching {
-            fileFilter.forEach { exclude(it) }
-        }
-
     val mainSrc =
         files(
             "${project.projectDir}/src/main/java",
@@ -274,7 +273,15 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
             include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
         },
     )
-    classDirectories.setFrom(debugTree)
+    classDirectories.setFrom(
+        zipTree(
+            layout.buildDirectory.file(
+                "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
+            ),
+        ).matching {
+            fileFilter.forEach { exclude(it) }
+        },
+    )
     sourceDirectories.setFrom(mainSrc)
 
     violationRules {

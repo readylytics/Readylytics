@@ -31,10 +31,10 @@ data class DailySummaryEntity(
     val zRhr: Float? = null,
     val recoveryFlags: String? = null,
     val hrvSigma: Float? = null,
-    @field:Embedded(prefix = "diag_")
-    val diagnosticsEmbedded: Diagnostics? = Diagnostics(),
-    @field:Embedded(prefix = "contrib_")
-    val contributorsEmbedded: Contributors? = Contributors(),
+    @Embedded(prefix = "diag_")
+    val diagnosticsEmbedded: Diagnostics = Diagnostics(),
+    @Embedded(prefix = "contrib_")
+    val contributorsEmbedded: Contributors = Contributors(),
     val rollingMu: Float? = null,
     val rhrDeltaBpm: Float? = null,
     val lateNadir: Boolean? = null,
@@ -95,7 +95,7 @@ data class DailySummaryEntity(
     val everydayLoadConfidence: String? = null,
 ) {
     val diagnostics: Diagnostics
-        get() = diagnosticsEmbedded ?: Diagnostics()
+        get() = diagnosticsEmbedded
     val contributors: Contributors
-        get() = contributorsEmbedded ?: Contributors()
+        get() = contributorsEmbedded
 }
