@@ -6,6 +6,7 @@ import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.*
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
@@ -30,12 +31,12 @@ class ScoringRepositoryImplTest {
     private val scoringConfigFactory = mockk<ScoringConfigFactory>(relaxed = true)
     private val computeWorkoutTrimpUseCase = mockk<ComputeWorkoutTrimpUseCase>(relaxed = true)
     private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
-    private val hrvDao = mockk<HrvDao>(relaxed = true)
     private val weightRecordDao = mockk<WeightRecordDao>(relaxed = true)
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
     private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
+    private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
     private lateinit var repo: ScoringRepositoryImpl
 
@@ -53,15 +54,16 @@ class ScoringRepositoryImplTest {
                 scoringConfigFactory,
                 computeWorkoutTrimpUseCase,
                 heartRateDao,
-                hrvDao,
                 weightRecordDao,
                 bodyFatRecordDao,
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
                 sleepPercentileRhrCalculator,
+                scoringHistoryRepository,
             )
         every { settingsRepo.userPreferences } returns flowOf(UserPreferences())
         coEvery { dailySummaryDao.getByDate(any()) } returns null
+        coEvery { scoringHistoryRepository.getDailySummaryByDate(any()) } returns null
         coEvery { sleepSessionDao.countSince(any()) } returns 10
         coEvery { baselineComputer.computeAdaptiveBaselineRhrBpmBetween(any(), any(), any()) } returns 60f
     }
@@ -164,6 +166,7 @@ class ScoringRepositoryImplTest {
                     baselineCalculatedAtDate = today,
                 )
             coEvery { dailySummaryDao.getByDate(todayMs) } returns existingSummary
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(todayMs) } returns existingSummary
 
             // Ensure use case returns success
             coEvery {
@@ -328,6 +331,7 @@ class ScoringRepositoryImplTest {
 
             every { settingsRepo.userPreferences } returns prefsFlow
             coEvery { dailySummaryDao.getByDate(any()) } returns null
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(any()) } returns null
             coEvery { sleepSessionDao.countSince(any()) } coAnswers {
                 prefsFlow.value = UserPreferences(scoringZoneId = zoneB.id)
                 10

@@ -1,11 +1,13 @@
 package app.readylytics.health.domain.scoring.sleep
 
+import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.SleepHrSample
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -20,8 +22,13 @@ import java.time.Instant
 private const val DELTA = 0.5f
 
 class CurrentNightHrvResolverTest {
+    private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
     private val hrvDao = mockk<HrvDao>()
-    private val resolver = CurrentNightHrvResolver(hrvDao)
+    private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
+    private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
+    private val scoringHistoryRepository =
+        ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao)
+    private val resolver = CurrentNightHrvResolver(scoringHistoryRepository)
 
     @Test
     fun `resolve_sessionHrvPresent_returnsSessionSamples`() =
@@ -86,8 +93,12 @@ class CurrentNightHrvResolverTest {
 
 class SleepPercentileRhrCalculatorTest {
     private val heartRateDao = mockk<HeartRateDao>()
+    private val hrvDao = mockk<HrvDao>(relaxed = true)
     private val sleepSessionDao = mockk<SleepSessionDao>()
-    private val collector = SleepPercentileRhrCalculator(heartRateDao, sleepSessionDao)
+    private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
+    private val scoringHistoryRepository =
+        ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao)
+    private val collector = SleepPercentileRhrCalculator(scoringHistoryRepository)
 
     @Test
     fun `collect_historicRecordsPresent_computesBaselineAndRatio`() =
@@ -222,8 +233,13 @@ class SleepPercentileRhrCalculatorTest {
 
 class SleepNadirAnalyzerTest {
     private val heartRateDao = mockk<HeartRateDao>()
+    private val hrvDao = mockk<HrvDao>(relaxed = true)
+    private val sleepSessionDao = mockk<SleepSessionDao>(relaxed = true)
+    private val dailySummaryDao = mockk<DailySummaryDao>(relaxed = true)
+    private val scoringHistoryRepository =
+        ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao)
     private val scoringCalculator = mockk<ScoringCalculator>()
-    private val analyzer = SleepNadirAnalyzer(heartRateDao, scoringCalculator)
+    private val analyzer = SleepNadirAnalyzer(scoringHistoryRepository, scoringCalculator)
 
     @Test
     fun `analyze_nadirInLastThird_isLateTrue`() =

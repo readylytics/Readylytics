@@ -9,6 +9,7 @@ import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.domain.model.TimestampedTrimp
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
@@ -34,12 +35,12 @@ class ScoringPointInTimeRegressionTest {
     private val scoringConfigFactory = mockk<ScoringConfigFactory>(relaxed = true)
     private val computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase()
     private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
-    private val hrvDao = mockk<HrvDao>(relaxed = true)
     private val weightRecordDao = mockk<WeightRecordDao>(relaxed = true)
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
     private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
+    private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
     private lateinit var repo: ScoringRepositoryImpl
 
@@ -57,12 +58,12 @@ class ScoringPointInTimeRegressionTest {
                 scoringConfigFactory,
                 computeWorkoutTrimpUseCase,
                 heartRateDao,
-                hrvDao,
                 weightRecordDao,
                 bodyFatRecordDao,
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
                 sleepPercentileRhrCalculator,
+                scoringHistoryRepository,
             )
     }
 
@@ -84,6 +85,7 @@ class ScoringPointInTimeRegressionTest {
                     baselineObservationCount = 10,
                 )
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns frozenSnapshot
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns frozenSnapshot
 
             // 2. Setup mock workouts/samples
             val workout =
@@ -168,6 +170,7 @@ class ScoringPointInTimeRegressionTest {
                     baselineObservationCount = 10,
                 )
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns frozenSnapshot
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns frozenSnapshot
             coEvery { sleepSessionDao.countSince(any()) } returns 10
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
 
@@ -244,6 +247,7 @@ class ScoringPointInTimeRegressionTest {
                     baselineObservationCount = 10,
                 )
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns frozenSnapshot
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns frozenSnapshot
             coEvery { sleepSessionDao.countSince(any()) } returns 10
             coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
@@ -306,7 +310,7 @@ class ScoringPointInTimeRegressionTest {
                 val historicalDate = LocalDate.of(2025, 7, 1)
                 val historicalMidnightMs = historicalDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
 
-                coEvery { dailySummaryDao.getByDate(targetMidnightMs) } returns
+                val targetFrozenSnapshot =
                     DailySummaryEntity(
                         dateMidnightMs = targetMidnightMs,
                         baselineCalculatedAtDate = targetDate,
@@ -315,6 +319,9 @@ class ScoringPointInTimeRegressionTest {
                         rhrBpm = 60f,
                         baselineObservationCount = 10,
                     )
+                coEvery { dailySummaryDao.getByDate(targetMidnightMs) } returns targetFrozenSnapshot
+                coEvery { scoringHistoryRepository.getDailySummaryByDate(targetMidnightMs) } returns
+                    targetFrozenSnapshot
                 coEvery { sleepSessionDao.countSince(any()) } returns 10
                 coEvery { sleepSessionDao.getSessionEndingInRange(any(), any()) } returns null
                 coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
@@ -391,7 +398,7 @@ class ScoringPointInTimeRegressionTest {
             listOf(LocalDate.of(2025, 3, 31), LocalDate.of(2025, 10, 27)).forEach { targetDate ->
                 val targetMidnightMs = targetDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
                 val fromMs = slot<Long>()
-                coEvery { dailySummaryDao.getByDate(targetMidnightMs) } returns
+                val frozenSnapshot =
                     DailySummaryEntity(
                         dateMidnightMs = targetMidnightMs,
                         baselineCalculatedAtDate = targetDate,
@@ -400,6 +407,8 @@ class ScoringPointInTimeRegressionTest {
                         rhrBpm = 60f,
                         baselineObservationCount = 10,
                     )
+                coEvery { dailySummaryDao.getByDate(targetMidnightMs) } returns frozenSnapshot
+                coEvery { scoringHistoryRepository.getDailySummaryByDate(targetMidnightMs) } returns frozenSnapshot
                 coEvery { workoutDao.getTrimpPoints(capture(fromMs), any()) } returns emptyList()
 
                 repo.computeDailySummary(targetDate)

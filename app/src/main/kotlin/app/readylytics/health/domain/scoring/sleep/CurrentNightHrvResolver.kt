@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.scoring.sleep
 
 import app.readylytics.health.domain.model.SleepSessionEntity
-import app.readylytics.health.domain.persistence.HrvDao
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.util.mean
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -10,7 +10,7 @@ import javax.inject.Singleton
 class CurrentNightHrvResolver
     @Inject
     constructor(
-        private val hrvDao: HrvDao,
+        private val scoringHistoryRepository: ScoringHistoryRepository,
     ) {
         data class HrvResult(
             val samples: List<Float>,
@@ -18,9 +18,9 @@ class CurrentNightHrvResolver
         )
 
         suspend fun resolve(session: SleepSessionEntity): HrvResult {
-            var samples = hrvDao.getSleepRmssdForSession(session.id)
+            var samples = scoringHistoryRepository.getSleepRmssdForSession(session.id)
             if (samples.isEmpty()) {
-                samples = hrvDao.getRmssdInTimeRange(session.startTime, session.endTime)
+                samples = scoringHistoryRepository.getRmssdInTimeRange(session.startTime, session.endTime)
             }
             val mean = if (samples.isNotEmpty()) samples.mean() else 0f
             return HrvResult(samples, mean)

@@ -16,6 +16,7 @@ import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.repository.ScoringRepository
@@ -135,13 +136,14 @@ class ScoringRepositoryN1Test {
                 LoadScoringStrategy(),
             )
 
-        val baselineComputer =
-            BaselineComputer(heartRateDao, hrvDao, sleepSessionDao, scoringCalculator, dailySummaryDao)
+        val scoringHistoryRepository =
+            ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao)
+        val baselineComputer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
         val scoringConfigFactory = ScoringConfigFactory()
         val encryptionManager = mockk<EncryptionManager>(relaxed = true)
-        val hrvResolver = CurrentNightHrvResolver(hrvDao)
-        val sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(heartRateDao, sleepSessionDao)
-        val nadirAnalyzer = SleepNadirAnalyzer(heartRateDao, scoringCalculator)
+        val hrvResolver = CurrentNightHrvResolver(scoringHistoryRepository)
+        val sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository)
+        val nadirAnalyzer = SleepNadirAnalyzer(scoringHistoryRepository, scoringCalculator)
         val coverageValidator = HrCoverageValidator()
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
@@ -171,12 +173,12 @@ class ScoringRepositoryN1Test {
                 scoringConfigFactory = scoringConfigFactory,
                 computeWorkoutTrimpUseCase = computeWorkoutTrimpUseCase,
                 heartRateDao = heartRateDao,
-                hrvDao = hrvDao,
                 weightRecordDao = weightRecordDao,
                 bodyFatRecordDao = bodyFatRecordDao,
                 bloodPressureRecordDao = bloodPressureRecordDao,
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
                 sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
+                scoringHistoryRepository = scoringHistoryRepository,
             )
     }
 

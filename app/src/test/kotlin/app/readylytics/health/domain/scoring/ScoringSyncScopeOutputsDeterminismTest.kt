@@ -16,6 +16,7 @@ import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.model.DailySummary
@@ -283,19 +284,23 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 RasScoringStrategy(),
                 LoadScoringStrategy(),
             )
-        val baselineComputer =
-            BaselineComputer(
+        val scoringHistoryRepository =
+            ScoringHistoryRepositoryImpl(
                 heartRateDao = heartRateDao,
                 hrvDao = hrvDao,
                 sleepSessionDao = sleepSessionDao,
-                scoringCalculator = scoringCalculator,
                 dailySummaryDao = dailySummaryDao,
+            )
+        val baselineComputer =
+            BaselineComputer(
+                scoringHistoryRepository = scoringHistoryRepository,
+                scoringCalculator = scoringCalculator,
             )
         val scoringConfigFactory = ScoringConfigFactory()
         val encryptionManager = mockk<EncryptionManager>(relaxed = true)
-        val currentNightHrvResolver = CurrentNightHrvResolver(hrvDao)
-        val sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(heartRateDao, sleepSessionDao)
-        val sleepNadirAnalyzer = SleepNadirAnalyzer(heartRateDao, scoringCalculator)
+        val currentNightHrvResolver = CurrentNightHrvResolver(scoringHistoryRepository)
+        val sleepPercentileRhrCalculator = SleepPercentileRhrCalculator(scoringHistoryRepository)
+        val sleepNadirAnalyzer = SleepNadirAnalyzer(scoringHistoryRepository, scoringCalculator)
         val coverageValidator = HrCoverageValidator()
         val computeSleepMetricsUseCase =
             ComputeSleepMetricsUseCase(
@@ -323,12 +328,12 @@ class ScoringSyncScopeOutputsDeterminismTest {
                 scoringConfigFactory = scoringConfigFactory,
                 computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase(),
                 heartRateDao = heartRateDao,
-                hrvDao = hrvDao,
                 weightRecordDao = weightRecordDao,
                 bodyFatRecordDao = bodyFatRecordDao,
                 bloodPressureRecordDao = bloodPressureRecordDao,
                 oxygenSaturationRecordDao = oxygenSaturationRecordDao,
                 sleepPercentileRhrCalculator = sleepPercentileRhrCalculator,
+                scoringHistoryRepository = scoringHistoryRepository,
             )
 
         return ScopeResult(label = label, summary = repo.computeDailySummary(targetDate))

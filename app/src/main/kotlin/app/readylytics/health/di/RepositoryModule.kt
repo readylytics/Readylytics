@@ -8,6 +8,7 @@ import app.readylytics.health.data.repository.DailyMetricsRepositoryImpl
 import app.readylytics.health.data.repository.DailySummaryRepositoryImpl
 import app.readylytics.health.data.repository.HeartRateRepositoryImpl
 import app.readylytics.health.data.repository.InsightDismissalRepositoryImpl
+import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.WeightRepositoryImpl
 import app.readylytics.health.data.repository.WorkoutRepositoryImpl
 import app.readylytics.health.domain.repository.BloodPressureRepository
@@ -16,6 +17,7 @@ import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.WeightRepository
 import app.readylytics.health.domain.repository.WorkoutRepository
 import dagger.Binds
@@ -58,6 +60,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindInsightDismissalRepository(impl: InsightDismissalRepositoryImpl): InsightDismissalRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindScoringHistoryRepository(impl: ScoringHistoryRepositoryImpl): ScoringHistoryRepository
 
     @Binds
     @Singleton
