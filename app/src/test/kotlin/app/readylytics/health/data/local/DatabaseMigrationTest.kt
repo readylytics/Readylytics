@@ -7,7 +7,7 @@ import org.junit.Test
 class DatabaseMigrationTest {
     @Test
     fun `database version matches latest migration`() {
-        assertEquals(2, HealthDatabase.DATABASE_VERSION)
+        assertEquals(3, HealthDatabase.DATABASE_VERSION)
     }
 
     @Test

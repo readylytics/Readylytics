@@ -195,9 +195,11 @@ tasks.register<JacocoReport>("jacocoTestReport") {
 
     doFirst {
         val classesJar =
-            layout.buildDirectory.file(
-                "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
-            ).get().asFile
+            layout.buildDirectory
+                .file(
+                    "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
+                ).get()
+                .asFile
         if (!classesJar.exists()) {
             println(
                 "  class jar missing: intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
