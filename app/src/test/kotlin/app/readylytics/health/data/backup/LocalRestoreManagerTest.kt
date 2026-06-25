@@ -7,11 +7,11 @@ import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.data.preferences.BackupScheduleProto
-import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferencesProto
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.workers.WorkerScheduler
 import io.mockk.coEvery
 import io.mockk.coVerify

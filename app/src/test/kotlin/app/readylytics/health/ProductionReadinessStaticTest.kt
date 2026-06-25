@@ -313,8 +313,20 @@ class ProductionReadinessStaticTest {
     }
 
     private fun sourceFile(path: String): File =
-        listOf(File(path), File("app", path))
-            .firstOrNull { it.exists() }
+        listOf(
+            File(path),
+            File("app", path),
+            File("core/database", path),
+            File("core/model", path),
+            File("core/scoring", path),
+            File("core/healthconnect", path),
+            File("..", path),
+            File("../app", path),
+            File("../core/database", path),
+            File("../core/model", path),
+            File("../core/scoring", path),
+            File("../core/healthconnect", path),
+        ).firstOrNull { it.exists() }
             ?: error("Source file not found: $path")
 
     private fun projectFile(path: String): File =

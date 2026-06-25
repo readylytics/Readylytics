@@ -19,7 +19,7 @@ class WorkerSchedulerTest {
     @Before
     fun setUp() {
         every { workManagerLazy.get() } returns workManager
-        scheduler = WorkerScheduler(workManagerLazy)
+        scheduler = WorkerSchedulerImpl(workManagerLazy)
     }
 
     @Test

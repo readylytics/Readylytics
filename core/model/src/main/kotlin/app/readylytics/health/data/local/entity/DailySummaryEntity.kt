@@ -6,6 +6,8 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import app.readylytics.health.domain.model.ReadinessResult
+import app.readylytics.health.domain.model.Diagnostics
+import app.readylytics.health.domain.model.Contributors
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 
@@ -29,10 +31,10 @@ data class DailySummaryEntity(
     val zRhr: Float? = null,
     val recoveryFlags: String? = null,
     val hrvSigma: Float? = null,
-    @Embedded(prefix = "diag_")
-    val diagnosticsEmbedded: ReadinessResult.Diagnostics? = ReadinessResult.Diagnostics(),
-    @Embedded(prefix = "contrib_")
-    val contributorsEmbedded: ReadinessResult.Contributors? = ReadinessResult.Contributors(),
+    @field:Embedded(prefix = "diag_")
+    val diagnosticsEmbedded: Diagnostics? = Diagnostics(),
+    @field:Embedded(prefix = "contrib_")
+    val contributorsEmbedded: Contributors? = Contributors(),
     val rollingMu: Float? = null,
     val rhrDeltaBpm: Float? = null,
     val lateNadir: Boolean? = null,
@@ -92,8 +94,8 @@ data class DailySummaryEntity(
     val everydayCoverageMinutes: Int? = null,
     val everydayLoadConfidence: String? = null,
 ) {
-    val diagnostics: ReadinessResult.Diagnostics
-        get() = diagnosticsEmbedded ?: ReadinessResult.Diagnostics()
-    val contributors: ReadinessResult.Contributors
-        get() = contributorsEmbedded ?: ReadinessResult.Contributors()
+    val diagnostics: Diagnostics
+        get() = diagnosticsEmbedded ?: Diagnostics()
+    val contributors: Contributors
+        get() = contributorsEmbedded ?: Contributors()
 }

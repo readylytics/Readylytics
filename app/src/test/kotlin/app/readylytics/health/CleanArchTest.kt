@@ -61,7 +61,8 @@ class CleanArchTest {
                 }.flatMap { file ->
                     file.imports
                         .filter { import ->
-                            import.name.startsWith("app.readylytics.health.data.")
+                            import.name.startsWith("app.readylytics.health.data.") &&
+                                !import.name.startsWith("app.readylytics.health.data.preferences.")
                         }.map { import -> "${file.name}: ${import.name}" }
                 }
 

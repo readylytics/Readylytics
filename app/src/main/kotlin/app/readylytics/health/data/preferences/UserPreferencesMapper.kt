@@ -42,7 +42,14 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         hrvWarningThreshold = hrvWarningThreshold,
         rhrOptimalThreshold = rhrOptimalThreshold,
         rhrWarningThreshold = rhrWarningThreshold,
-        restingHrPercentile = if (restingHrPercentile == 0) SettingsDefaults.RESTING_HR_PERCENTILE else restingHrPercentile.coerceIn(1, 15),
+        restingHrPercentile =
+            if (restingHrPercentile ==
+                0
+            ) {
+                SettingsDefaults.RESTING_HR_PERCENTILE
+            } else {
+                restingHrPercentile.coerceIn(1, 15)
+            },
         appTheme = AppTheme.valueOf(appTheme.name.removePrefix("THEME_")),
         backupSchedule = BackupSchedule.valueOf(backupSchedule.name.removePrefix("BACKUP_")),
         lastBackupTimestamp = lastBackupTimestamp,
@@ -62,19 +69,21 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         installDate = installDate,
         circadianThresholdOverride = if (hasCircadianThresholdOverride()) circadianThresholdOverride else null,
         dynamicColorEnabled = dynamicColorEnabled,
-        fallbackThemeColor = when (fallbackThemeColor) {
-            FallbackThemeColorProto.FALLBACK_GREEN_PERFORMANCE -> FallbackThemeColor.GREEN_PERFORMANCE
-            FallbackThemeColorProto.FALLBACK_BLUE_TRUST -> FallbackThemeColor.BLUE_TRUST
-            FallbackThemeColorProto.FALLBACK_PURPLE_INSIGHT -> FallbackThemeColor.PURPLE_INSIGHT
-            FallbackThemeColorProto.FALLBACK_ICON_SIGNATURE -> FallbackThemeColor.ICON_SIGNATURE
-            FallbackThemeColorProto.FALLBACK_ICON_ELEMENTS -> FallbackThemeColor.ICON_ELEMENTS
-            else -> SettingsDefaults.FALLBACK_THEME_COLOR
-        },
-        trimpModel = when (trimpMethod) {
-            TrimpMethodProto.TRIMP_ITRIMP -> TrimpModel.I_TRIMP
-            TrimpMethodProto.TRIMP_CHENG -> TrimpModel.CHENG
-            else -> TrimpModel.BANISTER
-        },
+        fallbackThemeColor =
+            when (fallbackThemeColor) {
+                FallbackThemeColorProto.FALLBACK_GREEN_PERFORMANCE -> FallbackThemeColor.GREEN_PERFORMANCE
+                FallbackThemeColorProto.FALLBACK_BLUE_TRUST -> FallbackThemeColor.BLUE_TRUST
+                FallbackThemeColorProto.FALLBACK_PURPLE_INSIGHT -> FallbackThemeColor.PURPLE_INSIGHT
+                FallbackThemeColorProto.FALLBACK_ICON_SIGNATURE -> FallbackThemeColor.ICON_SIGNATURE
+                FallbackThemeColorProto.FALLBACK_ICON_ELEMENTS -> FallbackThemeColor.ICON_ELEMENTS
+                else -> SettingsDefaults.FALLBACK_THEME_COLOR
+            },
+        trimpModel =
+            when (trimpMethod) {
+                TrimpMethodProto.TRIMP_ITRIMP -> TrimpModel.I_TRIMP
+                TrimpMethodProto.TRIMP_CHENG -> TrimpModel.CHENG
+                else -> TrimpModel.BANISTER
+            },
         banisterMultiplier = if (rasCalibration > 0f) rasCalibration else profile.banisterMultiplier,
         chengBeta = if (this.chengBeta > 0f) this.chengBeta else profile.defaultChengBeta,
         itrimB = if (itrimpB > 0f) itrimpB else profile.defaultItrimB,
@@ -83,33 +92,68 @@ fun UserPreferencesProto.toDomainModel(): UserPreferences {
         backupDirectoryUri = if (hasBackupDirectoryUri()) backupDirectoryUri else null,
         backupPasswordHash = if (hasBackupPasswordHash()) backupPasswordHash else null,
         isBirthdayConfigured = isBirthdayConfigured,
-        unitSystem = when (unitSystem) {
-            UnitSystemProto.UNIT_METRIC -> UnitSystem.METRIC
-            UnitSystemProto.UNIT_IMPERIAL -> UnitSystem.IMPERIAL
-            else -> SettingsDefaults.UNIT_SYSTEM
-        },
+        unitSystem =
+            when (unitSystem) {
+                UnitSystemProto.UNIT_METRIC -> UnitSystem.METRIC
+                UnitSystemProto.UNIT_IMPERIAL -> UnitSystem.IMPERIAL
+                else -> SettingsDefaults.UNIT_SYSTEM
+            },
         backgroundSyncEnabled = backgroundSyncEnabled,
-        backgroundSyncIntervalMinutes = if (backgroundSyncIntervalMinutes == 0) SettingsDefaults.BACKGROUND_SYNC_INTERVAL.minutes else backgroundSyncIntervalMinutes,
+        backgroundSyncIntervalMinutes =
+            if (backgroundSyncIntervalMinutes ==
+                0
+            ) {
+                SettingsDefaults.BACKGROUND_SYNC_INTERVAL.minutes
+            } else {
+                backgroundSyncIntervalMinutes
+            },
         isCustomPaletteEnabled = isCustomPaletteEnabled,
-        customSecondaryColor = if (customSecondaryColor == 0L) SettingsDefaults.CUSTOM_SECONDARY_COLOR else customSecondaryColor,
-        customTertiaryColor = if (customTertiaryColor == 0L) SettingsDefaults.CUSTOM_TERTIARY_COLOR else customTertiaryColor,
-        customPrimaryColor = if (customPrimaryColor == 0L) SettingsDefaults.CUSTOM_PRIMARY_COLOR else customPrimaryColor,
+        customSecondaryColor =
+            if (customSecondaryColor ==
+                0L
+            ) {
+                SettingsDefaults.CUSTOM_SECONDARY_COLOR
+            } else {
+                customSecondaryColor
+            },
+        customTertiaryColor =
+            if (customTertiaryColor ==
+                0L
+            ) {
+                SettingsDefaults.CUSTOM_TERTIARY_COLOR
+            } else {
+                customTertiaryColor
+            },
+        customPrimaryColor =
+            if (customPrimaryColor ==
+                0L
+            ) {
+                SettingsDefaults.CUSTOM_PRIMARY_COLOR
+            } else {
+                customPrimaryColor
+            },
         scoringZoneId = scoringZoneId,
         deviceChangeNoticeDismissed = deviceChangeNoticeDismissed,
-        strainLoadSourceMode = when (strainLoadSourceMode) {
-            LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY -> LoadSourceMode.WORKOUT_ONLY
-            LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE -> LoadSourceMode.EVERYDAY_HEART_RATE
-            else -> SettingsDefaults.STRAIN_LOAD_SOURCE_MODE
-        },
-        rasSourceMode = when (rasSourceMode) {
-            LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY -> LoadSourceMode.WORKOUT_ONLY
-            LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE -> LoadSourceMode.EVERYDAY_HEART_RATE
-            else -> SettingsDefaults.RAS_SOURCE_MODE
-        },
+        strainLoadSourceMode =
+            when (strainLoadSourceMode) {
+                LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY -> LoadSourceMode.WORKOUT_ONLY
+                LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE -> LoadSourceMode.EVERYDAY_HEART_RATE
+                else -> SettingsDefaults.STRAIN_LOAD_SOURCE_MODE
+            },
+        rasSourceMode =
+            when (rasSourceMode) {
+                LoadSourceModeProto.LOAD_SOURCE_WORKOUT_ONLY -> LoadSourceMode.WORKOUT_ONLY
+                LoadSourceModeProto.LOAD_SOURCE_EVERYDAY_HEART_RATE -> LoadSourceMode.EVERYDAY_HEART_RATE
+                else -> SettingsDefaults.RAS_SOURCE_MODE
+            },
     )
 }
 
-private fun migrateBirthdateFields(day: Int, month: Int, year: Int): String? {
+private fun migrateBirthdateFields(
+    day: Int,
+    month: Int,
+    year: Int,
+): String? {
     if (day == 0 || month == 0 || year == 0) return null
     return try {
         val clampedMonth = month.coerceIn(1, 12)
