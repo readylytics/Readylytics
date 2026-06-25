@@ -5,6 +5,7 @@ import app.readylytics.health.data.local.dao.HeartRateDao
 import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -53,13 +54,17 @@ class WalkForwardDeterminismTest {
 
     @Before
     fun setup() {
-        baselineComputer =
-            BaselineComputer(
+        val scoringHistoryRepository =
+            ScoringHistoryRepositoryImpl(
                 heartRateDao = heartRateDao,
                 hrvDao = hrvDao,
                 sleepSessionDao = sleepSessionDao,
-                scoringCalculator = scoringCalculator,
                 dailySummaryDao = dailySummaryDao,
+            )
+        baselineComputer =
+            BaselineComputer(
+                scoringHistoryRepository = scoringHistoryRepository,
+                scoringCalculator = scoringCalculator,
             )
 
         coEvery {

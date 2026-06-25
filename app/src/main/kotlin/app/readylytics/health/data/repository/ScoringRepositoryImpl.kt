@@ -4,7 +4,6 @@ import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
@@ -17,6 +16,7 @@ import app.readylytics.health.domain.model.DailySummaryMapper
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.RecordType
 import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.scoring.BaselineComputer
 import app.readylytics.health.domain.scoring.ComputeSleepMetricsUseCase
@@ -60,12 +60,12 @@ class ScoringRepositoryImpl
         private val scoringConfigFactory: ScoringConfigFactory,
         private val computeWorkoutTrimpUseCase: ComputeWorkoutTrimpUseCase,
         private val heartRateDao: HeartRateDao,
-        private val hrvDao: HrvDao,
         private val weightRecordDao: WeightRecordDao,
         private val bodyFatRecordDao: BodyFatRecordDao,
         private val bloodPressureRecordDao: BloodPressureRecordDao,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao,
         private val sleepPercentileRhrCalculator: SleepPercentileRhrCalculator,
+        private val scoringHistoryRepository: ScoringHistoryRepository,
     ) : ScoringRepository {
         private val calculationMutex = Mutex()
 
@@ -103,7 +103,7 @@ class ScoringRepositoryImpl
                 val nextDayMidnightMs = nextDayMidnight.toEpochMilli()
 
                 // Retrieve the nightly frozen HR_rest (nocturnal floor) from the daily summary if available
-                val dailySummary = dailySummaryDao.getByDate(dayMidnightMs)
+                val dailySummary = scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs)
 
                 val frozenSnapshot = dailySummary?.takeIf { it.baselineCalculatedAtDate != null }
                 val frozenHrMax = frozenSnapshot?.hrMax
@@ -241,7 +241,7 @@ class ScoringRepositoryImpl
 
                 var summary =
                     (
-                        dailySummaryDao.getByDate(dayMidnightMs)
+                        scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs)
                             ?: DailySummaryEntity(dateMidnightMs = dayMidnightMs)
                     ).copy(
                         trimpWorkoutOnly = dailyTrimpRaw,
@@ -280,14 +280,14 @@ class ScoringRepositoryImpl
 
                 if (!isCalibrated) {
                     if (session != null) {
-                        val hrvValues = hrvDao.getSleepRmssdForSession(session.id)
+                        val hrvValues = scoringHistoryRepository.getSleepRmssdForSession(session.id)
                         val avgHrv =
                             if (hrvValues.isNotEmpty()) {
                                 (hrvValues.sum() / hrvValues.size).toInt()
                             } else {
                                 null
                             }
-                        val sleepHrSamples = heartRateDao.getSleepHrSamplesForSession(session.id)
+                        val sleepHrSamples = scoringHistoryRepository.getSleepHrSamplesForSession(session.id)
                         val avgRhr =
                             if (sleepHrSamples.isNotEmpty()) {
                                 val idx =

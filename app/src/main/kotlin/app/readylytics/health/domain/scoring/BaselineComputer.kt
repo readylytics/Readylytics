@@ -2,10 +2,7 @@ package app.readylytics.health.domain.scoring
 
 import app.readylytics.health.domain.model.DailySummaryEntity
 import app.readylytics.health.domain.model.SleepSessionEntity
-import app.readylytics.health.domain.persistence.DailySummaryDao
-import app.readylytics.health.domain.persistence.HeartRateDao
-import app.readylytics.health.domain.persistence.HrvDao
-import app.readylytics.health.domain.persistence.SleepSessionDao
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.util.logD
 import app.readylytics.health.domain.util.mean
 import app.readylytics.health.domain.util.median
@@ -31,11 +28,8 @@ import kotlin.math.roundToInt
 class BaselineComputer
     @Inject
     constructor(
-        private val heartRateDao: HeartRateDao,
-        private val hrvDao: HrvDao,
-        private val sleepSessionDao: SleepSessionDao,
+        private val scoringHistoryRepository: ScoringHistoryRepository,
         private val scoringCalculator: ScoringCalculator,
-        private val dailySummaryDao: DailySummaryDao,
     ) {
         companion object {
             private const val TAG = "BaselineComputer"
@@ -49,11 +43,11 @@ class BaselineComputer
                 dayMidnight
                     .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
-            val sessions = sleepSessionDao.getSince(baselineFromMs)
+            val sessions = scoringHistoryRepository.getSleepSessionsSince(baselineFromMs)
             val sessionIds = sessions.map { it.id }
             if (sessionIds.isEmpty()) return emptyList()
 
-            val allHrRecords = heartRateDao.getSleepHrProjectionForSessions(sessionIds)
+            val allHrRecords = scoringHistoryRepository.getSleepHrProjectionForSessions(sessionIds)
             val samplesBySession = allHrRecords.groupBy { it.sessionId }
 
             return sessions.mapNotNull { session ->
@@ -75,11 +69,15 @@ class BaselineComputer
                     .ofEpochMilli(fromMs)
                     .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
-            val sessions = sleepSessionDao.getBetween(baselineFromMs.coerceAtLeast(0), inclusiveToMs)
+            val sessions =
+                scoringHistoryRepository.getSleepSessionsBetween(
+                    baselineFromMs.coerceAtLeast(0),
+                    inclusiveToMs,
+                )
             val sessionIds = sessions.map { it.id }
             if (sessionIds.isEmpty()) return emptyList()
 
-            val allHrRecords = heartRateDao.getSleepHrProjectionForSessions(sessionIds)
+            val allHrRecords = scoringHistoryRepository.getSleepHrProjectionForSessions(sessionIds)
             val samplesBySession = allHrRecords.groupBy { it.sessionId }
 
             return sessions.mapNotNull { session ->
@@ -121,7 +119,7 @@ class BaselineComputer
             percentile: Int,
         ): Float? {
             val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
-            val frozenSummary = dailySummaryDao.getByDate(fromMs)
+            val frozenSummary = scoringHistoryRepository.getDailySummaryByDate(fromMs)
             if (frozenSummary?.baselineCalculatedAtDate != null) {
                 logD(TAG) { "Baseline frozen; skipping RHR recompute" }
                 return null
@@ -132,12 +130,16 @@ class BaselineComputer
                         fromMs,
                     ).minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
-            val sessions = sleepSessionDao.getBetween(baselineFromMs.coerceAtLeast(0), inclusiveToMs)
+            val sessions =
+                scoringHistoryRepository.getSleepSessionsBetween(
+                    baselineFromMs.coerceAtLeast(0),
+                    inclusiveToMs,
+                )
             val validIds = filterValidBaselineSessions(sessions)
             if (validIds.isEmpty()) {
                 return ScoringConstants.DEFAULT_RHR_BPM
             }
-            val allHrSamples = heartRateDao.getSleepHrProjectionForSessions(validIds)
+            val allHrSamples = scoringHistoryRepository.getSleepHrProjectionForSessions(validIds)
             val samplesBySession = allHrSamples.groupBy { it.sessionId }
             val nadirs =
                 validIds.mapNotNull { sessionId ->
@@ -180,7 +182,7 @@ class BaselineComputer
         ): Float? {
             if (rhrBaselineOverride != null) return rhrBaselineOverride
 
-            val frozenSummary = dailySummaryDao.getByDate(dayMidnight.toEpochMilli())
+            val frozenSummary = scoringHistoryRepository.getDailySummaryByDate(dayMidnight.toEpochMilli())
             if (frozenSummary?.baselineCalculatedAtDate != null) {
                 logD(TAG) {
                     "Baseline frozen for date=${frozenSummary.baselineCalculatedAtDate}; " +
@@ -193,7 +195,7 @@ class BaselineComputer
                 dayMidnight
                     .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
-            val sessions = sleepSessionDao.getSince(baselineFromMs)
+            val sessions = scoringHistoryRepository.getSleepSessionsSince(baselineFromMs)
             val validIds = filterValidBaselineSessions(sessions)
 
             if (validIds.isEmpty()) {
@@ -201,7 +203,7 @@ class BaselineComputer
             }
 
             // OPTIMIZATION: Fetch all HR samples in single batch query using lightweight projection
-            val allHrSamples = heartRateDao.getSleepHrProjectionForSessions(validIds)
+            val allHrSamples = scoringHistoryRepository.getSleepHrProjectionForSessions(validIds)
 
             // Group samples by session in memory (fast)
             val samplesBySession = allHrSamples.groupBy { it.sessionId }
@@ -242,10 +244,10 @@ class BaselineComputer
                 dayMidnight
                     .minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
-            val historicalSessions = sleepSessionDao.getSince(baselineFromMs)
+            val historicalSessions = scoringHistoryRepository.getSleepSessionsSince(baselineFromMs)
             val validIds = filterValidBaselineSessions(historicalSessions)
             if (validIds.isEmpty()) return null
-            val hrvMap = hrvDao.getSleepRmssdForSessionsMap(validIds)
+            val hrvMap = scoringHistoryRepository.getSleepRmssdForSessionsMap(validIds)
             val nightlyAverages =
                 validIds.mapNotNull { sessionId ->
                     val samples = hrvMap[sessionId] ?: return@mapNotNull null
@@ -269,7 +271,7 @@ class BaselineComputer
         ): Int? {
             val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
             if (hrvBaselineOverride != null) return hrvBaselineOverride.roundToInt()
-            val frozenSummary = dailySummaryDao.getByDate(fromMs)
+            val frozenSummary = scoringHistoryRepository.getDailySummaryByDate(fromMs)
             if (frozenSummary?.baselineCalculatedAtDate != null) {
                 return frozenSummary.hrvBaseline
             }
@@ -280,14 +282,14 @@ class BaselineComputer
                     ).minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS)
                     .toEpochMilli()
             val historicalSessions =
-                sleepSessionDao
-                    .getBetween(
+                scoringHistoryRepository
+                    .getSleepSessionsBetween(
                         baselineFromMs.coerceAtLeast(0),
                         inclusiveToMs,
                     )
             val validIds = filterValidBaselineSessions(historicalSessions, assumeCoverageValid = true)
             if (validIds.isEmpty()) return null
-            val hrvMap = hrvDao.getSleepRmssdForSessionsMap(validIds)
+            val hrvMap = scoringHistoryRepository.getSleepRmssdForSessionsMap(validIds)
             val nightlyAverages =
                 validIds.mapNotNull { sessionId ->
                     val samples = hrvMap[sessionId] ?: return@mapNotNull null
@@ -311,7 +313,7 @@ class BaselineComputer
             excludeSessionId: String?,
         ): HrvWindows? {
             val inclusiveToMs = (toMs - 1).coerceAtLeast(0)
-            val frozenSummary = dailySummaryDao.getByDate(fromMs)
+            val frozenSummary = scoringHistoryRepository.getDailySummaryByDate(fromMs)
             if (frozenSummary?.baselineCalculatedAtDate != null) {
                 logD(
                     TAG,
@@ -327,13 +329,13 @@ class BaselineComputer
                     ).minus(ScoringConstants.HRV_SIGMA_WINDOW_DAYS.toLong(), ChronoUnit.DAYS)
                     .toEpochMilli()
             val historicalSessions =
-                sleepSessionDao
-                    .getBetween(
+                scoringHistoryRepository
+                    .getSleepSessionsBetween(
                         sigmaWindowFromMs.coerceAtLeast(0),
                         inclusiveToMs,
                     ).filter { it.id != excludeSessionId }
             val validIds = filterValidBaselineSessions(historicalSessions, assumeCoverageValid = true)
-            val hrvMap = hrvDao.getSleepRmssdForSessionsMap(validIds)
+            val hrvMap = scoringHistoryRepository.getSleepRmssdForSessionsMap(validIds)
             val sigmaHistory =
                 validIds.mapNotNull { sessionId ->
                     val samples = hrvMap[sessionId] ?: return@mapNotNull null
@@ -380,7 +382,7 @@ class BaselineComputer
          * (a classic N+1). It pre-fetches the widest window (the 56-day HRV sigma window) once and
          * derives each day's rolling windows in memory.
          *
-         * Equivalence is by construction: the prefetch is a superset [SleepSessionDao.getBetween]
+         * Equivalence is by construction: the prefetch is a superset [ScoringHistoryRepository.getSleepSessionsBetween]
          * over `[min(day) − 56d .. max(day) end]`, and each day re-applies the identical
          * `startTime >= from AND endTime <= to` predicate in the same start-ASC order, so per-day
          * membership, validity gating ([ScoringCalculator.validateNight]), session ordering and the
@@ -408,7 +410,7 @@ class BaselineComputer
                     .toEpochMilli()
                     .coerceAtLeast(0)
 
-            val sessionsAsc = sleepSessionDao.getBetween(prefetchFromMs, maxDayEndMs)
+            val sessionsAsc = scoringHistoryRepository.getSleepSessionsBetween(prefetchFromMs, maxDayEndMs)
             if (sessionsAsc.isEmpty()) {
                 return summaries.associate {
                     it.dateMidnightMs to
@@ -422,9 +424,13 @@ class BaselineComputer
             }
 
             val ids = sessionsAsc.map { it.id }
-            val rmssdBySession = hrvDao.getSleepRmssdForSessionsMap(ids)
-            val avgHrBySession = heartRateDao.getAvgSleepHrForSessions(ids)
-            val hrProjectionBySession = heartRateDao.getSleepHrProjectionForSessions(ids).groupBy { it.sessionId }
+            val rmssdBySession = scoringHistoryRepository.getSleepRmssdForSessionsMap(ids)
+            val avgHrBySession = scoringHistoryRepository.getAvgSleepHrForSessions(ids)
+            val hrProjectionBySession =
+                scoringHistoryRepository
+                    .getSleepHrProjectionForSessions(
+                        ids,
+                    ).groupBy { it.sessionId }
 
             // Precompute per-night derived values once (validity, nightly RMSSD mean, percentile nadir).
             val nights =
@@ -541,8 +547,8 @@ class BaselineComputer
             if (sessions.isEmpty()) return emptyList()
 
             val sessionIds = sessions.map { it.id }
-            val hrvMap = hrvDao.getSleepRmssdForSessionsMap(sessionIds)
-            val hrMap = heartRateDao.getAvgSleepHrForSessions(sessionIds)
+            val hrvMap = scoringHistoryRepository.getSleepRmssdForSessionsMap(sessionIds)
+            val hrMap = scoringHistoryRepository.getAvgSleepHrForSessions(sessionIds)
 
             return sessions
                 .filter { s ->

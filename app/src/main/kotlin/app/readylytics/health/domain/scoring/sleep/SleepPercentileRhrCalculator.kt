@@ -1,9 +1,8 @@
 package app.readylytics.health.domain.scoring.sleep
 
 import app.readylytics.health.domain.model.SleepSessionEntity
-import app.readylytics.health.domain.persistence.HeartRateDao
 import app.readylytics.health.domain.persistence.SleepHrSample
-import app.readylytics.health.domain.persistence.SleepSessionDao
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.util.median
 import java.time.Instant
@@ -16,8 +15,7 @@ import kotlin.math.roundToInt
 class SleepPercentileRhrCalculator
     @Inject
     constructor(
-        private val heartRateDao: HeartRateDao,
-        private val sleepSessionDao: SleepSessionDao,
+        private val scoringHistoryRepository: ScoringHistoryRepository,
     ) {
         data class SleepPercentileRhrResult(
             val currentRestingHr: Int?,
@@ -40,14 +38,14 @@ class SleepPercentileRhrCalculator
         ): SleepPercentileRhrResult {
             val baselineFrom = dayMidnight.minus(ScoringConstants.BASELINE_DAYS, ChronoUnit.DAYS).toEpochMilli()
             val sessions =
-                sleepSessionDao.getBetween(
+                scoringHistoryRepository.getSleepSessionsBetween(
                     baselineFrom,
                     dayMidnight.plus(1, ChronoUnit.DAYS).toEpochMilli() - 1,
                 )
             val sessionIds = (sessions.map { it.id } + session.id).distinct()
 
             // Fetch all sleep HR samples for all these sessions batched using a lightweight projection
-            val allHrRecords = heartRateDao.getSleepHrProjectionForSessions(sessionIds)
+            val allHrRecords = scoringHistoryRepository.getSleepHrProjectionForSessions(sessionIds)
             val samplesBySession = allHrRecords.groupBy { it.sessionId }
 
             fun List<SleepHrSample>?.getPercentileValue(percentile: Int): Int? {

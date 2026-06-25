@@ -1,7 +1,7 @@
 package app.readylytics.health.domain.scoring.sleep
 
 import app.readylytics.health.domain.model.SleepSessionEntity
-import app.readylytics.health.domain.persistence.HeartRateDao
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConstants
 import javax.inject.Inject
@@ -12,7 +12,7 @@ import kotlin.math.abs
 class SleepNadirAnalyzer
     @Inject
     constructor(
-        private val heartRateDao: HeartRateDao,
+        private val scoringHistoryRepository: ScoringHistoryRepository,
         private val scoringCalculator: ScoringCalculator,
     ) {
         data class NadirContext(
@@ -32,7 +32,7 @@ class SleepNadirAnalyzer
                     previousOffset != null &&
                     abs(currentOffset - previousOffset) >= ScoringConstants.TIMEZONE_JUMP_THRESHOLD_SECONDS
 
-            val minHrTimestamp = heartRateDao.getMinHrTimestamp(session.id)
+            val minHrTimestamp = scoringHistoryRepository.getMinHrTimestamp(session.id)
             val isLateNadirRaw =
                 minHrTimestamp != null &&
                     scoringCalculator.isLateNadir(minHrTimestamp, session.startTime, session.durationMinutes)
