@@ -24,5 +24,8 @@ class ConventionPluginPresenceTest {
             val buildFile = File(root, "$module/build.gradle.kts").readText()
             assertContains(buildFile, "id(\"readylytics.android-library-conventions\")")
         }
+
+        val databaseBuildFile = File(root, "core/database/build.gradle.kts").readText()
+        assertContains(databaseBuildFile, "id(\"readylytics.room-conventions\")")
     }
 }

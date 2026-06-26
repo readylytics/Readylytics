@@ -9,8 +9,8 @@ repositories {
 }
 
 dependencies {
-    compileOnly("com.android.tools.build:gradle:9.2.1")
-    compileOnly("org.jetbrains.kotlin.android:org.jetbrains.kotlin.android.gradle.plugin:2.3.21")
-    compileOnly("com.google.devtools.ksp:symbol-processing-gradle-plugin:2.3.7")
-    compileOnly("androidx.room:room-gradle-plugin:2.8.4")
+    implementation("com.android.tools.build:gradle:${libs.versions.agp.get()}")
+    implementation("org.jetbrains.kotlin.android:org.jetbrains.kotlin.android.gradle.plugin:${libs.versions.kotlin.get()}")
+    implementation("com.google.devtools.ksp:symbol-processing-gradle-plugin:${libs.versions.ksp.get()}")
+    implementation("androidx.room:room-gradle-plugin:${libs.versions.room.get()}")
 }
