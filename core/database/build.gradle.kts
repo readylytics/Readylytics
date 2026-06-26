@@ -23,4 +23,8 @@ dependencies {
     ksp(libs.room.compiler)
     implementation(libs.sqlcipher.android)
     implementation(libs.androidx.sqlite)
+
+    testImplementation(libs.junit)
+    testImplementation(kotlin("test"))
+    testImplementation(libs.kotlinx.coroutines.test)
 }

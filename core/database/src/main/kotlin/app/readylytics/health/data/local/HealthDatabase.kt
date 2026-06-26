@@ -3,6 +3,7 @@ package app.readylytics.health.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import app.readylytics.health.data.local.dao.AuditEventDao
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
@@ -14,6 +15,7 @@ import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.SleepStageDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
 import app.readylytics.health.data.local.dao.WorkoutDao
+import app.readylytics.health.data.local.entity.AuditEventEntity
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.local.entity.BodyFatRecordEntity
 import app.readylytics.health.data.local.entity.DailySummaryEntity
@@ -39,6 +41,7 @@ import app.readylytics.health.data.local.entity.WorkoutRecordEntity
         BloodPressureRecordEntity::class,
         OxygenSaturationRecordEntity::class,
         InsightDismissalEntity::class,
+        AuditEventEntity::class,
     ],
     version = HealthDatabase.DATABASE_VERSION,
 )
@@ -66,7 +69,9 @@ abstract class HealthDatabase : RoomDatabase() {
 
     abstract fun insightDismissalDao(): InsightDismissalDao
 
+    abstract fun auditEventDao(): AuditEventDao
+
     companion object {
-        const val DATABASE_VERSION = 3
+        const val DATABASE_VERSION = 4
     }
 }

@@ -174,16 +174,16 @@ are intentionally confined to `core/healthconnect/src/main/kotlin/app/readylytic
 | `BloodPressureDataMapper`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BloodPressureDataMapper.kt`    | `DomainBloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg).                                                               |
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 2)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 4)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`;
 entities in `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/`, DAOs in
 `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/`. **The database is the single source of truth; the UI never reads Health
 Connect directly.**
 
-`DatabaseMigrations` registers `MIGRATION_1_2` for existing v1 installs. The SQL schema is
-unchanged; the migration lets Room validate the moved-module schema and write the current
-identity hash without destructive data loss.
+`DatabaseMigrations` registers v1→v2, v2→v3, and v3→v4 migrations for existing installs.
+Version 4 adds the metadata-only `audit_events` table; it does not change Health Connect
+ingestion tables or scoring formulas.
 
 | Entity                         | Table                       | Primary key                            | Notable columns                                                                                                                                           |
 | :----------------------------- | :-------------------------- | :------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -198,6 +198,12 @@ identity hash without destructive data loss.
 | `OxygenSaturationRecordEntity` | `oxygen_saturation_records` | `id: String` (composite)               | %, `timestampMs`, `deviceName`                                                                                                                            |
 | `DailySummaryEntity`           | `daily_summaries`           | `dateMidnightMs: Long`                 | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hrv_sigma_mssd`, `rhr_bpm`, `rhr_sigma`, `hr_max`, …), weight/BP/SpO2 snapshots |
 | `InsightDismissalEntity`       | `insight_dismissals`        | `(dateMidnightMs: Long, type: String)` | `type: String` (LATE_NADIR, SICK_INDICATOR, STRONG_RECOVERY_SIGNAL, LOAD_SPIKE_RECOVERY_STRAIN, …) — represents dismissed dashboard insights                                                       |
+| `AuditEventEntity`             | `audit_events`              | `id: Long` (auto)                      | `type`, `occurredAtEpochMs`, optional coarse `detail` for local backup/restore/key-lifecycle events                                                       |
+
+Backup/restore and key-lifecycle operations append local audit events to `audit_events` through
+`AuditTrailRepository`. Audit events are metadata-only: operation type, timestamp, and coarse
+result detail. They do not store health samples, backup contents, passwords, encryption keys, or
+Health Connect payloads.
 
 **Idempotency contract:** every DAO uses `@Upsert` keyed on the stable primary key, so
 re-fetching a record **replaces** rather than duplicates. There is no blanket `deleteAll()`
@@ -443,11 +449,13 @@ day offset instead of resetting to zero.
 | `core/model/src/main/kotlin/app/readylytics/health/data/healthconnect/WorkoutMapper.kt`                                      | Ingestion — mapper                                  | zone minutes + workout TRIMP                                                             |
 | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/healthconnect/StepsMapper.kt`                                        | Ingestion — mapper                                  | raw selected-device steps / aggregate all-device steps                                   |
 | `data/mapper/{Weight,BodyFat,BloodPressure,OxygenSaturation}DataMapper.kt` | Ingestion — mappers                                 | weight / body fat / BP / SpO2                                                            |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v2)                              | 11 entities; v1→v2 identity migration wired through `DatabaseMigrations`                 |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v4)                              | 12 entities; v1→v4 migrations wired through `DatabaseMigrations`                         |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/DailySummaryEntity.kt`                                  | Storage — computed-day snapshot                     | scores + frozen baselines                                                                |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/InsightDismissalEntity.kt`                              | Storage — insight dismissal                         | dateMidnightMs + type                                                                    |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/entity/AuditEventEntity.kt`                                  | Storage — local audit events                        | metadata-only backup/restore/key-lifecycle events                                        |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/*.kt` (sleep, HR, HRV, workout, weight, …)              | Storage — raw metric entities                       | upsert by stable HC id                                                                   |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/InsightDismissalDao.kt`                                    | Storage — insight dismissal DAO                     | observe / dismiss / restore                                                              |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/dao/AuditEventDao.kt`                                       | Storage — local audit DAO                           | append / observe recent metadata events                                                  |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/*.kt`                                                      | Storage — DAOs                                      | `@Upsert`, `clearFrozenBaselines`, `deleteBeforeTimestamp`                               |
 | `domain/model/InsightType.kt`                                              | Domain — insight model                              | enum class and RecoveryFlag mapper                                                       |
 | `domain/dashboard/InsightDeriver.kt`                                       | Domain — insight logic                              | derives active set + ordered visible queue/current insight                               |

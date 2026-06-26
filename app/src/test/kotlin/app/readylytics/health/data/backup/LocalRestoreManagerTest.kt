@@ -10,6 +10,8 @@ import app.readylytics.health.data.preferences.BackupScheduleProto
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferencesProto
 import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.domain.audit.AuditEvent
+import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.workers.WorkerScheduler
@@ -19,6 +21,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
@@ -41,6 +44,7 @@ class LocalRestoreManagerTest {
     private lateinit var encryptionManager: EncryptionManager
     private lateinit var cardConfigRepo: CardConfigurationRepository
     private lateinit var workerScheduler: WorkerScheduler
+    private lateinit var auditTrailRepository: FakeAuditTrailRepository
     private lateinit var manager: LocalRestoreManager
 
     @Before
@@ -63,6 +67,7 @@ class LocalRestoreManagerTest {
         every { encryptionManager.encrypt("restored_password") } returns "encrypted_restored_password"
         cardConfigRepo = mockk<CardConfigurationRepository>(relaxed = true)
         workerScheduler = mockk<WorkerScheduler>(relaxed = true)
+        auditTrailRepository = FakeAuditTrailRepository()
         manager =
             LocalRestoreManager(
                 context,
@@ -71,6 +76,7 @@ class LocalRestoreManagerTest {
                 cardConfigRepo,
                 workerScheduler,
                 encryptionManager,
+                auditTrailRepository,
                 Dispatchers.Unconfined,
             )
     }
@@ -298,6 +304,11 @@ class LocalRestoreManagerTest {
 
             val sessions = db.sleepSessionDao().getSince(0)
             assertTrue(sessions.isEmpty())
+            assertEquals(
+                listOf(AuditEvent.Type.RESTORE_STARTED, AuditEvent.Type.RESTORE_FAILED),
+                auditTrailRepository.events.map { it.type },
+            )
+            assertEquals("RuntimeException", auditTrailRepository.events.last().detail)
             zipFile.delete()
         }
 
@@ -357,5 +368,16 @@ class LocalRestoreManagerTest {
                 },
             )
         }
+    }
+
+    private class FakeAuditTrailRepository : AuditTrailRepository {
+        val events = mutableListOf<AuditEvent>()
+
+        override suspend fun append(event: AuditEvent) {
+            events += event
+        }
+
+        override fun observeRecent(limit: Int): Flow<List<AuditEvent>> =
+            flowOf(events.sortedByDescending { it.occurredAt }.take(limit))
     }
 }

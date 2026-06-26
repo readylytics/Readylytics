@@ -1,5 +1,6 @@
 package app.readylytics.health.di
 
+import app.readylytics.health.data.audit.RoomAuditTrailRepository
 import app.readylytics.health.data.local.RoomHealthIngestionStore
 import app.readylytics.health.data.local.SessionLinkReconcilerImpl
 import app.readylytics.health.data.repository.BloodPressureRepositoryImpl
@@ -12,6 +13,7 @@ import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.data.repository.WeightRepositoryImpl
 import app.readylytics.health.data.repository.WorkoutRepositoryImpl
+import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.repository.BloodPressureRepository
 import app.readylytics.health.domain.repository.BodyFatRepository
 import app.readylytics.health.domain.repository.DailyMetricsRepository
@@ -66,6 +68,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindInsightDismissalRepository(impl: InsightDismissalRepositoryImpl): InsightDismissalRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAuditTrailRepository(impl: RoomAuditTrailRepository): AuditTrailRepository
 
     @Binds
     @Singleton

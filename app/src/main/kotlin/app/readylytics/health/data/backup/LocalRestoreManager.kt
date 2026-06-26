@@ -19,6 +19,8 @@ import app.readylytics.health.data.preferences.SyncPreferenceProto
 import app.readylytics.health.data.preferences.TrimpMethodProto
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.di.IoDispatcher
+import app.readylytics.health.domain.audit.AuditEvent
+import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.util.logW
 import app.readylytics.health.workers.WorkerScheduler
@@ -31,6 +33,7 @@ import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.exception.ZipException
 import java.io.File
 import java.io.InputStreamReader
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -46,6 +49,7 @@ class LocalRestoreManager
         private val cardConfigurationRepository: CardConfigurationRepository,
         private val workerScheduler: WorkerScheduler,
         private val encryptionManager: EncryptionManager,
+        private val auditTrailRepository: AuditTrailRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val json = Json { ignoreUnknownKeys = true }
@@ -127,6 +131,13 @@ class LocalRestoreManager
         ): RestoreResult =
             withContext(ioDispatcher) {
                 runCatching {
+                    auditTrailRepository.append(
+                        AuditEvent(
+                            type = AuditEvent.Type.RESTORE_STARTED,
+                            occurredAt = Instant.now(),
+                            detail = null,
+                        ),
+                    )
                     val tempZipFile = File(context.cacheDir, "restore_temp.zip")
                     copyUriToTempFile(backupUri, tempZipFile)
 
@@ -154,16 +165,32 @@ class LocalRestoreManager
                             prefsBackup?.let { restorePreferences(it, providedPassword) }
                         }
 
+                        auditTrailRepository.append(
+                            AuditEvent(
+                                type = AuditEvent.Type.RESTORE_COMPLETED,
+                                occurredAt = Instant.now(),
+                                detail = "success_requires_restart",
+                            ),
+                        )
                         RestoreResult.SuccessRequiresRestart
                     } finally {
                         tempZipFile.delete()
                     }
                 }.getOrElse {
-                    if (it is ZipException && it.message?.contains("password", ignoreCase = true) == true) {
-                        RestoreResult.Failure(WrongBackupPasswordException())
-                    } else {
-                        RestoreResult.Failure(it)
-                    }
+                    val cause =
+                        if (it is ZipException && it.message?.contains("password", ignoreCase = true) == true) {
+                            WrongBackupPasswordException()
+                        } else {
+                            it
+                        }
+                    auditTrailRepository.append(
+                        AuditEvent(
+                            type = AuditEvent.Type.RESTORE_FAILED,
+                            occurredAt = Instant.now(),
+                            detail = cause::class.simpleName,
+                        ),
+                    )
+                    RestoreResult.Failure(cause)
                 }
             }
 
