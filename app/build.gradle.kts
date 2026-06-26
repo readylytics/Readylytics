@@ -55,6 +55,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.androidx.room)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.protobuf)
     alias(libs.plugins.google.oss.licenses)
@@ -187,7 +188,8 @@ room {
 
 play {
     serviceAccountCredentials.set(
-        providers.environmentVariable("PLAY_SERVICE_ACCOUNT_JSON_FILE").map(::file),
+        providers.environmentVariable("PLAY_SERVICE_ACCOUNT_JSON_FILE")
+            .map { layout.projectDirectory.file(it) },
     )
     track.set("production")
     releaseStatus.set(ReleaseStatus.COMPLETED)
