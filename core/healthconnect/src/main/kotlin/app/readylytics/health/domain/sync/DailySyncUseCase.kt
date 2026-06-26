@@ -140,7 +140,7 @@ class DailySyncUseCase
                     var dayToScore = oldestTargetDay
                     while (!dayToScore.isAfter(today)) {
                         ensureActive()
-                        val steps = stepsMap[dayToScore] ?: 0L
+                        val steps = stepsMap[dayToScore]
                         val result = recomputeSupport.recomputeDay(dayToScore, steps)
 
                         when (result) {

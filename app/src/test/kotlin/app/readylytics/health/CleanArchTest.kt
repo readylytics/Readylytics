@@ -51,6 +51,20 @@ class CleanArchTest {
 
     @Test
     fun `domain package does not import data package`() {
+        // Value types that are domain-shaped but live under data.preferences for proto-schema reasons.
+        // Only these specific types are allowed; data-layer impls (mappers, serializers, repos) are not.
+        val allowedDataImports =
+            setOf(
+                "app.readylytics.health.data.preferences.UserPreferences",
+                "app.readylytics.health.data.preferences.Gender",
+                "app.readylytics.health.data.preferences.AppTheme",
+                "app.readylytics.health.data.preferences.SettingsDefaults",
+                "app.readylytics.health.data.preferences.PhysiologyProfile",
+                "app.readylytics.health.data.preferences.UnitSystem",
+                "app.readylytics.health.data.preferences.SyncPreference",
+                "app.readylytics.health.data.preferences.BackgroundSyncInterval",
+                "app.readylytics.health.data.preferences.FallbackThemeColor",
+            )
         val violations =
             Konsist
                 .scopeFromProject()
@@ -62,7 +76,7 @@ class CleanArchTest {
                     file.imports
                         .filter { import ->
                             import.name.startsWith("app.readylytics.health.data.") &&
-                                !import.name.startsWith("app.readylytics.health.data.preferences.")
+                                import.name !in allowedDataImports
                         }.map { import -> "${file.name}: ${import.name}" }
                 }
 

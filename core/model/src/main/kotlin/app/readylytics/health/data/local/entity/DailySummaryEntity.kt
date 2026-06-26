@@ -8,6 +8,7 @@ import androidx.room.PrimaryKey
 import app.readylytics.health.domain.model.ReadinessResult
 import app.readylytics.health.domain.model.Diagnostics
 import app.readylytics.health.domain.model.Contributors
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 
@@ -32,8 +33,10 @@ data class DailySummaryEntity(
     val recoveryFlags: String? = null,
     val hrvSigma: Float? = null,
     @Embedded(prefix = "diag_")
+    @SerialName("diagnostics")
     val diagnosticsEmbedded: Diagnostics = Diagnostics(),
     @Embedded(prefix = "contrib_")
+    @SerialName("contributors")
     val contributorsEmbedded: Contributors = Contributors(),
     val rollingMu: Float? = null,
     val rhrDeltaBpm: Float? = null,

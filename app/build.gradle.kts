@@ -54,7 +54,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.androidx.room)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.protobuf)
     alias(libs.plugins.google.oss.licenses)
@@ -147,10 +146,6 @@ listOf(
     tasks.matching { it.name == taskName }.configureEach {
         dependsOn(verifyReleaseSigningInputs)
     }
-}
-
-room {
-    schemaDirectory("$projectDir/schemas")
 }
 
 ktlint {
@@ -294,24 +289,8 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
                 minimum = 0.30.toBigDecimal()
             }
         }
-        rule {
-            element = "PACKAGE"
-            includes = listOf("app.readylytics.health.domain.scoring")
-            limit {
-                counter = "LINE"
-                value = "COVEREDRATIO"
-                minimum = 0.80.toBigDecimal()
-            }
-        }
-        rule {
-            element = "PACKAGE"
-            includes = listOf("app.readylytics.health.domain.sync")
-            limit {
-                counter = "LINE"
-                value = "COVEREDRATIO"
-                minimum = 0.70.toBigDecimal()
-            }
-        }
+        // domain.scoring and domain.sync moved to :core:scoring and :core:healthconnect;
+        // those modules carry their own jacocoCoverageVerification tasks.
         rule {
             element = "PACKAGE"
             includes = listOf("app.readylytics.health.workers")
