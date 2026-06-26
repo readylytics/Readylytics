@@ -70,7 +70,6 @@ fun computeVersion(): Pair<Int, String> {
     val isReleaseTag = isTag && refName.matches(Regex("^v?\\d+\\.\\d+\\.\\d+$"))
 
     val baseVersionName = project.findProperty("baseVersionName")?.toString() ?: "0.1.0"
-    val epochSeconds = System.currentTimeMillis() / 1000
 
     return if (isReleaseTag) {
         val cleanTag = refName.removePrefix("v")
@@ -83,9 +82,9 @@ fun computeVersion(): Pair<Int, String> {
     } else if (isCI) {
         val runNumber = envVar("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
         val code = 100000 + runNumber
-        Pair(code, "$baseVersionName.$epochSeconds")
+        Pair(code, "$baseVersionName.$runNumber")
     } else {
-        Pair(epochSeconds.toInt(), "$baseVersionName.$epochSeconds")
+        Pair(1, "$baseVersionName-local")
     }
 }
 
