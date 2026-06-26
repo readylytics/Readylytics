@@ -33,8 +33,6 @@ jobs:
         env:
           RAW_TAG: ${{ github.ref_name }}
         run: |
-          VERSION_CODE="${{ github.run_number }}"
-
           if [ "${{ github.ref_type }}" = "tag" ]; then
             VERSION_NAME="${RAW_TAG#v}"
             RELEASE_KIND="prod"
@@ -43,10 +41,9 @@ jobs:
             RELEASE_KIND="beta"
           fi
 
-          echo "Resolved versionCode=$VERSION_CODE versionName=$VERSION_NAME kind=$RELEASE_KIND"
+          echo "Resolved versionName=$VERSION_NAME kind=$RELEASE_KIND"
 
           {
-            echo "version_code=$VERSION_CODE"
             echo "version_name=$VERSION_NAME"
             echo "release_kind=$RELEASE_KIND"
           } >> "$GITHUB_OUTPUT"
@@ -99,7 +96,7 @@ jobs:
         run: ./gradlew lint lintRelease
 
       - name: Build signed release bundle
-        run: ./gradlew bundleRelease -PversionCode=${{ steps.version.outputs.version_code }} -PversionName=${{ steps.version.outputs.version_name }}
+        run: ./gradlew bundleRelease
 
       - name: Verify AAB signature
         run: |
@@ -129,7 +126,7 @@ jobs:
 
       - name: Publish to Google Play
         if: ${{ github.ref_type == 'tag' }}
-        run: ./gradlew publishBundle -PversionCode=${{ steps.version.outputs.version_code }} -PversionName=${{ steps.version.outputs.version_name }}
+        run: ./gradlew publishBundle
 
       - name: Delete temporary credential files
         if: ${{ always() }}
