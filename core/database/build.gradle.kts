@@ -1,26 +1,11 @@
 plugins {
-    alias(libs.plugins.android.library)
+    id("readylytics.android-library-conventions")
+    id("readylytics.room-conventions")
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ksp)
-    alias(libs.plugins.androidx.room)
 }
 
 android {
     namespace = "app.readylytics.health.core.database"
-    compileSdk = 37
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-}
-
-room {
-    schemaDirectory("$projectDir/schemas")
 }
 
 dependencies {
