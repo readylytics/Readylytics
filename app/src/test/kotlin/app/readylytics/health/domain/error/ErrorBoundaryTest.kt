@@ -81,28 +81,31 @@ class ErrorBoundaryTest {
     }
 
     @Test
-    fun recoverWithReturnValueStrategy() = runTest {
-        val failure: SafeResult.Failure<Int> = SafeResult.Failure(RuntimeException("error"))
-        val strategy = RecoveryStrategy.ReturnValue(42)
-        val result = failure.recover(strategy) { 99 }
-        assertTrue(result is SafeResult.Success)
-        assertEquals(42, (result as SafeResult.Success).value)
-    }
+    fun recoverWithReturnValueStrategy() =
+        runTest {
+            val failure: SafeResult.Failure<Int> = SafeResult.Failure(RuntimeException("error"))
+            val strategy = RecoveryStrategy.ReturnValue(42)
+            val result = failure.recover(strategy) { 99 }
+            assertTrue(result is SafeResult.Success)
+            assertEquals(42, (result as SafeResult.Success).value)
+        }
 
     @Test
-    fun recoverWithRetryStrategySucceedsImmediately() = runTest {
-        val failure: SafeResult.Failure<Int> = SafeResult.Failure(RuntimeException("error"))
-        val strategy = RecoveryStrategy.Retry<Int>(maxAttempts = 3, delayMs = 0)
-        val result = failure.recover(strategy) { 42 }
-        assertTrue(result is SafeResult.Success)
-        assertEquals(42, (result as SafeResult.Success).value)
-    }
+    fun recoverWithRetryStrategySucceedsImmediately() =
+        runTest {
+            val failure: SafeResult.Failure<Int> = SafeResult.Failure(RuntimeException("error"))
+            val strategy = RecoveryStrategy.Retry<Int>(maxAttempts = 3, delayMs = 0)
+            val result = failure.recover(strategy) { 42 }
+            assertTrue(result is SafeResult.Success)
+            assertEquals(42, (result as SafeResult.Success).value)
+        }
 
     @Test
-    fun recoverWithRetryStrategyReturnsFailureAfterExhaustion() = runTest {
-        val failure: SafeResult.Failure<Int> = SafeResult.Failure(RuntimeException("error"))
-        val strategy = RecoveryStrategy.Retry<Int>(maxAttempts = 2, delayMs = 0)
-        val result = failure.recover(strategy) { throw RuntimeException("still failing") }
-        assertTrue(result is SafeResult.Failure)
-    }
+    fun recoverWithRetryStrategyReturnsFailureAfterExhaustion() =
+        runTest {
+            val failure: SafeResult.Failure<Int> = SafeResult.Failure(RuntimeException("error"))
+            val strategy = RecoveryStrategy.Retry<Int>(maxAttempts = 2, delayMs = 0)
+            val result = failure.recover(strategy) { throw RuntimeException("still failing") }
+            assertTrue(result is SafeResult.Failure)
+        }
 }

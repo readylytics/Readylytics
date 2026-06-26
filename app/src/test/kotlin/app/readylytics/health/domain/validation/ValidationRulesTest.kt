@@ -107,10 +107,11 @@ class FloatRangeRuleTest {
 
 class BirthdayDateRuleTest {
     private val fixedNow = LocalDate.of(2026, 6, 26)
-    private val fixedClock = Clock.fixed(
-        fixedNow.atStartOfDay(ZoneId.of("UTC")).toInstant(),
-        ZoneId.of("UTC"),
-    )
+    private val fixedClock =
+        Clock.fixed(
+            fixedNow.atStartOfDay(ZoneId.of("UTC")).toInstant(),
+            ZoneId.of("UTC"),
+        )
 
     @Test
     fun `past date is Valid`() {

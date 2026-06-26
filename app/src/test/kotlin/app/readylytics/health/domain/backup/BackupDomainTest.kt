@@ -34,12 +34,13 @@ class BackupDomainTest {
     @Test
     fun backupFileRefCreation() {
         val location = BackupLocation("gs://bucket/backup.zip")
-        val ref = BackupFileRef(
-            name = "backup.zip",
-            lastModified = 1234567890L,
-            sizeBytes = 1024L,
-            location = location,
-        )
+        val ref =
+            BackupFileRef(
+                name = "backup.zip",
+                lastModified = 1234567890L,
+                sizeBytes = 1024L,
+                location = location,
+            )
 
         assertEquals("backup.zip", ref.name)
         assertEquals(1234567890L, ref.lastModified)
@@ -50,18 +51,20 @@ class BackupDomainTest {
     @Test
     fun backupFileRefEquality() {
         val location = BackupLocation("gs://bucket/backup.zip")
-        val ref1 = BackupFileRef(
-            name = "backup.zip",
-            lastModified = 1234567890L,
-            sizeBytes = 1024L,
-            location = location,
-        )
-        val ref2 = BackupFileRef(
-            name = "backup.zip",
-            lastModified = 1234567890L,
-            sizeBytes = 1024L,
-            location = location,
-        )
+        val ref1 =
+            BackupFileRef(
+                name = "backup.zip",
+                lastModified = 1234567890L,
+                sizeBytes = 1024L,
+                location = location,
+            )
+        val ref2 =
+            BackupFileRef(
+                name = "backup.zip",
+                lastModified = 1234567890L,
+                sizeBytes = 1024L,
+                location = location,
+            )
 
         assertEquals(ref1, ref2)
     }
