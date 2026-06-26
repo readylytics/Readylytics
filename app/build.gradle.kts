@@ -219,47 +219,21 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             "**/*Serializer*.*",
         )
 
-    doFirst {
-        val classesJar =
-            layout.buildDirectory
-                .file(
-                    "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
-                ).get()
-                .asFile
-        if (!classesJar.exists()) {
-            println(
-                "  class jar missing: intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
-            )
-        } else {
-            val debugTree =
-                zipTree(classesJar).matching {
-                    fileFilter.forEach { exclude(it) }
-                }
-            val count = debugTree.files.size
-            println("jacocoTestReport: classDirectories has $count class file(s)")
-        }
-    }
-
-    val mainSrc =
-        files(
-            "${project.projectDir}/src/main/java",
-            "${project.projectDir}/src/main/kotlin",
-        )
-
-    sourceDirectories.setFrom(mainSrc)
+    sourceDirectories.setFrom(
+        layout.projectDirectory.dir("src/main/java"),
+        layout.projectDirectory.dir("src/main/kotlin"),
+    )
     classDirectories.setFrom(
         zipTree(
             layout.buildDirectory.file(
                 "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
             ),
         ).matching {
-            fileFilter.forEach { exclude(it) }
+            exclude(fileFilter)
         },
     )
     executionData.setFrom(
-        fileTree(layout.buildDirectory.get()) {
-            include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
-        },
+        layout.buildDirectory.file("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"),
     )
 }
 
@@ -290,16 +264,13 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
             "**/*Serializer*.*",
         )
 
-    val mainSrc =
-        files(
-            "${project.projectDir}/src/main/java",
-            "${project.projectDir}/src/main/kotlin",
-        )
+    sourceDirectories.setFrom(
+        layout.projectDirectory.dir("src/main/java"),
+        layout.projectDirectory.dir("src/main/kotlin"),
+    )
 
     executionData.setFrom(
-        fileTree(layout.buildDirectory.get()) {
-            include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
-        },
+        layout.buildDirectory.file("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"),
     )
     classDirectories.setFrom(
         zipTree(
@@ -307,10 +278,9 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
                 "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
             ),
         ).matching {
-            fileFilter.forEach { exclude(it) }
+            exclude(fileFilter)
         },
     )
-    sourceDirectories.setFrom(mainSrc)
 
     violationRules {
         rule {
@@ -330,13 +300,6 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
                 value = "COVEREDRATIO"
                 minimum = 0.60.toBigDecimal()
             }
-        }
-    }
-
-    doFirst {
-        val reportFile = reportXmlFile.get().asFile
-        if (!reportFile.exists()) {
-            throw GradleException("Coverage report XML not found at ${reportFile.absolutePath}")
         }
     }
 }
