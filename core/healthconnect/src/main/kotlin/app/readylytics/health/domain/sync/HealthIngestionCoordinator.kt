@@ -35,7 +35,6 @@ class HealthIngestionCoordinator
                 }
             val exerciseRecords = hcRepo.readExerciseSessions(windowStart, windowEnd)
             val hrRecords = hcRepo.readHeartRateSamples(windowStart, windowEnd)
-            val restingHrRecords = hcRepo.readRestingHeartRateSamples(windowStart, windowEnd)
             val hrvRecords = hcRepo.readHrvSamples(windowStart, windowEnd)
             val weightRecords = hcRepo.readWeightRecords(windowStart, windowEnd)
             val bodyFatRecords = hcRepo.readBodyFatRecords(windowStart, windowEnd)
@@ -44,7 +43,7 @@ class HealthIngestionCoordinator
 
             logD("HealthIngestionCoordinator") {
                 "Bulk HC fetch complete: sleep=${sleepEntities.size} " +
-                    "hrv_rmssd=${hrvRecords.size} hr_records=${hrRecords.size} resting_hr=${restingHrRecords.size} " +
+                    "hrv_rmssd=${hrvRecords.size} hr_records=${hrRecords.size} " +
                     "weight=${weightRecords.size} bodyfat=${bodyFatRecords.size} bp=${bloodPressureRecords.size} spo2=${spo2Records.size}"
             }
 
@@ -70,11 +69,7 @@ class HealthIngestionCoordinator
                     hrRecords,
                     sleepEntities,
                     initialWorkouts,
-                ) +
-                    app.readylytics.health.data.healthconnect.HeartRateMapper.mapRestingToEntities(
-                        restingHrRecords,
-                        sleepEntities,
-                    )
+                )
             val hrBySession =
                 hrEntities
                     .asSequence()

@@ -196,17 +196,10 @@ class HealthChangeSynchronizerImpl
                     }
                 }
                 HealthDataType.HEART_RATE -> {
-                    when (record) {
-                        is HeartRateRecord -> {
-                            val domainHr = record.toDomain()
-                            val entities = HeartRateMapper.mapToEntities(listOf(domainHr), emptyList(), emptyList())
-                            heartRateDao.upsertAll(entities)
-                        }
-                        is RestingHeartRateRecord -> {
-                            val domainResting = record.toDomain()
-                            val entities = HeartRateMapper.mapRestingToEntities(listOf(domainResting), emptyList())
-                            heartRateDao.upsertAll(entities)
-                        }
+                    if (record is HeartRateRecord) {
+                        val domainHr = record.toDomain()
+                        val entities = HeartRateMapper.mapToEntities(listOf(domainHr), emptyList(), emptyList())
+                        heartRateDao.upsertAll(entities)
                     }
                 }
                 HealthDataType.HRV -> {
@@ -273,7 +266,7 @@ class HealthChangeSynchronizerImpl
                 HealthDataType.WEIGHT -> setOf(WeightRecord::class)
                 HealthDataType.SLEEP -> setOf(SleepSessionRecord::class)
                 HealthDataType.BLOOD_PRESSURE -> setOf(BloodPressureRecord::class)
-                HealthDataType.HEART_RATE -> setOf(HeartRateRecord::class, RestingHeartRateRecord::class)
+                HealthDataType.HEART_RATE -> setOf(HeartRateRecord::class)
                 HealthDataType.HRV -> setOf(HeartRateVariabilityRmssdRecord::class)
                 HealthDataType.OXYGEN_SATURATION -> setOf(OxygenSaturationRecord::class)
             }
@@ -313,7 +306,6 @@ class HealthChangeSynchronizerImpl
                 is ExerciseSessionRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
                 is StepsRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
                 is HeartRateRecord -> getDatesBetween(record.startTime, record.endTime, zoneId)
-                is RestingHeartRateRecord -> getDateFor(record.time, zoneId)
                 is HeartRateVariabilityRmssdRecord -> getDateFor(record.time, zoneId)
                 is WeightRecord -> getDateFor(record.time, zoneId)
                 is BodyFatRecord -> getDateFor(record.time, zoneId)
@@ -480,11 +472,4 @@ class HealthChangeSynchronizerImpl
                 deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
             )
 
-        private fun RestingHeartRateRecord.toDomain(): DomainRestingHeartRateRecord =
-            DomainRestingHeartRateRecord(
-                id = metadata.id,
-                time = time,
-                beatsPerMinute = beatsPerMinute.toInt(),
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
     }

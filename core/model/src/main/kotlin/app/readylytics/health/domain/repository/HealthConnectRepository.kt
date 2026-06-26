@@ -6,7 +6,6 @@ import app.readylytics.health.domain.model.DomainExerciseSessionRecord
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHrvRecord
 import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
-import app.readylytics.health.domain.model.DomainRestingHeartRateRecord
 import app.readylytics.health.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.domain.model.DomainStepsRecord
 import app.readylytics.health.domain.model.DomainWeightRecord
@@ -48,11 +47,6 @@ interface HealthConnectRepository {
         from: Instant,
         to: Instant,
     ): List<DomainHeartRateRecord>
-
-    suspend fun readRestingHeartRateSamples(
-        from: Instant,
-        to: Instant,
-    ): List<DomainRestingHeartRateRecord>
 
     suspend fun readHrvSamples(
         from: Instant,

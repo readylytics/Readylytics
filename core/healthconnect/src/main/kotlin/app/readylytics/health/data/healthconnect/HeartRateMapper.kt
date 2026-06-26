@@ -4,7 +4,6 @@ import app.readylytics.health.data.local.entity.HeartRateRecordEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.local.entity.WorkoutRecordEntity
 import app.readylytics.health.domain.model.DomainHeartRateRecord
-import app.readylytics.health.domain.model.DomainRestingHeartRateRecord
 import app.readylytics.health.domain.model.RecordType
 
 object HeartRateMapper {
@@ -73,40 +72,4 @@ object HeartRateMapper {
         }
     }
 
-    fun mapRestingToEntities(
-        records: List<DomainRestingHeartRateRecord>,
-        sleepSessions: List<SleepSessionEntity>,
-    ): List<HeartRateRecordEntity> {
-        val sortedSleep = sleepSessions.sortedWith(compareBy({ it.startTime }, { it.id }))
-        val sortedRecords = records.sortedBy { it.time.toEpochMilli() }
-        var sleepIdx = 0
-
-        return sortedRecords.map { record ->
-            val timestampMs = record.time.toEpochMilli()
-
-            while (sleepIdx < sortedSleep.size && sortedSleep[sleepIdx].endTime < timestampMs) {
-                sleepIdx++
-            }
-            val sleepSession =
-                if (sleepIdx < sortedSleep.size &&
-                    timestampMs in sortedSleep[sleepIdx].startTime..sortedSleep[sleepIdx].endTime
-                ) {
-                    sortedSleep[sleepIdx]
-                } else {
-                    null
-                }
-
-            val (recordType, sessionId) =
-                if (sleepSession != null) RecordType.SLEEP.name to sleepSession.id else RecordType.RESTING.name to null
-
-            HeartRateRecordEntity(
-                id = record.id,
-                timestampMs = timestampMs,
-                beatsPerMinute = record.beatsPerMinute,
-                recordType = recordType,
-                sessionId = sessionId,
-                deviceName = record.deviceName,
-            )
-        }
-    }
 }

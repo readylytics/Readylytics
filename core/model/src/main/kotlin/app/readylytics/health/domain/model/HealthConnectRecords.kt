@@ -37,13 +37,6 @@ data class DomainHeartRateSample(
     val beatsPerMinute: Int,
 )
 
-data class DomainRestingHeartRateRecord(
-    val id: String,
-    val time: Instant,
-    val beatsPerMinute: Int,
-    val deviceName: String,
-)
-
 data class DomainHrvRecord(
     val id: String,
     val time: Instant,

@@ -17,7 +17,6 @@ import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
 import app.readylytics.health.domain.model.DomainHrvRecord
 import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
-import app.readylytics.health.domain.model.DomainRestingHeartRateRecord
 import app.readylytics.health.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.domain.model.DomainSleepStage
 import app.readylytics.health.domain.model.DomainSleepStageType
@@ -37,7 +36,6 @@ import java.time.ZoneId
 internal enum class FakeOp {
     Sleep,
     HeartRate,
-    RestingHeartRate,
     Hrv,
     Exercise,
     Steps,
@@ -99,7 +97,6 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
 
     val sleepCount: MutableMap<Instant, Int> = mutableMapOf()
     val hrCount: MutableMap<Instant, Int> = mutableMapOf()
-    val rhrCount: MutableMap<Instant, Int> = mutableMapOf()
     val hrvCount: MutableMap<Instant, Int> = mutableMapOf()
     val exerciseCount: MutableMap<Instant, Int> = mutableMapOf()
     val weightCount: MutableMap<Instant, Int> = mutableMapOf()
@@ -154,14 +151,6 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
         val total = totalInRange(hrCount, from, to)
         hrPagesServed = pagesFor(total)
         return stubList(total) { index -> placeholderHeartRate(index) }
-    }
-
-    override suspend fun readRestingHeartRateSamples(
-        from: Instant,
-        to: Instant,
-    ): List<DomainRestingHeartRateRecord> {
-        translateCritical(FakeOp.RestingHeartRate)
-        return stubList(totalInRange(rhrCount, from, to)) { index -> placeholderRestingHeartRate(index) }
     }
 
     override suspend fun readHrvSamples(
@@ -335,14 +324,6 @@ internal class FakeHealthConnectRepository : HealthConnectRepository {
             id = "hr-$index",
             deviceName = PLACEHOLDER_DEVICE,
             samples = listOf(DomainHeartRateSample(time = PLACEHOLDER_TIME, beatsPerMinute = 60)),
-        )
-
-    private fun placeholderRestingHeartRate(index: Int): DomainRestingHeartRateRecord =
-        DomainRestingHeartRateRecord(
-            id = "rhr-$index",
-            time = PLACEHOLDER_TIME,
-            beatsPerMinute = 55,
-            deviceName = PLACEHOLDER_DEVICE,
         )
 
     private fun placeholderHrv(index: Int): DomainHrvRecord =

@@ -9,7 +9,6 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
-import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
@@ -24,7 +23,6 @@ import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
 import app.readylytics.health.domain.model.DomainHrvRecord
 import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
-import app.readylytics.health.domain.model.DomainRestingHeartRateRecord
 import app.readylytics.health.domain.model.DomainSleepSessionRecord
 import app.readylytics.health.domain.model.DomainSleepStage
 import app.readylytics.health.domain.model.DomainSleepStageType
@@ -193,14 +191,6 @@ class HealthConnectRepositoryImpl
                     },
             )
 
-        private fun RestingHeartRateRecord.toDomain(): DomainRestingHeartRateRecord =
-            DomainRestingHeartRateRecord(
-                id = metadata.id,
-                time = time,
-                beatsPerMinute = beatsPerMinute.toInt(),
-                deviceName = DeviceLabel.from(metadata.device, metadata.dataOrigin),
-            )
-
         private fun HeartRateVariabilityRmssdRecord.toDomain(): DomainHrvRecord =
             DomainHrvRecord(
                 id = metadata.id,
@@ -272,14 +262,6 @@ class HealthConnectRepositoryImpl
         ): List<DomainHeartRateRecord> =
             withContext(ioDispatcher) {
                 readAllPages<HeartRateRecord>(from, to).map { it.toDomain() }
-            }
-
-        override suspend fun readRestingHeartRateSamples(
-            from: Instant,
-            to: Instant,
-        ): List<DomainRestingHeartRateRecord> =
-            withContext(ioDispatcher) {
-                readAllPages<RestingHeartRateRecord>(from, to).map { it.toDomain() }
             }
 
         override suspend fun readHrvSamples(
