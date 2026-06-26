@@ -188,7 +188,8 @@ room {
 
 play {
     serviceAccountCredentials.set(
-        providers.environmentVariable("PLAY_SERVICE_ACCOUNT_JSON_FILE")
+        providers
+            .environmentVariable("PLAY_SERVICE_ACCOUNT_JSON_FILE")
             .map { layout.projectDirectory.file(it) },
     )
     track.set("production")
