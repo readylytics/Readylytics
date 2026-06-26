@@ -3,7 +3,6 @@ package app.readylytics.health.data.healthconnect
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.domain.model.DomainHeartRateRecord
 import app.readylytics.health.domain.model.DomainHeartRateSample
-import app.readylytics.health.domain.model.DomainRestingHeartRateRecord
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -24,52 +23,6 @@ class HeartRateMapperTest {
             lightSleepMinutes = 240,
             awakeMinutes = 30,
         )
-
-    // --- mapRestingToEntities ---
-
-    @Test
-    fun `mapRestingToEntities classifies record during sleep as SLEEP`() {
-        val ts = Instant.parse("2026-05-10T02:00:00Z")
-        val record =
-            DomainRestingHeartRateRecord(
-                id = "r1",
-                time = ts,
-                beatsPerMinute = 55,
-                deviceName = "Watch",
-            )
-
-        val result = HeartRateMapper.mapRestingToEntities(listOf(record), listOf(sleepSession))
-
-        assertEquals(1, result.size)
-        assertEquals("SLEEP", result[0].recordType)
-        assertEquals("sleep_1", result[0].sessionId)
-        assertEquals("RESTING_r1_${ts.toEpochMilli()}", result[0].id)
-        assertEquals(55, result[0].beatsPerMinute)
-    }
-
-    @Test
-    fun `mapRestingToEntities classifies record outside sleep as RESTING`() {
-        val ts = Instant.parse("2026-05-09T12:00:00Z")
-        val record =
-            DomainRestingHeartRateRecord(
-                id = "r2",
-                time = ts,
-                beatsPerMinute = 60,
-                deviceName = "Watch",
-            )
-
-        val result = HeartRateMapper.mapRestingToEntities(listOf(record), listOf(sleepSession))
-
-        assertEquals(1, result.size)
-        assertEquals("RESTING", result[0].recordType)
-        assertNull(result[0].sessionId)
-    }
-
-    @Test
-    fun `mapRestingToEntities returns empty list for empty input`() {
-        val result = HeartRateMapper.mapRestingToEntities(emptyList(), listOf(sleepSession))
-        assertEquals(0, result.size)
-    }
 
     // --- mapToEntities ---
 

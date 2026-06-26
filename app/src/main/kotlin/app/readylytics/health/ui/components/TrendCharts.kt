@@ -72,6 +72,10 @@ fun TrendChart(
     axisDecimalPlaces: Int = 0,
     tooltipDecimalPlaces: Int = axisDecimalPlaces,
     showBaseline: Boolean = true,
+    // Steps are self-descriptive (the metric title already says "steps"), so the tooltip omits
+    // the unit suffix. Gated by this flag rather than comparing baselineUnit's text, since
+    // baselineUnit is a localized display string and must not double as a behavior switch.
+    hideUnitInTooltip: Boolean = false,
     scrollState: VicoScrollState = rememberVicoScrollState(scrollEnabled = rangeDays > 7),
     // Zoom is only meaningful for ranges > 7 days.
     // initialZoom = Zoom.Content → chart starts fully zoomed out (fit-to-range).
@@ -245,7 +249,7 @@ fun TrendChart(
                         } else {
                             String.format("%.${tooltipDecimalPlaces}f", value)
                         }
-                    if (baselineUnit.equals("steps", ignoreCase = true)) {
+                    if (hideUnitInTooltip) {
                         formattedValue
                     } else {
                         "$formattedValue $baselineUnit"

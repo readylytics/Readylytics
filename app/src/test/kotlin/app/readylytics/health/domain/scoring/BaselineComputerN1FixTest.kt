@@ -7,6 +7,7 @@ import app.readylytics.health.data.local.dao.SleepHrSample
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.entity.SleepSessionEntity
 import app.readylytics.health.data.preferences.SettingsDefaults
+import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -46,8 +47,9 @@ class BaselineComputerN1FixTest {
         dailySummaryDao = mockk()
         // Default: no frozen baseline — all dates are live recompute
         coEvery { dailySummaryDao.getByDate(any()) } returns null
-        baselineComputer =
-            BaselineComputer(heartRateDao, hrvDao, sleepSessionDao, scoringCalculator, dailySummaryDao)
+        val scoringHistoryRepository =
+            ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao)
+        baselineComputer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
     }
 
     @Test

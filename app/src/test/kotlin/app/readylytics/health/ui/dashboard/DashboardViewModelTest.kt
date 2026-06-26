@@ -1,9 +1,9 @@
 package app.readylytics.health.ui.dashboard
 
-import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.cache.DailyMetricCache
+import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.GetDashboardDataUseCase
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository

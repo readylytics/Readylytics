@@ -4,7 +4,6 @@ import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
 import app.readylytics.health.data.local.dao.HeartRateDao
-import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.dao.WeightRecordDao
@@ -13,6 +12,7 @@ import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.ScoringRepositoryImpl
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
 import app.readylytics.health.domain.scoring.sleep.SleepPercentileRhrCalculator
 import app.readylytics.health.domain.scoring.strategies.LoadScoringStrategy
 import app.readylytics.health.domain.scoring.strategies.SleepScoringStrategy
@@ -50,12 +50,12 @@ class ScoringDeterminismRegressionTest {
     private val scoringConfigFactory = mockk<ScoringConfigFactory>(relaxed = true)
     private val computeWorkoutTrimpUseCase = ComputeWorkoutTrimpUseCase()
     private val heartRateDao = mockk<HeartRateDao>(relaxed = true)
-    private val hrvDao = mockk<HrvDao>(relaxed = true)
     private val weightRecordDao = mockk<WeightRecordDao>(relaxed = true)
     private val bodyFatRecordDao = mockk<BodyFatRecordDao>(relaxed = true)
     private val bloodPressureRecordDao = mockk<BloodPressureRecordDao>(relaxed = true)
     private val oxygenSaturationRecordDao = mockk<OxygenSaturationRecordDao>(relaxed = true)
     private val sleepPercentileRhrCalculator = mockk<SleepPercentileRhrCalculator>(relaxed = true)
+    private val scoringHistoryRepository = mockk<ScoringHistoryRepository>(relaxed = true)
 
     private lateinit var repo: ScoringRepositoryImpl
 
@@ -73,12 +73,12 @@ class ScoringDeterminismRegressionTest {
                 scoringConfigFactory,
                 computeWorkoutTrimpUseCase,
                 heartRateDao,
-                hrvDao,
                 weightRecordDao,
                 bodyFatRecordDao,
                 bloodPressureRecordDao,
                 oxygenSaturationRecordDao,
                 sleepPercentileRhrCalculator,
+                scoringHistoryRepository,
             )
     }
 
@@ -115,21 +115,17 @@ class ScoringDeterminismRegressionTest {
             coEvery { workoutDao.getWorkoutsInRange(any(), any()) } returns emptyList()
 
             // Run 1: fresh derived state.
-            coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns
-                frozenSnapshot(
-                    dayMidnightMs,
-                    today,
-                )
+            val run1Snapshot = frozenSnapshot(dayMidnightMs, today)
+            coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns run1Snapshot
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns run1Snapshot
             val run1 = repo.computeDailySummary(today)
 
             // Mutate the "live state" left behind by run 1: poison every derived output that the
             // engine reads back, while keeping the frozen baseline identical. A correct, leak-free
             // engine must ignore these and reproduce run 1 exactly.
-            coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns
-                frozenSnapshot(
-                    dayMidnightMs,
-                    today,
-                )
+            val run2Snapshot = frozenSnapshot(dayMidnightMs, today)
+            coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns run2Snapshot
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns run2Snapshot
             val run2 = repo.computeDailySummary(today)
 
             // US-03: derived outputs now live in the freshly-recomputed variant columns. The legacy
@@ -185,6 +181,7 @@ class ScoringDeterminismRegressionTest {
                     baselineObservationCount = 10,
                 )
             coEvery { dailySummaryDao.getByDate(dayMidnightMs) } returns frozen
+            coEvery { scoringHistoryRepository.getDailySummaryByDate(dayMidnightMs) } returns frozen
             // Frozen day: the HRV-window recompute is intentionally skipped.
             coEvery { baselineComputer.computeHrvWindowsBetween(any(), any(), any()) } returns null
 

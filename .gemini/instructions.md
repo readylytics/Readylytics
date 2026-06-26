@@ -10,12 +10,12 @@ Operating rules and project context for Antigravity CLI / Gemini.
 
 ## Health & Recovery Dashboard (Readylytics Context)
 
-Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35.
+Offline-first Android health app (Health Connect + Room DB). minSdk=26, targetSdk=37.
 
 ### Core Architecture & Tech Stack
 
 - **Data Flow:** Room DB is single source of truth. Health Connect is ingestion-only. UI must NEVER access Health Connect directly.
-- **Stack:** Kotlin, Compose (M3), Room, Health Connect API, WorkManager (sync/backup/historical resync), DataStore (prefs), Google Drive API (AppData), Vico (charts).
+- **Stack:** Kotlin, Compose (M3), Room, Health Connect API, WorkManager (sync/backup/historical resync), DataStore (prefs), local encrypted backup/restore, Vico (charts).
 - **Patterns:** Strict MVVM + Clean Architecture. ViewModels expose StateFlow/SharedFlow only. Compose uses `collectAsStateWithLifecycle`.
 - **Logic Isolation:** All business/calculation logic must be pure Kotlin (zero Android dependencies).
 
@@ -44,7 +44,7 @@ Offline-first Android health app (Health Connect + Room DB). minSdk/targetSdk=35
 - **Validation:** Centralized in `domain/validation/SettingsValidators`. No validation in composables. VMs validate defensively.
 - **UI & Charts:** `dynamicDarkColorScheme` mandatory. Use `M3ScoreDial`, `M3DataCard`, `M3Tooltip`. 16dp rounded corners default. Semantic colors only. Vico charts require Bezier curves, bottom gradient fills, and M3 tonal palette mapping (no hardcoded colors).
 - **Strings & i18n:** All user-facing strings (titles, labels, tooltips, descriptions) must be defined in `app/src/main/res/values/strings.xml`. Reference them in Compose with `stringResource(R.string.key_name)`. Never hardcode strings in code. This supports internationalization and improves maintainability.
-- **File Structure:** Target ≤ 400 lines/file, hard limit ≤ 800 lines (refactor if exceeded). Settings paths map to `ui/settings/{physiologyprofile,sleep,cloud,common}`.
+- **File Structure:** Target ≤ 400 lines/file, hard limit ≤ 800 lines (refactor if exceeded). Settings paths map to `ui/settings/{physiologyprofile,sleep,backup,common}`.
 
 ### Commands & Testing
 

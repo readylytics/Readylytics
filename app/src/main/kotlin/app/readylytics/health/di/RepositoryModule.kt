@@ -8,6 +8,8 @@ import app.readylytics.health.data.repository.DailyMetricsRepositoryImpl
 import app.readylytics.health.data.repository.DailySummaryRepositoryImpl
 import app.readylytics.health.data.repository.HeartRateRepositoryImpl
 import app.readylytics.health.data.repository.InsightDismissalRepositoryImpl
+import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
+import app.readylytics.health.data.repository.ScoringRepositoryImpl
 import app.readylytics.health.data.repository.WeightRepositoryImpl
 import app.readylytics.health.data.repository.WorkoutRepositoryImpl
 import app.readylytics.health.domain.repository.BloodPressureRepository
@@ -16,8 +18,14 @@ import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
+import app.readylytics.health.domain.repository.ScoringHistoryRepository
+import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.repository.WeightRepository
 import app.readylytics.health.domain.repository.WorkoutRepository
+import app.readylytics.health.domain.scoring.AdaptiveRhrBaselineProvider
+import app.readylytics.health.domain.scoring.CompositeScoringCalculator
+import app.readylytics.health.domain.scoring.RhrBaselineProvider
+import app.readylytics.health.domain.scoring.ScoringCalculator
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -61,6 +69,22 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
+    abstract fun bindScoringHistoryRepository(impl: ScoringHistoryRepositoryImpl): ScoringHistoryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindScoringRepository(impl: ScoringRepositoryImpl): ScoringRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindScoringCalculator(impl: CompositeScoringCalculator): ScoringCalculator
+
+    @Binds
+    @Singleton
+    abstract fun bindRhrBaselineProvider(impl: AdaptiveRhrBaselineProvider): RhrBaselineProvider
+
+    @Binds
+    @Singleton
     abstract fun bindHealthChangeTokenStore(
         impl: app.readylytics.health.data.preferences.HealthChangeTokenStoreImpl,
     ): app.readylytics.health.domain.sync.HealthChangeTokenStore
@@ -88,4 +112,22 @@ abstract class RepositoryModule {
     abstract fun bindSessionLinkReconciler(
         impl: SessionLinkReconcilerImpl,
     ): app.readylytics.health.domain.sync.link.SessionLinkReconciler
+
+    @Binds
+    @Singleton
+    abstract fun bindSettingsRepository(
+        impl: app.readylytics.health.data.preferences.SettingsRepository,
+    ): app.readylytics.health.domain.preferences.SettingsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCircadianThresholdPreferences(
+        impl: app.readylytics.health.data.preferences.DataStoreCircadianThresholdPreferences,
+    ): app.readylytics.health.data.preferences.CircadianThresholdPreferences
+
+    @Binds
+    @Singleton
+    abstract fun bindCardConfigurationRepository(
+        impl: app.readylytics.health.data.preferences.CardConfigurationRepositoryImpl,
+    ): app.readylytics.health.domain.dashboard.CardConfigurationRepository
 }

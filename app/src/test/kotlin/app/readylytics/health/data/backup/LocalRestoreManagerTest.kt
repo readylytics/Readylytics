@@ -7,11 +7,11 @@ import androidx.test.core.app.ApplicationProvider
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.data.preferences.BackupScheduleProto
-import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferencesProto
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.workers.WorkerScheduler
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -278,6 +278,27 @@ class LocalRestoreManagerTest {
             val builder = UserPreferencesProto.newBuilder()
             builderSlot.captured(builder)
             assertEquals("encrypted_restored_password", builder.backupPasswordHash)
+        }
+
+    @Test
+    fun applyRestore_rollsBackDbChangesWhenPreferencesRestoreFails() =
+        runTest {
+            val json = createValidBackupJson()
+            val zipFile = createBackupZipFile("rollback_backup.zip", json)
+
+            val failure = RuntimeException("simulated preferences restore failure")
+            coEvery { settingsRepo.batchUpdate(any()) } throws failure
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is LocalRestoreManager.RestoreResult.Failure)
+            val cause = (result as LocalRestoreManager.RestoreResult.Failure).cause
+            assertEquals(failure.message, cause.message)
+            assertEquals(failure::class, cause::class)
+
+            val sessions = db.sleepSessionDao().getSince(0)
+            assertTrue(sessions.isEmpty())
+            zipFile.delete()
         }
 
     @Test

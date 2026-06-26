@@ -103,7 +103,7 @@ class WorkoutsViewModel
         private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
         private val foregroundSyncController: ForegroundSyncController,
         private val savedStateHandle: SavedStateHandle,
-        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val _selectedRange =
             MutableStateFlow(

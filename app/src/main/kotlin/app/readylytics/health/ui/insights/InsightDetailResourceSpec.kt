@@ -25,7 +25,6 @@ data class InsightDetailResourceSpec(
     @StringRes val caveatsTitleRes: Int?,
     @ArrayRes val caveatsArrayRes: Int?,
     @StringRes val safetyNoteRes: Int?,
-    val debugEnglish: String,
 ) {
     companion object {
         private val specs: Map<InsightType, InsightDetailResourceSpec> =
@@ -40,7 +39,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_bp_elevated_high_strain_recommendations,
                     R.array.insight_detail_bp_elevated_high_strain_caveats,
                     R.string.insight_detail_bp_elevated_high_strain_safety,
-                    "Blood Pressure Elevated During High Strain. One elevated reading does not diagnose hypertension.",
                 ),
                 physiology(
                     InsightType.CIRCADIAN_SHIFT_RECOVERY_MISS,
@@ -52,7 +50,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_circadian_shift_recovery_miss_recommendations,
                     R.array.insight_detail_circadian_shift_recovery_miss_caveats,
                     null,
-                    "Late Bedtime May Have Affected Recovery. This does not prove your circadian rhythm shifted.",
                 ),
                 physiology(
                     InsightType.HIGH_STRAIN_SLEEP_DEFICIT,
@@ -64,7 +61,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_high_strain_sleep_deficit_recommendations,
                     R.array.insight_detail_high_strain_sleep_deficit_caveats,
                     null,
-                    "High Strain and Short Sleep. This does not prove your recovery is impaired.",
                 ),
                 physiology(
                     InsightType.HRV_DECLINE_STREAK,
@@ -76,7 +72,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_hrv_decline_streak_recommendations,
                     R.array.insight_detail_hrv_decline_streak_caveats,
                     null,
-                    "HRV Below Baseline Multiple Nights. HRV below baseline does not identify the exact cause.",
                 ),
                 physiology(
                     InsightType.HRV_DROP_LOW_SPO2,
@@ -88,7 +83,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_hrv_drop_low_spo2_recommendations,
                     R.array.insight_detail_hrv_drop_low_spo2_caveats,
                     R.string.insight_detail_hrv_drop_low_spo2_safety,
-                    "Low HRV and Lower Oxygen Overnight. This does not diagnose sleep apnea or any medical condition.",
                 ),
                 physiology(
                     InsightType.LATE_NADIR,
@@ -100,7 +94,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_late_nadir_recommendations,
                     R.array.insight_detail_late_nadir_caveats,
                     null,
-                    "Late Heart Rate Nadir. A late heart rate nadir does not prove poor recovery.",
                 ),
                 physiology(
                     InsightType.LATE_NADIR_ELEVATED_RHR,
@@ -112,8 +105,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_late_nadir_elevated_rhr_recommendations,
                     R.array.insight_detail_late_nadir_elevated_rhr_caveats,
                     null,
-                    "Delayed Recovery with Elevated Resting Heart Rate. " +
-                        "This does not diagnose illness or prove overtraining.",
                 ),
                 physiology(
                     InsightType.LATE_NADIR_SHORT_SLEEP,
@@ -125,7 +116,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_late_nadir_short_sleep_recommendations,
                     R.array.insight_detail_late_nadir_short_sleep_caveats,
                     null,
-                    "Late Recovery and Short Sleep. This suggests less recovery opportunity.",
                 ),
                 physiology(
                     InsightType.LOAD_SPIKE_RECOVERY_STRAIN,
@@ -137,7 +127,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_load_spike_recovery_strain_recommendations,
                     R.array.insight_detail_load_spike_recovery_strain_caveats,
                     R.string.insight_detail_load_spike_recovery_strain_safety,
-                    "Training Load May Be Affecting Recovery. This does not indicate overtraining.",
                 ),
                 training(
                     InsightType.RAS_DEPLETION_HIGH_STRAIN,
@@ -147,7 +136,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_ras_depletion_high_strain_causes,
                     R.array.insight_detail_ras_depletion_high_strain_recommendations,
                     R.array.insight_detail_ras_depletion_high_strain_caveats,
-                    "Low RAS Despite Training Load. Low RAS does not mean your training was useless.",
                 ),
                 training(
                     InsightType.RAS_WEEKLY_UNDERPERFORMANCE,
@@ -157,7 +145,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_ras_weekly_underperformance_causes,
                     R.array.insight_detail_ras_weekly_underperformance_recommendations,
                     R.array.insight_detail_ras_weekly_underperformance_caveats,
-                    "Weekly RAS Below Target. A low RAS week is not automatically bad.",
                 ),
                 dataQuality(
                     InsightType.RECOVERY_HRV_MISSING,
@@ -166,7 +153,6 @@ data class InsightDetailResourceSpec(
                     R.string.insight_detail_recovery_hrv_missing_observed,
                     R.array.insight_detail_recovery_hrv_missing_causes,
                     R.array.insight_detail_recovery_hrv_missing_recommendations,
-                    "HRV Data Missing. Readiness may be less personalized today.",
                 ),
                 dataQuality(
                     InsightType.RECOVERY_STAGES_MISSING,
@@ -175,7 +161,6 @@ data class InsightDetailResourceSpec(
                     R.string.insight_detail_recovery_stages_missing_observed,
                     R.array.insight_detail_recovery_stages_missing_causes,
                     R.array.insight_detail_recovery_stages_missing_recommendations,
-                    "Sleep Stage Data Missing. Sleep score may be less complete.",
                 ),
                 physiology(
                     InsightType.REST_DAY_NO_IMPACT,
@@ -187,7 +172,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_rest_day_no_impact_recommendations,
                     R.array.insight_detail_rest_day_no_impact_caveats,
                     null,
-                    "No Clear Recovery Rebound Yet. This does not mean the rest day failed.",
                 ),
                 physiology(
                     InsightType.REST_DAY_SUCCESS,
@@ -199,7 +183,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_rest_day_success_recommendations,
                     R.array.insight_detail_rest_day_success_caveats,
                     null,
-                    "Recovery Rebound. This does not guarantee performance.",
                 ),
                 physiology(
                     InsightType.SICK_INDICATOR,
@@ -211,7 +194,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_sick_indicator_recommendations,
                     R.array.insight_detail_sick_indicator_caveats,
                     R.string.insight_detail_sick_indicator_safety,
-                    "Possible Illness Signal. This does not diagnose an infection.",
                 ),
                 training(
                     InsightType.STEP_SHORTFALL,
@@ -221,7 +203,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_step_shortfall_causes,
                     R.array.insight_detail_step_shortfall_recommendations,
                     R.array.insight_detail_step_shortfall_caveats,
-                    "Low Daily Activity. A low step count is not automatically bad.",
                 ),
                 physiology(
                     InsightType.STRONG_RECOVERY_SIGNAL,
@@ -233,8 +214,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_strong_recovery_signal_recommendations,
                     R.array.insight_detail_strong_recovery_signal_caveats,
                     null,
-                    "Strong Recovery Signal. " +
-                        "It does not mean you should automatically train harder than planned.",
                 ),
                 physiology(
                     InsightType.WEIGHT_DRIFT_TRAINING_LOAD,
@@ -246,8 +225,6 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_weight_drift_training_load_recommendations,
                     R.array.insight_detail_weight_drift_training_load_caveats,
                     null,
-                    "Weight Change Under High Training Load. " +
-                        "One-week change does not prove fat gain or fat loss.",
                 ),
                 physiology(
                     InsightType.WORKOUT_IMPACT,
@@ -259,15 +236,12 @@ data class InsightDetailResourceSpec(
                     R.array.insight_detail_workout_impact_recommendations,
                     R.array.insight_detail_workout_impact_caveats,
                     null,
-                    "Training Load Carryover. A high TRIMP day does not automatically mean recovery is poor.",
                 ),
             ).associateBy { it.id }
 
         fun forType(type: InsightType): InsightDetailResourceSpec? = specs[type]
 
         fun all(): Collection<InsightDetailResourceSpec> = specs.values
-
-        fun debugEnglishText(): String = specs.values.joinToString("\n") { it.debugEnglish }
 
         private fun physiology(
             id: InsightType,
@@ -279,7 +253,6 @@ data class InsightDetailResourceSpec(
             @ArrayRes recommendations: Int,
             @ArrayRes caveats: Int?,
             @StringRes safety: Int?,
-            debugEnglish: String,
         ) = InsightDetailResourceSpec(
             id = id,
             type = InsightDetailType.PHYSIOLOGY,
@@ -297,7 +270,6 @@ data class InsightDetailResourceSpec(
             caveatsTitleRes = R.string.insight_detail_what_not_to_infer,
             caveatsArrayRes = caveats,
             safetyNoteRes = safety,
-            debugEnglish = debugEnglish,
         )
 
         private fun training(
@@ -308,7 +280,6 @@ data class InsightDetailResourceSpec(
             @ArrayRes causes: Int,
             @ArrayRes recommendations: Int,
             @ArrayRes caveats: Int,
-            debugEnglish: String,
         ) = InsightDetailResourceSpec(
             id = id,
             type = InsightDetailType.TRAINING_BEHAVIOR,
@@ -326,7 +297,6 @@ data class InsightDetailResourceSpec(
             caveatsTitleRes = R.string.insight_detail_what_not_to_infer,
             caveatsArrayRes = caveats,
             safetyNoteRes = null,
-            debugEnglish = debugEnglish,
         )
 
         private fun dataQuality(
@@ -336,7 +306,6 @@ data class InsightDetailResourceSpec(
             @StringRes missing: Int,
             @ArrayRes causes: Int,
             @ArrayRes recommendations: Int,
-            debugEnglish: String,
         ) = InsightDetailResourceSpec(
             id = id,
             type = InsightDetailType.DATA_QUALITY,
@@ -354,7 +323,6 @@ data class InsightDetailResourceSpec(
             caveatsTitleRes = null,
             caveatsArrayRes = null,
             safetyNoteRes = null,
-            debugEnglish = debugEnglish,
         )
 
         @StringRes

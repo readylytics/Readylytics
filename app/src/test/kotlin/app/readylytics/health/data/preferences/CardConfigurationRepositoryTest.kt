@@ -1,6 +1,7 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
 import io.mockk.coEvery
 import io.mockk.every
@@ -24,7 +25,7 @@ class CardConfigurationRepositoryTest {
 
     @Before
     fun setup() {
-        repository = CardConfigurationRepository(dataStore, TestScope())
+        repository = CardConfigurationRepositoryImpl(dataStore, TestScope())
     }
 
     @Test
@@ -109,7 +110,7 @@ class CardConfigurationRepositoryTest {
 
             // Recreate repository to trigger init block with test scope
             val testScope = TestScope(testScheduler)
-            val repo = CardConfigurationRepository(dataStore, testScope)
+            val repo = CardConfigurationRepositoryImpl(dataStore, testScope)
             testScope.advanceUntilIdle()
 
             val updatedProto = capturedUpdate.captured(existingProto)

@@ -25,6 +25,14 @@ class DocumentationDriftTest {
     private val aboutMd = readRepoFile("ABOUT.md")
     private val stringsXml = readRepoFile("app/src/main/res/values/strings.xml")
     private val dataFlowMd = readRepoFile("internal-docs/DATA_FLOW.md")
+    private val buildGradleKts = readRepoFile("app/build.gradle.kts")
+    private val governanceDocPaths =
+        listOf(
+            ".claude/CLAUDE.md",
+            "GEMINI.md",
+            "AGENTS.md",
+            ".gemini/instructions.md",
+        )
     private val configFactory = ScoringConfigFactory()
 
     @Test
@@ -225,6 +233,24 @@ class DocumentationDriftTest {
         for (text in listOf(aboutMd, stringsXml, dataFlowMd)) {
             assertFalse(text.contains("Shift Worker", ignoreCase = true))
             assertFalse(text.contains("General population", ignoreCase = true))
+        }
+    }
+
+    @Test
+    fun `governance docs declare the same minSdk and targetSdk as app build gradle kts`() {
+        val minSdk =
+            Regex("""minSdk\s*=\s*(\d+)""").find(buildGradleKts)?.groupValues?.get(1)
+                ?: error("could not find minSdk in app/build.gradle.kts")
+        val targetSdk =
+            Regex("""targetSdk\s*=\s*(\d+)""").find(buildGradleKts)?.groupValues?.get(1)
+                ?: error("could not find targetSdk in app/build.gradle.kts")
+
+        for (path in governanceDocPaths) {
+            val text = readRepoFile(path)
+            assertTrue(
+                text.contains("minSdk=$minSdk, targetSdk=$targetSdk"),
+                "expected $path to declare minSdk=$minSdk, targetSdk=$targetSdk",
+            )
         }
     }
 

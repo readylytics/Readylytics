@@ -7,6 +7,7 @@ import app.readylytics.health.data.local.dao.SleepHrSample
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.data.local.entity.DailySummaryEntity
 import app.readylytics.health.data.local.entity.SleepSessionEntity
+import app.readylytics.health.data.repository.ScoringHistoryRepositoryImpl
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -34,8 +35,9 @@ class BaselineComputerBackfillEquivalenceTest {
     private val scoringCalculator = mockk<ScoringCalculator>()
     private val dailySummaryDao = mockk<DailySummaryDao>()
 
-    private val baselineComputer =
-        BaselineComputer(heartRateDao, hrvDao, sleepSessionDao, scoringCalculator, dailySummaryDao)
+    private val scoringHistoryRepository =
+        ScoringHistoryRepositoryImpl(heartRateDao, hrvDao, sleepSessionDao, dailySummaryDao)
+    private val baselineComputer = BaselineComputer(scoringHistoryRepository, scoringCalculator)
 
     private val zone: ZoneId = ZoneId.systemDefault()
     private val day0: LocalDate = LocalDate.of(2026, 1, 1)
