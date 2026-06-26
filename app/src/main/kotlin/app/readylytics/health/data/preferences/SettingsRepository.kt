@@ -22,11 +22,11 @@ class SettingsRepository
         private val ui: UIPreferences,
         private val sync: SyncPreferences,
         private val backup: BackupPreferences,
-    ) {
+    ) : app.readylytics.health.domain.preferences.SettingsRepository {
         /**
          * The primary flow of user preferences.
          */
-        val userPreferences: Flow<UserPreferences> =
+        override val userPreferences: Flow<UserPreferences> =
             dataStore.data
                 .catch { e ->
                     if (e is IOException) emit(UserPreferencesProto.getDefaultInstance()) else throw e
@@ -78,7 +78,7 @@ class SettingsRepository
 
         suspend fun updateRhrBaselineOverride(bpm: Float?) = physiology.updateRhrBaselineOverride(bpm)
 
-        suspend fun updateMaxHeartRate(bpm: Int) = physiology.updateMaxHeartRate(bpm)
+        override suspend fun updateMaxHeartRate(bpm: Int) = physiology.updateMaxHeartRate(bpm)
 
         suspend fun updateAutoCalculateMaxHr(enabled: Boolean) = physiology.updateAutoCalculateMaxHr(enabled)
 
@@ -102,7 +102,7 @@ class SettingsRepository
 
         suspend fun updateAge(age: Int) = physiology.updateAge(age)
 
-        suspend fun updateBirthday(date: LocalDate) = physiology.updateBirthday(date)
+        override suspend fun updateBirthday(date: LocalDate) = physiology.updateBirthday(date)
 
         suspend fun updateGender(gender: String?) = physiology.updateGender(gender)
 
@@ -157,7 +157,7 @@ class SettingsRepository
 
         suspend fun initializeInstallDateIfUnset() = sync.initializeInstallDateIfUnset()
 
-        suspend fun bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory: Boolean) =
+        override suspend fun bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory: Boolean) =
             sync.bootstrapRasSourceModeIfUnset(hasWorkoutOnlyHistory)
 
         suspend fun updateInstallDate(dateTimeMs: Long) = sync.updateInstallDate(dateTimeMs)
@@ -174,7 +174,7 @@ class SettingsRepository
         suspend fun updateCircadianThresholdOverride(encryptedMinutes: String?) =
             sync.updateCircadianThresholdOverride(encryptedMinutes)
 
-        suspend fun updateLastSyncTimestamp(timestamp: Long) = sync.updateLastSyncTimestamp(timestamp)
+        override suspend fun updateLastSyncTimestamp(timestamp: Long) = sync.updateLastSyncTimestamp(timestamp)
 
         suspend fun updateStrainLoadSourceMode(mode: LoadSourceMode) = sync.updateStrainLoadSourceMode(mode)
 
@@ -209,7 +209,7 @@ class SettingsRepository
             deviceLabel: String?,
         ) = ui.updateDeviceForDataType(dataTypeKey, deviceLabel)
 
-        suspend fun migrateDeviceSelectionIfNeeded() = ui.migrateDeviceSelectionIfNeeded()
+        override suspend fun migrateDeviceSelectionIfNeeded() = ui.migrateDeviceSelectionIfNeeded()
 
         suspend fun updateDeviceChangeNoticeDismissed(dismissed: Boolean) =
             ui.updateDeviceChangeNoticeDismissed(dismissed)

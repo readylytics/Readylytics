@@ -1,9 +1,9 @@
 package app.readylytics.health.ui.dashboard
 
 import androidx.compose.runtime.Immutable
-import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType

@@ -19,8 +19,8 @@ import javax.inject.Singleton
 class EncryptionManager
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
-    ) {
+        @param:ApplicationContext private val context: Context,
+    ) : app.readylytics.health.domain.security.EncryptionManager {
         init {
             AeadConfig.register()
         }
@@ -39,7 +39,7 @@ class EncryptionManager
         /**
          * Encrypts a string and returns a Base64 encoded ciphertext.
          */
-        fun encrypt(plaintext: String): String {
+        override fun encrypt(plaintext: String): String {
             val ciphertext = aead.encrypt(plaintext.toByteArray(Charsets.UTF_8), null)
             return Base64.encodeToString(ciphertext, Base64.NO_WRAP)
         }
@@ -47,7 +47,7 @@ class EncryptionManager
         /**
          * Decrypts a Base64 encoded ciphertext and returns the original string.
          */
-        fun decrypt(ciphertext: String): String? =
+        override fun decrypt(ciphertext: String): String? =
             try {
                 val decoded = Base64.decode(ciphertext, Base64.NO_WRAP)
                 val plaintext = aead.decrypt(decoded, null)

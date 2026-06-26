@@ -6,13 +6,13 @@ import org.junit.Test
 
 class DatabaseMigrationTest {
     @Test
-    fun `mvp database starts at version 1`() {
-        assertEquals(1, HealthDatabase.DATABASE_VERSION)
+    fun `database version matches latest migration`() {
+        assertEquals(3, HealthDatabase.DATABASE_VERSION)
     }
 
     @Test
-    fun `mvp baseline has no pre-release migrations`() {
-        assertTrue(DatabaseMigrations.all.isEmpty())
+    fun `database migrations are registered`() {
+        assertTrue(DatabaseMigrations.all.isNotEmpty())
     }
 
     @Test

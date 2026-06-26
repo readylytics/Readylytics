@@ -17,4 +17,10 @@ object WorkerModule {
     fun provideWorkManager(
         @ApplicationContext context: Context,
     ): WorkManager = WorkManager.getInstance(context)
+
+    @Provides
+    @Singleton
+    fun provideWorkerScheduler(
+        impl: app.readylytics.health.workers.WorkerSchedulerImpl,
+    ): app.readylytics.health.workers.WorkerScheduler = impl
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import app.readylytics.health.BuildConfig
 import app.readylytics.health.data.local.DatabaseMigrations
 import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
@@ -42,6 +43,7 @@ object DatabaseModule {
             Room
                 .databaseBuilder<HealthDatabase>(context, "health_dashboard.db")
                 .openHelperFactory(sqlCipherKeyManager.getOrCreateFactory(dbFile))
+                .apply { if (BuildConfig.DEBUG) fallbackToDestructiveMigration(dropAllTables = true) }
                 .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .addMigrations(*DatabaseMigrations.all)

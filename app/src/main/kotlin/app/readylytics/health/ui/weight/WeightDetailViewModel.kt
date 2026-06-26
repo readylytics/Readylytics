@@ -54,7 +54,7 @@ class WeightDetailViewModel
         private val weightRepository: WeightRepository,
         private val settingsRepo: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
-        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val selectedRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
 
@@ -135,9 +135,10 @@ class WeightDetailViewModel
                             }.sortedBy { it.dayOffset }
                             .padToRange(range.days)
 
+                    val heightCm = userPrefs.heightCm
                     val bmi =
-                        if (latest != null && userPrefs.heightCm != null) {
-                            latest.weightKg / ((userPrefs.heightCm / 100f) * (userPrefs.heightCm / 100f))
+                        if (latest != null && heightCm != null) {
+                            latest.weightKg / ((heightCm / 100f) * (heightCm / 100f))
                         } else {
                             null
                         }

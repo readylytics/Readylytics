@@ -28,7 +28,7 @@ import java.time.ZoneId
  * that drives the same behaviour the production [HealthConnectRepositoryImpl] is
  * obligated to provide:
  *   - permission state transitions (Granted / Missing / Unavailable / propagation)
- *   - per-record-type reads (sleep, HR, RHR, HRV, exercise, steps, weight, body fat, BP)
+ *   - per-record-type reads (sleep, HR, HRV, exercise, steps, weight, body fat, BP, SpO2)
  *   - pagination over large result sets (paging-loop termination)
  *   - aggregation (readSteps) and grouping (readStepsRange)
  *   - error translation (SecurityException -> HealthConnectPermissionRevokedException
@@ -221,31 +221,6 @@ class HealthConnectRepositoryImplTest {
             fake.hrCount[t1] = 1
             assertTrue(repo.readHeartRateSamples(t7, t0).isEmpty())
         }
-
-    // ---------- resting heart rate ----------
-
-    @Test
-    fun readRestingHeartRateSamples_emptyWhenNone() =
-        runBlocking {
-            assertTrue(repo.readRestingHeartRateSamples(t0, t7).isEmpty())
-        }
-
-    @Test
-    fun readRestingHeartRateSamples_returnsRecordsInRange() =
-        runBlocking {
-            fake.rhrCount[t1] = 1
-            fake.rhrCount[t2] = 1
-            assertEquals(2, repo.readRestingHeartRateSamples(t0, t7).size)
-        }
-
-    @Test
-    fun readRestingHeartRateSamples_translatesSecurityException() {
-        fake.rhrCount[t1] = 1
-        fake.errors[FakeOp.RestingHeartRate] = SecurityException("revoked")
-        assertThrows(HealthConnectPermissionRevokedException::class.java) {
-            runBlocking { repo.readRestingHeartRateSamples(t0, t7) }
-        }
-    }
 
     // ---------- HRV ----------
 

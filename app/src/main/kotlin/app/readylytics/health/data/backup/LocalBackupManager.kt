@@ -5,12 +5,12 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import app.readylytics.health.data.local.HealthDatabase
-import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupLocation
+import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -36,12 +36,12 @@ import javax.inject.Singleton
 class LocalBackupManager
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
+        @param:ApplicationContext private val context: Context,
         private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
         private val cardConfigurationRepository: CardConfigurationRepository,
         private val encryptionManager: EncryptionManager,
-        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val defaultBackupDir = File(context.filesDir, "backups")
         private val json = Json { encodeDefaults = true }

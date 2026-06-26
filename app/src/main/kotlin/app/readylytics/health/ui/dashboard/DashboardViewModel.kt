@@ -3,12 +3,12 @@ package app.readylytics.health.ui.dashboard
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.R
-import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.cache.DailyMetricCache
 import app.readylytics.health.domain.dashboard.CardConfiguration
+import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.domain.dashboard.GetDashboardDataUseCase

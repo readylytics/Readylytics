@@ -1,6 +1,5 @@
 package app.readylytics.health.domain.dashboard
 
-import app.readylytics.health.data.preferences.CardConfigurationRepository
 import app.readylytics.health.data.preferences.SettingsDefaults
 import io.mockk.Runs
 import io.mockk.coEvery

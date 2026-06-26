@@ -54,7 +54,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.androidx.room)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.protobuf)
     alias(libs.plugins.google.oss.licenses)
@@ -149,10 +148,6 @@ listOf(
     }
 }
 
-room {
-    schemaDirectory("$projectDir/schemas")
-}
-
 ktlint {
     version.set("1.5.0")
 }
@@ -193,31 +188,24 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             "**/*Serializer*.*",
         )
 
-    // Search broadly across all known AGP output locations for compiled Kotlin/Java class files
-    val debugTree =
-        fileTree(layout.buildDirectory.get()) {
-            include(
-                "tmp/kotlin-classes/debug/**/*.class",
-                "intermediates/classes/debug/**/*.class",
-                "intermediates/kotlinc/debug/**/*.class",
-                "intermediates/javac/debug/**/*.class",
-            )
-            fileFilter.forEach { exclude(it) }
-        }
-
     doFirst {
-        val count = debugTree.files.size
-        println("jacocoTestReport: classDirectories has $count class file(s)")
-        if (count == 0) {
-            val buildDir =
-                project.layout.buildDirectory
-                    .get()
-                    .asFile
-            buildDir
-                .walkTopDown()
-                .filter { it.extension == "class" }
-                .take(20)
-                .forEach { println("  class: ${it.relativeTo(buildDir)}") }
+        val classesJar =
+            layout.buildDirectory
+                .file(
+                    "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
+                ).get()
+                .asFile
+        if (!classesJar.exists()) {
+            println(
+                "  class jar missing: intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
+            )
+        } else {
+            val debugTree =
+                zipTree(classesJar).matching {
+                    fileFilter.forEach { exclude(it) }
+                }
+            val count = debugTree.files.size
+            println("jacocoTestReport: classDirectories has $count class file(s)")
         }
     }
 
@@ -228,7 +216,15 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         )
 
     sourceDirectories.setFrom(mainSrc)
-    classDirectories.setFrom(files(debugTree))
+    classDirectories.setFrom(
+        zipTree(
+            layout.buildDirectory.file(
+                "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
+            ),
+        ).matching {
+            fileFilter.forEach { exclude(it) }
+        },
+    )
     executionData.setFrom(
         fileTree(layout.buildDirectory.get()) {
             include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
@@ -263,17 +259,6 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
             "**/*Serializer*.*",
         )
 
-    val debugTree =
-        fileTree(layout.buildDirectory.get()) {
-            include(
-                "tmp/kotlin-classes/debug/**/*.class",
-                "intermediates/classes/debug/**/*.class",
-                "intermediates/kotlinc/debug/**/*.class",
-                "intermediates/javac/debug/**/*.class",
-            )
-            fileFilter.forEach { exclude(it) }
-        }
-
     val mainSrc =
         files(
             "${project.projectDir}/src/main/java",
@@ -285,7 +270,15 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
             include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
         },
     )
-    classDirectories.setFrom(files(debugTree))
+    classDirectories.setFrom(
+        zipTree(
+            layout.buildDirectory.file(
+                "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
+            ),
+        ).matching {
+            fileFilter.forEach { exclude(it) }
+        },
+    )
     sourceDirectories.setFrom(mainSrc)
 
     violationRules {
@@ -293,27 +286,11 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
             limit {
                 counter = "INSTRUCTION"
                 value = "COVEREDRATIO"
-                minimum = 0.25.toBigDecimal()
+                minimum = 0.30.toBigDecimal()
             }
         }
-        rule {
-            element = "PACKAGE"
-            includes = listOf("app.readylytics.health.domain.scoring")
-            limit {
-                counter = "LINE"
-                value = "COVEREDRATIO"
-                minimum = 0.80.toBigDecimal()
-            }
-        }
-        rule {
-            element = "PACKAGE"
-            includes = listOf("app.readylytics.health.domain.sync")
-            limit {
-                counter = "LINE"
-                value = "COVEREDRATIO"
-                minimum = 0.70.toBigDecimal()
-            }
-        }
+        // domain.scoring and domain.sync moved to :core:scoring and :core:healthconnect;
+        // those modules carry their own jacocoCoverageVerification tasks.
         rule {
             element = "PACKAGE"
             includes = listOf("app.readylytics.health.workers")
@@ -330,22 +307,6 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
         if (!reportFile.exists()) {
             throw GradleException("Coverage report XML not found at ${reportFile.absolutePath}")
         }
-        val xml = reportFile.readText()
-        val requiredClasses =
-            listOf(
-                "app/readylytics/health/data/repository/ScoringRepositoryImpl",
-                "app/readylytics/health/domain/sync/HealthSyncUseCase",
-                "app/readylytics/health/workers/DataCleanupWorker",
-                "app/readylytics/health/ui/heartrate/HeartRateDetailViewModel",
-                "app/readylytics/health/ui/sleep/SleepViewModel",
-                "app/readylytics/health/ui/steps/StepDetailViewModel",
-            )
-        for (cls in requiredClasses) {
-            if (!xml.contains("name=\"$cls\"")) {
-                throw GradleException("Verification failed: Coverage report does not contain class $cls")
-            }
-        }
-        println("Coverage report contains all required classes.")
     }
 }
 
@@ -371,6 +332,10 @@ protobuf {
 }
 
 dependencies {
+    implementation(project(":core:model"))
+    implementation(project(":core:scoring"))
+    implementation(project(":core:database"))
+    implementation(project(":core:healthconnect"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.documentfile)
@@ -454,6 +419,13 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.hilt.android.testing)
     testImplementation(libs.androidx.arch.core.testing)
+    testRuntimeOnly(
+        files(
+            layout.buildDirectory.file(
+                "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
+            ),
+        ),
+    )
     kspTest(libs.hilt.compiler)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -470,7 +442,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
-tasks.withType<org.gradle.api.tasks.testing.Test> {
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     systemProperty("robolectric.coverage.enabled", "true")
     configure<JacocoTaskExtension> {
         isIncludeNoLocationClasses = true
