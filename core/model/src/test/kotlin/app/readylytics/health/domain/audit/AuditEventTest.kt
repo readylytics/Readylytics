@@ -5,12 +5,21 @@ import kotlin.test.assertEquals
 
 class AuditEventTest {
     @Test
-    fun backupRestoreAndKeyEventsAreStableForPersistence() {
-        assertEquals("backup_created", AuditEvent.Type.BACKUP_CREATED.storageKey)
-        assertEquals("restore_started", AuditEvent.Type.RESTORE_STARTED.storageKey)
-        assertEquals("restore_completed", AuditEvent.Type.RESTORE_COMPLETED.storageKey)
-        assertEquals("restore_failed", AuditEvent.Type.RESTORE_FAILED.storageKey)
-        assertEquals("key_rotated", AuditEvent.Type.KEY_ROTATED.storageKey)
-        assertEquals("key_rotation_failed", AuditEvent.Type.KEY_ROTATION_FAILED.storageKey)
+    fun allEventTypesAreStableForPersistence() {
+        assertEquals(
+            mapOf(
+                AuditEvent.Type.BACKUP_CREATED to "backup_created",
+                AuditEvent.Type.RESTORE_STARTED to "restore_started",
+                AuditEvent.Type.RESTORE_COMPLETED to "restore_completed",
+                AuditEvent.Type.RESTORE_FAILED to "restore_failed",
+                AuditEvent.Type.KEY_CREATED to "key_created",
+                AuditEvent.Type.KEY_ROTATED to "key_rotated",
+                AuditEvent.Type.KEY_ROTATION_FAILED to "key_rotation_failed",
+                AuditEvent.Type.APP_LOCK_ENABLED to "app_lock_enabled",
+                AuditEvent.Type.APP_LOCK_DISABLED to "app_lock_disabled",
+                AuditEvent.Type.UNKNOWN to "unknown",
+            ),
+            AuditEvent.Type.entries.associateWith { it.storageKey },
+        )
     }
 }

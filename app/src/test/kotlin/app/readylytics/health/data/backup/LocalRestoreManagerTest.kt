@@ -20,6 +20,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -34,6 +35,7 @@ import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.time.Instant
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
@@ -313,6 +315,78 @@ class LocalRestoreManagerTest {
         }
 
     @Test
+    fun applyRestore_returnsSuccessWhenStartedAuditAppendFails() =
+        runTest {
+            val zipFile = createBackupZipFile("started_audit_failure.zip", createValidBackupJson())
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.RESTORE_STARTED) RuntimeException("audit unavailable") else null
+            }
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_returnsSuccessWhenCompletedAuditAppendFails() =
+        runTest {
+            val zipFile = createBackupZipFile("completed_audit_failure.zip", createValidBackupJson())
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.RESTORE_COMPLETED) RuntimeException("audit unavailable") else null
+            }
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_preservesOriginalFailureWhenFailureAuditAppendFails() =
+        runTest {
+            val zipFile = createBackupZipFile("failure_audit_failure.zip", createValidBackupJson())
+            val originalFailure = RuntimeException("restore failed")
+            coEvery { settingsRepo.batchUpdate(any()) } throws originalFailure
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.RESTORE_FAILED) RuntimeException("audit unavailable") else null
+            }
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is LocalRestoreManager.RestoreResult.Failure)
+            assertEquals(originalFailure::class, result.cause::class)
+            assertEquals(originalFailure.message, result.cause.message)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_rethrowsCancellationFromRestoreOperation() =
+        runTest {
+            val zipFile = createBackupZipFile("restore_cancellation.zip", createValidBackupJson())
+            coEvery { settingsRepo.batchUpdate(any()) } throws CancellationException("cancel restore")
+
+            assertFailsWith<CancellationException> {
+                manager.applyRestore(Uri.fromFile(zipFile))
+            }
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_rethrowsCancellationFromAuditAppend() =
+        runTest {
+            val zipFile = createBackupZipFile("audit_cancellation.zip", createValidBackupJson())
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.RESTORE_STARTED) CancellationException("cancel audit") else null
+            }
+
+            assertFailsWith<CancellationException> {
+                manager.applyRestore(Uri.fromFile(zipFile))
+            }
+            zipFile.delete()
+        }
+
+    @Test
     fun applyRestore_restoresBackupScheduleAndSchedulesBackupWorker() =
         runTest {
             val json = createValidBackupJson()
@@ -372,8 +446,10 @@ class LocalRestoreManagerTest {
 
     private class FakeAuditTrailRepository : AuditTrailRepository {
         val events = mutableListOf<AuditEvent>()
+        var appendFailure: (AuditEvent) -> Throwable? = { null }
 
         override suspend fun append(event: AuditEvent) {
+            appendFailure(event)?.let { throw it }
             events += event
         }
 

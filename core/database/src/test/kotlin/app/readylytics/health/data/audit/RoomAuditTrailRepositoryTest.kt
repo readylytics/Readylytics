@@ -43,6 +43,23 @@ class RoomAuditTrailRepositoryTest {
             assertEquals(null, dao.inserted[0].detail)
         }
 
+    @Test
+    fun observeRecentMapsUnknownPersistedTypeWithoutTerminatingFlow() =
+        runTest {
+            dao.seed(
+                AuditEventEntity(
+                    id = 7,
+                    type = "future_event_type",
+                    occurredAtEpochMs = 3_000,
+                    detail = null,
+                ),
+            )
+
+            val recent = repository.observeRecent().first()
+
+            assertEquals(AuditEvent.Type.UNKNOWN, recent.single().type)
+        }
+
     private class FakeAuditEventDao : AuditEventDao {
         private val events = MutableStateFlow<List<AuditEventEntity>>(emptyList())
         private var nextId = 1L
@@ -53,6 +70,10 @@ class RoomAuditTrailRepositoryTest {
         override suspend fun insert(event: AuditEventEntity) {
             val id = event.id.takeUnless { it == 0L } ?: nextId++
             events.value = events.value + event.copy(id = id)
+        }
+
+        fun seed(event: AuditEventEntity) {
+            events.value = events.value + event
         }
 
         override fun observeRecent(limit: Int): Flow<List<AuditEventEntity>> =

@@ -18,5 +18,12 @@ data class AuditEvent(
         KEY_ROTATION_FAILED("key_rotation_failed"),
         APP_LOCK_ENABLED("app_lock_enabled"),
         APP_LOCK_DISABLED("app_lock_disabled"),
+        UNKNOWN("unknown"),
+        ;
+
+        companion object {
+            fun fromStorageKey(storageKey: String): Type =
+                entries.firstOrNull { it.storageKey == storageKey } ?: UNKNOWN
+        }
     }
 }

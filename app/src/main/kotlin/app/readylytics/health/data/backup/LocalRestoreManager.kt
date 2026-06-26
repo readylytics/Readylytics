@@ -25,6 +25,7 @@ import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.util.logW
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -130,14 +131,14 @@ class LocalRestoreManager
             providedPassword: String? = null,
         ): RestoreResult =
             withContext(ioDispatcher) {
-                runCatching {
-                    auditTrailRepository.append(
-                        AuditEvent(
-                            type = AuditEvent.Type.RESTORE_STARTED,
-                            occurredAt = Instant.now(),
-                            detail = null,
-                        ),
-                    )
+                appendAuditBestEffort(
+                    AuditEvent(
+                        type = AuditEvent.Type.RESTORE_STARTED,
+                        occurredAt = Instant.now(),
+                        detail = null,
+                    ),
+                )
+                try {
                     val tempZipFile = File(context.cacheDir, "restore_temp.zip")
                     copyUriToTempFile(backupUri, tempZipFile)
 
@@ -165,7 +166,7 @@ class LocalRestoreManager
                             prefsBackup?.let { restorePreferences(it, providedPassword) }
                         }
 
-                        auditTrailRepository.append(
+                        appendAuditBestEffort(
                             AuditEvent(
                                 type = AuditEvent.Type.RESTORE_COMPLETED,
                                 occurredAt = Instant.now(),
@@ -176,14 +177,16 @@ class LocalRestoreManager
                     } finally {
                         tempZipFile.delete()
                     }
-                }.getOrElse {
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
                     val cause =
-                        if (it is ZipException && it.message?.contains("password", ignoreCase = true) == true) {
+                        if (e is ZipException && e.message?.contains("password", ignoreCase = true) == true) {
                             WrongBackupPasswordException()
                         } else {
-                            it
+                            e
                         }
-                    auditTrailRepository.append(
+                    appendAuditBestEffort(
                         AuditEvent(
                             type = AuditEvent.Type.RESTORE_FAILED,
                             occurredAt = Instant.now(),
@@ -193,6 +196,16 @@ class LocalRestoreManager
                     RestoreResult.Failure(cause)
                 }
             }
+
+        private suspend fun appendAuditBestEffort(event: AuditEvent) {
+            try {
+                auditTrailRepository.append(event)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logW("LocalRestoreManager", e) { "Failed to append ${event.type.storageKey} audit event" }
+            }
+        }
 
         private suspend fun performStreamingRestore(
             reader: JsonReader,

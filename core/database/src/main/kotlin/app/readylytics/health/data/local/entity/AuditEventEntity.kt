@@ -20,7 +20,7 @@ data class AuditEventEntity(
     fun toDomain(): AuditEvent =
         AuditEvent(
             id = id,
-            type = AuditEvent.Type.entries.first { it.storageKey == type },
+            type = AuditEvent.Type.fromStorageKey(type),
             occurredAt = Instant.ofEpochMilli(occurredAtEpochMs),
             detail = detail,
         )

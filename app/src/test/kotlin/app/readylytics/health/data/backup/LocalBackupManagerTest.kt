@@ -17,6 +17,7 @@ import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -31,6 +32,7 @@ import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.nio.charset.StandardCharsets
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -126,6 +128,59 @@ class LocalBackupManagerTest {
             assertTrue(result.isSuccess)
             assertEquals(listOf(AuditEvent.Type.BACKUP_CREATED), auditTrailRepository.events.map { it.type })
             assertEquals(null, auditTrailRepository.events.single().detail)
+        }
+
+    @Test
+    fun createBackup_preservesSuccessWhenAuditAppendFails() =
+        runTest {
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.BACKUP_CREATED) RuntimeException("audit unavailable") else null
+            }
+
+            val result = manager.createBackup()
+
+            assertTrue(result.isSuccess)
+            assertNotNull(result.getOrNull())
+        }
+
+    @Test
+    fun createBackup_rethrowsCancellationFromAuditAppend() =
+        runTest {
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.BACKUP_CREATED) CancellationException("cancel audit") else null
+            }
+
+            assertFailsWith<CancellationException> {
+                manager.createBackup()
+            }
+        }
+
+    @Test
+    fun reencryptBackups_preservesSuccessWhenSuccessAuditAppendFails() =
+        runTest {
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.KEY_ROTATED) RuntimeException("audit unavailable") else null
+            }
+
+            val result = manager.reencryptBackups(oldPassword = null, newPassword = "new_password")
+
+            assertTrue(result.isSuccess)
+        }
+
+    @Test
+    fun reencryptBackups_preservesOriginalFailureWhenFailureAuditAppendFails() =
+        runTest {
+            val originalFailure = RuntimeException("backup listing failed")
+            coEvery { settingsRepo.userPreferences } throws originalFailure
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.KEY_ROTATION_FAILED) RuntimeException("audit unavailable") else null
+            }
+
+            val result = manager.reencryptBackups(oldPassword = null, newPassword = "new_password")
+
+            assertTrue(result.isFailure)
+            assertEquals(originalFailure::class, result.exceptionOrNull()!!::class)
+            assertEquals(originalFailure.message, result.exceptionOrNull()?.message)
         }
 
     @Test
@@ -323,8 +378,10 @@ class LocalBackupManagerTest {
 
     private class FakeAuditTrailRepository : AuditTrailRepository {
         val events = mutableListOf<AuditEvent>()
+        var appendFailure: (AuditEvent) -> Throwable? = { null }
 
         override suspend fun append(event: AuditEvent) {
+            appendFailure(event)?.let { throw it }
             events += event
         }
 
