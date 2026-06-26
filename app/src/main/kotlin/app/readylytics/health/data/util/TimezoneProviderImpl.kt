@@ -17,7 +17,7 @@ import javax.inject.Singleton
 class TimezoneProviderImpl
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
+        @param:ApplicationContext private val context: Context,
     ) : TimezoneProvider {
         override val timezone: Flow<ZoneId> =
             callbackFlow {

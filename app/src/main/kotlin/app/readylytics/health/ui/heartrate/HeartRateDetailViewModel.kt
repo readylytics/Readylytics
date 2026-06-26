@@ -32,7 +32,7 @@ class HeartRateDetailViewModel
         private val settingsRepository: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
         private val clock: Clock,
-        @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
+        @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         @OptIn(ExperimentalCoroutinesApi::class)
         val uiState: StateFlow<HeartRateDetailUiState> =

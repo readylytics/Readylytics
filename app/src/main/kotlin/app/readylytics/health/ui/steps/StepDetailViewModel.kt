@@ -45,7 +45,7 @@ class StepDetailViewModel
         private val dailySummaryRepository: DailySummaryRepository,
         private val selectedDateRepository: SelectedDateRepository,
         private val settingsRepo: SettingsRepository,
-        @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
+        @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)
         val selectedRange: StateFlow<TimeRange> = _selectedRange.asStateFlow()

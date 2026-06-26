@@ -36,12 +36,12 @@ import javax.inject.Singleton
 class LocalBackupManager
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
+        @param:ApplicationContext private val context: Context,
         private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
         private val cardConfigurationRepository: CardConfigurationRepository,
         private val encryptionManager: EncryptionManager,
-        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val defaultBackupDir = File(context.filesDir, "backups")
         private val json = Json { encodeDefaults = true }

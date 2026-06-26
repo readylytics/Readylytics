@@ -34,7 +34,7 @@ class SelectedDateRepository
         private val hrvDao: HrvDao? = null,
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao? = null,
         private val bloodPressureRecordDao: BloodPressureRecordDao? = null,
-        @ApplicationScope private val appScope: CoroutineScope,
+        @param:ApplicationScope private val appScope: CoroutineScope,
     ) {
         private val dateMutex = Mutex()
         private val _selectedDate = MutableStateFlow(LocalDate.now())

@@ -54,7 +54,7 @@ class WeightDetailViewModel
         private val weightRepository: WeightRepository,
         private val settingsRepo: SettingsRepository,
         private val selectedDateRepository: SelectedDateRepository,
-        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val selectedRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)
 

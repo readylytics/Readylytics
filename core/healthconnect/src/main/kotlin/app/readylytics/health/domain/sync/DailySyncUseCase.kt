@@ -36,7 +36,7 @@ class DailySyncUseCase
         private val ingestionCoordinator: HealthIngestionCoordinator,
         private val stepCountFetcher: StepCountFetcher,
         private val recomputeSupport: DailyRecomputeSupport,
-        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private companion object {
             // How far back a foreground sync will widen its walk-forward recompute to absorb

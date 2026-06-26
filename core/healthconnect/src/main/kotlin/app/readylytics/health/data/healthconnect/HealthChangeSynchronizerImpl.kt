@@ -33,7 +33,7 @@ import javax.inject.Singleton
 class HealthChangeSynchronizerImpl
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
+        @param:ApplicationContext private val context: Context,
         private val tokenStore: HealthChangeTokenStore,
         private val settingsRepo: SettingsRepository,
         private val transactionRunner: TransactionRunner,

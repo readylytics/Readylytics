@@ -40,13 +40,13 @@ class WrongBackupPasswordException : Exception("Incorrect backup password")
 class LocalRestoreManager
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
+        @param:ApplicationContext private val context: Context,
         private val healthDatabase: HealthDatabase,
         private val settingsRepository: SettingsRepository,
         private val cardConfigurationRepository: CardConfigurationRepository,
         private val workerScheduler: WorkerScheduler,
         private val encryptionManager: EncryptionManager,
-        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val json = Json { ignoreUnknownKeys = true }
 

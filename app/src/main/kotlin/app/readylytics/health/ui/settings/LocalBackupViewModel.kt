@@ -43,7 +43,7 @@ class LocalBackupViewModel
         private val backupService: BackupService,
         private val restoreService: RestoreService,
         private val encryptionManager: EncryptionManager,
-        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         sealed interface SideEffect {
             data object RestartApp : SideEffect

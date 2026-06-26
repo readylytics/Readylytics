@@ -19,7 +19,7 @@ import javax.inject.Singleton
 class EncryptionManager
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
+        @param:ApplicationContext private val context: Context,
     ) : app.readylytics.health.domain.security.EncryptionManager {
         init {
             AeadConfig.register()

@@ -48,8 +48,8 @@ import javax.inject.Singleton
 class HealthConnectRepositoryImpl
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
-        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @param:ApplicationContext private val context: Context,
+        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : HealthConnectRepository {
         override val criticalPermissions: Set<String> =
             setOf(

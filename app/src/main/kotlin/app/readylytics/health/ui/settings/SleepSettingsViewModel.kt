@@ -22,7 +22,7 @@ class SleepSettingsViewModel
     constructor(
         private val settingsRepo: SettingsRepository,
         private val scoringRepository: ScoringRepository,
-        @ApplicationScope private val appScope: CoroutineScope,
+        @param:ApplicationScope private val appScope: CoroutineScope,
     ) : ViewModel() {
         val uiState: StateFlow<SleepSettingsState> =
             settingsRepo.userPreferences

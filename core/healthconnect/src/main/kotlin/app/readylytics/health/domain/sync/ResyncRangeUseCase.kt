@@ -44,7 +44,7 @@ class ResyncRangeUseCase
         private val ingestionCoordinator: HealthIngestionCoordinator,
         private val stepCountFetcher: StepCountFetcher,
         private val recomputeSupport: DailyRecomputeSupport,
-        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         /**
          * @param onProgress reports (completed, total) across both the ingestion and recompute phases.

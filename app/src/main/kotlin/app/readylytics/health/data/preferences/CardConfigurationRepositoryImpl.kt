@@ -18,7 +18,7 @@ class CardConfigurationRepositoryImpl
     @Inject
     constructor(
         private val dataStore: DataStore<CardConfigurationsProto>,
-        @ApplicationScope private val repositoryScope: CoroutineScope,
+        @param:ApplicationScope private val repositoryScope: CoroutineScope,
     ) : CardConfigurationRepository {
         init {
             repositoryScope.launch {

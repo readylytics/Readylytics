@@ -72,7 +72,7 @@ class VitalsViewModel
         private val savedStateHandle: SavedStateHandle,
         private val hrvBaselineProvider: HrvBaselineProvider,
         private val rhrBaselineProvider: RhrBaselineProvider,
-        @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val _selectedRange =
             MutableStateFlow(
