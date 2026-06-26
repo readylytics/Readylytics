@@ -5,6 +5,8 @@ on:
   push:
     tags:
       - "v*"
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -22,6 +24,29 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.1.1
+        with:
+          fetch-depth: 0
+
+      - name: Compute version
+        id: version
+        shell: bash
+        env:
+          RAW_TAG: ${{ github.ref_name }}
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            VERSION_NAME="${RAW_TAG#v}"
+            RELEASE_KIND="prod"
+          else
+            VERSION_NAME="$(git describe --tags --always)-beta"
+            RELEASE_KIND="beta"
+          fi
+
+          echo "Resolved versionName=$VERSION_NAME kind=$RELEASE_KIND"
+
+          {
+            echo "version_name=$VERSION_NAME"
+            echo "release_kind=$RELEASE_KIND"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Set up JDK 21
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v4.2.1
@@ -47,6 +72,18 @@ jobs:
           echo "$READYLYTICS_UPLOAD_STORE_BASE64" | base64 --decode > "$STORE_PATH"
           {
             echo "READYLYTICS_UPLOAD_STORE_FILE=$STORE_PATH"
+          } >> "$GITHUB_ENV"
+
+      - name: Write Play service account key
+        if: ${{ github.ref_type == 'tag' }}
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          test -n "$PLAY_SERVICE_ACCOUNT_JSON"
+          KEY_PATH="$RUNNER_TEMP/play-service-account.json"
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$KEY_PATH"
+          {
+            echo "PLAY_SERVICE_ACCOUNT_JSON_FILE=$KEY_PATH"
           } >> "$GITHUB_ENV"
 
       - name: Verify signing inputs
@@ -84,13 +121,20 @@ jobs:
       - name: Upload signed release bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.3.3
         with:
-          name: readylytics-release-aab
+          name: readylytics-${{ steps.version.outputs.release_kind }}-${{ steps.version.outputs.version_name }}-aab
           path: app/build/outputs/bundle/release/app-release.aab
 
-      - name: Delete temporary keystore
+      - name: Publish to Google Play
+        if: ${{ github.ref_type == 'tag' }}
+        run: ./gradlew publishBundle
+
+      - name: Delete temporary credential files
         if: ${{ always() }}
         shell: bash
         run: |
           if [ -n "${READYLYTICS_UPLOAD_STORE_FILE:-}" ]; then
             rm -f "$READYLYTICS_UPLOAD_STORE_FILE"
+          fi
+          if [ -n "${PLAY_SERVICE_ACCOUNT_JSON_FILE:-}" ]; then
+            rm -f "$PLAY_SERVICE_ACCOUNT_JSON_FILE"
           fi

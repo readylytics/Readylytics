@@ -11,4 +11,5 @@ plugins {
     alias(libs.plugins.androidx.room) apply false
     alias(libs.plugins.protobuf) apply false
     alias(libs.plugins.google.oss.licenses) apply false
+    alias(libs.plugins.play.publisher) apply false
 }
