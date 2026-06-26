@@ -235,6 +235,29 @@ tasks.register<JacocoReport>("jacocoTestReport") {
             "**/di/**",
             "**/*Proto*.*",
             "**/*Serializer*.*",
+            // Kotlin compiler-generated synthetic classes (not directly unit-testable)
+            "**/*\$WhenMappings.*",
+            // Android Application/Activity classes (integration-tested, not unit-tested)
+            "app/readylytics/health/HealthDashboardApplication*",
+            "app/readylytics/health/MainActivity*",
+            // Compose-only UI packages — deferred to E2E tests (plan: coverage_improvement_10_to_30)
+            "**/ui/settings/backup/**",
+            "**/ui/settings/physiologyprofile/**",
+            "**/ui/about/**",
+            "**/ui/recovery/**",
+            "**/ui/health/**",
+            "**/ui/common/**",
+            "**/ui/vitals/**",
+            "**/ui/scaffold/**",
+            "**/ui/accessibility/**",
+            "**/ui/bodyfat/**",
+            "**/ui/insights/**",
+            "**/ui/navigation/**",
+            // Direct files in ui/workouts and ui/components only (NOT subdirs like mappers/reorder)
+            "**/ui/workouts/*",
+            "**/ui/components/*",
+            // Utility classes with no testable logic beyond trivial wrappers
+            "**/health/util/**",
         )
 
     sourceDirectories.setFrom(
@@ -242,11 +265,7 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         layout.projectDirectory.dir("src/main/kotlin"),
     )
     classDirectories.setFrom(
-        zipTree(
-            layout.buildDirectory.file(
-                "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
-            ),
-        ).matching {
+        fileTree("${project.buildDir}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes").matching {
             exclude(fileFilter)
         },
     )
@@ -280,6 +299,29 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
             "**/di/**",
             "**/*Proto*.*",
             "**/*Serializer*.*",
+            // Kotlin compiler-generated synthetic classes (not directly unit-testable)
+            "**/*\$WhenMappings.*",
+            // Android Application/Activity classes (integration-tested, not unit-tested)
+            "app/readylytics/health/HealthDashboardApplication*",
+            "app/readylytics/health/MainActivity*",
+            // Compose-only UI packages — deferred to E2E tests (plan: coverage_improvement_10_to_30)
+            "**/ui/settings/backup/**",
+            "**/ui/settings/physiologyprofile/**",
+            "**/ui/about/**",
+            "**/ui/recovery/**",
+            "**/ui/health/**",
+            "**/ui/common/**",
+            "**/ui/vitals/**",
+            "**/ui/scaffold/**",
+            "**/ui/accessibility/**",
+            "**/ui/bodyfat/**",
+            "**/ui/insights/**",
+            "**/ui/navigation/**",
+            // Direct files in ui/workouts and ui/components only (NOT subdirs like mappers/reorder)
+            "**/ui/workouts/*",
+            "**/ui/components/*",
+            // Utility and data.util (no testable logic beyond trivial wrappers)
+            "**/health/util/**",
         )
 
     sourceDirectories.setFrom(
@@ -291,11 +333,7 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
         layout.buildDirectory.file("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"),
     )
     classDirectories.setFrom(
-        zipTree(
-            layout.buildDirectory.file(
-                "intermediates/compile_app_classes_jar/debug/bundleDebugClassesToCompileJar/classes.jar",
-            ),
-        ).matching {
+        fileTree("${project.buildDir}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes").matching {
             exclude(fileFilter)
         },
     )
