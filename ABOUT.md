@@ -211,6 +211,10 @@ If a particular metric is missing on a given day, we'll either:
 - show the score with a "data partial" badge and explain which component was estimated, or
 - skip the score for that day entirely if too much is missing (especially total sleep time).
 
+Local encryption keys are stored through Android Keystore. On devices that support StrongBox,
+Readylytics attempts to use StrongBox-backed key protection and falls back to standard Keystore
+when StrongBox is unavailable. Backup passwords and database keys remain local to the device.
+
 ---
 
 ## How long until your scores stabilise

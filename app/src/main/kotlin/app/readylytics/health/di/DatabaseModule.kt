@@ -7,6 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import app.readylytics.health.BuildConfig
 import app.readylytics.health.data.local.DatabaseMigrations
 import app.readylytics.health.data.local.HealthDatabase
+import app.readylytics.health.data.local.dao.AuditEventDao
 import app.readylytics.health.data.local.dao.BloodPressureRecordDao
 import app.readylytics.health.data.local.dao.BodyFatRecordDao
 import app.readylytics.health.data.local.dao.DailySummaryDao
@@ -98,4 +99,7 @@ object DatabaseModule {
 
     @Provides
     fun provideInsightDismissalDao(db: HealthDatabase): InsightDismissalDao = db.insightDismissalDao()
+
+    @Provides
+    fun provideAuditEventDao(db: HealthDatabase): AuditEventDao = db.auditEventDao()
 }

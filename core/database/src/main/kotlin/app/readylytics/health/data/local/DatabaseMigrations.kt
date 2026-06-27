@@ -112,9 +112,32 @@ object DatabaseMigrations {
             }
         }
 
+    private val MIGRATION_3_4 =
+        object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `audit_events` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `type` TEXT NOT NULL,
+                        `occurredAtEpochMs` INTEGER NOT NULL,
+                        `detail` TEXT
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS `index_audit_events_occurredAtEpochMs`
+                    ON `audit_events` (`occurredAtEpochMs`)
+                    """.trimIndent(),
+                )
+            }
+        }
+
     val all: Array<Migration> =
         arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
+            MIGRATION_3_4,
         )
 }

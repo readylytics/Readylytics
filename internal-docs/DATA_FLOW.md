@@ -96,6 +96,12 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
 `readBodyFatRecords`, `readBloodPressureRecords`, `readOxygenSaturationRecords`,
 `discoverDevices`.
 
+**Rate-Limit and Transient Fault Protection:**
+Each Health Connect read is retried through `HealthConnectRetryPolicy`, which retries transient
+IO, quota, and rate-limit failures with bounded exponential backoff and jitter. Cancellation is
+rethrown. Room writes remain outside the read retry loop so ingestion failure boundaries stay
+explicit and idempotent.
+
 ### 1.2 Sync engine — orchestration, chunking, idempotency
 
 | Component                     | Path                                         | Responsibility                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
@@ -174,16 +180,16 @@ are intentionally confined to `core/healthconnect/src/main/kotlin/app/readylytic
 | `BloodPressureDataMapper`    | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/BloodPressureDataMapper.kt`    | `DomainBloodPressureRecord` → `BloodPressureRecordEntity` (systolic/diastolic mmHg).                                                               |
 | `OxygenSaturationDataMapper` | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/mapper/OxygenSaturationDataMapper.kt` | `DomainOxygenSaturationRecord` → `OxygenSaturationRecordEntity` (%).                                                                               |
 
-### 1.4 Room storage — `HealthDatabase` (`@Database(version = 2)`)
+### 1.4 Room storage — `HealthDatabase` (`@Database(version = 4)`)
 
 Defined in `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`;
 entities in `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/`, DAOs in
 `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/`. **The database is the single source of truth; the UI never reads Health
 Connect directly.**
 
-`DatabaseMigrations` registers `MIGRATION_1_2` for existing v1 installs. The SQL schema is
-unchanged; the migration lets Room validate the moved-module schema and write the current
-identity hash without destructive data loss.
+`DatabaseMigrations` registers v1→v2, v2→v3, and v3→v4 migrations for existing installs.
+Version 4 adds the metadata-only `audit_events` table; it does not change Health Connect
+ingestion tables or scoring formulas.
 
 | Entity                         | Table                       | Primary key                            | Notable columns                                                                                                                                           |
 | :----------------------------- | :-------------------------- | :------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -198,6 +204,25 @@ identity hash without destructive data loss.
 | `OxygenSaturationRecordEntity` | `oxygen_saturation_records` | `id: String` (composite)               | %, `timestampMs`, `deviceName`                                                                                                                            |
 | `DailySummaryEntity`           | `daily_summaries`           | `dateMidnightMs: Long`                 | computed scores (sleep/load/readiness), frozen baselines (`hrv_mu_mssd`, `hrv_sigma_mssd`, `rhr_bpm`, `rhr_sigma`, `hr_max`, …), weight/BP/SpO2 snapshots |
 | `InsightDismissalEntity`       | `insight_dismissals`        | `(dateMidnightMs: Long, type: String)` | `type: String` (LATE_NADIR, SICK_INDICATOR, STRONG_RECOVERY_SIGNAL, LOAD_SPIKE_RECOVERY_STRAIN, …) — represents dismissed dashboard insights                                                       |
+| `AuditEventEntity`             | `audit_events`              | `id: Long` (auto)                      | `type`, `occurredAtEpochMs`, optional coarse `detail` for local backup/restore/key-lifecycle events                                                       |
+
+Backup/restore and key-lifecycle operations append local audit events to `audit_events` through
+`AuditTrailRepository`. Audit events are metadata-only: operation type, timestamp, and coarse
+result detail. They do not store health samples, backup contents, passwords, encryption keys, or
+Health Connect payloads.
+
+**Staged Restore Design:**
+Restore is staged. Database replacement is atomic within Room. Preferences are restored after the
+database transaction commits because Room and DataStore cannot share a transaction. If a later
+stage fails, the app returns an explicit partial-success result requiring restart and instructs
+the user to rerun restore.
+
+**Encryption & Key Management:**
+Local encryption keys are versioned (e.g., `readylytics_master_key_v1`) and protected via Android Keystore.
+On supported devices, keys are StrongBox-backed, with fallback to standard Keystore. Current key version
+and StrongBox status are tracked in `KeyMetadataStore` (backed by SharedPreferences). Safe database key
+rotation is managed by `DatabaseKeyRotator`, which rekeys the SQLCipher database connection in-place and
+logs the operation status to the local audit trail. Keys are hardware-bound and do not support cloud backup.
 
 **Idempotency contract:** every DAO uses `@Upsert` keyed on the stable primary key, so
 re-fetching a record **replaces** rather than duplicates. There is no blanket `deleteAll()`
@@ -443,11 +468,13 @@ day offset instead of resetting to zero.
 | `core/model/src/main/kotlin/app/readylytics/health/data/healthconnect/WorkoutMapper.kt`                                      | Ingestion — mapper                                  | zone minutes + workout TRIMP                                                             |
 | `core/healthconnect/src/main/kotlin/app/readylytics/health/data/healthconnect/StepsMapper.kt`                                        | Ingestion — mapper                                  | raw selected-device steps / aggregate all-device steps                                   |
 | `data/mapper/{Weight,BodyFat,BloodPressure,OxygenSaturation}DataMapper.kt` | Ingestion — mappers                                 | weight / body fat / BP / SpO2                                                            |
-| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v2)                              | 11 entities; v1→v2 identity migration wired through `DatabaseMigrations`                 |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/HealthDatabase.kt`                                             | Storage — Room DB (v4)                              | 12 entities; v1→v4 migrations wired through `DatabaseMigrations`                         |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/DailySummaryEntity.kt`                                  | Storage — computed-day snapshot                     | scores + frozen baselines                                                                |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/InsightDismissalEntity.kt`                              | Storage — insight dismissal                         | dateMidnightMs + type                                                                    |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/entity/AuditEventEntity.kt`                                  | Storage — local audit events                        | metadata-only backup/restore/key-lifecycle events                                        |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/entity/*.kt` (sleep, HR, HRV, workout, weight, …)              | Storage — raw metric entities                       | upsert by stable HC id                                                                   |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/InsightDismissalDao.kt`                                    | Storage — insight dismissal DAO                     | observe / dismiss / restore                                                              |
+| `core/database/src/main/kotlin/app/readylytics/health/data/local/dao/AuditEventDao.kt`                                       | Storage — local audit DAO                           | append / observe recent metadata events                                                  |
 | `core/model/src/main/kotlin/app/readylytics/health/data/local/dao/*.kt`                                                      | Storage — DAOs                                      | `@Upsert`, `clearFrozenBaselines`, `deleteBeforeTimestamp`                               |
 | `domain/model/InsightType.kt`                                              | Domain — insight model                              | enum class and RecoveryFlag mapper                                                       |
 | `domain/dashboard/InsightDeriver.kt`                                       | Domain — insight logic                              | derives active set + ordered visible queue/current insight                               |

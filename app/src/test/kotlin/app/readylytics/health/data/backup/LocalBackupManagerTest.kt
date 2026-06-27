@@ -10,12 +10,16 @@ import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.domain.audit.AuditEvent
+import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import net.lingala.zip4j.ZipFile
@@ -28,6 +32,7 @@ import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.nio.charset.StandardCharsets
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -39,6 +44,7 @@ class LocalBackupManagerTest {
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var encryptionManager: EncryptionManager
     private lateinit var cardConfigRepo: CardConfigurationRepository
+    private lateinit var auditTrailRepository: FakeAuditTrailRepository
     private lateinit var manager: LocalBackupManager
     private lateinit var backupDir: File
 
@@ -79,8 +85,17 @@ class LocalBackupManagerTest {
             mockk<CardConfigurationRepository>(relaxed = true).apply {
                 coEvery { dashboardCardConfigurations() } returns flowOf(emptyList())
             }
+        auditTrailRepository = FakeAuditTrailRepository()
         manager =
-            LocalBackupManager(context, db, settingsRepo, cardConfigRepo, encryptionManager, Dispatchers.Unconfined)
+            LocalBackupManager(
+                context,
+                db,
+                settingsRepo,
+                cardConfigRepo,
+                encryptionManager,
+                auditTrailRepository,
+                Dispatchers.Unconfined,
+            )
     }
 
     @After
@@ -103,6 +118,69 @@ class LocalBackupManagerTest {
             assertTrue(file.exists())
             assertTrue(file.name.endsWith(".zip"))
             assertTrue(file.name.startsWith("backup_"))
+        }
+
+    @Test
+    fun createBackup_recordsBackupCreatedAuditEvent() =
+        runTest {
+            val result = manager.createBackup()
+
+            assertTrue(result.isSuccess)
+            assertEquals(listOf(AuditEvent.Type.BACKUP_CREATED), auditTrailRepository.events.map { it.type })
+            assertEquals(null, auditTrailRepository.events.single().detail)
+        }
+
+    @Test
+    fun createBackup_preservesSuccessWhenAuditAppendFails() =
+        runTest {
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.BACKUP_CREATED) RuntimeException("audit unavailable") else null
+            }
+
+            val result = manager.createBackup()
+
+            assertTrue(result.isSuccess)
+            assertNotNull(result.getOrNull())
+        }
+
+    @Test
+    fun createBackup_rethrowsCancellationFromAuditAppend() =
+        runTest {
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.BACKUP_CREATED) CancellationException("cancel audit") else null
+            }
+
+            assertFailsWith<CancellationException> {
+                manager.createBackup()
+            }
+        }
+
+    @Test
+    fun reencryptBackups_preservesSuccessWhenSuccessAuditAppendFails() =
+        runTest {
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.KEY_ROTATED) RuntimeException("audit unavailable") else null
+            }
+
+            val result = manager.reencryptBackups(oldPassword = null, newPassword = "new_password")
+
+            assertTrue(result.isSuccess)
+        }
+
+    @Test
+    fun reencryptBackups_preservesOriginalFailureWhenFailureAuditAppendFails() =
+        runTest {
+            val originalFailure = RuntimeException("backup listing failed")
+            coEvery { settingsRepo.userPreferences } throws originalFailure
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.KEY_ROTATION_FAILED) RuntimeException("audit unavailable") else null
+            }
+
+            val result = manager.reencryptBackups(oldPassword = null, newPassword = "new_password")
+
+            assertTrue(result.isFailure)
+            assertEquals(originalFailure::class, result.exceptionOrNull()!!::class)
+            assertEquals(originalFailure.message, result.exceptionOrNull()?.message)
         }
 
     @Test
@@ -217,7 +295,15 @@ class LocalBackupManagerTest {
                         )
                 }
             manager =
-                LocalBackupManager(context, db, settingsRepo, cardConfigRepo, encryptionManager, Dispatchers.Unconfined)
+                LocalBackupManager(
+                    context,
+                    db,
+                    settingsRepo,
+                    cardConfigRepo,
+                    encryptionManager,
+                    auditTrailRepository,
+                    Dispatchers.Unconfined,
+                )
 
             val now = System.currentTimeMillis()
             val eightDaysAgo = now - (8L * 24 * 60 * 60 * 1000)
@@ -270,7 +356,15 @@ class LocalBackupManagerTest {
                         )
                 }
             manager =
-                LocalBackupManager(context, db, settingsRepo, cardConfigRepo, encryptionManager, Dispatchers.Unconfined)
+                LocalBackupManager(
+                    context,
+                    db,
+                    settingsRepo,
+                    cardConfigRepo,
+                    encryptionManager,
+                    auditTrailRepository,
+                    Dispatchers.Unconfined,
+                )
 
             val result = manager.createBackup()
 
@@ -281,4 +375,17 @@ class LocalBackupManagerTest {
                     .orEmpty()
             assertFalse(leakedJson.any(), "Plaintext backup JSON temp files must be removed after failure")
         }
+
+    private class FakeAuditTrailRepository : AuditTrailRepository {
+        val events = mutableListOf<AuditEvent>()
+        var appendFailure: (AuditEvent) -> Throwable? = { null }
+
+        override suspend fun append(event: AuditEvent) {
+            appendFailure(event)?.let { throw it }
+            events += event
+        }
+
+        override fun observeRecent(limit: Int): Flow<List<AuditEvent>> =
+            flowOf(events.sortedByDescending { it.occurredAt }.take(limit))
+    }
 }

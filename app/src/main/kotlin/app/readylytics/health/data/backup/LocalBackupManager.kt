@@ -8,6 +8,8 @@ import app.readylytics.health.data.local.HealthDatabase
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.di.IoDispatcher
+import app.readylytics.health.domain.audit.AuditEvent
+import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
@@ -41,6 +43,7 @@ class LocalBackupManager
         private val settingsRepository: SettingsRepository,
         private val cardConfigurationRepository: CardConfigurationRepository,
         private val encryptionManager: EncryptionManager,
+        private val auditTrailRepository: AuditTrailRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val defaultBackupDir = File(context.filesDir, "backups")
@@ -106,6 +109,14 @@ class LocalBackupManager
                         finalFile = file
                     }
 
+                    auditTrailRepository.appendBestEffort(
+                        "LocalBackupManager",
+                        AuditEvent(
+                            type = AuditEvent.Type.BACKUP_CREATED,
+                            occurredAt = Instant.now(),
+                            detail = null,
+                        ),
+                    )
                     Result.success(finalFile)
                 } catch (e: CancellationException) {
                     throw e
@@ -221,10 +232,26 @@ class LocalBackupManager
                     } finally {
                         tempDir.deleteRecursively()
                     }
+                    auditTrailRepository.appendBestEffort(
+                        "LocalBackupManager",
+                        AuditEvent(
+                            type = AuditEvent.Type.KEY_ROTATED,
+                            occurredAt = Instant.now(),
+                            detail = null,
+                        ),
+                    )
                     Result.success(Unit)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    auditTrailRepository.appendBestEffort(
+                        "LocalBackupManager",
+                        AuditEvent(
+                            type = AuditEvent.Type.KEY_ROTATION_FAILED,
+                            occurredAt = Instant.now(),
+                            detail = e::class.simpleName,
+                        ),
+                    )
                     Result.failure(e)
                 }
             }

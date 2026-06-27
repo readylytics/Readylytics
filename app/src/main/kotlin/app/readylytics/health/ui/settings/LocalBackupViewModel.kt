@@ -145,6 +145,15 @@ class LocalBackupViewModel
                             RestoreResult.SuccessRequiresRestart -> {
                                 _sideEffect.emit(SideEffect.RestartApp)
                             }
+                            is RestoreResult.PartialSuccessRequiresRestart -> {
+                                transientState.update {
+                                    it.copy(
+                                        isRestoring = false,
+                                        backupError = UiText.StringRes(R.string.restore_partial_success_message),
+                                    )
+                                }
+                                _sideEffect.emit(SideEffect.RestartApp)
+                            }
                             is RestoreResult.Failure -> {
                                 transientState.update {
                                     it.copy(

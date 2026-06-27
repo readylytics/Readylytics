@@ -23,12 +23,7 @@ class LocalRestoreServiceImpl
         override suspend fun applyRestore(
             location: BackupLocation,
             password: String?,
-        ): RestoreResult =
-            when (val result = localRestoreManager.applyRestore(location.toUri(), password)) {
-                LocalRestoreManager.RestoreResult.Success -> RestoreResult.Success
-                LocalRestoreManager.RestoreResult.SuccessRequiresRestart -> RestoreResult.SuccessRequiresRestart
-                is LocalRestoreManager.RestoreResult.Failure -> RestoreResult.Failure(result.cause)
-            }
+        ): RestoreResult = localRestoreManager.applyRestore(location.toUri(), password)
     }
 
 private fun BackupLocation.toUri(): Uri = value.toUri()

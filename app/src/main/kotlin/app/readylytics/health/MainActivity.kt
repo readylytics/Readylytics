@@ -16,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import app.readylytics.health.data.backup.LocalRestoreManager
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.security.SqlCipherKeyManager
+import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.ui.navigation.AppNavHost
 import app.readylytics.health.ui.recovery.DatabaseRecoveryScreen
 import app.readylytics.health.ui.sync.SyncViewModel
@@ -56,11 +57,11 @@ class MainActivity : ComponentActivity() {
                         onRestoreBackup = { uri, onResult ->
                             lifecycleScope.launch {
                                 val result = localRestoreManager.applyRestore(uri)
-                                if (result is LocalRestoreManager.RestoreResult.Success ||
-                                    result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart
+                                if (result is RestoreResult.Success ||
+                                    result is RestoreResult.SuccessRequiresRestart
                                 ) {
                                     onResult(true, null)
-                                } else if (result is LocalRestoreManager.RestoreResult.Failure) {
+                                } else if (result is RestoreResult.Failure) {
                                     onResult(false, getString(R.string.recovery_error_default))
                                 }
                             }

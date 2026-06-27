@@ -9,23 +9,22 @@ import kotlinx.coroutines.delay
  * rate-limit / IO failures during a chunked resync. Cancellation is never swallowed.
  */
 internal suspend fun <T> retryWithBackoff(
-    maxAttempts: Int = 4,
-    initialDelayMs: Long = 1_000,
+    policy: HealthConnectRetryPolicy = HealthConnectRetryPolicy(),
+    delayFn: suspend (Long) -> Unit = { delay(it) },
     block: suspend () -> T,
 ): T {
-    var attempt = 0
-    var delayMs = initialDelayMs
+    var attempt = 1
     while (true) {
         try {
             return block()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            if (!policy.shouldRetry(e, attempt)) throw e
+            val delayMs = policy.delayForAttempt(attempt)
+            logD("RetryWithBackoff") { "Health Connect read failed (attempt $attempt), backing off ${delayMs}ms" }
+            delayFn(delayMs)
             attempt++
-            if (attempt >= maxAttempts) throw e
-            logD("RetryWithBackoff") { "Operation failed (attempt $attempt), backing off ${delayMs}ms" }
-            delay(delayMs)
-            delayMs *= 2
         }
     }
 }

@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.android.library)
+    id("readylytics.android-library-conventions")
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     id("jacoco")
@@ -7,16 +7,6 @@ plugins {
 
 android {
     namespace = "app.readylytics.health.core.healthconnect"
-    compileSdk = 37
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
     buildTypes {
         debug {
             enableUnitTestCoverage = true
@@ -80,4 +70,8 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.health.connect.client)
+
+    testImplementation(libs.junit)
+    testImplementation(kotlin("test"))
+    testImplementation(libs.kotlinx.coroutines.test)
 }

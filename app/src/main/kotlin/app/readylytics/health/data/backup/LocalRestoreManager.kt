@@ -19,10 +19,15 @@ import app.readylytics.health.data.preferences.SyncPreferenceProto
 import app.readylytics.health.data.preferences.TrimpMethodProto
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.di.IoDispatcher
+import app.readylytics.health.domain.audit.AuditEvent
+import app.readylytics.health.domain.audit.AuditTrailRepository
+import app.readylytics.health.domain.backup.RestoreResult
+import app.readylytics.health.domain.backup.RestoreStage
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.util.logW
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -31,6 +36,7 @@ import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.exception.ZipException
 import java.io.File
 import java.io.InputStreamReader
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -46,19 +52,10 @@ class LocalRestoreManager
         private val cardConfigurationRepository: CardConfigurationRepository,
         private val workerScheduler: WorkerScheduler,
         private val encryptionManager: EncryptionManager,
+        private val auditTrailRepository: AuditTrailRepository,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val json = Json { ignoreUnknownKeys = true }
-
-        sealed class RestoreResult {
-            data object Success : RestoreResult()
-
-            data object SuccessRequiresRestart : RestoreResult()
-
-            data class Failure(
-                val cause: Throwable,
-            ) : RestoreResult()
-        }
 
         suspend fun validate(
             backupUri: Uri,
@@ -126,7 +123,15 @@ class LocalRestoreManager
             providedPassword: String? = null,
         ): RestoreResult =
             withContext(ioDispatcher) {
-                runCatching {
+                auditTrailRepository.appendBestEffort(
+                    "LocalRestoreManager",
+                    AuditEvent(
+                        type = AuditEvent.Type.RESTORE_STARTED,
+                        occurredAt = Instant.now(),
+                        detail = null,
+                    ),
+                )
+                try {
                     val tempZipFile = File(context.cacheDir, "restore_temp.zip")
                     copyUriToTempFile(backupUri, tempZipFile)
 
@@ -143,27 +148,67 @@ class LocalRestoreManager
                             zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
                                 ?: throw IllegalStateException("No JSON file found in backup ZIP")
 
+                        var prefsBackup: UserPreferencesBackup? = null
                         healthDatabase.withTransaction {
-                            var prefsBackup: UserPreferencesBackup? = null
                             zipFile.getInputStream(header).use { inputStream ->
                                 val reader = JsonReader(InputStreamReader(inputStream, "UTF-8"))
                                 performStreamingRestore(reader) { parsedPreferences ->
                                     prefsBackup = parsedPreferences
                                 }
                             }
-                            prefsBackup?.let { restorePreferences(it, providedPassword) }
                         }
 
+                        val backup = prefsBackup
+                        if (backup != null) {
+                            try {
+                                restorePreferences(backup, providedPassword)
+                            } catch (e: Throwable) {
+                                if (e is CancellationException) throw e
+                                auditTrailRepository.appendBestEffort(
+                                    "LocalRestoreManager",
+                                    AuditEvent(
+                                        type = AuditEvent.Type.RESTORE_FAILED,
+                                        occurredAt = Instant.now(),
+                                        detail = "prefs_failed: ${e::class.simpleName}",
+                                    ),
+                                )
+                                return@withContext RestoreResult.PartialSuccessRequiresRestart(
+                                    failedStage = RestoreStage.PREFERENCES,
+                                    cause = e,
+                                )
+                            }
+                        }
+
+                        auditTrailRepository.appendBestEffort(
+                            "LocalRestoreManager",
+                            AuditEvent(
+                                type = AuditEvent.Type.RESTORE_COMPLETED,
+                                occurredAt = Instant.now(),
+                                detail = "success_requires_restart",
+                            ),
+                        )
                         RestoreResult.SuccessRequiresRestart
                     } finally {
                         tempZipFile.delete()
                     }
-                }.getOrElse {
-                    if (it is ZipException && it.message?.contains("password", ignoreCase = true) == true) {
-                        RestoreResult.Failure(WrongBackupPasswordException())
-                    } else {
-                        RestoreResult.Failure(it)
-                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    val cause =
+                        if (e is ZipException && e.message?.contains("password", ignoreCase = true) == true) {
+                            WrongBackupPasswordException()
+                        } else {
+                            e
+                        }
+                    auditTrailRepository.appendBestEffort(
+                        "LocalRestoreManager",
+                        AuditEvent(
+                            type = AuditEvent.Type.RESTORE_FAILED,
+                            occurredAt = Instant.now(),
+                            detail = cause::class.simpleName,
+                        ),
+                    )
+                    RestoreResult.Failure(cause)
                 }
             }
 

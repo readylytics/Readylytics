@@ -10,6 +10,10 @@ import app.readylytics.health.data.preferences.BackupScheduleProto
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferencesProto
 import app.readylytics.health.data.security.EncryptionManager
+import app.readylytics.health.domain.audit.AuditEvent
+import app.readylytics.health.domain.audit.AuditTrailRepository
+import app.readylytics.health.domain.backup.RestoreResult
+import app.readylytics.health.domain.backup.RestoreStage
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.workers.WorkerScheduler
@@ -18,7 +22,9 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
@@ -31,6 +37,7 @@ import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.time.Instant
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
@@ -41,6 +48,7 @@ class LocalRestoreManagerTest {
     private lateinit var encryptionManager: EncryptionManager
     private lateinit var cardConfigRepo: CardConfigurationRepository
     private lateinit var workerScheduler: WorkerScheduler
+    private lateinit var auditTrailRepository: FakeAuditTrailRepository
     private lateinit var manager: LocalRestoreManager
 
     @Before
@@ -63,6 +71,7 @@ class LocalRestoreManagerTest {
         every { encryptionManager.encrypt("restored_password") } returns "encrypted_restored_password"
         cardConfigRepo = mockk<CardConfigurationRepository>(relaxed = true)
         workerScheduler = mockk<WorkerScheduler>(relaxed = true)
+        auditTrailRepository = FakeAuditTrailRepository()
         manager =
             LocalRestoreManager(
                 context,
@@ -71,6 +80,7 @@ class LocalRestoreManagerTest {
                 cardConfigRepo,
                 workerScheduler,
                 encryptionManager,
+                auditTrailRepository,
                 Dispatchers.Unconfined,
             )
     }
@@ -131,7 +141,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
 
             val sessions = db.sleepSessionDao().getSince(0)
             assertEquals(1, sessions.size)
@@ -148,7 +158,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
             coVerify { settingsRepo.batchUpdate(any()) }
             zipFile.delete()
         }
@@ -167,7 +177,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
 
             val builder =
                 app.readylytics.health.data.preferences.UserPreferencesProto
@@ -198,7 +208,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
 
             val expectedCards =
                 listOf(
@@ -228,7 +238,7 @@ class LocalRestoreManagerTest {
             coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
 
             val builder = UserPreferencesProto.newBuilder()
             builderSlot.captured(builder)
@@ -253,7 +263,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
 
             val builder = UserPreferencesProto.newBuilder().setBackgroundSyncEnabled(true)
             builderSlot.captured(builder)
@@ -273,7 +283,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile), providedPassword = "restored_password")
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
 
             val builder = UserPreferencesProto.newBuilder()
             builderSlot.captured(builder)
@@ -281,23 +291,114 @@ class LocalRestoreManagerTest {
         }
 
     @Test
-    fun applyRestore_rollsBackDbChangesWhenPreferencesRestoreFails() =
+    fun applyRestore_rollsBackDbChangesWhenDatabaseRestoreFails() =
         runTest {
             val json = createValidBackupJson()
+            json.put(
+                "sleepSessions",
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("id", JSONObject())
+                        },
+                    )
+                },
+            )
             val zipFile = createBackupZipFile("rollback_backup.zip", json)
-
-            val failure = RuntimeException("simulated preferences restore failure")
-            coEvery { settingsRepo.batchUpdate(any()) } throws failure
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.Failure)
-            val cause = (result as LocalRestoreManager.RestoreResult.Failure).cause
-            assertEquals(failure.message, cause.message)
-            assertEquals(failure::class, cause::class)
+            assertTrue(result is RestoreResult.Failure)
+            assertTrue(result.cause is kotlinx.serialization.SerializationException)
 
             val sessions = db.sleepSessionDao().getSince(0)
             assertTrue(sessions.isEmpty())
+            assertEquals(
+                listOf(AuditEvent.Type.RESTORE_STARTED, AuditEvent.Type.RESTORE_FAILED),
+                auditTrailRepository.events.map { it.type },
+            )
+            val detail = auditTrailRepository.events.last().detail
+            assertTrue(detail != null && detail.contains("Exception"))
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_returnsSuccessWhenStartedAuditAppendFails() =
+        runTest {
+            val zipFile = createBackupZipFile("started_audit_failure.zip", createValidBackupJson())
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.RESTORE_STARTED) RuntimeException("audit unavailable") else null
+            }
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_returnsSuccessWhenCompletedAuditAppendFails() =
+        runTest {
+            val zipFile = createBackupZipFile("completed_audit_failure.zip", createValidBackupJson())
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.RESTORE_COMPLETED) RuntimeException("audit unavailable") else null
+            }
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_preservesOriginalFailureWhenFailureAuditAppendFails() =
+        runTest {
+            val json = createValidBackupJson()
+            json.put(
+                "sleepSessions",
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("id", JSONObject())
+                        },
+                    )
+                },
+            )
+            val zipFile = createBackupZipFile("failure_audit_failure.zip", json)
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.RESTORE_FAILED) RuntimeException("audit unavailable") else null
+            }
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.Failure)
+            assertTrue(result.cause is kotlinx.serialization.SerializationException)
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_rethrowsCancellationFromRestoreOperation() =
+        runTest {
+            val zipFile = createBackupZipFile("restore_cancellation.zip", createValidBackupJson())
+            coEvery { settingsRepo.batchUpdate(any()) } throws CancellationException("cancel restore")
+
+            assertFailsWith<CancellationException> {
+                manager.applyRestore(Uri.fromFile(zipFile))
+            }
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_rethrowsCancellationFromAuditAppend() =
+        runTest {
+            val zipFile = createBackupZipFile("audit_cancellation.zip", createValidBackupJson())
+            auditTrailRepository.appendFailure = { event ->
+                if (event.type == AuditEvent.Type.RESTORE_STARTED) CancellationException("cancel audit") else null
+            }
+
+            assertFailsWith<CancellationException> {
+                manager.applyRestore(Uri.fromFile(zipFile))
+            }
             zipFile.delete()
         }
 
@@ -313,12 +414,33 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
 
             val builder = UserPreferencesProto.newBuilder()
             builderSlot.captured(builder)
             assertEquals(BackupScheduleProto.BACKUP_WEEKLY, builder.backupSchedule)
             coVerify(exactly = 1) { workerScheduler.scheduleBackupWorker(BackupSchedule.WEEKLY) }
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_whenPreferencesFail_returnsPartialSuccessWithCommittedDatabase() =
+        runTest {
+            val json = createValidBackupJson()
+            val zipFile = createBackupZipFile("restore_partial_fail.zip", json)
+
+            coEvery { settingsRepo.batchUpdate(any()) } throws RuntimeException("prefs fail")
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is RestoreResult.PartialSuccessRequiresRestart)
+            assertEquals(
+                RestoreStage.PREFERENCES,
+                result.failedStage,
+            )
+
+            val sessions = db.sleepSessionDao().getSince(0)
+            assertTrue(sessions.isNotEmpty())
             zipFile.delete()
         }
 
@@ -357,5 +479,18 @@ class LocalRestoreManagerTest {
                 },
             )
         }
+    }
+
+    private class FakeAuditTrailRepository : AuditTrailRepository {
+        val events = mutableListOf<AuditEvent>()
+        var appendFailure: (AuditEvent) -> Throwable? = { null }
+
+        override suspend fun append(event: AuditEvent) {
+            appendFailure(event)?.let { throw it }
+            events += event
+        }
+
+        override fun observeRecent(limit: Int): Flow<List<AuditEvent>> =
+            flowOf(events.sortedByDescending { it.occurredAt }.take(limit))
     }
 }

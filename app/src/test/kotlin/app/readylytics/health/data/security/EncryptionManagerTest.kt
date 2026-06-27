@@ -6,6 +6,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -17,7 +18,8 @@ class EncryptionManagerTest {
 
     @Before
     fun setUp() {
-        encryptionManager = EncryptionManager(context)
+        val keyMetadataStore = KeyMetadataStore(context)
+        encryptionManager = EncryptionManager(context, keyMetadataStore)
     }
 
     @Test
@@ -51,5 +53,11 @@ class EncryptionManagerTest {
         val result = encryptionManager.decrypt(corrupted)
 
         assertNull(result, "Decryption of corrupted input should return null")
+    }
+
+    @Test
+    fun keyAliasIsVersionedAndStable() {
+        assertEquals("android-keystore://readylytics_master_key_v1", EncryptionManager.masterKeyUriForVersion(1))
+        assertEquals("readylytics_master_key_v1", EncryptionManager.keyAliasForVersion(1))
     }
 }
