@@ -14,9 +14,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import app.readylytics.health.data.backup.LocalRestoreManager
-import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.security.SqlCipherKeyManager
+import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.ui.navigation.AppNavHost
 import app.readylytics.health.ui.recovery.DatabaseRecoveryScreen
 import app.readylytics.health.ui.sync.SyncViewModel
