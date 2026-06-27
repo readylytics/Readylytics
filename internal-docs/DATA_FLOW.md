@@ -205,6 +205,13 @@ Backup/restore and key-lifecycle operations append local audit events to `audit_
 result detail. They do not store health samples, backup contents, passwords, encryption keys, or
 Health Connect payloads.
 
+**Encryption & Key Management:**
+Local encryption keys are versioned (e.g., `readylytics_master_key_v1`) and protected via Android Keystore.
+On supported devices, keys are StrongBox-backed, with fallback to standard Keystore. Current key version
+and StrongBox status are tracked in `KeyMetadataStore` (backed by SharedPreferences). Safe database key
+rotation is managed by `DatabaseKeyRotator`, which rekeys the SQLCipher database connection in-place and
+logs the operation status to the local audit trail. Keys are hardware-bound and do not support cloud backup.
+
 **Idempotency contract:** every DAO uses `@Upsert` keyed on the stable primary key, so
 re-fetching a record **replaces** rather than duplicates. There is no blanket `deleteAll()`
 in the sync path — a worker that dies mid-resync leaves prior valid data intact, and a retry

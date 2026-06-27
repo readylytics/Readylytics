@@ -43,6 +43,10 @@ Readylytics may create encrypted local backup files when you use the backup
 feature. These backup files are controlled by you and remain local to your
 device or the storage location you choose.
 
+Local encryption keys are stored through Android Keystore. On devices that support StrongBox,
+Readylytics attempts to use StrongBox-backed key protection and falls back to standard Keystore
+when StrongBox is unavailable. Backup passwords and database keys remain local to the device.
+
 The production app does not request the Android `INTERNET` permission. It does
 not include analytics, advertising, telemetry uploads, or any Readylytics-run
 network service for your health data.
