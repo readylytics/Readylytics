@@ -292,11 +292,16 @@ class LocalRestoreManagerTest {
     fun applyRestore_rollsBackDbChangesWhenDatabaseRestoreFails() =
         runTest {
             val json = createValidBackupJson()
-            json.put("sleepSessions", JSONArray().apply {
-                put(JSONObject().apply {
-                    put("id", JSONObject())
-                })
-            })
+            json.put(
+                "sleepSessions",
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("id", JSONObject())
+                        },
+                    )
+                },
+            )
             val zipFile = createBackupZipFile("rollback_backup.zip", json)
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
@@ -347,11 +352,16 @@ class LocalRestoreManagerTest {
     fun applyRestore_preservesOriginalFailureWhenFailureAuditAppendFails() =
         runTest {
             val json = createValidBackupJson()
-            json.put("sleepSessions", JSONArray().apply {
-                put(JSONObject().apply {
-                    put("id", JSONObject())
-                })
-            })
+            json.put(
+                "sleepSessions",
+                JSONArray().apply {
+                    put(
+                        JSONObject().apply {
+                            put("id", JSONObject())
+                        },
+                    )
+                },
+            )
             val zipFile = createBackupZipFile("failure_audit_failure.zip", json)
             auditTrailRepository.appendFailure = { event ->
                 if (event.type == AuditEvent.Type.RESTORE_FAILED) RuntimeException("audit unavailable") else null
