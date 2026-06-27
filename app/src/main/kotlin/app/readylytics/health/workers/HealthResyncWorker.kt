@@ -15,6 +15,7 @@ import app.readylytics.health.domain.util.logE
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 
 /**
  * Durable, long-running worker that performs the full historical Health Connect resync triggered by
@@ -63,6 +64,8 @@ class HealthResyncWorker
                     // Transient HC/IO failure: let WorkManager retry with its backoff policy.
                     Result.retry()
                 }
+            } catch (e: TimeoutCancellationException) {
+                Result.retry()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

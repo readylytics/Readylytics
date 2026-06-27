@@ -32,8 +32,8 @@ class EncryptionManager
 
         private val aead: Aead by lazy {
             val alias = keyAliasForVersion(CURRENT_KEY_VERSION)
-            ensureMasterKeyCreated(alias)
             try {
+                ensureMasterKeyCreated(alias)
                 AndroidKeysetManager
                     .Builder()
                     .withSharedPref(context, KEYSET_NAME, PREF_FILE_NAME)

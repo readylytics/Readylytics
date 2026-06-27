@@ -13,7 +13,6 @@ import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
-import app.readylytics.health.domain.util.logW
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -110,7 +109,8 @@ class LocalBackupManager
                         finalFile = file
                     }
 
-                    appendAuditBestEffort(
+                    auditTrailRepository.appendBestEffort(
+                        "LocalBackupManager",
                         AuditEvent(
                             type = AuditEvent.Type.BACKUP_CREATED,
                             occurredAt = Instant.now(),
@@ -232,7 +232,8 @@ class LocalBackupManager
                     } finally {
                         tempDir.deleteRecursively()
                     }
-                    appendAuditBestEffort(
+                    auditTrailRepository.appendBestEffort(
+                        "LocalBackupManager",
                         AuditEvent(
                             type = AuditEvent.Type.KEY_ROTATED,
                             occurredAt = Instant.now(),
@@ -243,7 +244,8 @@ class LocalBackupManager
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    appendAuditBestEffort(
+                    auditTrailRepository.appendBestEffort(
+                        "LocalBackupManager",
                         AuditEvent(
                             type = AuditEvent.Type.KEY_ROTATION_FAILED,
                             occurredAt = Instant.now(),
@@ -253,16 +255,6 @@ class LocalBackupManager
                     Result.failure(e)
                 }
             }
-
-        private suspend fun appendAuditBestEffort(event: AuditEvent) {
-            try {
-                auditTrailRepository.append(event)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                logW("LocalBackupManager", e) { "Failed to append ${event.type.storageKey} audit event" }
-            }
-        }
 
         private fun moveTempZipToFinal(
             tempZipFile: File,

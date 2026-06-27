@@ -1,5 +1,13 @@
 package app.readylytics.health.domain.sync
 
+import app.readylytics.health.domain.model.DomainBloodPressureRecord
+import app.readylytics.health.domain.model.DomainBodyFatRecord
+import app.readylytics.health.domain.model.DomainExerciseSessionRecord
+import app.readylytics.health.domain.model.DomainHeartRateRecord
+import app.readylytics.health.domain.model.DomainHrvRecord
+import app.readylytics.health.domain.model.DomainOxygenSaturationRecord
+import app.readylytics.health.domain.model.DomainSleepSessionRecord
+import app.readylytics.health.domain.model.DomainWeightRecord
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.UserPreferences
 import app.readylytics.health.domain.repository.HealthConnectRepository
@@ -7,6 +15,7 @@ import app.readylytics.health.domain.util.logD
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.withTimeout
 
 /**
  * Reads one Health Connect window, maps + device-filters it, and upserts every record type into
@@ -24,8 +33,22 @@ class HealthIngestionCoordinator
             windowStart: Instant,
             windowEnd: Instant,
             prefs: UserPreferences,
+            windowBudgetMs: Long = 3 * 60_000L,
         ) {
-            val sleepSessions = retryWithBackoff { hcRepo.readSleepSessions(windowStart, windowEnd) }
+            val (sleepSessions, exerciseRecords, hrRecords, hrvRecords,
+                weightRecords, bodyFatRecords, bloodPressureRecords, spo2Records) =
+                withTimeout(windowBudgetMs) {
+                    HcFetch(
+                        sleepSessions = retryWithBackoff { hcRepo.readSleepSessions(windowStart, windowEnd) },
+                        exerciseRecords = retryWithBackoff { hcRepo.readExerciseSessions(windowStart, windowEnd) },
+                        hrRecords = retryWithBackoff { hcRepo.readHeartRateSamples(windowStart, windowEnd) },
+                        hrvRecords = retryWithBackoff { hcRepo.readHrvSamples(windowStart, windowEnd) },
+                        weightRecords = retryWithBackoff { hcRepo.readWeightRecords(windowStart, windowEnd) },
+                        bodyFatRecords = retryWithBackoff { hcRepo.readBodyFatRecords(windowStart, windowEnd) },
+                        bloodPressureRecords = retryWithBackoff { hcRepo.readBloodPressureRecords(windowStart, windowEnd) },
+                        spo2Records = retryWithBackoff { hcRepo.readOxygenSaturationRecords(windowStart, windowEnd) },
+                    )
+                }
             val sleepEntities =
                 sleepSessions.map {
                     app.readylytics.health.data.healthconnect.SleepDataMapper
@@ -33,13 +56,6 @@ class HealthIngestionCoordinator
                             it,
                         )
                 }
-            val exerciseRecords = retryWithBackoff { hcRepo.readExerciseSessions(windowStart, windowEnd) }
-            val hrRecords = retryWithBackoff { hcRepo.readHeartRateSamples(windowStart, windowEnd) }
-            val hrvRecords = retryWithBackoff { hcRepo.readHrvSamples(windowStart, windowEnd) }
-            val weightRecords = retryWithBackoff { hcRepo.readWeightRecords(windowStart, windowEnd) }
-            val bodyFatRecords = retryWithBackoff { hcRepo.readBodyFatRecords(windowStart, windowEnd) }
-            val bloodPressureRecords = retryWithBackoff { hcRepo.readBloodPressureRecords(windowStart, windowEnd) }
-            val spo2Records = retryWithBackoff { hcRepo.readOxygenSaturationRecords(windowStart, windowEnd) }
 
             logD("HealthIngestionCoordinator") {
                 "Bulk HC fetch complete: sleep=${sleepEntities.size} " +
@@ -185,6 +201,17 @@ class HealthIngestionCoordinator
                 ),
             )
         }
+
+        private data class HcFetch(
+            val sleepSessions: List<DomainSleepSessionRecord>,
+            val exerciseRecords: List<DomainExerciseSessionRecord>,
+            val hrRecords: List<DomainHeartRateRecord>,
+            val hrvRecords: List<DomainHrvRecord>,
+            val weightRecords: List<DomainWeightRecord>,
+            val bodyFatRecords: List<DomainBodyFatRecord>,
+            val bloodPressureRecords: List<DomainBloodPressureRecord>,
+            val spo2Records: List<DomainOxygenSaturationRecord>,
+        )
 
         private fun app.readylytics.health.data.local.entity.SleepSessionEntity.toInput() =
             SleepSessionInput(

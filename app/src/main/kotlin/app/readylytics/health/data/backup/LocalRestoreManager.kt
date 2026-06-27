@@ -21,6 +21,8 @@ import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.audit.AuditEvent
 import app.readylytics.health.domain.audit.AuditTrailRepository
+import app.readylytics.health.domain.backup.RestoreResult
+import app.readylytics.health.domain.backup.RestoreStage
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.util.logW
 import app.readylytics.health.workers.WorkerScheduler
@@ -54,29 +56,6 @@ class LocalRestoreManager
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         private val json = Json { ignoreUnknownKeys = true }
-
-        enum class RestoreStage {
-            VALIDATION,
-            DATABASE,
-            PREFERENCES,
-            CARD_CONFIGURATION,
-            WORK_SCHEDULING,
-        }
-
-        sealed class RestoreResult {
-            data object Success : RestoreResult()
-
-            data object SuccessRequiresRestart : RestoreResult()
-
-            data class PartialSuccessRequiresRestart(
-                val failedStage: RestoreStage,
-                val cause: Throwable,
-            ) : RestoreResult()
-
-            data class Failure(
-                val cause: Throwable,
-            ) : RestoreResult()
-        }
 
         suspend fun validate(
             backupUri: Uri,
@@ -144,7 +123,8 @@ class LocalRestoreManager
             providedPassword: String? = null,
         ): RestoreResult =
             withContext(ioDispatcher) {
-                appendAuditBestEffort(
+                auditTrailRepository.appendBestEffort(
+                    "LocalRestoreManager",
                     AuditEvent(
                         type = AuditEvent.Type.RESTORE_STARTED,
                         occurredAt = Instant.now(),
@@ -184,7 +164,8 @@ class LocalRestoreManager
                                 restorePreferences(backup, providedPassword)
                             } catch (e: Throwable) {
                                 if (e is CancellationException) throw e
-                                appendAuditBestEffort(
+                                auditTrailRepository.appendBestEffort(
+                                    "LocalRestoreManager",
                                     AuditEvent(
                                         type = AuditEvent.Type.RESTORE_FAILED,
                                         occurredAt = Instant.now(),
@@ -198,7 +179,8 @@ class LocalRestoreManager
                             }
                         }
 
-                        appendAuditBestEffort(
+                        auditTrailRepository.appendBestEffort(
+                            "LocalRestoreManager",
                             AuditEvent(
                                 type = AuditEvent.Type.RESTORE_COMPLETED,
                                 occurredAt = Instant.now(),
@@ -218,7 +200,8 @@ class LocalRestoreManager
                         } else {
                             e
                         }
-                    appendAuditBestEffort(
+                    auditTrailRepository.appendBestEffort(
+                        "LocalRestoreManager",
                         AuditEvent(
                             type = AuditEvent.Type.RESTORE_FAILED,
                             occurredAt = Instant.now(),
@@ -228,16 +211,6 @@ class LocalRestoreManager
                     RestoreResult.Failure(cause)
                 }
             }
-
-        private suspend fun appendAuditBestEffort(event: AuditEvent) {
-            try {
-                auditTrailRepository.append(event)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                logW("LocalRestoreManager", e) { "Failed to append ${event.type.storageKey} audit event" }
-            }
-        }
 
         private suspend fun performStreamingRestore(
             reader: JsonReader,

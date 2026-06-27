@@ -6,9 +6,18 @@ import kotlin.test.assertContains
 import kotlin.test.assertTrue
 
 class ConventionPluginPresenceTest {
-    private val root =
-        sequenceOf(File("."), File(".."))
-            .first { File(it, "settings.gradle.kts").exists() }
+    private val root: File =
+        run {
+            var dir: File? =
+                File(
+                    javaClass.protectionDomain.codeSource.location
+                        .toURI(),
+                ).parentFile
+            while (dir != null && !File(dir, "settings.gradle.kts").exists()) {
+                dir = dir.parentFile
+            }
+            checkNotNull(dir) { "Could not locate repo root (no settings.gradle.kts in parent chain)" }
+        }
 
     @Test
     fun conventionPluginsAreIncludedAndAppliedToCoreModules() {

@@ -17,13 +17,15 @@ data class AuditEventEntity(
     val occurredAtEpochMs: Long,
     val detail: String?,
 ) {
-    fun toDomain(): AuditEvent =
-        AuditEvent(
+    fun toDomain(): AuditEvent {
+        val resolvedType = AuditEvent.Type.fromStorageKey(type)
+        return AuditEvent(
             id = id,
-            type = AuditEvent.Type.fromStorageKey(type),
+            type = resolvedType,
             occurredAt = Instant.ofEpochMilli(occurredAtEpochMs),
-            detail = detail,
+            detail = if (resolvedType == AuditEvent.Type.UNKNOWN) "unknown_type:$type" else detail,
         )
+    }
 
     companion object {
         fun fromDomain(event: AuditEvent): AuditEventEntity =

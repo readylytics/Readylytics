@@ -12,6 +12,8 @@ import app.readylytics.health.data.preferences.UserPreferencesProto
 import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.domain.audit.AuditEvent
 import app.readylytics.health.domain.audit.AuditTrailRepository
+import app.readylytics.health.domain.backup.RestoreResult
+import app.readylytics.health.domain.backup.RestoreStage
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.workers.WorkerScheduler
@@ -139,7 +141,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
 
             val sessions = db.sleepSessionDao().getSince(0)
             assertEquals(1, sessions.size)
@@ -156,7 +158,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
             coVerify { settingsRepo.batchUpdate(any()) }
             zipFile.delete()
         }
@@ -175,7 +177,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
 
             val builder =
                 app.readylytics.health.data.preferences.UserPreferencesProto
@@ -206,7 +208,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
 
             val expectedCards =
                 listOf(
@@ -236,7 +238,7 @@ class LocalRestoreManagerTest {
             coEvery { settingsRepo.batchUpdate(capture(builderSlot)) } returns Unit
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
 
             val builder = UserPreferencesProto.newBuilder()
             builderSlot.captured(builder)
@@ -261,7 +263,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
 
             val builder = UserPreferencesProto.newBuilder().setBackgroundSyncEnabled(true)
             builderSlot.captured(builder)
@@ -281,7 +283,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile), providedPassword = "restored_password")
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
 
             val builder = UserPreferencesProto.newBuilder()
             builderSlot.captured(builder)
@@ -306,7 +308,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.Failure)
+            assertTrue(result is RestoreResult.Failure)
             assertTrue(result.cause is kotlinx.serialization.SerializationException)
 
             val sessions = db.sleepSessionDao().getSince(0)
@@ -330,7 +332,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
             zipFile.delete()
         }
 
@@ -344,7 +346,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
             zipFile.delete()
         }
 
@@ -369,7 +371,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.Failure)
+            assertTrue(result is RestoreResult.Failure)
             assertTrue(result.cause is kotlinx.serialization.SerializationException)
             zipFile.delete()
         }
@@ -412,7 +414,7 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.SuccessRequiresRestart)
+            assertTrue(result is RestoreResult.SuccessRequiresRestart)
 
             val builder = UserPreferencesProto.newBuilder()
             builderSlot.captured(builder)
@@ -431,9 +433,9 @@ class LocalRestoreManagerTest {
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
-            assertTrue(result is LocalRestoreManager.RestoreResult.PartialSuccessRequiresRestart)
+            assertTrue(result is RestoreResult.PartialSuccessRequiresRestart)
             assertEquals(
-                LocalRestoreManager.RestoreStage.PREFERENCES,
+                RestoreStage.PREFERENCES,
                 result.failedStage,
             )
 

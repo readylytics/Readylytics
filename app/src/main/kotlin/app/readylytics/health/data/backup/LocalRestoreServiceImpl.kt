@@ -6,7 +6,6 @@ import app.readylytics.health.data.backup.LocalRestoreManager
 import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.backup.RestoreService
-import app.readylytics.health.domain.backup.RestoreStage
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,25 +23,7 @@ class LocalRestoreServiceImpl
         override suspend fun applyRestore(
             location: BackupLocation,
             password: String?,
-        ): RestoreResult =
-            when (val result = localRestoreManager.applyRestore(location.toUri(), password)) {
-                LocalRestoreManager.RestoreResult.Success -> RestoreResult.Success
-                LocalRestoreManager.RestoreResult.SuccessRequiresRestart -> RestoreResult.SuccessRequiresRestart
-                is LocalRestoreManager.RestoreResult.PartialSuccessRequiresRestart -> {
-                    RestoreResult.PartialSuccessRequiresRestart(
-                        failedStage =
-                            when (result.failedStage) {
-                                LocalRestoreManager.RestoreStage.VALIDATION -> RestoreStage.VALIDATION
-                                LocalRestoreManager.RestoreStage.DATABASE -> RestoreStage.DATABASE
-                                LocalRestoreManager.RestoreStage.PREFERENCES -> RestoreStage.PREFERENCES
-                                LocalRestoreManager.RestoreStage.CARD_CONFIGURATION -> RestoreStage.CARD_CONFIGURATION
-                                LocalRestoreManager.RestoreStage.WORK_SCHEDULING -> RestoreStage.WORK_SCHEDULING
-                            },
-                        cause = result.cause,
-                    )
-                }
-                is LocalRestoreManager.RestoreResult.Failure -> RestoreResult.Failure(result.cause)
-            }
+        ): RestoreResult = localRestoreManager.applyRestore(location.toUri(), password)
     }
 
 private fun BackupLocation.toUri(): Uri = value.toUri()
