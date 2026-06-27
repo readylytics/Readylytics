@@ -96,6 +96,12 @@ Paths below are rooted at the project root. Module prefixes are explicit, for ex
 `readBodyFatRecords`, `readBloodPressureRecords`, `readOxygenSaturationRecords`,
 `discoverDevices`.
 
+**Rate-Limit and Transient Fault Protection:**
+Each Health Connect read is retried through `HealthConnectRetryPolicy`, which retries transient
+IO, quota, and rate-limit failures with bounded exponential backoff and jitter. Cancellation is
+rethrown. Room writes remain outside the read retry loop so ingestion failure boundaries stay
+explicit and idempotent.
+
 ### 1.2 Sync engine — orchestration, chunking, idempotency
 
 | Component                     | Path                                         | Responsibility                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |

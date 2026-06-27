@@ -25,7 +25,7 @@ class HealthIngestionCoordinator
             windowEnd: Instant,
             prefs: UserPreferences,
         ) {
-            val sleepSessions = hcRepo.readSleepSessions(windowStart, windowEnd)
+            val sleepSessions = retryWithBackoff { hcRepo.readSleepSessions(windowStart, windowEnd) }
             val sleepEntities =
                 sleepSessions.map {
                     app.readylytics.health.data.healthconnect.SleepDataMapper
@@ -33,13 +33,13 @@ class HealthIngestionCoordinator
                             it,
                         )
                 }
-            val exerciseRecords = hcRepo.readExerciseSessions(windowStart, windowEnd)
-            val hrRecords = hcRepo.readHeartRateSamples(windowStart, windowEnd)
-            val hrvRecords = hcRepo.readHrvSamples(windowStart, windowEnd)
-            val weightRecords = hcRepo.readWeightRecords(windowStart, windowEnd)
-            val bodyFatRecords = hcRepo.readBodyFatRecords(windowStart, windowEnd)
-            val bloodPressureRecords = hcRepo.readBloodPressureRecords(windowStart, windowEnd)
-            val spo2Records = hcRepo.readOxygenSaturationRecords(windowStart, windowEnd)
+            val exerciseRecords = retryWithBackoff { hcRepo.readExerciseSessions(windowStart, windowEnd) }
+            val hrRecords = retryWithBackoff { hcRepo.readHeartRateSamples(windowStart, windowEnd) }
+            val hrvRecords = retryWithBackoff { hcRepo.readHrvSamples(windowStart, windowEnd) }
+            val weightRecords = retryWithBackoff { hcRepo.readWeightRecords(windowStart, windowEnd) }
+            val bodyFatRecords = retryWithBackoff { hcRepo.readBodyFatRecords(windowStart, windowEnd) }
+            val bloodPressureRecords = retryWithBackoff { hcRepo.readBloodPressureRecords(windowStart, windowEnd) }
+            val spo2Records = retryWithBackoff { hcRepo.readOxygenSaturationRecords(windowStart, windowEnd) }
 
             logD("HealthIngestionCoordinator") {
                 "Bulk HC fetch complete: sleep=${sleepEntities.size} " +
