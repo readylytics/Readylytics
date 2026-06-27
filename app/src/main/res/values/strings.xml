@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Readylytics</string>
     <string name="tab_dashboard">Dashboard</string>
     <string name="tab_sleep">Sleep</string>
@@ -732,6 +732,9 @@
     <string name="error_backup_delete_failed">Could not delete backup</string>
     <string name="error_backup_reencrypt_failed">Could not update backup encryption</string>
     <string name="error_backup_wrong_password">Incorrect backup password</string>
+    <string name="restore_partial_success_title" tools:ignore="UnusedResources">Restore partly completed</string>
+    <string name="restore_partial_success_message">Health data was restored, but settings could not be restored. Restart Readylytics, then run restore again if settings still look wrong.</string>
+    <string name="restore_stage_preferences" tools:ignore="UnusedResources">settings</string>
     <string name="error_threshold_invalid_range">Invalid threshold value. Range: 0–90 minutes.</string>
     <string name="error_threshold_update_failed">Failed to update threshold settings. Changes rolled
         back.</string>

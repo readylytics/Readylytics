@@ -289,20 +289,20 @@ class LocalRestoreManagerTest {
         }
 
     @Test
-    fun applyRestore_rollsBackDbChangesWhenPreferencesRestoreFails() =
+    fun applyRestore_rollsBackDbChangesWhenDatabaseRestoreFails() =
         runTest {
             val json = createValidBackupJson()
+            json.put("sleepSessions", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("id", JSONObject())
+                })
+            })
             val zipFile = createBackupZipFile("rollback_backup.zip", json)
-
-            val failure = RuntimeException("simulated preferences restore failure")
-            coEvery { settingsRepo.batchUpdate(any()) } throws failure
 
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is LocalRestoreManager.RestoreResult.Failure)
-            val cause = (result as LocalRestoreManager.RestoreResult.Failure).cause
-            assertEquals(failure.message, cause.message)
-            assertEquals(failure::class, cause::class)
+            assertTrue(result.cause is kotlinx.serialization.SerializationException)
 
             val sessions = db.sleepSessionDao().getSince(0)
             assertTrue(sessions.isEmpty())
@@ -310,7 +310,8 @@ class LocalRestoreManagerTest {
                 listOf(AuditEvent.Type.RESTORE_STARTED, AuditEvent.Type.RESTORE_FAILED),
                 auditTrailRepository.events.map { it.type },
             )
-            assertEquals("RuntimeException", auditTrailRepository.events.last().detail)
+            val detail = auditTrailRepository.events.last().detail
+            assertTrue(detail != null && detail.contains("Exception"))
             zipFile.delete()
         }
 
@@ -345,9 +346,13 @@ class LocalRestoreManagerTest {
     @Test
     fun applyRestore_preservesOriginalFailureWhenFailureAuditAppendFails() =
         runTest {
-            val zipFile = createBackupZipFile("failure_audit_failure.zip", createValidBackupJson())
-            val originalFailure = RuntimeException("restore failed")
-            coEvery { settingsRepo.batchUpdate(any()) } throws originalFailure
+            val json = createValidBackupJson()
+            json.put("sleepSessions", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("id", JSONObject())
+                })
+            })
+            val zipFile = createBackupZipFile("failure_audit_failure.zip", json)
             auditTrailRepository.appendFailure = { event ->
                 if (event.type == AuditEvent.Type.RESTORE_FAILED) RuntimeException("audit unavailable") else null
             }
@@ -355,8 +360,7 @@ class LocalRestoreManagerTest {
             val result = manager.applyRestore(Uri.fromFile(zipFile))
 
             assertTrue(result is LocalRestoreManager.RestoreResult.Failure)
-            assertEquals(originalFailure::class, result.cause::class)
-            assertEquals(originalFailure.message, result.cause.message)
+            assertTrue(result.cause is kotlinx.serialization.SerializationException)
             zipFile.delete()
         }
 
@@ -404,6 +408,27 @@ class LocalRestoreManagerTest {
             builderSlot.captured(builder)
             assertEquals(BackupScheduleProto.BACKUP_WEEKLY, builder.backupSchedule)
             coVerify(exactly = 1) { workerScheduler.scheduleBackupWorker(BackupSchedule.WEEKLY) }
+            zipFile.delete()
+        }
+
+    @Test
+    fun applyRestore_whenPreferencesFail_returnsPartialSuccessWithCommittedDatabase() =
+        runTest {
+            val json = createValidBackupJson()
+            val zipFile = createBackupZipFile("restore_partial_fail.zip", json)
+
+            coEvery { settingsRepo.batchUpdate(any()) } throws RuntimeException("prefs fail")
+
+            val result = manager.applyRestore(Uri.fromFile(zipFile))
+
+            assertTrue(result is LocalRestoreManager.RestoreResult.PartialSuccessRequiresRestart)
+            assertEquals(
+                LocalRestoreManager.RestoreStage.PREFERENCES,
+                result.failedStage,
+            )
+
+            val sessions = db.sleepSessionDao().getSince(0)
+            assertTrue(sessions.isNotEmpty())
             zipFile.delete()
         }
 

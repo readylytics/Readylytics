@@ -55,10 +55,23 @@ class LocalRestoreManager
     ) {
         private val json = Json { ignoreUnknownKeys = true }
 
+        enum class RestoreStage {
+            VALIDATION,
+            DATABASE,
+            PREFERENCES,
+            CARD_CONFIGURATION,
+            WORK_SCHEDULING,
+        }
+
         sealed class RestoreResult {
             data object Success : RestoreResult()
 
             data object SuccessRequiresRestart : RestoreResult()
+
+            data class PartialSuccessRequiresRestart(
+                val failedStage: RestoreStage,
+                val cause: Throwable,
+            ) : RestoreResult()
 
             data class Failure(
                 val cause: Throwable,
@@ -155,15 +168,34 @@ class LocalRestoreManager
                             zipFile.fileHeaders.firstOrNull { it.fileName.endsWith(".json") }
                                 ?: throw IllegalStateException("No JSON file found in backup ZIP")
 
+                        var prefsBackup: UserPreferencesBackup? = null
                         healthDatabase.withTransaction {
-                            var prefsBackup: UserPreferencesBackup? = null
                             zipFile.getInputStream(header).use { inputStream ->
                                 val reader = JsonReader(InputStreamReader(inputStream, "UTF-8"))
                                 performStreamingRestore(reader) { parsedPreferences ->
                                     prefsBackup = parsedPreferences
                                 }
                             }
-                            prefsBackup?.let { restorePreferences(it, providedPassword) }
+                        }
+
+                        val backup = prefsBackup
+                        if (backup != null) {
+                            try {
+                                restorePreferences(backup, providedPassword)
+                            } catch (e: Throwable) {
+                                if (e is CancellationException) throw e
+                                appendAuditBestEffort(
+                                    AuditEvent(
+                                        type = AuditEvent.Type.RESTORE_FAILED,
+                                        occurredAt = Instant.now(),
+                                        detail = "prefs_failed: ${e::class.simpleName}",
+                                    ),
+                                )
+                                return@withContext RestoreResult.PartialSuccessRequiresRestart(
+                                    failedStage = RestoreStage.PREFERENCES,
+                                    cause = e,
+                                )
+                            }
                         }
 
                         appendAuditBestEffort(

@@ -211,6 +211,12 @@ Backup/restore and key-lifecycle operations append local audit events to `audit_
 result detail. They do not store health samples, backup contents, passwords, encryption keys, or
 Health Connect payloads.
 
+**Staged Restore Design:**
+Restore is staged. Database replacement is atomic within Room. Preferences are restored after the
+database transaction commits because Room and DataStore cannot share a transaction. If a later
+stage fails, the app returns an explicit partial-success result requiring restart and instructs
+the user to rerun restore.
+
 **Encryption & Key Management:**
 Local encryption keys are versioned (e.g., `readylytics_master_key_v1`) and protected via Android Keystore.
 On supported devices, keys are StrongBox-backed, with fallback to standard Keystore. Current key version

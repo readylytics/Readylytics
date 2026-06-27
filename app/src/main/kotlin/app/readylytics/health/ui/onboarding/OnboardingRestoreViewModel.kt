@@ -24,6 +24,7 @@ data class OnboardingRestoreState(
     val isValidating: Boolean = false,
     val isRestoring: Boolean = false,
     val error: UiText? = null,
+    val restoreRequiresRestart: Boolean = false,
 )
 
 @HiltViewModel
@@ -56,6 +57,16 @@ class OnboardingRestoreViewModel
                         when (val result = restoreService.applyRestore(location, password)) {
                             RestoreResult.SuccessRequiresRestart -> _sideEffect.send(SideEffect.RestartApp)
                             RestoreResult.Success -> _state.update { it.copy(isRestoring = false) }
+                            is RestoreResult.PartialSuccessRequiresRestart -> {
+                                _state.update {
+                                    it.copy(
+                                        isRestoring = false,
+                                        error = UiText.StringRes(R.string.restore_partial_success_message),
+                                        restoreRequiresRestart = true,
+                                    )
+                                }
+                                _sideEffect.send(SideEffect.RestartApp)
+                            }
                             is RestoreResult.Failure ->
                                 _state.update { it.copy(isRestoring = false, error = result.cause.toUiText()) }
                         }
