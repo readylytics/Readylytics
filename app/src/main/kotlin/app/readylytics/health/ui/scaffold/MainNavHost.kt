@@ -45,8 +45,8 @@ import app.readylytics.health.ui.settings.SettingsRoute
 import app.readylytics.health.ui.steps.StepDetailRoute
 import app.readylytics.health.ui.vitals.VitalsRoute
 import app.readylytics.health.ui.weight.WeightDetailRoute
-import app.readylytics.health.ui.workouts.WorkoutDetailRoute
-import app.readylytics.health.ui.workouts.WorkoutsRoute
+import app.readylytics.health.feature.workouts.WorkoutDetailRoute
+import app.readylytics.health.feature.workouts.WorkoutsRoute
 
 @Composable
 fun MainNavHost(

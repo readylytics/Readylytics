@@ -41,11 +41,6 @@
     <string name="tooltip_deep_sleep">Time in Stage 3 (Physical repair).</string>
     <string name="tooltip_rem_sleep">Time in Rapid Eye Movement.</string>
 
-    <string name="tooltip_ras">Your 7-day rolling Readylytics Activity Score (RAS).\nBased on how often and how
-        hard you challenge your heart.\n\n• 100+: Optimal\n• 75-99: Neutral\n• 50-74: Warning\n•
-        &lt; 50: Poor</string>
-    <string name="tooltip_readiness">Preparation for stress based on recent load &amp;
-        recovery.\n\n• 85–100: Peak\n• 60–84: Maintain\n• 30–59: Caution\n• &lt; 30: High Fatigue</string>
 
     <string name="tooltip_sleep_score">Total quality of rest based on duration and cycles.\n\n•
         80–100: Optimal\n• 60–79: Fair\n• &lt; 60: Poor</string>
@@ -76,11 +71,6 @@
     <string name="tooltip_resting_hr_no_baseline">Resting heart rate calculated as the
         low-percentile of the entire sleep period.\n\nNot enough data to calculate baseline.</string>
 
-    <string name="tooltip_strain_ratio">The ACWR (Acute:Chronic Workload Ratio). Compares recent
-        training load to your baseline.\n\n• 0.8–1.3: In your normal range — sweet spot\n• 1.3–1.5:
-        Load increasing; linear decay begins\n• 1.5–2.0: Overtraining; high injury risk\n• &gt;2.0:
-        Severe overtraining; recovery needed\n• 0.5–0.8: Under-training\n• &lt;0.5: Severe
-        under-training</string>
 
     
     <string name="device_selection_title">Choose your primary device</string>
@@ -132,15 +122,7 @@
     <string name="data_type_hrv">Heart rate variability</string>
     <string name="data_type_oxygen_saturation">Oxygen saturation</string>
 
-    
-    <string name="workout_recovery_header">Heart rate recovery</string>
-    <string name="workout_recovery_tooltip_description">A drop of 18+ bpm in the first minute is
-        considered good.</string>
-    <string name="workout_recovery_item_1min">1 Minute</string>
-    <string name="workout_recovery_item_2min">2 Minutes</string>
-    <string name="workout_recovery_item_3min">3 Minutes</string>
-    <string name="workout_recovery_bpm_value">%1$d bpm</string>
-    <string name="workout_recovery_na">N/A</string>
+
 
     
     <string name="sleep_duration_hours_minutes">%1$dh %2$dm</string>
@@ -164,11 +146,7 @@
     <string name="sleep_trend_tooltip_bedtime_format">Bedtime: %1$s - %2$s</string>
 
     
-    <string name="acwr_training_load">Training load</string>
-    <string name="acwr_legend_daily_trimp">Daily TRIMP</string>
-    <string name="acwr_legend_strain_ratio">Strain ratio</string>
-    <string name="acwr_tooltip_trimp_format">TRIMP: %1$s</string>
-    <string name="acwr_tooltip_strain_format">Strain: %1$s</string>
+
 
     
     <string name="action_customize">Customize</string>
@@ -332,7 +310,6 @@
     
     <string name="message_calibrating_banner">Calibrating — averages shown may improve as more
         nights are recorded.</string>
-    <string name="message_no_hr_data">No HR data available</string>
     <string name="label_average">Average</string>
     <string name="label_normal_limit">Normal Limit</string>
     <string name="label_min">Min</string>
@@ -342,7 +319,6 @@
     <string name="label_zone_breakdown">Zone Breakdown</string>
     <string name="label_trends">Trends</string>
     <string name="label_history">History</string>
-    <string name="label_minutes">Minutes</string>
     <string name="label_physiological_trends">Physiological trends</string>
     <string name="label_systolic_ref">Systolic (Ref: &lt;120)</string>
     <string name="label_diastolic_ref">Diastolic (Ref: &lt;80)</string>
@@ -420,7 +396,7 @@
     <string name="label_oxygen_saturation">Oxygen saturation</string>
 
     
-    <string name="label_workout_details">Workout details</string>
+
 
     
     <string name="label_circadian_consistency">Circadian consistency</string>
@@ -562,16 +538,13 @@
     <string name="chart_accessibility_rhr_summary">Resting heart rate timeline chart showing heart rate values in beats per minute over the sleep period.</string>
 
     <string name="chart_accessibility_sleep_stages_summary">Sleep stages timeline chart showing Awake, REM, Light, and Deep sleep segments.</string>
-    <string name="chart_accessibility_trimp_summary">Heart rate intensity timeline chart showing workout heart rate over the duration of the exercise.</string>
     <string name="chart_accessibility_steps_summary">Steps progress bar showing steps count against daily goal.</string>
-    <string name="chart_accessibility_ras_summary">RAS weekly breakdown bar showing daily Readylytics Activity Score contribution.</string>
     <string name="chart_accessibility_sleep_architecture_summary">Sleep architecture bar showing proportion of sleep spent in Deep, REM, Light, and Awake stages.</string>
 
     <string name="chart_accessibility_no_selection">No point selected</string>
     <string name="chart_accessibility_selected_rhr">Selected: %1$d bpm at %2$s</string>
 
     <string name="chart_accessibility_selected_sleep_stage">Selected: %1$s stage, duration %2$s, starting at %3$s</string>
-    <string name="chart_accessibility_selected_trimp">Selected: %1$s at %2$s</string>
     <string name="chart_accessibility_selected_steps">Selected: %1$s steps, goal %2$s</string>
 
     <string name="action_previous_point">Previous point</string>
@@ -587,19 +560,12 @@
         <item quantity="one">Current value: %1$d minute</item>
         <item quantity="other">Current value: %1$d minutes</item>
     </plurals>
-    <string name="workout_zones_title">Heart rate zones</string>
-    <string name="workout_stats_ras_title">Readylytics Activity Score</string>
-    <string name="workout_stats_history_title">History</string>
- 
-    
     <string name="card_title_sleep_score">Sleep score</string>
-    <string name="card_title_readiness">Readiness</string>
     <string name="card_title_steps">Steps</string>
     <string name="card_title_hrv">HRV</string>
     <string name="card_title_sleep_rhr">Sleep RHR</string>
     <string name="card_title_sleep_duration">Sleep duration</string>
     <string name="card_title_sleep_architecture">Sleep architecture</string>
-    <string name="card_title_strain_ratio">Strain ratio</string>
     <string name="card_title_ras_daily">RAS daily</string>
     <string name="card_title_ras">RAS</string>
     <string name="card_title_circadian_consistency">Circadian consistency</string>
@@ -633,38 +599,7 @@
         and readiness scores. All data is processed locally on your device and is never uploaded to
         any server.</string>
 
-    
-    <string name="workout_metric_training_load">Training load</string>
-    <string name="workout_metric_avg_pulse">Avg Pulse</string>
-    <string name="workout_metric_gained_strain">Gained Strain</string>
-    <string name="workout_metric_ras">RAS</string>
-    <string name="workout_metric_trimp">TRIMP</string>
-    <string name="workout_metric_bpm">bpm</string>
-    <string name="workout_metric_strain">Strain</string>
-    <string name="workout_metric_points">points</string>
-    <string name="workout_tooltip_training_load">Total training impulse - measures training
-        intensity and duration.</string>
-    <string name="workout_tooltip_avg_pulse">Average heart rate during the workout.</string>
-    <string name="workout_tooltip_gained_strain">Total strain gained from this workout.</string>
-    <string name="workout_tooltip_ras">Readylytics Activity Score (RAS) points gained from this
-        workout. RAS summarizes meaningful cardiovascular activity.</string>
 
-    <string name="workout_stats_acwr_title">Training Load &amp; Strain Ratio (ACWR)</string>
-
-    
-    <string name="workout_intensity_very_hard">Very Hard</string>
-    <string name="workout_intensity_hard">Hard</string>
-    <string name="workout_intensity_moderate">Moderate</string>
-    <string name="workout_intensity_light">Light</string>
-    <string name="workout_intensity_very_light">Very Light</string>
-
-    
-    <string name="workout_history_item_subtitle">%1$d min · Strain %2$s · %3$s</string>
-    <string name="workout_history_bpm_format">%1$d bpm</string>
-    <string name="workout_history_bpm_na">-- bpm</string>
-    <string name="workout_history_page_info">Page %1$d of %2$d</string>
-    <string name="workout_history_button_prev">Previous page</string>
-    <string name="workout_history_button_next">Next page</string>
 
     
     <string name="card_title_deep_sleep">Deep Sleep</string>

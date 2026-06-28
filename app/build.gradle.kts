@@ -385,6 +385,7 @@ dependencies {
     implementation(project(":feature:about"))
     implementation(project(":feature:insights"))
     implementation(project(":feature:sleep"))
+    implementation(project(":feature:workouts"))
     implementation(project(":core:model"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:ui"))
