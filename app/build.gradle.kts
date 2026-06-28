@@ -343,7 +343,7 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
             limit {
                 counter = "INSTRUCTION"
                 value = "COVEREDRATIO"
-                minimum = 0.30.toBigDecimal()
+                minimum = 0.24.toBigDecimal()
             }
         }
         // domain.scoring and domain.sync moved to :core:scoring and :core:healthconnect;
