@@ -1,3 +1,3 @@
 package app.readylytics.health.architecture
 
-internal val expectedFeatureModules: Set<String> = emptySet()
+internal val expectedFeatureModules: Set<String> = setOf("about")

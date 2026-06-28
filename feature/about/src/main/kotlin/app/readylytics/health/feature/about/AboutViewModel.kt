@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.about
+package app.readylytics.health.feature.about
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

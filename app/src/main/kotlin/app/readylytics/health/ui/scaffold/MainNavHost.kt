@@ -13,7 +13,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import app.readylytics.health.ui.about.AboutScreen
+import app.readylytics.health.feature.about.AboutScreen
 import app.readylytics.health.ui.bloodpressure.BloodPressureDetailRoute
 import app.readylytics.health.ui.bodyfat.BodyFatDetailRoute
 import app.readylytics.health.ui.dashboard.DashboardRoute

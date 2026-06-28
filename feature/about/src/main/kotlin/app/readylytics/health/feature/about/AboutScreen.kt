@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.about
+package app.readylytics.health.feature.about
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues

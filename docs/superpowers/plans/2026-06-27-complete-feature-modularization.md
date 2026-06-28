@@ -968,11 +968,11 @@ git commit -m "refactor: add feature-facing presentation ports" -m "Constraint: 
 - Move: all `about_*` strings, `action_continue_to_app`, and About-exclusive resources
 - Modify: `internal-docs/DATA_FLOW.md`
 
-- [ ] **Step 1: Add `about` to expected module set and run failing test**
+- [x] **Step 1: Add `about` to expected module set and run failing test**
 
 Set `expectedFeatureModules = setOf("about")`, then run architecture test. Expected: FAIL with missing `:feature:about`.
 
-- [ ] **Step 2: Create module**
+- [x] **Step 2: Create module**
 
 ```kotlin
 plugins { id("readylytics.compose-feature-conventions") }
@@ -984,11 +984,11 @@ dependencies { implementation(libs.play.services.oss.licenses) }
 
 Include module in settings and add app dependency.
 
-- [ ] **Step 3: Move sources, resources, and test**
+- [x] **Step 3: Move sources, resources, and test**
 
 Move `AboutComponents.kt`, `AboutScreen.kt`, `AboutViewModel.kt`, `AppInfoSection.kt`, `ContributorsSection.kt`, `FeedbackSection.kt`, and `LicenseSection.kt`. Rename package to `app.readylytics.health.feature.about`. Add ViewModel test proving dismissal calls `AboutPreferences.updateAboutDismissed(true)` once.
 
-- [ ] **Step 4: Wire app navigation and verify**
+- [x] **Step 4: Wire app navigation and verify**
 
 Update `MainNavHost` import. Run:
 
@@ -1000,7 +1000,7 @@ Update `MainNavHost` import. Run:
 .\gradlew :app:testDebugUnitTest --tests app.readylytics.health.architecture.FeatureModuleArchitectureTest
 ```
 
-- [ ] **Step 5: Docs, sync, commit**
+- [x] **Step 5: Docs, sync, commit**
 
 ```powershell
 codegraph index

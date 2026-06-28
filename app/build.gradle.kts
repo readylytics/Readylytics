@@ -382,6 +382,7 @@ protobuf {
 }
 
 dependencies {
+    implementation(project(":feature:about"))
     implementation(project(":core:model"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:ui"))

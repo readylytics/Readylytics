@@ -33,6 +33,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "Readylytics"
 include(":app")
+include(":feature:about")
 include(":core:model")
 include(":core:scoring")
 include(":core:database")
