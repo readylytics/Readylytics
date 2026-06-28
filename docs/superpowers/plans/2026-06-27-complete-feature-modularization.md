@@ -1330,7 +1330,7 @@ rg -n "androidx\.work|HealthResyncWorker|WorkerScheduler|HealthSyncUseCase|data\
 
 Expected: forbidden-import search has no matches; all tests pass.
 
-- [ ] **Step 6: Docs, sync, commit**
+- [x] **Step 6: Docs, sync, commit**
 
 ```powershell
 codegraph index
