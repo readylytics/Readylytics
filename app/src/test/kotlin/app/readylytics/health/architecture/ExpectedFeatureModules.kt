@@ -1,0 +1,3 @@
+package app.readylytics.health.architecture
+
+internal val expectedFeatureModules: Set<String> = emptySet()

@@ -85,4 +85,52 @@ class CleanArchTest {
             violations.isEmpty(),
         )
     }
+
+    @Test
+    fun `domain and data packages do not import feature package`() {
+        val violations = Konsist
+            .scopeFromProject()
+            .files
+            .filter { 
+                (it.hasPackage("app.readylytics.health.domain..") || it.hasPackage("app.readylytics.health.data..")) &&
+                    (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\"))
+            }.flatMap { file ->
+                file.imports
+                    .filter { import -> import.name.startsWith("app.readylytics.health.feature.") }
+                    .map { import -> "${file.name}: ${import.name}" }
+            }
+
+        org.junit.Assert.assertTrue(
+            "Domain and Data layers must not import feature modules. Forbidden imports:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `feature packages are only imported from allowed app shell composition points`() {
+        val allowedImportsInApp = listOf(
+            "app.readylytics.health.ui.navigation",
+            "app.readylytics.health.ui.scaffold",
+            "app.readylytics.health.di",
+        )
+        val violations = Konsist
+            .scopeFromProject()
+            .files
+            .filter { file ->
+                (file.path.contains("/app/src/main/") || file.path.contains("\\app\\src\\main\\")) &&
+                    file.name != "MainActivity.kt" &&
+                    file.name != "PrivacyRationaleActivity.kt" &&
+                    allowedImportsInApp.none { pkg -> file.hasPackage("$pkg..") }
+            }.flatMap { file ->
+                file.imports
+                    .filter { import -> import.name.startsWith("app.readylytics.health.feature.") }
+                    .map { import -> "${file.name}: ${import.name}" }
+            }
+
+        org.junit.Assert.assertTrue(
+            "Feature imports are restricted in app shell. Forbidden imports:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
 }
+
