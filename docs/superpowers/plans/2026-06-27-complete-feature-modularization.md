@@ -557,11 +557,11 @@ git commit -m "refactor: extract design system module" -m "Constraint: Keep pref
 - Modify: `app/src/main/res/values/strings.xml`
 - Modify: `internal-docs/DATA_FLOW.md`
 
-- [ ] **Step 1: Write failing ownership test**
+- [x] **Step 1: Write failing ownership test**
 
 Create `CoreUiOwnershipTest.kt` asserting module exists and app no longer owns `DailyDataPoint.kt`, `TimeRange.kt`, `UiText.kt`, `DateSwitcher.kt`, `HeightInputField.kt`, or `UnitSystemSelector.kt`.
 
-- [ ] **Step 2: Run test and verify failure**
+- [x] **Step 2: Run test and verify failure**
 
 ```powershell
 .\gradlew :app:testDebugUnitTest --tests app.readylytics.health.architecture.CoreUiOwnershipTest
@@ -569,7 +569,7 @@ Create `CoreUiOwnershipTest.kt` asserting module exists and app no longer owns `
 
 Expected: FAIL because `:core:ui` is absent.
 
-- [ ] **Step 3: Add core UI module**
+- [x] **Step 3: Add core UI module**
 
 Add `include(":core:ui")`. Create:
 
@@ -599,7 +599,7 @@ dependencies {
 
 Add `implementation(project(":core:ui"))` to app.
 
-- [ ] **Step 4: Move generic common files**
+- [x] **Step 4: Move generic common files**
 
 Move these files to `core/ui/.../common/` and change package prefix to `app.readylytics.health.core.ui.common`:
 
@@ -620,7 +620,7 @@ UiText.kt
 
 Keep `CardIdExtensionsUi.kt` with dashboard and `RasUtils.kt` with workouts/dashboard until those feature tasks.
 
-- [ ] **Step 5: Move generic components**
+- [x] **Step 5: Move generic components**
 
 Move these files to `core/ui/.../components/` and change package prefix to `app.readylytics.health.core.ui.components`:
 
@@ -649,19 +649,19 @@ reorder/DragController.kt
 
 Keep feature-specific components in app until their owner moves: blood-pressure charts, HR timeline, sleep charts, steps components, card-management components, insight card, physiology pickers, and `RasWeeklyBar`.
 
-- [ ] **Step 6: Move cross-feature presentation types**
+- [x] **Step 6: Move cross-feature presentation types**
 
 Move `DateSwitcher.kt` to `core/ui/.../components/DateSwitcher.kt`. Split `HeartRateUiModels.kt` so `HrSample` and `HeartRateDaySummary` live in `core/ui/.../model/HeartRatePresentation.kt`. Move `Baselines` from `SleepViewModel.kt` into `core/ui/.../model/Baselines.kt`. Move `HeightInputField.kt` and `UnitSystemSelector.kt` into `core/ui/.../components/settings/`.
 
-- [ ] **Step 7: Move shared strings**
+- [x] **Step 7: Move shared strings**
 
 Move exactly the shared keys listed under “Shared ownership decisions” from app `strings.xml` to core UI `strings.xml`. Update moved code to import `app.readylytics.health.core.ui.R`. Leave feature-exclusive keys in app until their feature task.
 
-- [ ] **Step 8: Move tests and update all imports**
+- [x] **Step 8: Move tests and update all imports**
 
 Move `DailyDataPointTest.kt`, `ScoreDeltaFormatterTest.kt`, `TimeRangeTest.kt`, `DayTimelineScaleTest.kt`, `MetricStatusContainerToneTest.kt`, `ReorderableCardGridThresholdTest.kt`, and `reorder/DragControllerTest.kt` to matching core UI test packages. Move `DateSwitcherTest.kt`, `ChartAccessibilityTest.kt`, and `MetricTooltipTest.kt` to core UI `androidTest`. Keep HR/sleep-specific component tests with their future feature owners.
 
-- [ ] **Step 9: Verify no scoring dependency leaked into core UI**
+- [x] **Step 9: Verify no scoring dependency leaked into core UI**
 
 Run:
 
@@ -675,7 +675,7 @@ rg -n "app\.readylytics\.health\.domain\.scoring|project\(\":core:scoring\"\)" c
 
 Expected: `rg` returns no matches; all Gradle tasks pass.
 
-- [ ] **Step 10: Update docs, index, sync, commit**
+- [x] **Step 10: Update docs, index, sync, commit**
 
 ```powershell
 codegraph index
