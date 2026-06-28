@@ -1021,11 +1021,11 @@ git commit -m "refactor: extract about feature module" -m "Constraint: Preserve 
 - Move: all `insight_*` and `confidence_*` strings owned exclusively by insights
 - Modify: `internal-docs/DATA_FLOW.md`
 
-- [ ] **Step 1: Expect `about` and `insights`; verify red**
+- [x] **Step 1: Expect `about` and `insights`; verify red**
 
 Set expected set to `setOf("about", "insights")`. Run architecture test; expect missing module failure.
 
-- [ ] **Step 2: Create module**
+- [x] **Step 2: Create module**
 
 ```kotlin
 plugins { id("readylytics.compose-feature-conventions") }
@@ -1033,11 +1033,11 @@ android { namespace = "app.readylytics.health.feature.insights" }
 dependencies { implementation(project(":core:scoring")) }
 ```
 
-- [ ] **Step 3: Move code, tests, and resources**
+- [x] **Step 3: Move code, tests, and resources**
 
 Rename package to `app.readylytics.health.feature.insights`. Keep `InsightDetailSheet` public as app composition API. Do not add dashboard dependency.
 
-- [ ] **Step 4: Verify wording and independent compile**
+- [x] **Step 4: Verify wording and independent compile**
 
 ```powershell
 .\gradlew :feature:insights:testDebugUnitTest
@@ -1046,7 +1046,7 @@ Rename package to `app.readylytics.health.feature.insights`. Keep `InsightDetail
 .\gradlew :app:assembleDebug
 ```
 
-- [ ] **Step 5: Docs, sync, commit**
+- [x] **Step 5: Docs, sync, commit**
 
 ```powershell
 codegraph index

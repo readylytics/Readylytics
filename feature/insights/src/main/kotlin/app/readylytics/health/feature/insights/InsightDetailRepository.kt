@@ -1,8 +1,8 @@
-package app.readylytics.health.ui.insights
+package app.readylytics.health.feature.insights
 
 import android.content.Context
 import android.content.res.Resources
-import app.readylytics.health.R
+import app.readylytics.health.feature.insights.R
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.CauseRankHint
 import app.readylytics.health.domain.insights.detail.DailyInsightContext

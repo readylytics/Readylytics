@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.insights
+package app.readylytics.health.feature.insights
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,7 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.R
+import app.readylytics.health.feature.insights.R
 import app.readylytics.health.domain.insights.detail.InsightConfidence
 import app.readylytics.health.domain.insights.detail.InsightDetailContent
 import app.readylytics.health.domain.insights.detail.InsightDetailType

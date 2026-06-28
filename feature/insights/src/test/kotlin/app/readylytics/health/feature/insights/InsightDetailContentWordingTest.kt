@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.insights
+package app.readylytics.health.feature.insights
 
 import org.junit.Assert.assertTrue
 import org.junit.Test

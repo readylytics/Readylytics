@@ -44,8 +44,8 @@ import app.readylytics.health.ui.components.InsightCard
 import app.readylytics.health.ui.components.InsightRerunCard
 import app.readylytics.health.ui.components.StepsCard
 import app.readylytics.health.ui.heartrate.HeartRateCard
-import app.readylytics.health.ui.insights.InsightDetailRepository
-import app.readylytics.health.ui.insights.InsightDetailSheet
+import app.readylytics.health.feature.insights.InsightDetailRepository
+import app.readylytics.health.feature.insights.InsightDetailSheet
 
 // Build a map of CardId to composable card content for the Dashboard screen
 // This factory method creates all available dashboard cards and maps them by ID

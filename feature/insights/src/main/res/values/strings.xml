@@ -1,0 +1,422 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="insight_late_nadir_title">Late Heart Rate Nadir</string>
+    <string name="insight_late_nadir_body">Your heart rate nadir occurred later than usual last night, suggesting delayed recovery.</string>
+    <string name="insight_sick_indicator_title">Potential Illness Detected</string>
+    <string name="insight_sick_indicator_body">Elevated resting heart rate and suppressed HRV indicate your body may be fighting something off.</string>
+    <string name="insight_strong_recovery_signal_title">Strong Recovery Signal</string>
+    <string name="insight_strong_recovery_signal_body">Your HRV and resting heart rate were unusually favorable compared with your baseline.</string>
+    <string name="insight_load_spike_recovery_strain_title">Training Load May Be Affecting Recovery</string>
+    <string name="insight_load_spike_recovery_strain_body">Your recent training load is high, and your recovery markers show signs of strain.</string>
+    <string name="insight_load_spike_recovery_strain_body_everyday">Your recent daily physiological load is high, and your recovery markers show signs of strain.</string>
+    <string name="insight_restore_dismissed">Restore dismissed insights (%1$d)</string>
+    <string name="insight_dismiss_description">Dismiss health insight</string>
+    <string name="insight_rerun_description">Restore dismissed health insights</string>
+    <string name="insight_workout_impact_title">Workout Impact</string>
+    <string name="insight_workout_impact_body">Yesterday\'s high strain workout appears to be carrying into today because both HRV and RHR are outside their optimal ranges.</string>
+    <string name="insight_rest_day_success_title">Rest Day Success</string>
+    <string name="insight_rest_day_success_body">Your dedicated rest day resulted in an optimal HRV rebound.</string>
+    <string name="insight_rest_day_perfect_sleep"> Your night\'s rest was perfect!</string>
+    <string name="insight_rest_day_no_impact_title">Rest Day</string>
+    <string name="insight_rest_day_no_impact_body">Your rest day did not lead to a significant HRV rebound.</string>
+    <string name="insight_circadian_shift_title">Circadian Shift Delayed Recovery</string>
+    <plurals name="insight_circadian_shift_body">
+        <item quantity="one">No recovery signal triggered despite a rest day. This correlates with a bedtime %1$d min later than your average, which shifted your circadian rhythm and impacted overnight recovery.</item>
+        <item quantity="other">No recovery signal triggered despite a rest day. This correlates with a bedtime %1$d min later than your average, which shifted your circadian rhythm and impacted overnight recovery.</item>
+    </plurals>
+    <string name="insight_high_strain_sleep_deficit_title">High Strain and Sleep Deficit</string>
+    <plurals name="insight_high_strain_sleep_deficit_body">
+        <item quantity="one">Your acute strain ratio of %1$.1f combined with %2$d minute less sleep than your goal is suppressing your recovery.</item>
+        <item quantity="other">Your acute strain ratio of %1$.1f combined with %2$d minutes less sleep than your goal is suppressing your recovery.</item>
+    </plurals>
+    <string name="insight_late_nadir_short_sleep_title">Late Recovery and Short Sleep</string>
+    <plurals name="insight_late_nadir_short_sleep_body">
+        <item quantity="one">Your heart rate nadir occurred late in the night, and you slept %1$d minute less than your %2$d minute goal, limiting overnight restoration.</item>
+        <item quantity="other">Your heart rate nadir occurred late in the night, and you slept %1$d minutes less than your %2$d minute goal, limiting overnight restoration.</item>
+    </plurals>
+    <string name="insight_recovery_hrv_missing_title">HRV Data Missing</string>
+    <string name="insight_recovery_hrv_missing_body">Today\'s readiness score is based on resting heart rate and sleep only because no HRV reading was recorded last night.</string>
+    <string name="insight_recovery_stages_missing_title">Sleep Stage Data Missing</string>
+    <string name="insight_recovery_stages_missing_body">Sleep stage data wasn\'t recorded last night, so your sleep score reflects duration and restoration only, not architecture.</string>
+    <string name="insight_hrv_drop_low_spo2_title">Possible Illness or Breathing Disruption</string>
+    <string name="insight_hrv_drop_low_spo2_body">Your HRV dropped sharply to a z-score of %1$.1f and your average sleeping blood oxygen fell to %2$.0f%%, which can indicate the onset of illness or a breathing disruption such as sleep apnea.</string>
+    <string name="insight_late_nadir_elevated_rhr_title">Delayed Recovery with Elevated Resting Heart Rate</string>
+    <string name="insight_late_nadir_elevated_rhr_body">Your heart rate nadir was delayed and your resting heart rate was %1$.1f bpm above baseline, suggesting your body is still working to recover.</string>
+    <string name="insight_bp_elevated_high_strain_title">Elevated Blood Pressure Under High Strain</string>
+    <string name="insight_bp_elevated_high_strain_body">Your systolic blood pressure is %1$d mmHg above your recent baseline while your strain ratio of %2$.1f indicates high training load.</string>
+    <string name="insight_ras_depletion_high_strain_title">RAS Depleted Despite Training Load</string>
+    <string name="insight_ras_depletion_high_strain_body">Your RAS score of %1$.0f is low even though your strain ratio of %2$.1f shows a high training load, suggesting your effort isn\'t translating into RAS gains.</string>
+    <string name="insight_hrv_decline_streak_title">HRV Below Baseline Multiple Nights</string>
+    <plurals name="insight_hrv_decline_streak_body">
+        <item quantity="one">Your HRV has been below your baseline for %1$d consecutive night, which can signal accumulating fatigue.</item>
+        <item quantity="other">Your HRV has been below your baseline for %1$d consecutive nights, which can signal accumulating fatigue.</item>
+    </plurals>
+    <string name="insight_step_shortfall_title">Low Daily Activity</string>
+    <plurals name="insight_step_shortfall_body">
+        <item quantity="one">You took %1$d step today, well short of your %2$d step goal.</item>
+        <item quantity="other">You took %1$d steps today, well short of your %2$d step goal.</item>
+    </plurals>
+    <string name="insight_ras_weekly_underperformance_title">Weekly RAS Below Target</string>
+    <string name="insight_ras_weekly_underperformance_body">Your rolling weekly RAS total of %1$.0f is below the recommended target of %2$.0f.</string>
+    <string name="insight_weight_drift_training_load_title">Weight Change Under High Training Load</string>
+    <string name="insight_weight_drift_training_load_body">Your weight has changed by %1$.1f kg (%2$.1f%%) over the past week while your training load is high, which can indicate fluid shifts or under-fueling.</string>
+    <string name="insight_detail_observed_signal">Observed Signal</string>
+    <string name="insight_detail_what_this_might_mean">What This Might Mean</string>
+    <string name="insight_detail_confidence">Confidence</string>
+    <string name="confidence_low">Low</string>
+    <string name="confidence_low_medium">Low-Medium</string>
+    <string name="confidence_medium">Medium</string>
+    <string name="confidence_medium_high">Medium-High</string>
+    <string name="confidence_high">High</string>
+    <string name="insight_detail_why_this_might_have_happened">Why This Might Have Happened</string>
+    <string name="insight_detail_what_you_can_do_today">What You Can Do Today</string>
+    <string name="insight_detail_what_not_to_infer">What Not To Infer</string>
+    <string name="insight_detail_safety_note">Safety Note</string>
+    <string name="insight_detail_why_this_matters">Why This Matters</string>
+    <string name="insight_detail_what_might_explain_it">What Might Explain It</string>
+    <string name="insight_detail_what_you_can_do">What You Can Do</string>
+    <string name="insight_detail_what_data_is_missing">What Data Is Missing</string>
+    <string name="insight_detail_how_this_affects_your_score">How This Affects Your Score</string>
+    <string name="insight_detail_what_you_can_check">What You Can Check</string>
+    <string name="insight_detail_show_explanation_format">Show explanation for %1$s</string>
+    <string name="insight_detail_bp_elevated_high_strain_observed">Your systolic blood pressure is more than 10 mmHg above your recent baseline, and your strain ratio is high.</string>
+    <string name="insight_detail_bp_elevated_high_strain_meaning">Your cardiovascular system may be under additional stress today.</string>
+    <string name="insight_detail_bp_elevated_high_strain_safety">If blood pressure is repeatedly high, very high, or occurs with chest pain, shortness of breath, severe headache, dizziness, or neurological symptoms, seek medical advice.</string>
+    <string-array name="insight_detail_bp_elevated_high_strain_causes">
+        <item>High recent training load|Recent training may be adding cardiovascular demand.|HIGH_STRAIN_RATIO</item>
+        <item>Poor sleep|Short or disrupted sleep can make recovery signals less favorable.|POOR_SLEEP</item>
+        <item>Stress|Mental or physical stress can affect blood pressure and recovery markers.|GENERIC</item>
+        <item>Caffeine or stimulants|Recent stimulant intake can raise blood pressure in some people.|GENERIC</item>
+        <item>Dehydration|Fluid balance can influence heart rate and blood pressure.|GENERIC</item>
+        <item>Alcohol|Alcohol can disrupt sleep and overnight recovery.|GENERIC</item>
+        <item>Measurement timing or device variation|Blood pressure readings vary with posture, timing, cuff fit, and device noise.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_bp_elevated_high_strain_recommendations">
+        <item>Avoid very intense training if blood pressure remains elevated or you feel unwell.</item>
+        <item>Retake the measurement under consistent resting conditions.</item>
+        <item>Prioritize hydration, sleep, and recovery.</item>
+    </string-array>
+    <string-array name="insight_detail_bp_elevated_high_strain_caveats">
+        <item>One elevated reading does not diagnose hypertension.</item>
+    </string-array>
+    <string name="insight_detail_circadian_shift_recovery_miss_observed">You went to bed more than 90 minutes later than your usual bedtime, and no clear recovery rebound was detected after a rest day.</string>
+    <string name="insight_detail_circadian_shift_recovery_miss_meaning">A large bedtime shift can make sleep and recovery signals less consistent.</string>
+    <string-array name="insight_detail_circadian_shift_recovery_miss_causes">
+        <item>Later bedtime|Your sleep timing moved well outside your usual pattern.|LARGE_BEDTIME_SHIFT</item>
+        <item>Shorter sleep opportunity|Less time in bed can reduce recovery opportunity.|POOR_SLEEP</item>
+        <item>Social schedule or travel|Schedule changes can shift sleep timing.|GENERIC</item>
+        <item>Stress|Stress can delay sleep onset and affect overnight physiology.|GENERIC</item>
+        <item>Late meal or screen exposure|Evening routines can delay sleep and recovery signals.|GENERIC</item>
+        <item>Normal HRV variability|One night can move around because of normal measurement variation.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_circadian_shift_recovery_miss_recommendations">
+        <item>Try to return to your usual sleep schedule tonight.</item>
+        <item>Keep training flexible if you also feel tired.</item>
+    </string-array>
+    <string-array name="insight_detail_circadian_shift_recovery_miss_caveats">
+        <item>This does not prove your circadian rhythm shifted.</item>
+    </string-array>
+    <string name="insight_detail_high_strain_sleep_deficit_observed">Your strain ratio is high and you slept less than 85% of your goal.</string>
+    <string name="insight_detail_high_strain_sleep_deficit_meaning">Your body may have had less overnight recovery time after a high-load period.</string>
+    <string-array name="insight_detail_high_strain_sleep_deficit_causes">
+        <item>High training load|Recent training load is above your usual range.|HIGH_STRAIN_RATIO</item>
+        <item>Short sleep duration|You slept well below your configured sleep goal.|POOR_SLEEP</item>
+        <item>Late workout|Training close to bedtime can delay overnight settling.|LATE_WORKOUT</item>
+        <item>Stress|Stress can reduce sleep quality and recovery consistency.|GENERIC</item>
+        <item>Poor sleep timing|A shifted sleep window can make recovery less predictable.|POOR_SLEEP</item>
+        <item>Under-fueling|Not eating enough can make high-load periods harder to recover from.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_high_strain_sleep_deficit_recommendations">
+        <item>Avoid adding another hard session if you feel tired.</item>
+        <item>Prioritize an earlier bedtime tonight.</item>
+        <item>Consider easy training or recovery work.</item>
+    </string-array>
+    <string-array name="insight_detail_high_strain_sleep_deficit_caveats">
+        <item>This does not prove your recovery is impaired.</item>
+    </string-array>
+    <string name="insight_detail_hrv_decline_streak_observed">Your HRV has been below your baseline for three consecutive nights.</string>
+    <string name="insight_detail_hrv_decline_streak_meaning">A multi-night HRV decline may reflect increased recovery demand, stress, illness, or poor sleep.</string>
+    <string-array name="insight_detail_hrv_decline_streak_causes">
+        <item>Accumulated training load|Repeated training stress can increase recovery demand.|HIGH_STRAIN_RATIO</item>
+        <item>Poor sleep|Sleep loss can lower HRV relative to baseline.|POOR_SLEEP</item>
+        <item>Stress|Mental or physical stress can lower HRV.|GENERIC</item>
+        <item>Illness onset|Early illness can appear as lower HRV and higher resting heart rate.|GENERIC</item>
+        <item>Alcohol|Alcohol often disrupts sleep and autonomic recovery.|GENERIC</item>
+        <item>Dehydration|Fluid loss can affect HRV and heart rate.|GENERIC</item>
+        <item>Travel|Travel can disrupt timing, sleep, hydration, and recovery.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_hrv_decline_streak_recommendations">
+        <item>Look at how you feel and whether resting heart rate, sleep, or readiness also look worse.</item>
+        <item>If several markers are poor, consider reducing intensity.</item>
+    </string-array>
+    <string-array name="insight_detail_hrv_decline_streak_caveats">
+        <item>HRV below baseline does not identify the exact cause.</item>
+    </string-array>
+    <string name="insight_detail_hrv_drop_low_spo2_observed">Your HRV was much lower than usual and your average sleeping oxygen was below 94%.</string>
+    <string name="insight_detail_hrv_drop_low_spo2_meaning">This combination can occur with illness, poor recovery, altitude, congestion, device fit issues, or breathing-related sleep disruption.</string>
+    <string name="insight_detail_hrv_drop_low_spo2_safety">Repeated low oxygen readings, loud snoring, pauses in breathing, or strong daytime sleepiness are worth discussing with a clinician.</string>
+    <string-array name="insight_detail_hrv_drop_low_spo2_causes">
+        <item>Early illness or congestion|Congestion or early illness can affect breathing and HRV.|GENERIC</item>
+        <item>Poor sleep|Disrupted sleep can lower HRV and affect oxygen readings.|POOR_SLEEP</item>
+        <item>Breathing disruption|Overnight breathing disruption can appear as lower oxygen.|GENERIC</item>
+        <item>Sleeping position|Position can affect breathing and sensor contact.|GENERIC</item>
+        <item>Altitude|Higher altitude can lower overnight oxygen saturation.|GENERIC</item>
+        <item>Device fit or sensor noise|Wearable oxygen readings can be sensitive to fit and motion.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_hrv_drop_low_spo2_recommendations">
+        <item>Check how you feel and whether low oxygen repeats on other nights.</item>
+        <item>Prioritize rest if you also feel sick or unusually fatigued.</item>
+    </string-array>
+    <string-array name="insight_detail_hrv_drop_low_spo2_caveats">
+        <item>This does not diagnose sleep apnea or any medical condition.</item>
+    </string-array>
+    <string name="insight_detail_late_nadir_observed">Your lowest heart rate happened in the final third of your sleep period.</string>
+    <string name="insight_detail_late_nadir_meaning">Your body may have taken longer than usual to settle into a more recovered overnight state.</string>
+    <string-array name="insight_detail_late_nadir_causes">
+        <item>Late workout|Training close to bedtime can delay overnight settling.|LATE_WORKOUT</item>
+        <item>High training load|High load can extend overnight recovery demand.|HIGH_STRAIN_RATIO</item>
+        <item>Late meal|Eating late can keep heart rate elevated.|GENERIC</item>
+        <item>Alcohol|Alcohol can delay overnight heart-rate recovery.|GENERIC</item>
+        <item>Stress|Stress can keep heart rate elevated during sleep.|GENERIC</item>
+        <item>Travel|Travel can disrupt timing and recovery.|GENERIC</item>
+        <item>Poor sleep|Fragmented sleep can alter heart-rate patterns.|POOR_SLEEP</item>
+        <item>Early illness|Early illness can raise overnight heart rate.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_late_nadir_recommendations">
+        <item>Keep today flexible. If you feel tired, prefer easy training, mobility, or recovery work.</item>
+    </string-array>
+    <string-array name="insight_detail_late_nadir_caveats">
+        <item>A late heart rate nadir does not prove poor recovery or identify a single cause.</item>
+    </string-array>
+    <string name="insight_detail_late_nadir_elevated_rhr_observed">Your lowest heart rate occurred late, and your resting heart rate was more than 5 bpm above baseline.</string>
+    <string name="insight_detail_late_nadir_elevated_rhr_meaning">Your body may have remained under physiological strain during the night.</string>
+    <string-array name="insight_detail_late_nadir_elevated_rhr_causes">
+        <item>Late or intense workout|Hard training or late timing can keep heart rate elevated overnight.|GENERIC</item>
+        <item>Illness onset|Early illness can raise resting heart rate.|GENERIC</item>
+        <item>Poor sleep|Short or disrupted sleep can reduce overnight recovery.|POOR_SLEEP</item>
+        <item>Alcohol|Alcohol can raise overnight heart rate.|GENERIC</item>
+        <item>Dehydration|Fluid loss can raise heart rate.|GENERIC</item>
+        <item>Stress|Stress can increase overnight physiological strain.|GENERIC</item>
+        <item>Heat|Heat exposure can raise heart rate and recovery demand.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_late_nadir_elevated_rhr_recommendations">
+        <item>Choose an easier training option if you also feel tired or unwell.</item>
+        <item>Prioritize hydration and sleep tonight.</item>
+    </string-array>
+    <string-array name="insight_detail_late_nadir_elevated_rhr_caveats">
+        <item>This does not diagnose illness or prove overtraining.</item>
+    </string-array>
+    <string name="insight_detail_late_nadir_short_sleep_observed">Your heart rate nadir occurred late and you slept less than 85% of your sleep goal.</string>
+    <string name="insight_detail_late_nadir_short_sleep_meaning">Your recovery window may have been shortened before your body fully settled overnight.</string>
+    <string-array name="insight_detail_late_nadir_short_sleep_causes">
+        <item>Short sleep duration|You slept well below your configured sleep goal.|POOR_SLEEP</item>
+        <item>Late bedtime|A late bedtime can reduce sleep opportunity.|GENERIC</item>
+        <item>Early wake-up|An early wake-up can end sleep before full recovery opportunity.|GENERIC</item>
+        <item>Late workout|Training close to bedtime can delay overnight settling.|LATE_WORKOUT</item>
+        <item>Stress|Stress can fragment sleep and keep heart rate higher.|GENERIC</item>
+        <item>Poor sleep continuity|Interrupted sleep can reduce recovery opportunity.|POOR_SLEEP</item>
+    </string-array>
+    <string-array name="insight_detail_late_nadir_short_sleep_recommendations">
+        <item>Keep intensity flexible today and aim for more sleep opportunity tonight.</item>
+    </string-array>
+    <string-array name="insight_detail_late_nadir_short_sleep_caveats">
+        <item>This does not prove your recovery was poor, but it suggests less recovery opportunity.</item>
+    </string-array>
+    <string name="insight_detail_load_spike_recovery_strain_observed">Your recent training load is above your usual range, and at least one recovery marker is less favorable than normal.</string>
+    <string name="insight_detail_load_spike_recovery_strain_meaning">Your body may need more recovery before another hard session.</string>
+    <string name="insight_detail_load_spike_recovery_strain_safety">If fatigue persists despite several easy days, or if performance drops for a longer period, consider adjusting your training plan or seeking professional guidance.</string>
+    <string-array name="insight_detail_load_spike_recovery_strain_causes">
+        <item>High strain ratio|Your acute training strain is high compared with your longer-term baseline.|HIGH_STRAIN_RATIO</item>
+        <item>High TRIMP yesterday|Yesterday\'s training load was high.|HIGH_TRIMP_YESTERDAY</item>
+        <item>Short sleep|You slept well below your configured sleep goal.|POOR_SLEEP</item>
+        <item>Low HRV|Your HRV is below your recent baseline.|LOW_HRV</item>
+        <item>Elevated resting heart rate|Your resting heart rate is above your recent baseline.|ELEVATED_RHR</item>
+        <item>Dehydration|Fluid loss can make recovery markers less favorable.|GENERIC</item>
+        <item>Under-fueling|Not eating enough can make high-load periods harder to recover from.|GENERIC</item>
+        <item>Heat stress|Heat can raise cardiovascular strain and recovery demand.|GENERIC</item>
+        <item>General life stress|Life stress can affect HRV, resting heart rate, and sleep.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_load_spike_recovery_strain_recommendations">
+        <item>Avoid stacking another hard session on top of this signal.</item>
+        <item>Prefer easy aerobic work, mobility, or rest if you also feel tired.</item>
+        <item>Prioritize sleep, hydration, and enough food before your next hard session.</item>
+    </string-array>
+    <string-array name="insight_detail_load_spike_recovery_strain_caveats">
+        <item>This does not indicate overtraining.</item>
+        <item>This does not predict injury by itself.</item>
+    </string-array>
+    <string name="insight_detail_ras_depletion_high_strain_observed">Your RAS score is below target while your strain ratio indicates recent training load.</string>
+    <string name="insight_detail_ras_depletion_high_strain_meaning">Some workouts may add training strain without raising RAS much, depending on heart-rate intensity and duration.</string>
+    <string-array name="insight_detail_ras_depletion_high_strain_causes">
+        <item>Strength training with lower sustained heart rate|RAS rewards sustained heart-rate activity more than brief spikes.|GENERIC</item>
+        <item>Short workouts|Short sessions may not add much RAS even when they feel hard.|GENERIC</item>
+        <item>Incomplete heart-rate data|Missing heart-rate samples can reduce RAS credit.|GENERIC</item>
+        <item>Training intensity below RAS zones|Some work may be below zones that contribute strongly to RAS.|GENERIC</item>
+        <item>Device measurement gaps|Wearable gaps can affect RAS calculation.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_ras_depletion_high_strain_recommendations">
+        <item>If RAS is a goal, include some sustained aerobic work in appropriate heart-rate zones.</item>
+    </string-array>
+    <string-array name="insight_detail_ras_depletion_high_strain_caveats">
+        <item>Low RAS does not mean your training was useless.</item>
+    </string-array>
+    <string name="insight_detail_ras_weekly_underperformance_observed">Your 7-day RAS total is below the configured weekly target.</string>
+    <string name="insight_detail_ras_weekly_underperformance_meaning">RAS is designed to reward sustained heart-rate activity over the week.</string>
+    <string-array name="insight_detail_ras_weekly_underperformance_causes">
+        <item>Too few aerobic sessions|Fewer sustained sessions can lower weekly RAS.|GENERIC</item>
+        <item>Low heart-rate intensity|Lower-intensity sessions may add less RAS.|GENERIC</item>
+        <item>Missing heart-rate data|Missing heart-rate samples can reduce RAS credit.|GENERIC</item>
+        <item>Recovery week|A planned easier week can reduce weekly RAS.|GENERIC</item>
+        <item>Strength-focused training|Strength work may add less RAS than sustained aerobic work.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_ras_weekly_underperformance_recommendations">
+        <item>Add easy or moderate aerobic sessions if this fits your training plan.</item>
+    </string-array>
+    <string-array name="insight_detail_ras_weekly_underperformance_caveats">
+        <item>A low RAS week is not automatically bad if you are intentionally recovering or focusing on strength.</item>
+    </string-array>
+    <string name="insight_detail_recovery_hrv_missing_observed">No sleep HRV reading was recorded last night.</string>
+    <string name="insight_detail_recovery_hrv_missing_meaning">Readiness may be less personalized today because HRV could not be included.</string>
+    <string-array name="insight_detail_recovery_hrv_missing_causes">
+        <item>Watch not worn overnight|No overnight wear can prevent HRV capture.|GENERIC</item>
+        <item>Loose fit|Poor sensor contact can prevent HRV capture.|GENERIC</item>
+        <item>Low battery|Low battery can stop overnight recording.|GENERIC</item>
+        <item>Sync delay|Health Connect data may not have arrived yet.|GENERIC</item>
+        <item>Device did not record HRV|Some devices or nights may not include HRV.|GENERIC</item>
+        <item>Health Connect did not provide HRV data|The source app may not have shared HRV data.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_recovery_hrv_missing_recommendations">
+        <item>Check whether your wearable recorded HRV and whether Health Connect synced overnight data.</item>
+    </string-array>
+    <string name="insight_detail_recovery_stages_missing_observed">Sleep stage coverage was missing or suspicious last night.</string>
+    <string name="insight_detail_recovery_stages_missing_meaning">Sleep score may be less complete because sleep architecture could not be evaluated.</string>
+    <string-array name="insight_detail_recovery_stages_missing_causes">
+        <item>Watch not worn consistently|Inconsistent wear can reduce stage coverage.|GENERIC</item>
+        <item>Loose fit|Poor sensor contact can prevent sleep staging.|GENERIC</item>
+        <item>Device did not classify sleep stages|Some nights may not receive stage labels.|GENERIC</item>
+        <item>Short or interrupted sleep|Short or fragmented sleep can reduce stage coverage.|GENERIC</item>
+        <item>Sync delay|Health Connect data may not have arrived yet.|GENERIC</item>
+        <item>Health Connect data gap|The source app may not have shared stage data.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_recovery_stages_missing_recommendations">
+        <item>Check your wearable sleep report and Health Connect sync status.</item>
+    </string-array>
+    <string name="insight_detail_rest_day_no_impact_observed">Yesterday was a low-load day, but today\'s HRV did not clearly improve.</string>
+    <string name="insight_detail_rest_day_no_impact_meaning">One light day may not have been enough to shift your recovery markers, or this may simply reflect normal HRV variability.</string>
+    <string-array name="insight_detail_rest_day_no_impact_causes">
+        <item>Accumulated fatigue|Recovery markers can take more than one day to rebound.|GENERIC</item>
+        <item>Poor sleep|Poor sleep can blunt a recovery rebound.|POOR_SLEEP</item>
+        <item>Stress|Stress can keep HRV lower despite low training load.|GENERIC</item>
+        <item>Dehydration|Fluid loss can affect HRV.|GENERIC</item>
+        <item>Early illness|Early illness can lower HRV.|GENERIC</item>
+        <item>Normal HRV variation|One morning can vary because of normal measurement noise.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_rest_day_no_impact_recommendations">
+        <item>Watch the next 2–3 days rather than reacting to one morning.</item>
+    </string-array>
+    <string-array name="insight_detail_rest_day_no_impact_caveats">
+        <item>This does not mean the rest day failed.</item>
+    </string-array>
+    <string name="insight_detail_rest_day_success_observed">Yesterday was a low-load day and today\'s HRV improved.</string>
+    <string name="insight_detail_rest_day_success_meaning">Your body may have responded positively to lower training stress.</string>
+    <string-array name="insight_detail_rest_day_success_causes">
+        <item>Reduced training load|Lower load can support recovery.|HIGH_STRAIN_RATIO</item>
+        <item>Good sleep|Good sleep can improve recovery markers.|GENERIC</item>
+        <item>Lower stress|Lower stress can support HRV.|GENERIC</item>
+        <item>Hydration|Better fluid balance can support recovery signals.|GENERIC</item>
+        <item>Normal HRV variability|One strong morning can reflect normal variation.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_rest_day_success_recommendations">
+        <item>Treat this as encouraging, not a guarantee.</item>
+    </string-array>
+    <string-array name="insight_detail_rest_day_success_caveats">
+        <item>This does not prove you are fully recovered or guaranteed to perform well.</item>
+    </string-array>
+    <string name="insight_detail_sick_indicator_observed">Your resting heart rate is higher than usual and your HRV is lower than usual for more than one day.</string>
+    <string name="insight_detail_sick_indicator_meaning">This pattern can occur with illness, inflammation, poor sleep, high stress, or heavy recovery demand.</string>
+    <string name="insight_detail_sick_indicator_safety">If you have fever, chest pain, shortness of breath, fainting, severe symptoms, or persistent abnormal readings, seek medical advice.</string>
+    <string-array name="insight_detail_sick_indicator_causes">
+        <item>Early illness|Early illness can lower HRV and raise resting heart rate.|GENERIC</item>
+        <item>Poor sleep|Short or disrupted sleep can make recovery markers less favorable.|POOR_SLEEP</item>
+        <item>High stress|Stress can lower HRV and raise resting heart rate.|GENERIC</item>
+        <item>Heavy training|Heavy training can increase recovery demand.|GENERIC</item>
+        <item>Dehydration|Fluid loss can raise heart rate.|GENERIC</item>
+        <item>Alcohol|Alcohol can disrupt sleep and recovery markers.|GENERIC</item>
+        <item>Heat|Heat can raise heart rate and strain.|GENERIC</item>
+        <item>Travel|Travel can disrupt sleep, hydration, and timing.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_sick_indicator_recommendations">
+        <item>Reduce intensity today, prioritize sleep and hydration, and check how you feel.</item>
+    </string-array>
+    <string-array name="insight_detail_sick_indicator_caveats">
+        <item>This does not diagnose an infection or identify the cause of the signal.</item>
+    </string-array>
+    <string name="insight_detail_step_shortfall_observed">Your step count is below 70% of your daily goal.</string>
+    <string name="insight_detail_step_shortfall_meaning">Daily movement supports general activity balance, but a low-step day may be intentional during recovery.</string>
+    <string-array name="insight_detail_step_shortfall_causes">
+        <item>Recovery day|Lower movement may be intentional during recovery.|GENERIC</item>
+        <item>Desk-heavy day|Long seated work can reduce step count.|GENERIC</item>
+        <item>Travel|Travel can reduce normal movement.|GENERIC</item>
+        <item>Missed device wear|Steps can be undercounted if the device was not worn.|GENERIC</item>
+        <item>Low outdoor activity|Less outdoor time often reduces steps.|GENERIC</item>
+        <item>Intentional taper|A taper can intentionally reduce daily movement.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_step_shortfall_recommendations">
+        <item>If it fits your day, a short walk can help close the gap.</item>
+    </string-array>
+    <string-array name="insight_detail_step_shortfall_caveats">
+        <item>A low step count is not automatically bad, especially on rest or recovery days.</item>
+    </string-array>
+    <string name="insight_detail_strong_recovery_signal_observed">Your HRV was much higher than usual and your resting heart rate was much lower than usual.</string>
+    <string name="insight_detail_strong_recovery_signal_meaning">This pattern is consistent with a favorable overnight recovery signal.</string>
+    <string-array name="insight_detail_strong_recovery_signal_causes">
+        <item>Good sleep|Good sleep can support favorable recovery markers.|GENERIC</item>
+        <item>Lower stress|Lower stress can support HRV and resting heart rate.|GENERIC</item>
+        <item>Low recent training load|Lower load can improve recovery markers.|HIGH_STRAIN_RATIO</item>
+        <item>Good hydration|Hydration can support cardiovascular recovery.|GENERIC</item>
+        <item>Normal HRV variability|A strong single signal can reflect normal HRV variation.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_strong_recovery_signal_recommendations">
+        <item>This is an encouraging signal. If you also feel good, normal training is reasonable.</item>
+        <item>Avoid using one strong recovery signal as a reason to suddenly increase training load.</item>
+    </string-array>
+    <string-array name="insight_detail_strong_recovery_signal_caveats">
+        <item>This does not guarantee peak performance today.</item>
+        <item>It does not mean you should automatically train harder than planned.</item>
+    </string-array>
+    <string name="insight_detail_weight_drift_training_load_observed" formatted="false">Your weight changed by more than 2% over the past week while training strain is high.</string>
+    <string name="insight_detail_weight_drift_training_load_meaning">During high training load, short-term weight changes often reflect fluid balance, glycogen, food volume, or recovery stress rather than true tissue change.</string>
+    <string-array name="insight_detail_weight_drift_training_load_causes">
+        <item>Fluid loss|Sweat and hydration changes can move weight quickly.|GENERIC</item>
+        <item>Glycogen changes|Stored carbohydrate changes also shift water weight.|GENERIC</item>
+        <item>Under-fueling|Eating too little during high load can affect weight and recovery.|GENERIC</item>
+        <item>High sweat loss|Heat or long sessions can cause fluid shifts.|GENERIC</item>
+        <item>Salt intake changes|Sodium changes can affect water retention.|GENERIC</item>
+        <item>Meal timing|Food volume and timing can move scale weight.|GENERIC</item>
+        <item>Scale timing variation|Different weigh-in timing can change readings.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_weight_drift_training_load_recommendations">
+        <item>Look at the trend, not one weigh-in.</item>
+        <item>Make sure you are eating and hydrating enough during high-load periods.</item>
+    </string-array>
+    <string-array name="insight_detail_weight_drift_training_load_caveats">
+        <item>A one-week weight change does not prove fat gain or fat loss.</item>
+    </string-array>
+    <string name="insight_detail_workout_impact_observed">Yesterday\'s training load was high, HRV is no longer optimal, RHR is no longer optimal, and HRV dropped meaningfully from yesterday.</string>
+    <string name="insight_detail_workout_impact_meaning">Your body may still be repairing, refueling, and returning to baseline after a demanding session.</string>
+    <string-array name="insight_detail_workout_impact_causes">
+        <item>Long workout|Long duration can raise training load.|GENERIC</item>
+        <item>High-intensity workout|High intensity can raise TRIMP.|GENERIC</item>
+        <item>Late workout|Late training can affect overnight recovery.|LATE_WORKOUT</item>
+        <item>Poor sleep after training|Poor sleep can extend recovery demand.|POOR_SLEEP</item>
+        <item>Dehydration|Fluid loss can make recovery feel harder.|GENERIC</item>
+        <item>Under-fueling|Not eating enough can slow recovery from hard sessions.|GENERIC</item>
+        <item>Heat|Heat can increase cardiovascular strain.|GENERIC</item>
+    </string-array>
+    <string-array name="insight_detail_workout_impact_recommendations">
+        <item>Use today as a flexible day. If you feel good, normal training may still be fine; if you feel flat, choose easy training.</item>
+    </string-array>
+    <string-array name="insight_detail_workout_impact_caveats">
+        <item>A high TRIMP day does not automatically mean your recovery is poor.</item>
+    </string-array>
+</resources>

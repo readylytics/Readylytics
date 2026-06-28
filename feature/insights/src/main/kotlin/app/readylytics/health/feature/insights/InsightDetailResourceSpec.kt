@@ -1,9 +1,9 @@
-package app.readylytics.health.ui.insights
+package app.readylytics.health.feature.insights
 
 import androidx.annotation.AnyRes
 import androidx.annotation.ArrayRes
 import androidx.annotation.StringRes
-import app.readylytics.health.R
+import app.readylytics.health.feature.insights.R
 import app.readylytics.health.domain.insights.detail.InsightConfidence
 import app.readylytics.health.domain.insights.detail.InsightDetailType
 import app.readylytics.health.domain.model.InsightType
