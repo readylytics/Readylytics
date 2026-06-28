@@ -36,7 +36,7 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.scoring.toStatus
 import app.readylytics.health.domain.scoring.toTimeString
 import app.readylytics.health.domain.util.roundToPercentInt
-import app.readylytics.health.ui.components.StepsCard
+import app.readylytics.health.feature.vitals.steps.StepsCard
 import app.readylytics.health.ui.heartrate.HeartRateCard
 
 // Build a map of CardId to composable card content for the Dashboard screen

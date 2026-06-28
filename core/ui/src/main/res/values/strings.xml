@@ -80,4 +80,32 @@
         under-training</string>
     <string name="card_title_readiness">Readiness</string>
     <string name="card_title_strain_ratio">Strain ratio</string>
+    <string name="unit_bpm">bpm</string>
+    <string name="unit_mmHg">mmHg</string>
+    <string name="unit_ms">ms</string>
+    <string name="unit_percent">%</string>
+    <string name="unit_steps">steps</string>
+    <string name="unit_kg">kg</string>
+    <string name="unit_lbs">lbs</string>
+    <string name="label_average">Average</string>
+    <string name="label_normal_limit">Normal Limit</string>
+    <string name="label_min">Min</string>
+    <string name="label_max">Max</string>
+    <string name="label_avg">Avg</string>
+    <string name="label_timeline">Timeline</string>
+    <string name="label_zone_breakdown">Zone Breakdown</string>
+    <string name="label_trends">Trends</string>
+    <string name="label_history">History</string>
+    <string name="label_rhr">RHR</string>
+    <string name="label_hrv">HRV</string>
+    <string name="label_steps">Steps</string>
+    <string name="label_spo2">SpO2</string>
+    <string name="tooltip_sleep_rhr">Average heart rate during sleep.\nTarget: lower or equal to
+        your 30-day rolling average. (Lower = Recovered)</string>
+    <string name="tooltip_sleep_hrv">Variation between heartbeats in milliseconds.\nTarget: Within
+        or above your 30-day rolling average. (Higher = Recovered)</string>
+    <string name="chart_accessibility_rhr_summary">Resting heart rate timeline chart showing heart rate values in beats per minute over the sleep period.</string>
+    <string name="chart_accessibility_selected_rhr">Selected: %1$d bpm at %2$s</string>
+    <string name="chart_accessibility_steps_summary">Steps progress bar showing steps count against daily goal.</string>
+    <string name="chart_accessibility_selected_steps">Selected: %1$s steps, goal %2$s</string>
 </resources>

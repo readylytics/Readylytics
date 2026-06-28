@@ -28,10 +28,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.feature.workouts.R
 import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.util.roundToPercentInt
+import app.readylytics.health.feature.workouts.R
 
 // 100 RAS fills 75% of the bar width
 private const val BAR_MAX = 100f / 0.75f

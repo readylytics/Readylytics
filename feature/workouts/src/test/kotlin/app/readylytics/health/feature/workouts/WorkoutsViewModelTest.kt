@@ -4,8 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.date.SelectedDateStore
+import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository

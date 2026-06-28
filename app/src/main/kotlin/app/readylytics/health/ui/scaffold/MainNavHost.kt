@@ -31,22 +31,22 @@ import app.readylytics.health.feature.about.AboutScreen
 import app.readylytics.health.feature.insights.InsightDetailRepository
 import app.readylytics.health.feature.insights.InsightDetailSheet
 import app.readylytics.health.feature.sleep.SleepRoute
-import app.readylytics.health.ui.bloodpressure.BloodPressureDetailRoute
-import app.readylytics.health.ui.bodyfat.BodyFatDetailRoute
+import app.readylytics.health.feature.vitals.bloodpressure.BloodPressureDetailRoute
+import app.readylytics.health.feature.vitals.bodyfat.BodyFatDetailRoute
+import app.readylytics.health.feature.vitals.heartrate.HeartRateDetailRoute
+import app.readylytics.health.feature.vitals.overview.VitalsRoute
+import app.readylytics.health.feature.vitals.steps.StepDetailRoute
+import app.readylytics.health.feature.vitals.weight.WeightDetailRoute
+import app.readylytics.health.feature.workouts.WorkoutDetailRoute
+import app.readylytics.health.feature.workouts.WorkoutsRoute
 import app.readylytics.health.ui.components.InsightCard
 import app.readylytics.health.ui.components.InsightRerunCard
 import app.readylytics.health.ui.dashboard.DashboardRoute
 import app.readylytics.health.ui.dashboard.getInsightIcon
 import app.readylytics.health.ui.dashboard.toDailyInsightContext
-import app.readylytics.health.ui.heartrate.HeartRateDetailRoute
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
 import app.readylytics.health.ui.settings.SettingsRoute
-import app.readylytics.health.ui.steps.StepDetailRoute
-import app.readylytics.health.ui.vitals.VitalsRoute
-import app.readylytics.health.ui.weight.WeightDetailRoute
-import app.readylytics.health.feature.workouts.WorkoutDetailRoute
-import app.readylytics.health.feature.workouts.WorkoutsRoute
 
 @Composable
 fun MainNavHost(

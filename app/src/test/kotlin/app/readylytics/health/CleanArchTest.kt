@@ -123,6 +123,7 @@ class CleanArchTest {
                 "app.readylytics.health.ui.navigation",
                 "app.readylytics.health.ui.scaffold",
                 "app.readylytics.health.di",
+                "app.readylytics.health.ui.dashboard",
             )
         val violations =
             Konsist

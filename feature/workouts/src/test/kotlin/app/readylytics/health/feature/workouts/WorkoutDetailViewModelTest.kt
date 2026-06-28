@@ -3,8 +3,8 @@ package app.readylytics.health.feature.workouts
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRecordData
@@ -26,11 +26,11 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
-import org.junit.Assert.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WorkoutDetailViewModelTest {
@@ -195,15 +195,16 @@ class WorkoutDetailViewModelTest {
 
             // Recreate viewModel with pre-populated SavedStateHandle simulating process death recovery
             val restoredHandle = SavedStateHandle(mapOf("workoutId" to "run-1"))
-            val recreatedViewModel = WorkoutDetailViewModel(
-                workoutRepository = workoutRepository,
-                hcRepo = healthConnectRepository,
-                heartRateRepository = heartRateRepository,
-                dailySummaryRepository = dailySummaryRepository,
-                settingsRepo = settingsRepository,
-                getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
-                savedStateHandle = restoredHandle,
-            )
+            val recreatedViewModel =
+                WorkoutDetailViewModel(
+                    workoutRepository = workoutRepository,
+                    hcRepo = healthConnectRepository,
+                    heartRateRepository = heartRateRepository,
+                    dailySummaryRepository = dailySummaryRepository,
+                    settingsRepo = settingsRepository,
+                    getWorkoutDisplayMetricsUseCase = getWorkoutDisplayMetricsUseCase,
+                    savedStateHandle = restoredHandle,
+                )
 
             advanceUntilIdle()
 

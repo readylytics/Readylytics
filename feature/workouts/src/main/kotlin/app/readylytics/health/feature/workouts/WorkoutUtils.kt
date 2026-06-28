@@ -1,25 +1,23 @@
 package app.readylytics.health.feature.workouts
 
-import androidx.health.connect.client.records.ExerciseSessionRecord
-
 fun exerciseTypeToDisplayName(type: String): String =
     when (type) {
-        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING.toString() -> "Running"
-        ExerciseSessionRecord.EXERCISE_TYPE_WALKING.toString() -> "Walking"
-        ExerciseSessionRecord.EXERCISE_TYPE_BIKING.toString() -> "Cycling"
-        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL.toString(),
-        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER.toString(),
+        "56" -> "Running"
+        "79" -> "Walking"
+        "8" -> "Cycling"
+        "74",
+        "73",
         -> "Swimming"
-        ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING.toString() -> "Strength"
-        ExerciseSessionRecord.EXERCISE_TYPE_HIKING.toString() -> "Hiking"
-        ExerciseSessionRecord.EXERCISE_TYPE_YOGA.toString() -> "Yoga"
-        ExerciseSessionRecord.EXERCISE_TYPE_PILATES.toString() -> "Pilates"
-        ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL.toString() -> "Elliptical"
-        ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE.toString() -> "Rowing"
-        ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING.toString(),
-        ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING_MACHINE.toString(),
+        "70" -> "Strength"
+        "37" -> "Hiking"
+        "83" -> "Yoga"
+        "48" -> "Pilates"
+        "25" -> "Elliptical"
+        "54" -> "Rowing"
+        "68",
+        "69",
         -> "Stairs"
-        ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING.toString() -> "HIIT"
+        "36" -> "HIIT"
         else ->
             type
                 .replace("EXERCISE_TYPE_", "")

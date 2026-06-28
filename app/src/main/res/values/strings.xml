@@ -50,13 +50,9 @@
         80%%: Optimal\n• 60–79%%: Neutral\n• 40–59%%: Warning\n• &lt; 40%%: Poor\n\nConsistency
         Window: ±%1$d min grace period before score drops.</string>
 
-    <string name="tooltip_sleep_rhr">Average heart rate during sleep.\nTarget: lower or equal to
-        your 30-day rolling average. (Lower = Recovered)</string>
     <string name="tooltip_sleep_rhr_baseline">\n\nBaseline: %1$d bpm %2$s (%3$d bpm)</string>
     <string name="tooltip_sleep_rhr_no_baseline">\n\nNot enough data to calculate baseline.</string>
 
-    <string name="tooltip_sleep_hrv">Variation between heartbeats in milliseconds.\nTarget: Within
-        or above your 30-day rolling average. (Higher = Recovered)</string>
     <string name="tooltip_sleep_hrv_baseline">\n\nBaseline: %1$d ms %2$s (%3$d ms)</string>
     <string name="tooltip_sleep_hrv_baseline_no_today">\n\nBaseline: %1$d ms (today\'s HRV not yet
         available)</string>
@@ -158,17 +154,6 @@
 
     <string name="unit_imperial_lbs">lbs</string>
 
-    
-    <string name="tab_vitals">Vitals</string>
-    <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last
-        night.\n\n• Optimal: 98–100%\n• Normal: 95–97%\n• Warning: 90–94%\n• Poor: &lt;90%</string>
-    <string name="spo2_optimal">Optimal</string>
-    <string name="spo2_normal">Normal</string>
-    <string name="spo2_warning">Warning</string>
-    <string name="spo2_poor">Poor</string>
-    <string name="spo2_calibrating">Calibrating</string>
-
-    
     <string name="action_change">Change</string>
     <string name="action_set">Set</string>
     <string name="action_verify">Verify</string>
@@ -310,93 +295,13 @@
     
     <string name="message_calibrating_banner">Calibrating — averages shown may improve as more
         nights are recorded.</string>
-    <string name="label_average">Average</string>
-    <string name="label_normal_limit">Normal Limit</string>
-    <string name="label_min">Min</string>
-    <string name="label_max">Max</string>
-    <string name="label_avg">Avg</string>
-    <string name="label_timeline">Timeline</string>
-    <string name="label_zone_breakdown">Zone Breakdown</string>
-    <string name="label_trends">Trends</string>
-    <string name="label_history">History</string>
-    <string name="label_physiological_trends">Physiological trends</string>
-    <string name="label_systolic_ref">Systolic (Ref: &lt;120)</string>
-    <string name="label_diastolic_ref">Diastolic (Ref: &lt;80)</string>
 
     
-    <string name="label_daily_steps">Daily Steps</string>
 
-    <string name="label_goal">Goal</string>
-    <string name="steps_fraction_display">%1$s / %2$s</string>
-    <string name="label_steps_today">Steps Today</string>
-    <plurals name="tooltip_steps_today">
-        <item quantity="one">Total steps recorded today.\nGoal: %1$d step.</item>
-        <item quantity="other">Total steps recorded today.\nGoal: %1$d steps.</item>
-    </plurals>
 
     
     <string name="tooltip_heart_rate_card">Today\'s heart rate range across all activities. Tap to
         see full timeline and zone breakdown.</string>
-    <string name="hr_no_data">-- bpm</string>
-    <string name="hr_avg_display">bpm · avg %1$d</string>
-    <string name="hr_zone_0_range">&lt; %1$d bpm</string>
-    <string name="hr_zone_inner_range">%1$d–%2$d bpm</string>
-    <string name="hr_zone_above_range">&gt; %1$d bpm</string>
-
-    
-    <string name="label_weight">Weight</string>
-    <string name="label_weight_unit_format">Weight (%1$s)</string>
-    <string name="tooltip_weight_current">Latest weight: %1$s\nHeight: %2$s</string>
-    <string name="label_bmi">BMI</string>
-    <string name="tooltip_bmi">Body Mass Index (Normal: 18.5–24.9)\n\nUnder 25: Normal\n25-30:
-        Overweight\n30+: Obese</string>
-    <string name="label_weight_trend">Weight Trend</string>
-    <string name="weight_history_title_format">Weight (%1$s)</string>
-    <string name="weight_history_subtitle_with_delta">%1$s %2$s · %3$s %2$s</string>
-    <string name="weight_history_subtitle_no_delta">%1$s %2$s</string>
-    <string name="weight_status_normal">Normal</string>
-    <string name="weight_status_overweight">Overweight</string>
-    <string name="weight_status_obese_1">Obese Class I</string>
-    <string name="weight_status_obese_2">Obese Class II+</string>
-    <string name="weight_status_calibrating">Calibrating</string>
-
-    
-    <string name="label_body_fat_percentage">Body Fat Percentage</string>
-    <string name="label_body_fat">Body Fat</string>
-    <string name="tooltip_body_fat_current">Current: %1$s%%\nOptimal: %2$s\n\n%3$s, Age %4$d</string>
-    <string name="label_body_fat_trend">Body Fat Trend</string>
-    <string name="body_fat_history_title_format">Body Fat (%1$s)</string>
-    <string name="body_fat_history_subtitle_with_lean_mass">%1$s%% · %2$s %3$s lean mass</string>
-    <string name="body_fat_history_subtitle_no_lean_mass">%1$s%%</string>
-    <string name="body_fat_status_optimal">Athletic</string>
-    <string name="body_fat_status_fitness">Fitness</string>
-    <string name="body_fat_status_average">Average</string>
-    <string name="body_fat_status_above_range">Above Range</string>
-    <string name="body_fat_status_calibrating">Calibrating</string>
-
-    
-    <string name="label_blood_pressure">Blood Pressure</string>
-    <string name="label_systolic">Systolic</string>
-    <string name="tooltip_blood_pressure_systolic">Latest systolic blood pressure
-        measurement.\n\nOptimal: &lt;120\nElevated: 120–129\nStage 1: 130–139\nStage 2: ≥140</string>
-    <string name="label_diastolic">Diastolic</string>
-    <string name="tooltip_blood_pressure_diastolic">Latest diastolic blood pressure
-        measurement.\n\nOptimal: &lt;80\nStage 1: 80–89\nStage 2: ≥90</string>
-    <string name="label_blood_pressure_trend">Blood Pressure Trend</string>
-    <string name="bp_history_title_format">Blood Pressure (%1$s)</string>
-    <string name="bp_history_subtitle_format">%1$d/%2$d mmHg</string>
-    <string name="bp_status_normal">Normal</string>
-    <string name="bp_status_elevated">Elevated</string>
-    <string name="bp_status_stage1">Stage 1</string>
-    <string name="bp_status_stage2">Stage 2</string>
-
-    
-    <string name="label_hrv_rmssd">HRV (RMSSD)</string>
-    <string name="label_resting_heart_rate">Resting heart rate</string>
-    <string name="label_oxygen_saturation">Oxygen saturation</string>
-
-    
-
 
     
     <string name="label_circadian_consistency">Circadian consistency</string>
@@ -521,10 +426,6 @@
     <string name="circadian_using_custom_setting">Using custom setting</string>
 
     
-    <string name="label_rhr">RHR</string>
-    <string name="label_hrv">HRV</string>
-    <string name="label_steps">Steps</string>
-    <string name="label_spo2">SpO2</string>
     <string name="provider_google_fit">Google Fit</string>
     <string name="provider_samsung_health_watch">Samsung Health (Watch)</string>
     <string name="provider_samsung_health_phone">Samsung Health (Phone)</string>
@@ -535,17 +436,13 @@
     <string name="provider_withings">Withings</string>
 
     
-    <string name="chart_accessibility_rhr_summary">Resting heart rate timeline chart showing heart rate values in beats per minute over the sleep period.</string>
 
     <string name="chart_accessibility_sleep_stages_summary">Sleep stages timeline chart showing Awake, REM, Light, and Deep sleep segments.</string>
-    <string name="chart_accessibility_steps_summary">Steps progress bar showing steps count against daily goal.</string>
     <string name="chart_accessibility_sleep_architecture_summary">Sleep architecture bar showing proportion of sleep spent in Deep, REM, Light, and Awake stages.</string>
 
     <string name="chart_accessibility_no_selection">No point selected</string>
-    <string name="chart_accessibility_selected_rhr">Selected: %1$d bpm at %2$s</string>
 
     <string name="chart_accessibility_selected_sleep_stage">Selected: %1$s stage, duration %2$s, starting at %3$s</string>
-    <string name="chart_accessibility_selected_steps">Selected: %1$s steps, goal %2$s</string>
 
     <string name="action_previous_point">Previous point</string>
     <string name="action_next_point">Next point</string>
@@ -608,23 +505,8 @@
     <string name="card_target_rem_sleep">Target: 20–25%</string>
 
     
-    <string name="unit_bpm">bpm</string>
-    <string name="unit_mmHg">mmHg</string>
-    <string name="unit_ms">ms</string>
-    <string name="unit_percent">%</string>
-    <string name="unit_steps">steps</string>
 
     
-    <string name="card_tooltip_weight_no_data">Weight from Health Connect</string>
-    <string name="card_tooltip_weight_latest">Latest weight measurement.</string>
-    <string name="card_tooltip_body_fat_no_data">Body fat percentage from Health Connect</string>
-    <string name="card_tooltip_body_fat_latest">Body fat percentage.</string>
-    <string name="card_tooltip_bp_no_data">Blood pressure from Health Connect</string>
-    <string name="card_tooltip_bp_latest">Latest blood pressure reading.\n\n</string>
-    <string name="card_bp_status_optimal">Optimal: &lt;120/80 mmHg</string>
-    <string name="card_bp_status_neutral">Elevated: 120–129/&lt;80 mmHg</string>
-    <string name="card_bp_status_warning">Hypertension Stage 1: 130–139/80–89 mmHg</string>
-    <string name="card_bp_status_poor">Hypertension Stage 2+: \u2265140/90 mmHg</string>
 
     
     <string name="sleep_duration_hours_only">%1$dh</string>
@@ -632,7 +514,5 @@
     
 
     
-    <string name="unit_kg">kg</string>
-    <string name="unit_lbs">lbs</string>
 
 </resources>

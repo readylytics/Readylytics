@@ -1172,11 +1172,11 @@ git commit -m "refactor: extract workouts feature module" -m "Constraint: Preser
 - Move vitals-exclusive strings
 - Modify: `MainNavHost.kt`, module settings/dependencies, expected set, `DATA_FLOW.md`
 
-- [ ] **Step 1: Add `vitals` to expected set and verify red**
+- [x] **Step 1: Add `vitals` to expected set and verify red**
 
 Run architecture test; expect missing module.
 
-- [ ] **Step 2: Create module**
+- [x] **Step 2: Create module**
 
 ```kotlin
 plugins { id("readylytics.compose-feature-conventions") }
@@ -1188,19 +1188,19 @@ dependencies {
 }
 ```
 
-- [ ] **Step 3: Move six UI packages into grouped feature namespace**
+- [x] **Step 3: Move six UI packages into grouped feature namespace**
 
 Use subpackages `overview`, `heartrate`, `bloodpressure`, `weight`, `bodyfat`, and `steps`. Import `HrSample`, `HeartRateDaySummary`, `Baselines`, and `DateSwitcher` from core UI. Move `HeartRateCard.kt` to dashboard-owned staging path in app, not vitals.
 
-- [ ] **Step 4: Move tests and resources**
+- [x] **Step 4: Move tests and resources**
 
 Move exact ViewModel tests and component tests named in Files. Move vitals-exclusive keys; shared keys remain core UI.
 
-- [ ] **Step 5: Wire tab and five detail routes**
+- [x] **Step 5: Wire tab and five detail routes**
 
 Update app imports for `VitalsRoute`, `HeartRateDetailRoute`, `BloodPressureDetailRoute`, `WeightDetailRoute`, `BodyFatDetailRoute`, and `StepDetailRoute`.
 
-- [ ] **Step 6: Verify grouped module and app**
+- [x] **Step 6: Verify grouped module and app**
 
 ```powershell
 .\gradlew :feature:vitals:testDebugUnitTest
@@ -1210,7 +1210,7 @@ Update app imports for `VitalsRoute`, `HeartRateDetailRoute`, `BloodPressureDeta
 .\gradlew testDebugUnitTest
 ```
 
-- [ ] **Step 7: Docs, sync, commit**
+- [x] **Step 7: Docs, sync, commit**
 
 ```powershell
 codegraph index

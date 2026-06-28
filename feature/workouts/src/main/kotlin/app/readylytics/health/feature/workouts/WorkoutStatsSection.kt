@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.feature.workouts.R
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
@@ -34,6 +33,7 @@ import app.readylytics.health.core.ui.components.MetricTooltip
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.strainRatioStatus
+import app.readylytics.health.feature.workouts.R
 import app.readylytics.health.feature.workouts.RasWeeklyBar
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
