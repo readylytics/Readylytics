@@ -1,6 +1,6 @@
 package app.readylytics.health.ui.components
 
-import app.readylytics.health.ui.heartrate.HrSample
+import app.readylytics.health.core.ui.model.HrSample
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId

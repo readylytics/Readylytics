@@ -6,7 +6,8 @@ import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.DailyDataPoint
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -84,7 +85,7 @@ class StepDetailViewModelTest {
             viewModel = createViewModel()
             val state = viewModel.uiState.value
             assertEquals(TimeRange.SEVEN_DAYS, state.selectedRange)
-            assertEquals(emptyList<app.readylytics.health.ui.common.DailyDataPoint>(), state.dailySteps)
+            assertEquals(emptyList<DailyDataPoint>(), state.dailySteps)
         }
 
     @Test

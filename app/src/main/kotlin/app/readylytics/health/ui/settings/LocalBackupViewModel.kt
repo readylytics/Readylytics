@@ -12,7 +12,7 @@ import app.readylytics.health.domain.backup.BackupService
 import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.backup.RestoreService
 import app.readylytics.health.domain.util.logE
-import app.readylytics.health.ui.common.UiText
+import app.readylytics.health.core.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi

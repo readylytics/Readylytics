@@ -13,9 +13,9 @@ import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.BmiStatus
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.toMetricStatus
-import app.readylytics.health.ui.common.WeightHistoryItem
-import app.readylytics.health.ui.components.HistoryCardLayout
-import app.readylytics.health.ui.components.SectionHeader
+import app.readylytics.health.core.ui.common.WeightHistoryItem
+import app.readylytics.health.core.ui.components.HistoryCardLayout
+import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.ui.theme.FitDashboardTheme
 import java.time.Instant
 import java.time.ZoneId

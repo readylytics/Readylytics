@@ -31,14 +31,14 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.R
 import app.readylytics.health.domain.model.stepsStatus
-import app.readylytics.health.ui.common.ScoreDialSkeleton
-import app.readylytics.health.ui.common.SkeletonCard
-import app.readylytics.health.ui.common.TimeRange
-import app.readylytics.health.ui.components.ChartDefaults
-import app.readylytics.health.ui.components.M3ScoreGaugeCard
-import app.readylytics.health.ui.components.SectionHeader
-import app.readylytics.health.ui.components.TrendCard
-import app.readylytics.health.ui.components.TrendChart
+import app.readylytics.health.core.ui.common.ScoreDialSkeleton
+import app.readylytics.health.core.ui.common.SkeletonCard
+import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.components.ChartDefaults
+import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
+import app.readylytics.health.core.ui.components.SectionHeader
+import app.readylytics.health.core.ui.components.TrendCard
+import app.readylytics.health.core.ui.components.TrendChart
 
 @Composable
 fun StepDetailRoute(

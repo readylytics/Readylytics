@@ -1,4 +1,5 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<?xml version='1.0' encoding='utf-8'?>
+<resources xmlns:ns0="http://schemas.android.com/tools">
     <string name="app_name">Readylytics</string>
     <string name="tab_dashboard">Dashboard</string>
     <string name="tab_sleep">Sleep</string>
@@ -7,7 +8,7 @@
     <string name="sync_completed">Sync and recalculation completed</string>
     <string name="recalculating_progress">Recalculating day %1$d of %2$d</string>
 
-    <!-- Historical Health Connect resync -->
+    
     <string name="resync_button_label">Resync Health Connect data</string>
     <string name="resync_button_description">Re-fetch and recalculate your full history within your
         retention period. Runs in the background — you can keep using the app.</string>
@@ -18,7 +19,7 @@
     <string name="resync_channel_description">Progress while recalculating your full Health Connect
         history.</string>
 
-    <!-- Sync settings: app-open / background sync toggles -->
+    
     <string name="sync_on_app_open_label">Sync on app open</string>
     <string name="background_sync_label">Background sync</string>
     <string name="background_sync_description">Keep your data up to date in the background</string>
@@ -35,7 +36,7 @@
     <string name="health_connect_unavailable_message">Health Connect is not installed on this
         device.\nInstall it from the Play Store.</string>
 
-    <!-- Tooltips -->
+    
     <string name="tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
     <string name="tooltip_deep_sleep">Time in Stage 3 (Physical repair).</string>
     <string name="tooltip_rem_sleep">Time in Rapid Eye Movement.</string>
@@ -81,7 +82,7 @@
         Severe overtraining; recovery needed\n• 0.5–0.8: Under-training\n• &lt;0.5: Severe
         under-training</string>
 
-    <!-- Device Selection -->
+    
     <string name="device_selection_title">Choose your primary device</string>
     <string name="device_selection_description">We found data from multiple sources. Pick the device
         whose readings should drive your scores — we\'ll fall back to other devices for days it
@@ -98,7 +99,7 @@
     <string name="device_selection_dialog_hc_error">No devices found from Health Connect</string>
     <string name="device_selection_dialog_continue">Continue</string>
 
-    <!-- Data Sources Section -->
+    
     <string name="data_sources_title">Data sources</string>
     <string name="data_sources_description">Pick the source device individually for each health data
         type. "All devices" (the default) applies no source filter.</string>
@@ -114,13 +115,13 @@
     <string name="device_change_notice_dont_show_again">Don\'t show this again</string>
     <string name="device_change_notice_confirm">Got it</string>
 
-    <!-- Health Data Categories -->
+    
     <string name="category_activity">Activity</string>
     <string name="category_body_measurements">Body measurements</string>
     <string name="category_sleep">Sleep</string>
     <string name="category_vitals">Vitals</string>
 
-    <!-- Health Data Types -->
+    
     <string name="data_type_exercise">Exercise</string>
     <string name="data_type_steps">Steps</string>
     <string name="data_type_body_fat">Body fat</string>
@@ -131,7 +132,7 @@
     <string name="data_type_hrv">Heart rate variability</string>
     <string name="data_type_oxygen_saturation">Oxygen saturation</string>
 
-    <!-- Workout Recovery Section -->
+    
     <string name="workout_recovery_header">Heart rate recovery</string>
     <string name="workout_recovery_tooltip_description">A drop of 18+ bpm in the first minute is
         considered good.</string>
@@ -141,7 +142,7 @@
     <string name="workout_recovery_bpm_value">%1$d bpm</string>
     <string name="workout_recovery_na">N/A</string>
 
-    <!-- About Sections -->
+    
     <string name="about_header_sleep_score">## Sleep Score</string>
     <string name="about_sleep_score_intro">A 100-point summary of last night\'s sleep, made of three
         parts:</string>
@@ -397,7 +398,7 @@
     <string name="about_disclaimer_p2">If you have concerns about your health, sleep, or recovery,
         consult a qualified healthcare provider.</string>
 
-    <!-- Sleep Detail Screen -->
+    
 
     <string name="sleep_duration_hours_minutes">%1$dh %2$dm</string>
     <string name="sleep_duration_minutes_only">%1$dm</string>
@@ -411,7 +412,7 @@
     <string name="sleep_breakdown_row_format">%1$s • %2$s</string>
 
 
-    <!-- Sleep Trend Chart -->
+    
     <string name="sleep_trend_section_title">Sleep durations and bedtimes</string>
     <string name="sleep_trend_title">Sleep trend</string>
     <string name="sleep_trend_legend_window">Sleep window</string>
@@ -419,33 +420,24 @@
     <string name="sleep_trend_tooltip_duration_format">Duration: %1$s</string>
     <string name="sleep_trend_tooltip_bedtime_format">Bedtime: %1$s - %2$s</string>
 
-    <!-- ACWR / Training Load Chart -->
+    
     <string name="acwr_training_load">Training load</string>
     <string name="acwr_legend_daily_trimp">Daily TRIMP</string>
     <string name="acwr_legend_strain_ratio">Strain ratio</string>
     <string name="acwr_tooltip_trimp_format">TRIMP: %1$s</string>
     <string name="acwr_tooltip_strain_format">Strain: %1$s</string>
 
-    <!-- Dashboard Grid Management -->
+    
     <string name="action_customize">Customize</string>
     <string name="action_done">Save</string>
     <string name="action_done_editing">Save changes</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_cancel_editing">Cancel editing</string>
-    <string name="dashboard_no_data">No data for this day</string>
-    <string name="action_delete_drop_zone">Drop here to remove</string>
-
-    <!-- Unit System -->
-    <string name="unit_metric_cm">cm</string>
     <string name="unit_metric_kg">kg</string>
 
     <string name="unit_imperial_lbs">lbs</string>
 
-    <!-- Heart Rate Detail Screen -->
-    <string name="heart_rate_title">Heart Rate</string>
-    <string name="back">Back</string>
-
-    <!-- Vitals Tab & Oxygen Saturation -->
+    
     <string name="tab_vitals">Vitals</string>
     <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last
         night.\n\n• Optimal: 98–100%\n• Normal: 95–97%\n• Warning: 90–94%\n• Poor: &lt;90%</string>
@@ -455,15 +447,14 @@
     <string name="spo2_poor">Poor</string>
     <string name="spo2_calibrating">Calibrating</string>
 
-    <!-- Actions (generic buttons) -->
-    <string name="action_dismiss">Dismiss</string>
+    
     <string name="action_change">Change</string>
     <string name="action_set">Set</string>
     <string name="action_verify">Verify</string>
     <string name="action_restore">Restore</string>
     <string name="action_ok">OK</string>
 
-    <!-- Backup Settings -->
+    
     <string name="backup_description">Backups are stored locally on your device. You can create a
         new backup at any time or restore from a previous one.</string>
     <string name="backup_create_button">Create new backup</string>
@@ -488,7 +479,7 @@
     <string name="backup_schedule_weekly">Weekly</string>
     <string name="backup_this_backup">this backup</string>
 
-    <!-- Backup Dialogs & Errors -->
+    
     <string name="dialog_set_password_title">Set backup password</string>
     <string name="dialog_set_password_body">This password will be used to encrypt your backups with
         AES-256. If you lose it, you won\'t be able to restore your data.</string>
@@ -497,7 +488,7 @@
         contents of %1$s and restart the app. This cannot be undone.</string>
     <string name="error_passwords_do_not_match">Passwords do not match</string>
 
-    <!-- Database Recovery Screen -->
+    
     <string name="recovery_title">Database access problem</string>
     <string name="recovery_description">The secure encryption key for your database could not be
         decrypted. This typically happens if the Android Keystore was cleared or corrupted.</string>
@@ -514,41 +505,19 @@
         This will permanently delete all existing local health dashboards and records.</string>
     <string name="recovery_reset_button">Reset database &amp; start fresh</string>
 
-    <!-- Accessibility -->
-    <string name="accessibility_password_hide">Hide password</string>
-    <string name="accessibility_password_show">Show password</string>
+    
     <string name="accessibility_backup_delete">Delete backup from %1$s</string>
     <string name="accessibility_security_alert">Security Alert</string>
     <string name="accessibility_search">Search</string>
     <string name="accessibility_clear">Clear</string>
 
-    <!-- Settings Screen -->
+    
 
     <string name="settings_search_placeholder">Search settings…</string>
 
-    <!-- Gender display labels (display only; domain/stored values remain English keys) -->
-    <string name="gender_male">Male</string>
-    <string name="gender_female">Female</string>
-    <string name="gender_other">Other</string>
-    <string name="gender_prefer_not_to_say">Prefer not to say</string>
-
-    <!-- Common form labels -->
+    
     <string name="label_date_of_birth">Date of birth</string>
     <string name="label_not_set">Not set</string>
-    <string name="label_gender">Gender</string>
-    <string name="label_height">Height</string>
-    <string name="label_feet">Feet</string>
-    <string name="label_inches">Inches</string>
-    <string name="unit_ft">ft</string>
-    <string name="unit_in">in</string>
-    <string name="height_range_hint_metric">Range: 120–250 cm</string>
-    <string name="height_range_hint_imperial">Range: 3\'11\" - 8\'2\"</string>
-    <string name="height_bmi_note">Used for BMI calculation in weight tracking</string>
-    <string name="error_height_feet">Feet: 3–8</string>
-    <string name="error_height_inches">Inches: 0–11</string>
-    <string name="error_height_out_of_range">Height out of range (120–250 cm)</string>
-
-    <!-- Onboarding Screen -->
     <string name="onboarding_welcome_title">Welcome to Readylytics</string>
     <string name="onboarding_welcome_subtitle">Your personal recovery &amp; readiness tracker —
         powered entirely by your own data.</string>
@@ -570,9 +539,6 @@
         device.</string>
     <string name="onboarding_activity_profile_label">Activity profile</string>
     <string name="onboarding_appearance_label">Appearance</string>
-    <string name="onboarding_dynamic_color_label">Dynamic color</string>
-    <string name="onboarding_dynamic_color_desc">Use colors derived from your wallpaper (Android
-        12+)</string>
     <string name="fallback_theme_color_label">Accent color</string>
     <string name="fallback_color_green_performance">Green Performance</string>
     <string name="fallback_color_blue_trust">Blue Trust</string>
@@ -603,7 +569,7 @@
         permissions to continue. Grant access to finish setting up your restored data.</string>
     <string name="onboarding_grant_permissions_retry">Grant Permissions</string>
 
-    <!-- Heart Rate Settings -->
+    
     <string name="hr_auto_calculate_label">Auto-calculate Max HR</string>
     <string name="hr_auto_calculate_desc">Uses age (220 - age) if enabled</string>
     <string name="hr_age_display">Age: %1$d (auto-calculated)</string>
@@ -617,20 +583,17 @@
     <string name="hr_zones_footer">Zones are used for TRIMP and workout intensity tracking.</string>
     <string name="hr_save_zones_button">Save zone boundaries</string>
     <string name="hr_zone_range_display">%1$d - %2$d bpm</string>
-    <string name="hr_zone_n">Zone %1$d</string>
     <string name="error_hr_zones_invalid">Invalid: All values must be 1–%1$d bpm and strictly
         increasing</string>
 
-    <!-- Dashboard & Calibration Messages -->
+    
     <string name="message_calibrating_banner">Calibrating — averages shown may improve as more
         nights are recorded.</string>
     <string name="message_sleep_no_data_calibrating">No data — calibrating</string>
     <string name="message_no_hr_data">No HR data available</string>
-    <string name="message_no_data_available">No data available</string>
     <string name="action_continue_to_app">Continue to App</string>
 
-    <!-- Chart Labels & Section Headers -->
-    <string name="label_baseline">Baseline</string>
+    
     <string name="label_average">Average</string>
     <string name="label_normal_limit">Normal Limit</string>
     <string name="label_min">Min</string>
@@ -645,7 +608,7 @@
     <string name="label_systolic_ref">Systolic (Ref: &lt;120)</string>
     <string name="label_diastolic_ref">Diastolic (Ref: &lt;80)</string>
 
-    <!-- Steps -->
+    
     <string name="label_daily_steps">Daily Steps</string>
 
     <string name="label_goal">Goal</string>
@@ -656,7 +619,7 @@
         <item quantity="other">Total steps recorded today.\nGoal: %1$d steps.</item>
     </plurals>
 
-    <!-- Heart Rate Card & Detail -->
+    
     <string name="tooltip_heart_rate_card">Today\'s heart rate range across all activities. Tap to
         see full timeline and zone breakdown.</string>
     <string name="hr_no_data">-- bpm</string>
@@ -665,7 +628,7 @@
     <string name="hr_zone_inner_range">%1$d–%2$d bpm</string>
     <string name="hr_zone_above_range">&gt; %1$d bpm</string>
 
-    <!-- Weight Detail -->
+    
     <string name="label_weight">Weight</string>
     <string name="label_weight_unit_format">Weight (%1$s)</string>
     <string name="tooltip_weight_current">Latest weight: %1$s\nHeight: %2$s</string>
@@ -682,7 +645,7 @@
     <string name="weight_status_obese_2">Obese Class II+</string>
     <string name="weight_status_calibrating">Calibrating</string>
 
-    <!-- Body Fat Detail -->
+    
     <string name="label_body_fat_percentage">Body Fat Percentage</string>
     <string name="label_body_fat">Body Fat</string>
     <string name="tooltip_body_fat_current">Current: %1$s%%\nOptimal: %2$s\n\n%3$s, Age %4$d</string>
@@ -696,7 +659,7 @@
     <string name="body_fat_status_above_range">Above Range</string>
     <string name="body_fat_status_calibrating">Calibrating</string>
 
-    <!-- Blood Pressure Detail -->
+    
     <string name="label_blood_pressure">Blood Pressure</string>
     <string name="label_systolic">Systolic</string>
     <string name="tooltip_blood_pressure_systolic">Latest systolic blood pressure
@@ -712,34 +675,31 @@
     <string name="bp_status_stage1">Stage 1</string>
     <string name="bp_status_stage2">Stage 2</string>
 
-    <!-- Vitals Screen -->
+    
     <string name="label_hrv_rmssd">HRV (RMSSD)</string>
     <string name="label_resting_heart_rate">Resting heart rate</string>
     <string name="label_oxygen_saturation">Oxygen saturation</string>
 
-    <!-- Workout Detail -->
+    
     <string name="label_workout_details">Workout details</string>
 
-    <!-- Circadian Consistency -->
+    
     <string name="label_circadian_consistency">Circadian consistency</string>
     <string name="label_circadian_median">Median: %1$s→%2$s</string>
 
-    <!-- Error Messages (ViewModel-surface) -->
+    
     <string name="error_sync_failed">Sync failed</string>
-    <string name="error_backup_restore_validation">Restore validation failed</string>
     <string name="error_backup_restore_failed">Restore failed</string>
     <string name="error_backup_create_failed">Backup failed</string>
     <string name="error_backup_delete_failed">Could not delete backup</string>
     <string name="error_backup_reencrypt_failed">Could not update backup encryption</string>
-    <string name="error_backup_wrong_password">Incorrect backup password</string>
-    <string name="restore_partial_success_title" tools:ignore="UnusedResources">Restore partly completed</string>
-    <string name="restore_partial_success_message">Health data was restored, but settings could not be restored. Restart Readylytics, then run restore again if settings still look wrong.</string>
-    <string name="restore_stage_preferences" tools:ignore="UnusedResources">settings</string>
+    <string name="restore_partial_success_title" ns0:ignore="UnusedResources">Restore partly completed</string>
+    <string name="restore_stage_preferences" ns0:ignore="UnusedResources">settings</string>
     <string name="error_threshold_invalid_range">Invalid threshold value. Range: 0–90 minutes.</string>
     <string name="error_threshold_update_failed">Failed to update threshold settings. Changes rolled
         back.</string>
 
-    <!-- Settings Screen Sections & Sub-headers -->
+    
     <string name="settings_section_data_backup">Data &amp; backup</string>
     <string name="settings_sub_local_backup">Local backup</string>
 
@@ -751,7 +711,7 @@
     <string name="settings_sub_heart_rate_zones">Heart rate zones</string>
     <string name="settings_sub_thresholds">Thresholds</string>
 
-    <!-- Load Sources -->
+    
     <string name="load_sources_section_title">Load Sources</string>
     <string name="load_sources_strain_label">Strain / Training Load Source</string>
     <string name="load_sources_ras_label">RAS Source</string>
@@ -778,7 +738,7 @@
 
     <string name="action_reset_to_default">Reset to default</string>
 
-    <!-- Data Management & Sync Settings -->
+    
     <string name="settings_retention_enabled_label">Retention Enabled</string>
     <string name="settings_retention_period_label">Retention Period</string>
 
@@ -787,7 +747,7 @@
 
 
 
-    <!-- Advanced Settings -->
+    
     <string name="advanced_baseline_overrides_title">Baseline Overrides</string>
     <string name="advanced_hrv_baseline_label">HRV Baseline (ms)</string>
     <string name="advanced_baseline_override_tooltip">Overrides the 30-day rolling median used in
@@ -811,7 +771,7 @@
     <string name="advanced_itrimp_b_factor_label">iTRIMP B Factor</string>
     <string name="advanced_itrimp_b_factor_desc">Sedentary=1.5, Active=2.1, Athlete=2.9.</string>
 
-    <!-- Threshold Settings Sliders -->
+    
     <string name="threshold_hrv_optimal_label">HRV Optimal</string>
     <string name="threshold_hrv_optimal_desc">HRV ratio to baseline to be considered Optimal (e.g.
         100-120%%).</string>
@@ -835,7 +795,7 @@
         Optimal on the dashboard.</string>
     <string name="label_sleep_goal">Sleep Goal</string>
 
-    <!-- Circadian Threshold Settings Section -->
+    
 
     <string name="circadian_threshold_window_label">Threshold Window</string>
     <string name="circadian_profile_default">Profile default: %1$dmin</string>
@@ -845,7 +805,7 @@
     <string name="circadian_using_profile_default">Using profile default</string>
     <string name="circadian_using_custom_setting">Using custom setting</string>
 
-    <!-- Vitals and Device Display Labels -->
+    
     <string name="label_rhr">RHR</string>
     <string name="label_hrv">HRV</string>
     <string name="label_steps">Steps</string>
@@ -859,7 +819,7 @@
     <string name="provider_strava">Strava</string>
     <string name="provider_withings">Withings</string>
 
-    <!-- Chart Accessibility Summary Descriptions -->
+    
     <string name="chart_accessibility_rhr_summary">Resting heart rate timeline chart showing heart rate values in beats per minute over the sleep period.</string>
 
     <string name="chart_accessibility_sleep_stages_summary">Sleep stages timeline chart showing Awake, REM, Light, and Deep sleep segments.</string>
@@ -879,33 +839,21 @@
     <string name="action_next_point">Next point</string>
     <string name="action_clear_selection">Clear selection</string>
 
-    <!-- Audited Strings -->
+    
     <string name="manage_cards">Manage Cards</string>
     <string name="action_reset_to_defaults">Reset to defaults</string>
-    <string name="accessibility_more_information">More information</string>
-    <string name="accessibility_drag_to_reorder">Drag to reorder</string>
-    <string name="accessibility_prev_day">Previous day</string>
-
-    <string name="accessibility_next_day">Next day</string>
-    <string name="accessibility_date_pill">%1$s, %2$s. Tap to open date picker.</string>
-    <string name="date_switcher_label_today">Today</string>
-    <string name="date_switcher_label_yesterday">Yesterday</string>
-    <string name="date_switcher_label_selected">Selected date</string>
     <string name="accessibility_circadian_threshold_adjustment">Circadian threshold adjustment.
         Range: 0 to 90 minutes</string>
     <plurals name="accessibility_circadian_threshold_state">
         <item quantity="one">Current value: %1$d minute</item>
         <item quantity="other">Current value: %1$d minutes</item>
     </plurals>
-    <string name="unit_system_label">Unit system</string>
-    <string name="unit_system_metric_label">Metric (cm, kg)</string>
-    <string name="unit_system_imperial_label">Imperial (ft/in, lbs)</string>
     <string name="workout_zones_title">Heart rate zones</string>
     <string name="workout_stats_ras_title">Readylytics Activity Score</string>
     <string name="workout_stats_history_title">History</string>
     <string name="sleep_metrics_title">Metrics</string>
 
-    <!-- Card Titles -->
+    
     <string name="card_title_sleep_score">Sleep score</string>
     <string name="sleep_score_gauge_title">Sleep Score</string>
     <string name="sleep_time_gauge_title">Sleep Time</string>
@@ -930,26 +878,26 @@
     <string name="card_title_oxygen_saturation">Oxygen saturation</string>
     <string name="card_title_insights">Insights</string>
 
-    <!-- Card Tooltips & Secondary Texts -->
+    
     <string name="card_tooltip_sleep_efficiency">The percentage of time actually asleep while in
         bed.</string>
     <string name="card_goal_sleep_efficiency">Goal: &gt;85%</string>
     <string name="card_efficiency_format">%1$s%%</string>
 
-    <!-- Plurals -->
+    
     <plurals name="settings_retention_days">
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>
     </plurals>
 
-    <!-- Privacy Rationale -->
+    
     <string name="privacy_rationale_title">Privacy &amp; Health Data</string>
     <string name="privacy_rationale_description">This app reads sleep, heart rate, heart rate
         variability, and exercise data from Health Connect solely to compute your personal recovery
         and readiness scores. All data is processed locally on your device and is never uploaded to
         any server.</string>
 
-    <!-- Workout Metrics -->
+    
     <string name="workout_metric_training_load">Training load</string>
     <string name="workout_metric_avg_pulse">Avg Pulse</string>
     <string name="workout_metric_gained_strain">Gained Strain</string>
@@ -967,14 +915,14 @@
 
     <string name="workout_stats_acwr_title">Training Load &amp; Strain Ratio (ACWR)</string>
 
-    <!-- Workout Intensities -->
+    
     <string name="workout_intensity_very_hard">Very Hard</string>
     <string name="workout_intensity_hard">Hard</string>
     <string name="workout_intensity_moderate">Moderate</string>
     <string name="workout_intensity_light">Light</string>
     <string name="workout_intensity_very_light">Very Light</string>
 
-    <!-- Workout History Formats -->
+    
     <string name="workout_history_item_subtitle">%1$d min · Strain %2$s · %3$s</string>
     <string name="workout_history_bpm_format">%1$d bpm</string>
     <string name="workout_history_bpm_na">-- bpm</string>
@@ -982,20 +930,20 @@
     <string name="workout_history_button_prev">Previous page</string>
     <string name="workout_history_button_next">Next page</string>
 
-    <!-- Sleep Metrics Cards -->
+    
     <string name="card_title_deep_sleep">Deep Sleep</string>
     <string name="card_target_deep_sleep">Target: 15–25%</string>
     <string name="card_title_rem_sleep">REM Sleep</string>
     <string name="card_target_rem_sleep">Target: 20–25%</string>
 
-    <!-- Units -->
+    
     <string name="unit_bpm">bpm</string>
     <string name="unit_mmHg">mmHg</string>
     <string name="unit_ms">ms</string>
     <string name="unit_percent">%</string>
     <string name="unit_steps">steps</string>
 
-    <!-- Additional Card Tooltips -->
+    
     <string name="card_tooltip_weight_no_data">Weight from Health Connect</string>
     <string name="card_tooltip_weight_latest">Latest weight measurement.</string>
     <string name="card_tooltip_body_fat_no_data">Body fat percentage from Health Connect</string>
@@ -1007,10 +955,10 @@
     <string name="card_bp_status_warning">Hypertension Stage 1: 130–139/80–89 mmHg</string>
     <string name="card_bp_status_poor">Hypertension Stage 2+: \u2265140/90 mmHg</string>
 
-    <!-- Additional Duration Formats -->
+    
     <string name="sleep_duration_hours_only">%1$dh</string>
 
-    <!-- Dashboard Insight Cards -->
+    
     <string name="insight_late_nadir_title">Late Heart Rate Nadir</string>
     <string name="insight_late_nadir_body">Your heart rate nadir occurred later than usual last night, suggesting delayed recovery.</string>
     <string name="insight_sick_indicator_title">Potential Illness Detected</string>
@@ -1023,7 +971,7 @@
     <string name="insight_restore_dismissed">Restore dismissed insights (%1$d)</string>
     <string name="insight_dismiss_description">Dismiss health insight</string>
     <string name="insight_rerun_description">Restore dismissed health insights</string>
-    <!-- Insights -->
+    
     <string name="insight_workout_impact_title">Workout Impact</string>
     <string name="insight_workout_impact_body">Yesterday\'s high strain workout appears to be carrying into today because both HRV and RHR are outside their optimal ranges.</string>
     <string name="insight_rest_day_success_title">Rest Day Success</string>
@@ -1072,7 +1020,7 @@
     <string name="insight_ras_weekly_underperformance_body">Your rolling weekly RAS total of %1$.0f is below the recommended target of %2$.0f.</string>
     <string name="insight_weight_drift_training_load_title">Weight Change Under High Training Load</string>
     <string name="insight_weight_drift_training_load_body">Your weight has changed by %1$.1f kg (%2$.1f%%) over the past week while your training load is high, which can indicate fluid shifts or under-fueling.</string>
-    <!-- General Insight Sheet Labels -->
+    
     <string name="insight_detail_observed_signal">Observed Signal</string>
     <string name="insight_detail_what_this_might_mean">What This Might Mean</string>
     <string name="insight_detail_confidence">Confidence</string>
@@ -1093,7 +1041,7 @@
     <string name="insight_detail_what_you_can_check">What You Can Check</string>
     <string name="insight_detail_show_explanation_format">Show explanation for %1$s</string>
 
-    <!-- BP_ELEVATED_HIGH_STRAIN -->
+    
     <string name="insight_detail_bp_elevated_high_strain_observed">Your systolic blood pressure is more than 10 mmHg above your recent baseline, and your strain ratio is high.</string>
     <string name="insight_detail_bp_elevated_high_strain_meaning">Your cardiovascular system may be under additional stress today.</string>
     <string name="insight_detail_bp_elevated_high_strain_safety">If blood pressure is repeatedly high, very high, or occurs with chest pain, shortness of breath, severe headache, dizziness, or neurological symptoms, seek medical advice.</string>
@@ -1115,7 +1063,7 @@
         <item>One elevated reading does not diagnose hypertension.</item>
     </string-array>
 
-    <!-- CIRCADIAN_SHIFT_RECOVERY_MISS -->
+    
     <string name="insight_detail_circadian_shift_recovery_miss_observed">You went to bed more than 90 minutes later than your usual bedtime, and no clear recovery rebound was detected after a rest day.</string>
     <string name="insight_detail_circadian_shift_recovery_miss_meaning">A large bedtime shift can make sleep and recovery signals less consistent.</string>
     <string-array name="insight_detail_circadian_shift_recovery_miss_causes">
@@ -1134,7 +1082,7 @@
         <item>This does not prove your circadian rhythm shifted.</item>
     </string-array>
 
-    <!-- HIGH_STRAIN_SLEEP_DEFICIT -->
+    
     <string name="insight_detail_high_strain_sleep_deficit_observed">Your strain ratio is high and you slept less than 85% of your goal.</string>
     <string name="insight_detail_high_strain_sleep_deficit_meaning">Your body may have had less overnight recovery time after a high-load period.</string>
     <string-array name="insight_detail_high_strain_sleep_deficit_causes">
@@ -1154,7 +1102,7 @@
         <item>This does not prove your recovery is impaired.</item>
     </string-array>
 
-    <!-- HRV_DECLINE_STREAK -->
+    
     <string name="insight_detail_hrv_decline_streak_observed">Your HRV has been below your baseline for three consecutive nights.</string>
     <string name="insight_detail_hrv_decline_streak_meaning">A multi-night HRV decline may reflect increased recovery demand, stress, illness, or poor sleep.</string>
     <string-array name="insight_detail_hrv_decline_streak_causes">
@@ -1174,7 +1122,7 @@
         <item>HRV below baseline does not identify the exact cause.</item>
     </string-array>
 
-    <!-- HRV_DROP_LOW_SPO2 -->
+    
     <string name="insight_detail_hrv_drop_low_spo2_observed">Your HRV was much lower than usual and your average sleeping oxygen was below 94%.</string>
     <string name="insight_detail_hrv_drop_low_spo2_meaning">This combination can occur with illness, poor recovery, altitude, congestion, device fit issues, or breathing-related sleep disruption.</string>
     <string name="insight_detail_hrv_drop_low_spo2_safety">Repeated low oxygen readings, loud snoring, pauses in breathing, or strong daytime sleepiness are worth discussing with a clinician.</string>
@@ -1194,7 +1142,7 @@
         <item>This does not diagnose sleep apnea or any medical condition.</item>
     </string-array>
 
-    <!-- LATE_NADIR -->
+    
     <string name="insight_detail_late_nadir_observed">Your lowest heart rate happened in the final third of your sleep period.</string>
     <string name="insight_detail_late_nadir_meaning">Your body may have taken longer than usual to settle into a more recovered overnight state.</string>
     <string-array name="insight_detail_late_nadir_causes">
@@ -1214,7 +1162,7 @@
         <item>A late heart rate nadir does not prove poor recovery or identify a single cause.</item>
     </string-array>
 
-    <!-- LATE_NADIR_ELEVATED_RHR -->
+    
     <string name="insight_detail_late_nadir_elevated_rhr_observed">Your lowest heart rate occurred late, and your resting heart rate was more than 5 bpm above baseline.</string>
     <string name="insight_detail_late_nadir_elevated_rhr_meaning">Your body may have remained under physiological strain during the night.</string>
     <string-array name="insight_detail_late_nadir_elevated_rhr_causes">
@@ -1234,7 +1182,7 @@
         <item>This does not diagnose illness or prove overtraining.</item>
     </string-array>
 
-    <!-- LATE_NADIR_SHORT_SLEEP -->
+    
     <string name="insight_detail_late_nadir_short_sleep_observed">Your heart rate nadir occurred late and you slept less than 85% of your sleep goal.</string>
     <string name="insight_detail_late_nadir_short_sleep_meaning">Your recovery window may have been shortened before your body fully settled overnight.</string>
     <string-array name="insight_detail_late_nadir_short_sleep_causes">
@@ -1252,7 +1200,7 @@
         <item>This does not prove your recovery was poor, but it suggests less recovery opportunity.</item>
     </string-array>
 
-    <!-- LOAD_SPIKE_RECOVERY_STRAIN -->
+    
     <string name="insight_detail_load_spike_recovery_strain_observed">Your recent training load is above your usual range, and at least one recovery marker is less favorable than normal.</string>
     <string name="insight_detail_load_spike_recovery_strain_meaning">Your body may need more recovery before another hard session.</string>
     <string name="insight_detail_load_spike_recovery_strain_safety">If fatigue persists despite several easy days, or if performance drops for a longer period, consider adjusting your training plan or seeking professional guidance.</string>
@@ -1277,7 +1225,7 @@
         <item>This does not predict injury by itself.</item>
     </string-array>
 
-    <!-- RAS_DEPLETION_HIGH_STRAIN -->
+    
     <string name="insight_detail_ras_depletion_high_strain_observed">Your RAS score is below target while your strain ratio indicates recent training load.</string>
     <string name="insight_detail_ras_depletion_high_strain_meaning">Some workouts may add training strain without raising RAS much, depending on heart-rate intensity and duration.</string>
     <string-array name="insight_detail_ras_depletion_high_strain_causes">
@@ -1294,7 +1242,7 @@
         <item>Low RAS does not mean your training was useless.</item>
     </string-array>
 
-    <!-- RAS_WEEKLY_UNDERPERFORMANCE -->
+    
     <string name="insight_detail_ras_weekly_underperformance_observed">Your 7-day RAS total is below the configured weekly target.</string>
     <string name="insight_detail_ras_weekly_underperformance_meaning">RAS is designed to reward sustained heart-rate activity over the week.</string>
     <string-array name="insight_detail_ras_weekly_underperformance_causes">
@@ -1311,7 +1259,7 @@
         <item>A low RAS week is not automatically bad if you are intentionally recovering or focusing on strength.</item>
     </string-array>
 
-    <!-- RECOVERY_HRV_MISSING -->
+    
     <string name="insight_detail_recovery_hrv_missing_observed">No sleep HRV reading was recorded last night.</string>
     <string name="insight_detail_recovery_hrv_missing_meaning">Readiness may be less personalized today because HRV could not be included.</string>
     <string-array name="insight_detail_recovery_hrv_missing_causes">
@@ -1326,7 +1274,7 @@
         <item>Check whether your wearable recorded HRV and whether Health Connect synced overnight data.</item>
     </string-array>
 
-    <!-- RECOVERY_STAGES_MISSING -->
+    
     <string name="insight_detail_recovery_stages_missing_observed">Sleep stage coverage was missing or suspicious last night.</string>
     <string name="insight_detail_recovery_stages_missing_meaning">Sleep score may be less complete because sleep architecture could not be evaluated.</string>
     <string-array name="insight_detail_recovery_stages_missing_causes">
@@ -1341,7 +1289,7 @@
         <item>Check your wearable sleep report and Health Connect sync status.</item>
     </string-array>
 
-    <!-- REST_DAY_NO_IMPACT -->
+    
     <string name="insight_detail_rest_day_no_impact_observed">Yesterday was a low-load day, but today\'s HRV did not clearly improve.</string>
     <string name="insight_detail_rest_day_no_impact_meaning">One light day may not have been enough to shift your recovery markers, or this may simply reflect normal HRV variability.</string>
     <string-array name="insight_detail_rest_day_no_impact_causes">
@@ -1359,7 +1307,7 @@
         <item>This does not mean the rest day failed.</item>
     </string-array>
 
-    <!-- REST_DAY_SUCCESS -->
+    
     <string name="insight_detail_rest_day_success_observed">Yesterday was a low-load day and today\'s HRV improved.</string>
     <string name="insight_detail_rest_day_success_meaning">Your body may have responded positively to lower training stress.</string>
     <string-array name="insight_detail_rest_day_success_causes">
@@ -1376,7 +1324,7 @@
         <item>This does not prove you are fully recovered or guaranteed to perform well.</item>
     </string-array>
 
-    <!-- SICK_INDICATOR -->
+    
     <string name="insight_detail_sick_indicator_observed">Your resting heart rate is higher than usual and your HRV is lower than usual for more than one day.</string>
     <string name="insight_detail_sick_indicator_meaning">This pattern can occur with illness, inflammation, poor sleep, high stress, or heavy recovery demand.</string>
     <string name="insight_detail_sick_indicator_safety">If you have fever, chest pain, shortness of breath, fainting, severe symptoms, or persistent abnormal readings, seek medical advice.</string>
@@ -1397,7 +1345,7 @@
         <item>This does not diagnose an infection or identify the cause of the signal.</item>
     </string-array>
 
-    <!-- STEP_SHORTFALL -->
+    
     <string name="insight_detail_step_shortfall_observed">Your step count is below 70% of your daily goal.</string>
     <string name="insight_detail_step_shortfall_meaning">Daily movement supports general activity balance, but a low-step day may be intentional during recovery.</string>
     <string-array name="insight_detail_step_shortfall_causes">
@@ -1415,7 +1363,7 @@
         <item>A low step count is not automatically bad, especially on rest or recovery days.</item>
     </string-array>
 
-    <!-- STRONG_RECOVERY_SIGNAL -->
+    
     <string name="insight_detail_strong_recovery_signal_observed">Your HRV was much higher than usual and your resting heart rate was much lower than usual.</string>
     <string name="insight_detail_strong_recovery_signal_meaning">This pattern is consistent with a favorable overnight recovery signal.</string>
     <string-array name="insight_detail_strong_recovery_signal_causes">
@@ -1434,7 +1382,7 @@
         <item>It does not mean you should automatically train harder than planned.</item>
     </string-array>
 
-    <!-- WEIGHT_DRIFT_TRAINING_LOAD -->
+    
     <string name="insight_detail_weight_drift_training_load_observed" formatted="false">Your weight changed by more than 2% over the past week while training strain is high.</string>
     <string name="insight_detail_weight_drift_training_load_meaning">During high training load, short-term weight changes often reflect fluid balance, glycogen, food volume, or recovery stress rather than true tissue change.</string>
     <string-array name="insight_detail_weight_drift_training_load_causes">
@@ -1454,7 +1402,7 @@
         <item>A one-week weight change does not prove fat gain or fat loss.</item>
     </string-array>
 
-    <!-- WORKOUT_IMPACT -->
+    
     <string name="insight_detail_workout_impact_observed">Yesterday\'s training load was high, HRV is no longer optimal, RHR is no longer optimal, and HRV dropped meaningfully from yesterday.</string>
     <string name="insight_detail_workout_impact_meaning">Your body may still be repairing, refueling, and returning to baseline after a demanding session.</string>
     <string-array name="insight_detail_workout_impact_causes">
@@ -1473,12 +1421,7 @@
         <item>A high TRIMP day does not automatically mean your recovery is poor.</item>
     </string-array>
 
-    <!-- Delta/Change Indicators -->
-    <string name="delta_up">↑</string>
-    <string name="delta_down">↓</string>
-    <string name="delta_no_change">—</string>
-
-    <!-- Unit Labels -->
+    
     <string name="unit_kg">kg</string>
     <string name="unit_lbs">lbs</string>
 

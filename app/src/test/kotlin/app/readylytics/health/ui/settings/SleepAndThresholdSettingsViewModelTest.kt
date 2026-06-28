@@ -5,7 +5,7 @@ import app.readylytics.health.data.preferences.CircadianThresholdPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.ui.common.UiText
+import app.readylytics.health.core.ui.common.UiText
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk

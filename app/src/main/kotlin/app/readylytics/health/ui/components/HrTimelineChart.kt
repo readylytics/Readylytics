@@ -1,5 +1,11 @@
 package app.readylytics.health.ui.components
 
+import app.readylytics.health.core.ui.components.EmptyChartPlaceholder
+import app.readylytics.health.core.ui.components.hrZoneColors
+import app.readylytics.health.core.ui.components.DayTimelineScale
+import app.readylytics.health.core.ui.components.DataPointTooltipData
+import app.readylytics.health.core.ui.components.DataPointTooltip
+
 import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -48,7 +54,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.readylytics.health.R
-import app.readylytics.health.ui.heartrate.HrSample
+import app.readylytics.health.core.ui.model.HrSample
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

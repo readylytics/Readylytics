@@ -7,7 +7,7 @@ import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.service.BmiData
 import app.readylytics.health.domain.service.BmiService
-import app.readylytics.health.ui.common.BaseViewModel
+import app.readylytics.health.core.ui.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import java.time.LocalDate

@@ -1,24 +1,13 @@
 package app.readylytics.health.ui.heartrate
 
 import java.time.LocalDate
-
-data class HrSample(
-    val timeMs: Long,
-    val bpm: Int,
-    val zone: Int,
-)
+import app.readylytics.health.core.ui.model.HrSample
+import app.readylytics.health.core.ui.model.HeartRateDaySummary
 
 data class ZoneTotal(
     val durationMs: Long,
     val percent: Float,
     val formattedPercent: String,
-)
-
-data class HeartRateDaySummary(
-    val minBpm: Int,
-    val maxBpm: Int,
-    val avgBpm: Int,
-    val hourlySamples: List<Pair<Int, Int>>,
 )
 
 data class HeartRateDetailUiState(

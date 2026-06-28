@@ -1,5 +1,7 @@
 package app.readylytics.health.ui.components
 
+import app.readylytics.health.core.ui.components.gaugeColor
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

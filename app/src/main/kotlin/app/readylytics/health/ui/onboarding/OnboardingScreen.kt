@@ -44,9 +44,9 @@ import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.ui.components.BirthdayDatePickerField
 import app.readylytics.health.ui.components.PhysiologyProfilePicker
-import app.readylytics.health.ui.components.SettingsToggleItem
-import app.readylytics.health.ui.settings.HeightInputField
-import app.readylytics.health.ui.settings.common.UnitSystemSelector
+import app.readylytics.health.core.ui.components.SettingsToggleItem
+import app.readylytics.health.core.ui.settings.HeightInputField
+import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
 import java.time.LocalDate
 
 @Composable

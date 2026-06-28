@@ -1,0 +1,60 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources><string name="dashboard_no_data">No data for this day</string>
+    <string name="heart_rate_title">Heart Rate</string>
+    <string name="back">Back</string>
+
+    
+    <string name="action_dismiss">Dismiss</string>
+    <string name="accessibility_password_hide">Hide password</string>
+    <string name="accessibility_password_show">Show password</string>
+    <string name="gender_male">Male</string>
+    <string name="gender_female">Female</string>
+    <string name="gender_other">Other</string>
+    <string name="gender_prefer_not_to_say">Prefer not to say</string>
+
+    
+    <string name="label_gender">Gender</string>
+    <string name="onboarding_dynamic_color_label">Dynamic color</string>
+    <string name="onboarding_dynamic_color_desc">Use colors derived from your wallpaper (Android
+        12+)</string>
+    <string name="hr_zone_n">Zone %1$d</string>
+    <string name="message_no_data_available">No data available</string>
+    <string name="error_backup_restore_validation">Restore validation failed</string>
+    <string name="error_backup_wrong_password">Incorrect backup password</string>
+    <string name="restore_partial_success_message">Health data was restored, but settings could not be restored. Restart Readylytics, then run restore again if settings still look wrong.</string>
+    <string name="delta_up">↑</string>
+    <string name="delta_down">↓</string>
+    <string name="delta_no_change">—</string>
+
+    
+    <string name="action_delete_drop_zone">Drop here to remove</string>
+
+    
+    <string name="unit_metric_cm">cm</string>
+    <string name="label_height">Height</string>
+    <string name="label_feet">Feet</string>
+    <string name="label_inches">Inches</string>
+    <string name="unit_ft">ft</string>
+    <string name="unit_in">in</string>
+    <string name="height_range_hint_metric">Range: 120–250 cm</string>
+    <string name="height_range_hint_imperial">Range: 3\'11\" - 8\'2\"</string>
+    <string name="height_bmi_note">Used for BMI calculation in weight tracking</string>
+    <string name="error_height_feet">Feet: 3–8</string>
+    <string name="error_height_inches">Inches: 0–11</string>
+    <string name="error_height_out_of_range">Height out of range (120–250 cm)</string>
+
+    
+    <string name="label_baseline">Baseline</string>
+    <string name="accessibility_drag_to_reorder">Drag to reorder</string>
+    <string name="unit_system_label">Unit system</string>
+    <string name="unit_system_metric_label">Metric (cm, kg)</string>
+    <string name="unit_system_imperial_label">Imperial (ft/in, lbs)</string>
+    <string name="accessibility_more_information">More information</string>
+    <string name="accessibility_prev_day">Previous day</string>
+
+    <string name="accessibility_next_day">Next day</string>
+    <string name="accessibility_date_pill">%1$s, %2$s. Tap to open date picker.</string>
+    <string name="date_switcher_label_today">Today</string>
+    <string name="date_switcher_label_yesterday">Yesterday</string>
+    <string name="date_switcher_label_selected">Selected date</string>
+    </resources>

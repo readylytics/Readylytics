@@ -34,23 +34,23 @@ import app.readylytics.health.domain.model.efficiencyStatus
 import app.readylytics.health.domain.model.remSleepStatus
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.util.roundToPercentInt
-import app.readylytics.health.ui.common.DateFormatUtils
-import app.readylytics.health.ui.common.MetricCardSkeleton
-import app.readylytics.health.ui.common.ScoreDialSkeleton
-import app.readylytics.health.ui.common.SkeletonCard
-import app.readylytics.health.ui.common.TimeRange
-import app.readylytics.health.ui.common.formatRoundedScoreDelta
-import app.readylytics.health.ui.common.resolveOrNull
-import app.readylytics.health.ui.components.ChartDefaults
+import app.readylytics.health.core.ui.common.DateFormatUtils
+import app.readylytics.health.core.ui.common.MetricCardSkeleton
+import app.readylytics.health.core.ui.common.ScoreDialSkeleton
+import app.readylytics.health.core.ui.common.SkeletonCard
+import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.formatRoundedScoreDelta
+import app.readylytics.health.core.ui.common.resolveOrNull
+import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.ui.components.CircadianConsistencyCard
-import app.readylytics.health.ui.components.M3ScoreGaugeCard
-import app.readylytics.health.ui.components.MetricCard
-import app.readylytics.health.ui.components.SectionHeader
+import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
+import app.readylytics.health.core.ui.components.MetricCard
+import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.ui.components.SleepArchitectureBar
 import app.readylytics.health.ui.components.SleepStagesChart
-import app.readylytics.health.ui.components.StatusLegend
-import app.readylytics.health.ui.components.TrendCard
-import app.readylytics.health.ui.dashboard.DateSwitcher
+import app.readylytics.health.core.ui.components.StatusLegend
+import app.readylytics.health.core.ui.components.TrendCard
+import app.readylytics.health.core.ui.dashboard.DateSwitcher
 import app.readylytics.health.core.designsystem.spacing
 
 @Composable

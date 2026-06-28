@@ -24,7 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
-import app.readylytics.health.ui.components.MetricTooltip
+import app.readylytics.health.core.ui.components.MetricTooltip
 import app.readylytics.health.ui.settings.common.SettingsConstants
 import kotlin.math.roundToInt
 

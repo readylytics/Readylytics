@@ -14,7 +14,7 @@ import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.WorkoutDisplayMetrics
 import app.readylytics.health.domain.sync.ForegroundSyncController
-import app.readylytics.health.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TimeRange
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

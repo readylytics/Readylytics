@@ -2,6 +2,7 @@ package app.readylytics.health.ui.components
 
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.core.ui.components.CardConfigurationsList
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test

@@ -40,7 +40,7 @@ import app.readylytics.health.R
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.ui.components.BirthdayDatePickerField
 import app.readylytics.health.ui.settings.HeartRateZonesState
-import app.readylytics.health.ui.settings.HeightInputField
+import app.readylytics.health.core.ui.settings.HeightInputField
 import app.readylytics.health.ui.settings.PhysiologySettingsState
 import app.readylytics.health.ui.settings.SettingsEvent
 import app.readylytics.health.ui.settings.SettingsExpandState

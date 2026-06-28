@@ -1,5 +1,15 @@
 package app.readylytics.health.ui.components
 
+import app.readylytics.health.core.ui.components.DataPointTooltipData
+import app.readylytics.health.core.ui.components.EmptyChartPlaceholder
+import app.readylytics.health.core.ui.components.ChartDefaults
+import app.readylytics.health.core.ui.components.zoneBandColors
+import app.readylytics.health.core.ui.components.ZoneBandDecoration
+import app.readylytics.health.core.ui.components.rememberChartMarkerVisibilityListener
+import app.readylytics.health.core.ui.components.InvisibleMarker
+import app.readylytics.health.core.ui.components.VicoChartTooltipOverlay
+import app.readylytics.health.core.ui.components.DataPointTooltip
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -26,8 +36,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
-import app.readylytics.health.ui.common.ChartUtils
-import app.readylytics.health.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.ChartUtils
+import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.designsystem.LocalExtendedColors
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
@@ -238,11 +248,13 @@ fun BloodPressureTrendChart(
             val dateText = ChartUtils.formatTooltipDate(date)
             val sysNearest = systolicPoints.firstOrNull { it.dayOffset == dayOffset }
             val diaNearest = diastolicPoints.firstOrNull { it.dayOffset == dayOffset }
+            val sysVal = sysNearest?.value
+            val diaVal = diaNearest?.value
             val valueText =
-                if (sysNearest?.value != null && diaNearest?.value != null) {
-                    "${sysNearest.value.toInt()}/${diaNearest.value.toInt()} mmHg"
-                } else if (sysNearest?.value != null) {
-                    "Sys: ${sysNearest.value.toInt()} mmHg"
+                if (sysVal != null && diaVal != null) {
+                    "${sysVal.toInt()}/${diaVal.toInt()} mmHg"
+                } else if (sysVal != null) {
+                    "Sys: ${sysVal.toInt()} mmHg"
                 } else {
                     "—"
                 }

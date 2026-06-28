@@ -46,8 +46,8 @@ import androidx.core.net.toUri
 import app.readylytics.health.R
 import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.domain.backup.BackupFileInfo
-import app.readylytics.health.ui.common.resolveOrNull
-import app.readylytics.health.ui.components.DropdownPreferenceItem
+import app.readylytics.health.core.ui.common.resolveOrNull
+import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.ui.settings.LocalBackupState
 import app.readylytics.health.ui.settings.SettingsEvent
 import app.readylytics.health.ui.settings.common.SettingsConstants

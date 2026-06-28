@@ -1,5 +1,7 @@
 package app.readylytics.health.ui.components
 
+import app.readylytics.health.core.ui.components.MetricCard
+
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource

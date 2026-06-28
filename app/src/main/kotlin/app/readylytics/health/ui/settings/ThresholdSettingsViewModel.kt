@@ -10,7 +10,7 @@ import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.util.logE
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
-import app.readylytics.health.ui.common.UiText
+import app.readylytics.health.core.ui.common.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

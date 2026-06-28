@@ -8,10 +8,10 @@ import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.BloodPressureRepository
-import app.readylytics.health.ui.common.BloodPressureHistoryItem
-import app.readylytics.health.ui.common.DailyDataPoint
-import app.readylytics.health.ui.common.TimeRange
-import app.readylytics.health.ui.common.padToRange
+import app.readylytics.health.core.ui.common.BloodPressureHistoryItem
+import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.padToRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow

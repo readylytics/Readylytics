@@ -15,7 +15,7 @@ import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncController
-import app.readylytics.health.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.TimeRange
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

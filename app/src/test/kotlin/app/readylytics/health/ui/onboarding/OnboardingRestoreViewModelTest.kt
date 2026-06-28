@@ -5,7 +5,7 @@ import app.readylytics.health.R
 import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.backup.RestoreService
 import app.readylytics.health.domain.backup.RestoreStage
-import app.readylytics.health.ui.common.UiText
+import app.readylytics.health.core.ui.common.UiText
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers

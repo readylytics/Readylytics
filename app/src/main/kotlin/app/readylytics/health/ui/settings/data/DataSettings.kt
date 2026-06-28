@@ -47,9 +47,9 @@ import app.readylytics.health.data.preferences.BackgroundSyncInterval
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.domain.model.HealthDataCategory
 import app.readylytics.health.domain.model.HealthDataType
-import app.readylytics.health.ui.components.DropdownPreferenceItem
-import app.readylytics.health.ui.components.SectionHeader
-import app.readylytics.health.ui.components.SettingsToggleItem
+import app.readylytics.health.core.ui.components.DropdownPreferenceItem
+import app.readylytics.health.core.ui.components.SectionHeader
+import app.readylytics.health.core.ui.components.SettingsToggleItem
 import app.readylytics.health.ui.settings.SettingsEvent
 import app.readylytics.health.ui.settings.SyncSettingsState
 import app.readylytics.health.ui.settings.UIState

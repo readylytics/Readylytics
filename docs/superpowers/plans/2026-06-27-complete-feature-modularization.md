@@ -454,7 +454,7 @@ git commit -m "build: add Compose feature conventions" -m "Constraint: Keep feat
 - Create: `app/src/test/kotlin/app/readylytics/health/architecture/DesignSystemOwnershipTest.kt`
 - Modify: `internal-docs/DATA_FLOW.md`
 
-- [ ] **Step 1: Write failing ownership test**
+- [x] **Step 1: Write failing ownership test**
 
 ```kotlin
 package app.readylytics.health.architecture
@@ -478,7 +478,7 @@ class DesignSystemOwnershipTest {
 }
 ```
 
-- [ ] **Step 2: Run test and verify failure**
+- [x] **Step 2: Run test and verify failure**
 
 ```powershell
 .\gradlew :app:testDebugUnitTest --tests app.readylytics.health.architecture.DesignSystemOwnershipTest
@@ -486,7 +486,7 @@ class DesignSystemOwnershipTest {
 
 Expected: FAIL because module and destination files do not exist.
 
-- [ ] **Step 3: Add module build and dependencies**
+- [x] **Step 3: Add module build and dependencies**
 
 Add `include(":core:designsystem")` to `settings.gradle.kts`. Create:
 
@@ -510,11 +510,11 @@ dependencies {
 
 Add `implementation(project(":core:designsystem"))` to `app/build.gradle.kts`.
 
-- [ ] **Step 4: Move primitives and preserve app-owned theme state**
+- [x] **Step 4: Move primitives and preserve app-owned theme state**
 
 Use `git mv` for five primitive files and `ThemeTest.kt`. Change packages to `app.readylytics.health.core.designsystem`. Move `ThemeViewModel.kt` into app scaffold package, keeping its DataStore-backed state in app. Update imports throughout app and tests.
 
-- [ ] **Step 5: Verify module and app**
+- [x] **Step 5: Verify module and app**
 
 ```powershell
 .\gradlew :core:designsystem:testDebugUnitTest
@@ -525,7 +525,7 @@ Use `git mv` for five primitive files and `ThemeTest.kt`. Change packages to `ap
 
 Expected: PASS.
 
-- [ ] **Step 6: Update topology docs, index, sync, commit**
+- [x] **Step 6: Update topology docs, index, sync, commit**
 
 Add `:core:designsystem` responsibility and dependency edge to `internal-docs/DATA_FLOW.md`.
 

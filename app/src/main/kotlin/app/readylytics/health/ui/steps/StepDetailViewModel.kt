@@ -9,9 +9,9 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.util.toMidnightEpochMilli
 import app.readylytics.health.domain.util.truncateToDayMs
-import app.readylytics.health.ui.common.DailyDataPoint
-import app.readylytics.health.ui.common.TimeRange
-import app.readylytics.health.ui.common.padToRange
+import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.padToRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi

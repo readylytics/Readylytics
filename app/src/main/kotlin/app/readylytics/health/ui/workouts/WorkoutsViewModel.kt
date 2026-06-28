@@ -20,8 +20,8 @@ import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.util.truncateToDayMs
-import app.readylytics.health.ui.common.DailyDataPoint
-import app.readylytics.health.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TimeRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers

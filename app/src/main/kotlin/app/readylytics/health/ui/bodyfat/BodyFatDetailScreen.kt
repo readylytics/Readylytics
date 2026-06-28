@@ -31,15 +31,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.R
 import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.domain.model.bodyFatZoneBands
-import app.readylytics.health.ui.common.ScoreDialSkeleton
-import app.readylytics.health.ui.common.SkeletonCard
-import app.readylytics.health.ui.common.TimeRange
-import app.readylytics.health.ui.common.resolveOrNull
-import app.readylytics.health.ui.components.ChartDefaults
-import app.readylytics.health.ui.components.M3ScoreGaugeCard
-import app.readylytics.health.ui.components.SectionHeader
-import app.readylytics.health.ui.components.TrendCard
-import app.readylytics.health.ui.components.TrendChart
+import app.readylytics.health.core.ui.common.ScoreDialSkeleton
+import app.readylytics.health.core.ui.common.SkeletonCard
+import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.resolveOrNull
+import app.readylytics.health.core.ui.components.ChartDefaults
+import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
+import app.readylytics.health.core.ui.components.SectionHeader
+import app.readylytics.health.core.ui.components.TrendCard
+import app.readylytics.health.core.ui.components.TrendChart
 
 @Composable
 fun BodyFatDetailRoute(

@@ -1,5 +1,7 @@
 package app.readylytics.health.ui.heartrate
 
+import app.readylytics.health.core.ui.model.HeartRateDaySummary
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,7 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
-import app.readylytics.health.ui.components.MetricTooltip
+import app.readylytics.health.core.ui.components.MetricTooltip
 
 @Composable
 fun HeartRateCard(

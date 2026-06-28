@@ -13,11 +13,11 @@ import app.readylytics.health.domain.model.bodyFatStatus
 import app.readylytics.health.domain.repository.BodyFatRepository
 import app.readylytics.health.domain.repository.WeightRepository
 import app.readylytics.health.domain.util.UnitConverter
-import app.readylytics.health.ui.common.BodyFatHistoryItem
-import app.readylytics.health.ui.common.DailyDataPoint
-import app.readylytics.health.ui.common.TimeRange
-import app.readylytics.health.ui.common.UiText
-import app.readylytics.health.ui.common.padToRange
+import app.readylytics.health.core.ui.common.BodyFatHistoryItem
+import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.UiText
+import app.readylytics.health.core.ui.common.padToRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow

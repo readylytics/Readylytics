@@ -30,9 +30,9 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.RecalcProgress
-import app.readylytics.health.ui.common.BaseViewModel
-import app.readylytics.health.ui.common.UiText
-import app.readylytics.health.ui.heartrate.HeartRateDaySummary
+import app.readylytics.health.core.ui.common.BaseViewModel
+import app.readylytics.health.core.ui.common.UiText
+import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

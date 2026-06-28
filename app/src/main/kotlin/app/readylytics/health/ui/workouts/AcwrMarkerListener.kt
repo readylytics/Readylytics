@@ -3,7 +3,7 @@ package app.readylytics.health.ui.workouts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import app.readylytics.health.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.DailyDataPoint
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
 import com.patrykandpatrick.vico.compose.cartesian.marker.ColumnCartesianLayerMarkerTarget

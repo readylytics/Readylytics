@@ -29,9 +29,9 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.WorkoutData
-import app.readylytics.health.ui.components.SectionHeader
-import app.readylytics.health.ui.components.containerColor
-import app.readylytics.health.ui.components.onContainerColor
+import app.readylytics.health.core.ui.components.SectionHeader
+import app.readylytics.health.core.ui.components.containerColor
+import app.readylytics.health.core.ui.components.onContainerColor
 import java.util.Locale
 import kotlin.math.roundToInt
 

@@ -1,5 +1,7 @@
 package app.readylytics.health.ui.heartrate
 
+import app.readylytics.health.core.ui.model.HrSample
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.SettingsRepository

@@ -32,14 +32,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
-import app.readylytics.health.ui.common.ChartUtils
-import app.readylytics.health.ui.common.DailyDataPoint
-import app.readylytics.health.ui.common.DateFormatUtils
-import app.readylytics.health.ui.common.SkeletonCard
-import app.readylytics.health.ui.common.TimeRange
-import app.readylytics.health.ui.components.ChartDefaults
-import app.readylytics.health.ui.components.DataPointTooltip
-import app.readylytics.health.ui.components.DataPointTooltipData
+import app.readylytics.health.core.ui.common.ChartUtils
+import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.DateFormatUtils
+import app.readylytics.health.core.ui.common.SkeletonCard
+import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.components.ChartDefaults
+import app.readylytics.health.core.ui.components.DataPointTooltip
+import app.readylytics.health.core.ui.components.DataPointTooltipData
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
@@ -287,9 +287,11 @@ fun SleepTrendChart(
                 ): Double {
                     val endVals =
                         startOffsetPoints
-                            .zip(durationSpanPoints) { start, span ->
-                                if (start.value != null && span.value != null) start.value + span.value else null
-                            }.filterNotNull()
+                             .zip(durationSpanPoints) { start, span ->
+                                 val startVal = start.value
+                                 val spanVal = span.value
+                                 if (startVal != null && spanVal != null) startVal + spanVal else null
+                             }.filterNotNull()
                     val maxVal = endVals.maxOrNull() ?: 20.0f // default to 8:00 AM next day (20 hours since Noon)
                     return (ceil(maxVal.toDouble() + 1.0)).coerceAtMost(24.0)
                 }

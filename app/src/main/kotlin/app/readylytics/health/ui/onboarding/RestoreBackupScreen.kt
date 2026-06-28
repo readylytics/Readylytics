@@ -47,7 +47,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import app.readylytics.health.R
-import app.readylytics.health.ui.common.resolveOrNull
+import app.readylytics.health.core.ui.common.resolveOrNull
 
 @Composable
 fun RestoreBackupScreen(

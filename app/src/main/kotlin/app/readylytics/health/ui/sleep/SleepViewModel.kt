@@ -19,8 +19,8 @@ import app.readylytics.health.domain.repository.SleepStageData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncController
-import app.readylytics.health.ui.common.DailyDataPoint
-import app.readylytics.health.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TimeRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -39,13 +39,9 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import app.readylytics.health.core.ui.model.Baselines
 import javax.inject.Inject
 import kotlin.math.roundToInt
-
-data class Baselines(
-    val hrv: Float? = null,
-    val rhr: Int? = null,
-)
 
 data class SleepUiState(
     val latestSummary: DailySummary? = null,

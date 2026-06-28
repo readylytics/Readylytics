@@ -11,7 +11,7 @@ import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
-import app.readylytics.health.ui.common.UiText
+import app.readylytics.health.core.ui.common.UiText
 import java.time.LocalDate
 
 data class ThresholdSettingsState(
