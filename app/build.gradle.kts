@@ -383,6 +383,7 @@ protobuf {
 
 dependencies {
     implementation(project(":feature:about"))
+    implementation(project(":feature:dashboard"))
     implementation(project(":feature:insights"))
     implementation(project(":feature:sleep"))
     implementation(project(":feature:vitals"))

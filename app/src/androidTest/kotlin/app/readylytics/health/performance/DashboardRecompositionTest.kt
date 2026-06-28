@@ -7,8 +7,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.ui.dashboard.DashboardScreen
-import app.readylytics.health.ui.dashboard.DashboardUiState
+import app.readylytics.health.feature.dashboard.DashboardScreen
+import app.readylytics.health.feature.dashboard.DashboardUiState
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test

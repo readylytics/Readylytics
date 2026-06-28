@@ -1234,15 +1234,15 @@ git commit -m "refactor: extract grouped vitals feature module" -m "Constraint: 
 - Move dashboard-exclusive strings
 - Modify: module settings/dependencies, expected set, `DATA_FLOW.md`
 
-- [ ] **Step 1: Add `dashboard` to expected set and verify red**
+- [x] **Step 1: Add `dashboard` to expected set and verify red**
 
 Run architecture test; expect missing module.
 
-- [ ] **Step 2: Write failing dashboard composition test**
+- [x] **Step 2: Write failing dashboard composition test**
 
 Add test proving dashboard exposes `onOpenInsight(InsightParams)` and accepts an `insightDetail` composable slot without importing insights package.
 
-- [ ] **Step 3: Create module**
+- [x] **Step 3: Create module**
 
 ```kotlin
 plugins { id("readylytics.compose-feature-conventions") }
@@ -1250,11 +1250,11 @@ android { namespace = "app.readylytics.health.feature.dashboard" }
 dependencies { implementation(project(":core:scoring")) }
 ```
 
-- [ ] **Step 4: Remove dashboard-to-insights and dashboard-to-vitals edges**
+- [x] **Step 4: Remove dashboard-to-insights and dashboard-to-vitals edges**
 
 Move `HeartRateCard` into dashboard. Replace direct `InsightDetailRepository`/`InsightDetailSheet` construction with callback and composable slot. App `MainNavHost` owns selected insight state, obtains detail content through `:feature:insights`, and supplies sheet content to dashboard. Preserve bottom-sheet behavior.
 
-- [ ] **Step 5: Move dashboard sources, tests, and resources**
+- [x] **Step 5: Move dashboard sources, tests, and resources**
 
 Rename package to `app.readylytics.health.feature.dashboard`. Keep callbacks for sleep, workouts, vitals, and detail navigation; never import their routes.
 
@@ -1270,8 +1270,9 @@ rg -n "feature\.(insights|vitals|sleep|workouts)" feature\dashboard
 ```
 
 Expected: `rg` has no matches; tests pass.
+Note: `:feature:dashboard:connectedDebugAndroidTest` built the test APK on 2026-06-28 but could not execute because no device was connected (`DeviceException: No connected devices!`).
 
-- [ ] **Step 7: Docs, sync, commit**
+- [x] **Step 7: Docs, sync, commit**
 
 ```powershell
 codegraph index

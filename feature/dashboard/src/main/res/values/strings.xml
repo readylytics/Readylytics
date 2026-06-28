@@ -1,0 +1,102 @@
+<resources>
+    <string name="action_cancel_editing">Cancel editing</string>
+    <string name="action_customize">Customize</string>
+    <string name="action_done">Done</string>
+    <string name="action_done_editing">Save changes</string>
+    <string name="action_reset_to_defaults">Reset to defaults</string>
+    <string name="card_bp_status_neutral">Elevated: 120-129/&lt;80 mmHg</string>
+    <string name="card_bp_status_optimal">Optimal: &lt;120/80 mmHg</string>
+    <string name="card_bp_status_poor">Hypertension Stage 2+: ≥140/90 mmHg</string>
+    <string name="card_bp_status_warning">Hypertension Stage 1: 130-139/80-89 mmHg</string>
+    <string name="card_efficiency_format">%1$s%%</string>
+    <string name="card_goal_sleep_efficiency">Goal: &gt;85%</string>
+    <string name="card_title_acute_chronic_ratio">Acute/Chronic Ratio</string>
+    <string name="card_title_blood_pressure">Blood Pressure</string>
+    <string name="card_title_body_fat">Body Fat</string>
+    <string name="card_title_circadian_consistency">Circadian consistency</string>
+    <string name="card_title_heart_rate">Heart Rate</string>
+    <string name="card_title_hrv">HRV</string>
+    <string name="card_title_insights">Insights</string>
+    <string name="card_title_oxygen_saturation">Oxygen saturation</string>
+    <string name="card_title_ras">RAS</string>
+    <string name="card_title_ras_daily">RAS daily</string>
+    <string name="card_title_readiness">Readiness</string>
+    <string name="card_title_recovery_index">Recovery Index</string>
+    <string name="card_title_resting_hr">Resting heart rate</string>
+    <string name="card_title_sleep_architecture">Sleep architecture</string>
+    <string name="card_title_sleep_duration">Sleep duration</string>
+    <string name="card_title_sleep_efficiency">Sleep Efficiency</string>
+    <string name="card_title_sleep_rhr">Sleep RHR</string>
+    <string name="card_title_sleep_score">Sleep score</string>
+    <string name="card_title_steps">Steps</string>
+    <string name="card_title_strain_ratio">Strain ratio</string>
+    <string name="card_title_weight">Weight</string>
+    <string name="card_tooltip_body_fat_latest">Body fat percentage.</string>
+    <string name="card_tooltip_body_fat_no_data">Body fat percentage from Health Connect</string>
+    <string name="card_tooltip_bp_latest">Latest blood pressure reading.
+
+</string>
+    <string name="card_tooltip_bp_no_data">Blood pressure from Health Connect</string>
+    <string name="card_tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
+    <string name="card_tooltip_weight_latest">Latest weight measurement.</string>
+    <string name="card_tooltip_weight_no_data">Weight from Health Connect</string>
+    <string name="dashboard_no_data">No data for this day</string>
+    <string name="error_sync_failed">Sync failed</string>
+    <string name="heart_rate_title">Heart Rate</string>
+    <string name="hr_avg_display">bpm · avg %1$d</string>
+    <string name="hr_no_data">-- bpm</string>
+    <string name="insight_detail_show_explanation_format">Show explanation for %1$s</string>
+    <string name="insight_dismiss_description">Dismiss health insight</string>
+    <string name="insight_rerun_description">Restore dismissed health insights</string>
+    <string name="label_daily_steps">Daily Steps</string>
+    <string name="manage_cards">Manage Cards</string>
+    <string name="message_calibrating_banner">Calibrating — averages shown may improve as more nights are recorded.</string>
+    <string name="sleep_duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="sleep_duration_hours_only">%1$dh</string>
+    <string name="spo2_calibrating">Calibrating</string>
+    <string name="spo2_normal">Normal</string>
+    <string name="spo2_optimal">Optimal</string>
+    <string name="spo2_poor">Poor</string>
+    <string name="spo2_warning">Warning</string>
+    <string name="tooltip_heart_rate_card">Today\'s heart rate range across all activities. Tap to view details.</string>
+    <string name="tooltip_ras">Your 7-day rolling Readylytics Activity Score (RAS).</string>
+    <string name="tooltip_readiness">Preparation for stress based on recent load and recovery.</string>
+    <string name="tooltip_resting_hr_baseline">Resting heart rate calculated as the low-percentile baseline.
+
+Baseline: %1$d bpm %2$s (%3$d bpm)</string>
+    <string name="tooltip_resting_hr_no_baseline">Resting heart rate calculated as the low-percentile baseline.</string>
+    <string name="tooltip_sleep_duration">Total time asleep last night.
+
+Goal: %1$s</string>
+    <string name="tooltip_sleep_hrv">Variation between heartbeats in milliseconds.</string>
+    <string name="tooltip_sleep_hrv_baseline">
+
+Baseline: %1$d ms %2$s (%3$d ms)</string>
+    <string name="tooltip_sleep_hrv_baseline_no_today">
+
+Baseline: %1$d ms (today\'s HRV not yet recorded)</string>
+    <string name="tooltip_sleep_hrv_diagnostics">
+
+Diagnostics:
+• Z-score: %1$s
+• σ (ln-scale): %2$s</string>
+    <string name="tooltip_sleep_hrv_no_baseline">
+
+Not enough data to calculate baseline.</string>
+    <string name="tooltip_sleep_rhr">Average heart rate during sleep.</string>
+    <string name="tooltip_sleep_rhr_baseline">
+
+Baseline: %1$d bpm %2$s (%3$d bpm)</string>
+    <string name="tooltip_sleep_rhr_no_baseline">
+
+Not enough data to calculate baseline.</string>
+    <string name="tooltip_sleep_score">Total quality of rest based on duration and cycles.</string>
+    <string name="tooltip_strain_ratio">The ACWR (Acute:Chronic Workload Ratio).</string>
+    <string name="tooltip_vitals_spo2">Average sleeping oxygen saturation last night.</string>
+    <string name="unit_bpm">bpm</string>
+    <string name="unit_imperial_lbs">lbs</string>
+    <string name="unit_metric_kg">kg</string>
+    <string name="unit_mmHg">mmHg</string>
+    <string name="unit_ms">ms</string>
+    <string name="unit_percent">%</string>
+</resources>

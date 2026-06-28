@@ -55,7 +55,7 @@ class ProductionReadinessStaticTest {
     fun `ui code does not surface raw throwable messages`() {
         val uiFiles =
             listOf(
-                "app/src/main/kotlin/app/readylytics/health/ui/dashboard/DashboardViewModel.kt",
+                "feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardViewModel.kt",
                 "app/src/main/kotlin/app/readylytics/health/ui/settings/LocalBackupViewModel.kt",
                 "app/src/main/kotlin/app/readylytics/health/ui/sync/SyncViewModel.kt",
                 "app/src/main/kotlin/app/readylytics/health/MainActivity.kt",

@@ -26,8 +26,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import app.readylytics.health.R
+import app.readylytics.health.domain.insights.InsightParams
+import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.feature.about.AboutScreen
+import app.readylytics.health.feature.dashboard.DashboardRoute
+import app.readylytics.health.feature.dashboard.InsightCard
+import app.readylytics.health.feature.dashboard.InsightRerunCard
+import app.readylytics.health.feature.dashboard.getInsightIcon
+import app.readylytics.health.feature.dashboard.toDailyInsightContext
 import app.readylytics.health.feature.insights.InsightDetailRepository
 import app.readylytics.health.feature.insights.InsightDetailSheet
 import app.readylytics.health.feature.sleep.SleepRoute
@@ -39,11 +46,6 @@ import app.readylytics.health.feature.vitals.steps.StepDetailRoute
 import app.readylytics.health.feature.vitals.weight.WeightDetailRoute
 import app.readylytics.health.feature.workouts.WorkoutDetailRoute
 import app.readylytics.health.feature.workouts.WorkoutsRoute
-import app.readylytics.health.ui.components.InsightCard
-import app.readylytics.health.ui.components.InsightRerunCard
-import app.readylytics.health.ui.dashboard.DashboardRoute
-import app.readylytics.health.ui.dashboard.getInsightIcon
-import app.readylytics.health.ui.dashboard.toDailyInsightContext
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
 import app.readylytics.health.ui.settings.SettingsRoute
@@ -128,6 +130,9 @@ fun MainNavHost(
         },
     ) {
         composable<TabDestination.Dashboard> {
+            var selectedInsightForDetails by remember { mutableStateOf<InsightType?>(null) }
+            var selectedInsightParams by remember { mutableStateOf<InsightParams>(InsightParams.None) }
+            var selectedInsightContext by remember { mutableStateOf<DailyInsightContext?>(null) }
             DashboardRoute(
                 onNavigateToSleep = {
                     navController.navigate(TabDestination.Sleep) {
@@ -189,8 +194,24 @@ fun MainNavHost(
                         restoreState = true
                     }
                 },
-                insightsCard = { uiState, isEditing, onDismissInsight, onRestoreInsights ->
-                    var selectedInsightForDetails by remember { mutableStateOf<InsightType?>(null) }
+                onOpenInsight = { selectedInsightParams = it },
+                insightDetail = {
+                    val selected = selectedInsightForDetails
+                    val detailContext = selectedInsightContext
+                    if (selected != null && detailContext != null) {
+                        val context = LocalContext.current
+                        val detailRepository = remember(context) { InsightDetailRepository(context) }
+                        InsightDetailSheet(
+                            content = detailRepository.getDetail(selected, detailContext, selectedInsightParams),
+                            onDismiss = {
+                                selectedInsightForDetails = null
+                                selectedInsightParams = InsightParams.None
+                                selectedInsightContext = null
+                            },
+                        )
+                    }
+                },
+                insightsCard = { uiState, isEditing, onDismissInsight, onRestoreInsights, onOpenInsight ->
                     val context = LocalContext.current
                     val detailRepository = remember(context) { InsightDetailRepository(context) }
                     val detailContext =
@@ -236,7 +257,11 @@ fun MainNavHost(
                                 body = bodyText,
                                 icon = getInsightIcon(insight),
                                 onDismiss = { onDismissInsight(insight) },
-                                onShowDetails = { selectedInsightForDetails = insight },
+                                onShowDetails = {
+                                    selectedInsightForDetails = insight
+                                    selectedInsightContext = detailContext
+                                    onOpenInsight(uiState.currentInsightParams)
+                                },
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         } else {
@@ -255,13 +280,6 @@ fun MainNavHost(
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         }
-                    }
-
-                    selectedInsightForDetails?.let { selected ->
-                        InsightDetailSheet(
-                            content = detailRepository.getDetail(selected, detailContext, uiState.currentInsightParams),
-                            onDismiss = { selectedInsightForDetails = null },
-                        )
                     }
                 },
             )
