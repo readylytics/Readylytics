@@ -1,6 +1,7 @@
 package app.readylytics.health.ui.settings
 
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.getOrNull
@@ -9,7 +10,6 @@ import app.readylytics.health.domain.sync.HealthSyncUseCase
 import app.readylytics.health.domain.user.UserUseCase
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
-import app.readylytics.health.core.ui.common.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

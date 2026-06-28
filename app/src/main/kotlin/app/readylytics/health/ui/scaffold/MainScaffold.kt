@@ -38,11 +38,11 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import app.readylytics.health.R
+import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
 import app.readylytics.health.ui.sync.SyncEvent
 import app.readylytics.health.ui.sync.SyncViewModel
-import app.readylytics.health.core.designsystem.spacing
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)

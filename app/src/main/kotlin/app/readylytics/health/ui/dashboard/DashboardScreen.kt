@@ -1,7 +1,5 @@
 package app.readylytics.health.ui.dashboard
 
-import app.readylytics.health.core.ui.dashboard.DateSwitcher
-
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -36,15 +34,16 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.R
-import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.CardConfigurationsList
 import app.readylytics.health.core.ui.components.CardDataMap
-import app.readylytics.health.ui.components.CardManagementBottomSheet
-import app.readylytics.health.ui.components.EditModeFab
 import app.readylytics.health.core.ui.components.ReorderableCardGrid
 import app.readylytics.health.core.ui.components.StatusLegend
+import app.readylytics.health.core.ui.dashboard.DateSwitcher
+import app.readylytics.health.domain.dashboard.CardId
+import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.ui.components.CardManagementBottomSheet
+import app.readylytics.health.ui.components.EditModeFab
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 

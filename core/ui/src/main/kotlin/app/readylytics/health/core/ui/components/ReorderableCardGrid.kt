@@ -40,9 +40,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import app.readylytics.health.core.ui.R
+import app.readylytics.health.core.ui.components.reorder.DragController
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
-import app.readylytics.health.core.ui.components.reorder.DragController
 import kotlin.math.roundToInt
 
 // Cards that should span entire width instead of pairing into a row.

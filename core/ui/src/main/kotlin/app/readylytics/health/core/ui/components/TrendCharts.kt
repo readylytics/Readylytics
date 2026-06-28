@@ -31,11 +31,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.core.ui.R
-import app.readylytics.health.domain.model.ZoneBand
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.common.DailyDataPoint
-import app.readylytics.health.core.designsystem.LocalExtendedColors
+import app.readylytics.health.domain.model.ZoneBand
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState

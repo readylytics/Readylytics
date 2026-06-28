@@ -77,7 +77,6 @@ fun FitDashboardTheme(
     customPrimaryColor: Long = SettingsDefaults.CUSTOM_PRIMARY_COLOR,
     content: @Composable () -> Unit,
 ) {
-
     val darkTheme =
         when (appTheme) {
             AppTheme.LIGHT -> false

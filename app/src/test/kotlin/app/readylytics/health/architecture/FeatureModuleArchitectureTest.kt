@@ -1,9 +1,9 @@
 package app.readylytics.health.architecture
 
-import java.io.File
-import org.junit.Test
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.io.File
 
 class FeatureModuleArchitectureTest {
     private val root = sequenceOf(File("."), File("..")).first { File(it, "settings.gradle.kts").exists() }
@@ -22,23 +22,29 @@ class FeatureModuleArchitectureTest {
         val forbidden = listOf("project(\":app\")", "project(\":core:database\")", "project(\":core:healthconnect\")")
         featureDirectories().forEach { module ->
             val buildScript = File(module, "build.gradle.kts").readText()
-            forbidden.forEach { dependency -> assertFalse("${module.name}: $dependency", buildScript.contains(dependency)) }
+            forbidden.forEach { dependency ->
+                assertFalse("${module.name}: $dependency", buildScript.contains(dependency))
+            }
             featureDirectories().map { it.name }.forEach { peer ->
-                assertFalse("${module.name} depends on feature $peer", buildScript.contains("project(\":feature:$peer\")"))
+                assertFalse(
+                    "${module.name} depends on feature $peer",
+                    buildScript.contains("project(\":feature:$peer\")"),
+                )
             }
         }
     }
 
     @Test
     fun `existing feature sources have no forbidden imports`() {
-        val forbidden = listOf(
-            "app.readylytics.health.R",
-            "app.readylytics.health.data.",
-            "app.readylytics.health.workers.",
-            "androidx.room.",
-            "androidx.health.connect.",
-            "androidx.work.",
-        )
+        val forbidden =
+            listOf(
+                "app.readylytics.health.R",
+                "app.readylytics.health.data.",
+                "app.readylytics.health.workers.",
+                "androidx.room.",
+                "androidx.health.connect.",
+                "androidx.work.",
+            )
         featureDirectories().forEach { module ->
             File(module, "src/main/kotlin").walkTopDown().filter { it.extension == "kt" }.forEach { source ->
                 source.readLines().forEachIndexed { index, line ->
@@ -59,5 +65,8 @@ class FeatureModuleArchitectureTest {
     }
 
     private fun featureDirectories(): List<File> =
-        File(root, "feature").listFiles().orEmpty().filter { File(it, "build.gradle.kts").isFile }.sortedBy(File::getName)
+        File(
+            root,
+            "feature",
+        ).listFiles().orEmpty().filter { File(it, "build.gradle.kts").isFile }.sortedBy(File::getName)
 }

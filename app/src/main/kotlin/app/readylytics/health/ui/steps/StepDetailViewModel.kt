@@ -2,6 +2,9 @@ package app.readylytics.health.ui.steps
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.di.DefaultDispatcher
@@ -9,9 +12,6 @@ import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.util.toMidnightEpochMilli
 import app.readylytics.health.domain.util.truncateToDayMs
-import app.readylytics.health.core.ui.common.DailyDataPoint
-import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.core.ui.common.padToRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi

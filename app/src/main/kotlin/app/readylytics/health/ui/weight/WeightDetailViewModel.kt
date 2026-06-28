@@ -3,6 +3,11 @@ package app.readylytics.health.ui.weight
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.R
+import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TimeRange
+import app.readylytics.health.core.ui.common.UiText
+import app.readylytics.health.core.ui.common.WeightHistoryItem
+import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.repository.SelectedDateRepository
@@ -11,11 +16,6 @@ import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.repository.WeightRepository
 import app.readylytics.health.domain.util.UnitConverter
-import app.readylytics.health.core.ui.common.DailyDataPoint
-import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.core.ui.common.UiText
-import app.readylytics.health.core.ui.common.WeightHistoryItem
-import app.readylytics.health.core.ui.common.padToRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow

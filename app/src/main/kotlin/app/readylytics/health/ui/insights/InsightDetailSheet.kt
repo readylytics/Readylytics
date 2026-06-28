@@ -51,12 +51,15 @@ fun InsightDetailSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Section(content.observedSignalTitle, content.observedSignal)
-            if (content.meaningTitle != null && content.meaning != null) {
-                Section(content.meaningTitle, content.meaning)
+            val meaningTitle = content.meaningTitle
+            val meaning = content.meaning
+            if (meaningTitle != null && meaning != null) {
+                Section(meaningTitle, meaning)
             }
-            if (content.type == InsightDetailType.PHYSIOLOGY && content.confidence != null) {
+            val confidence = content.confidence
+            if (content.type == InsightDetailType.PHYSIOLOGY && confidence != null) {
                 val confidenceRes =
-                    when (content.confidence) {
+                    when (confidence) {
                         InsightConfidence.LOW -> R.string.confidence_low
                         InsightConfidence.LOW_MEDIUM -> R.string.confidence_low_medium
                         InsightConfidence.MEDIUM -> R.string.confidence_medium
@@ -69,16 +72,19 @@ fun InsightDetailSheet(
                 )
             }
             if (content.causes.isNotEmpty()) {
-                CauseSection(content.causesTitle, content.causes.map { "${it.title}: ${it.description}" })
+                val causesTitle = content.causesTitle
+                CauseSection(causesTitle, content.causes.map { "${it.title}: ${it.description}" })
             }
             if (content.recommendations.isNotEmpty()) {
                 ListSection(content.recommendationsTitle, content.recommendations)
             }
-            if (content.caveatsTitle != null && content.caveats.isNotEmpty()) {
-                ListSection(content.caveatsTitle, content.caveats)
+            val caveatsTitle = content.caveatsTitle
+            if (caveatsTitle != null && content.caveats.isNotEmpty()) {
+                ListSection(caveatsTitle, content.caveats)
             }
-            if (!content.safetyNote.isNullOrBlank()) {
-                Section(stringResource(R.string.insight_detail_safety_note), content.safetyNote)
+            val safetyNote = content.safetyNote
+            if (!safetyNote.isNullOrBlank()) {
+                Section(stringResource(R.string.insight_detail_safety_note), safetyNote)
             }
             Spacer(Modifier.height(16.dp))
         }

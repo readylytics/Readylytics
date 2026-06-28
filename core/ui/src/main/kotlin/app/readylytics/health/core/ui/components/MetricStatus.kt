@@ -3,9 +3,9 @@ package app.readylytics.health.core.ui.components
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import app.readylytics.health.core.designsystem.LocalExtendedColors
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.strainRatioStatus
-import app.readylytics.health.core.designsystem.LocalExtendedColors
 
 internal enum class MetricContainerTone {
     DEFAULT_CARD,

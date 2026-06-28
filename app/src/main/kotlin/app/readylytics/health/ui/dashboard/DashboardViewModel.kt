@@ -3,6 +3,9 @@ package app.readylytics.health.ui.dashboard
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.R
+import app.readylytics.health.core.ui.common.BaseViewModel
+import app.readylytics.health.core.ui.common.UiText
+import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.SelectedDateRepository
@@ -30,9 +33,6 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.RecalcProgress
-import app.readylytics.health.core.ui.common.BaseViewModel
-import app.readylytics.health.core.ui.common.UiText
-import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

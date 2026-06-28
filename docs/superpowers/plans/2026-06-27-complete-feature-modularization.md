@@ -699,11 +699,11 @@ git commit -m "refactor: extract shared UI module" -m "Constraint: Keep scoring-
 - Modify: `internal-docs/DATA_FLOW.md`
 - Create: `app/src/test/kotlin/app/readylytics/health/architecture/AppDomainOwnershipTest.kt`
 
-- [ ] **Step 1: Write failing ownership test**
+- [x] **Step 1: Write failing ownership test**
 
 Assert app domain contains only `security/DatabaseKeyRotator.kt`, while listed pure domain directories exist under their target core module.
 
-- [ ] **Step 2: Run and verify failure**
+- [x] **Step 2: Run and verify failure**
 
 ```powershell
 .\gradlew :app:testDebugUnitTest --tests app.readylytics.health.architecture.AppDomainOwnershipTest
@@ -711,19 +711,19 @@ Assert app domain contains only `security/DatabaseKeyRotator.kt`, while listed p
 
 Expected: FAIL with remaining app-domain paths.
 
-- [ ] **Step 3: Move pure model/use-case packages and tests**
+- [x] **Step 3: Move pure model/use-case packages and tests**
 
 Use `git mv` preserving package names for this task. Move matching tests to target module test roots. Do not rename domain packages during physical move; avoiding package churn keeps this task behavior-only.
 
-- [ ] **Step 4: Move calculation and insight engine packages to scoring**
+- [x] **Step 4: Move calculation and insight engine packages to scoring**
 
 Move all files under `domain/calculation/**`, `domain/insights/**`, and matching tests to `:core:scoring`. No formula or rule body changes allowed.
 
-- [ ] **Step 5: Add only required module dependencies**
+- [x] **Step 5: Add only required module dependencies**
 
 Add coroutine/inject dependencies required by moved pure code to core module build files. Do not add Android, Compose, Room, Health Connect, DataStore, or WorkManager dependencies.
 
-- [ ] **Step 6: Verify purity and deterministic behavior**
+- [x] **Step 6: Verify purity and deterministic behavior**
 
 ```powershell
 rg -n "^import android\.|^import androidx\." core\model\src\main core\scoring\src\main
@@ -735,7 +735,7 @@ rg -n "^import android\.|^import androidx\." core\model\src\main core\scoring\sr
 
 Expected: no Android imports; all tests pass, including scoring determinism suites.
 
-- [ ] **Step 7: Update docs, sync, commit**
+- [x] **Step 7: Update docs, sync, commit**
 
 Update pure-domain ownership and formula-location pointers in `internal-docs/DATA_FLOW.md` without copying formula derivations.
 

@@ -1,12 +1,12 @@
 package app.readylytics.health.ui.sleep
 
 import app.readylytics.health.R
+import app.readylytics.health.core.ui.common.DateFormatUtils
+import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.sleepDurationStatus
 import app.readylytics.health.domain.repository.SleepSessionData
-import app.readylytics.health.core.ui.common.DateFormatUtils
-import app.readylytics.health.core.ui.common.UiText
 
 private const val SLEEP_TIME_GOAL_FILL_RATIO = 0.5f
 

@@ -1,8 +1,8 @@
 package app.readylytics.health.build
 
-import java.io.File
-import org.junit.Test
 import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.io.File
 
 class FeatureConventionPluginPresenceTest {
     private val root = sequenceOf(File("."), File("..")).first { File(it, "settings.gradle.kts").exists() }

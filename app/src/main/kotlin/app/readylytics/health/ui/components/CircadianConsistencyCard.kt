@@ -1,11 +1,10 @@
 package app.readylytics.health.ui.components
 
-import app.readylytics.health.core.ui.components.MetricCard
-
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.R
+import app.readylytics.health.core.ui.components.MetricCard
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.scoring.toStatus
 import app.readylytics.health.domain.scoring.toTimeString

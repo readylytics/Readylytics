@@ -1,12 +1,12 @@
 package app.readylytics.health.ui.bloodpressure
 
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.data.local.entity.BloodPressureRecordEntity
 import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.BloodPressureRepository
-import app.readylytics.health.core.ui.common.TimeRange
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

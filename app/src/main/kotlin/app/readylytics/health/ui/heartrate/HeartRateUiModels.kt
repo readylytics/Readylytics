@@ -1,8 +1,7 @@
 package app.readylytics.health.ui.heartrate
 
-import java.time.LocalDate
 import app.readylytics.health.core.ui.model.HrSample
-import app.readylytics.health.core.ui.model.HeartRateDaySummary
+import java.time.LocalDate
 
 data class ZoneTotal(
     val durationMs: Long,

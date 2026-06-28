@@ -2,6 +2,7 @@ package app.readylytics.health.ui.sleep
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.SelectedDateRepository
@@ -15,7 +16,6 @@ import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncController
-import app.readylytics.health.core.ui.common.TimeRange
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

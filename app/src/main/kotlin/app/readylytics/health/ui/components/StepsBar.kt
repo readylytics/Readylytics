@@ -1,11 +1,5 @@
 package app.readylytics.health.ui.components
 
-import app.readylytics.health.core.ui.components.DataPointTooltipData
-import app.readylytics.health.core.ui.components.DataPointTooltip
-import app.readylytics.health.core.ui.components.detectCanvasTap
-import app.readylytics.health.core.ui.components.SegmentHitBox
-import app.readylytics.health.core.ui.components.gaugeColor
-
 import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -43,9 +37,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
+import app.readylytics.health.core.ui.common.ChartUtils
+import app.readylytics.health.core.ui.components.DataPointTooltip
+import app.readylytics.health.core.ui.components.DataPointTooltipData
+import app.readylytics.health.core.ui.components.SegmentHitBox
+import app.readylytics.health.core.ui.components.detectCanvasTap
+import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.stepsStatus
-import app.readylytics.health.core.ui.common.ChartUtils
 import java.text.NumberFormat
 import java.time.LocalDate
 

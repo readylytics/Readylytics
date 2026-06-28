@@ -1,8 +1,5 @@
 package app.readylytics.health.ui.components
 
-import app.readylytics.health.core.ui.components.DataPointTooltipData
-import app.readylytics.health.core.ui.components.DataPointTooltip
-
 import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -51,6 +48,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
+import app.readylytics.health.core.ui.components.DataPointTooltip
+import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.domain.model.SleepStageType
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepStageData

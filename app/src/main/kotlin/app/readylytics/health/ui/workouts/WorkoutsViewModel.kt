@@ -3,6 +3,8 @@ package app.readylytics.health.ui.workouts
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.di.IoDispatcher
@@ -20,8 +22,6 @@ import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConstants
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.util.truncateToDayMs
-import app.readylytics.health.core.ui.common.DailyDataPoint
-import app.readylytics.health.core.ui.common.TimeRange
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers

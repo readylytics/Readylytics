@@ -287,11 +287,11 @@ fun SleepTrendChart(
                 ): Double {
                     val endVals =
                         startOffsetPoints
-                             .zip(durationSpanPoints) { start, span ->
-                                 val startVal = start.value
-                                 val spanVal = span.value
-                                 if (startVal != null && spanVal != null) startVal + spanVal else null
-                             }.filterNotNull()
+                            .zip(durationSpanPoints) { start, span ->
+                                val startVal = start.value
+                                val spanVal = span.value
+                                if (startVal != null && spanVal != null) startVal + spanVal else null
+                            }.filterNotNull()
                     val maxVal = endVals.maxOrNull() ?: 20.0f // default to 8:00 AM next day (20 hours since Noon)
                     return (ceil(maxVal.toDouble() + 1.0)).coerceAtMost(24.0)
                 }

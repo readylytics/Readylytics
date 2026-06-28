@@ -1,6 +1,7 @@
 package app.readylytics.health.ui.dashboard
 
 import androidx.compose.runtime.Immutable
+import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
@@ -15,7 +16,6 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.RecalcProgress
-import app.readylytics.health.core.ui.model.HeartRateDaySummary
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine

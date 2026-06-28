@@ -25,9 +25,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.R
-import app.readylytics.health.domain.model.MetricStatus
-import app.readylytics.health.domain.model.hrvStatus
-import app.readylytics.health.domain.model.rhrStatus
 import app.readylytics.health.core.ui.common.CardLoader
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.ScreenHeaderSection
@@ -40,6 +37,9 @@ import app.readylytics.health.core.ui.components.StatusLegend
 import app.readylytics.health.core.ui.components.TrendCard
 import app.readylytics.health.core.ui.components.TrendChart
 import app.readylytics.health.core.ui.dashboard.DateSwitcher
+import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.domain.model.hrvStatus
+import app.readylytics.health.domain.model.rhrStatus
 import kotlin.math.roundToInt
 
 private const val RHR_DIAL_FLOOR = 30

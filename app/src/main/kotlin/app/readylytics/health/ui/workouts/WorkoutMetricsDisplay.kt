@@ -22,12 +22,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
+import app.readylytics.health.core.designsystem.LocalStatusColors
+import app.readylytics.health.core.ui.common.DateFormatUtils
+import app.readylytics.health.core.ui.components.MetricCard
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.repository.WorkoutData
-import app.readylytics.health.core.ui.common.DateFormatUtils
-import app.readylytics.health.core.ui.components.MetricCard
-import app.readylytics.health.core.designsystem.LocalStatusColors
 import java.time.Instant
 import java.time.ZoneId
 import kotlin.math.roundToInt

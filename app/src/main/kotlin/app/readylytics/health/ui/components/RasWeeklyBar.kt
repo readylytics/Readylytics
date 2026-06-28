@@ -1,7 +1,5 @@
 package app.readylytics.health.ui.components
 
-import app.readylytics.health.core.ui.components.gaugeColor
-
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,6 +29,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.R
+import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.util.roundToPercentInt
 

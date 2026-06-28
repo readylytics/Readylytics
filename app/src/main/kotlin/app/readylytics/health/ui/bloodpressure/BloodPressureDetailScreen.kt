@@ -34,11 +34,11 @@ import app.readylytics.health.R
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.SkeletonCard
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.ui.components.BloodPressureSplitChart
 import app.readylytics.health.core.ui.components.ChartDefaults
 import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.TrendCard
+import app.readylytics.health.ui.components.BloodPressureSplitChart
 
 @Composable
 fun BloodPressureDetailRoute(

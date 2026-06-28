@@ -1,13 +1,13 @@
 package app.readylytics.health.ui.steps
 
 import androidx.lifecycle.viewModelScope
+import app.readylytics.health.core.ui.common.DailyDataPoint
+import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.repository.DailySummaryRepository
-import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.core.ui.common.DailyDataPoint
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

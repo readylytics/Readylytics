@@ -2,8 +2,8 @@ package app.readylytics.health.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
+import app.readylytics.health.data.preferences.PhysiologyProfile
 
 @Composable
 fun PhysiologyProfilePicker(

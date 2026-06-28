@@ -46,22 +46,22 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.MainActivity
 import app.readylytics.health.R
-import app.readylytics.health.data.preferences.AppTheme
+import app.readylytics.health.core.designsystem.calculateSecondarySeedColor
+import app.readylytics.health.core.designsystem.calculateTertiarySeedColor
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
-import app.readylytics.health.ui.components.PhysiologyProfilePicker
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.SettingsToggleItem
+import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
+import app.readylytics.health.data.preferences.AppTheme
+import app.readylytics.health.ui.components.PhysiologyProfilePicker
 import app.readylytics.health.ui.settings.LocalBackupViewModel.SideEffect
 import app.readylytics.health.ui.settings.backup.LocalBackupSection
 import app.readylytics.health.ui.settings.common.CustomColorPicker
-import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
 import app.readylytics.health.ui.settings.data.DataManagementSection
 import app.readylytics.health.ui.settings.data.DataSourceSettingsSection
 import app.readylytics.health.ui.settings.data.SyncSettingsSection
 import app.readylytics.health.ui.settings.physiologyprofile.HeartRateZoneSection
-import app.readylytics.health.core.designsystem.calculateSecondarySeedColor
-import app.readylytics.health.core.designsystem.calculateTertiarySeedColor
 import kotlinx.coroutines.flow.collectLatest
 
 @Suppress("DEPRECATION")
