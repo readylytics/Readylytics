@@ -1,9 +1,5 @@
 package app.readylytics.health.ui.dashboard
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
@@ -15,17 +11,13 @@ import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.MonitorWeight
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import app.readylytics.health.R
 import app.readylytics.health.core.ui.common.CardLoader
@@ -33,19 +25,19 @@ import app.readylytics.health.core.ui.common.MetricCardSkeleton
 import app.readylytics.health.core.ui.common.ScoreDialSkeleton
 import app.readylytics.health.core.ui.common.formatRoundedScoreDelta
 import app.readylytics.health.core.ui.common.resolveOrNull
+import app.readylytics.health.core.ui.components.CircadianConsistencyCard
 import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.MetricCard
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
 import app.readylytics.health.domain.model.InsightType
 import app.readylytics.health.domain.model.LoadSourceSelector
-import app.readylytics.health.ui.components.CircadianConsistencyCard
-import app.readylytics.health.ui.components.InsightCard
-import app.readylytics.health.ui.components.InsightRerunCard
+import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.domain.scoring.toStatus
+import app.readylytics.health.domain.scoring.toTimeString
+import app.readylytics.health.domain.util.roundToPercentInt
 import app.readylytics.health.ui.components.StepsCard
 import app.readylytics.health.ui.heartrate.HeartRateCard
-import app.readylytics.health.feature.insights.InsightDetailRepository
-import app.readylytics.health.feature.insights.InsightDetailSheet
 
 // Build a map of CardId to composable card content for the Dashboard screen
 // This factory method creates all available dashboard cards and maps them by ID
@@ -66,6 +58,7 @@ fun buildCardDataMap(
     isLoading: Boolean = false,
     onDismissInsight: (InsightType) -> Unit = {},
     onRestoreInsights: () -> Unit = {},
+    insightsCard: @Composable (DashboardUiState, Boolean, (InsightType) -> Unit, () -> Unit) -> Unit,
 ): Map<CardId, @Composable () -> Unit> {
     val cardMap = mutableMapOf<CardId, @Composable () -> Unit>()
 
@@ -123,73 +116,7 @@ fun buildCardDataMap(
 
     if (uiState.activeInsightTypes.isNotEmpty() || isEditing) {
         cardMap[CardId.INSIGHTS] = {
-            var selectedInsightForDetails by remember { mutableStateOf<InsightType?>(null) }
-            val context = LocalContext.current
-            val detailRepository = remember(context) { InsightDetailRepository(context) }
-            val detailContext =
-                remember(
-                    uiState.summary,
-                    uiState.stepGoal,
-                    uiState.goalSleepHours,
-                    uiState.selectedDate,
-                    uiState.userPreferences,
-                ) {
-                    uiState.toDailyInsightContext()
-                }
-
-            AnimatedContent(
-                targetState = uiState.currentInsight,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "dashboard_insight_card",
-            ) { insight ->
-                if (insight != null) {
-                    val detail = detailRepository.getDetail(insight, detailContext, uiState.currentInsightParams)
-                    val bodyText =
-                        if (insight == InsightType.REST_DAY_SUCCESS) {
-                            val sleepScore = uiState.summary?.sleepScore ?: 0f
-                            val duration = uiState.summary?.sleepDurationMinutes ?: 0
-                            val isPerfectSleep = sleepScore >= 85f && duration >= (uiState.goalSleepHours * 60).toInt()
-                            if (isPerfectSleep) {
-                                detail.cardDescription + stringResource(R.string.insight_rest_day_perfect_sleep)
-                            } else {
-                                detail.cardDescription
-                            }
-                        } else {
-                            detail.cardDescription
-                        }
-
-                    InsightCard(
-                        title = detail.title,
-                        body = bodyText,
-                        icon = getInsightIcon(insight),
-                        onDismiss = { onDismissInsight(insight) },
-                        onShowDetails = { selectedInsightForDetails = insight },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                } else {
-                    InsightRerunCard(
-                        text =
-                            if (isEditing) {
-                                stringResource(R.string.card_title_insights)
-                            } else {
-                                stringResource(
-                                    R.string.insight_restore_dismissed,
-                                    uiState.dismissedInsightCount,
-                                )
-                            },
-                        icon = if (isEditing) Icons.Default.Info else Icons.Default.Refresh,
-                        onRestore = if (isEditing) ({}) else onRestoreInsights,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-
-            selectedInsightForDetails?.let { selected ->
-                InsightDetailSheet(
-                    content = detailRepository.getDetail(selected, detailContext, uiState.currentInsightParams),
-                    onDismiss = { selectedInsightForDetails = null },
-                )
-            }
+            insightsCard(uiState, isEditing, onDismissInsight, onRestoreInsights)
         }
     }
 
@@ -354,8 +281,46 @@ fun buildCardDataMap(
             skeleton = { MetricCardSkeleton() },
             content = {
                 if (uiState.circadianConsistency != null) {
+                    val result = uiState.circadianConsistency
+                    val scoreText =
+                        when (result) {
+                            is CircadianConsistencyResult.Calibrating ->
+                                stringResource(
+                                    app.readylytics.health.core.ui.R.string.spo2_calibrating,
+                                )
+                            is CircadianConsistencyResult.MissingData -> "—"
+                            is CircadianConsistencyResult.Ready -> "${result.score.roundToPercentInt()}%"
+                        }
+                    val windowText =
+                        when (result) {
+                            is CircadianConsistencyResult.Calibrating,
+                            is CircadianConsistencyResult.MissingData,
+                            -> null
+                            is CircadianConsistencyResult.Ready ->
+                                stringResource(
+                                    app.readylytics.health.core.ui.R.string.label_circadian_median,
+                                    result.medianBedtimeMinutes.toTimeString(),
+                                    result.medianWakeMinutes.toTimeString(),
+                                )
+                        }
+                    val thresholdMinutes =
+                        when (result) {
+                            is CircadianConsistencyResult.Calibrating,
+                            is CircadianConsistencyResult.MissingData,
+                            -> 30
+                            is CircadianConsistencyResult.Ready -> result.thresholdMinutes
+                        }
+                    val tooltipText =
+                        stringResource(
+                            app.readylytics.health.core.ui.R.string.tooltip_circadian_score,
+                            thresholdMinutes,
+                        )
+
                     CircadianConsistencyCard(
-                        result = uiState.circadianConsistency,
+                        scoreText = scoreText,
+                        windowText = windowText,
+                        status = result.toStatus(),
+                        tooltipText = tooltipText,
                         onClick = if (isEditing) ({}) else onNavigateToSleep,
                     )
                 }
@@ -461,7 +426,7 @@ fun buildCardDataMap(
     return cardMap
 }
 
-private fun DashboardUiState.toDailyInsightContext(): DailyInsightContext =
+fun DashboardUiState.toDailyInsightContext(): DailyInsightContext =
     DailyInsightContext(
         date = selectedDate,
         sleepScore = summary?.sleepScore,
@@ -488,7 +453,7 @@ private fun DashboardUiState.toDailyInsightContext(): DailyInsightContext =
         workoutIntensityCategory = null,
     )
 
-private fun getInsightIcon(type: InsightType): ImageVector =
+fun getInsightIcon(type: InsightType): ImageVector =
     when (type) {
         InsightType.LATE_NADIR -> Icons.Default.Schedule
         InsightType.SICK_INDICATOR -> Icons.Default.MonitorHeart

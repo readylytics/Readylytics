@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.sleep
+package app.readylytics.health.feature.sleep
 
 /**
  * Selection state for the Sleep Trend Chart.

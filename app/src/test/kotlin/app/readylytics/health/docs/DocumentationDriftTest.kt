@@ -23,7 +23,25 @@ import kotlin.test.assertTrue
  */
 class DocumentationDriftTest {
     private val aboutMd = readRepoFile("ABOUT.md")
-    private val stringsXml = readRepoFile("app/src/main/res/values/strings.xml")
+    private val stringsXml =
+        listOf(
+            "app/src/main/res/values/strings.xml",
+            "core/ui/src/main/res/values/strings.xml",
+            "feature/about/src/main/res/values/strings.xml",
+            "feature/insights/src/main/res/values/strings.xml",
+            "feature/sleep/src/main/res/values/strings.xml",
+            "feature/workouts/src/main/res/values/strings.xml",
+            "feature/vitals/src/main/res/values/strings.xml",
+            "feature/dashboard/src/main/res/values/strings.xml",
+            "feature/settings/src/main/res/values/strings.xml",
+            "feature/onboarding/src/main/res/values/strings.xml",
+        ).mapNotNull { path ->
+            try {
+                readRepoFile(path)
+            } catch (e: Throwable) {
+                null
+            }
+        }.joinToString("\n")
     private val dataFlowMd = readRepoFile("internal-docs/DATA_FLOW.md")
     private val buildGradleKts = readRepoFile("app/build.gradle.kts")
     private val governanceDocPaths =

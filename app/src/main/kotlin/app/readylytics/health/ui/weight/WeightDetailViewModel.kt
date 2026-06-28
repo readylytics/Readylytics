@@ -9,9 +9,9 @@ import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.common.WeightHistoryItem
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.data.preferences.UnitSystem
-import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.calculation.HealthMetricsCalculator
+import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.WeightRepository

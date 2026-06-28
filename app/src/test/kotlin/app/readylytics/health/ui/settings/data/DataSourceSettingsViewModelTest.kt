@@ -68,9 +68,10 @@ class DataSourceSettingsViewModelTest {
                     prefsFlow.value = prefsFlow.value.copy(deviceByDataType = deviceByDataType.value)
                 }
             }
-        every { historicalResyncController.state } returns flowOf(
-            HistoricalResyncState(running = false, current = 0, total = 0),
-        )
+        every { historicalResyncController.state } returns
+            flowOf(
+                HistoricalResyncState(running = false, current = 0, total = 0),
+            )
 
         val viewModel = DataSourceSettingsViewModel(settingsRepo, settingsRepo, historicalResyncController)
         viewModel.sharingStarted = SharingStarted.Lazily

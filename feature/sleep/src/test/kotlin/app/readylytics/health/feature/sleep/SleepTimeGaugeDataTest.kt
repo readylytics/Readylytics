@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.sleep
+package app.readylytics.health.feature.sleep
 
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.MetricStatus

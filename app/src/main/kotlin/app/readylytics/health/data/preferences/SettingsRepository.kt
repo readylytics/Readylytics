@@ -136,9 +136,11 @@ class SettingsRepository
 
         override suspend fun updateRhrWarningThreshold(value: Float) = thresholds.updateRhrWarningThreshold(value)
 
-        override suspend fun updateRestingHrPercentile(percentile: Int) = physiology.updateRestingHrPercentile(percentile)
+        override suspend fun updateRestingHrPercentile(percentile: Int) =
+            physiology.updateRestingHrPercentile(percentile)
 
-        override suspend fun updateConsistencyThresholdMinutes(minutes: Int) = sleep.updateConsistencyThresholdMinutes(minutes)
+        override suspend fun updateConsistencyThresholdMinutes(minutes: Int) =
+            sleep.updateConsistencyThresholdMinutes(minutes)
 
         override suspend fun updateConsistencyEvaluationDays(days: Int) = sleep.updateConsistencyEvaluationDays(days)
 
@@ -163,7 +165,8 @@ class SettingsRepository
 
         override suspend fun updateAboutDismissed(dismissed: Boolean) = ui.updateAboutDismissed(dismissed)
 
-        override suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) = physiology.updatePhysiologyProfile(profile)
+        override suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) =
+            physiology.updatePhysiologyProfile(profile)
 
         override suspend fun updateTrimpModel(model: TrimpModel) = physiology.updateTrimpModel(model)
 

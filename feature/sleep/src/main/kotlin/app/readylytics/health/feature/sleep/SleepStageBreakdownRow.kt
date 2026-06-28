@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.components
+package app.readylytics.health.feature.sleep
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.R
+import app.readylytics.health.feature.sleep.R
 
 @Composable
 fun SleepStageBreakdownRow(

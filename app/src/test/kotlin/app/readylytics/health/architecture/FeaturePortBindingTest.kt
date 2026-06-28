@@ -19,8 +19,8 @@ import app.readylytics.health.domain.sync.HealthDataRefresh
 import app.readylytics.health.domain.sync.HealthDataRefreshAdapter
 import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.domain.sync.HistoricalResyncControllerImpl
-import kotlin.test.assertTrue
 import org.junit.Test
+import kotlin.test.assertTrue
 
 class FeaturePortBindingTest {
     @Test

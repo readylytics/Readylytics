@@ -2,7 +2,6 @@ package app.readylytics.health.feature.insights
 
 import android.content.Context
 import android.content.res.Resources
-import app.readylytics.health.feature.insights.R
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.CauseRankHint
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
@@ -10,6 +9,7 @@ import app.readylytics.health.domain.insights.detail.InsightCause
 import app.readylytics.health.domain.insights.detail.InsightCauseRanker
 import app.readylytics.health.domain.insights.detail.InsightDetailContent
 import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.feature.insights.R
 
 class InsightDetailRepository(
     private val context: Context,

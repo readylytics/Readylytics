@@ -10,7 +10,7 @@ class CanonicalMetricDisplayAuditTest {
         val auditedFiles =
             listOf(
                 "app/src/main/kotlin/app/readylytics/health/ui/dashboard/DashboardCardFactory.kt",
-                "app/src/main/kotlin/app/readylytics/health/ui/sleep/SleepScreen.kt",
+                "feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepScreen.kt",
                 "app/src/main/kotlin/app/readylytics/health/ui/workouts/WorkoutStatsSection.kt",
                 "app/src/main/kotlin/app/readylytics/health/ui/workouts/WorkoutMetricsDisplay.kt",
                 "app/src/main/kotlin/app/readylytics/health/domain/dashboard/dashboard/GetWorkoutMetricsUseCase.kt",
@@ -58,6 +58,9 @@ class CanonicalMetricDisplayAuditTest {
 
         val fromModuleRoot = File(pathFromRepoRoot.removePrefix("app/"))
         if (fromModuleRoot.exists()) return fromModuleRoot
+
+        val parentPath = File("..", pathFromRepoRoot)
+        if (parentPath.exists()) return parentPath
 
         return direct
     }

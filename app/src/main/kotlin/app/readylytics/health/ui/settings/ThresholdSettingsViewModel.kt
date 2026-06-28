@@ -96,7 +96,11 @@ class ThresholdSettingsViewModel
                     }
                 }
                 is SettingsEvent.ConsistencyThresholdChanged ->
-                    viewModelScope.launch { thresholdSettings.updateConsistencyThresholdMinutes(minutes = event.minutes) }
+                    viewModelScope.launch {
+                        thresholdSettings.updateConsistencyThresholdMinutes(
+                            minutes = event.minutes,
+                        )
+                    }
                 is SettingsEvent.ConsistencyEvaluationDaysChanged ->
                     viewModelScope.launch { thresholdSettings.updateConsistencyEvaluationDays(days = event.days) }
                 is SettingsEvent.ConsistencyBaselineDaysChanged ->

@@ -332,7 +332,6 @@
     
     <string name="message_calibrating_banner">Calibrating — averages shown may improve as more
         nights are recorded.</string>
-    <string name="message_sleep_no_data_calibrating">No data — calibrating</string>
     <string name="message_no_hr_data">No HR data available</string>
     <string name="label_average">Average</string>
     <string name="label_normal_limit">Normal Limit</string>
@@ -591,12 +590,9 @@
     <string name="workout_zones_title">Heart rate zones</string>
     <string name="workout_stats_ras_title">Readylytics Activity Score</string>
     <string name="workout_stats_history_title">History</string>
-    <string name="sleep_metrics_title">Metrics</string>
-
+ 
     
     <string name="card_title_sleep_score">Sleep score</string>
-    <string name="sleep_score_gauge_title">Sleep Score</string>
-    <string name="sleep_time_gauge_title">Sleep Time</string>
     <string name="card_title_readiness">Readiness</string>
     <string name="card_title_steps">Steps</string>
     <string name="card_title_hrv">HRV</string>

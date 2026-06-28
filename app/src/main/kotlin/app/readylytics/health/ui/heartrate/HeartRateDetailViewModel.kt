@@ -3,8 +3,8 @@ package app.readylytics.health.ui.heartrate
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.model.HrSample
-import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.di.DefaultDispatcher
+import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.heartrate.HrZoneClassifier
 import app.readylytics.health.domain.preferences.UserPreferencesReader

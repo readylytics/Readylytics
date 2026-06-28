@@ -19,10 +19,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.feature.insights.R
 import app.readylytics.health.domain.insights.detail.InsightConfidence
 import app.readylytics.health.domain.insights.detail.InsightDetailContent
 import app.readylytics.health.domain.insights.detail.InsightDetailType
+import app.readylytics.health.feature.insights.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

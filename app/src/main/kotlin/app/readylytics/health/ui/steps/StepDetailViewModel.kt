@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.padToRange
-import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.di.DefaultDispatcher
+import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository

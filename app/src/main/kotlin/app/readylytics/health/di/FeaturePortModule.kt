@@ -82,7 +82,5 @@ abstract class FeaturePortModule {
 
     @Binds
     @Singleton
-    abstract fun bindHistoricalResyncController(
-        impl: HistoricalResyncControllerImpl,
-    ): HistoricalResyncController
+    abstract fun bindHistoricalResyncController(impl: HistoricalResyncControllerImpl): HistoricalResyncController
 }

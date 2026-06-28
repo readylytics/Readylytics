@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.ui.model.HrSample
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepStageData
+import app.readylytics.health.feature.sleep.SleepStagesChart
 import app.readylytics.health.ui.workouts.TrimpBreakdownChart
 import org.junit.Rule
 import org.junit.Test

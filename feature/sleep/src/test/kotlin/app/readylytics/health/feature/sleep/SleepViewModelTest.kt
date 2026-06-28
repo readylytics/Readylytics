@@ -1,13 +1,13 @@
-package app.readylytics.health.ui.sleep
+package app.readylytics.health.feature.sleep
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
@@ -15,7 +15,7 @@ import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.sync.ForegroundSyncController
+import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -45,10 +45,10 @@ class SleepViewModelTest {
     private val dailyMetricsRepository: DailyMetricsRepository = mockk(relaxed = true)
     private val sleepSessionRepository: SleepSessionRepository = mockk(relaxed = true)
     private val heartRateRepository: HeartRateRepository = mockk(relaxed = true)
-    private val settingsRepo: SettingsRepository = mockk(relaxed = true)
-    private val selectedDateRepository: SelectedDateRepository = mockk(relaxed = true)
+    private val settingsRepo: UserPreferencesReader = mockk(relaxed = true)
+    private val selectedDateRepository: SelectedDateStore = mockk(relaxed = true)
     private val circadianRepo: CircadianConsistencyRepository = mockk(relaxed = true)
-    private val foregroundSyncController: ForegroundSyncController = mockk(relaxed = true)
+    private val foregroundSyncController: ForegroundSyncGateway = mockk(relaxed = true)
     private val savedStateHandle: SavedStateHandle = mockk(relaxed = true)
 
     private val selectedDateFlow = MutableStateFlow(LocalDate.of(2026, 6, 11))

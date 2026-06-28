@@ -7,10 +7,10 @@ import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.data.preferences.CircadianThresholdPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.sync.HealthDataRefresh
 import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.domain.sync.HistoricalResyncState
-import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest

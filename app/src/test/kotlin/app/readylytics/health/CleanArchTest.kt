@@ -64,6 +64,7 @@ class CleanArchTest {
                 "app.readylytics.health.data.preferences.SyncPreference",
                 "app.readylytics.health.data.preferences.BackgroundSyncInterval",
                 "app.readylytics.health.data.preferences.FallbackThemeColor",
+                "app.readylytics.health.data.preferences.BackupSchedule",
             )
         val violations =
             Konsist

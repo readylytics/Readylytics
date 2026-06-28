@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.components
+package app.readylytics.health.feature.sleep
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
@@ -28,8 +28,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.R
 import app.readylytics.health.domain.repository.SleepSessionData
+import app.readylytics.health.feature.sleep.R
 
 private data class StageSegment(
     val label: String,

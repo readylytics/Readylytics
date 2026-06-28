@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.sleep
+package app.readylytics.health.feature.sleep
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel

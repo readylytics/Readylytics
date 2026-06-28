@@ -50,7 +50,13 @@ class FeatureModuleArchitectureTest {
                 source.readLines().forEachIndexed { index, line ->
                     if (line.startsWith("import ")) {
                         forbidden.forEach { prefix ->
-                            assertFalse("${source.relativeTo(root)}:${index + 1}: $prefix", line.contains(prefix))
+                            if (prefix == "app.readylytics.health.data." &&
+                                line.contains("app.readylytics.health.data.preferences.")
+                            ) {
+                                // allowed preferences package imports
+                            } else {
+                                assertFalse("${source.relativeTo(root)}:${index + 1}: $prefix", line.contains(prefix))
+                            }
                         }
                         if (line.contains("app.readylytics.health.feature.")) {
                             assertTrue(

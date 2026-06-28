@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.components
+package app.readylytics.health.feature.sleep
 
 import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.RepeatMode
@@ -47,17 +47,18 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.R
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
 import app.readylytics.health.domain.model.SleepStageType
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepStageData
+import app.readylytics.health.feature.sleep.R
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlin.math.roundToInt
+import app.readylytics.health.core.ui.R as CoreUiR
 
 private val LANE_HEIGHT = 56.dp
 private val SHAPE_INSET = 4.dp
@@ -328,9 +329,9 @@ fun SleepStagesChart(
             }
 
             val density = LocalDensity.current
-            val prevActionLabel = stringResource(R.string.action_previous_point)
-            val nextActionLabel = stringResource(R.string.action_next_point)
-            val clearActionLabel = stringResource(R.string.action_clear_selection)
+            val prevActionLabel = stringResource(CoreUiR.string.action_previous_point)
+            val nextActionLabel = stringResource(CoreUiR.string.action_next_point)
+            val clearActionLabel = stringResource(CoreUiR.string.action_clear_selection)
             val customActionsList =
                 remember(selectedSegment, mergedTimeline, session, chartWidth, density) {
                     val list = mutableListOf<CustomAccessibilityAction>()
@@ -407,7 +408,7 @@ fun SleepStagesChart(
                     val stageName = stageDisplayName(sel.stage.stageType)
                     val durationStr = formatStageDuration(sel.stage.durationMinutes)
                     stringResource(R.string.chart_accessibility_selected_sleep_stage, stageName, durationStr, timeStr)
-                } ?: stringResource(R.string.chart_accessibility_no_selection)
+                } ?: stringResource(CoreUiR.string.chart_accessibility_no_selection)
 
             Column(
                 modifier =

@@ -57,4 +57,15 @@
     <string name="date_switcher_label_today">Today</string>
     <string name="date_switcher_label_yesterday">Yesterday</string>
     <string name="date_switcher_label_selected">Selected date</string>
-    </resources>
+    <string name="tooltip_circadian_score">Measures how regular your sleep schedule is.\n\nHigh
+        consistency stabilizes your internal clock, improving deep sleep and energy levels.\n\n• ≥
+        80%%: Optimal\n• 60–79%%: Neutral\n• 40–59%%: Warning\n• &lt; 40%%: Poor\n\nConsistency
+        Window: ±%1$d min grace period before score drops.</string>
+    <string name="spo2_calibrating">Calibrating</string>
+    <string name="label_circadian_consistency">Circadian consistency</string>
+    <string name="label_circadian_median">Median: %1$s→%2$s</string>
+    <string name="chart_accessibility_no_selection">No point selected</string>
+    <string name="action_previous_point">Previous point</string>
+    <string name="action_next_point">Next point</string>
+    <string name="action_clear_selection">Clear selection</string>
+</resources>

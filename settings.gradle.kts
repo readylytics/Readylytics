@@ -35,6 +35,7 @@ rootProject.name = "Readylytics"
 include(":app")
 include(":feature:about")
 include(":feature:insights")
+include(":feature:sleep")
 include(":core:model")
 include(":core:scoring")
 include(":core:database")

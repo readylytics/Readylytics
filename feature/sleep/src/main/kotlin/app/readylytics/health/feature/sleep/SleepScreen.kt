@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.sleep
+package app.readylytics.health.feature.sleep
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,7 +27,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.readylytics.health.R
 import app.readylytics.health.core.designsystem.spacing
 import app.readylytics.health.core.ui.common.DateFormatUtils
 import app.readylytics.health.core.ui.common.MetricCardSkeleton
@@ -37,6 +36,7 @@ import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.formatRoundedScoreDelta
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.ChartDefaults
+import app.readylytics.health.core.ui.components.CircadianConsistencyCard
 import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.MetricCard
 import app.readylytics.health.core.ui.components.SectionHeader
@@ -48,10 +48,10 @@ import app.readylytics.health.domain.model.deepSleepStatus
 import app.readylytics.health.domain.model.efficiencyStatus
 import app.readylytics.health.domain.model.remSleepStatus
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
+import app.readylytics.health.domain.scoring.toStatus
+import app.readylytics.health.domain.scoring.toTimeString
 import app.readylytics.health.domain.util.roundToPercentInt
-import app.readylytics.health.ui.components.CircadianConsistencyCard
-import app.readylytics.health.ui.components.SleepArchitectureBar
-import app.readylytics.health.ui.components.SleepStagesChart
+import app.readylytics.health.feature.sleep.R
 
 @Composable
 fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {
@@ -294,8 +294,42 @@ private fun MetricsGrid(
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
         ) {
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                val scoreText =
+                    when (circadianResult) {
+                        is CircadianConsistencyResult.Calibrating ->
+                            stringResource(
+                                app.readylytics.health.core.ui.R.string.spo2_calibrating,
+                            )
+                        is CircadianConsistencyResult.MissingData -> "—"
+                        is CircadianConsistencyResult.Ready -> "${circadianResult.score.roundToPercentInt()}%"
+                    }
+                val windowText =
+                    when (circadianResult) {
+                        is CircadianConsistencyResult.Calibrating,
+                        is CircadianConsistencyResult.MissingData,
+                        -> null
+                        is CircadianConsistencyResult.Ready ->
+                            stringResource(
+                                app.readylytics.health.core.ui.R.string.label_circadian_median,
+                                circadianResult.medianBedtimeMinutes.toTimeString(),
+                                circadianResult.medianWakeMinutes.toTimeString(),
+                            )
+                    }
+                val thresholdMinutes =
+                    when (circadianResult) {
+                        is CircadianConsistencyResult.Calibrating,
+                        is CircadianConsistencyResult.MissingData,
+                        -> 30
+                        is CircadianConsistencyResult.Ready -> circadianResult.thresholdMinutes
+                    }
+                val tooltipText =
+                    stringResource(app.readylytics.health.core.ui.R.string.tooltip_circadian_score, thresholdMinutes)
+
                 CircadianConsistencyCard(
-                    result = circadianResult,
+                    scoreText = scoreText,
+                    windowText = windowText,
+                    status = circadianResult.toStatus(),
+                    tooltipText = tooltipText,
                     onClick = null,
                 )
             }

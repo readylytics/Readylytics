@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.sleep
+package app.readylytics.health.feature.sleep
 
 import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.RepeatMode

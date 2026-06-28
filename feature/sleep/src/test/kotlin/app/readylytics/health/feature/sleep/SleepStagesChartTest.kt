@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.components
+package app.readylytics.health.feature.sleep
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

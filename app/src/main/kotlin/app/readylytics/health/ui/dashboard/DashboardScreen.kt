@@ -59,6 +59,7 @@ fun DashboardRoute(
     onNavigateToBodyFat: () -> Unit = {},
     onNavigateToBloodPressure: () -> Unit = {},
     onNavigateToVitals: () -> Unit = {},
+    insightsCard: @Composable (DashboardUiState, Boolean, (InsightType) -> Unit, () -> Unit) -> Unit,
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -98,6 +99,7 @@ fun DashboardRoute(
         onResetToDefaults = viewModel::onResetToDefaults,
         onDismissInsight = { viewModel.onEvent(DashboardEvent.DismissInsight(it)) },
         onRestoreInsights = { viewModel.onEvent(DashboardEvent.RestoreInsights) },
+        insightsCard = insightsCard,
     )
 }
 
@@ -129,6 +131,7 @@ fun DashboardScreen(
     earliestDate: LocalDate? = null,
     onDismissInsight: (InsightType) -> Unit = {},
     onRestoreInsights: () -> Unit = {},
+    insightsCard: @Composable (DashboardUiState, Boolean, (InsightType) -> Unit, () -> Unit) -> Unit,
 ) {
     val summary = uiState.summary
     val scope = rememberCoroutineScope()
@@ -232,6 +235,7 @@ fun DashboardScreen(
                                     isLoading = uiState.isComputingMetrics,
                                     onDismissInsight = onDismissInsight,
                                     onRestoreInsights = onRestoreInsights,
+                                    insightsCard = insightsCard,
                                 ),
                             )
                         }

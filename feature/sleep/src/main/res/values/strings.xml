@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
+    <string name="tooltip_deep_sleep">Time in Stage 3 (Physical repair).</string>
+    <string name="tooltip_rem_sleep">Time in Rapid Eye Movement.</string>
+    <string name="tooltip_sleep_score">Total quality of rest based on duration and cycles.\n\n•
+        80–100: Optimal\n• 60–79: Fair\n• &lt; 60: Poor</string>
+    <string name="tooltip_sleep_rhr">Average heart rate during sleep.\nTarget: lower or equal to
+        your 30-day rolling average. (Lower = Recovered)</string>
+    <string name="tooltip_sleep_rhr_baseline">\n\nBaseline: %1$d bpm %2$s (%3$d bpm)</string>
+    <string name="tooltip_sleep_rhr_no_baseline">\n\nNot enough data to calculate baseline.</string>
+    <string name="tooltip_sleep_hrv">Variation between heartbeats in milliseconds.\nTarget: Within
+        or above your 30-day rolling average. (Higher = Recovered)</string>
+    <string name="tooltip_sleep_hrv_baseline">\n\nBaseline: %1$d ms %2$s (%3$d ms)</string>
+    <string name="tooltip_sleep_hrv_baseline_no_today">\n\nBaseline: %1$d ms (today\'s HRV not yet
+        available)</string>
+    <string name="tooltip_sleep_hrv_no_baseline">\n\nNot enough data to calculate baseline.</string>
+    <string name="tooltip_sleep_hrv_diagnostics">\n\nDiagnostics:\n• Z-score: %1$s\n• σ (ln-scale):
+        %2$s</string>
+    <string name="tooltip_sleep_duration">Total time asleep last night.\n\nGoal: %1$s</string>
+
+    <string name="sleep_duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="sleep_duration_minutes_only">%1$dm</string>
+    <string name="sleep_duration_hours_only">%1$dh</string>
+    <string name="sleep_timeline_title">Sleep timeline</string>
+    <string name="sleep_breakdown_title">Sleep breakdown</string>
+    <string name="sleep_stage_awake">Awake</string>
+    <string name="sleep_stage_rem">REM</string>
+    <string name="sleep_stage_light">Light</string>
+    <string name="sleep_stage_deep">Deep</string>
+    <string name="sleep_breakdown_row_format">%1$s • %2$s</string>
+    <string name="sleep_trend_section_title">Sleep durations and bedtimes</string>
+    <string name="sleep_trend_title">Sleep trend</string>
+    <string name="sleep_trend_legend_window">Sleep window</string>
+    <string name="sleep_trend_legend_duration">Sleep duration</string>
+    <string name="sleep_trend_tooltip_duration_format">Duration: %1$s</string>
+    <string name="sleep_trend_tooltip_bedtime_format">Bedtime: %1$s - %2$s</string>
+
+    <string name="chart_accessibility_sleep_stages_summary">Sleep stages timeline chart showing Awake, REM, Light, and Deep sleep segments.</string>
+    <string name="chart_accessibility_sleep_architecture_summary">Sleep architecture bar showing proportion of sleep spent in Deep, REM, Light, and Awake stages.</string>
+    <string name="chart_accessibility_selected_sleep_stage">Selected: %1$s stage, duration %2$s, starting at %3$s</string>
+
+    <string name="card_title_sleep_efficiency">Sleep Efficiency</string>
+    <string name="card_tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
+    <string name="card_goal_sleep_efficiency">Goal: &gt;85%</string>
+    <string name="card_efficiency_format">%1$s%%</string>
+
+    <string name="card_title_deep_sleep">Deep Sleep</string>
+    <string name="card_target_deep_sleep">Target: 15–25%</string>
+    <string name="card_title_rem_sleep">REM Sleep</string>
+    <string name="card_target_rem_sleep">Target: 20–25%</string>
+    <string name="message_sleep_no_data_calibrating">No data — calibrating</string>
+    <string name="sleep_metrics_title">Metrics</string>
+    <string name="sleep_score_gauge_title">Sleep Score</string>
+    <string name="sleep_time_gauge_title">Sleep Time</string>
+</resources>

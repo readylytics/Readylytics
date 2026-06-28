@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.sleep
+package app.readylytics.health.feature.sleep
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember

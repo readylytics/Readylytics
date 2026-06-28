@@ -2,12 +2,12 @@ package app.readylytics.health.ui.dashboard
 
 import androidx.compose.runtime.Immutable
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
-import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
@@ -185,9 +185,7 @@ fun createDashboardCardStateFlow(
  * - Sync progress and completion state
  * - Background work status
  */
-fun createDashboardRealtimeStateFlow(
-    foregroundSyncController: ForegroundSyncGateway,
-): Flow<DashboardRealtimeState> =
+fun createDashboardRealtimeStateFlow(foregroundSyncController: ForegroundSyncGateway): Flow<DashboardRealtimeState> =
     combine(
         foregroundSyncController.isSyncing,
         foregroundSyncController.recalcProgress,
