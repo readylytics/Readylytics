@@ -106,7 +106,7 @@ restore_partial_success_message
 - Inspect: `app/build.gradle.kts`
 - Inspect: `internal-docs/DATA_FLOW.md`
 
-- [ ] **Step 1: Verify prerequisite tasks and clean worktree**
+- [x] **Step 1: Verify prerequisite tasks and clean worktree**
 
 Run:
 
@@ -117,7 +117,7 @@ Select-String -Path docs\superpowers\plans\2026-06-26-phase-4-long-term-hardenin
 
 Expected: worktree clean; convention-plugin and accessibility tasks show completed checkboxes. Stop if either prerequisite remains incomplete.
 
-- [ ] **Step 2: Run pre-move verification baseline**
+- [x] **Step 2: Run pre-move verification baseline**
 
 Run:
 
@@ -132,7 +132,7 @@ Run:
 
 Expected: all commands pass before topology work starts.
 
-- [ ] **Step 3: Measure three clean and three incremental builds**
+- [x] **Step 3: Measure three clean and three incremental builds**
 
 Run each timed command three times and record elapsed seconds:
 
@@ -144,7 +144,7 @@ Measure-Command { .\gradlew :app:compileDebugKotlin }
 
 For incremental measurement, touch `app/src/main/kotlin/app/readylytics/health/ui/about/AboutComponents.kt`, run `:app:compileDebugKotlin`, then restore timestamp/content without changing Git state.
 
-- [ ] **Step 4: Write baseline document**
+- [x] **Step 4: Write baseline document**
 
 Create `internal-docs/FEATURE_MODULARIZATION_BASELINE.md` with this structure and measured values:
 
@@ -178,7 +178,7 @@ Record all three clean-build samples, median clean time, all three incremental s
 - Feature modules: none
 ```
 
-- [ ] **Step 5: Commit baseline**
+- [x] **Step 5: Commit baseline**
 
 ```powershell
 git add internal-docs/FEATURE_MODULARIZATION_BASELINE.md
@@ -194,17 +194,9 @@ git commit -m "docs: capture feature modularization baseline" -m "Constraint: Pr
 - Create: `app/src/test/kotlin/app/readylytics/health/architecture/ExpectedFeatureModules.kt`
 - Modify: `app/src/test/kotlin/app/readylytics/health/CleanArchTest.kt`
 
-- [ ] **Step 1: Write scanner tests using an isolated fixture**
+- [x] **Step 1: Write scanner tests using an isolated fixture**
 
 Create `ExpectedFeatureModules.kt`:
-
-```kotlin
-package app.readylytics.health.architecture
-
-internal val expectedFeatureModules: Set<String> = emptySet()
-```
-
-Create `FeatureModuleArchitectureTest.kt`:
 
 ```kotlin
 package app.readylytics.health.architecture
@@ -272,7 +264,7 @@ class FeatureModuleArchitectureTest {
 }
 ```
 
-- [ ] **Step 2: Run scanner tests**
+- [x] **Step 2: Run scanner tests**
 
 Run:
 
@@ -282,11 +274,11 @@ Run:
 
 Expected: PASS with no feature modules; fixture-independent rules are now active for every later module.
 
-- [ ] **Step 3: Extend clean-architecture source rule**
+- [x] **Step 3: Extend clean-architecture source rule**
 
 In `CleanArchTest.kt`, add forbidden feature imports for app data/domain layers and forbid `app.readylytics.health.feature` imports outside `ui/navigation`, `ui/scaffold`, activities, and DI composition. Keep app shell as sole feature composition point.
 
-- [ ] **Step 4: Run architecture suite**
+- [x] **Step 4: Run architecture suite**
 
 ```powershell
 .\gradlew :app:testDebugUnitTest --tests app.readylytics.health.CleanArchTest --tests app.readylytics.health.architecture.FeatureModuleArchitectureTest
@@ -294,7 +286,7 @@ In `CleanArchTest.kt`, add forbidden feature imports for app data/domain layers 
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit boundary enforcement**
+- [x] **Step 5: Commit boundary enforcement**
 
 ```powershell
 git add app/src/test/kotlin/app/readylytics/health/CleanArchTest.kt app/src/test/kotlin/app/readylytics/health/architecture
@@ -311,7 +303,7 @@ git commit -m "test: enforce feature module boundaries" -m "Constraint: Permit f
 - Create: `build-logic/src/main/kotlin/readylytics.compose-feature-conventions.gradle.kts`
 - Create: `app/src/test/kotlin/app/readylytics/health/build/FeatureConventionPluginPresenceTest.kt`
 
-- [ ] **Step 1: Write failing presence test**
+- [x] **Step 1: Write failing presence test**
 
 ```kotlin
 package app.readylytics.health.build
@@ -338,7 +330,7 @@ class FeatureConventionPluginPresenceTest {
 }
 ```
 
-- [ ] **Step 2: Run test and verify failure**
+- [x] **Step 2: Run test and verify failure**
 
 ```powershell
 .\gradlew :app:testDebugUnitTest --tests app.readylytics.health.build.FeatureConventionPluginPresenceTest
@@ -346,7 +338,7 @@ class FeatureConventionPluginPresenceTest {
 
 Expected: FAIL because both convention scripts are absent.
 
-- [ ] **Step 3: Add plugin artifacts to build logic**
+- [x] **Step 3: Add plugin artifacts to build logic**
 
 Append to `build-logic/build.gradle.kts` dependencies:
 
@@ -356,7 +348,7 @@ implementation("com.google.dagger:hilt-android-gradle-plugin:${libs.versions.hil
 implementation("org.jlleitschuh.gradle:ktlint-gradle:${libs.versions.ktlint.get()}")
 ```
 
-- [ ] **Step 4: Create Compose library convention**
+- [x] **Step 4: Create Compose library convention**
 
 Create `readylytics.compose-library-conventions.gradle.kts`:
 
@@ -390,7 +382,7 @@ dependencies {
 }
 ```
 
-- [ ] **Step 5: Create feature convention**
+- [x] **Step 5: Create feature convention**
 
 Create `readylytics.compose-feature-conventions.gradle.kts`:
 
@@ -427,7 +419,7 @@ dependencies {
 }
 ```
 
-- [ ] **Step 6: Verify convention build and presence test**
+- [x] **Step 6: Verify convention build and presence test**
 
 ```powershell
 .\gradlew :build-logic:build
@@ -436,7 +428,7 @@ dependencies {
 
 Expected: PASS.
 
-- [ ] **Step 7: Index and commit**
+- [x] **Step 7: Index and commit**
 
 ```powershell
 codegraph index
