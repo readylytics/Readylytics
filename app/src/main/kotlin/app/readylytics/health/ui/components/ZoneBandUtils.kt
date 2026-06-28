@@ -6,8 +6,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import app.readylytics.health.domain.model.HealthZone
 import app.readylytics.health.domain.model.ZoneBand
-import app.readylytics.health.ui.theme.ExtendedColors
-import app.readylytics.health.ui.theme.LocalExtendedColors
+import app.readylytics.health.core.designsystem.ExtendedColors
+import app.readylytics.health.core.designsystem.LocalExtendedColors
 
 // Single source of truth for chart zone-background alpha values.
 // Edit here to adjust opacity globally across all Canvas and Vico charts.

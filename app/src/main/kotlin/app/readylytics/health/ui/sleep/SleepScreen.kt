@@ -51,7 +51,7 @@ import app.readylytics.health.ui.components.SleepStagesChart
 import app.readylytics.health.ui.components.StatusLegend
 import app.readylytics.health.ui.components.TrendCard
 import app.readylytics.health.ui.dashboard.DateSwitcher
-import app.readylytics.health.ui.theme.spacing
+import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 fun SleepRoute(viewModel: SleepViewModel = hiltViewModel()) {

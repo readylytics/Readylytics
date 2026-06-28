@@ -60,8 +60,8 @@ import app.readylytics.health.ui.settings.data.DataManagementSection
 import app.readylytics.health.ui.settings.data.DataSourceSettingsSection
 import app.readylytics.health.ui.settings.data.SyncSettingsSection
 import app.readylytics.health.ui.settings.physiologyprofile.HeartRateZoneSection
-import app.readylytics.health.ui.theme.calculateSecondarySeedColor
-import app.readylytics.health.ui.theme.calculateTertiarySeedColor
+import app.readylytics.health.core.designsystem.calculateSecondarySeedColor
+import app.readylytics.health.core.designsystem.calculateTertiarySeedColor
 import kotlinx.coroutines.flow.collectLatest
 
 @Suppress("DEPRECATION")

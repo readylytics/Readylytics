@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.theme
+package app.readylytics.health.core.designsystem
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -10,8 +10,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.readylytics.health.data.preferences.AppTheme
 import app.readylytics.health.data.preferences.FallbackThemeColor
 import app.readylytics.health.data.preferences.SettingsDefaults
@@ -71,35 +69,14 @@ val LocalExtendedColors =
 @Composable
 fun FitDashboardTheme(
     appTheme: AppTheme = AppTheme.SYSTEM,
-    viewModel: ThemeViewModel = hiltViewModel(),
+    dynamicColor: Boolean = true,
+    fallbackThemeColor: FallbackThemeColor = FallbackThemeColor.GREEN_PERFORMANCE,
+    isCustomPaletteEnabled: Boolean = false,
+    customSecondaryColor: Long = 0L,
+    customTertiaryColor: Long = 0L,
+    customPrimaryColor: Long = SettingsDefaults.CUSTOM_PRIMARY_COLOR,
     content: @Composable () -> Unit,
 ) {
-    val dynamicColor = viewModel.dynamicColorFlow.collectAsStateWithLifecycle(initialValue = true).value
-    val fallbackThemeColor =
-        viewModel.fallbackThemeColorFlow
-            .collectAsStateWithLifecycle(
-                initialValue = FallbackThemeColor.GREEN_PERFORMANCE,
-            ).value
-    val isCustomPaletteEnabled =
-        viewModel.isCustomPaletteEnabledFlow
-            .collectAsStateWithLifecycle(
-                initialValue = false,
-            ).value
-    val customSecondaryColor =
-        viewModel.customSecondaryColorFlow
-            .collectAsStateWithLifecycle(
-                initialValue = 0L,
-            ).value
-    val customTertiaryColor =
-        viewModel.customTertiaryColorFlow
-            .collectAsStateWithLifecycle(
-                initialValue = 0L,
-            ).value
-    val customPrimaryColor =
-        viewModel.customPrimaryColorFlow
-            .collectAsStateWithLifecycle(
-                initialValue = SettingsDefaults.CUSTOM_PRIMARY_COLOR,
-            ).value
 
     val darkTheme =
         when (appTheme) {

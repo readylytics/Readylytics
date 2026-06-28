@@ -30,7 +30,7 @@ import app.readylytics.health.ui.components.InvisibleMarker
 import app.readylytics.health.ui.components.VicoChartTooltipOverlay
 import app.readylytics.health.ui.components.ZoneBandDecoration
 import app.readylytics.health.ui.components.zoneBandColors
-import app.readylytics.health.ui.theme.LocalExtendedColors
+import app.readylytics.health.core.designsystem.LocalExtendedColors
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState

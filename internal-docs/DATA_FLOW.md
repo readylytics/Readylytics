@@ -13,7 +13,7 @@ and out to the **Jetpack Compose** UI.
 
 Paths below are rooted at the project root. Module prefixes are explicit, for example
 `app/src/main/...`, `core/model/src/main/...`, `core/scoring/src/main/...`,
-`core/database/src/main/...`, and `core/healthconnect/src/main/...`.
+`core/database/src/main/...`, `core/healthconnect/src/main/...`, and `core/designsystem/src/main/...`.
 
 ---
 

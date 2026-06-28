@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.theme
+package app.readylytics.health.ui.scaffold
 
 import androidx.lifecycle.ViewModel
 import app.readylytics.health.data.preferences.FallbackThemeColor

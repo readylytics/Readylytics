@@ -32,7 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.ui.theme.LocalExtendedColors
+import app.readylytics.health.core.designsystem.LocalExtendedColors
 
 data class StatusItem(
     val label: String,

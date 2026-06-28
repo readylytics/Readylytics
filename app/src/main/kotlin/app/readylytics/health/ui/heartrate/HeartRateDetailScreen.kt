@@ -40,7 +40,7 @@ import app.readylytics.health.ui.common.MetricCardSkeleton
 import app.readylytics.health.ui.common.SkeletonCard
 import app.readylytics.health.ui.components.HrTimelineChart
 import app.readylytics.health.ui.components.SectionHeader
-import app.readylytics.health.ui.theme.LocalExtendedColors
+import app.readylytics.health.core.designsystem.LocalExtendedColors
 import java.time.ZoneId
 
 @Composable

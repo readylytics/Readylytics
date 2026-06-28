@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.theme
+package app.readylytics.health.core.designsystem
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme

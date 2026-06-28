@@ -35,7 +35,7 @@ import app.readylytics.health.R
 import app.readylytics.health.domain.model.ZoneBand
 import app.readylytics.health.ui.common.ChartUtils
 import app.readylytics.health.ui.common.DailyDataPoint
-import app.readylytics.health.ui.theme.LocalExtendedColors
+import app.readylytics.health.core.designsystem.LocalExtendedColors
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState

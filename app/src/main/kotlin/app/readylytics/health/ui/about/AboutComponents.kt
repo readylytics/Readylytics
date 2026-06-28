@@ -17,7 +17,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.ui.theme.spacing
+import app.readylytics.health.core.designsystem.spacing
 
 @Composable
 fun SectionHeader(text: String) {
