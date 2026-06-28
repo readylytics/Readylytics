@@ -129,7 +129,7 @@ abstract class RepositoryModule {
     @Singleton
     abstract fun bindCircadianThresholdPreferences(
         impl: app.readylytics.health.data.preferences.DataStoreCircadianThresholdPreferences,
-    ): app.readylytics.health.data.preferences.CircadianThresholdPreferences
+    ): app.readylytics.health.domain.preferences.CircadianThresholdPreferences
 
     @Binds
     @Singleton

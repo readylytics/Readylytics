@@ -1293,11 +1293,11 @@ git commit -m "refactor: extract dashboard feature module" -m "Constraint: Compo
 - Move settings-exclusive strings and resources
 - Modify: `MainNavHost.kt`, module settings/dependencies, expected set, `DATA_FLOW.md`
 
-- [ ] **Step 1: Add `settings` to expected set and verify red**
+- [x] **Step 1: Add `settings` to expected set and verify red**
 
 Run architecture test; expect missing module.
 
-- [ ] **Step 2: Create module**
+- [x] **Step 2: Create module**
 
 ```kotlin
 plugins { id("readylytics.compose-feature-conventions") }
@@ -1309,15 +1309,15 @@ dependencies {
 }
 ```
 
-- [ ] **Step 3: Move settings sources and replace infrastructure imports**
+- [x] **Step 3: Move settings sources and replace infrastructure imports**
 
 Rename package to `app.readylytics.health.feature.settings`. Inject categorized settings ports, `HealthDataRefresh`, `HistoricalResyncController`, backup/restore domain services, and domain `EncryptionManager`. No WorkInfo, worker constants, DataStore, concrete settings repository, or HealthSyncUseCase imports remain.
 
-- [ ] **Step 4: Move tests and resources**
+- [x] **Step 4: Move tests and resources**
 
 Move HeartRate, Physiology, Settings, Sleep/Threshold, DataSource, GenderSelector, and ValidatingTextField tests. Update mocks to pure ports. Keep global `SyncViewModel` in app shell.
 
-- [ ] **Step 5: Verify settings behavior and boundaries**
+- [x] **Step 5: Verify settings behavior and boundaries**
 
 ```powershell
 rg -n "androidx\.work|HealthResyncWorker|WorkerScheduler|HealthSyncUseCase|data\.preferences\.SettingsRepository" feature\settings

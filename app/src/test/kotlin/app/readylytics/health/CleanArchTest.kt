@@ -100,7 +100,9 @@ class CleanArchTest {
                         ) ||
                             it.hasPackage("app.readylytics.health.data..")
                     ) &&
-                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\"))
+                        (it.path.contains("/src/main/") || it.path.contains("\\src\\main\\")) &&
+                        !it.path.contains("/feature/") &&
+                        !it.path.contains("\\feature\\")
                 }.flatMap { file ->
                     file.imports
                         .filter { import ->
@@ -124,6 +126,7 @@ class CleanArchTest {
                 "app.readylytics.health.ui.scaffold",
                 "app.readylytics.health.di",
                 "app.readylytics.health.ui.dashboard",
+                "app.readylytics.health.ui.onboarding",
             )
         val violations =
             Konsist

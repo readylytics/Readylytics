@@ -13,12 +13,14 @@ import app.readylytics.health.domain.preferences.SleepSettings
 import app.readylytics.health.domain.preferences.SyncSettings
 import app.readylytics.health.domain.preferences.ThresholdSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.user.UserProfileActions
 import app.readylytics.health.domain.sync.ForegroundSyncController
 import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.HealthDataRefresh
 import app.readylytics.health.domain.sync.HealthDataRefreshAdapter
 import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.domain.sync.HistoricalResyncControllerImpl
+import app.readylytics.health.domain.user.UserUseCase
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -83,4 +85,8 @@ abstract class FeaturePortModule {
     @Binds
     @Singleton
     abstract fun bindHistoricalResyncController(impl: HistoricalResyncControllerImpl): HistoricalResyncController
+
+    @Binds
+    @Singleton
+    abstract fun bindUserProfileActions(impl: UserUseCase): UserProfileActions
 }

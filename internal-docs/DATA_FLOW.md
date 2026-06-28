@@ -395,7 +395,7 @@ ViewModels collect repository flows, fuse them with `combine()`, and expose immu
 `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardFlowIntermediate.kt`,
 `feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardLoadingState.kt`), per-screen
 `*UiState` (`HeartRateDetailUiState`, `VitalsUiState`, `SleepUiState`, `WorkoutsUiState`, …),
-and `ui/settings/SettingsState.kt` (incl. `SyncSettingsState` with resync current/total
+and `feature/settings/src/main/kotlin/app/readylytics/health/feature/settings/SettingsState.kt` (incl. `SyncSettingsState` with resync current/total
 progress).
 
 ### 3.3 Compose render & visualization components
@@ -500,7 +500,7 @@ day offset instead of resetting to zero.
 | `feature/vitals/src/main/kotlin/app/readylytics/health/feature/vitals/overview/VitalsViewModel.kt`         | UI — vitals state                                   | HRV / RHR / SpO2 trends + bands                                                          |
 | `feature/sleep/src/main/kotlin/app/readylytics/health/feature/sleep/SleepViewModel.kt`                      | UI — sleep state                                    | sleep score, stage timeline, sleep window/duration trend data                            |
 | `feature/workouts/src/main/kotlin/app/readylytics/health/feature/workouts/WorkoutsViewModel.kt`             | UI — workouts state                                 | TRIMP / strain / RAS                                                                     |
-| `ui/settings/SettingsState.kt`                                                                             | UI — settings state                                 | `SyncSettingsState` resync progress                                                      |
+| `feature/settings/src/main/kotlin/app/readylytics/health/feature/settings/SettingsState.kt`             | UI — settings state                                 | `SyncSettingsState` resync progress                                                      |
 | `ui/scaffold/MainScaffold.kt`                                                                              | UI — scaffold + banner                              | "Recalculating day X of Y"                                                               |
 | `ui/components/InsightCard.kt`                                                                             | UI — component                                      | dismissible M3 health insight card + slim rerun restore state                            |
 | `ui/components/M3ScoreGaugeCard.kt`                                                                        | UI — visualization                                  | soft arc gauge metric card                                                               |

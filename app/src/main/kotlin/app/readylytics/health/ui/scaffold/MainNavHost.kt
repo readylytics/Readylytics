@@ -37,6 +37,7 @@ import app.readylytics.health.feature.dashboard.getInsightIcon
 import app.readylytics.health.feature.dashboard.toDailyInsightContext
 import app.readylytics.health.feature.insights.InsightDetailRepository
 import app.readylytics.health.feature.insights.InsightDetailSheet
+import app.readylytics.health.feature.settings.SettingsRoute
 import app.readylytics.health.feature.sleep.SleepRoute
 import app.readylytics.health.feature.vitals.bloodpressure.BloodPressureDetailRoute
 import app.readylytics.health.feature.vitals.bodyfat.BodyFatDetailRoute
@@ -48,7 +49,6 @@ import app.readylytics.health.feature.workouts.WorkoutDetailRoute
 import app.readylytics.health.feature.workouts.WorkoutsRoute
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
-import app.readylytics.health.ui.settings.SettingsRoute
 
 @Composable
 fun MainNavHost(

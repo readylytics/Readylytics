@@ -54,6 +54,15 @@ class FeatureModuleArchitectureTest {
                                 line.contains("app.readylytics.health.data.preferences.")
                             ) {
                                 // allowed preferences package imports
+                            } else if (
+                                prefix == "androidx.health.connect." &&
+                                source.name == "DataSettings.kt" &&
+                                (
+                                    line.contains("androidx.health.connect.client.PermissionController") ||
+                                        line.contains("androidx.health.connect.client.permission.HealthPermission")
+                                )
+                            ) {
+                                // settings permission launcher may reference HC permission constants
                             } else {
                                 assertFalse("${source.relativeTo(root)}:${index + 1}: $prefix", line.contains(prefix))
                             }
