@@ -3,11 +3,11 @@ package app.readylytics.health.ui.heartrate
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.model.HrSample
-import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.heartrate.HrZoneClassifier
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.HeartRateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -30,8 +30,8 @@ class HeartRateDetailViewModel
     @Inject
     constructor(
         private val heartRateRepository: HeartRateRepository,
-        private val settingsRepository: SettingsRepository,
-        private val selectedDateRepository: SelectedDateRepository,
+        private val settingsRepository: UserPreferencesReader,
+        private val selectedDateRepository: SelectedDateStore,
         private val clock: Clock,
         @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {

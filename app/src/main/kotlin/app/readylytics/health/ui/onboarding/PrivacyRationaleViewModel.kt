@@ -3,7 +3,7 @@ package app.readylytics.health.ui.onboarding
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.AppTheme
-import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
@@ -14,7 +14,7 @@ import javax.inject.Inject
 class PrivacyRationaleViewModel
     @Inject
     constructor(
-        settingsRepository: SettingsRepository,
+        settingsRepository: UserPreferencesReader,
     ) : ViewModel() {
         val appTheme =
             settingsRepository.userPreferences

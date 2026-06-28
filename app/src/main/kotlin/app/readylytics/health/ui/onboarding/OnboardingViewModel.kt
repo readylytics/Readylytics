@@ -3,9 +3,11 @@ package app.readylytics.health.ui.onboarding
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.data.preferences.PhysiologyProfile
-import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.Result
+import app.readylytics.health.domain.preferences.DeviceSettings
+import app.readylytics.health.domain.preferences.DisplaySettings
+import app.readylytics.health.domain.preferences.PhysiologySettings
 import app.readylytics.health.domain.service.BmiData
 import app.readylytics.health.domain.service.BmiService
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,7 +19,9 @@ import javax.inject.Inject
 class OnboardingViewModel
     @Inject
     constructor(
-        private val settingsRepo: SettingsRepository,
+        private val physiologySettings: PhysiologySettings,
+        private val displaySettings: DisplaySettings,
+        private val deviceSettings: DeviceSettings,
         private val bmiService: BmiService,
     ) : BaseViewModel() {
         fun validateBirthdayDay(day: String): Result<Int> =
@@ -88,12 +92,12 @@ class OnboardingViewModel
             }
 
             viewModelScope.launch {
-                settingsRepo.updateBirthday(birthDate)
-                settingsRepo.updateGender(gender)
-                settingsRepo.updatePhysiologyProfile(physiologyProfile)
-                settingsRepo.updateDynamicColorEnabled(dynamicColorEnabled)
-                settingsRepo.updateUnitSystem(unitSystem)
-                settingsRepo.updateHeight(heightCm)
+                physiologySettings.updateBirthday(birthDate)
+                physiologySettings.updateGender(gender)
+                physiologySettings.updatePhysiologyProfile(physiologyProfile)
+                displaySettings.updateDynamicColorEnabled(dynamicColorEnabled)
+                displaySettings.updateUnitSystem(unitSystem)
+                physiologySettings.updateHeight(heightCm)
                 onComplete()
             }
         }
@@ -103,7 +107,7 @@ class OnboardingViewModel
             onComplete: () -> Unit,
         ) {
             viewModelScope.launch {
-                settingsRepo.updatePrimaryDevice(deviceName)
+                deviceSettings.updatePrimaryDevice(deviceName)
                 onComplete()
             }
         }

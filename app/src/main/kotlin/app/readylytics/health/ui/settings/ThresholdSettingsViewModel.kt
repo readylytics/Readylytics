@@ -5,8 +5,9 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.R
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.data.preferences.CircadianThresholdPreferences
-import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.circadian.CircadianThresholdValue
+import app.readylytics.health.domain.preferences.ThresholdSettings
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.util.logE
 import app.readylytics.health.domain.validation.SettingsValidators
@@ -25,13 +26,14 @@ import javax.inject.Inject
 class ThresholdSettingsViewModel
     @Inject
     constructor(
-        private val settingsRepo: SettingsRepository,
+        private val settingsReader: UserPreferencesReader,
+        private val thresholdSettings: ThresholdSettings,
         private val scoringRepository: ScoringRepository,
         private val circadianThresholdPreferences: CircadianThresholdPreferences,
     ) : ViewModel() {
         val uiState: StateFlow<ThresholdSettingsState> =
             combine(
-                settingsRepo.userPreferences,
+                settingsReader.userPreferences,
                 circadianThresholdPreferences.overrideMinutesFlow,
             ) { prefs, decryptedOverride ->
                 ThresholdSettingsState(
@@ -72,33 +74,33 @@ class ThresholdSettingsViewModel
                 is SettingsEvent.HrvOptimalThresholdChanged -> {
                     val validation = SettingsValidators.HRV_OPTIMAL_THRESHOLD_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
-                        viewModelScope.launch { settingsRepo.updateHrvOptimalThreshold(value = event.value) }
+                        viewModelScope.launch { thresholdSettings.updateHrvOptimalThreshold(value = event.value) }
                     }
                 }
                 is SettingsEvent.HrvWarningThresholdChanged -> {
                     val validation = SettingsValidators.HRV_WARNING_THRESHOLD_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
-                        viewModelScope.launch { settingsRepo.updateHrvWarningThreshold(value = event.value) }
+                        viewModelScope.launch { thresholdSettings.updateHrvWarningThreshold(value = event.value) }
                     }
                 }
                 is SettingsEvent.RhrOptimalThresholdChanged -> {
                     val validation = SettingsValidators.RHR_OPTIMAL_THRESHOLD_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
-                        viewModelScope.launch { settingsRepo.updateRhrOptimalThreshold(value = event.value) }
+                        viewModelScope.launch { thresholdSettings.updateRhrOptimalThreshold(value = event.value) }
                     }
                 }
                 is SettingsEvent.RhrWarningThresholdChanged -> {
                     val validation = SettingsValidators.RHR_WARNING_THRESHOLD_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
-                        viewModelScope.launch { settingsRepo.updateRhrWarningThreshold(value = event.value) }
+                        viewModelScope.launch { thresholdSettings.updateRhrWarningThreshold(value = event.value) }
                     }
                 }
                 is SettingsEvent.ConsistencyThresholdChanged ->
-                    viewModelScope.launch { settingsRepo.updateConsistencyThresholdMinutes(minutes = event.minutes) }
+                    viewModelScope.launch { thresholdSettings.updateConsistencyThresholdMinutes(minutes = event.minutes) }
                 is SettingsEvent.ConsistencyEvaluationDaysChanged ->
-                    viewModelScope.launch { settingsRepo.updateConsistencyEvaluationDays(days = event.days) }
+                    viewModelScope.launch { thresholdSettings.updateConsistencyEvaluationDays(days = event.days) }
                 is SettingsEvent.ConsistencyBaselineDaysChanged ->
-                    viewModelScope.launch { settingsRepo.updateConsistencyBaselineDays(days = event.days) }
+                    viewModelScope.launch { thresholdSettings.updateConsistencyBaselineDays(days = event.days) }
                 is SettingsEvent.CircadianThresholdOverrideChanged -> {
                     viewModelScope.launch {
                         val previousValue = consolidatedState.value.circadianThresholdOverride

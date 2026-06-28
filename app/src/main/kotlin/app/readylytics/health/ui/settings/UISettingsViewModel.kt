@@ -3,9 +3,10 @@ package app.readylytics.health.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.data.preferences.FallbackThemeColor
-import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.DisplaySettings
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.scoring.TrimpModel
-import app.readylytics.health.domain.sync.HealthSyncUseCase
+import app.readylytics.health.domain.sync.HealthDataRefresh
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,8 +22,9 @@ import javax.inject.Inject
 class UISettingsViewModel
     @Inject
     constructor(
-        private val settingsRepo: SettingsRepository,
-        private val healthSyncUseCase: HealthSyncUseCase,
+        private val settingsRepo: UserPreferencesReader,
+        private val displaySettings: DisplaySettings,
+        private val healthDataRefresh: HealthDataRefresh,
     ) : ViewModel() {
         // Internal property to allow overriding in tests
         var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
@@ -58,20 +60,20 @@ class UISettingsViewModel
         fun onEvent(event: SettingsEvent) {
             when (event) {
                 is SettingsEvent.AppThemeChanged ->
-                    viewModelScope.launch { settingsRepo.updateAppTheme(theme = event.theme) }
+                    viewModelScope.launch { displaySettings.updateAppTheme(theme = event.theme) }
                 is SettingsEvent.DynamicColorEnabledChanged ->
-                    viewModelScope.launch { settingsRepo.updateDynamicColorEnabled(enabled = event.enabled) }
+                    viewModelScope.launch { displaySettings.updateDynamicColorEnabled(enabled = event.enabled) }
                 is SettingsEvent.FallbackThemeColorChanged ->
                     viewModelScope.launch {
-                        settingsRepo.updateFallbackThemeColor(color = event.color)
-                        settingsRepo.updateCustomPrimaryColor(color = event.color.seedColor)
+                        displaySettings.updateFallbackThemeColor(color = event.color)
+                        displaySettings.updateCustomPrimaryColor(color = event.color.seedColor)
                     }
                 is SettingsEvent.RasScalingFactorChanged -> {
                     val validation = SettingsValidators.RAS_SCALING_FACTOR_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
-                            settingsRepo.updateRasScalingFactor(value = event.value)
-                            healthSyncUseCase.sync()
+                            displaySettings.updateRasScalingFactor(value = event.value)
+                            healthDataRefresh.refreshAffectedWindow()
                         }
                     }
                 }
@@ -79,30 +81,30 @@ class UISettingsViewModel
                     val validation = SettingsValidators.STEP_GOAL_RULE.validate(event.steps.toString())
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
-                            settingsRepo.updateStepGoal(steps = event.steps)
-                            healthSyncUseCase.sync()
+                            displaySettings.updateStepGoal(steps = event.steps)
+                            healthDataRefresh.refreshAffectedWindow()
                         }
                     }
                 }
                 is SettingsEvent.RetentionDaysEnabledChanged ->
-                    viewModelScope.launch { settingsRepo.updateRetentionDaysEnabled(enabled = event.enabled) }
+                    viewModelScope.launch { displaySettings.updateRetentionDaysEnabled(enabled = event.enabled) }
                 is SettingsEvent.RetentionDaysChanged -> {
                     val validation = SettingsValidators.RETENTION_DAYS_RULE.validate(event.days.toString())
                     if (validation is ValidationResult.Valid) {
-                        viewModelScope.launch { settingsRepo.updateRetentionDays(days = event.days) }
+                        viewModelScope.launch { displaySettings.updateRetentionDays(days = event.days) }
                     }
                 }
                 is SettingsEvent.TrimpModelChanged ->
                     viewModelScope.launch {
-                        settingsRepo.updateTrimpModel(event.model)
-                        healthSyncUseCase.sync()
+                        displaySettings.updateTrimpModel(event.model)
+                        healthDataRefresh.refreshAffectedWindow()
                     }
                 is SettingsEvent.BanisterMultiplierChanged -> {
                     val validation = SettingsValidators.TRIMP_BANISTER_MULTIPLIER_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
-                            settingsRepo.updateBanisterMultiplier(event.value)
-                            healthSyncUseCase.sync()
+                            displaySettings.updateBanisterMultiplier(event.value)
+                            healthDataRefresh.refreshAffectedWindow()
                         }
                     }
                 }
@@ -110,8 +112,8 @@ class UISettingsViewModel
                     val validation = SettingsValidators.TRIMP_CHENG_BETA_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
-                            settingsRepo.updateChengBeta(event.value)
-                            healthSyncUseCase.sync()
+                            displaySettings.updateChengBeta(event.value)
+                            healthDataRefresh.refreshAffectedWindow()
                         }
                     }
                 }
@@ -119,33 +121,33 @@ class UISettingsViewModel
                     val validation = SettingsValidators.TRIMP_ITRIMP_B_FACTOR_RULE.validate(event.value)
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
-                            settingsRepo.updateItrimB(event.value)
-                            healthSyncUseCase.sync()
+                            displaySettings.updateItrimB(event.value)
+                            healthDataRefresh.refreshAffectedWindow()
                         }
                     }
                 }
                 SettingsEvent.ResetTrimpToProfileDefaults ->
                     viewModelScope.launch {
                         val profile = settingsRepo.userPreferences.first().physiologyProfile
-                        settingsRepo.updateTrimpModel(TrimpModel.BANISTER)
-                        settingsRepo.updateBanisterMultiplier(profile.banisterMultiplier)
-                        settingsRepo.updateChengBeta(profile.defaultChengBeta)
-                        settingsRepo.updateItrimB(profile.defaultItrimB)
-                        healthSyncUseCase.sync()
+                        displaySettings.updateTrimpModel(TrimpModel.BANISTER)
+                        displaySettings.updateBanisterMultiplier(profile.banisterMultiplier)
+                        displaySettings.updateChengBeta(profile.defaultChengBeta)
+                        displaySettings.updateItrimB(profile.defaultItrimB)
+                        healthDataRefresh.refreshAffectedWindow()
                     }
                 is SettingsEvent.UnitSystemChanged ->
-                    viewModelScope.launch { settingsRepo.updateUnitSystem(unitSystem = event.unitSystem) }
+                    viewModelScope.launch { displaySettings.updateUnitSystem(unitSystem = event.unitSystem) }
                 is SettingsEvent.CustomPaletteEnabledChanged ->
-                    viewModelScope.launch { settingsRepo.updateCustomPaletteEnabled(enabled = event.enabled) }
+                    viewModelScope.launch { displaySettings.updateCustomPaletteEnabled(enabled = event.enabled) }
                 is SettingsEvent.CustomSecondaryColorChanged ->
-                    viewModelScope.launch { settingsRepo.updateCustomSecondaryColor(color = event.color) }
+                    viewModelScope.launch { displaySettings.updateCustomSecondaryColor(color = event.color) }
                 is SettingsEvent.CustomTertiaryColorChanged ->
-                    viewModelScope.launch { settingsRepo.updateCustomTertiaryColor(color = event.color) }
+                    viewModelScope.launch { displaySettings.updateCustomTertiaryColor(color = event.color) }
                 is SettingsEvent.CustomPrimaryColorChanged ->
                     viewModelScope.launch {
-                        settingsRepo.updateCustomPrimaryColor(color = event.color)
+                        displaySettings.updateCustomPrimaryColor(color = event.color)
                         FallbackThemeColor.entries.find { it.seedColor == event.color }?.let {
-                            settingsRepo.updateFallbackThemeColor(it)
+                            displaySettings.updateFallbackThemeColor(it)
                         }
                     }
                 else -> {}

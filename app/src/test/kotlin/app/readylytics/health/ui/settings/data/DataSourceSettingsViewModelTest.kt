@@ -2,9 +2,9 @@ package app.readylytics.health.ui.settings.data
 
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.data.preferences.UserPreferencesProto
 import app.readylytics.health.domain.model.HealthDataType
-import app.readylytics.health.workers.WorkerScheduler
+import app.readylytics.health.domain.sync.HistoricalResyncController
+import app.readylytics.health.domain.sync.HistoricalResyncState
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -45,31 +45,36 @@ class DataSourceSettingsViewModelTest {
     private fun buildViewModel(
         initialPrefs: UserPreferences = UserPreferences(),
         deviceChangeNoticeDismissed: Boolean = false,
-        scheduler: WorkerScheduler = mockk(relaxed = true),
-    ): Triple<DataSourceSettingsViewModel, MutableStateFlow<Map<String, String>>, WorkerScheduler> {
+        historicalResyncController: HistoricalResyncController = mockk(relaxed = true),
+    ): Triple<DataSourceSettingsViewModel, MutableStateFlow<Map<String, String>>, HistoricalResyncController> {
         val deviceByDataType = MutableStateFlow(initialPrefs.deviceByDataType)
+        val prefsFlow =
+            MutableStateFlow(
+                initialPrefs.copy(
+                    deviceChangeNoticeDismissed = deviceChangeNoticeDismissed,
+                ),
+            )
         val settingsRepo =
             mockk<SettingsRepository>(relaxed = true) {
-                every { this@mockk.deviceByDataType } returns deviceByDataType
-                every { this@mockk.deviceChangeNoticeDismissed } returns flowOf(deviceChangeNoticeDismissed)
+                every { userPreferences } returns prefsFlow
                 coEvery { getAvailableDevices() } returns listOf("Watch A", "Watch B")
-                coEvery { batchUpdate(any()) } coAnswers {
-                    @Suppress("UNCHECKED_CAST")
-                    val block = it.invocation.args[0] as UserPreferencesProto.Builder.() -> Unit
-                    val builder = UserPreferencesProto.newBuilder()
-                    deviceByDataType.value.forEach { (key, value) -> builder.putDeviceByDataType(key, value) }
-                    builder.block()
-                    deviceByDataType.value = builder.deviceByDataTypeMap.toMap()
+                coEvery { updateDeviceForDataType(any(), any()) } coAnswers {
+                    val key = it.invocation.args[0] as String
+                    val value = it.invocation.args[1] as String?
+                    deviceByDataType.value =
+                        deviceByDataType.value.toMutableMap().apply {
+                            if (value.isNullOrBlank()) remove(key) else put(key, value)
+                        }
+                    prefsFlow.value = prefsFlow.value.copy(deviceByDataType = deviceByDataType.value)
                 }
             }
-        val workManager =
-            mockk<androidx.work.WorkManager> {
-                every { getWorkInfosForUniqueWorkFlow(WorkerScheduler.RESYNC_WORK_NAME) } returns flowOf(emptyList())
-            }
+        every { historicalResyncController.state } returns flowOf(
+            HistoricalResyncState(running = false, current = 0, total = 0),
+        )
 
-        val viewModel = DataSourceSettingsViewModel(settingsRepo, scheduler, workManager)
+        val viewModel = DataSourceSettingsViewModel(settingsRepo, settingsRepo, historicalResyncController)
         viewModel.sharingStarted = SharingStarted.Lazily
-        return Triple(viewModel, deviceByDataType, scheduler)
+        return Triple(viewModel, deviceByDataType, historicalResyncController)
     }
 
     @Test
@@ -84,7 +89,7 @@ class DataSourceSettingsViewModelTest {
             assertEquals("Watch A", viewModel.uiState.value.deviceByDataType[HealthDataType.HEART_RATE.name])
             assertTrue(viewModel.uiState.value.hasPendingChanges)
             assertTrue(deviceByDataType.value.isEmpty())
-            coVerify(exactly = 0) { scheduler.scheduleResyncWorker() }
+            coVerify(exactly = 0) { scheduler.requestHistoricalResync() }
 
             job.cancel()
         }
@@ -102,7 +107,7 @@ class DataSourceSettingsViewModelTest {
 
             assertEquals("Watch A", deviceByDataType.value[HealthDataType.HEART_RATE.name])
             assertFalse(viewModel.uiState.value.hasPendingChanges)
-            coVerify { scheduler.scheduleResyncWorker() }
+            coVerify { scheduler.requestHistoricalResync() }
 
             job.cancel()
         }

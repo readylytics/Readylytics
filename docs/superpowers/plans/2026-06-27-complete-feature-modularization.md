@@ -763,11 +763,11 @@ git commit -m "refactor: move pure domain code into core modules" -m "Constraint
 - Create: `app/src/test/kotlin/app/readylytics/health/architecture/FeaturePortBindingTest.kt`
 - Modify: feature-bound ViewModels still in app
 
-- [ ] **Step 1: Write failing assignability test**
+- [x] **Step 1: Write failing assignability test**
 
 Create `FeaturePortBindingTest.kt` using `Class.isAssignableFrom` to require concrete settings, selected-date, foreground-sync, refresh, and historical-resync implementations to implement their pure interfaces.
 
-- [ ] **Step 2: Add preference read and categorized write ports**
+- [x] **Step 2: Add preference read and categorized write ports**
 
 Create:
 
@@ -868,7 +868,7 @@ interface BackupSettings {
 }
 ```
 
-- [ ] **Step 3: Add selected-date port**
+- [x] **Step 3: Add selected-date port**
 
 Create `SelectedDateStore.kt`:
 
@@ -891,7 +891,7 @@ interface SelectedDateStore {
 
 Make `core:database` `SelectedDateRepository` implement it without changing behavior. Keep implementation in `:core:database` because earliest-date state reads six DAOs.
 
-- [ ] **Step 4: Add pure sync ports and state**
+- [x] **Step 4: Add pure sync ports and state**
 
 Create `FeatureSyncPorts.kt`:
 
@@ -926,15 +926,15 @@ interface HistoricalResyncController {
 
 Move `RecalcProgress` from `ForegroundSyncController.kt` into this core-model file. Implement gateway on existing controller. `HealthDataRefreshAdapter.refreshAffectedWindow()` delegates to existing `HealthSyncUseCase.sync()` with its current default eight-day window. `HistoricalResyncControllerImpl` maps WorkInfo progress keys to pure state and delegates scheduling to `WorkerScheduler`.
 
-- [ ] **Step 5: Bind ports in app DI**
+- [x] **Step 5: Bind ports in app DI**
 
 Create `FeaturePortModule.kt` with `@Binds` methods for all implemented ports. Concrete `SettingsRepository` implements categorized preference interfaces; feature ViewModels inject only interfaces they use. Change `LocalBackupViewModel` to import existing core-model `domain.security.EncryptionManager`, not concrete app encryption class.
 
-- [ ] **Step 6: Convert all feature-bound ViewModels to ports**
+- [x] **Step 6: Convert all feature-bound ViewModels to ports**
 
 Update About, Dashboard, Sleep, Workouts, Vitals, metric-detail, Settings, and Onboarding ViewModels. Remove imports of concrete `data.preferences.SettingsRepository`, `data.repository.SelectedDateRepository`, `HealthSyncUseCase`, `ForegroundSyncController`, `WorkerScheduler`, `HealthResyncWorker`, and concrete `EncryptionManager`.
 
-- [ ] **Step 7: Verify bindings and behavior**
+- [x] **Step 7: Verify bindings and behavior**
 
 ```powershell
 .\gradlew :app:testDebugUnitTest --tests app.readylytics.health.architecture.FeaturePortBindingTest
@@ -944,7 +944,7 @@ Update About, Dashboard, Sleep, Workouts, Vitals, metric-detail, Settings, and O
 
 Expected: PASS; existing ViewModel tests use port mocks and retain assertions.
 
-- [ ] **Step 8: Index and commit**
+- [x] **Step 8: Index and commit**
 
 ```powershell
 codegraph index

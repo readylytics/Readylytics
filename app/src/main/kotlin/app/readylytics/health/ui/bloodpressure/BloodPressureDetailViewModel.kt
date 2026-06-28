@@ -6,7 +6,7 @@ import app.readylytics.health.core.ui.common.BloodPressureHistoryItem
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.padToRange
-import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.display.MetricFormatter
@@ -47,7 +47,7 @@ class BloodPressureDetailViewModel
     @Inject
     constructor(
         private val bloodPressureRepository: BloodPressureRepository,
-        private val selectedDateRepository: SelectedDateRepository,
+        private val selectedDateRepository: SelectedDateStore,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val selectedRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)

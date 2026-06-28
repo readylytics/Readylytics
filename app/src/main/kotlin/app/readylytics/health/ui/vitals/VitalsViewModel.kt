@@ -7,19 +7,19 @@ import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.padToRange
 import app.readylytics.health.core.ui.model.Baselines
-import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.ZoneBand
 import app.readylytics.health.domain.model.hrvZoneBands
 import app.readylytics.health.domain.model.rhrZoneBands
 import app.readylytics.health.domain.model.spo2ZoneBands
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.scoring.HrvBaselineProvider
 import app.readylytics.health.domain.scoring.RhrBaselineProvider
-import app.readylytics.health.domain.sync.ForegroundSyncController
+import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.util.truncateToDayMs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -66,9 +66,9 @@ class VitalsViewModel
     constructor(
         private val dailySummaryRepository: DailySummaryRepository,
         private val dailyMetricsRepository: DailyMetricsRepository,
-        private val settingsRepo: SettingsRepository,
-        private val selectedDateRepository: SelectedDateRepository,
-        private val foregroundSyncController: ForegroundSyncController,
+        private val settingsRepo: UserPreferencesReader,
+        private val selectedDateRepository: SelectedDateStore,
+        private val foregroundSyncController: ForegroundSyncGateway,
         private val savedStateHandle: SavedStateHandle,
         private val hrvBaselineProvider: HrvBaselineProvider,
         private val rhrBaselineProvider: RhrBaselineProvider,

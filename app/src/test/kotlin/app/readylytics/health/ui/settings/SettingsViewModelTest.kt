@@ -7,8 +7,10 @@ import androidx.test.platform.app.InstrumentationRegistry
 import app.readylytics.health.data.preferences.CircadianThresholdPreferences
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.sync.HealthDataRefresh
+import app.readylytics.health.domain.sync.HistoricalResyncController
+import app.readylytics.health.domain.sync.HistoricalResyncState
 import app.readylytics.health.domain.repository.ScoringRepository
-import app.readylytics.health.domain.sync.HealthSyncUseCase
 import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -60,7 +62,7 @@ class SettingsViewModelTest {
     lateinit var scoringRepository: ScoringRepository
 
     @Inject
-    lateinit var healthSyncUseCase: HealthSyncUseCase
+    lateinit var healthDataRefresh: HealthDataRefresh
 
     @Inject
     lateinit var workerScheduler: WorkerScheduler
@@ -99,7 +101,8 @@ class SettingsViewModelTest {
             val viewModel =
                 UISettingsViewModel(
                     settingsRepo,
-                    healthSyncUseCase,
+                    settingsRepo,
+                    healthDataRefresh,
                 )
             viewModel.sharingStarted = SharingStarted.Lazily
 
@@ -129,7 +132,8 @@ class SettingsViewModelTest {
             val viewModel =
                 UISettingsViewModel(
                     settingsRepo,
-                    healthSyncUseCase,
+                    settingsRepo,
+                    healthDataRefresh,
                 )
             viewModel.sharingStarted = SharingStarted.Lazily
 
@@ -154,7 +158,7 @@ class SettingsViewModelTest {
     @Test
     fun `UISettingsViewModel custom color events update state`() =
         runTest {
-            val viewModel = UISettingsViewModel(settingsRepo, healthSyncUseCase)
+            val viewModel = UISettingsViewModel(settingsRepo, settingsRepo, healthDataRefresh)
             viewModel.sharingStarted = SharingStarted.Lazily
 
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -192,20 +196,19 @@ class SettingsViewModelTest {
                     every { userPreferences } returns flowOf(UserPreferences())
                     coEvery { getAvailableDevices() } returns emptyList()
                 }
-            val mockScheduler = mockk<WorkerScheduler>(relaxed = true)
-            val workManager =
-                mockk<androidx.work.WorkManager> {
-                    every {
-                        getWorkInfosForUniqueWorkFlow(WorkerScheduler.RESYNC_WORK_NAME)
-                    } returns flowOf(emptyList())
+            val mockRefresh = mockk<HealthDataRefresh>(relaxed = true)
+            val mockHistoricalResyncController =
+                mockk<HistoricalResyncController>(relaxed = true) {
+                    every { state } returns flowOf(HistoricalResyncState(running = false, current = 0, total = 0))
                 }
 
             val viewModel =
                 SyncSettingsViewModel(
                     mockSettingsRepo,
-                    healthSyncUseCase,
-                    mockScheduler,
-                    workManager,
+                    mockSettingsRepo,
+                    mockSettingsRepo,
+                    mockRefresh,
+                    mockHistoricalResyncController,
                 )
             viewModel.sharingStarted = SharingStarted.Lazily
 
@@ -217,6 +220,6 @@ class SettingsViewModelTest {
             viewModel.onEvent(SettingsEvent.ResyncHealthConnect)
             advanceUntilIdle()
 
-            io.mockk.coVerify { mockScheduler.scheduleResyncWorker() }
+            io.mockk.coVerify { mockHistoricalResyncController.requestHistoricalResync() }
         }
 }

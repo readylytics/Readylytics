@@ -2,8 +2,8 @@ package app.readylytics.health.ui.workouts
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.model.LoadSourceSelector
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
@@ -55,7 +55,7 @@ class WorkoutDetailViewModel
         private val hcRepo: HealthConnectRepository,
         private val heartRateRepository: HeartRateRepository,
         private val dailySummaryRepository: DailySummaryRepository,
-        private val settingsRepo: SettingsRepository,
+        private val settingsRepo: UserPreferencesReader,
         private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(WorkoutDetailUiState())

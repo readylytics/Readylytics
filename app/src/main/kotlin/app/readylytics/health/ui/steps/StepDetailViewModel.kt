@@ -5,10 +5,10 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.padToRange
-import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.di.DefaultDispatcher
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.util.toMidnightEpochMilli
 import app.readylytics.health.domain.util.truncateToDayMs
@@ -43,8 +43,8 @@ class StepDetailViewModel
     @Inject
     constructor(
         private val dailySummaryRepository: DailySummaryRepository,
-        private val selectedDateRepository: SelectedDateRepository,
-        private val settingsRepo: SettingsRepository,
+        private val selectedDateRepository: SelectedDateStore,
+        private val settingsRepo: UserPreferencesReader,
         @param:DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val _selectedRange = MutableStateFlow(TimeRange.SEVEN_DAYS)

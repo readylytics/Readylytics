@@ -27,7 +27,7 @@ class ForegroundSyncController
         private val settingsRepo: SettingsRepository,
         private val syncUseCase: HealthSyncUseCase,
         private val workerScheduler: dagger.Lazy<app.readylytics.health.workers.WorkerScheduler>,
-    ) {
+    ) : ForegroundSyncGateway {
         private val syncMutex = Mutex()
 
         private val _syncCompletedEvent =
@@ -35,16 +35,16 @@ class ForegroundSyncController
                 extraBufferCapacity = 1,
                 onBufferOverflow = BufferOverflow.DROP_OLDEST,
             )
-        val syncCompletedEvent: SharedFlow<Unit> = _syncCompletedEvent.asSharedFlow()
+        override val syncCompletedEvent: SharedFlow<Unit> = _syncCompletedEvent.asSharedFlow()
 
         private val _isSyncing = MutableStateFlow(false)
-        val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+        override val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
         // Determinate recalculation progress ("day X of Y"); null when no walk-forward is running.
         private val _recalcProgress = MutableStateFlow<RecalcProgress?>(null)
-        val recalcProgress: StateFlow<RecalcProgress?> = _recalcProgress.asStateFlow()
+        override val recalcProgress: StateFlow<RecalcProgress?> = _recalcProgress.asStateFlow()
 
-        suspend fun evaluateAndSync() {
+        override suspend fun evaluateAndSync() {
             app.readylytics.health.domain.util
                 .logD("ForegroundSyncController") { "evaluateAndSync called" }
             val prefs = settingsRepo.userPreferences.first()
@@ -98,7 +98,7 @@ class ForegroundSyncController
             }
         }
 
-        suspend fun triggerImmediateSync() {
+        override suspend fun triggerImmediateSync() {
             app.readylytics.health.domain.util.logD(
                 "ForegroundSyncController",
             ) { "triggerImmediateSync called" }
@@ -110,7 +110,7 @@ class ForegroundSyncController
          * historical recalculation lives behind the Settings "Resync Health Connect data" button,
          * which runs durably in WorkManager.
          */
-        suspend fun triggerDailySync() {
+        override suspend fun triggerDailySync() {
             app.readylytics.health.domain.util.logD(
                 "ForegroundSyncController",
             ) { "triggerDailySync called (current day only)" }
@@ -203,13 +203,3 @@ class ForegroundSyncController
         }
     }
 
-/**
- * Determinate progress for a historical walk-forward recalculation.
- *
- * @param current number of days recomputed so far
- * @param total   total number of days in this recalculation pass
- */
-data class RecalcProgress(
-    val current: Int,
-    val total: Int,
-)

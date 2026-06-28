@@ -1,7 +1,9 @@
 package app.readylytics.health.ui.settings
 
 import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.domain.sync.HealthSyncUseCase
+import app.readylytics.health.domain.preferences.DisplaySettings
+import app.readylytics.health.domain.preferences.PhysiologySettings
+import app.readylytics.health.domain.sync.HealthDataRefresh
 import app.readylytics.health.domain.user.UserUseCase
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -11,20 +13,26 @@ import java.time.LocalDate
 
 class PhysiologySettingsViewModelTest {
     private lateinit var settingsRepo: SettingsRepository
+    private lateinit var physiologySettings: PhysiologySettings
+    private lateinit var displaySettings: DisplaySettings
     private lateinit var userUseCase: UserUseCase
-    private lateinit var healthSyncUseCase: HealthSyncUseCase
+    private lateinit var healthDataRefresh: HealthDataRefresh
     private lateinit var viewModel: PhysiologySettingsViewModel
 
     @Before
     fun setUp() {
         settingsRepo = mockk(relaxed = true)
+        physiologySettings = mockk(relaxed = true)
+        displaySettings = mockk(relaxed = true)
         userUseCase = mockk(relaxed = true)
-        healthSyncUseCase = mockk(relaxed = true)
+        healthDataRefresh = mockk(relaxed = true)
         viewModel =
             PhysiologySettingsViewModel(
                 settingsRepo = settingsRepo,
+                physiologySettings = physiologySettings,
+                displaySettings = displaySettings,
                 userUseCase = userUseCase,
-                healthSyncUseCase = healthSyncUseCase,
+                healthDataRefresh = healthDataRefresh,
             )
     }
 

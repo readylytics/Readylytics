@@ -2,8 +2,9 @@ package app.readylytics.health.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.di.ApplicationScope
+import app.readylytics.health.domain.preferences.SleepSettings
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
@@ -20,12 +21,13 @@ import javax.inject.Inject
 class SleepSettingsViewModel
     @Inject
     constructor(
-        private val settingsRepo: SettingsRepository,
+        private val settingsReader: UserPreferencesReader,
+        private val sleepSettings: SleepSettings,
         private val scoringRepository: ScoringRepository,
         @param:ApplicationScope private val appScope: CoroutineScope,
     ) : ViewModel() {
         val uiState: StateFlow<SleepSettingsState> =
-            settingsRepo.userPreferences
+            settingsReader.userPreferences
                 .map { prefs ->
                     SleepSettingsState(
                         goalSleepHours = prefs.goalSleepHours,
@@ -45,7 +47,7 @@ class SleepSettingsViewModel
             when (event) {
                 is SettingsEvent.GoalSleepHoursChanged ->
                     appScope.launch {
-                        settingsRepo.updateGoalSleepHours(hours = event.hours)
+                        sleepSettings.updateGoalSleepHours(hours = event.hours)
                         scoringRepository.computeAndPersistDailySummary()
                     }
 
@@ -55,7 +57,7 @@ class SleepSettingsViewModel
                         SettingsValidators.HRV_BASELINE_RULE.validate(event.text) is ValidationResult.Valid
                     if (isValid) {
                         appScope.launch {
-                            settingsRepo.updateHrvBaselineOverride(rmssdMs = value)
+                            sleepSettings.updateHrvBaselineOverride(rmssdMs = value)
                             scoringRepository.computeAndPersistDailySummary()
                         }
                     }
@@ -63,7 +65,7 @@ class SleepSettingsViewModel
 
                 SettingsEvent.HrvBaselineCleared ->
                     appScope.launch {
-                        settingsRepo.updateHrvBaselineOverride(rmssdMs = null)
+                        sleepSettings.updateHrvBaselineOverride(rmssdMs = null)
                         scoringRepository.computeAndPersistDailySummary()
                     }
 
@@ -73,7 +75,7 @@ class SleepSettingsViewModel
                         SettingsValidators.RHR_BASELINE_RULE.validate(event.text) is ValidationResult.Valid
                     if (isValid) {
                         appScope.launch {
-                            settingsRepo.updateRhrBaselineOverride(bpm = value)
+                            sleepSettings.updateRhrBaselineOverride(bpm = value)
                             scoringRepository.computeAndPersistDailySummary()
                         }
                     }
@@ -81,7 +83,7 @@ class SleepSettingsViewModel
 
                 SettingsEvent.RhrBaselineCleared ->
                     appScope.launch {
-                        settingsRepo.updateRhrBaselineOverride(bpm = null)
+                        sleepSettings.updateRhrBaselineOverride(bpm = null)
                         scoringRepository.computeAndPersistDailySummary()
                     }
 
@@ -90,17 +92,17 @@ class SleepSettingsViewModel
                         SettingsValidators.RESTING_HR_PERCENTILE_RULE.validate(event.percentile.toString())
                     if (validation is ValidationResult.Valid) {
                         appScope.launch {
-                            settingsRepo.updateRestingHrPercentile(percentile = event.percentile)
+                            sleepSettings.updateRestingHrPercentile(percentile = event.percentile)
                             scoringRepository.computeAndPersistDailySummary()
                         }
                     }
                 }
 
                 is SettingsEvent.StrainLoadSourceModeChanged ->
-                    appScope.launch { settingsRepo.updateStrainLoadSourceMode(event.mode) }
+                    appScope.launch { sleepSettings.updateStrainLoadSourceMode(event.mode) }
 
                 is SettingsEvent.RasSourceModeChanged ->
-                    appScope.launch { settingsRepo.updateRasSourceMode(event.mode) }
+                    appScope.launch { sleepSettings.updateRasSourceMode(event.mode) }
 
                 else -> {}
             }

@@ -2,7 +2,7 @@ package app.readylytics.health.ui.about
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.AboutPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -11,11 +11,11 @@ import javax.inject.Inject
 class AboutViewModel
     @Inject
     constructor(
-        private val settingsRepo: SettingsRepository,
+        private val aboutPreferences: AboutPreferences,
     ) : ViewModel() {
         fun dismissAbout(onComplete: () -> Unit) {
             viewModelScope.launch {
-                settingsRepo.updateAboutDismissed(true)
+                aboutPreferences.updateAboutDismissed(true)
                 onComplete()
             }
         }

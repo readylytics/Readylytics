@@ -8,13 +8,13 @@ import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.common.padToRange
-import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UnitSystem
-import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.display.MetricFormatter
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.bodyFatStatus
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.BodyFatRepository
 import app.readylytics.health.domain.repository.WeightRepository
 import app.readylytics.health.domain.util.UnitConverter
@@ -57,8 +57,8 @@ class BodyFatDetailViewModel
     constructor(
         private val bodyFatRepository: BodyFatRepository,
         private val weightRepository: WeightRepository,
-        private val settingsRepo: SettingsRepository,
-        private val selectedDateRepository: SelectedDateRepository,
+        private val settingsRepo: UserPreferencesReader,
+        private val selectedDateRepository: SelectedDateStore,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         private val selectedRangeFlow = MutableStateFlow(TimeRange.SEVEN_DAYS)

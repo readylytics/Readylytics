@@ -6,12 +6,12 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
 import app.readylytics.health.data.preferences.SettingsDefaults
-import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.di.IoDispatcher
+import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailySummary
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailyMetricsRepository
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
@@ -20,7 +20,7 @@ import app.readylytics.health.domain.repository.SleepSessionRepository
 import app.readylytics.health.domain.repository.SleepStageData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.sync.ForegroundSyncController
+import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -72,10 +72,10 @@ class SleepViewModel
         private val dailyMetricsRepository: DailyMetricsRepository,
         private val sleepSessionRepository: SleepSessionRepository,
         private val heartRateRepository: HeartRateRepository,
-        private val settingsRepo: SettingsRepository,
-        private val selectedDateRepository: SelectedDateRepository,
+        private val settingsRepo: UserPreferencesReader,
+        private val selectedDateRepository: SelectedDateStore,
         private val circadianRepo: CircadianConsistencyRepository,
-        private val foregroundSyncController: ForegroundSyncController,
+        private val foregroundSyncController: ForegroundSyncGateway,
         private val savedStateHandle: SavedStateHandle,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {

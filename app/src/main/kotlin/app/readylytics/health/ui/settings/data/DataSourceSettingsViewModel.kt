@@ -2,18 +2,18 @@ package app.readylytics.health.ui.settings.data
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
-import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.model.HealthDataType
+import app.readylytics.health.domain.preferences.DeviceSettings
+import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.sync.HistoricalResyncController
 import app.readylytics.health.ui.settings.DataSourceSettingsState
-import app.readylytics.health.workers.WorkerScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -31,9 +31,9 @@ import javax.inject.Inject
 class DataSourceSettingsViewModel
     @Inject
     constructor(
-        private val settingsRepo: SettingsRepository,
-        private val workerScheduler: WorkerScheduler,
-        workManager: WorkManager,
+        private val settingsReader: UserPreferencesReader,
+        private val deviceSettings: DeviceSettings,
+        private val historicalResyncController: HistoricalResyncController,
     ) : ViewModel() {
         private val availableDevicesFlow = MutableStateFlow<List<String>>(emptyList())
 
@@ -42,21 +42,18 @@ class DataSourceSettingsViewModel
 
         private val showDeviceChangeNoticeFlow = MutableStateFlow(false)
 
-        private val resyncWorkInfo =
-            workManager.getWorkInfosForUniqueWorkFlow(WorkerScheduler.RESYNC_WORK_NAME)
-
         // Internal property to allow overriding in tests
         var sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
 
         private val persistedDeviceByDataType =
-            settingsRepo.deviceByDataType.stateIn(
+            settingsReader.userPreferences.map { it.deviceByDataType }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = emptyMap(),
             )
 
         private val deviceChangeNoticeDismissed =
-            settingsRepo.deviceChangeNoticeDismissed.stateIn(
+            settingsReader.userPreferences.map { it.deviceChangeNoticeDismissed }.stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.Eagerly,
                 initialValue = false,
@@ -69,20 +66,18 @@ class DataSourceSettingsViewModel
                 persistedDeviceByDataType,
                 availableDevicesFlow,
                 pendingOverrides,
-                resyncWorkInfo,
+                historicalResyncController.state,
                 showDeviceChangeNoticeFlow,
-            ) { persisted, availableDevices, pending, workInfos, showNotice ->
+            ) { persisted, availableDevices, pending, resyncState, showNotice ->
                 val effective = persisted.toMutableMap()
                 pending.forEach { (type, label) ->
                     if (label == null) effective.remove(type.name) else effective[type.name] = label
                 }
-                val running =
-                    workInfos.any { it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED }
                 DataSourceSettingsState(
                     availableDevices = availableDevices,
                     deviceByDataType = effective,
                     hasPendingChanges = pending.isNotEmpty(),
-                    isResyncing = running,
+                    isResyncing = resyncState.running,
                     showDeviceChangeNotice = showNotice,
                 )
             }.stateIn(
@@ -94,14 +89,14 @@ class DataSourceSettingsViewModel
 
         init {
             // Make sure any legacy global device selection is reflected per data type.
-            viewModelScope.launch { settingsRepo.migrateDeviceSelectionIfNeeded() }
+            viewModelScope.launch { deviceSettings.migrateDeviceSelectionIfNeeded() }
             refreshAvailableDevices()
         }
 
         fun refreshAvailableDevices() {
             viewModelScope.launch {
-                settingsRepo.clearDeviceCache()
-                availableDevicesFlow.value = settingsRepo.getAvailableDevices()
+                deviceSettings.clearDeviceCache()
+                availableDevicesFlow.value = deviceSettings.getAvailableDevices()
             }
         }
 
@@ -131,17 +126,11 @@ class DataSourceSettingsViewModel
                 viewModelScope.launch {
                     val overrides = pendingOverrides.value
                     if (overrides.isEmpty()) return@launch
-                    settingsRepo.batchUpdate {
-                        overrides.forEach { (type, label) ->
-                            if (label.isNullOrBlank()) {
-                                removeDeviceByDataType(type.name)
-                            } else {
-                                putDeviceByDataType(type.name, label)
-                            }
-                        }
+                    overrides.forEach { (type, label) ->
+                        deviceSettings.updateDeviceForDataType(type.name, label)
                     }
                     pendingOverrides.value = emptyMap()
-                    workerScheduler.scheduleResyncWorker()
+                    historicalResyncController.requestHistoricalResync()
                 }
         }
 
@@ -149,7 +138,7 @@ class DataSourceSettingsViewModel
         fun onNoticeAcknowledged(dismissPermanently: Boolean) {
             showDeviceChangeNoticeFlow.value = false
             if (dismissPermanently) {
-                viewModelScope.launch { settingsRepo.updateDeviceChangeNoticeDismissed(true) }
+                viewModelScope.launch { deviceSettings.updateDeviceChangeNoticeDismissed(true) }
             }
         }
     }

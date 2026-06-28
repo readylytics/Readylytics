@@ -1,9 +1,11 @@
 package app.readylytics.health.ui.onboarding
 
 import app.readylytics.health.data.preferences.PhysiologyProfile
-import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.domain.preferences.DeviceSettings
+import app.readylytics.health.domain.preferences.DisplaySettings
+import app.readylytics.health.domain.preferences.PhysiologySettings
 import app.readylytics.health.domain.service.BmiService
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -19,16 +21,22 @@ import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingViewModelTest {
-    private lateinit var settingsRepo: SettingsRepository
+    private lateinit var physiologySettings: PhysiologySettings
+    private lateinit var displaySettings: DisplaySettings
+    private lateinit var deviceSettings: DeviceSettings
     private lateinit var viewModel: OnboardingViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        settingsRepo = mockk(relaxed = true)
+        physiologySettings = mockk(relaxed = true)
+        displaySettings = mockk(relaxed = true)
+        deviceSettings = mockk(relaxed = true)
         viewModel =
             OnboardingViewModel(
-                settingsRepo = settingsRepo,
+                physiologySettings = physiologySettings,
+                displaySettings = displaySettings,
+                deviceSettings = deviceSettings,
                 bmiService = BmiService(),
             )
     }
@@ -184,7 +192,7 @@ class OnboardingViewModelTest {
             heightCm = 175f,
             onComplete = { completed = true },
         )
-        coVerify(timeout = 1000) { settingsRepo.updateBirthday(birthDate) }
+        coVerify(timeout = 1000) { physiologySettings.updateBirthday(birthDate) }
         assert(completed) { "onComplete should be called" }
     }
 
@@ -201,7 +209,7 @@ class OnboardingViewModelTest {
             heightCm = 175f,
             onComplete = { completed = true },
         )
-        coVerify(timeout = 100, inverse = true) { settingsRepo.updateBirthday(any()) }
+        coVerify(timeout = 100, inverse = true) { physiologySettings.updateBirthday(any()) }
         assert(!completed) { "onComplete should not be called with future date" }
     }
 }

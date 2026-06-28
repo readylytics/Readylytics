@@ -5,13 +5,14 @@ import androidx.lifecycle.viewModelScope
 import app.readylytics.health.R
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.data.backup.WrongBackupPasswordException
-import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.security.EncryptionManager
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.domain.backup.BackupService
 import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.backup.RestoreService
+import app.readylytics.health.domain.preferences.BackupSettings
+import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.security.EncryptionManager
 import app.readylytics.health.domain.util.logE
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -39,7 +40,8 @@ import javax.inject.Inject
 class LocalBackupViewModel
     @Inject
     constructor(
-        private val settingsRepo: SettingsRepository,
+        private val settingsRepo: UserPreferencesReader,
+        private val backupSettings: BackupSettings,
         private val backupService: BackupService,
         private val restoreService: RestoreService,
         private val encryptionManager: EncryptionManager,
@@ -177,7 +179,7 @@ class LocalBackupViewModel
                 is SettingsEvent.ChangeBackupDirectory -> {
                     viewModelScope.launch {
                         _sideEffect.emit(SideEffect.TakePersistableUriPermission(event.path))
-                        settingsRepo.updateBackupDirectoryUri(event.path)
+                        backupSettings.updateBackupDirectoryUri(event.path)
                     }
                 }
                 is SettingsEvent.DeleteLocalBackup -> {
@@ -224,7 +226,7 @@ class LocalBackupViewModel
                             }
 
                         // 2. Update master password hash
-                        settingsRepo.updateBackupPasswordHash(newHash)
+                        backupSettings.updateBackupPasswordHash(newHash)
 
                         transientState.update { it.copy(isReencrypting = false) }
 
@@ -253,7 +255,7 @@ class LocalBackupViewModel
                     transientState.update { it.copy(passwordVerificationResult = null) }
                 }
                 is SettingsEvent.BackupScheduleChanged ->
-                    viewModelScope.launch { settingsRepo.updateBackupSchedule(schedule = event.schedule) }
+                    viewModelScope.launch { backupSettings.updateBackupSchedule(schedule = event.schedule) }
                 else -> {}
             }
         }
@@ -263,7 +265,7 @@ class LocalBackupViewModel
             backupService
                 .createBackup()
                 .onSuccess {
-                    settingsRepo.updateLastBackupTimestamp(System.currentTimeMillis())
+                    backupSettings.updateLastBackupTimestamp(System.currentTimeMillis())
                     transientState.update { it.copy(refreshTrigger = it.refreshTrigger + 1) }
                 }.onFailure { e ->
                     transientState.update {

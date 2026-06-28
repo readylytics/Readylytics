@@ -40,8 +40,13 @@ class SleepAndThresholdSettingsViewModelTest {
         coEvery { circadianPrefs.overrideMinutesFlow } returns MutableStateFlow(null)
 
         sleepViewModel =
-            SleepSettingsViewModel(settingsRepo, scoringRepo, kotlinx.coroutines.CoroutineScope(testDispatcher))
-        thresholdViewModel = ThresholdSettingsViewModel(settingsRepo, scoringRepo, circadianPrefs)
+            SleepSettingsViewModel(
+                settingsRepo,
+                settingsRepo,
+                scoringRepo,
+                kotlinx.coroutines.CoroutineScope(testDispatcher),
+            )
+        thresholdViewModel = ThresholdSettingsViewModel(settingsRepo, settingsRepo, scoringRepo, circadianPrefs)
     }
 
     @After

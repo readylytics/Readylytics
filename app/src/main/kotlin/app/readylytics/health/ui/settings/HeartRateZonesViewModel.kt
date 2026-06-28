@@ -2,9 +2,10 @@ package app.readylytics.health.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.model.getOrNull
-import app.readylytics.health.domain.sync.HealthSyncUseCase
+import app.readylytics.health.domain.preferences.HeartRateZoneSettings
+import app.readylytics.health.domain.preferences.UserPreferencesReader
+import app.readylytics.health.domain.sync.HealthDataRefresh
 import app.readylytics.health.domain.user.UserUseCase
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
@@ -20,12 +21,13 @@ import javax.inject.Inject
 class HeartRateZonesViewModel
     @Inject
     constructor(
-        private val settingsRepo: SettingsRepository,
+        private val settingsReader: UserPreferencesReader,
+        private val heartRateZoneSettings: HeartRateZoneSettings,
         private val userUseCase: UserUseCase,
-        private val healthSyncUseCase: HealthSyncUseCase,
+        private val healthDataRefresh: HealthDataRefresh,
     ) : ViewModel() {
         val uiState: StateFlow<HeartRateZonesState> =
-            settingsRepo.userPreferences
+            settingsReader.userPreferences
                 .map { prefs ->
                     HeartRateZonesState(
                         maxHeartRate = prefs.maxHeartRate,
@@ -56,14 +58,14 @@ class HeartRateZonesViewModel
                         SettingsValidators.HEART_RATE_RULE.validate(event.text) is ValidationResult.Valid
                     if (value != null && isValid) {
                         viewModelScope.launch {
-                            settingsRepo.updateMaxHeartRate(bpm = value)
-                            healthSyncUseCase.sync()
+                            heartRateZoneSettings.updateMaxHeartRate(bpm = value)
+                            healthDataRefresh.refreshAffectedWindow()
                         }
                     }
                 }
                 is SettingsEvent.AutoCalculateMaxHrChanged -> {
                     viewModelScope.launch {
-                        settingsRepo.updateAutoCalculateMaxHr(enabled = event.enabled)
+                        heartRateZoneSettings.updateAutoCalculateMaxHr(enabled = event.enabled)
                         if (event.enabled) {
                             userUseCase.calculateAndSetMaxHr().getOrNull()
                         }
@@ -71,31 +73,31 @@ class HeartRateZonesViewModel
                 }
                 is SettingsEvent.ManualZoneEditingChanged -> {
                     viewModelScope.launch {
-                        settingsRepo.updateManualZoneEditing(enabled = event.enabled)
+                        heartRateZoneSettings.updateManualZoneEditing(enabled = event.enabled)
                     }
                 }
                 is SettingsEvent.ZonePercentagesChanged -> {
                     viewModelScope.launch {
-                        settingsRepo.updateZonePercentages(
+                        heartRateZoneSettings.updateZonePercentages(
                             z1Min = event.z1Min,
                             z1Max = event.z1Max,
                             z2Max = event.z2Max,
                             z3Max = event.z3Max,
                             z4Max = event.z4Max,
                         )
-                        healthSyncUseCase.sync()
+                        healthDataRefresh.refreshAffectedWindow()
                     }
                 }
                 is SettingsEvent.ZoneBpmsChanged -> {
                     viewModelScope.launch {
-                        settingsRepo.updateZoneBpms(
+                        heartRateZoneSettings.updateZoneBpms(
                             z1Min = event.z1Min,
                             z1Max = event.z1Max,
                             z2Max = event.z2Max,
                             z3Max = event.z3Max,
                             z4Max = event.z4Max,
                         )
-                        healthSyncUseCase.sync()
+                        healthDataRefresh.refreshAffectedWindow()
                     }
                 }
                 else -> {}

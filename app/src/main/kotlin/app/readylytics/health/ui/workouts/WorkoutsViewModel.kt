@@ -5,13 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.DailyDataPoint
 import app.readylytics.health.core.ui.common.TimeRange
-import app.readylytics.health.data.preferences.SettingsRepository
-import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.model.DailyMetrics
 import app.readylytics.health.domain.model.DailyMetricsMapper
 import app.readylytics.health.domain.model.DailySummary
 import app.readylytics.health.domain.model.LoadSourceSelector
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.WorkoutData
@@ -20,7 +20,7 @@ import app.readylytics.health.domain.scoring.ComputeWorkoutTrimpUseCase
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.ScoringCalculator
 import app.readylytics.health.domain.scoring.ScoringConstants
-import app.readylytics.health.domain.sync.ForegroundSyncController
+import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.util.truncateToDayMs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -97,11 +97,11 @@ class WorkoutsViewModel
         private val dailySummaryRepository: DailySummaryRepository,
         private val workoutRepository: WorkoutRepository,
         private val heartRateRepository: HeartRateRepository,
-        private val selectedDateRepository: SelectedDateRepository,
+        private val selectedDateRepository: SelectedDateStore,
         private val scoringCalculator: ScoringCalculator,
-        private val settingsRepo: SettingsRepository,
+        private val settingsRepo: UserPreferencesReader,
         private val getWorkoutDisplayMetricsUseCase: GetWorkoutDisplayMetricsUseCase,
-        private val foregroundSyncController: ForegroundSyncController,
+        private val foregroundSyncController: ForegroundSyncGateway,
         private val savedStateHandle: SavedStateHandle,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {

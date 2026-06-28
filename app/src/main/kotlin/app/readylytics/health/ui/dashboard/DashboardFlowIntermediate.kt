@@ -2,7 +2,7 @@ package app.readylytics.health.ui.dashboard
 
 import androidx.compose.runtime.Immutable
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
-import app.readylytics.health.data.preferences.SettingsRepository
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardManagementDelegate
@@ -14,7 +14,7 @@ import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.sync.ForegroundSyncController
+import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.RecalcProgress
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -83,7 +83,7 @@ data class DashboardRealtimeState(
 fun createDashboardBasicInputsFlow(
     selectedDate: Flow<LocalDate>,
     dailySummaryRepository: DailySummaryRepository,
-    settingsRepository: SettingsRepository,
+    settingsRepository: UserPreferencesReader,
     circadianRepository: CircadianConsistencyRepository,
     insightDismissalRepository: InsightDismissalRepository,
 ): Flow<DashboardBasicInputs> =
@@ -186,7 +186,7 @@ fun createDashboardCardStateFlow(
  * - Background work status
  */
 fun createDashboardRealtimeStateFlow(
-    foregroundSyncController: ForegroundSyncController,
+    foregroundSyncController: ForegroundSyncGateway,
 ): Flow<DashboardRealtimeState> =
     combine(
         foregroundSyncController.isSyncing,

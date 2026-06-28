@@ -2,11 +2,13 @@ package app.readylytics.health.ui.settings
 
 import androidx.lifecycle.viewModelScope
 import app.readylytics.health.core.ui.common.BaseViewModel
-import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.domain.preferences.DisplaySettings
+import app.readylytics.health.domain.preferences.PhysiologySettings
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.scoring.RasCalculator
-import app.readylytics.health.domain.sync.HealthSyncUseCase
+import app.readylytics.health.domain.sync.HealthDataRefresh
 import app.readylytics.health.domain.user.UserUseCase
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
@@ -24,9 +26,11 @@ import javax.inject.Inject
 class PhysiologySettingsViewModel
     @Inject
     constructor(
-        private val settingsRepo: SettingsRepository,
+        private val settingsRepo: UserPreferencesReader,
+        private val physiologySettings: PhysiologySettings,
+        private val displaySettings: DisplaySettings,
         private val userUseCase: UserUseCase,
-        private val healthSyncUseCase: HealthSyncUseCase,
+        private val healthDataRefresh: HealthDataRefresh,
     ) : BaseViewModel() {
         fun validateBirthdayDayForUpdate(day: String): Result<Int> =
             try {
@@ -84,32 +88,32 @@ class PhysiologySettingsViewModel
                     if (validation is ValidationResult.Valid) {
                         viewModelScope.launch {
                             userUseCase.updateBirthday(event.date).getOrNull()
-                            healthSyncUseCase.sync()
+                            healthDataRefresh.refreshAffectedWindow()
                         }
                     }
                 }
                 is SettingsEvent.GenderChanged -> {
                     viewModelScope.launch {
-                        settingsRepo.updateGender(gender = event.gender?.displayName)
-                        healthSyncUseCase.sync()
+                        physiologySettings.updateGender(gender = event.gender?.displayName)
+                        healthDataRefresh.refreshAffectedWindow()
                     }
                 }
                 is SettingsEvent.HeightChanged -> {
                     viewModelScope.launch {
-                        settingsRepo.updateHeight(heightCm = event.heightCm)
+                        physiologySettings.updateHeight(heightCm = event.heightCm)
                     }
                 }
                 is SettingsEvent.PhysiologyProfileChanged ->
                     viewModelScope.launch {
-                        settingsRepo.updatePhysiologyProfile(profile = event.profile)
-                        healthSyncUseCase.sync()
+                        physiologySettings.updatePhysiologyProfile(profile = event.profile)
+                        healthDataRefresh.refreshAffectedWindow()
                     }
                 SettingsEvent.ResetRasScalingFactor ->
                     viewModelScope.launch {
                         val currentProfile = settingsRepo.userPreferences.first().physiologyProfile
                         val defaultFactor = RasCalculator.getDefaultRasScalingFactor(currentProfile)
-                        settingsRepo.updateRasScalingFactor(defaultFactor)
-                        healthSyncUseCase.sync()
+                        displaySettings.updateRasScalingFactor(defaultFactor)
+                        healthDataRefresh.refreshAffectedWindow()
                     }
                 else -> {}
             }

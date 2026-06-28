@@ -6,10 +6,9 @@ import app.readylytics.health.R
 import app.readylytics.health.core.ui.common.BaseViewModel
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.core.ui.model.HeartRateDaySummary
-import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
-import app.readylytics.health.data.repository.SelectedDateRepository
 import app.readylytics.health.domain.cache.DailyMetricCache
+import app.readylytics.health.domain.date.SelectedDateStore
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.dashboard.CardId
@@ -26,12 +25,13 @@ import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.model.SleepSessionSummary
 import app.readylytics.health.domain.model.getOrNull
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.repository.DailySummaryRepository
 import app.readylytics.health.domain.repository.HeartRateRepository
 import app.readylytics.health.domain.repository.InsightDismissalRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyRepository
 import app.readylytics.health.domain.scoring.CircadianConsistencyResult
-import app.readylytics.health.domain.sync.ForegroundSyncController
+import app.readylytics.health.domain.sync.ForegroundSyncGateway
 import app.readylytics.health.domain.sync.RecalcProgress
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -56,9 +56,9 @@ class DashboardViewModel
     constructor(
         private val dailySummaryRepository: DailySummaryRepository,
         private val getDashboardDataUseCase: GetDashboardDataUseCase,
-        private val foregroundSyncController: ForegroundSyncController,
-        private val selectedDateRepository: SelectedDateRepository,
-        private val settingsRepo: SettingsRepository,
+        private val foregroundSyncController: ForegroundSyncGateway,
+        private val selectedDateRepository: SelectedDateStore,
+        private val settingsRepo: UserPreferencesReader,
         private val cardConfigRepository: CardConfigurationRepository,
         private val circadianRepo: CircadianConsistencyRepository,
         private val dailyMetricCache: DailyMetricCache,

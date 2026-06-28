@@ -1,6 +1,16 @@
 package app.readylytics.health.data.preferences
 
 import androidx.datastore.core.DataStore
+import app.readylytics.health.domain.preferences.AboutPreferences
+import app.readylytics.health.domain.preferences.BackupSettings
+import app.readylytics.health.domain.preferences.DeviceSettings
+import app.readylytics.health.domain.preferences.DisplaySettings
+import app.readylytics.health.domain.preferences.HeartRateZoneSettings
+import app.readylytics.health.domain.preferences.PhysiologySettings
+import app.readylytics.health.domain.preferences.SleepSettings
+import app.readylytics.health.domain.preferences.SyncSettings
+import app.readylytics.health.domain.preferences.ThresholdSettings
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.scoring.LoadSourceMode
 import app.readylytics.health.domain.scoring.TrimpModel
 import kotlinx.coroutines.flow.Flow
@@ -22,7 +32,17 @@ class SettingsRepository
         private val ui: UIPreferences,
         private val sync: SyncPreferences,
         private val backup: BackupPreferences,
-    ) : app.readylytics.health.domain.preferences.SettingsRepository {
+    ) : app.readylytics.health.domain.preferences.SettingsRepository,
+        UserPreferencesReader,
+        AboutPreferences,
+        PhysiologySettings,
+        HeartRateZoneSettings,
+        SleepSettings,
+        ThresholdSettings,
+        DisplaySettings,
+        SyncSettings,
+        DeviceSettings,
+        BackupSettings {
         /**
          * The primary flow of user preferences.
          */
@@ -72,19 +92,19 @@ class SettingsRepository
 
         // --- Update Methods (delegated to preference modules) ---
 
-        suspend fun updateGoalSleepHours(hours: Float) = sleep.updateGoalSleepHours(hours)
+        override suspend fun updateGoalSleepHours(hours: Float) = sleep.updateGoalSleepHours(hours)
 
-        suspend fun updateHrvBaselineOverride(rmssdMs: Float?) = physiology.updateHrvBaselineOverride(rmssdMs)
+        override suspend fun updateHrvBaselineOverride(rmssdMs: Float?) = physiology.updateHrvBaselineOverride(rmssdMs)
 
-        suspend fun updateRhrBaselineOverride(bpm: Float?) = physiology.updateRhrBaselineOverride(bpm)
+        override suspend fun updateRhrBaselineOverride(bpm: Float?) = physiology.updateRhrBaselineOverride(bpm)
 
         override suspend fun updateMaxHeartRate(bpm: Int) = physiology.updateMaxHeartRate(bpm)
 
-        suspend fun updateAutoCalculateMaxHr(enabled: Boolean) = physiology.updateAutoCalculateMaxHr(enabled)
+        override suspend fun updateAutoCalculateMaxHr(enabled: Boolean) = physiology.updateAutoCalculateMaxHr(enabled)
 
-        suspend fun updateManualZoneEditing(enabled: Boolean) = physiology.updateManualZoneEditing(enabled)
+        override suspend fun updateManualZoneEditing(enabled: Boolean) = physiology.updateManualZoneEditing(enabled)
 
-        suspend fun updateZonePercentages(
+        override suspend fun updateZonePercentages(
             z1Min: Float,
             z1Max: Float,
             z2Max: Float,
@@ -92,7 +112,7 @@ class SettingsRepository
             z4Max: Float,
         ) = physiology.updateZonePercentages(z1Min, z1Max, z2Max, z3Max, z4Max)
 
-        suspend fun updateZoneBpms(
+        override suspend fun updateZoneBpms(
             z1Min: Int,
             z1Max: Int,
             z2Max: Int,
@@ -104,33 +124,33 @@ class SettingsRepository
 
         override suspend fun updateBirthday(date: LocalDate) = physiology.updateBirthday(date)
 
-        suspend fun updateGender(gender: String?) = physiology.updateGender(gender)
+        override suspend fun updateGender(gender: String?) = physiology.updateGender(gender)
 
-        suspend fun updateHeight(heightCm: Float?) = physiology.updateHeight(heightCm)
+        override suspend fun updateHeight(heightCm: Float?) = physiology.updateHeight(heightCm)
 
-        suspend fun updateHrvOptimalThreshold(value: Float) = thresholds.updateHrvOptimalThreshold(value)
+        override suspend fun updateHrvOptimalThreshold(value: Float) = thresholds.updateHrvOptimalThreshold(value)
 
-        suspend fun updateHrvWarningThreshold(value: Float) = thresholds.updateHrvWarningThreshold(value)
+        override suspend fun updateHrvWarningThreshold(value: Float) = thresholds.updateHrvWarningThreshold(value)
 
-        suspend fun updateRhrOptimalThreshold(value: Float) = thresholds.updateRhrOptimalThreshold(value)
+        override suspend fun updateRhrOptimalThreshold(value: Float) = thresholds.updateRhrOptimalThreshold(value)
 
-        suspend fun updateRhrWarningThreshold(value: Float) = thresholds.updateRhrWarningThreshold(value)
+        override suspend fun updateRhrWarningThreshold(value: Float) = thresholds.updateRhrWarningThreshold(value)
 
-        suspend fun updateRestingHrPercentile(percentile: Int) = physiology.updateRestingHrPercentile(percentile)
+        override suspend fun updateRestingHrPercentile(percentile: Int) = physiology.updateRestingHrPercentile(percentile)
 
-        suspend fun updateConsistencyThresholdMinutes(minutes: Int) = sleep.updateConsistencyThresholdMinutes(minutes)
+        override suspend fun updateConsistencyThresholdMinutes(minutes: Int) = sleep.updateConsistencyThresholdMinutes(minutes)
 
-        suspend fun updateConsistencyEvaluationDays(days: Int) = sleep.updateConsistencyEvaluationDays(days)
+        override suspend fun updateConsistencyEvaluationDays(days: Int) = sleep.updateConsistencyEvaluationDays(days)
 
-        suspend fun updateConsistencyBaselineDays(days: Int) = sleep.updateConsistencyBaselineDays(days)
+        override suspend fun updateConsistencyBaselineDays(days: Int) = sleep.updateConsistencyBaselineDays(days)
 
-        suspend fun updateRasScalingFactor(value: Float) = sleep.updateRasScalingFactor(value)
+        override suspend fun updateRasScalingFactor(value: Float) = sleep.updateRasScalingFactor(value)
 
-        suspend fun updateStepGoal(steps: Int) = sleep.updateStepGoal(steps)
+        override suspend fun updateStepGoal(steps: Int) = sleep.updateStepGoal(steps)
 
-        suspend fun updateRetentionDaysEnabled(enabled: Boolean) = sleep.updateRetentionDaysEnabled(enabled)
+        override suspend fun updateRetentionDaysEnabled(enabled: Boolean) = sleep.updateRetentionDaysEnabled(enabled)
 
-        suspend fun updateRetentionDays(days: Int) = sleep.updateRetentionDays(days)
+        override suspend fun updateRetentionDays(days: Int) = sleep.updateRetentionDays(days)
 
         suspend fun updateCollapseHealthConnect(collapsed: Boolean) = ui.updateCollapseHealthConnect(collapsed)
 
@@ -141,17 +161,17 @@ class SettingsRepository
 
         suspend fun updateCollapseAdvanced(collapsed: Boolean) = ui.updateCollapseAdvanced(collapsed)
 
-        suspend fun updateAboutDismissed(dismissed: Boolean) = ui.updateAboutDismissed(dismissed)
+        override suspend fun updateAboutDismissed(dismissed: Boolean) = ui.updateAboutDismissed(dismissed)
 
-        suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) = physiology.updatePhysiologyProfile(profile)
+        override suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) = physiology.updatePhysiologyProfile(profile)
 
-        suspend fun updateTrimpModel(model: TrimpModel) = physiology.updateTrimpModel(model)
+        override suspend fun updateTrimpModel(model: TrimpModel) = physiology.updateTrimpModel(model)
 
-        suspend fun updateBanisterMultiplier(value: Float) = physiology.updateBanisterMultiplier(value)
+        override suspend fun updateBanisterMultiplier(value: Float) = physiology.updateBanisterMultiplier(value)
 
-        suspend fun updateChengBeta(value: Float) = physiology.updateChengBeta(value)
+        override suspend fun updateChengBeta(value: Float) = physiology.updateChengBeta(value)
 
-        suspend fun updateItrimB(value: Float) = physiology.updateItrimB(value)
+        override suspend fun updateItrimB(value: Float) = physiology.updateItrimB(value)
 
         suspend fun updateInstallDate(date: LocalDate) = sync.updateInstallDate(date)
 
@@ -162,13 +182,13 @@ class SettingsRepository
 
         suspend fun updateInstallDate(dateTimeMs: Long) = sync.updateInstallDate(dateTimeMs)
 
-        suspend fun updateSyncPreference(pref: SyncPreference) = sync.updateSyncPreference(pref)
+        override suspend fun updateSyncPreference(pref: SyncPreference) = sync.updateSyncPreference(pref)
 
-        suspend fun updateSyncIntervalHours(hours: Int) = sync.updateSyncIntervalHours(hours)
+        override suspend fun updateSyncIntervalHours(hours: Int) = sync.updateSyncIntervalHours(hours)
 
-        suspend fun updateBackgroundSyncEnabled(enabled: Boolean) = sync.updateBackgroundSyncEnabled(enabled)
+        override suspend fun updateBackgroundSyncEnabled(enabled: Boolean) = sync.updateBackgroundSyncEnabled(enabled)
 
-        suspend fun updateBackgroundSyncIntervalMinutes(minutes: Int) =
+        override suspend fun updateBackgroundSyncIntervalMinutes(minutes: Int) =
             sync.updateBackgroundSyncIntervalMinutes(minutes)
 
         suspend fun updateCircadianThresholdOverride(encryptedMinutes: String?) =
@@ -176,49 +196,49 @@ class SettingsRepository
 
         override suspend fun updateLastSyncTimestamp(timestamp: Long) = sync.updateLastSyncTimestamp(timestamp)
 
-        suspend fun updateStrainLoadSourceMode(mode: LoadSourceMode) = sync.updateStrainLoadSourceMode(mode)
+        override suspend fun updateStrainLoadSourceMode(mode: LoadSourceMode) = sync.updateStrainLoadSourceMode(mode)
 
-        suspend fun updateRasSourceMode(mode: LoadSourceMode) = sync.updateRasSourceMode(mode)
+        override suspend fun updateRasSourceMode(mode: LoadSourceMode) = sync.updateRasSourceMode(mode)
 
-        suspend fun updateBackupSchedule(schedule: BackupSchedule) = backup.updateBackupSchedule(schedule)
+        override suspend fun updateBackupSchedule(schedule: BackupSchedule) = backup.updateBackupSchedule(schedule)
 
-        suspend fun updateLastBackupTimestamp(timestamp: Long) = backup.updateLastBackupTimestamp(timestamp)
+        override suspend fun updateLastBackupTimestamp(timestamp: Long) = backup.updateLastBackupTimestamp(timestamp)
 
-        suspend fun updateBackupDirectoryUri(uri: String?) = backup.updateBackupDirectoryUri(uri)
+        override suspend fun updateBackupDirectoryUri(uri: String?) = backup.updateBackupDirectoryUri(uri)
 
-        suspend fun updateBackupPasswordHash(hash: String?) = backup.updateBackupPasswordHash(hash)
+        override suspend fun updateBackupPasswordHash(hash: String?) = backup.updateBackupPasswordHash(hash)
 
-        suspend fun updateAppTheme(theme: AppTheme) = ui.updateAppTheme(theme)
+        override suspend fun updateAppTheme(theme: AppTheme) = ui.updateAppTheme(theme)
 
-        suspend fun updateDynamicColorEnabled(enabled: Boolean) = ui.updateDynamicColorEnabled(enabled)
+        override suspend fun updateDynamicColorEnabled(enabled: Boolean) = ui.updateDynamicColorEnabled(enabled)
 
-        suspend fun updateFallbackThemeColor(color: FallbackThemeColor) = ui.updateFallbackThemeColor(color)
+        override suspend fun updateFallbackThemeColor(color: FallbackThemeColor) = ui.updateFallbackThemeColor(color)
 
-        suspend fun updateCustomPaletteEnabled(enabled: Boolean) = ui.updateCustomPaletteEnabled(enabled)
+        override suspend fun updateCustomPaletteEnabled(enabled: Boolean) = ui.updateCustomPaletteEnabled(enabled)
 
-        suspend fun updateCustomSecondaryColor(color: Long) = ui.updateCustomSecondaryColor(color)
+        override suspend fun updateCustomSecondaryColor(color: Long) = ui.updateCustomSecondaryColor(color)
 
-        suspend fun updateCustomTertiaryColor(color: Long) = ui.updateCustomTertiaryColor(color)
+        override suspend fun updateCustomTertiaryColor(color: Long) = ui.updateCustomTertiaryColor(color)
 
-        suspend fun updateCustomPrimaryColor(color: Long) = ui.updateCustomPrimaryColor(color)
+        override suspend fun updateCustomPrimaryColor(color: Long) = ui.updateCustomPrimaryColor(color)
 
-        suspend fun updatePrimaryDevice(deviceName: String?) = ui.updatePrimaryDevice(deviceName)
+        override suspend fun updatePrimaryDevice(deviceName: String?) = ui.updatePrimaryDevice(deviceName)
 
-        suspend fun updateDeviceForDataType(
+        override suspend fun updateDeviceForDataType(
             dataTypeKey: String,
             deviceLabel: String?,
         ) = ui.updateDeviceForDataType(dataTypeKey, deviceLabel)
 
         override suspend fun migrateDeviceSelectionIfNeeded() = ui.migrateDeviceSelectionIfNeeded()
 
-        suspend fun updateDeviceChangeNoticeDismissed(dismissed: Boolean) =
+        override suspend fun updateDeviceChangeNoticeDismissed(dismissed: Boolean) =
             ui.updateDeviceChangeNoticeDismissed(dismissed)
 
-        suspend fun getAvailableDevices(): List<String> = ui.getAvailableDevices()
+        override suspend fun getAvailableDevices(): List<String> = ui.getAvailableDevices()
 
-        suspend fun clearDeviceCache() = ui.clearDeviceCache()
+        override suspend fun clearDeviceCache() = ui.clearDeviceCache()
 
-        suspend fun updateUnitSystem(unitSystem: UnitSystem) = ui.updateUnitSystem(unitSystem)
+        override suspend fun updateUnitSystem(unitSystem: UnitSystem) = ui.updateUnitSystem(unitSystem)
 
         suspend fun batchUpdate(block: UserPreferencesProto.Builder.() -> Unit) {
             dataStore.updateData { proto ->
