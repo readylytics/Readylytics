@@ -52,7 +52,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: ./gradlew jacocoTestReport
 
-      - name: Enforce coverage gate (>= 25%)
+      - name: Enforce coverage gate (>= 30%)
         if: ${{ !cancelled() }}
         run: ./gradlew jacocoCoverageVerification
 
@@ -63,7 +63,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.3.3
         with:
           name: coverage-report
-          path: app/build/reports/jacoco/jacocoTestReport/
+          path: build/reports/jacoco/jacocoTestReport/
 
       - name: Upload lint report
         if: ${{ !cancelled() }}
