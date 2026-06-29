@@ -67,11 +67,12 @@ fun StepsCard(
             val fillColor = status.gaugeColor()
 
             HealthProgressBar(
-                segments = if (stepCount != null && stepCount > 0) {
-                    listOf(ProgressBarSegment(value = count.toFloat(), color = fillColor))
-                } else {
-                    emptyList()
-                },
+                segments =
+                    if (stepCount != null && stepCount > 0) {
+                        listOf(ProgressBarSegment(value = count.toFloat(), color = fillColor))
+                    } else {
+                        emptyList()
+                    },
                 max = stepGoal / 0.75f,
                 height = 28.dp,
                 modifier = Modifier.fillMaxWidth(),
