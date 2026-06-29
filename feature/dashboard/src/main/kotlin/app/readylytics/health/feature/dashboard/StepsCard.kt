@@ -10,19 +10,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.ui.components.HealthProgressBar
+import app.readylytics.health.core.ui.components.ProgressBarSegment
+import app.readylytics.health.core.ui.components.gaugeColor
+import app.readylytics.health.domain.model.MetricStatus
+import app.readylytics.health.domain.model.stepsStatus
 
 @Composable
 fun StepsCard(
@@ -59,14 +62,19 @@ fun StepsCard(
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
-            LinearProgressIndicator(
-                progress = {
-                    val count = stepCount ?: 0
-                    val max = stepGoal / 0.75f
-                    (count.toFloat() / max.coerceAtLeast(1f)).coerceIn(0f, 1f)
+            val count = stepCount ?: 0
+            val status = if (stepCount != null) stepsStatus(count, stepGoal) else MetricStatus.CALIBRATING
+            val fillColor = status.gaugeColor()
+
+            HealthProgressBar(
+                segments = if (stepCount != null && stepCount > 0) {
+                    listOf(ProgressBarSegment(value = count.toFloat(), color = fillColor))
+                } else {
+                    emptyList()
                 },
-                modifier = Modifier.fillMaxWidth().height(28.dp),
-                strokeCap = StrokeCap.Round,
+                max = stepGoal / 0.75f,
+                height = 28.dp,
+                modifier = Modifier.fillMaxWidth(),
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(
