@@ -1415,7 +1415,7 @@ git commit -m "refactor: extract onboarding feature module" -m "Constraint: Keep
 - Modify: `app/src/androidTest/kotlin/app/readylytics/health/ui/scaffold/MainScaffoldTest.kt`
 - Modify: baseline profile and performance tests importing moved packages
 
-- [ ] **Step 1: Write final failing topology test**
+- [x] **Step 1: Write final failing topology test**
 
 ```kotlin
 package app.readylytics.health.architecture
@@ -1440,7 +1440,7 @@ class CompleteFeatureTopologyTest {
 }
 ```
 
-- [ ] **Step 2: Delete obsolete app packages and dependencies**
+- [x] **Step 2: Delete obsolete app packages and dependencies**
 
 Remove empty feature directories, duplicate resources, feature-only Compose/Vico dependencies, and obsolete test source paths from app. Keep only navigation, scaffold, global sync, shell theme state, activities, DI, workers, and infrastructure.
 
@@ -1478,15 +1478,15 @@ class FeatureResourceOwnershipTest {
 }
 ```
 
-- [ ] **Step 3: Make root navigation tests feature-aware**
+- [x] **Step 3: Make root navigation tests feature-aware**
 
 Update app tests to use feature entry points through app `NavHost`. Verify tab switching, detail bottom-bar visibility, About, onboarding, workout argument, insight sheet, and back navigation.
 
-- [ ] **Step 4: Update performance and baseline-profile imports**
+- [x] **Step 4: Update performance and baseline-profile imports**
 
 Update `BaselineProfileGenerator.kt`, `DashboardRecompositionTest.kt`, `RenderTest.kt`, and startup tests. Preserve journey selectors and measured behavior.
 
-- [ ] **Step 5: Verify final topology and shell**
+- [x] **Step 5: Verify final topology and shell**
 
 ```powershell
 .\gradlew :app:testDebugUnitTest --tests app.readylytics.health.architecture.CompleteFeatureTopologyTest
@@ -1497,7 +1497,7 @@ Update `BaselineProfileGenerator.kt`, `DashboardRecompositionTest.kt`, `RenderTe
 
 Expected: PASS.
 
-- [ ] **Step 6: Sync and commit**
+- [x] **Step 6: Sync and commit**
 
 ```powershell
 codegraph sync

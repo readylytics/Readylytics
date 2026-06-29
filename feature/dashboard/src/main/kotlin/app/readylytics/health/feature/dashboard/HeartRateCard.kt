@@ -60,7 +60,7 @@ fun HeartRateCard(
                 verticalAlignment = Alignment.Top,
             ) {
                 Text(
-                    text = stringResource(R.string.heart_rate_title),
+                    text = stringResource(app.readylytics.health.core.ui.R.string.heart_rate_title),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleMedium,
                     color = contentColor,
@@ -76,7 +76,7 @@ fun HeartRateCard(
             Spacer(modifier = Modifier.height(4.dp))
             if (summary == null) {
                 Text(
-                    text = stringResource(R.string.hr_no_data),
+                    text = stringResource(app.readylytics.health.core.ui.R.string.hr_no_data),
                     style = MaterialTheme.typography.headlineLarge,
                     color = contentColor,
                 )
@@ -89,7 +89,7 @@ fun HeartRateCard(
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = stringResource(R.string.hr_avg_display, summary.avgBpm),
+                    text = stringResource(app.readylytics.health.core.ui.R.string.hr_avg_display, summary.avgBpm),
                     style = MaterialTheme.typography.bodySmall,
                     color = contentColor.copy(alpha = 0.7f),
                 )

@@ -25,7 +25,7 @@ class BaselineProfileGenerator {
 
     @Test
     fun generate() =
-        baselineProfileRule.collectBaselineProfile(packageName = "app.readylytics.health") {
+        baselineProfileRule.collect(packageName = "app.readylytics.health") {
             pressHome()
             startActivityAndWait()
             device.waitForIdle()

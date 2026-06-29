@@ -385,12 +385,12 @@ private fun SetPasswordDialog(
                 onClick = { onConfirm(password) },
                 enabled = password.isNotEmpty() && password == repeatPassword,
             ) {
-                Text(stringResource(R.string.action_done))
+                Text(stringResource(R.string.action_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
+                Text(stringResource(app.readylytics.health.core.ui.R.string.action_cancel))
             }
         },
     )

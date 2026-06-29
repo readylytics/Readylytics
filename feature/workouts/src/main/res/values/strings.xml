@@ -31,7 +31,6 @@
     <string name="workout_stats_ras_title">Readylytics Activity Score</string>
     <string name="workout_stats_history_title">History</string>
     <string name="workout_zones_title">Heart rate zones</string>
-    <string name="hr_zones_footer">Zones are used for TRIMP and workout intensity tracking.</string>
 
     <!-- Workout Intensities -->
     <string name="workout_intensity_very_hard">Very Hard</string>

@@ -241,7 +241,7 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { onLocalBackupEvent(SettingsEvent.RestoreDismissed) }) {
-                    Text(stringResource(R.string.action_cancel))
+                    Text(stringResource(app.readylytics.health.core.ui.R.string.action_cancel))
                 }
             },
         )
@@ -372,7 +372,9 @@ fun SettingsScreen(
                             SectionHeader(stringResource(R.string.load_sources_section_title))
                             LoadSourcesSection(uiState = sleepState, onEvent = onSleepEvent)
                             Spacer(modifier = Modifier.height(16.dp))
-                            SectionHeader(stringResource(R.string.label_circadian_consistency))
+                            SectionHeader(
+                                stringResource(app.readylytics.health.core.ui.R.string.label_circadian_consistency),
+                            )
                             CircadianThresholdSettingsSection(
                                 profile = physiologyState.physiologyProfile,
                                 currentOverride = thresholdState.circadianThresholdOverride,

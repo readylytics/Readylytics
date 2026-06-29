@@ -2,12 +2,6 @@
 <resources>
     <!-- Vitals Overview / Tab -->
     <string name="tab_vitals">Vitals</string>
-    <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last
-        night.\n\n• Optimal: 98–100%\n• Normal: 95–97%\n• Warning: 90–94%\n• Poor: &lt;90%</string>
-    <string name="spo2_optimal">Optimal</string>
-    <string name="spo2_normal">Normal</string>
-    <string name="spo2_warning">Warning</string>
-    <string name="spo2_poor">Poor</string>
 
     <!-- General Labels -->
     <string name="label_physiological_trends">Physiological trends</string>
@@ -15,7 +9,7 @@
     <string name="label_diastolic_ref">Diastolic (Ref: &lt;80)</string>
 
     <!-- Steps -->
-    <string name="label_daily_steps">Daily Steps</string>
+    
     <string name="label_goal">Goal</string>
     <string name="steps_fraction_display">%1$s / %2$s</string>
     <string name="label_steps_today">Steps Today</string>
@@ -25,8 +19,7 @@
     </plurals>
 
     <!-- Heart Rate Details -->
-    <string name="hr_no_data">-- bpm</string>
-    <string name="hr_avg_display">bpm · avg %1$d</string>
+
     <string name="hr_zone_0_range">&lt; %1$d bpm</string>
     <string name="hr_zone_inner_range">%1$d–%2$d bpm</string>
     <string name="hr_zone_above_range">&gt; %1$d bpm</string>
@@ -84,14 +77,5 @@
     <string name="label_oxygen_saturation">Oxygen saturation</string>
 
     <!-- Tooltips & specific card labels -->
-    <string name="card_tooltip_weight_no_data">Weight from Health Connect</string>
-    <string name="card_tooltip_weight_latest">Latest weight measurement.</string>
-    <string name="card_tooltip_body_fat_no_data">Body fat percentage from Health Connect</string>
-    <string name="card_tooltip_body_fat_latest">Body fat percentage.</string>
-    <string name="card_tooltip_bp_no_data">Blood pressure from Health Connect</string>
-    <string name="card_tooltip_bp_latest">Latest blood pressure reading.\n\n</string>
-    <string name="card_bp_status_optimal">Optimal: &lt;120/80 mmHg</string>
-    <string name="card_bp_status_neutral">Elevated: 120–129/&lt;80 mmHg</string>
-    <string name="card_bp_status_warning">Hypertension Stage 1: 130–139/80–89 mmHg</string>
-    <string name="card_bp_status_poor">Hypertension Stage 2+: \u2265140/90 mmHg</string>
+
 </resources>

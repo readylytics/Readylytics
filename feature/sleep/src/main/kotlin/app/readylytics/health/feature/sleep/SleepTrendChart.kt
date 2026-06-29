@@ -135,7 +135,7 @@ fun SleepTrendChart(
 
     val durationFormat = stringResource(R.string.sleep_trend_tooltip_duration_format)
     val bedtimeFormat = stringResource(R.string.sleep_trend_tooltip_bedtime_format)
-    val hoursOnlyFormat = stringResource(R.string.sleep_duration_hours_only)
+    val hoursOnlyFormat = stringResource(app.readylytics.health.core.ui.R.string.sleep_duration_hours_only)
 
     var layerBounds by remember { mutableStateOf<Rect?>(null) }
     val invisibleMarker =

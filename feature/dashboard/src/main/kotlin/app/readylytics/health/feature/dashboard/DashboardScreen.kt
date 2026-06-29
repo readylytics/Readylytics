@@ -217,7 +217,7 @@ fun DashboardScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = stringResource(R.string.dashboard_no_data),
+                            text = stringResource(app.readylytics.health.core.ui.R.string.dashboard_no_data),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

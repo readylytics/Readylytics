@@ -5,10 +5,10 @@
         Range: 0 to 90 minutes</string>
 <string name="accessibility_clear">Clear</string>
 <string name="accessibility_search">Search</string>
-<string name="action_cancel">Cancel</string>
+
 <string name="action_change">Change</string>
-<string name="action_done">Save</string>
-<string name="action_ok">OK</string>
+<string name="action_save">Save</string>
+
 <string name="action_reset_to_default">Reset to default</string>
 <string name="action_restore">Restore</string>
 <string name="action_set">Set</string>
@@ -137,12 +137,11 @@
 <string name="hr_max_rate_label">Max heart rate (bpm)</string>
 <string name="hr_save_zones_button">Save zone boundaries</string>
 <string name="hr_zone_range_display">%1$d - %2$d bpm</string>
-<string name="hr_zones_footer">Zones are used for TRIMP and workout intensity tracking.</string>
+
 <string name="hr_zones_section_title">Heart rate zones (bpm)</string>
-<string name="label_circadian_consistency">Circadian consistency</string>
+
 <string name="label_daily_step_goal">Daily step goal</string>
-<string name="label_date_of_birth">Date of birth</string>
-<string name="label_not_set">Not set</string>
+
 <string name="label_sleep">Sleep</string>
 <string name="label_sleep_goal">Sleep Goal</string>
 <string name="load_source_option_everyday_hr">Everyday HR load</string>

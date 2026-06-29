@@ -69,7 +69,7 @@ fun TrimpBreakdownChart(
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                text = stringResource(R.string.heart_rate_title),
+                text = stringResource(app.readylytics.health.core.ui.R.string.heart_rate_title),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )

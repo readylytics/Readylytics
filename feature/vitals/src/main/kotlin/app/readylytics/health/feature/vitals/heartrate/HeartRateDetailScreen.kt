@@ -88,7 +88,7 @@ fun HeartRateDetailScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.heart_rate_title)) },
+                title = { Text(stringResource(app.readylytics.health.core.ui.R.string.heart_rate_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -232,7 +232,7 @@ fun HeartRateDetailScreen(
 
                     if (uiState.zoneTotals.isEmpty()) {
                         Text(
-                            text = stringResource(R.string.dashboard_no_data),
+                            text = stringResource(app.readylytics.health.core.ui.R.string.dashboard_no_data),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

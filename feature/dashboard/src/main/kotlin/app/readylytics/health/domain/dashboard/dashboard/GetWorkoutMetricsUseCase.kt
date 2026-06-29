@@ -42,12 +42,18 @@ class GetWorkoutMetricsUseCase
                         )
                     } else {
                         CardData(
-                            title = resourceProvider.getString(R.string.card_title_strain_ratio),
+                            title =
+                                resourceProvider.getString(
+                                    app.readylytics.health.core.ui.R.string.card_title_strain_ratio,
+                                ),
                             value = "—",
                             unit = "",
                             status = MetricStatus.CALIBRATING,
                             action = DashboardAction.NAVIGATE_WORKOUTS,
-                            tooltip = resourceProvider.getString(R.string.tooltip_strain_ratio),
+                            tooltip =
+                                resourceProvider.getString(
+                                    app.readylytics.health.core.ui.R.string.tooltip_strain_ratio,
+                                ),
                         )
                     }
 
@@ -63,12 +69,12 @@ class GetWorkoutMetricsUseCase
             val status = strainRatio.strainRatioStatus()
 
             return CardData(
-                title = resourceProvider.getString(R.string.card_title_strain_ratio),
+                title = resourceProvider.getString(app.readylytics.health.core.ui.R.string.card_title_strain_ratio),
                 value = displayValue,
                 unit = "",
                 status = status,
                 action = DashboardAction.NAVIGATE_WORKOUTS,
-                tooltip = resourceProvider.getString(R.string.tooltip_strain_ratio),
+                tooltip = resourceProvider.getString(app.readylytics.health.core.ui.R.string.tooltip_strain_ratio),
             )
         }
     }

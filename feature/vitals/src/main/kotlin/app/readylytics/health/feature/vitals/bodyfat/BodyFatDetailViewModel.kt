@@ -88,7 +88,7 @@ class BodyFatDetailViewModel
                                         listOf(
                                             UiText.StringRes(R.string.delta_up),
                                             UiText.RawString(" $formattedDiff"),
-                                            UiText.StringRes(R.string.unit_percent),
+                                            UiText.StringRes(app.readylytics.health.core.ui.R.string.unit_percent),
                                         ),
                                     )
                                 diff < 0 ->
@@ -96,7 +96,7 @@ class BodyFatDetailViewModel
                                         listOf(
                                             UiText.StringRes(R.string.delta_down),
                                             UiText.RawString(" $formattedDiff"),
-                                            UiText.StringRes(R.string.unit_percent),
+                                            UiText.StringRes(app.readylytics.health.core.ui.R.string.unit_percent),
                                         ),
                                     )
                                 else -> UiText.StringRes(R.string.delta_no_change)

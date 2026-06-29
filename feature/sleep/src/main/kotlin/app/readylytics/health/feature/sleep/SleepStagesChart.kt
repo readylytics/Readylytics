@@ -171,7 +171,7 @@ private fun formatStageDuration(minutes: Int): String {
     val h = minutes / 60
     val m = minutes % 60
     return if (h > 0) {
-        stringResource(R.string.sleep_duration_hours_minutes, h, m)
+        stringResource(app.readylytics.health.core.ui.R.string.sleep_duration_hours_minutes, h, m)
     } else {
         stringResource(R.string.sleep_duration_minutes_only, m)
     }

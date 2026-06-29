@@ -75,7 +75,7 @@ fun StepDetailScreen(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.label_daily_steps)) },
+                title = { Text(stringResource(app.readylytics.health.core.ui.R.string.label_daily_steps)) },
                 windowInsets = WindowInsets(0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -166,7 +166,7 @@ fun StepDetailScreen(
                 )
             } else {
                 TrendCard(
-                    title = stringResource(R.string.label_daily_steps),
+                    title = stringResource(app.readylytics.health.core.ui.R.string.label_daily_steps),
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
                     TrendChart(

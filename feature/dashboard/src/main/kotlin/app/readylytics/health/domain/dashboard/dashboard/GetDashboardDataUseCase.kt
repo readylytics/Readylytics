@@ -113,7 +113,7 @@ class GetDashboardDataUseCase
                 unit = "",
                 status = summary.sleepScore?.let { scoreStatus(it) } ?: MetricStatus.CALIBRATING,
                 action = DashboardAction.NAVIGATE_SLEEP,
-                tooltip = resourceProvider.getString(R.string.tooltip_sleep_score),
+                tooltip = resourceProvider.getString(app.readylytics.health.core.ui.R.string.tooltip_sleep_score),
             )
 
         private fun readinessCard(
@@ -121,12 +121,12 @@ class GetDashboardDataUseCase
             m: DailyMetrics,
         ): CardData =
             CardData(
-                title = resourceProvider.getString(R.string.card_title_readiness),
+                title = resourceProvider.getString(app.readylytics.health.core.ui.R.string.card_title_readiness),
                 value = m.readinessRounded?.toString() ?: "—",
                 unit = "",
                 status = m.readinessRounded?.let { scoreStatus(it.toFloat()) } ?: MetricStatus.CALIBRATING,
                 action = DashboardAction.NAVIGATE_WORKOUTS,
-                tooltip = resourceProvider.getString(R.string.tooltip_readiness),
+                tooltip = resourceProvider.getString(app.readylytics.health.core.ui.R.string.tooltip_readiness),
             )
 
         private fun scoreStatus(score: Float): MetricStatus =
@@ -142,20 +142,29 @@ class GetDashboardDataUseCase
             val efficiency = lastSleepSession?.efficiency?.roundToPercentInt()?.toString() ?: "—"
 
             return CardData(
-                title = resourceProvider.getString(R.string.card_title_sleep_efficiency),
+                title = resourceProvider.getString(app.readylytics.health.core.ui.R.string.card_title_sleep_efficiency),
                 value =
                     if (efficiency ==
                         "—"
                     ) {
                         efficiency
                     } else {
-                        resourceProvider.getString(R.string.card_efficiency_format, efficiency)
+                        resourceProvider.getString(
+                            app.readylytics.health.core.ui.R.string.card_efficiency_format,
+                            efficiency,
+                        )
                     },
                 unit = "",
                 status = efficiencyStatus,
                 action = DashboardAction.NAVIGATE_SLEEP,
-                tooltip = resourceProvider.getString(R.string.card_tooltip_sleep_efficiency),
-                secondaryText = resourceProvider.getString(R.string.card_goal_sleep_efficiency),
+                tooltip =
+                    resourceProvider.getString(
+                        app.readylytics.health.core.ui.R.string.card_tooltip_sleep_efficiency,
+                    ),
+                secondaryText =
+                    resourceProvider.getString(
+                        app.readylytics.health.core.ui.R.string.card_goal_sleep_efficiency,
+                    ),
             )
         }
 
@@ -169,7 +178,7 @@ class GetDashboardDataUseCase
                 unit = "",
                 status = status,
                 action = DashboardAction.NAVIGATE_WORKOUTS,
-                tooltip = resourceProvider.getString(R.string.tooltip_ras),
+                tooltip = resourceProvider.getString(app.readylytics.health.core.ui.R.string.tooltip_ras),
             )
         }
 
@@ -199,25 +208,29 @@ class GetDashboardDataUseCase
 
             val tooltip =
                 buildString {
-                    append(resourceProvider.getString(R.string.tooltip_sleep_rhr))
+                    append(resourceProvider.getString(app.readylytics.health.core.ui.R.string.tooltip_sleep_rhr))
                     if (rhrBaseline != null && rhrArrow != null && rhrDiff != null) {
                         append(
                             resourceProvider.getString(
-                                R.string.tooltip_sleep_rhr_baseline,
+                                app.readylytics.health.core.ui.R.string.tooltip_sleep_rhr_baseline,
                                 rhrBaseline,
                                 rhrArrow,
                                 rhrDiff,
                             ),
                         )
                     } else {
-                        append(resourceProvider.getString(R.string.tooltip_sleep_rhr_no_baseline))
+                        append(
+                            resourceProvider.getString(
+                                app.readylytics.health.core.ui.R.string.tooltip_sleep_rhr_no_baseline,
+                            ),
+                        )
                     }
                 }
 
             return CardData(
                 title = resourceProvider.getString(R.string.card_title_sleep_rhr),
                 value = summary.restingHeartRate?.toString() ?: "—",
-                unit = resourceProvider.getString(R.string.unit_bpm),
+                unit = resourceProvider.getString(app.readylytics.health.core.ui.R.string.unit_bpm),
                 status = rhrStatus,
                 action = DashboardAction.NAVIGATE_SLEEP,
                 tooltip = tooltip,
@@ -236,12 +249,12 @@ class GetDashboardDataUseCase
 
             val tooltip =
                 buildString {
-                    append(resourceProvider.getString(R.string.tooltip_sleep_hrv))
+                    append(resourceProvider.getString(app.readylytics.health.core.ui.R.string.tooltip_sleep_hrv))
                     if (hrvBaseline != null) {
                         if (hrvArrow != null && hrvDiff != null) {
                             append(
                                 resourceProvider.getString(
-                                    R.string.tooltip_sleep_hrv_baseline,
+                                    app.readylytics.health.core.ui.R.string.tooltip_sleep_hrv_baseline,
                                     hrvBaseline,
                                     hrvArrow,
                                     hrvDiff,
@@ -249,23 +262,36 @@ class GetDashboardDataUseCase
                             )
                         } else {
                             append(
-                                resourceProvider.getString(R.string.tooltip_sleep_hrv_baseline_no_today, hrvBaseline),
+                                resourceProvider.getString(
+                                    app.readylytics.health.core.ui.R.string.tooltip_sleep_hrv_baseline_no_today,
+                                    hrvBaseline,
+                                ),
                             )
                         }
                     } else {
-                        append(resourceProvider.getString(R.string.tooltip_sleep_hrv_no_baseline))
+                        append(
+                            resourceProvider.getString(
+                                app.readylytics.health.core.ui.R.string.tooltip_sleep_hrv_no_baseline,
+                            ),
+                        )
                     }
                     val zStr = m.zLnHrvDisplay
                     val sigmaStr = m.hrvSigmaDisplay
                     if (zStr != null && sigmaStr != null) {
-                        append(resourceProvider.getString(R.string.tooltip_sleep_hrv_diagnostics, zStr, sigmaStr))
+                        append(
+                            resourceProvider.getString(
+                                app.readylytics.health.core.ui.R.string.tooltip_sleep_hrv_diagnostics,
+                                zStr,
+                                sigmaStr,
+                            ),
+                        )
                     }
                 }
 
             return CardData(
                 title = resourceProvider.getString(R.string.card_title_hrv),
                 value = summary.nocturnalHrv?.toString() ?: "—",
-                unit = resourceProvider.getString(R.string.unit_ms),
+                unit = resourceProvider.getString(app.readylytics.health.core.ui.R.string.unit_ms),
                 status = hrvStatus,
                 action = DashboardAction.NAVIGATE_SLEEP,
                 tooltip = tooltip,
@@ -296,7 +322,11 @@ class GetDashboardDataUseCase
                 unit = "",
                 status = durationStatus,
                 action = DashboardAction.NAVIGATE_SLEEP,
-                tooltip = resourceProvider.getString(R.string.tooltip_sleep_duration, goalStr),
+                tooltip =
+                    resourceProvider.getString(
+                        app.readylytics.health.core.ui.R.string.tooltip_sleep_duration,
+                        goalStr,
+                    ),
             ).let {
                 if (lastNightText != null) it.copy(secondaryText = lastNightText) else it
             }
@@ -331,7 +361,7 @@ class GetDashboardDataUseCase
             return CardData(
                 title = resourceProvider.getString(R.string.card_title_resting_hr),
                 value = m.restingHeartRateRounded?.toString() ?: "—",
-                unit = resourceProvider.getString(R.string.unit_bpm),
+                unit = resourceProvider.getString(app.readylytics.health.core.ui.R.string.unit_bpm),
                 status = restingHrStatus,
                 action = DashboardAction.NAVIGATE_RHR,
                 tooltip = tooltip,
@@ -343,9 +373,13 @@ class GetDashboardDataUseCase
             val hours = minutes / 60
             val mins = minutes % 60
             return if (mins == 0) {
-                resourceProvider.getString(R.string.sleep_duration_hours_only, hours)
+                resourceProvider.getString(app.readylytics.health.core.ui.R.string.sleep_duration_hours_only, hours)
             } else {
-                resourceProvider.getString(R.string.sleep_duration_hours_minutes, hours, mins)
+                resourceProvider.getString(
+                    app.readylytics.health.core.ui.R.string.sleep_duration_hours_minutes,
+                    hours,
+                    mins,
+                )
             }
         }
 
@@ -366,7 +400,10 @@ class GetDashboardDataUseCase
                     value = "—",
                     unit = unitStr,
                     status = MetricStatus.NEUTRAL,
-                    tooltip = resourceProvider.getString(R.string.card_tooltip_weight_no_data),
+                    tooltip =
+                        resourceProvider.getString(
+                            app.readylytics.health.core.ui.R.string.card_tooltip_weight_no_data,
+                        ),
                 )
 
             val heightCm = prefs.heightCm
@@ -393,7 +430,10 @@ class GetDashboardDataUseCase
                 unit = unitStr,
                 status = bmiStatus,
                 action = DashboardAction.NAVIGATE_WEIGHT,
-                tooltip = resourceProvider.getString(R.string.card_tooltip_weight_latest),
+                tooltip =
+                    resourceProvider.getString(
+                        app.readylytics.health.core.ui.R.string.card_tooltip_weight_latest,
+                    ),
                 secondaryText = null,
             )
         }
@@ -407,9 +447,12 @@ class GetDashboardDataUseCase
                 summary.bodyFatPercent ?: return CardData(
                     title = resourceProvider.getString(R.string.card_title_body_fat),
                     value = "—",
-                    unit = resourceProvider.getString(R.string.unit_percent),
+                    unit = resourceProvider.getString(app.readylytics.health.core.ui.R.string.unit_percent),
                     status = MetricStatus.NEUTRAL,
-                    tooltip = resourceProvider.getString(R.string.card_tooltip_body_fat_no_data),
+                    tooltip =
+                        resourceProvider.getString(
+                            app.readylytics.health.core.ui.R.string.card_tooltip_body_fat_no_data,
+                        ),
                 )
 
             val bodyFatStatus =
@@ -432,7 +475,10 @@ class GetDashboardDataUseCase
                 unit = "",
                 status = status,
                 action = DashboardAction.NAVIGATE_BODY_FAT,
-                tooltip = resourceProvider.getString(R.string.card_tooltip_body_fat_latest),
+                tooltip =
+                    resourceProvider.getString(
+                        app.readylytics.health.core.ui.R.string.card_tooltip_body_fat_latest,
+                    ),
             )
         }
 
@@ -447,9 +493,12 @@ class GetDashboardDataUseCase
                 return CardData(
                     title = resourceProvider.getString(R.string.card_title_blood_pressure),
                     value = "—",
-                    unit = resourceProvider.getString(R.string.unit_mmHg),
+                    unit = resourceProvider.getString(app.readylytics.health.core.ui.R.string.unit_mmHg),
                     status = MetricStatus.NEUTRAL,
-                    tooltip = resourceProvider.getString(R.string.card_tooltip_bp_no_data),
+                    tooltip =
+                        resourceProvider.getString(
+                            app.readylytics.health.core.ui.R.string.card_tooltip_bp_no_data,
+                        ),
                 )
             }
 
@@ -464,27 +513,37 @@ class GetDashboardDataUseCase
 
             val tooltip =
                 buildString {
-                    append(resourceProvider.getString(R.string.card_tooltip_bp_latest))
+                    append(resourceProvider.getString(app.readylytics.health.core.ui.R.string.card_tooltip_bp_latest))
                     when (bpStatus) {
                         BloodPressureStatus.Optimal ->
                             append(
-                                resourceProvider.getString(R.string.card_bp_status_optimal),
+                                resourceProvider.getString(
+                                    app.readylytics.health.core.ui.R.string.card_bp_status_optimal,
+                                ),
                             )
                         BloodPressureStatus.Neutral ->
                             append(
-                                resourceProvider.getString(R.string.card_bp_status_neutral),
+                                resourceProvider.getString(
+                                    app.readylytics.health.core.ui.R.string.card_bp_status_neutral,
+                                ),
                             )
                         BloodPressureStatus.HypertensionStage1 ->
-                            append(resourceProvider.getString(R.string.card_bp_status_warning))
+                            append(
+                                resourceProvider.getString(
+                                    app.readylytics.health.core.ui.R.string.card_bp_status_warning,
+                                ),
+                            )
                         BloodPressureStatus.HypertensionStage2 ->
-                            append(resourceProvider.getString(R.string.card_bp_status_poor))
+                            append(
+                                resourceProvider.getString(app.readylytics.health.core.ui.R.string.card_bp_status_poor),
+                            )
                     }
                 }
 
             return CardData(
                 title = resourceProvider.getString(R.string.card_title_blood_pressure),
                 value = m.bloodPressureDisplay ?: "$systolic/$diastolic",
-                unit = resourceProvider.getString(R.string.unit_mmHg),
+                unit = resourceProvider.getString(app.readylytics.health.core.ui.R.string.unit_mmHg),
                 status = status,
                 action = DashboardAction.NAVIGATE_BLOOD_PRESSURE,
                 tooltip = tooltip,
@@ -504,27 +563,38 @@ class GetDashboardDataUseCase
                 return CardData(
                     title = resourceProvider.getString(R.string.card_title_oxygen_saturation),
                     value = "—",
-                    unit = resourceProvider.getString(R.string.unit_percent),
+                    unit = resourceProvider.getString(app.readylytics.health.core.ui.R.string.unit_percent),
                     status = MetricStatus.CALIBRATING,
-                    tooltip = resourceProvider.getString(R.string.tooltip_vitals_spo2),
-                    secondaryText = resourceProvider.getString(R.string.spo2_calibrating),
+                    tooltip = resourceProvider.getString(app.readylytics.health.core.ui.R.string.tooltip_vitals_spo2),
+                    secondaryText =
+                        resourceProvider.getString(
+                            app.readylytics.health.core.ui.R.string.spo2_calibrating,
+                        ),
                 )
             }
             val (status, statusLabelRes) =
                 when {
-                    roundedSpo2 >= 98 -> Pair(MetricStatus.OPTIMAL, R.string.spo2_optimal)
-                    roundedSpo2 >= 95 -> Pair(MetricStatus.NEUTRAL, R.string.spo2_normal)
-                    roundedSpo2 >= 90 -> Pair(MetricStatus.WARNING, R.string.spo2_warning)
-                    else -> Pair(MetricStatus.POOR, R.string.spo2_poor)
+                    roundedSpo2 >= 98 ->
+                        Pair(
+                            MetricStatus.OPTIMAL,
+                            app.readylytics.health.core.ui.R.string.spo2_optimal,
+                        )
+                    roundedSpo2 >= 95 -> Pair(MetricStatus.NEUTRAL, app.readylytics.health.core.ui.R.string.spo2_normal)
+                    roundedSpo2 >= 90 ->
+                        Pair(
+                            MetricStatus.WARNING,
+                            app.readylytics.health.core.ui.R.string.spo2_warning,
+                        )
+                    else -> Pair(MetricStatus.POOR, app.readylytics.health.core.ui.R.string.spo2_poor)
                 }
 
             return CardData(
                 title = resourceProvider.getString(R.string.card_title_oxygen_saturation),
                 value = "$roundedSpo2",
-                unit = resourceProvider.getString(R.string.unit_percent),
+                unit = resourceProvider.getString(app.readylytics.health.core.ui.R.string.unit_percent),
                 status = status,
                 action = DashboardAction.NAVIGATE_VITALS,
-                tooltip = resourceProvider.getString(R.string.tooltip_vitals_spo2),
+                tooltip = resourceProvider.getString(app.readylytics.health.core.ui.R.string.tooltip_vitals_spo2),
                 secondaryText = resourceProvider.getString(statusLabelRes),
             )
         }

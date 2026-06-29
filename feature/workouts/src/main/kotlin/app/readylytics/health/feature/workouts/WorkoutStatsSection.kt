@@ -106,7 +106,7 @@ fun WorkoutStatsSection(
                 ) {
                     val strainRatio = uiState.latestMetrics?.strainRatioRaw
                     val strainStatus = strainRatio?.strainRatioStatus() ?: MetricStatus.CALIBRATING
-                    val strainTooltip = stringResource(R.string.tooltip_strain_ratio)
+                    val strainTooltip = stringResource(app.readylytics.health.core.ui.R.string.tooltip_strain_ratio)
 
                     val strainDelta =
                         if (uiState.todayStrainIncrease != null) {
@@ -127,7 +127,7 @@ fun WorkoutStatsSection(
 
                     M3ScoreGaugeCard(
                         modifier = Modifier.weight(1f),
-                        title = stringResource(R.string.card_title_strain_ratio),
+                        title = stringResource(app.readylytics.health.core.ui.R.string.card_title_strain_ratio),
                         score = strainRatio,
                         displayText =
                             uiState.latestMetrics?.strainRatioDisplay ?: stringResource(R.string.delta_no_change),
@@ -147,14 +147,14 @@ fun WorkoutStatsSection(
 
                     M3ScoreGaugeCard(
                         modifier = Modifier.weight(1f),
-                        title = stringResource(R.string.card_title_readiness),
+                        title = stringResource(app.readylytics.health.core.ui.R.string.card_title_readiness),
                         score = readinessVal,
                         displayText =
                             uiState.latestMetrics?.readinessRounded?.toString()
                                 ?: stringResource(R.string.delta_no_change),
                         unitText = "",
                         deltaText = readinessDelta,
-                        tooltipDescription = stringResource(R.string.tooltip_readiness),
+                        tooltipDescription = stringResource(app.readylytics.health.core.ui.R.string.tooltip_readiness),
                     )
                 }
             },
@@ -203,7 +203,7 @@ fun WorkoutStatsSection(
                                     )
                                 }
                                 MetricTooltip(
-                                    description = stringResource(R.string.tooltip_ras),
+                                    description = stringResource(app.readylytics.health.core.ui.R.string.tooltip_ras),
                                 )
                             }
                         }

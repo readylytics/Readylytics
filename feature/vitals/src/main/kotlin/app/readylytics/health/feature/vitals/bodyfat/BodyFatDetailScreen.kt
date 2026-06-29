@@ -127,7 +127,7 @@ fun BodyFatDetailScreen(
                     title = stringResource(R.string.label_body_fat),
                     score = uiState.latestBodyFat,
                     displayText = uiState.bodyFatDisplay ?: "—",
-                    unitText = stringResource(R.string.unit_percent),
+                    unitText = stringResource(app.readylytics.health.core.ui.R.string.unit_percent),
                     maxScore = uiState.optimalRangeMax * 2f,
                     status = uiState.bodyFatStatus,
                     deltaText = uiState.deltaBodyFatDisplay.resolveOrNull(),

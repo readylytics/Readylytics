@@ -4,12 +4,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.ui.model.HrSample
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepStageData
 import app.readylytics.health.feature.sleep.SleepStagesChart
+import app.readylytics.health.feature.vitals.heartrate.HrTimelineChart
+import app.readylytics.health.feature.vitals.steps.StepsBar
 import app.readylytics.health.feature.workouts.TrimpBreakdownChart
 import org.junit.Rule
 import org.junit.Test
@@ -17,6 +20,7 @@ import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.time.ZoneId
 
+@OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class ChartAccessibilityTest {
     @get:Rule

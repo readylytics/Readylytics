@@ -144,7 +144,7 @@ fun SleepScreen(
                             currentRounded = uiState.latestMetrics?.sleepScoreRounded,
                             previousRounded = uiState.yesterdaySleepScoreRounded,
                         ).resolveOrNull(),
-                    tooltipDescription = stringResource(R.string.tooltip_sleep_score),
+                    tooltipDescription = stringResource(app.readylytics.health.core.ui.R.string.tooltip_sleep_score),
                 )
 
                 val sleepTimeGaugeData = uiState.sleepTimeGaugeData
@@ -162,7 +162,11 @@ fun SleepScreen(
                     maxScore = 1f,
                     status = sleepTimeGaugeData.status,
                     deltaText = sleepTimeGaugeData.deltaText.resolveOrNull(),
-                    tooltipDescription = stringResource(R.string.tooltip_sleep_duration, goalText),
+                    tooltipDescription =
+                        stringResource(
+                            app.readylytics.health.core.ui.R.string.tooltip_sleep_duration,
+                            goalText,
+                        ),
                 )
             }
         }
@@ -335,16 +339,16 @@ private fun MetricsGrid(
             }
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 MetricCard(
-                    title = stringResource(R.string.card_title_sleep_efficiency),
+                    title = stringResource(app.readylytics.health.core.ui.R.string.card_title_sleep_efficiency),
                     value =
                         session?.let {
                             stringResource(
-                                R.string.card_efficiency_format,
+                                app.readylytics.health.core.ui.R.string.card_efficiency_format,
                                 it.efficiency.roundToPercentInt(),
                             )
                         }
                             ?: "—",
-                    secondaryText = stringResource(R.string.card_goal_sleep_efficiency),
+                    secondaryText = stringResource(app.readylytics.health.core.ui.R.string.card_goal_sleep_efficiency),
                     status = efficiencyStatus,
                     tooltip = stringResource(R.string.tooltip_sleep_efficiency),
                     onClick = null,

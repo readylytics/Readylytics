@@ -46,7 +46,7 @@ fun SleepStageBreakdownRow(
         val minutes = durationMinutes % 60
         val durationText =
             if (hours > 0) {
-                stringResource(R.string.sleep_duration_hours_minutes, hours, minutes)
+                stringResource(app.readylytics.health.core.ui.R.string.sleep_duration_hours_minutes, hours, minutes)
             } else {
                 stringResource(R.string.sleep_duration_minutes_only, minutes)
             }

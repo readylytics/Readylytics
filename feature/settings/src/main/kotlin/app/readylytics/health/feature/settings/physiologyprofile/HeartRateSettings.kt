@@ -180,7 +180,7 @@ fun HeartRateZoneSection(
         }
 
         Text(
-            stringResource(R.string.hr_zones_footer),
+            stringResource(app.readylytics.health.core.ui.R.string.hr_zones_footer),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = SettingsConstants.VERTICAL_SPACER),
@@ -416,7 +416,9 @@ fun GenderSelector(
         modifier = Modifier.fillMaxWidth(),
     ) {
         OutlinedTextField(
-            value = selectedGender?.let { stringResource(it.labelRes()) } ?: stringResource(R.string.label_not_set),
+            value =
+                selectedGender?.let { stringResource(it.labelRes()) }
+                    ?: stringResource(app.readylytics.health.core.ui.R.string.label_not_set),
             onValueChange = {},
             readOnly = true,
             label = { Text(stringResource(R.string.label_gender)) },

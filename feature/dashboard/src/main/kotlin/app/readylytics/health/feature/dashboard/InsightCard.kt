@@ -81,7 +81,7 @@ fun InsightCard(
                         imageVector = Icons.Default.Info,
                         contentDescription =
                             stringResource(
-                                R.string.insight_detail_show_explanation_format,
+                                app.readylytics.health.core.ui.R.string.insight_detail_show_explanation_format,
                                 title,
                             ),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -94,7 +94,10 @@ fun InsightCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.insight_dismiss_description),
+                    contentDescription =
+                        stringResource(
+                            app.readylytics.health.core.ui.R.string.insight_dismiss_description,
+                        ),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -133,7 +136,7 @@ fun InsightRerunCard(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = stringResource(R.string.insight_rerun_description),
+                contentDescription = stringResource(app.readylytics.health.core.ui.R.string.insight_rerun_description),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

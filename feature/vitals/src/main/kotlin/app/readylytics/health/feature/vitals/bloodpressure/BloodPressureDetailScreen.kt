@@ -118,10 +118,10 @@ fun BloodPressureDetailScreen(
                             when {
                                 diff > 0 ->
                                     stringResource(R.string.delta_up) + " $diff " +
-                                        stringResource(R.string.unit_mmHg)
+                                        stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg)
                                 diff < 0 ->
                                     stringResource(R.string.delta_down) + " ${kotlin.math.abs(diff)} " +
-                                        stringResource(R.string.unit_mmHg)
+                                        stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg)
                                 else -> stringResource(R.string.delta_no_change)
                             }
                         } else {
@@ -133,7 +133,7 @@ fun BloodPressureDetailScreen(
                         title = stringResource(R.string.label_systolic),
                         score = uiState.latestSystolic?.toFloat(),
                         displayText = uiState.latestSystolic?.toString() ?: "—",
-                        unitText = stringResource(R.string.unit_mmHg),
+                        unitText = stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg),
                         maxScore = 200f,
                         status = uiState.systolicStatus,
                         deltaText = systolicDelta,
@@ -146,10 +146,10 @@ fun BloodPressureDetailScreen(
                             when {
                                 diff > 0 ->
                                     stringResource(R.string.delta_up) + " $diff " +
-                                        stringResource(R.string.unit_mmHg)
+                                        stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg)
                                 diff < 0 ->
                                     stringResource(R.string.delta_down) + " ${kotlin.math.abs(diff)} " +
-                                        stringResource(R.string.unit_mmHg)
+                                        stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg)
                                 else -> stringResource(R.string.delta_no_change)
                             }
                         } else {
@@ -161,7 +161,7 @@ fun BloodPressureDetailScreen(
                         title = stringResource(R.string.label_diastolic),
                         score = uiState.latestDiastolic?.toFloat(),
                         displayText = uiState.latestDiastolic?.toString() ?: "—",
-                        unitText = stringResource(R.string.unit_mmHg),
+                        unitText = stringResource(app.readylytics.health.core.ui.R.string.unit_mmHg),
                         maxScore = 120f,
                         status = uiState.diastolicStatus,
                         deltaText = diastolicDelta,

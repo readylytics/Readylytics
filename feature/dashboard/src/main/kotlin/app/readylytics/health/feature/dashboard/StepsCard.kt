@@ -52,7 +52,7 @@ fun StepsCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringResource(R.string.label_daily_steps),
+                    text = stringResource(app.readylytics.health.core.ui.R.string.label_daily_steps),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

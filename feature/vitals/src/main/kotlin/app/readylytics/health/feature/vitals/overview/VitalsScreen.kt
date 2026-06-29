@@ -162,7 +162,7 @@ fun VitalsScreen(
                                 optimalThreshold = uiState.rhrOptimalThreshold,
                                 warningThreshold = uiState.rhrWarningThreshold,
                             ) ?: MetricStatus.CALIBRATING
-                        val rhrTooltip = stringResource(CoreUiR.string.tooltip_sleep_rhr)
+                        val rhrTooltip = stringResource(app.readylytics.health.core.ui.R.string.tooltip_sleep_rhr)
 
                         val rhrDelta =
                             if (currentRhr != null && baselineRhr != null) {
@@ -170,10 +170,10 @@ fun VitalsScreen(
                                 when {
                                     diff > 0 ->
                                         stringResource(CoreUiR.string.delta_up) + " $diff " +
-                                            stringResource(CoreUiR.string.unit_bpm)
+                                            stringResource(app.readylytics.health.core.ui.R.string.unit_bpm)
                                     diff < 0 ->
                                         stringResource(CoreUiR.string.delta_down) + " ${kotlin.math.abs(diff)} " +
-                                            stringResource(CoreUiR.string.unit_bpm)
+                                            stringResource(app.readylytics.health.core.ui.R.string.unit_bpm)
                                     else -> stringResource(CoreUiR.string.delta_no_change)
                                 }
                             } else {
@@ -185,7 +185,7 @@ fun VitalsScreen(
                             title = stringResource(CoreUiR.string.label_rhr),
                             score = rhrFill,
                             displayText = currentRhr?.toString() ?: "—",
-                            unitText = stringResource(CoreUiR.string.unit_bpm),
+                            unitText = stringResource(app.readylytics.health.core.ui.R.string.unit_bpm),
                             maxScore = 1f,
                             status = rhrStatus,
                             deltaText = rhrDelta,
@@ -199,7 +199,7 @@ fun VitalsScreen(
                                 optimalThreshold = uiState.hrvOptimalThreshold,
                                 warningThreshold = uiState.hrvWarningThreshold,
                             ) ?: MetricStatus.CALIBRATING
-                        val hrvTooltip = stringResource(CoreUiR.string.tooltip_sleep_hrv)
+                        val hrvTooltip = stringResource(app.readylytics.health.core.ui.R.string.tooltip_sleep_hrv)
 
                         val hrvDelta =
                             if (currentHrv != null && baselineHrv != null) {
@@ -207,10 +207,10 @@ fun VitalsScreen(
                                 when {
                                     diff > 0 ->
                                         stringResource(CoreUiR.string.delta_up) + " $diff " +
-                                            stringResource(CoreUiR.string.unit_ms)
+                                            stringResource(app.readylytics.health.core.ui.R.string.unit_ms)
                                     diff < 0 ->
                                         stringResource(CoreUiR.string.delta_down) + " ${kotlin.math.abs(diff)} " +
-                                            stringResource(CoreUiR.string.unit_ms)
+                                            stringResource(app.readylytics.health.core.ui.R.string.unit_ms)
                                     else -> stringResource(CoreUiR.string.delta_no_change)
                                 }
                             } else {
@@ -222,7 +222,7 @@ fun VitalsScreen(
                             title = stringResource(CoreUiR.string.label_hrv),
                             score = currentHrv?.toFloat(),
                             displayText = currentHrv?.toString() ?: "—",
-                            unitText = stringResource(CoreUiR.string.unit_ms),
+                            unitText = stringResource(app.readylytics.health.core.ui.R.string.unit_ms),
                             maxScore = hrvMax,
                             status = hrvStatus,
                             deltaText = hrvDelta,
@@ -282,7 +282,7 @@ fun VitalsScreen(
                             rangeStartMs = uiState.rangeStartMs,
                             rangeDays = uiState.selectedRange.days,
                             metricName = stringResource(CoreUiR.string.label_hrv),
-                            baselineUnit = stringResource(CoreUiR.string.unit_ms),
+                            baselineUnit = stringResource(app.readylytics.health.core.ui.R.string.unit_ms),
                             baseline = baselineHrv,
                             showBaseline = !isCalibrating,
                             scrollState = chartScrollState,

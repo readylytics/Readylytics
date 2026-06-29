@@ -10,8 +10,7 @@
     <string name="insight_load_spike_recovery_strain_body">Your recent training load is high, and your recovery markers show signs of strain.</string>
     <string name="insight_load_spike_recovery_strain_body_everyday">Your recent daily physiological load is high, and your recovery markers show signs of strain.</string>
     <string name="insight_restore_dismissed">Restore dismissed insights (%1$d)</string>
-    <string name="insight_dismiss_description">Dismiss health insight</string>
-    <string name="insight_rerun_description">Restore dismissed health insights</string>
+
     <string name="insight_workout_impact_title">Workout Impact</string>
     <string name="insight_workout_impact_body">Yesterday\'s high strain workout appears to be carrying into today because both HRV and RHR are outside their optimal ranges.</string>
     <string name="insight_rest_day_success_title">Rest Day Success</string>
@@ -78,7 +77,7 @@
     <string name="insight_detail_what_data_is_missing">What Data Is Missing</string>
     <string name="insight_detail_how_this_affects_your_score">How This Affects Your Score</string>
     <string name="insight_detail_what_you_can_check">What You Can Check</string>
-    <string name="insight_detail_show_explanation_format">Show explanation for %1$s</string>
+    
     <string name="insight_detail_bp_elevated_high_strain_observed">Your systolic blood pressure is more than 10 mmHg above your recent baseline, and your strain ratio is high.</string>
     <string name="insight_detail_bp_elevated_high_strain_meaning">Your cardiovascular system may be under additional stress today.</string>
     <string name="insight_detail_bp_elevated_high_strain_safety">If blood pressure is repeatedly high, very high, or occurs with chest pain, shortness of breath, severe headache, dizziness, or neurological symptoms, seek medical advice.</string>
