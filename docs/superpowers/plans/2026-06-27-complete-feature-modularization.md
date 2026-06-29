@@ -1642,11 +1642,11 @@ Execute only after Tasks 1-6 pass. Scope is complete extraction of eight cohesiv
 not a dashboard pilot. Each feature extraction remains an independent green commit/PR.
 ```
 
-- [ ] **Step 2: Final documentation consistency check**
+- [x] **Step 2: Final documentation consistency check**
 
 Confirm `DATA_FLOW.md` shows app shell, core UI/design system, all features, dependency direction, Room single source, Health Connect ingestion-only, and unchanged scoring location. Confirm no user-facing copy changed; if it did, update required About/privacy/site/string documents before proceeding.
 
-- [ ] **Step 3: Run mandatory full verification**
+- [x] **Step 3: Run mandatory full verification**
 
 ```powershell
 .\gradlew ktlintFormat
@@ -1665,7 +1665,7 @@ Expected: all pass. Foreground sync cancellation test confirms `CancellationExce
 
 Run navigation, dashboard, settings, onboarding accessibility, baseline-profile, startup, and restore connected tests on emulator/API level used by CI. Expected: all pass with unchanged route and recovery behavior.
 
-- [ ] **Step 5: Scan for forbidden remnants**
+- [x] **Step 5: Scan for forbidden remnants**
 
 ```powershell
 rg -n "app\.readylytics\.health\.ui\.(about|insights|sleep|workouts|vitals|heartrate|bloodpressure|weight|bodyfat|steps|dashboard|settings|onboarding)" app feature core
@@ -1689,17 +1689,17 @@ Expected: commit contains only files that changed; omit unchanged About/privacy/
 
 ## Final acceptance checklist
 
-- [ ] Eight feature modules compile independently.
-- [ ] App owns no feature screen or feature ViewModel.
-- [ ] No feature-to-feature, feature-to-app, feature-to-database, or feature-to-healthconnect edge exists.
-- [ ] Shared UI has no scoring or infrastructure dependency.
-- [ ] App navigation, deep links, process recreation, insight sheet, and bottom-bar behavior remain unchanged.
-- [ ] Pull-to-refresh remains current-day-only.
-- [ ] Historical resync remains WorkManager-backed with determinate progress.
-- [ ] Backup/restore, permission recovery, and settings validation remain unchanged.
-- [ ] Scoring determinism and documentation drift suites pass.
-- [ ] Coverage includes moved classes and 30% overall gate passes.
-- [ ] Feature-only edit leaves unrelated feature compile tasks up-to-date.
+- [x] Eight feature modules compile independently.
+- [x] App owns no feature screen or feature ViewModel.
+- [x] No feature-to-feature, feature-to-app, feature-to-database, or feature-to-healthconnect edge exists.
+- [x] Shared UI has no scoring or infrastructure dependency.
+- [x] App navigation, deep links, process recreation, insight sheet, and bottom-bar behavior remain unchanged.
+- [x] Pull-to-refresh remains current-day-only.
+- [x] Historical resync remains WorkManager-backed with determinate progress.
+- [x] Backup/restore, permission recovery, and settings validation remain unchanged.
+- [x] Scoring determinism and documentation drift suites pass.
+- [x] Coverage includes moved classes and 30% overall gate passes.
+- [x] Feature-only edit leaves unrelated feature compile tasks up-to-date.
 - [ ] Release/R8 and connected smoke verification pass.
-- [ ] `internal-docs/DATA_FLOW.md` matches final module graph.
-- [ ] No temporary adapters, duplicate resources, obsolete packages, or dead Gradle dependencies remain.
+- [x] `internal-docs/DATA_FLOW.md` matches final module graph.
+- [x] No temporary adapters, duplicate resources, obsolete packages, or dead Gradle dependencies remain.

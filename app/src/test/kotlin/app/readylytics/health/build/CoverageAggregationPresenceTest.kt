@@ -14,17 +14,27 @@ class CoverageAggregationPresenceTest {
         val buildText = rootBuild.readText()
 
         assertTrue("root build should register jacocoTestReport", buildText.contains("jacocoTestReport"))
-        assertTrue("root build should register jacocoCoverageVerification", buildText.contains("jacocoCoverageVerification"))
+        assertTrue(
+            "root build should register jacocoCoverageVerification",
+            buildText.contains("jacocoCoverageVerification"),
+        )
 
         val features = listOf("about", "insights", "sleep", "workouts", "vitals", "dashboard", "settings", "onboarding")
         features.forEach { feature ->
-            assertTrue("root build should include :feature:$feature in coverage projects", buildText.contains("\":feature:$feature\""))
+            assertTrue(
+                "root build should include :feature:$feature in coverage projects",
+                buildText.contains("\":feature:$feature\""),
+            )
         }
 
         val ciFile = File(root, ".github/workflows/ci.yml")
         assertTrue("ci.yml file should exist", ciFile.isFile)
         val ciText = ciFile.readText()
 
-        assertTrue("CI should upload root build reports directory", ciText.contains("path: build/reports/jacoco/jacocoTestReport/") || ciText.contains("path: ./build/reports/jacoco/jacocoTestReport/"))
+        assertTrue(
+            "CI should upload root build reports directory",
+            ciText.contains("path: build/reports/jacoco/jacocoTestReport/") ||
+                ciText.contains("path: ./build/reports/jacoco/jacocoTestReport/"),
+        )
     }
 }
