@@ -1353,11 +1353,11 @@ git commit -m "refactor: extract settings feature module" -m "Constraint: Preser
 - Move onboarding-exclusive strings/resources
 - Modify: `AppNavHost.kt`, module settings/dependencies, expected set, `DATA_FLOW.md`
 
-- [ ] **Step 1: Add `onboarding` to expected set and verify red**
+- [x] **Step 1: Add `onboarding` to expected set and verify red**
 
 Expected set now contains all eight modules. Architecture test must fail before module creation.
 
-- [ ] **Step 2: Create module**
+- [x] **Step 2: Create module**
 
 ```kotlin
 plugins { id("readylytics.compose-feature-conventions") }
@@ -1365,19 +1365,19 @@ android { namespace = "app.readylytics.health.feature.onboarding" }
 dependencies { implementation(libs.androidx.activity.compose) }
 ```
 
-- [ ] **Step 3: Split Android entry point from feature UI**
+- [x] **Step 3: Split Android entry point from feature UI**
 
 Keep `PrivacyRationaleActivity` as thin app activity. It hosts exported feature composable and contains no onboarding screen implementation. Update manifest activity name to `.PrivacyRationaleActivity`. Move DeviceSelection, restore, onboarding route/screen, and all onboarding ViewModels to feature namespace.
 
-- [ ] **Step 4: Replace settings-feature reuse with core UI**
+- [x] **Step 4: Replace settings-feature reuse with core UI**
 
 Import `HeightInputField` and `UnitSystemSelector` from core UI. Inject pure preference/device/backup ports. No settings-feature dependency allowed.
 
-- [ ] **Step 5: Move tests and resources; wire root navigation**
+- [x] **Step 5: Move tests and resources; wire root navigation**
 
 Update `AppNavHost` import. Preserve permission launcher, restore result, process recreation, and completion callbacks.
 
-- [ ] **Step 6: Verify onboarding and permission paths**
+- [x] **Step 6: Verify onboarding and permission paths**
 
 ```powershell
 rg -n "feature\.settings|data\.preferences\.SettingsRepository|androidx\.work" feature\onboarding
@@ -1390,7 +1390,7 @@ rg -n "feature\.settings|data\.preferences\.SettingsRepository|androidx\.work" f
 
 Run Phase 4 onboarding accessibility connected test. Expected: forbidden search empty; all tests pass.
 
-- [ ] **Step 7: Docs, sync, commit**
+- [x] **Step 7: Docs, sync, commit**
 
 ```powershell
 codegraph index

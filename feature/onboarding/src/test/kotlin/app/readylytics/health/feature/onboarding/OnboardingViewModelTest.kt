@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.onboarding
+package app.readylytics.health.feature.onboarding
 
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UnitSystem

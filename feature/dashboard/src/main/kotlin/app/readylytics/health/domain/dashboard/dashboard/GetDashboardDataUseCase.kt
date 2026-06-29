@@ -1,6 +1,5 @@
 package app.readylytics.health.domain.dashboard
 
-import app.readylytics.health.feature.dashboard.R
 import app.readylytics.health.domain.calculation.HealthMetricsCalculator
 import app.readylytics.health.domain.model.BloodPressureStatus
 import app.readylytics.health.domain.model.BmiStatus
@@ -25,6 +24,7 @@ import app.readylytics.health.domain.util.ResourceProvider
 import app.readylytics.health.domain.util.roundToPercentInt
 import app.readylytics.health.feature.dashboard.CardData
 import app.readylytics.health.feature.dashboard.DashboardAction
+import app.readylytics.health.feature.dashboard.R
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId

@@ -63,5 +63,3 @@ class GenderSelectorTest {
         composeTestRule.onRoot().assertExists()
     }
 }
-
-

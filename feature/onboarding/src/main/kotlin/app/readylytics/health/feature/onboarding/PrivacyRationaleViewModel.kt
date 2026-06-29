@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.onboarding
+package app.readylytics.health.feature.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

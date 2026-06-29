@@ -36,6 +36,7 @@ import app.readylytics.health.domain.scoring.CircadianConsistencyResult
 import app.readylytics.health.domain.scoring.toStatus
 import app.readylytics.health.domain.scoring.toTimeString
 import app.readylytics.health.domain.util.roundToPercentInt
+
 // Build a map of CardId to composable card content for the Dashboard screen
 // This factory method creates all available dashboard cards and maps them by ID
 // for use with the ReorderableCardGrid component
@@ -56,7 +57,13 @@ fun buildCardDataMap(
     onDismissInsight: (InsightType) -> Unit = {},
     onRestoreInsights: () -> Unit = {},
     onOpenInsight: (InsightParams) -> Unit = {},
-    insightsCard: @Composable (DashboardUiState, Boolean, (InsightType) -> Unit, () -> Unit, (InsightParams) -> Unit) -> Unit,
+    insightsCard: @Composable (
+        DashboardUiState,
+        Boolean,
+        (InsightType) -> Unit,
+        () -> Unit,
+        (InsightParams) -> Unit,
+    ) -> Unit,
 ): Map<CardId, @Composable () -> Unit> {
     val cardMap = mutableMapOf<CardId, @Composable () -> Unit>()
 

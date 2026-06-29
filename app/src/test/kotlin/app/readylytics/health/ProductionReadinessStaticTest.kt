@@ -348,4 +348,3 @@ class ProductionReadinessStaticTest {
             .firstOrNull { it.exists() }
             ?: error("Project file not found: $path")
 }
-

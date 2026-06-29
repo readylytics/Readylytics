@@ -1,14 +1,13 @@
 package app.readylytics.health.feature.settings
 
-import app.readylytics.health.feature.settings.R
 import app.readylytics.health.core.ui.common.UiText
+import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.preferences.CircadianThresholdPreferences
 import app.readylytics.health.domain.preferences.SleepSettings
 import app.readylytics.health.domain.preferences.ThresholdSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
-import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.domain.repository.ScoringRepository
-import io.mockk.coEvery
+import app.readylytics.health.feature.settings.R
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -130,5 +129,3 @@ class SleepAndThresholdSettingsViewModelTest {
             job.cancel()
         }
 }
-
-

@@ -80,5 +80,3 @@ fun M3CollapsibleSection(
         }
     }
 }
-
-

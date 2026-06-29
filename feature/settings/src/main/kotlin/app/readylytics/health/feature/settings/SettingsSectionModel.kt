@@ -99,5 +99,3 @@ fun sectionMatches(
     return section.name.lowercase().contains(lowerQuery) ||
         section.keywords.any { it.contains(lowerQuery) }
 }
-
-

@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.onboarding
+package app.readylytics.health.feature.onboarding
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -46,8 +46,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
-import app.readylytics.health.R
 import app.readylytics.health.core.ui.common.resolveOrNull
+import app.readylytics.health.feature.onboarding.R
+import app.readylytics.health.core.ui.R as CoreR
 
 @Composable
 fun RestoreBackupScreen(
@@ -85,7 +86,7 @@ fun RestoreBackupScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         IconButton(onClick = onBack, enabled = !isBusy) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(CoreR.string.back))
         }
 
         Spacer(Modifier.height(8.dp))
@@ -145,9 +146,9 @@ fun RestoreBackupScreen(
                         contentDescription =
                             stringResource(
                                 if (showPassword) {
-                                    R.string.accessibility_password_hide
+                                    CoreR.string.accessibility_password_hide
                                 } else {
-                                    R.string.accessibility_password_show
+                                    CoreR.string.accessibility_password_show
                                 },
                             ),
                     )
@@ -166,7 +167,7 @@ fun RestoreBackupScreen(
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = onDismissError) {
-                    Text(stringResource(R.string.action_dismiss))
+                    Text(stringResource(CoreR.string.action_dismiss))
                 }
             }
         }

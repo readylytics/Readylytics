@@ -23,8 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.feature.settings.R
 import app.readylytics.health.core.ui.components.MetricTooltip
+import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.common.SettingsConstants
 import kotlin.math.roundToInt
 
@@ -245,5 +245,3 @@ fun Float.toSleepHoursText(): String {
     val minutes = totalMinutes % 60
     return if (minutes == 0) "${hours}h" else "${hours}h ${minutes}m"
 }
-
-

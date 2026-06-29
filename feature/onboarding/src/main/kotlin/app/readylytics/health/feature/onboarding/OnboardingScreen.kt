@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.onboarding
+package app.readylytics.health.feature.onboarding
 
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
@@ -39,15 +39,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.R
 import app.readylytics.health.core.ui.components.SettingsToggleItem
+import app.readylytics.health.core.ui.components.settings.BirthdayDatePickerField
+import app.readylytics.health.core.ui.components.settings.PhysiologyProfilePicker
 import app.readylytics.health.core.ui.settings.HeightInputField
 import app.readylytics.health.core.ui.settings.common.UnitSystemSelector
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UnitSystem
-import app.readylytics.health.feature.settings.BirthdayDatePickerField
-import app.readylytics.health.feature.settings.PhysiologyProfilePicker
+import app.readylytics.health.feature.onboarding.R
 import java.time.LocalDate
+import app.readylytics.health.core.ui.R as CoreR
 
 @Composable
 fun OnboardingScreen(
@@ -337,7 +338,7 @@ private fun ProfileSetupScreen(
         Spacer(Modifier.height(16.dp))
 
         Text(
-            text = stringResource(R.string.label_gender),
+            text = stringResource(CoreR.string.label_gender),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -347,13 +348,13 @@ private fun ProfileSetupScreen(
         ) {
             // onClick uses English domain key; label uses translated string resource
             RadioButton(selected = gender == "Male", onClick = { gender = "Male" })
-            Text(stringResource(R.string.gender_male), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(CoreR.string.gender_male), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.width(8.dp))
             RadioButton(selected = gender == "Female", onClick = { gender = "Female" })
-            Text(stringResource(R.string.gender_female), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(CoreR.string.gender_female), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.width(8.dp))
             RadioButton(selected = gender == "Other", onClick = { gender = "Other" })
-            Text(stringResource(R.string.gender_other), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(CoreR.string.gender_other), style = MaterialTheme.typography.bodyMedium)
         }
 
         Spacer(Modifier.height(16.dp))
@@ -376,8 +377,8 @@ private fun ProfileSetupScreen(
         Spacer(Modifier.height(8.dp))
 
         SettingsToggleItem(
-            label = stringResource(R.string.onboarding_dynamic_color_label),
-            description = stringResource(R.string.onboarding_dynamic_color_desc),
+            label = stringResource(CoreR.string.onboarding_dynamic_color_label),
+            description = stringResource(CoreR.string.onboarding_dynamic_color_desc),
             checked = dynamicColorEnabled,
             onCheckedChange = { dynamicColorEnabled = it },
             modifier = Modifier.fillMaxWidth(),
@@ -443,4 +444,3 @@ private fun ProfileSetupScreen(
         }
     }
 }
-

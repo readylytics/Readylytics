@@ -13,5 +13,3 @@ object SettingsConstants {
     const val MIN_HEART_RATE = 1
     const val MAX_HEART_RATE = 220
 }
-
-

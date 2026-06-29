@@ -80,5 +80,3 @@ class PhysiologySettingsViewModelTest {
         coVerify(timeout = 100, inverse = true) { userUseCase.updateBirthday(any()) }
     }
 }
-
-

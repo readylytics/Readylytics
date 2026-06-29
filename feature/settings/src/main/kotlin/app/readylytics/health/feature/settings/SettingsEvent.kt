@@ -245,5 +245,3 @@ sealed interface SettingsEvent {
         val mode: LoadSourceMode,
     ) : SettingsEvent
 }
-
-

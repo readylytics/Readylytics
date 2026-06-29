@@ -36,5 +36,3 @@ fun ValidatingTextField(
         modifier = modifier,
     )
 }
-
-

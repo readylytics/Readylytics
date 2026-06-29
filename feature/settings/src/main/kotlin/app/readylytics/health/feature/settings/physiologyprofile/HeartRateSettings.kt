@@ -36,12 +36,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.feature.settings.R
+import app.readylytics.health.core.ui.components.settings.BirthdayDatePickerField
 import app.readylytics.health.core.ui.settings.HeightInputField
 import app.readylytics.health.data.preferences.Gender
-import app.readylytics.health.feature.settings.BirthdayDatePickerField
 import app.readylytics.health.feature.settings.HeartRateZonesState
 import app.readylytics.health.feature.settings.PhysiologySettingsState
+import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
 import app.readylytics.health.feature.settings.SettingsExpandState
 import app.readylytics.health.feature.settings.common.SettingsConstants
@@ -459,5 +459,3 @@ private fun Gender.labelRes(): Int =
         Gender.OTHER -> R.string.gender_other
         Gender.PREFER_NOT_TO_SAY -> R.string.gender_prefer_not_to_say
     }
-
-

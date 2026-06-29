@@ -1,9 +1,9 @@
-package app.readylytics.health.ui.onboarding
+package app.readylytics.health.feature.onboarding
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.R
+import app.readylytics.health.core.ui.R
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.domain.backup.BackupLocation
 import app.readylytics.health.domain.backup.RestoreResult

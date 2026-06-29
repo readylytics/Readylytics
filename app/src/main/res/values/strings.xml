@@ -68,15 +68,6 @@
         low-percentile of the entire sleep period.\n\nNot enough data to calculate baseline.</string>
 
 
-    
-    <string name="device_selection_title">Choose your primary device</string>
-    <string name="device_selection_description">We found data from multiple sources. Pick the device
-        whose readings should drive your scores — we\'ll fall back to other devices for days it
-        didn\'t record.</string>
-    <string name="device_selection_no_devices">No specific devices were detected. We\'ll use all
-        available data sources.</string>
-    <string name="device_selection_use_all">Use all devices</string>
-    <string name="device_selection_continue_with">Continue with %1$s</string>
     <string name="device_selection_dialog_title">Select primary device</string>
     <string name="device_selection_dialog_message">Which device should we use for health metrics?</string>
     <string name="device_selection_dialog_label">Device</string>
@@ -221,30 +212,7 @@
 
     <string name="settings_search_placeholder">Search settings…</string>
 
-    
-    <string name="label_date_of_birth">Date of birth</string>
-    <string name="label_not_set">Not set</string>
-    <string name="onboarding_welcome_title">Welcome to Readylytics</string>
-    <string name="onboarding_welcome_subtitle">Your personal recovery &amp; readiness tracker —
-        powered entirely by your own data.</string>
-    <string name="onboarding_feature_sleep_title">Sleep score</string>
-    <string name="onboarding_feature_sleep_desc">Weighted by duration, architecture, and restoration
-        quality.</string>
-    <string name="onboarding_feature_hrv_title">HRV &amp; resting HR tracking</string>
-    <string name="onboarding_feature_hrv_desc">Personal baselines calculated from your last 30 days
-        of data.</string>
-    <string name="onboarding_feature_training_title">Training load index</string>
-    <string name="onboarding_feature_training_desc">Acute vs. chronic workload ratio to guide your
-        recovery.</string>
-    <string name="onboarding_privacy_note">All data stays on your device. Nothing is ever uploaded
-        to any server.</string>
-    <string name="onboarding_get_started">Get Started</string>
-    <string name="onboarding_profile_title">Your profile</string>
-    <string name="onboarding_profile_subtitle">Your birthday, gender, and activity profile are used
-        to calculate your max heart rate and personalize scores. They are stored only on your
-        device.</string>
-    <string name="onboarding_activity_profile_label">Activity profile</string>
-    <string name="onboarding_appearance_label">Appearance</string>
+
     <string name="fallback_theme_color_label">Accent color</string>
     <string name="fallback_color_green_performance">Green Performance</string>
     <string name="fallback_color_blue_trust">Blue Trust</string>
@@ -256,25 +224,8 @@
     <string name="circadian_preview_active_label">Active</string>
     <string name="circadian_preview_athlete_label">Athlete</string>
 
-    <string name="onboarding_units_label">Measurement units</string>
-    <string name="onboarding_hc_permissions_label">Health Connect permissions</string>
-    <string name="onboarding_hc_permissions_desc">This app needs access to Sleep, Heart Rate, HRV,
-        and Exercise data from Health Connect to calculate your scores.</string>
-    <string name="onboarding_grant_access">Grant Access &amp; Continue</string>
-    <string name="onboarding_open_hc_settings">Open Health Connect Settings</string>
-    <string name="onboarding_restore_backup_button">Restore from Backup</string>
-    <string name="onboarding_restore_title">Restore from Backup</string>
-    <string name="onboarding_restore_subtitle">Select a backup file and enter its password to
-        restore your data.</string>
-    <string name="onboarding_restore_select_file_button">Select backup file</string>
-    <string name="onboarding_restore_password_label">Backup password</string>
-    <string name="onboarding_restore_button">Restore</string>
-    <string name="onboarding_finishing_setup">Finishing setup…</string>
-    <string name="onboarding_permissions_required_title">Permissions needed</string>
-    <string name="onboarding_permissions_required_message">Readylytics needs Health Connect
-        permissions to continue. Grant access to finish setting up your restored data.</string>
-    <string name="onboarding_grant_permissions_retry">Grant Permissions</string>
 
+    
     
     <string name="hr_auto_calculate_label">Auto-calculate Max HR</string>
     <string name="hr_auto_calculate_desc">Uses age (220 - age) if enabled</string>
@@ -489,12 +440,6 @@
         <item quantity="other">%1$d days</item>
     </plurals>
 
-    
-    <string name="privacy_rationale_title">Privacy &amp; Health Data</string>
-    <string name="privacy_rationale_description">This app reads sleep, heart rate, heart rate
-        variability, and exercise data from Health Connect solely to compute your personal recovery
-        and readiness scores. All data is processed locally on your device and is never uploaded to
-        any server.</string>
 
 
 

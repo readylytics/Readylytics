@@ -1,4 +1,4 @@
-package app.readylytics.health.feature.settings
+package app.readylytics.health.core.ui.components.settings
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -29,5 +29,3 @@ fun PhysiologyProfilePicker(
         modifier = modifier,
     )
 }
-
-

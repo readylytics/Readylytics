@@ -43,12 +43,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import app.readylytics.health.feature.settings.R
 import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.data.preferences.BackupSchedule
 import app.readylytics.health.domain.backup.BackupFileInfo
 import app.readylytics.health.feature.settings.LocalBackupState
+import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
 import app.readylytics.health.feature.settings.common.SettingsConstants
 import java.text.DateFormat
@@ -522,5 +522,3 @@ private fun BackupSchedule.labelRes(): Int =
         BackupSchedule.DAILY -> R.string.backup_schedule_daily
         BackupSchedule.WEEKLY -> R.string.backup_schedule_weekly
     }
-
-

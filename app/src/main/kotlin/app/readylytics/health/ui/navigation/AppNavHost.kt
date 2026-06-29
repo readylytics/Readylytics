@@ -1,5 +1,6 @@
 package app.readylytics.health.ui.navigation
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -9,6 +10,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -17,8 +19,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import app.readylytics.health.MainActivity
 import app.readylytics.health.R
-import app.readylytics.health.ui.onboarding.OnboardingRoute
+import app.readylytics.health.feature.onboarding.OnboardingRoute
 import app.readylytics.health.ui.scaffold.MainScaffold
 import app.readylytics.health.ui.sync.SyncUiState
 import app.readylytics.health.ui.sync.SyncViewModel
@@ -67,8 +70,20 @@ fun AppNavHost(
         }
 
         composable<AppDestination.Onboarding> {
+            val context = LocalContext.current
             OnboardingRoute(
-                syncViewModel = viewModel,
+                userPreferencesFlow = viewModel.userPreferences,
+                allPermissions = viewModel.allPermissions,
+                requiredPermissions = viewModel.requiredPermissions,
+                onPermissionsGranted = { viewModel.onPermissionsGranted() },
+                onPermissionsDenied = { viewModel.onPermissionsDenied() },
+                onRestartApp = {
+                    val restartIntent =
+                        Intent(context, MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        }
+                    context.startActivity(restartIntent)
+                },
             )
         }
 

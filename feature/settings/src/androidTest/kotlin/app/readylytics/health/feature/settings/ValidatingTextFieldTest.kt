@@ -62,5 +62,3 @@ class ValidatingTextFieldTest {
         composeTestRule.onRoot().assertExists()
     }
 }
-
-

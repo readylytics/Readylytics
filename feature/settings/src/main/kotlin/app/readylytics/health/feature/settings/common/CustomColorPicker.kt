@@ -41,9 +41,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
-import app.readylytics.health.feature.settings.R
 import app.readylytics.health.core.designsystem.toHexCode
 import app.readylytics.health.data.preferences.FallbackThemeColor
+import app.readylytics.health.feature.settings.R
 
 private fun FallbackThemeColor.labelRes(): Int =
     when (this) {
@@ -217,5 +217,3 @@ fun CustomColorPicker(
         }
     }
 }
-
-

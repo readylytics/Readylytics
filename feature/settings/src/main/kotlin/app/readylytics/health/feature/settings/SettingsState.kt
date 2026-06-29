@@ -119,5 +119,3 @@ data class DataSourceSettingsState(
     val isResyncing: Boolean = false,
     val showDeviceChangeNotice: Boolean = false,
 )
-
-

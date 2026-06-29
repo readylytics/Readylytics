@@ -34,5 +34,3 @@ class HeartRateSettingsViewModelTest {
             assertTrue(result is ValidationResult.Invalid)
         }
 }
-
-

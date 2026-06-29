@@ -59,7 +59,13 @@ fun DashboardRoute(
     onNavigateToVitals: () -> Unit = {},
     onOpenInsight: (InsightParams) -> Unit = {},
     insightDetail: @Composable (() -> Unit)? = null,
-    insightsCard: @Composable (DashboardUiState, Boolean, (InsightType) -> Unit, () -> Unit, (InsightParams) -> Unit) -> Unit = { _, _, _, _, _ -> },
+    insightsCard: @Composable (
+        DashboardUiState,
+        Boolean,
+        (InsightType) -> Unit,
+        () -> Unit,
+        (InsightParams) -> Unit,
+    ) -> Unit = { _, _, _, _, _ -> },
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -135,7 +141,13 @@ fun DashboardScreen(
     onRestoreInsights: () -> Unit = {},
     onOpenInsight: (InsightParams) -> Unit = {},
     insightDetail: @Composable (() -> Unit)? = null,
-    insightsCard: @Composable (DashboardUiState, Boolean, (InsightType) -> Unit, () -> Unit, (InsightParams) -> Unit) -> Unit = { _, _, _, _, _ -> },
+    insightsCard: @Composable (
+        DashboardUiState,
+        Boolean,
+        (InsightType) -> Unit,
+        () -> Unit,
+        (InsightParams) -> Unit,
+    ) -> Unit = { _, _, _, _, _ -> },
 ) {
     val summary = uiState.summary
     val scope = rememberCoroutineScope()

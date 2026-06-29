@@ -15,8 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.feature.settings.R
 import app.readylytics.health.domain.scoring.LoadSourceMode
+import app.readylytics.health.feature.settings.R
 
 @Composable
 fun LoadSourcesSection(
@@ -105,5 +105,3 @@ private fun LoadSourcePicker(
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
     )
 }
-
-

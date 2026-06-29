@@ -108,4 +108,16 @@
     <string name="chart_accessibility_selected_rhr">Selected: %1$d bpm at %2$s</string>
     <string name="chart_accessibility_steps_summary">Steps progress bar showing steps count against daily goal.</string>
     <string name="chart_accessibility_selected_steps">Selected: %1$s steps, goal %2$s</string>
+    <string name="device_selection_title">Choose your primary device</string>
+    <string name="device_selection_description">We found data from multiple sources. Pick the device
+        whose readings should drive your scores — we\'ll fall back to other devices for days it
+        didn\'t record.</string>
+    <string name="device_selection_no_devices">No specific devices were detected. We\'ll use all
+        available data sources.</string>
+    <string name="device_selection_use_all">Use all devices</string>
+    <string name="device_selection_continue_with">Continue with %1$s</string>
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="label_date_of_birth">Date of birth</string>
+    <string name="label_not_set">Not set</string>
 </resources>

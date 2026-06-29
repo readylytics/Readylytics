@@ -134,8 +134,8 @@ class CleanArchTest {
                 .files
                 .filter { file ->
                     (file.path.contains("/app/src/main/") || file.path.contains("\\app\\src\\main\\")) &&
-                        file.name != "MainActivity.kt" &&
-                        file.name != "PrivacyRationaleActivity.kt" &&
+                        !file.name.startsWith("MainActivity") &&
+                        !file.name.startsWith("PrivacyRationaleActivity") &&
                         allowedImportsInApp.none { pkg -> file.hasPackage("$pkg..") }
                 }.flatMap { file ->
                     file.imports

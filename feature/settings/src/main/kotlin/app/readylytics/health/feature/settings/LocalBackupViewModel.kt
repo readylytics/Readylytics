@@ -2,7 +2,6 @@ package app.readylytics.health.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.readylytics.health.feature.settings.R
 import app.readylytics.health.core.ui.common.UiText
 import app.readylytics.health.di.IoDispatcher
 import app.readylytics.health.domain.backup.BackupFileInfo
@@ -14,6 +13,7 @@ import app.readylytics.health.domain.preferences.BackupSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.security.EncryptionManager
 import app.readylytics.health.domain.util.logE
+import app.readylytics.health.feature.settings.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -297,5 +297,3 @@ class LocalBackupViewModel
             val refreshTrigger: Int = 0,
         )
     }
-
-

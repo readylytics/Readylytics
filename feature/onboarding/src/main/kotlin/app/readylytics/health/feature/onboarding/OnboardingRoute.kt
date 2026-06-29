@@ -1,4 +1,4 @@
-package app.readylytics.health.ui.onboarding
+package app.readylytics.health.feature.onboarding
 
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -14,19 +14,24 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.readylytics.health.ui.sync.SyncViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun OnboardingRoute(
-    syncViewModel: SyncViewModel,
+    userPreferencesFlow: Flow<app.readylytics.health.domain.preferences.UserPreferences>,
+    allPermissions: Set<String>,
+    requiredPermissions: Set<String>,
+    onPermissionsGranted: () -> Unit,
+    onPermissionsDenied: () -> Unit,
+    onRestartApp: () -> Unit,
     onboardingViewModel: OnboardingViewModel = hiltViewModel(),
     restoreViewModel: OnboardingRestoreViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
-    val userPrefs by syncViewModel.userPreferences.collectAsStateWithLifecycle(initialValue = null)
+    val userPrefs by userPreferencesFlow.collectAsStateWithLifecycle(initialValue = null)
     val restoreState by restoreViewModel.state.collectAsStateWithLifecycle()
-    val permissions = remember { syncViewModel.allPermissions }
+    val permissions = remember { allPermissions }
 
     var permissionsDenied by rememberSaveable { mutableStateOf(false) }
 
@@ -37,19 +42,19 @@ fun OnboardingRoute(
             app.readylytics.health.domain.util.logD("OnboardingRoute") {
                 "Permission result received. Granted: $granted"
             }
-            if (granted.containsAll(syncViewModel.requiredPermissions)) {
+            if (granted.containsAll(requiredPermissions)) {
                 app.readylytics.health.domain.util.logD(
                     "OnboardingRoute",
                 ) { "All required permissions granted by user" }
                 permissionsDenied = false
-                syncViewModel.onPermissionsGranted()
+                onPermissionsGranted()
             } else {
-                val missing = syncViewModel.requiredPermissions - granted
+                val missing = requiredPermissions - granted
                 app.readylytics.health.domain.util.logD(
                     "OnboardingRoute",
                 ) { "User denied some required permissions: $missing" }
                 permissionsDenied = true
-                syncViewModel.onPermissionsDenied()
+                onPermissionsDenied()
             }
         }
 
@@ -57,11 +62,7 @@ fun OnboardingRoute(
         restoreViewModel.sideEffect.collectLatest { effect ->
             when (effect) {
                 OnboardingRestoreViewModel.SideEffect.RestartApp -> {
-                    val restartIntent =
-                        Intent(context, app.readylytics.health.MainActivity::class.java).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                        }
-                    context.startActivity(restartIntent)
+                    onRestartApp()
                 }
             }
         }

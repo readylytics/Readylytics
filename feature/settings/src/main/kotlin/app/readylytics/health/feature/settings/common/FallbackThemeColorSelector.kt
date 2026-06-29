@@ -30,8 +30,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.feature.settings.R
 import app.readylytics.health.data.preferences.FallbackThemeColor
+import app.readylytics.health.feature.settings.R
 
 private fun FallbackThemeColor.labelRes(): Int =
     when (this) {
@@ -108,5 +108,3 @@ fun FallbackThemeColorSelector(
 
 private fun contentColorFor(background: Color): Color =
     if (background.luminance() > 0.179f) Color.Black else Color.White
-
-

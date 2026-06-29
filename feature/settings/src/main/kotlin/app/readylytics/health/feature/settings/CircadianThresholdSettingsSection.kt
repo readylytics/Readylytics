@@ -19,9 +19,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.feature.settings.R
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.domain.circadian.CircadianThresholdDefaults
+import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.common.SettingsConstants
 
 private const val THRESHOLD_SLIDER_STEPS = 8 // Results in: 0, 10, 20, ..., 90 (Issue #9)
@@ -247,5 +247,3 @@ fun CircadianThresholdSettingsSectionPreview() {
         }
     }
 }
-
-

@@ -32,11 +32,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import app.readylytics.health.feature.settings.R
 import app.readylytics.health.core.ui.components.MetricTooltip
 import app.readylytics.health.domain.scoring.TrimpModel
 import app.readylytics.health.domain.validation.SettingsValidators
 import app.readylytics.health.domain.validation.ValidationResult
+import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.common.SettingsConstants
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -292,5 +292,3 @@ fun AdvancedSettingsSection(
         }
     }
 }
-
-

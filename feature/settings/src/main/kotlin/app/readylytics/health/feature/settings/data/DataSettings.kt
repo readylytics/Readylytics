@@ -42,7 +42,6 @@ import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.readylytics.health.feature.settings.R
 import app.readylytics.health.core.ui.components.DropdownPreferenceItem
 import app.readylytics.health.core.ui.components.SectionHeader
 import app.readylytics.health.core.ui.components.SettingsToggleItem
@@ -50,6 +49,7 @@ import app.readylytics.health.data.preferences.BackgroundSyncInterval
 import app.readylytics.health.data.preferences.SyncPreference
 import app.readylytics.health.domain.model.HealthDataCategory
 import app.readylytics.health.domain.model.HealthDataType
+import app.readylytics.health.feature.settings.R
 import app.readylytics.health.feature.settings.SettingsEvent
 import app.readylytics.health.feature.settings.SyncSettingsState
 import app.readylytics.health.feature.settings.UIState
@@ -455,5 +455,3 @@ private fun HealthDataType.labelRes(): Int =
         HealthDataType.HRV -> R.string.data_type_hrv
         HealthDataType.OXYGEN_SATURATION -> R.string.data_type_oxygen_saturation
     }
-
-

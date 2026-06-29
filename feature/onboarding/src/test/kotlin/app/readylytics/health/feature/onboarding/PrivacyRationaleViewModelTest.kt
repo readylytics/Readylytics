@@ -1,8 +1,8 @@
-package app.readylytics.health.ui.onboarding
+package app.readylytics.health.feature.onboarding
 
 import app.readylytics.health.data.preferences.AppTheme
-import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.preferences.UserPreferencesReader
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -20,7 +20,7 @@ import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PrivacyRationaleViewModelTest {
-    private lateinit var settingsRepository: SettingsRepository
+    private lateinit var settingsRepository: UserPreferencesReader
     private lateinit var viewModel: PrivacyRationaleViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
 
