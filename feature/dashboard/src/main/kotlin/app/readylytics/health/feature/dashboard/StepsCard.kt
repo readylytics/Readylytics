@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -59,8 +60,13 @@ fun StepsCard(
             }
             Spacer(modifier = Modifier.height(12.dp))
             LinearProgressIndicator(
-                progress = { ((stepCount ?: 0).toFloat() / stepGoal.coerceAtLeast(1)).coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth().height(10.dp),
+                progress = {
+                    val count = stepCount ?: 0
+                    val max = stepGoal / 0.75f
+                    (count.toFloat() / max.coerceAtLeast(1f)).coerceIn(0f, 1f)
+                },
+                modifier = Modifier.fillMaxWidth().height(28.dp),
+                strokeCap = StrokeCap.Round,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(
