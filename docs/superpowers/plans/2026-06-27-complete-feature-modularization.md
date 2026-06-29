@@ -1516,11 +1516,11 @@ git commit -m "refactor: reduce app to feature composition shell" -m "Constraint
 - Modify: `internal-docs/FEATURE_MODULARIZATION_BASELINE.md`
 - Create: `app/src/test/kotlin/app/readylytics/health/build/CoverageAggregationPresenceTest.kt`
 
-- [ ] **Step 1: Write failing coverage-presence test**
+- [x] **Step 1: Write failing coverage-presence test**
 
 Assert root build registers `jacocoTestReport` and `jacocoCoverageVerification`, includes every `:feature:*` module, and CI uploads root `build/reports/jacoco/jacocoTestReport`.
 
-- [ ] **Step 2: Move aggregation to root build**
+- [x] **Step 2: Move aggregation to root build**
 
 Apply `jacoco` at root. Register aggregate report depending on `testDebugUnitTest` for app, all core modules, and all eight feature modules. Collect each module's Kotlin class directory, source roots, and `.exec` data. Reuse current generated-code exclusions. Preserve overall instruction minimum `0.30` and existing per-package gates.
 
@@ -1591,11 +1591,11 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
 }
 ```
 
-- [ ] **Step 3: Remove app-only aggregate tasks and update CI paths**
+- [x] **Step 3: Remove app-only aggregate tasks and update CI paths**
 
 Keep app test coverage enabled, but remove duplicate app-owned aggregate task definitions. Change CI upload path to `build/reports/jacoco/jacocoTestReport/` and label gate as 30%.
 
-- [ ] **Step 4: Verify coverage remains measured**
+- [x] **Step 4: Verify coverage remains measured**
 
 ```powershell
 .\gradlew jacocoTestReport
@@ -1604,7 +1604,7 @@ Keep app test coverage enabled, but remove duplicate app-owned aggregate task de
 
 Expected: PASS; XML contains packages under `app/readylytics/health/feature/` for all eight modules.
 
-- [ ] **Step 5: Prove feature isolation**
+- [x] **Step 5: Prove feature isolation**
 
 Run a clean `:app:assembleDebug`, change one non-ABI line in `feature/about`, then run:
 
@@ -1614,7 +1614,7 @@ Run a clean `:app:assembleDebug`, change one non-ABI line in `feature/about`, th
 
 Expected: `:feature:about:compileDebugKotlin` and app compile execute; unrelated feature compile tasks remain UP-TO-DATE. Record evidence and post-move three-sample timings in baseline document. Investigate unexplained material regression before continuing.
 
-- [ ] **Step 6: Commit coverage and evidence**
+- [x] **Step 6: Commit coverage and evidence**
 
 ```powershell
 git add build.gradle.kts app/build.gradle.kts .github/workflows/ci.yml internal-docs/FEATURE_MODULARIZATION_BASELINE.md app/src/test/kotlin/app/readylytics/health/build/CoverageAggregationPresenceTest.kt
