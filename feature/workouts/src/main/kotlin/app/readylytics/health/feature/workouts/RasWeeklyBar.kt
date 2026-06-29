@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,18 +15,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.readylytics.health.core.ui.components.HealthProgressBar
+import app.readylytics.health.core.ui.components.ProgressBarSegment
 import app.readylytics.health.core.ui.components.gaugeColor
 import app.readylytics.health.domain.model.MetricStatus
 import app.readylytics.health.domain.util.roundToPercentInt
@@ -60,56 +54,19 @@ fun RasWeeklyBar(
     val chartSummary = stringResource(R.string.chart_accessibility_ras_summary)
 
     Column(modifier = modifier) {
-        Canvas(
+        HealthProgressBar(
+            segments = dailyBreakdown.map { ProgressBarSegment(value = it.second, color = fillColor) },
+            max = BAR_MAX,
+            height = 28.dp,
+            trackColor = trackColor,
+            outlineColor = outlineColor,
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(28.dp)
                     .semantics {
                         contentDescription = chartSummary
                     },
-        ) {
-            val totalWidth = size.width
-            val barHeight = size.height
-            val radius = barHeight / 2f
-
-            val clipPath =
-                Path().apply {
-                    addRoundRect(
-                        RoundRect(
-                            left = 0f,
-                            top = 0f,
-                            right = totalWidth,
-                            bottom = barHeight,
-                            cornerRadius = CornerRadius(radius),
-                        ),
-                    )
-                }
-
-            clipPath(clipPath) {
-                drawRect(color = trackColor, topLeft = Offset(0f, 0f), size = Size(totalWidth, barHeight))
-
-                var xOffset = 0f
-                for ((_, ras) in dailyBreakdown) {
-                    if (ras > 0f) {
-                        val segmentWidth = totalWidth * (ras / BAR_MAX)
-                        drawRect(
-                            color = fillColor,
-                            topLeft = Offset(xOffset, 0f),
-                            size = Size(segmentWidth, barHeight),
-                        )
-                        xOffset += segmentWidth
-                    }
-                }
-            }
-
-            // Outline drawn outside clip so the stroke sits on the edge
-            drawRoundRect(
-                color = outlineColor,
-                cornerRadius = CornerRadius(radius),
-                style = Stroke(width = 1.dp.toPx()),
-            )
-        }
+        )
 
         Spacer(Modifier.height(8.dp))
 
