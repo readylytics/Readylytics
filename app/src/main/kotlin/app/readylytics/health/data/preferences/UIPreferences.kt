@@ -87,6 +87,20 @@ internal class UIPreferences
             }
         }
 
+        suspend fun applyDeviceOverrides(overrides: Map<String, String?>) {
+            dataStore.updateData { proto ->
+                val builder = proto.toBuilder()
+                overrides.forEach { (key, label) ->
+                    if (label.isNullOrBlank()) {
+                        builder.removeDeviceByDataType(key)
+                    } else {
+                        builder.putDeviceByDataType(key, label)
+                    }
+                }
+                builder.build()
+            }
+        }
+
         /**
          * One-time migration from the legacy single global "primary device" to the
          * per–data-type selection. Seeds every data type with the previously chosen

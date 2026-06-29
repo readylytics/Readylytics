@@ -71,6 +71,15 @@ class DataSourceSettingsViewModelTest {
                         }
                     prefsFlow.value = prefsFlow.value.copy(deviceByDataType = deviceByDataType.value)
                 }
+                coEvery { applyDeviceOverrides(any()) } coAnswers {
+                    val overrides = it.invocation.args[0] as Map<String, String?>
+                    val updated = deviceByDataType.value.toMutableMap()
+                    overrides.forEach { (key, value) ->
+                        if (value.isNullOrBlank()) updated.remove(key) else updated[key] = value
+                    }
+                    deviceByDataType.value = updated
+                    prefsFlow.value = prefsFlow.value.copy(deviceByDataType = updated)
+                }
             }
         every { historicalResyncController.state } returns
             flowOf(

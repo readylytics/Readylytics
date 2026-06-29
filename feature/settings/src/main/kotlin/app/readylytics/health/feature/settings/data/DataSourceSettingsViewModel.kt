@@ -126,9 +126,7 @@ class DataSourceSettingsViewModel
                 viewModelScope.launch {
                     val overrides = pendingOverrides.value
                     if (overrides.isEmpty()) return@launch
-                    overrides.forEach { (type, label) ->
-                        deviceSettings.updateDeviceForDataType(type.name, label)
-                    }
+                    deviceSettings.applyDeviceOverrides(overrides.mapKeys { it.key.name })
                     pendingOverrides.value = emptyMap()
                     historicalResyncController.requestHistoricalResync()
                 }

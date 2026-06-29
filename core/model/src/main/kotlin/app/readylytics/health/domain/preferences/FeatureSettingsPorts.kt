@@ -93,6 +93,7 @@ interface DeviceSettings {
     suspend fun migrateDeviceSelectionIfNeeded()
     suspend fun updatePrimaryDevice(deviceName: String?)
     suspend fun updateDeviceForDataType(dataTypeKey: String, deviceLabel: String?)
+    suspend fun applyDeviceOverrides(overrides: Map<String, String?>)
     suspend fun updateDeviceChangeNoticeDismissed(dismissed: Boolean)
 }
 

@@ -27,6 +27,7 @@ import app.readylytics.health.core.ui.common.resolveOrNull
 import app.readylytics.health.core.ui.components.CircadianConsistencyCard
 import app.readylytics.health.core.ui.components.M3ScoreGaugeCard
 import app.readylytics.health.core.ui.components.MetricCard
+import app.readylytics.health.data.preferences.SettingsDefaults
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.insights.InsightParams
 import app.readylytics.health.domain.insights.detail.DailyInsightContext
@@ -312,7 +313,7 @@ fun buildCardDataMap(
                         when (result) {
                             is CircadianConsistencyResult.Calibrating,
                             is CircadianConsistencyResult.MissingData,
-                            -> 30
+                            -> SettingsDefaults.CONSISTENCY_THRESHOLD_MINUTES
                             is CircadianConsistencyResult.Ready -> result.thresholdMinutes
                         }
                     val tooltipText =
