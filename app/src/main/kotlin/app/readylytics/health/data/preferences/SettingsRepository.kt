@@ -232,8 +232,7 @@ class SettingsRepository
             deviceLabel: String?,
         ) = ui.updateDeviceForDataType(dataTypeKey, deviceLabel)
 
-        override suspend fun applyDeviceOverrides(overrides: Map<String, String?>) =
-            ui.applyDeviceOverrides(overrides)
+        override suspend fun applyDeviceOverrides(overrides: Map<String, String?>) = ui.applyDeviceOverrides(overrides)
 
         override suspend fun migrateDeviceSelectionIfNeeded() = ui.migrateDeviceSelectionIfNeeded()
 
