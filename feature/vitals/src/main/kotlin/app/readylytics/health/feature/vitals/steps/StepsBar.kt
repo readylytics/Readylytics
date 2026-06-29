@@ -6,7 +6,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,13 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -39,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import app.readylytics.health.core.ui.common.ChartUtils
 import app.readylytics.health.core.ui.components.DataPointTooltip
 import app.readylytics.health.core.ui.components.DataPointTooltipData
+import app.readylytics.health.core.ui.components.HealthProgressBar
+import app.readylytics.health.core.ui.components.ProgressBarSegment
 import app.readylytics.health.core.ui.components.SegmentHitBox
 import app.readylytics.health.core.ui.components.detectCanvasTap
 import app.readylytics.health.core.ui.components.gaugeColor
@@ -169,11 +164,20 @@ fun StepsBar(
 
     Column(modifier = modifier) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            Canvas(
+            HealthProgressBar(
+                segments =
+                    if (stepCount != null && stepCount > 0) {
+                        listOf(ProgressBarSegment(value = count.toFloat(), color = fillColor))
+                    } else {
+                        emptyList()
+                    },
+                max = barMax(stepGoal),
+                height = 28.dp,
+                trackColor = trackColor,
+                outlineColor = outlineColor,
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(28.dp)
                         .testTag("StepsBarCanvas")
                         .semantics {
                             contentDescription = chartSummary
@@ -210,68 +214,32 @@ fun StepsBar(
                                 }
                             },
                         ),
-            ) {
-                val totalWidth = size.width
-                val barHeight = size.height
-                val radius = barHeight / 2f
+                onDrawOverlay = { totalWidth, barHeight ->
+                    if (activeTapOffset != null) {
+                        val tapX = activeTapOffset!!.x.coerceIn(0f, totalWidth)
 
-                val clipPath =
-                    Path().apply {
-                        addRoundRect(
-                            RoundRect(
-                                left = 0f,
-                                top = 0f,
-                                right = totalWidth,
-                                bottom = barHeight,
-                                cornerRadius = CornerRadius(radius),
-                            ),
+                        // Vertical indicator line through the bar
+                        drawLine(
+                            color = primaryColor.copy(alpha = 0.4f),
+                            start = Offset(tapX, 0f),
+                            end = Offset(tapX, barHeight),
+                            strokeWidth = 2.dp.toPx(),
+                        )
+
+                        // Concentric highlight circles with breathing pulsing animation
+                        drawCircle(
+                            color = primaryColor.copy(alpha = haloAlpha),
+                            center = Offset(tapX, barHeight / 2f),
+                            radius = (8.dp.toPx() * haloRadiusCoeff),
+                        )
+                        drawCircle(
+                            color = primaryColor,
+                            center = Offset(tapX, barHeight / 2f),
+                            radius = 4.dp.toPx(),
                         )
                     }
-
-                clipPath(clipPath) {
-                    drawRect(color = trackColor, topLeft = Offset(0f, 0f), size = Size(totalWidth, barHeight))
-
-                    if (stepCount != null && stepCount > 0) {
-                        val fillWidth = (totalWidth * (count.toFloat() / barMax(stepGoal))).coerceAtMost(totalWidth)
-                        drawRect(
-                            color = fillColor,
-                            topLeft = Offset(0f, 0f),
-                            size = Size(fillWidth, barHeight),
-                        )
-                    }
-                }
-
-                drawRoundRect(
-                    color = outlineColor,
-                    cornerRadius = CornerRadius(radius),
-                    style = Stroke(width = 1.dp.toPx()),
-                )
-
-                // Draw highlight overlay and indicator line
-                if (activeTapOffset != null) {
-                    val tapX = activeTapOffset!!.x.coerceIn(0f, totalWidth)
-
-                    // Vertical indicator line through the bar
-                    drawLine(
-                        color = primaryColor.copy(alpha = 0.4f),
-                        start = Offset(tapX, 0f),
-                        end = Offset(tapX, barHeight),
-                        strokeWidth = 2.dp.toPx(),
-                    )
-
-                    // Concentric highlight circles with breathing pulsing animation
-                    drawCircle(
-                        color = primaryColor.copy(alpha = haloAlpha),
-                        center = Offset(tapX, barHeight / 2f),
-                        radius = (8.dp.toPx() * haloRadiusCoeff),
-                    )
-                    drawCircle(
-                        color = primaryColor,
-                        center = Offset(tapX, barHeight / 2f),
-                        radius = 4.dp.toPx(),
-                    )
-                }
-            }
+                },
+            )
 
             if (tooltipState != null) {
                 DataPointTooltip(
