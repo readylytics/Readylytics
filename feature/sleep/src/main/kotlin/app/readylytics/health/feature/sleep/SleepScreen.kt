@@ -350,7 +350,7 @@ private fun MetricsGrid(
                             ?: "—",
                     secondaryText = stringResource(app.readylytics.health.core.ui.R.string.card_goal_sleep_efficiency),
                     status = efficiencyStatus,
-                    tooltip = stringResource(R.string.tooltip_sleep_efficiency),
+                    tooltip = stringResource(app.readylytics.health.core.ui.R.string.card_tooltip_sleep_efficiency),
                     onClick = null,
                 )
             }

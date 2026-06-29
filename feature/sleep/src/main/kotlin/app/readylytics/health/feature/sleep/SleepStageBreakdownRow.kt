@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.readylytics.health.feature.sleep.R
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun SleepStageBreakdownRow(
@@ -46,9 +47,9 @@ fun SleepStageBreakdownRow(
         val minutes = durationMinutes % 60
         val durationText =
             if (hours > 0) {
-                stringResource(app.readylytics.health.core.ui.R.string.sleep_duration_hours_minutes, hours, minutes)
+                stringResource(CoreUiR.string.sleep_duration_hours_minutes, hours, minutes)
             } else {
-                stringResource(R.string.sleep_duration_minutes_only, minutes)
+                stringResource(CoreUiR.string.sleep_duration_minutes_only, minutes)
             }
 
         Text(

@@ -49,6 +49,7 @@ import app.readylytics.health.feature.workouts.WorkoutDetailRoute
 import app.readylytics.health.feature.workouts.WorkoutsRoute
 import app.readylytics.health.ui.navigation.AppDestination
 import app.readylytics.health.ui.navigation.TabDestination
+import app.readylytics.health.core.ui.R as CoreUiR
 
 @Composable
 fun MainNavHost(
@@ -244,7 +245,8 @@ fun MainNavHost(
                                     val isPerfectSleep =
                                         sleepScore >= 85f && duration >= (uiState.goalSleepHours * 60).toInt()
                                     if (isPerfectSleep) {
-                                        detail.cardDescription + stringResource(R.string.insight_rest_day_perfect_sleep)
+                                        detail.cardDescription + " " +
+                                            stringResource(CoreUiR.string.insight_rest_day_perfect_sleep)
                                     } else {
                                         detail.cardDescription
                                     }

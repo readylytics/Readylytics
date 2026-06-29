@@ -205,8 +205,6 @@ jacoco {
     toolVersion = "0.8.11"
 }
 
-
-
 protobuf {
     protoc {
         artifact =

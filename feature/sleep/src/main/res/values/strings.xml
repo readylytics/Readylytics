@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
     <string name="tooltip_deep_sleep">Time in Stage 3 (Physical repair).</string>
     <string name="tooltip_rem_sleep">Time in Rapid Eye Movement.</string>
-
-    <string name="sleep_duration_minutes_only">%1$dm</string>
     
     <string name="sleep_timeline_title">Sleep timeline</string>
     <string name="sleep_breakdown_title">Sleep breakdown</string>
@@ -22,8 +19,6 @@
 
     <string name="chart_accessibility_sleep_stages_summary">Sleep stages timeline chart showing Awake, REM, Light, and Deep sleep segments.</string>
     <string name="chart_accessibility_sleep_architecture_summary">Sleep architecture bar showing proportion of sleep spent in Deep, REM, Light, and Awake stages.</string>
-    <string name="chart_accessibility_selected_sleep_stage">Selected: %1$s stage, duration %2$s, starting at %3$s</string>
-
     <string name="card_title_deep_sleep">Deep Sleep</string>
     <string name="card_target_deep_sleep">Target: 15–25%</string>
     <string name="card_title_rem_sleep">REM Sleep</string>

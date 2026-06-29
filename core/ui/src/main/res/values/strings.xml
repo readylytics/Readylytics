@@ -65,6 +65,7 @@
     <string name="label_circadian_consistency">Circadian consistency</string>
     <string name="label_circadian_median">Median: %1$s→%2$s</string>
     <string name="chart_accessibility_no_selection">No point selected</string>
+    <string name="chart_accessibility_selected_sleep_stage">Selected: %1$s stage, duration %2$s, starting at %3$s</string>
     <string name="action_previous_point">Previous point</string>
     <string name="action_next_point">Next point</string>
     <string name="action_clear_selection">Clear selection</string>
@@ -121,10 +122,12 @@
     <string name="label_date_of_birth">Date of birth</string>
     <string name="label_not_set">Not set</string>
     <string name="sleep_duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="sleep_duration_minutes_only">%1$dm</string>
     <string name="sleep_duration_hours_only">%1$dh</string>
     <string name="card_title_sleep_efficiency">Sleep Efficiency</string>
     <string name="card_tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
     <string name="card_goal_sleep_efficiency">Goal: &gt;85%</string>
+    <string name="insight_rest_day_perfect_sleep">Your night\'s rest was perfect!</string>
     <string name="card_efficiency_format">%1$s%%</string>
     <string name="hr_zones_footer">Zones are used for TRIMP and workout intensity tracking.</string>
     <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last night.</string>

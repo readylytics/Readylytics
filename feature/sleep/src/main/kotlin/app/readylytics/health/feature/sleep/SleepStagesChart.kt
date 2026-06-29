@@ -171,9 +171,9 @@ private fun formatStageDuration(minutes: Int): String {
     val h = minutes / 60
     val m = minutes % 60
     return if (h > 0) {
-        stringResource(app.readylytics.health.core.ui.R.string.sleep_duration_hours_minutes, h, m)
+        stringResource(CoreUiR.string.sleep_duration_hours_minutes, h, m)
     } else {
-        stringResource(R.string.sleep_duration_minutes_only, m)
+        stringResource(CoreUiR.string.sleep_duration_minutes_only, m)
     }
 }
 
@@ -407,7 +407,12 @@ fun SleepStagesChart(
                     val timeStr = timeFormatter.format(Instant.ofEpochMilli(sel.stage.startTime))
                     val stageName = stageDisplayName(sel.stage.stageType)
                     val durationStr = formatStageDuration(sel.stage.durationMinutes)
-                    stringResource(R.string.chart_accessibility_selected_sleep_stage, stageName, durationStr, timeStr)
+                    stringResource(
+                        CoreUiR.string.chart_accessibility_selected_sleep_stage,
+                        stageName,
+                        durationStr,
+                        timeStr,
+                    )
                 } ?: stringResource(CoreUiR.string.chart_accessibility_no_selection)
 
             Column(

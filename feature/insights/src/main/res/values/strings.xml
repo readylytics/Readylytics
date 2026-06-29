@@ -15,7 +15,6 @@
     <string name="insight_workout_impact_body">Yesterday\'s high strain workout appears to be carrying into today because both HRV and RHR are outside their optimal ranges.</string>
     <string name="insight_rest_day_success_title">Rest Day Success</string>
     <string name="insight_rest_day_success_body">Your dedicated rest day resulted in an optimal HRV rebound.</string>
-    <string name="insight_rest_day_perfect_sleep"> Your night\'s rest was perfect!</string>
     <string name="insight_rest_day_no_impact_title">Rest Day</string>
     <string name="insight_rest_day_no_impact_body">Your rest day did not lead to a significant HRV rebound.</string>
     <string name="insight_circadian_shift_title">Circadian Shift Delayed Recovery</string>
