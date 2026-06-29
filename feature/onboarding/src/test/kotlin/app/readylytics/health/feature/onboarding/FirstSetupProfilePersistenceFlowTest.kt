@@ -21,7 +21,7 @@ class FirstSetupProfilePersistenceFlowTest {
     }
 
     @Test
-    fun saveProfile_persistsSharedHarnessState() =
+    fun saveProfile_persistsBirthdayHeightProfileUnitSystemDynamicColor_andBirthdayConfigured() =
         runTest {
             val mainDispatcher = StandardTestDispatcher(testScheduler)
             Dispatchers.setMain(mainDispatcher)
@@ -49,5 +49,6 @@ class FirstSetupProfilePersistenceFlowTest {
             assertEquals(true, prefs.dynamicColorEnabled)
             assertEquals(UnitSystem.METRIC, prefs.unitSystem)
             assertEquals(172.5f, prefs.heightCm)
+            assertEquals(true, prefs.isBirthdayConfigured)
         }
 }

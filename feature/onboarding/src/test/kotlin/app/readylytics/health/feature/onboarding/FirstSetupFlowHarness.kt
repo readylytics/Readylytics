@@ -4,12 +4,15 @@ import app.readylytics.health.data.preferences.Gender
 import app.readylytics.health.data.preferences.PhysiologyProfile
 import app.readylytics.health.data.preferences.UnitSystem
 import app.readylytics.health.data.preferences.UserPreferences
+import app.readylytics.health.domain.model.Result
 import app.readylytics.health.domain.preferences.DeviceSettings
 import app.readylytics.health.domain.preferences.DisplaySettings
 import app.readylytics.health.domain.preferences.PhysiologySettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.scoring.TrimpModel
 import app.readylytics.health.domain.service.BmiService
+import app.readylytics.health.domain.sync.HealthDataRefresh
+import app.readylytics.health.domain.user.UserProfileActions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.time.LocalDate
@@ -23,6 +26,8 @@ class FirstSetupFlowHarness(
     val displaySettings: DisplaySettings = DisplayPort()
     val deviceSettings: DeviceSettings = DevicePort()
     val reader: UserPreferencesReader = Reader()
+    val userProfileActions = UserProfileActionsPort()
+    val healthDataRefresh = HealthDataRefreshPort()
 
     fun buildOnboardingViewModel(): OnboardingViewModel =
         OnboardingViewModel(
@@ -31,6 +36,22 @@ class FirstSetupFlowHarness(
             deviceSettings = deviceSettings,
             bmiService = BmiService(),
         )
+
+    fun seedProfile(
+        birthDate: LocalDate,
+        heightCm: Float,
+        physiologyProfile: PhysiologyProfile,
+        unitSystem: UnitSystem,
+    ) {
+        preferences.value =
+            preferences.value.copy(
+                birthDate = birthDate.toString(),
+                isBirthdayConfigured = true,
+                heightCm = heightCm,
+                physiologyProfile = physiologyProfile,
+                unitSystem = unitSystem,
+            )
+    }
 
     fun advanceUntilIdle() {
         advanceUntilIdle.invoke()
@@ -137,5 +158,28 @@ class FirstSetupFlowHarness(
 
         override suspend fun updateDeviceChangeNoticeDismissed(dismissed: Boolean) =
             error("Unexpected call: updateDeviceChangeNoticeDismissed")
+    }
+
+    inner class UserProfileActionsPort : UserProfileActions {
+        override suspend fun updateBirthday(date: LocalDate): Result<Unit> {
+            preferences.value =
+                preferences.value.copy(
+                    birthDate = date.toString(),
+                    isBirthdayConfigured = true,
+                )
+            return Result.success(Unit)
+        }
+
+        override suspend fun calculateAndSetMaxHr(): Result<Unit> =
+            error("Unexpected call: calculateAndSetMaxHr")
+    }
+
+    inner class HealthDataRefreshPort : HealthDataRefresh {
+        var refreshCalls = 0
+            private set
+
+        override suspend fun refreshAffectedWindow() {
+            refreshCalls += 1
+        }
     }
 }

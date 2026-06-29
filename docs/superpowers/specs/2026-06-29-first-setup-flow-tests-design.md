@@ -234,6 +234,8 @@ Best home for new setup-flow tests:
 
 Default recommendation: start local, extract later if duplication appears.
 
+If feature-module test wiring blocks direct reuse of one harness across modules, a tiny module-local harness that mirrors the same in-memory preference model is acceptable. Prefer documenting that constraint over forcing new cross-module test dependencies for this work.
+
 ### androidTest placement
 
 If real seeded Health Connect instrumentation becomes necessary, align with current strategy layout:
