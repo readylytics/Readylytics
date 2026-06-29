@@ -9,10 +9,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import app.readylytics.health.core.ui.components.HealthProgressBar
-import app.readylytics.health.core.ui.components.ProgressBarSegment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -178,13 +177,15 @@ private fun ZoneRow(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        HealthProgressBar(
-            segments = listOf(ProgressBarSegment(value = minutes, color = color)),
-            max = totalMinutes,
-            height = 10.dp,
+        LinearProgressIndicator(
+            progress = { (minutes / totalMinutes).coerceIn(0f, 1f) },
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .height(10.dp)
+                    .clip(MaterialTheme.shapes.extraSmall),
+            color = color,
             trackColor = color.copy(alpha = 0.15f),
-            outlineColor = null,
-            modifier = Modifier.weight(1f),
         )
         Spacer(Modifier.width(8.dp))
         Text(
