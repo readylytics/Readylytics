@@ -95,14 +95,14 @@ class FirstSetupFlowHarness(
         override suspend fun updateAppTheme(theme: app.readylytics.health.data.preferences.AppTheme) =
             error("Unexpected call: updateAppTheme")
 
-        override suspend fun updateFallbackThemeColor(color: app.readylytics.health.data.preferences.FallbackThemeColor) =
-            error("Unexpected call: updateFallbackThemeColor")
+        override suspend fun updateFallbackThemeColor(
+            color: app.readylytics.health.data.preferences.FallbackThemeColor,
+        ) = error("Unexpected call: updateFallbackThemeColor")
 
         override suspend fun updateCustomPaletteEnabled(enabled: Boolean) =
             error("Unexpected call: updateCustomPaletteEnabled")
 
-        override suspend fun updateCustomPrimaryColor(color: Long) =
-            error("Unexpected call: updateCustomPrimaryColor")
+        override suspend fun updateCustomPrimaryColor(color: Long) = error("Unexpected call: updateCustomPrimaryColor")
 
         override suspend fun updateCustomSecondaryColor(color: Long) =
             error("Unexpected call: updateCustomSecondaryColor")
@@ -110,43 +110,32 @@ class FirstSetupFlowHarness(
         override suspend fun updateCustomTertiaryColor(color: Long) =
             error("Unexpected call: updateCustomTertiaryColor")
 
-        override suspend fun updateRasScalingFactor(value: Float) =
-            error("Unexpected call: updateRasScalingFactor")
+        override suspend fun updateRasScalingFactor(value: Float) = error("Unexpected call: updateRasScalingFactor")
 
-        override suspend fun updateStepGoal(steps: Int) =
-            error("Unexpected call: updateStepGoal")
+        override suspend fun updateStepGoal(steps: Int) = error("Unexpected call: updateStepGoal")
 
         override suspend fun updateRetentionDaysEnabled(enabled: Boolean) =
             error("Unexpected call: updateRetentionDaysEnabled")
 
-        override suspend fun updateRetentionDays(days: Int) =
-            error("Unexpected call: updateRetentionDays")
+        override suspend fun updateRetentionDays(days: Int) = error("Unexpected call: updateRetentionDays")
 
-        override suspend fun updateTrimpModel(model: TrimpModel) =
-            error("Unexpected call: updateTrimpModel")
+        override suspend fun updateTrimpModel(model: TrimpModel) = error("Unexpected call: updateTrimpModel")
 
-        override suspend fun updateBanisterMultiplier(value: Float) =
-            error("Unexpected call: updateBanisterMultiplier")
+        override suspend fun updateBanisterMultiplier(value: Float) = error("Unexpected call: updateBanisterMultiplier")
 
-        override suspend fun updateChengBeta(value: Float) =
-            error("Unexpected call: updateChengBeta")
+        override suspend fun updateChengBeta(value: Float) = error("Unexpected call: updateChengBeta")
 
-        override suspend fun updateItrimB(value: Float) =
-            error("Unexpected call: updateItrimB")
+        override suspend fun updateItrimB(value: Float) = error("Unexpected call: updateItrimB")
     }
 
     private inner class DevicePort : DeviceSettings {
-        override suspend fun getAvailableDevices(): List<String> =
-            error("Unexpected call: getAvailableDevices")
+        override suspend fun getAvailableDevices(): List<String> = error("Unexpected call: getAvailableDevices")
 
-        override suspend fun clearDeviceCache() =
-            error("Unexpected call: clearDeviceCache")
+        override suspend fun clearDeviceCache() = error("Unexpected call: clearDeviceCache")
 
-        override suspend fun migrateDeviceSelectionIfNeeded() =
-            error("Unexpected call: migrateDeviceSelectionIfNeeded")
+        override suspend fun migrateDeviceSelectionIfNeeded() = error("Unexpected call: migrateDeviceSelectionIfNeeded")
 
-        override suspend fun updatePrimaryDevice(deviceName: String?) =
-            error("Unexpected call: updatePrimaryDevice")
+        override suspend fun updatePrimaryDevice(deviceName: String?) = error("Unexpected call: updatePrimaryDevice")
 
         override suspend fun updateDeviceForDataType(
             dataTypeKey: String,
@@ -170,8 +159,7 @@ class FirstSetupFlowHarness(
             return Result.success(Unit)
         }
 
-        override suspend fun calculateAndSetMaxHr(): Result<Unit> =
-            error("Unexpected call: calculateAndSetMaxHr")
+        override suspend fun calculateAndSetMaxHr(): Result<Unit> = error("Unexpected call: calculateAndSetMaxHr")
     }
 
     inner class HealthDataRefreshPort : HealthDataRefresh {

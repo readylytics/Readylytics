@@ -25,9 +25,10 @@ class FirstSetupProfilePersistenceFlowTest {
         runTest {
             val mainDispatcher = StandardTestDispatcher(testScheduler)
             Dispatchers.setMain(mainDispatcher)
-            val harness = FirstSetupFlowHarness(
-                advanceUntilIdle = testScheduler::advanceUntilIdle,
-            )
+            val harness =
+                FirstSetupFlowHarness(
+                    advanceUntilIdle = testScheduler::advanceUntilIdle,
+                )
             val viewModel = harness.buildOnboardingViewModel()
 
             viewModel.saveProfile(

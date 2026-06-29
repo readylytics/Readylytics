@@ -15,8 +15,8 @@ import app.readylytics.health.domain.model.DomainStepsRecord
 import app.readylytics.health.domain.model.DomainWeightRecord
 import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.SettingsRepository
-import app.readylytics.health.domain.repository.PermissionStatus
 import app.readylytics.health.domain.repository.HealthConnectRepository
+import app.readylytics.health.domain.repository.PermissionStatus
 import app.readylytics.health.domain.repository.ScoringRepository
 import app.readylytics.health.domain.scoring.RasSourceModeBootstrapUseCase
 import app.readylytics.health.domain.sync.link.SessionLinkReconciler
