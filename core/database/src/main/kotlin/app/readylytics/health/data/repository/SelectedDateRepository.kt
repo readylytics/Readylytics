@@ -7,6 +7,7 @@ import app.readylytics.health.data.local.dao.HrvDao
 import app.readylytics.health.data.local.dao.OxygenSaturationRecordDao
 import app.readylytics.health.data.local.dao.SleepSessionDao
 import app.readylytics.health.di.ApplicationScope
+import app.readylytics.health.domain.date.SelectedDateStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,17 +36,17 @@ class SelectedDateRepository
         private val oxygenSaturationRecordDao: OxygenSaturationRecordDao? = null,
         private val bloodPressureRecordDao: BloodPressureRecordDao? = null,
         @param:ApplicationScope private val appScope: CoroutineScope,
-    ) {
+    ) : SelectedDateStore {
         private val dateMutex = Mutex()
         private val _selectedDate = MutableStateFlow(LocalDate.now())
-        val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
+        override val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
         // Tracks what "today" was as of the last foreground check, so
         // advanceTodayIfNeeded() can tell "passively viewing today" (selectedDate
         // == lastKnownToday) apart from an explicit historical pick.
         private var lastKnownToday: LocalDate = _selectedDate.value
 
-        val earliestDate: StateFlow<LocalDate?> =
+        override val earliestDate: StateFlow<LocalDate?> =
             combine(
                 dao.observeEarliestDateMs(),
                 sleepSessionDao?.observeEarliestSessionTime() ?: flowOf(null),
@@ -72,7 +73,7 @@ class SelectedDateRepository
             }
         }
 
-        suspend fun updateSelectedDate(date: LocalDate) {
+        override suspend fun updateSelectedDate(date: LocalDate) {
             dateMutex.withLock {
                 val today = LocalDate.now()
                 val earliest = earliestDate.value
@@ -84,7 +85,7 @@ class SelectedDateRepository
             }
         }
 
-        suspend fun resetToToday() {
+        override suspend fun resetToToday() {
             dateMutex.withLock {
                 val today = LocalDate.now()
                 _selectedDate.value = today
@@ -96,7 +97,7 @@ class SelectedDateRepository
         // was passively on the previously-known today and the calendar day has
         // actually moved forward since the last check; an explicit historical
         // selection is left untouched.
-        suspend fun advanceTodayIfNeeded() {
+        override suspend fun advanceTodayIfNeeded() {
             dateMutex.withLock {
                 val today = LocalDate.now()
                 val previousToday = lastKnownToday
@@ -109,7 +110,7 @@ class SelectedDateRepository
             }
         }
 
-        suspend fun selectPreviousDay() {
+        override suspend fun selectPreviousDay() {
             dateMutex.withLock {
                 val candidate = _selectedDate.value.minusDays(1)
                 val earliest = earliestDate.value
@@ -120,7 +121,7 @@ class SelectedDateRepository
             }
         }
 
-        suspend fun selectNextDay() {
+        override suspend fun selectNextDay() {
             dateMutex.withLock {
                 val today = LocalDate.now()
                 if (_selectedDate.value < today) {

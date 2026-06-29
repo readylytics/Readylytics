@@ -55,8 +55,8 @@ class ProductionReadinessStaticTest {
     fun `ui code does not surface raw throwable messages`() {
         val uiFiles =
             listOf(
-                "app/src/main/kotlin/app/readylytics/health/ui/dashboard/DashboardViewModel.kt",
-                "app/src/main/kotlin/app/readylytics/health/ui/settings/LocalBackupViewModel.kt",
+                "feature/dashboard/src/main/kotlin/app/readylytics/health/feature/dashboard/DashboardViewModel.kt",
+                "feature/settings/src/main/kotlin/app/readylytics/health/feature/settings/LocalBackupViewModel.kt",
                 "app/src/main/kotlin/app/readylytics/health/ui/sync/SyncViewModel.kt",
                 "app/src/main/kotlin/app/readylytics/health/MainActivity.kt",
             )
@@ -138,11 +138,11 @@ class ProductionReadinessStaticTest {
     fun `settings color and circadian controls do not hardcode user visible strings`() {
         val customColorPicker =
             sourceFile(
-                "src/main/kotlin/app/readylytics/health/ui/settings/common/CustomColorPicker.kt",
+                "src/main/kotlin/app/readylytics/health/feature/settings/common/CustomColorPicker.kt",
             ).readText()
         val circadianSection =
             sourceFile(
-                "src/main/kotlin/app/readylytics/health/ui/settings/CircadianThresholdSettingsSection.kt",
+                "src/main/kotlin/app/readylytics/health/feature/settings/CircadianThresholdSettingsSection.kt",
             ).readText()
 
         assertFalse(customColorPicker.contains("Text(\"Hex Code\")"))
@@ -320,12 +320,26 @@ class ProductionReadinessStaticTest {
             File("core/model", path),
             File("core/scoring", path),
             File("core/healthconnect", path),
+            File("feature/about", path),
+            File("feature/dashboard", path),
+            File("feature/insights", path),
+            File("feature/settings", path),
+            File("feature/sleep", path),
+            File("feature/vitals", path),
+            File("feature/workouts", path),
             File("..", path),
             File("../app", path),
             File("../core/database", path),
             File("../core/model", path),
             File("../core/scoring", path),
             File("../core/healthconnect", path),
+            File("../feature/about", path),
+            File("../feature/dashboard", path),
+            File("../feature/insights", path),
+            File("../feature/settings", path),
+            File("../feature/sleep", path),
+            File("../feature/vitals", path),
+            File("../feature/workouts", path),
         ).firstOrNull { it.exists() }
             ?: error("Source file not found: $path")
 

@@ -18,8 +18,8 @@ class UserUseCase
         private val settingsRepo: SettingsRepository,
         private val healthSyncUseCase: HealthSyncUseCase,
         private val scoringRepository: ScoringRepository,
-    ) {
-        suspend fun updateBirthday(date: LocalDate): Result<Unit> =
+    ) : UserProfileActions {
+        override suspend fun updateBirthday(date: LocalDate): Result<Unit> =
             try {
                 val age = calculateAge(date)
                 settingsRepo.updateBirthday(date)
@@ -37,7 +37,7 @@ class UserUseCase
                 Result.failure("Failed to update birthday", "BIRTHDAY_UPDATE_ERROR")
             }
 
-        suspend fun calculateAndSetMaxHr(): Result<Unit> =
+        override suspend fun calculateAndSetMaxHr(): Result<Unit> =
             try {
                 val prefs = settingsRepo.userPreferences.first()
                 if (prefs.autoCalculateMaxHr) {

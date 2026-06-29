@@ -4,18 +4,23 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.*
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.readylytics.health.core.ui.model.HrSample
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepStageData
-import app.readylytics.health.ui.heartrate.HrSample
-import app.readylytics.health.ui.workouts.TrimpBreakdownChart
+import app.readylytics.health.feature.sleep.SleepStagesChart
+import app.readylytics.health.feature.vitals.heartrate.HrTimelineChart
+import app.readylytics.health.feature.vitals.steps.StepsBar
+import app.readylytics.health.feature.workouts.TrimpBreakdownChart
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.time.ZoneId
 
+@OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class ChartAccessibilityTest {
     @get:Rule
@@ -40,9 +45,9 @@ class ChartAccessibilityTest {
     fun hrTimelineChart_accessibilitySemantics() {
         val samples =
             listOf(
-                HrSample(1700000000000L, 70),
-                HrSample(1700000060000L, 75),
-                HrSample(1700000120000L, 80),
+                HrSample(1700000000000L, 70, 1),
+                HrSample(1700000060000L, 75, 2),
+                HrSample(1700000120000L, 80, 2),
             )
         composeTestRule.setContent {
             Surface {

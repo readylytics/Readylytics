@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Workout Recovery -->
+    <string name="workout_recovery_header">Heart rate recovery</string>
+    <string name="workout_recovery_tooltip_description">A drop of 18+ bpm in the first minute is
+        considered good.</string>
+    <string name="workout_recovery_item_1min">1 Minute</string>
+    <string name="workout_recovery_item_2min">2 Minutes</string>
+    <string name="workout_recovery_item_3min">3 Minutes</string>
+    <string name="workout_recovery_bpm_value">%1$d bpm</string>
+    <string name="workout_recovery_na">N/A</string>
+
+    <!-- Workout Metrics -->
+    <string name="workout_metric_training_load">Training load</string>
+    <string name="workout_metric_avg_pulse">Avg Pulse</string>
+    <string name="workout_metric_gained_strain">Gained Strain</string>
+    <string name="workout_metric_ras">RAS</string>
+    <string name="workout_metric_trimp">TRIMP</string>
+    <string name="workout_metric_bpm">bpm</string>
+    <string name="workout_metric_strain">Strain</string>
+    <string name="workout_metric_points">points</string>
+    <string name="workout_tooltip_training_load">Total training impulse - measures training
+        intensity and duration.</string>
+    <string name="workout_tooltip_avg_pulse">Average heart rate during the workout.</string>
+    <string name="workout_tooltip_gained_strain">Total strain gained from this workout.</string>
+    <string name="workout_tooltip_ras">Readylytics Activity Score (RAS) points gained from this
+        workout. RAS summarizes meaningful cardiovascular activity.</string>
+
+    <!-- Workout Stats -->
+    <string name="workout_stats_acwr_title">Training Load &amp; Strain Ratio (ACWR)</string>
+    <string name="workout_stats_ras_title">Readylytics Activity Score</string>
+    <string name="workout_stats_history_title">History</string>
+    <string name="workout_zones_title">Heart rate zones</string>
+
+    <!-- Workout Intensities -->
+    <string name="workout_intensity_very_hard">Very Hard</string>
+    <string name="workout_intensity_hard">Hard</string>
+    <string name="workout_intensity_moderate">Moderate</string>
+    <string name="workout_intensity_light">Light</string>
+    <string name="workout_intensity_very_light">Very Light</string>
+
+    <!-- Workout History Page/Items -->
+    <string name="workout_history_item_subtitle">%1$d min · Strain %2$s · %3$s</string>
+    <string name="workout_history_bpm_format">%1$d bpm</string>
+    <string name="workout_history_bpm_na">-- bpm</string>
+    <string name="workout_history_page_info">Page %1$d of %2$d</string>
+    <string name="workout_history_button_prev">Previous page</string>
+    <string name="workout_history_button_next">Next page</string>
+
+    <!-- Accessibility -->
+    <string name="chart_accessibility_trimp_summary">Heart rate intensity timeline chart showing workout heart rate over the duration of the exercise.</string>
+    <string name="chart_accessibility_ras_summary">RAS weekly breakdown bar showing daily Readylytics Activity Score contribution.</string>
+    <string name="label_workout_details">Workout details</string>
+    <string name="acwr_training_load">Training load</string>
+    <string name="acwr_legend_daily_trimp">Daily TRIMP</string>
+    <string name="acwr_legend_strain_ratio">Strain ratio</string>
+    <string name="acwr_tooltip_trimp_format">TRIMP: %1$s</string>
+    <string name="acwr_tooltip_strain_format">Strain: %1$s</string>
+    <string name="message_no_hr_data">No HR data available</string>
+    <string name="label_minutes">Minutes</string>
+    <string name="chart_accessibility_selected_trimp">Selected: %1$s at %2$s</string>
+</resources>

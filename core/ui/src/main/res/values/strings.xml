@@ -1,0 +1,162 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources><string name="dashboard_no_data">No data for this day</string>
+    <string name="heart_rate_title">Heart Rate</string>
+    <string name="back">Back</string>
+
+    
+    <string name="action_dismiss">Dismiss</string>
+    <string name="accessibility_password_hide">Hide password</string>
+    <string name="accessibility_password_show">Show password</string>
+    <string name="gender_male">Male</string>
+    <string name="gender_female">Female</string>
+    <string name="gender_other">Other</string>
+    <string name="gender_prefer_not_to_say">Prefer not to say</string>
+
+    
+    <string name="label_gender">Gender</string>
+    <string name="onboarding_dynamic_color_label">Dynamic color</string>
+    <string name="onboarding_dynamic_color_desc">Use colors derived from your wallpaper (Android
+        12+)</string>
+    <string name="hr_zone_n">Zone %1$d</string>
+    <string name="message_no_data_available">No data available</string>
+    <string name="error_backup_restore_validation">Restore validation failed</string>
+    <string name="error_backup_wrong_password">Incorrect backup password</string>
+    <string name="restore_partial_success_message">Health data was restored, but settings could not be restored. Restart Readylytics, then run restore again if settings still look wrong.</string>
+    <string name="delta_up">↑</string>
+    <string name="delta_down">↓</string>
+    <string name="delta_no_change">—</string>
+
+    
+    <string name="action_delete_drop_zone">Drop here to remove</string>
+
+    
+    <string name="unit_metric_cm">cm</string>
+    <string name="label_height">Height</string>
+    <string name="label_feet">Feet</string>
+    <string name="label_inches">Inches</string>
+    <string name="unit_ft">ft</string>
+    <string name="unit_in">in</string>
+    <string name="height_range_hint_metric">Range: 120–250 cm</string>
+    <string name="height_range_hint_imperial">Range: 3\'11\" - 8\'2\"</string>
+    <string name="height_bmi_note">Used for BMI calculation in weight tracking</string>
+    <string name="error_height_feet">Feet: 3–8</string>
+    <string name="error_height_inches">Inches: 0–11</string>
+    <string name="error_height_out_of_range">Height out of range (120–250 cm)</string>
+
+    
+    <string name="label_baseline">Baseline</string>
+    <string name="accessibility_drag_to_reorder">Drag to reorder</string>
+    <string name="unit_system_label">Unit system</string>
+    <string name="unit_system_metric_label">Metric (cm, kg)</string>
+    <string name="unit_system_imperial_label">Imperial (ft/in, lbs)</string>
+    <string name="accessibility_more_information">More information</string>
+    <string name="accessibility_prev_day">Previous day</string>
+
+    <string name="accessibility_next_day">Next day</string>
+    <string name="accessibility_date_pill">%1$s, %2$s. Tap to open date picker.</string>
+    <string name="date_switcher_label_today">Today</string>
+    <string name="date_switcher_label_yesterday">Yesterday</string>
+    <string name="date_switcher_label_selected">Selected date</string>
+    <string name="tooltip_circadian_score">Measures how regular your sleep schedule is.\n\nHigh
+        consistency stabilizes your internal clock, improving deep sleep and energy levels.\n\n• ≥
+        80%%: Optimal\n• 60–79%%: Neutral\n• 40–59%%: Warning\n• &lt; 40%%: Poor\n\nConsistency
+        Window: ±%1$d min grace period before score drops.</string>
+    <string name="spo2_calibrating">Calibrating</string>
+    <string name="label_circadian_consistency">Circadian consistency</string>
+    <string name="label_circadian_median">Median: %1$s→%2$s</string>
+    <string name="chart_accessibility_no_selection">No point selected</string>
+    <string name="chart_accessibility_selected_sleep_stage">Selected: %1$s stage, duration %2$s, starting at %3$s</string>
+    <string name="action_previous_point">Previous point</string>
+    <string name="action_next_point">Next point</string>
+    <string name="action_clear_selection">Clear selection</string>
+    <string name="tooltip_ras">Your 7-day rolling Readylytics Activity Score (RAS).\nBased on how often and how
+        hard you challenge your heart.\n\n• 100+: Optimal\n• 75-99: Neutral\n• 50-74: Warning\n•
+        &lt; 50: Poor</string>
+    <string name="tooltip_readiness">Preparation for stress based on recent load &amp;
+        recovery.\n\n• 85–100: Peak\n• 60–84: Maintain\n• 30–59: Caution\n• &lt; 30: High Fatigue</string>
+    <string name="tooltip_strain_ratio">The ACWR (Acute:Chronic Workload Ratio). Compares recent
+        training load to your baseline.\n\n• 0.8–1.3: In your normal range — sweet spot\n• 1.3–1.5:
+        Load increasing; linear decay begins\n• 1.5–2.0: Overtraining; high injury risk\n• &gt;2.0:
+        Severe overtraining; recovery needed\n• 0.5–0.8: Under-training\n• &lt;0.5: Severe
+        under-training</string>
+    <string name="card_title_readiness">Readiness</string>
+    <string name="card_title_strain_ratio">Strain ratio</string>
+    <string name="unit_bpm">bpm</string>
+    <string name="unit_mmHg">mmHg</string>
+    <string name="unit_ms">ms</string>
+    <string name="unit_percent">%</string>
+    <string name="unit_steps">steps</string>
+    <string name="unit_kg">kg</string>
+    <string name="unit_lbs">lbs</string>
+    <string name="label_average">Average</string>
+    <string name="label_normal_limit">Normal Limit</string>
+    <string name="label_min">Min</string>
+    <string name="label_max">Max</string>
+    <string name="label_avg">Avg</string>
+    <string name="label_timeline">Timeline</string>
+    <string name="label_zone_breakdown">Zone Breakdown</string>
+    <string name="label_trends">Trends</string>
+    <string name="label_history">History</string>
+    <string name="label_rhr">RHR</string>
+    <string name="label_hrv">HRV</string>
+    <string name="label_steps">Steps</string>
+    <string name="label_spo2">SpO2</string>
+    <string name="tooltip_sleep_rhr">Average heart rate during sleep.\nTarget: lower or equal to
+        your 30-day rolling average. (Lower = Recovered)</string>
+    <string name="tooltip_sleep_hrv">Variation between heartbeats in milliseconds.\nTarget: Within
+        or above your 30-day rolling average. (Higher = Recovered)</string>
+    <string name="chart_accessibility_rhr_summary">Resting heart rate timeline chart showing heart rate values in beats per minute over the sleep period.</string>
+    <string name="chart_accessibility_selected_rhr">Selected: %1$d bpm at %2$s</string>
+    <string name="chart_accessibility_steps_summary">Steps progress bar showing steps count against daily goal.</string>
+    <string name="chart_accessibility_selected_steps">Selected: %1$s steps, goal %2$s</string>
+    <string name="device_selection_title">Choose your primary device</string>
+    <string name="device_selection_description">We found data from multiple sources. Pick the device
+        whose readings should drive your scores — we\'ll fall back to other devices for days it
+        didn\'t record.</string>
+    <string name="device_selection_no_devices">No specific devices were detected. We\'ll use all
+        available data sources.</string>
+    <string name="device_selection_use_all">Use all devices</string>
+    <string name="device_selection_continue_with">Continue with %1$s</string>
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="label_date_of_birth">Date of birth</string>
+    <string name="label_not_set">Not set</string>
+    <string name="sleep_duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="sleep_duration_minutes_only">%1$dm</string>
+    <string name="sleep_duration_hours_only">%1$dh</string>
+    <string name="card_title_sleep_efficiency">Sleep Efficiency</string>
+    <string name="card_tooltip_sleep_efficiency">The percentage of time actually asleep while in bed.</string>
+    <string name="card_goal_sleep_efficiency">Goal: &gt;85%</string>
+    <string name="insight_rest_day_perfect_sleep">Your night\'s rest was perfect!</string>
+    <string name="card_efficiency_format">%1$s%%</string>
+    <string name="hr_zones_footer">Zones are used for TRIMP and workout intensity tracking.</string>
+    <string name="tooltip_vitals_spo2" formatted="false">Average sleeping oxygen saturation last night.</string>
+    <string name="spo2_optimal">Optimal</string>
+    <string name="spo2_normal">Normal</string>
+    <string name="spo2_warning">Warning</string>
+    <string name="spo2_poor">Poor</string>
+    <string name="label_daily_steps">Daily Steps</string>
+    <string name="hr_no_data">-- bpm</string>
+    <string name="hr_avg_display">bpm · avg %1$d</string>
+    <string name="card_tooltip_weight_no_data">Weight from Health Connect</string>
+    <string name="card_tooltip_weight_latest">Latest weight measurement.</string>
+    <string name="card_tooltip_body_fat_no_data">Body fat percentage from Health Connect</string>
+    <string name="card_tooltip_body_fat_latest">Body fat percentage.</string>
+    <string name="card_tooltip_bp_no_data">Blood pressure from Health Connect</string>
+    <string name="card_tooltip_bp_latest">Latest blood pressure reading.\n\n</string>
+    <string name="card_bp_status_optimal">Optimal: &lt;120/80 mmHg</string>
+    <string name="card_bp_status_neutral">Elevated: 120–129/&lt;80 mmHg</string>
+    <string name="card_bp_status_warning">Hypertension Stage 1: 130–139/80–89 mmHg</string>
+    <string name="card_bp_status_poor">Hypertension Stage 2+: \u2265140/90 mmHg</string>
+    <string name="insight_dismiss_description">Dismiss health insight</string>
+    <string name="insight_rerun_description">Restore dismissed health insights</string>
+    <string name="insight_detail_show_explanation_format">Show explanation for %1$s</string>
+    <string name="tooltip_sleep_score">Total quality of rest based on duration and cycles.\n\n• 80–100: Optimal\n• 60–79: Fair\n• &lt; 60: Poor</string>
+    <string name="tooltip_sleep_rhr_baseline">\n\nBaseline: %1$d bpm %2$s (%3$d bpm)</string>
+    <string name="tooltip_sleep_rhr_no_baseline">\n\nNot enough data to calculate baseline.</string>
+    <string name="tooltip_sleep_hrv_baseline">\n\nBaseline: %1$d ms %2$s (%3$d ms)</string>
+    <string name="tooltip_sleep_hrv_baseline_no_today">\n\nBaseline: %1$d ms (today\'s HRV not yet available)</string>
+    <string name="tooltip_sleep_hrv_no_baseline">\n\nNot enough data to calculate baseline.</string>
+    <string name="tooltip_sleep_hrv_diagnostics">\n\nDiagnostics:\n• Z-score: %1$s\n• σ (ln-scale): %2$s</string>
+    <string name="tooltip_sleep_duration">Total time asleep last night.\n\nGoal: %1$s</string>
+</resources>

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Vitals Overview / Tab -->
+    <string name="tab_vitals">Vitals</string>
+
+    <!-- General Labels -->
+    <string name="label_physiological_trends">Physiological trends</string>
+    <string name="label_systolic_ref">Systolic (Ref: &lt;120)</string>
+    <string name="label_diastolic_ref">Diastolic (Ref: &lt;80)</string>
+
+    <!-- Steps -->
+    
+    <string name="label_goal">Goal</string>
+    <string name="steps_fraction_display">%1$s / %2$s</string>
+    <string name="label_steps_today">Steps Today</string>
+    <plurals name="tooltip_steps_today">
+        <item quantity="one">Total steps recorded today.\nGoal: %1$d step.</item>
+        <item quantity="other">Total steps recorded today.\nGoal: %1$d steps.</item>
+    </plurals>
+
+    <!-- Heart Rate Details -->
+
+    <string name="hr_zone_0_range">&lt; %1$d bpm</string>
+    <string name="hr_zone_inner_range">%1$d–%2$d bpm</string>
+    <string name="hr_zone_above_range">&gt; %1$d bpm</string>
+
+    <!-- Weight Details -->
+    <string name="label_weight">Weight</string>
+    <string name="label_weight_unit_format">Weight (%1$s)</string>
+    <string name="tooltip_weight_current">Latest weight: %1$s\nHeight: %2$s</string>
+    <string name="label_bmi">BMI</string>
+    <string name="tooltip_bmi">Body Mass Index (Normal: 18.5–24.9)\n\nUnder 25: Normal\n25-30:
+        Overweight\n30+: Obese</string>
+    <string name="label_weight_trend">Weight Trend</string>
+    <string name="weight_history_title_format">Weight (%1$s)</string>
+    <string name="weight_history_subtitle_with_delta">%1$s %2$s · %3$s %2$s</string>
+    <string name="weight_history_subtitle_no_delta">%1$s %2$s</string>
+    <string name="weight_status_normal">Normal</string>
+    <string name="weight_status_overweight">Overweight</string>
+    <string name="weight_status_obese_1">Obese Class I</string>
+    <string name="weight_status_obese_2">Obese Class II+</string>
+    <string name="weight_status_calibrating">Calibrating</string>
+
+    <!-- Body Fat Details -->
+    <string name="label_body_fat_percentage">Body Fat Percentage</string>
+    <string name="label_body_fat">Body Fat</string>
+    <string name="tooltip_body_fat_current">Current: %1$s%%\nOptimal: %2$s\n\n%3$s, Age %4$d</string>
+    <string name="label_body_fat_trend">Body Fat Trend</string>
+    <string name="body_fat_history_title_format">Body Fat (%1$s)</string>
+    <string name="body_fat_history_subtitle_with_lean_mass">%1$s%% · %2$s %3$s lean mass</string>
+    <string name="body_fat_history_subtitle_no_lean_mass">%1$s%%</string>
+    <string name="body_fat_status_optimal">Athletic</string>
+    <string name="body_fat_status_fitness">Fitness</string>
+    <string name="body_fat_status_average">Average</string>
+    <string name="body_fat_status_above_range">Above Range</string>
+    <string name="body_fat_status_calibrating">Calibrating</string>
+
+    <!-- Blood Pressure Details -->
+    <string name="label_blood_pressure">Blood Pressure</string>
+    <string name="label_systolic">Systolic</string>
+    <string name="tooltip_blood_pressure_systolic">Latest systolic blood pressure
+        measurement.\n\nOptimal: &lt;120\nElevated: 120–129\nStage 1: 130–139\nStage 2: ≥140</string>
+    <string name="label_diastolic">Diastolic</string>
+    <string name="tooltip_blood_pressure_diastolic">Latest diastolic blood pressure
+        measurement.\n\nOptimal: &lt;80\nStage 1: 80–89\nStage 2: ≥90</string>
+    <string name="label_blood_pressure_trend">Blood Pressure Trend</string>
+    <string name="bp_history_title_format">Blood Pressure (%1$s)</string>
+    <string name="bp_history_subtitle_format">%1$d/%2$d mmHg</string>
+    <string name="bp_status_normal">Normal</string>
+    <string name="bp_status_elevated">Elevated</string>
+    <string name="bp_status_stage1">Stage 1</string>
+    <string name="bp_status_stage2">Stage 2</string>
+
+    <!-- General Vitals overview metric names -->
+    <string name="label_hrv_rmssd">HRV (RMSSD)</string>
+    <string name="label_resting_heart_rate">Resting heart rate</string>
+    <string name="label_oxygen_saturation">Oxygen saturation</string>
+
+    <!-- Tooltips & specific card labels -->
+
+</resources>

@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="accessibility_backup_delete">Delete backup from %1$s</string>
+<string name="accessibility_circadian_threshold_adjustment">Circadian threshold adjustment.
+        Range: 0 to 90 minutes</string>
+<string name="accessibility_clear">Clear</string>
+<string name="accessibility_search">Search</string>
+
+<string name="action_change">Change</string>
+<string name="action_save">Save</string>
+
+<string name="action_reset_to_default">Reset to default</string>
+<string name="action_restore">Restore</string>
+<string name="action_set">Set</string>
+<string name="action_verify">Verify</string>
+<string name="advanced_banister_multiplier_desc">Sedentary=1.75, Active=1.35, Athlete=1.00.</string>
+<string name="advanced_banister_multiplier_label">Banister Multiplier</string>
+<string name="advanced_baseline_override_tooltip">Overrides the 30-day rolling median used in
+        scoring.</string>
+<string name="advanced_baseline_overrides_title">Baseline Overrides</string>
+<string name="advanced_cheng_beta_desc">Sedentary=0.11, Active=0.09, Athlete=0.07.</string>
+<string name="advanced_cheng_beta_label">Cheng Beta</string>
+<string name="advanced_hrv_baseline_label">HRV Baseline (ms)</string>
+<string name="advanced_itrimp_b_factor_desc">Sedentary=1.5, Active=2.1, Athlete=2.9.</string>
+<string name="advanced_itrimp_b_factor_label">iTRIMP B Factor</string>
+<string name="advanced_ras_scaling_label">RAS Scaling Factor</string>
+<string name="advanced_ras_scaling_tooltip">Adjusts how quickly you earn RAS points. Default:
+        0.20.</string>
+<string name="advanced_resting_hr_percentile_label">Resting HR: Percentile</string>
+<string name="advanced_resting_hr_percentile_tooltip">Use the Nth percentile lowest heart rate
+        reading of the entire sleep period (e.g., 5%% = lowest 5%% threshold). Lower values = lower
+        RHR estimate. Default: 5%%.</string>
+<string name="advanced_rhr_baseline_label">RHR Baseline (bpm)</string>
+<string name="advanced_training_load_label">Training Load Model</string>
+<string name="advanced_trimp_banister">Banister</string>
+<string name="advanced_trimp_cheng">Cheng LT-TRIMP</string>
+<string name="advanced_trimp_itrimp">iTRIMP</string>
+<string name="background_sync_description">Keep your data up to date in the background</string>
+<string name="background_sync_interval_12h">Every 12 hours</string>
+<string name="background_sync_interval_15m">Every 15 minutes</string>
+<string name="background_sync_interval_1h">Every hour</string>
+<string name="background_sync_interval_4h">Every 4 hours</string>
+<string name="background_sync_interval_daily">Daily</string>
+<string name="background_sync_interval_label">Sync interval</string>
+<string name="background_sync_label">Background sync</string>
+<string name="backup_auto_label">Auto backup</string>
+<string name="backup_create_button">Create new backup</string>
+<string name="backup_description">Backups are stored locally on your device. You can create a
+        new backup at any time or restore from a previous one.</string>
+<string name="backup_directory_default">Default (App Internal)</string>
+<string name="backup_directory_label">Backup directory</string>
+<string name="backup_encryption_disabled">Encryption is disabled.</string>
+<string name="backup_encryption_enabled">Encryption is enabled.</string>
+<string name="backup_new_password_label">New password</string>
+<string name="backup_none_found">No backups found.</string>
+<string name="backup_password_label">Backup password</string>
+<string name="backup_password_match">Match! ✓</string>
+<string name="backup_password_no_match">No match ✗</string>
+<string name="backup_reencrypting_message">Updating existing backup passwords…</string>
+<string name="backup_repeat_password_label">Repeat password</string>
+<string name="backup_schedule_daily">Daily</string>
+<string name="backup_schedule_manual">Manual only</string>
+<string name="backup_schedule_weekly">Weekly</string>
+<string name="backup_section_available">Available backups</string>
+<string name="backup_security_section">Security</string>
+<string name="backup_size_kb">%1$d KB</string>
+<string name="backup_test_password_label">Test backup password</string>
+<string name="backup_this_backup">this backup</string>
+<string name="category_activity">Activity</string>
+<string name="category_body_measurements">Body measurements</string>
+<string name="category_sleep">Sleep</string>
+<string name="category_vitals">Vitals</string>
+<string name="circadian_current_value">Current: %1$d min</string>
+<string name="circadian_preview_active_label">Active</string>
+<string name="circadian_preview_athlete_label">Athlete</string>
+<string name="circadian_profile_default">Profile default: %1$dmin</string>
+<string name="circadian_range_max">90 min</string>
+<string name="circadian_range_min">0 min</string>
+<string name="circadian_threshold_window_label">Threshold Window</string>
+<string name="circadian_using_custom_setting">Using custom setting</string>
+<string name="circadian_using_profile_default">Using profile default</string>
+<string name="color_picker_hex_code_label">Hex code</string>
+<string name="color_picker_hex_code_placeholder">#AABBCC</string>
+<string name="data_sources_all_devices">All devices</string>
+<string name="data_sources_apply_button">Apply</string>
+<string name="data_sources_apply_description">Save your device selection and resync your Health Connect
+        data so it reflects the new selection.</string>
+<string name="data_sources_calibrating">Calibrating…</string>
+<string name="data_sources_description">Pick the source device individually for each health data
+        type. "All devices" (the default) applies no source filter.</string>
+<string name="data_sources_title">Data sources</string>
+<string name="data_type_blood_pressure">Blood pressure</string>
+<string name="data_type_body_fat">Body fat</string>
+<string name="data_type_exercise">Exercise</string>
+<string name="data_type_heart_rate">Heart rate</string>
+<string name="data_type_hrv">Heart rate variability</string>
+<string name="data_type_oxygen_saturation">Oxygen saturation</string>
+<string name="data_type_sleep">Sleep</string>
+<string name="data_type_steps">Steps</string>
+<string name="data_type_weight">Weight</string>
+<string name="device_change_notice_body">Press Apply at the bottom of this section to save your device
+        selection. Applying will resync your Health Connect data using the new selection.</string>
+<string name="device_change_notice_confirm">Got it</string>
+<string name="device_change_notice_dont_show_again">Don\'t show this again</string>
+<string name="device_change_notice_title">Apply your device selection</string>
+<string name="device_this_phone">This Phone</string>
+<string name="dialog_restore_backup_body">This will replace all local health data with the
+        contents of %1$s and restart the app. This cannot be undone.</string>
+<string name="dialog_restore_backup_title">Restore backup?</string>
+<string name="dialog_set_password_body">This password will be used to encrypt your backups with
+        AES-256. If you lose it, you won\'t be able to restore your data.</string>
+<string name="dialog_set_password_title">Set backup password</string>
+<string name="error_backup_create_failed">Backup failed</string>
+<string name="error_backup_delete_failed">Could not delete backup</string>
+<string name="error_backup_reencrypt_failed">Could not update backup encryption</string>
+<string name="error_backup_restore_failed">Restore failed</string>
+<string name="error_hr_zones_invalid">Invalid: All values must be 1–%1$d bpm and strictly
+        increasing</string>
+<string name="error_passwords_do_not_match">Passwords do not match</string>
+<string name="error_threshold_invalid_range">Invalid threshold value. Range: 0–90 minutes.</string>
+<string name="error_threshold_update_failed">Failed to update threshold settings. Changes rolled
+        back.</string>
+<string name="fallback_color_blue_trust">Blue Trust</string>
+<string name="fallback_color_green_performance">Green Performance</string>
+<string name="fallback_color_icon_elements">Icon Elements</string>
+<string name="fallback_color_icon_signature">Icon Signature</string>
+<string name="fallback_color_purple_insight">Purple Insight</string>
+<string name="fallback_theme_color_label">Accent color</string>
+<string name="hr_age_display">Age: %1$d (auto-calculated)</string>
+<string name="hr_auto_calculate_desc">Uses age (220 - age) if enabled</string>
+<string name="hr_auto_calculate_label">Auto-calculate Max HR</string>
+<string name="hr_calculated_from_age">Calculated from age</string>
+<string name="hr_calculated_zones_header">Calculated zones</string>
+<string name="hr_manual_override">Manual override</string>
+<string name="hr_manual_zone_editing_desc">Customize percentage thresholds</string>
+<string name="hr_manual_zone_editing_label">Manual zone editing</string>
+<string name="hr_max_rate_label">Max heart rate (bpm)</string>
+<string name="hr_save_zones_button">Save zone boundaries</string>
+<string name="hr_zone_range_display">%1$d - %2$d bpm</string>
+
+<string name="hr_zones_section_title">Heart rate zones (bpm)</string>
+
+<string name="label_daily_step_goal">Daily step goal</string>
+
+<string name="label_sleep">Sleep</string>
+<string name="label_sleep_goal">Sleep Goal</string>
+<string name="load_source_option_everyday_hr">Everyday HR load</string>
+<string name="load_source_option_workout_only">Workout only</string>
+<string name="load_sources_ras_help">Controls RAS only, independent of the Strain / Training Load source above.</string>
+<string name="load_sources_ras_label">RAS Source</string>
+<string name="load_sources_required_note">Readiness uses the Strain / Training Load source. RAS source affects RAS only.</string>
+<string name="load_sources_section_title">Load Sources</string>
+<string name="load_sources_strain_help">Controls TRIMP, acute/chronic load (ACWR), Strain Ratio, Load Score, and Readiness. \"Workout only\" counts only exercise sessions; \"Everyday heart-rate load\" also counts elevated heart rate outside workouts, such as from stress, illness, or heat.</string>
+<string name="load_sources_strain_label">Strain / Training Load Source</string>
+<string name="load_sources_zone_caveat">Zone 0 minutes are excluded from TRIMP and load even when counted toward coverage. Everyday heart-rate load is affected by your configured heart-rate zones and TRIMP model in Heart Rate Zones settings.</string>
+<string name="privacy_policy_url" translatable="false">https://gregorlauritz.github.io/MyHealthStatus/privacy/</string>
+<string name="provider_garmin_connect">Garmin Connect</string>
+<string name="provider_google_fit">Google Fit</string>
+<string name="provider_oura">Oura</string>
+<string name="provider_samsung_health_phone">Samsung Health (Phone)</string>
+<string name="provider_samsung_health_watch">Samsung Health (Watch)</string>
+<string name="provider_strava">Strava</string>
+<string name="provider_whoop">Whoop</string>
+<string name="provider_withings">Withings</string>
+<string name="recalculating_progress">Recalculating day %1$d of %2$d</string>
+<string name="resync_button_description">Re-fetch and recalculate your full history within your
+        retention period. Runs in the background — you can keep using the app.</string>
+<string name="resync_button_label">Resync Health Connect data</string>
+<string name="resync_dialog_continue_in_background">Continue in background</string>
+<string name="resync_notification_preparing">Preparing…</string>
+<string name="settings_about_button">About Readylytics</string>
+<string name="settings_customize_palette_desc">Manually override color formulas with custom selections</string>
+<string name="settings_customize_palette_label">Customize secondary and tertiary colors</string>
+<string name="settings_item_licenses">Open source licenses</string>
+<string name="settings_item_licenses_title">Open Source Licenses</string>
+<string name="settings_item_privacy_policy">Privacy Policy</string>
+<string name="settings_label_app_theme">App Theme</string>
+<string name="settings_reset_color_desc">Reset to calculated color</string>
+<string name="settings_retention_description">Automatically delete data older than the retention
+        period.</string>
+<string name="settings_retention_enabled_label">Retention Enabled</string>
+<string name="settings_retention_period_label">Retention Period</string>
+<string name="settings_search_placeholder">Search settings…</string>
+<string name="settings_secondary_color_label">Secondary color</string>
+<string name="settings_section_advanced">Advanced</string>
+<string name="settings_section_baselines_thresholds">Baselines &amp; thresholds</string>
+<string name="settings_section_data_backup">Data &amp; backup</string>
+<string name="settings_section_display">Display</string>
+<string name="settings_section_miscellaneous">Miscellaneous</string>
+<string name="settings_step_goal_tooltip">Target steps per day. Reaching this goal shows as
+        Optimal on the dashboard.</string>
+<string name="settings_sub_data_management">Data management</string>
+<string name="settings_sub_health_connect">Health Connect</string>
+<string name="settings_sub_heart_rate_zones">Heart rate zones</string>
+<string name="settings_sub_local_backup">Local backup</string>
+<string name="settings_sub_thresholds">Thresholds</string>
+<string name="settings_tertiary_color_label">Tertiary color</string>
+<string name="sync_on_app_open_label">Sync on app open</string>
+<string name="threshold_baseline_window_desc">Number of past sleep sessions used to calculate
+        your median bedtime anchor. Default: 14.</string>
+<string name="threshold_baseline_window_label">Baseline Window</string>
+<string name="threshold_evaluation_period_desc">Number of recent sleep sessions scored to
+        compute your current consistency. Default: 7.</string>
+<string name="threshold_evaluation_period_label">Evaluation Period</string>
+<string name="threshold_hrv_optimal_desc">HRV ratio to baseline to be considered Optimal (e.g.
+        100-120%%).</string>
+<string name="threshold_hrv_optimal_label">HRV Optimal</string>
+<string name="threshold_hrv_warning_desc">HRV ratio to baseline to be considered Warning (e.g.
+        80-100%%).</string>
+<string name="threshold_hrv_warning_label">HRV Warning</string>
+<string name="threshold_rhr_optimal_desc">RHR ratio to baseline to be considered Optimal (e.g.
+        80-100%%).</string>
+<string name="threshold_rhr_optimal_label">RHR Optimal</string>
+<string name="threshold_rhr_warning_desc">RHR ratio to baseline to be considered Warning (e.g.
+        100-120%%).</string>
+<string name="threshold_rhr_warning_label">RHR Warning</string>
+<plurals name="accessibility_circadian_threshold_state">
+        <item quantity="one">Current value: %1$d minute</item>
+        <item quantity="other">Current value: %1$d minutes</item>
+    </plurals>
+<plurals name="settings_retention_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+</resources>

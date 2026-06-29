@@ -23,6 +23,7 @@ import app.readylytics.health.domain.audit.AuditEvent
 import app.readylytics.health.domain.audit.AuditTrailRepository
 import app.readylytics.health.domain.backup.RestoreResult
 import app.readylytics.health.domain.backup.RestoreStage
+import app.readylytics.health.domain.backup.WrongBackupPasswordException
 import app.readylytics.health.domain.dashboard.CardConfigurationRepository
 import app.readylytics.health.domain.util.logW
 import app.readylytics.health.workers.WorkerScheduler
@@ -39,8 +40,6 @@ import java.io.InputStreamReader
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
-
-class WrongBackupPasswordException : Exception("Incorrect backup password")
 
 @Singleton
 class LocalRestoreManager

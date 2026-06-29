@@ -1,0 +1,45 @@
+<resources>
+    <string name="action_cancel_editing">Cancel editing</string>
+    <string name="action_customize">Customize</string>
+    <string name="action_done">Done</string>
+    <string name="action_done_editing">Save changes</string>
+    <string name="action_reset_to_defaults">Reset to defaults</string>
+
+    <string name="card_title_acute_chronic_ratio">Acute/Chronic Ratio</string>
+    <string name="card_title_blood_pressure">Blood Pressure</string>
+    <string name="card_title_body_fat">Body Fat</string>
+    <string name="card_title_circadian_consistency">Circadian consistency</string>
+    <string name="card_title_heart_rate">Heart Rate</string>
+    <string name="card_title_hrv">HRV</string>
+    <string name="card_title_insights">Insights</string>
+    <string name="card_title_oxygen_saturation">Oxygen saturation</string>
+    <string name="card_title_ras">RAS</string>
+    <string name="card_title_ras_daily">RAS daily</string>
+    
+    <string name="card_title_recovery_index">Recovery Index</string>
+    <string name="card_title_resting_hr">Resting heart rate</string>
+    <string name="card_title_sleep_architecture">Sleep architecture</string>
+    <string name="card_title_sleep_duration">Sleep duration</string>
+    
+    <string name="card_title_sleep_rhr">Sleep RHR</string>
+    <string name="card_title_sleep_score">Sleep score</string>
+    <string name="card_title_steps">Steps</string>
+    
+    <string name="card_title_weight">Weight</string>
+
+    <string name="error_sync_failed">Sync failed</string>
+
+    <string name="manage_cards">Manage Cards</string>
+    <string name="message_calibrating_banner">Calibrating — averages shown may improve as more nights are recorded.</string>
+
+    <string name="tooltip_heart_rate_card">Today\'s heart rate range across all activities. Tap to view details.</string>
+
+    <string name="tooltip_resting_hr_baseline">Resting heart rate calculated as the low-percentile baseline.
+
+Baseline: %1$d bpm %2$s (%3$d bpm)</string>
+    <string name="tooltip_resting_hr_no_baseline">Resting heart rate calculated as the low-percentile baseline.</string>
+
+    <string name="unit_imperial_lbs">lbs</string>
+    <string name="unit_metric_kg">kg</string>
+
+</resources>

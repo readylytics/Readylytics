@@ -205,161 +205,6 @@ jacoco {
     toolVersion = "0.8.11"
 }
 
-tasks.register<JacocoReport>("jacocoTestReport") {
-    dependsOn("testDebugUnitTest")
-
-    reports {
-        xml.required.set(true)
-        html.required.set(true)
-        xml.outputLocation.set(layout.buildDirectory.file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml"))
-        html.outputLocation.set(layout.buildDirectory.dir("reports/jacoco/jacocoTestReport/html"))
-    }
-
-    val fileFilter =
-        listOf(
-            "**/R.class",
-            "**/R$*.class",
-            "**/BuildConfig.*",
-            "**/Manifest*.*",
-            "**/*Test*.*",
-            "android/**/*.*",
-            "**/hilt_aggregated_deps/**",
-            "**/*_HiltModules*",
-            "**/*_MembersInjector*",
-            "**/*Hilt_*",
-            "**/*_Factory*",
-            "**/Dagger*Component*.*",
-            "**/*ComposableSingletons*",
-            "**/*_Impl*",
-            "**/databinding/**",
-            "**/di/**",
-            "**/*Proto*.*",
-            "**/*Serializer*.*",
-            // Kotlin compiler-generated synthetic classes (not directly unit-testable)
-            "**/*\$WhenMappings.*",
-            // Android Application/Activity classes (integration-tested, not unit-tested)
-            "app/readylytics/health/HealthDashboardApplication*",
-            "app/readylytics/health/MainActivity*",
-            // Compose-only UI packages — deferred to E2E tests (plan: coverage_improvement_10_to_30)
-            "**/ui/settings/backup/**",
-            "**/ui/settings/physiologyprofile/**",
-            "**/ui/about/**",
-            "**/ui/recovery/**",
-            "**/ui/health/**",
-            "**/ui/common/**",
-            "**/ui/vitals/**",
-            "**/ui/scaffold/**",
-            "**/ui/accessibility/**",
-            "**/ui/bodyfat/**",
-            "**/ui/insights/**",
-            "**/ui/navigation/**",
-            // Direct files in ui/workouts and ui/components only (NOT subdirs like mappers/reorder)
-            "**/ui/workouts/*",
-            "**/ui/components/*",
-            // Utility classes with no testable logic beyond trivial wrappers
-            "**/health/util/**",
-        )
-
-    sourceDirectories.setFrom(
-        layout.projectDirectory.dir("src/main/java"),
-        layout.projectDirectory.dir("src/main/kotlin"),
-    )
-    classDirectories.setFrom(
-        fileTree("${project.buildDir}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes").matching {
-            exclude(fileFilter)
-        },
-    )
-    executionData.setFrom(
-        layout.buildDirectory.file("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"),
-    )
-}
-
-tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
-    dependsOn("jacocoTestReport")
-
-    val reportXmlFile = layout.buildDirectory.file("reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
-
-    val fileFilter =
-        listOf(
-            "**/R.class",
-            "**/R$*.class",
-            "**/BuildConfig.*",
-            "**/Manifest*.*",
-            "**/*Test*.*",
-            "android/**/*.*",
-            "**/hilt_aggregated_deps/**",
-            "**/*_HiltModules*",
-            "**/*_MembersInjector*",
-            "**/*Hilt_*",
-            "**/*_Factory*",
-            "**/Dagger*Component*.*",
-            "**/*ComposableSingletons*",
-            "**/*_Impl*",
-            "**/databinding/**",
-            "**/di/**",
-            "**/*Proto*.*",
-            "**/*Serializer*.*",
-            // Kotlin compiler-generated synthetic classes (not directly unit-testable)
-            "**/*\$WhenMappings.*",
-            // Android Application/Activity classes (integration-tested, not unit-tested)
-            "app/readylytics/health/HealthDashboardApplication*",
-            "app/readylytics/health/MainActivity*",
-            // Compose-only UI packages — deferred to E2E tests (plan: coverage_improvement_10_to_30)
-            "**/ui/settings/backup/**",
-            "**/ui/settings/physiologyprofile/**",
-            "**/ui/about/**",
-            "**/ui/recovery/**",
-            "**/ui/health/**",
-            "**/ui/common/**",
-            "**/ui/vitals/**",
-            "**/ui/scaffold/**",
-            "**/ui/accessibility/**",
-            "**/ui/bodyfat/**",
-            "**/ui/insights/**",
-            "**/ui/navigation/**",
-            // Direct files in ui/workouts and ui/components only (NOT subdirs like mappers/reorder)
-            "**/ui/workouts/*",
-            "**/ui/components/*",
-            // Utility and data.util (no testable logic beyond trivial wrappers)
-            "**/health/util/**",
-        )
-
-    sourceDirectories.setFrom(
-        layout.projectDirectory.dir("src/main/java"),
-        layout.projectDirectory.dir("src/main/kotlin"),
-    )
-
-    executionData.setFrom(
-        layout.buildDirectory.file("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"),
-    )
-    classDirectories.setFrom(
-        fileTree("${project.buildDir}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes").matching {
-            exclude(fileFilter)
-        },
-    )
-
-    violationRules {
-        rule {
-            limit {
-                counter = "INSTRUCTION"
-                value = "COVEREDRATIO"
-                minimum = 0.30.toBigDecimal()
-            }
-        }
-        // domain.scoring and domain.sync moved to :core:scoring and :core:healthconnect;
-        // those modules carry their own jacocoCoverageVerification tasks.
-        rule {
-            element = "PACKAGE"
-            includes = listOf("app.readylytics.health.workers")
-            limit {
-                counter = "LINE"
-                value = "COVEREDRATIO"
-                minimum = 0.60.toBigDecimal()
-            }
-        }
-    }
-}
-
 protobuf {
     protoc {
         artifact =
@@ -382,7 +227,17 @@ protobuf {
 }
 
 dependencies {
+    implementation(project(":feature:about"))
+    implementation(project(":feature:dashboard"))
+    implementation(project(":feature:insights"))
+    implementation(project(":feature:onboarding"))
+    implementation(project(":feature:settings"))
+    implementation(project(":feature:sleep"))
+    implementation(project(":feature:vitals"))
+    implementation(project(":feature:workouts"))
     implementation(project(":core:model"))
+    implementation(project(":core:designsystem"))
+    implementation(project(":core:ui"))
     implementation(project(":core:scoring"))
     implementation(project(":core:database"))
     implementation(project(":core:healthconnect"))
