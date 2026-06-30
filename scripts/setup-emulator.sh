@@ -8,6 +8,12 @@ PACKAGE_TYPE="google_apis_playstore"
 BOOT_TIMEOUT="${BOOT_TIMEOUT:-300}"
 POLL_INTERVAL=5
 
+# Pin AVD home so avdmanager and emulator agree on location.
+# ANDROID_SDK_HOME (set by setup-android action) shifts the default search
+# path; ANDROID_AVD_HOME wins over both, keeping creation and lookup in sync.
+export ANDROID_AVD_HOME="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
+mkdir -p "$ANDROID_AVD_HOME"
+
 # ---------- Mode detection ----------
 CI_MODE=false
 for arg in "$@"; do
