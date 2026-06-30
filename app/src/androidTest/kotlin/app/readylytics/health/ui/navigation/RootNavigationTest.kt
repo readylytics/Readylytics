@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.MainActivity
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -15,6 +16,14 @@ import org.junit.runner.RunWith
 class RootNavigationTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<MainActivity>()
+
+    // Pause the test clock so MainScaffold's indefinite pull-to-refresh indicator
+    // (driven by isSyncing on launch) does not keep the Compose clock busy and
+    // block waitForIdle() forever. Finders/interactions still operate normally.
+    @Before
+    fun pauseClock() {
+        composeRule.mainClock.autoAdvance = false
+    }
 
     @Test
     fun verifyTabSwitching() {

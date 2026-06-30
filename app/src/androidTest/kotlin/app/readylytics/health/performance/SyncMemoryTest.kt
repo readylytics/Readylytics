@@ -4,6 +4,7 @@ import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.MainActivity
 import org.junit.Assert.assertTrue
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -16,6 +17,9 @@ class SyncMemoryTest {
     @get:Rule
     val rule = ActivityScenarioRule(MainActivity::class.java)
 
+    // Placeholder: boots full app + live sync (needs Health Connect) for a no-op assertion.
+    // Replace with Macrobenchmark MemoryUsageMetric in :benchmark.
+    @Ignore("Placeholder smoke test; use Macrobenchmark MemoryUsageMetric")
     @Test
     fun heapPeakDuring8DaySync() {
         // TODO: Replace with androidx.benchmark.macro.MemoryUsageMetric for accurate memory profiling
