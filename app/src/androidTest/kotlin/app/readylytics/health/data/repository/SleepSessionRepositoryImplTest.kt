@@ -258,7 +258,7 @@ class SleepSessionRepositoryImplTest {
         runTest {
             dao.upsertAll(
                 listOf(
-                    session("old", t1Start),
+                    session(id = "old", startTime = t1Start, endTime = t2Start - 1),
                     session("recent", t3Start),
                 ),
             )

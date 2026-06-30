@@ -1,4 +1,4 @@
-package app.readylytics.health.performance
+package app.readylytics.health.benchmark
 
 import androidx.benchmark.macro.StartupMode
 import androidx.benchmark.macro.StartupTimingMetric

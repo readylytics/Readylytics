@@ -15,28 +15,30 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 class StartupDataStoreTest {
     @Test
-    fun dataStoreReadTime() =
-        runBlocking {
-            val context = InstrumentationRegistry.getInstrumentation().targetContext
-            val testFile = File(context.filesDir, "test_user_preferences_perf.pb")
-            testFile.delete()
+    fun dataStoreReadTime() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val testFile = File(context.filesDir, "test_user_preferences_perf.pb")
+        testFile.delete()
+        try {
+            runBlocking {
+                val dataStore =
+                    DataStoreFactory.create(
+                        serializer = UserPreferencesSerializer,
+                        produceFile = { testFile },
+                    )
 
-            val dataStore =
-                DataStoreFactory.create(
-                    serializer = UserPreferencesSerializer,
-                    produceFile = { testFile },
+                val start = System.currentTimeMillis()
+                val prefs = dataStore.data.first()
+                val elapsed = System.currentTimeMillis() - start
+
+                assertNotNull(prefs)
+                assertTrue(
+                    "DataStore read should be <50ms, was ${elapsed}ms",
+                    elapsed < 50,
                 )
-
-            val start = System.currentTimeMillis()
-            val prefs = dataStore.data.first()
-            val elapsed = System.currentTimeMillis() - start
-
-            assertNotNull(prefs)
-            assertTrue(
-                "DataStore read should be <50ms, was ${elapsed}ms",
-                elapsed < 50,
-            )
-
+            }
+        } finally {
             testFile.delete()
         }
+    }
 }
