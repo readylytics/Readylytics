@@ -20,6 +20,8 @@ enum class SeedPeriod(
     DAYS_42(42),
 }
 
+private const val INSERT_BATCH_SIZE = 1000
+
 /**
  * Seeds deterministic nocturnal RHR and HRV data into Health Connect.
  *
@@ -37,19 +39,19 @@ suspend fun HealthConnectClient.seedNocturnalData(
     sleepVariationHours: Double = SeedConstants.DEFAULT_VARIATION_HOURS,
     today: LocalDate = LocalDate.now(ZoneOffset.UTC),
 ) {
-    for (dayIndex in 0 until period.days) {
-        val sleepStart = SeedConstants.sleepStartForDay(dayIndex, today)
-        val sleepDurationHours = SeedConstants.sleepDurationForDay(dayIndex, avgSleepHours, sleepVariationHours)
+    val allRecords: List<Record> =
+        buildList {
+            for (dayIndex in 0 until period.days) {
+                val sleepStart = SeedConstants.sleepStartForDay(dayIndex, today)
+                val sleepDurationHours = SeedConstants.sleepDurationForDay(dayIndex, avgSleepHours, sleepVariationHours)
 
-        val rhrRecords = buildRhrRecords(dayIndex, sleepStart, sleepDurationHours)
-        val hrvRecords = buildHrvRecords(dayIndex, sleepStart, sleepDurationHours)
-        val nightRecords: List<Record> =
-            buildList {
-                addAll(rhrRecords)
-                addAll(hrvRecords)
+                addAll(buildRhrRecords(dayIndex, sleepStart, sleepDurationHours))
+                addAll(buildHrvRecords(dayIndex, sleepStart, sleepDurationHours))
             }
+        }
 
-        insertRecords(nightRecords)
+    for (chunk in allRecords.chunked(INSERT_BATCH_SIZE)) {
+        insertRecords(chunk)
     }
 }
 
@@ -90,7 +92,7 @@ private fun buildRhrRecords(
             time = slotTime,
             zoneOffset = ZoneOffset.UTC,
             beatsPerMinute = bpm,
-            metadata = Metadata.manualEntry("rhr_seeded_day${dayIndex}_s$i"),
+            metadata = Metadata.manualEntry(clientRecordId = "rhr_seeded_day${dayIndex}_s$i"),
         )
     }
 }
@@ -111,7 +113,7 @@ private fun buildHrvRecords(
             time = recordTime,
             zoneOffset = ZoneOffset.UTC,
             heartRateVariabilityMillis = rmssd,
-            metadata = Metadata.manualEntry("hrv_seeded_day${dayIndex}_h$h"),
+            metadata = Metadata.manualEntry(clientRecordId = "hrv_seeded_day${dayIndex}_h$h"),
         )
     }
 }

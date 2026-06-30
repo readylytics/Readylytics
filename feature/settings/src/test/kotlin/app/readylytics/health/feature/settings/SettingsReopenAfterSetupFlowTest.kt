@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -75,23 +76,24 @@ class SettingsReopenAfterSetupFlowTest {
         private val physiologySettings =
             object : PhysiologySettings {
                 override suspend fun updateBirthday(date: LocalDate) {
-                    preferences.value =
-                        preferences.value.copy(
+                    preferences.update {
+                        it.copy(
                             birthDate = date.toString(),
                             isBirthdayConfigured = true,
                         )
+                    }
                 }
 
                 override suspend fun updateGender(gender: String?) {
-                    preferences.value = preferences.value.copy(gender = Gender.fromStringOrNull(gender))
+                    preferences.update { it.copy(gender = Gender.fromStringOrNull(gender)) }
                 }
 
                 override suspend fun updateHeight(heightCm: Float?) {
-                    preferences.value = preferences.value.copy(heightCm = heightCm)
+                    preferences.update { it.copy(heightCm = heightCm) }
                 }
 
                 override suspend fun updatePhysiologyProfile(profile: PhysiologyProfile) {
-                    preferences.value = preferences.value.copy(physiologyProfile = profile)
+                    preferences.update { it.copy(physiologyProfile = profile) }
                 }
             }
 
@@ -100,7 +102,7 @@ class SettingsReopenAfterSetupFlowTest {
                 override suspend fun updateDynamicColorEnabled(enabled: Boolean) = Unit
 
                 override suspend fun updateUnitSystem(unitSystem: UnitSystem) {
-                    preferences.value = preferences.value.copy(unitSystem = unitSystem)
+                    preferences.update { it.copy(unitSystem = unitSystem) }
                 }
 
                 override suspend fun updateAppTheme(theme: app.readylytics.health.data.preferences.AppTheme) =
@@ -145,11 +147,12 @@ class SettingsReopenAfterSetupFlowTest {
         private val userProfileActions =
             object : UserProfileActions {
                 override suspend fun updateBirthday(date: LocalDate): Result<Unit> {
-                    preferences.value =
-                        preferences.value.copy(
+                    preferences.update {
+                        it.copy(
                             birthDate = date.toString(),
                             isBirthdayConfigured = true,
                         )
+                    }
                     return Result.success(Unit)
                 }
 
@@ -168,14 +171,15 @@ class SettingsReopenAfterSetupFlowTest {
             physiologyProfile: PhysiologyProfile,
             unitSystem: UnitSystem,
         ) {
-            preferences.value =
-                preferences.value.copy(
+            preferences.update {
+                it.copy(
                     birthDate = birthDate.toString(),
                     isBirthdayConfigured = true,
                     heightCm = heightCm,
                     physiologyProfile = physiologyProfile,
                     unitSystem = unitSystem,
                 )
+            }
         }
 
         fun buildPhysiologySettingsViewModel(): PhysiologySettingsViewModel =

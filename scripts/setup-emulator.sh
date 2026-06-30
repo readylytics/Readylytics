@@ -69,6 +69,10 @@ until adb shell getprop sys.boot_completed 2>/dev/null | grep -q "^1$"; do
     kill "$EMULATOR_PID" 2>/dev/null || true
     exit 1
   fi
+  if ! kill -0 "$EMULATOR_PID" 2>/dev/null; then
+    echo "ERROR: Emulator process died unexpectedly"
+    exit 1
+  fi
   echo "   ... still booting (${ELAPSED}s elapsed)"
   sleep "$POLL_INTERVAL"
   ELAPSED=$(( ELAPSED + POLL_INTERVAL ))
