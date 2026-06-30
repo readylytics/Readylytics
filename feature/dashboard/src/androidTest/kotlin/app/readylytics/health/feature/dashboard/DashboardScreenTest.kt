@@ -12,6 +12,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
@@ -188,7 +189,8 @@ class DashboardScreenTest {
             .onNodeWithContentDescription("Show explanation for Strong Recovery Signal")
             .performClick()
 
-        composeRule.onNodeWithText("Strong Recovery Signal").assertIsDisplayed()
+        // "Strong Recovery Signal" appears in both the card title and the sheet header;
+        // assert the sheet-only sections to confirm the detail opened.
         composeRule.onNodeWithText("Observed Signal").assertIsDisplayed()
         composeRule.onNodeWithText("What This Might Mean").assertIsDisplayed()
         composeRule.onNodeWithText("What Not To Infer").assertIsDisplayed()
@@ -253,6 +255,6 @@ class DashboardScreenTest {
 
         composeRule.onNodeWithText("What Data Is Missing").assertIsDisplayed()
         composeRule.onNodeWithText("How This Affects Your Score").assertIsDisplayed()
-        composeRule.onNodeWithText("What You Can Check").assertIsDisplayed()
+        composeRule.onNodeWithText("What You Can Check").performScrollTo().assertIsDisplayed()
     }
 }
