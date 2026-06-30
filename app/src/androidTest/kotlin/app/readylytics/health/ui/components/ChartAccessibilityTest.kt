@@ -136,14 +136,17 @@ class ChartAccessibilityTest {
 
         // Perform "Next point" to select first segment
         canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(stateDescriptionStartsWith("Selected: Deep stage, duration 1m, starting at "))
 
         // Perform "Next point" to select second segment
         canvasNode.performCustomAccessibilityActionWithLabel("Next point")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(stateDescriptionStartsWith("Selected: Light stage, duration 1m, starting at "))
 
         // Perform "Clear selection"
         canvasNode.performCustomAccessibilityActionWithLabel("Clear selection")
+        composeTestRule.mainClock.advanceTimeByFrame()
         canvasNode.assert(hasStateDescription("No point selected"))
     }
 
