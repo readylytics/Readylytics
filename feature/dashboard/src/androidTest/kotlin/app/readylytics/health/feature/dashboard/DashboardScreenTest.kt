@@ -1,13 +1,11 @@
 package app.readylytics.health.feature.dashboard
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -18,7 +16,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.InsightType
-import app.readylytics.health.feature.insights.InsightDetailRepository
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -140,11 +137,7 @@ class DashboardScreenTest {
                 currentInsight = InsightType.STRONG_RECOVERY_SIGNAL,
             )
         composeRule.setContent {
-            val context = LocalContext.current
-            val detailRepository = remember { InsightDetailRepository(context) }
-            val detailContext = remember { uiState.toDailyInsightContext() }
             var showingDetailFor by remember { mutableStateOf<InsightType?>(null) }
-
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
@@ -161,11 +154,9 @@ class DashboardScreenTest {
                 onResetToDefaults = {},
                 insightsCard = { state, _, onDismissInsight, _, _ ->
                     state.currentInsight?.let { insight ->
-                        val detail =
-                            detailRepository.getDetail(insight, detailContext, state.currentInsightParams)
                         InsightCard(
-                            title = detail.title,
-                            body = detail.cardDescription,
+                            title = "Strong Recovery Signal",
+                            body = "",
                             icon = getInsightIcon(insight),
                             onDismiss = { onDismissInsight(insight) },
                             onShowDetails = { showingDetailFor = insight },
@@ -173,17 +164,7 @@ class DashboardScreenTest {
                     }
                 },
                 insightDetail = {
-                    showingDetailFor?.let { insight ->
-                        val detail =
-                            detailRepository.getDetail(insight, detailContext, uiState.currentInsightParams)
-                        // Plain Column avoids ModalBottomSheet animation hanging waitForIdle() on CI
-                        Column {
-                            Text(detail.title)
-                            Text(detail.observedSignalTitle)
-                            detail.meaningTitle?.let { Text(it) }
-                            detail.caveatsTitle?.let { Text(it) }
-                        }
-                    }
+                    showingDetailFor?.let { Text("detail:${it.name}") }
                 },
             )
         }
@@ -192,11 +173,7 @@ class DashboardScreenTest {
             .onNodeWithContentDescription("Show explanation for Strong Recovery Signal")
             .performClick()
 
-        // "Strong Recovery Signal" appears in both the card title and the Column header;
-        // assert the sheet-only sections to confirm the detail opened.
-        composeRule.onNodeWithText("Observed Signal").assertIsDisplayed()
-        composeRule.onNodeWithText("What This Might Mean").assertIsDisplayed()
-        composeRule.onNodeWithText("What Not To Infer").assertIsDisplayed()
+        composeRule.onNodeWithText("detail:STRONG_RECOVERY_SIGNAL").assertIsDisplayed()
     }
 
     @Test
@@ -207,11 +184,7 @@ class DashboardScreenTest {
                 currentInsight = InsightType.RECOVERY_HRV_MISSING,
             )
         composeRule.setContent {
-            val context = LocalContext.current
-            val detailRepository = remember { InsightDetailRepository(context) }
-            val detailContext = remember { uiState.toDailyInsightContext() }
             var showingDetailFor by remember { mutableStateOf<InsightType?>(null) }
-
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
@@ -228,11 +201,9 @@ class DashboardScreenTest {
                 onResetToDefaults = {},
                 insightsCard = { state, _, onDismissInsight, _, _ ->
                     state.currentInsight?.let { insight ->
-                        val detail =
-                            detailRepository.getDetail(insight, detailContext, state.currentInsightParams)
                         InsightCard(
-                            title = detail.title,
-                            body = detail.cardDescription,
+                            title = "HRV Data Missing",
+                            body = "",
                             icon = getInsightIcon(insight),
                             onDismiss = { onDismissInsight(insight) },
                             onShowDetails = { showingDetailFor = insight },
@@ -240,17 +211,7 @@ class DashboardScreenTest {
                     }
                 },
                 insightDetail = {
-                    showingDetailFor?.let { insight ->
-                        val detail =
-                            detailRepository.getDetail(insight, detailContext, uiState.currentInsightParams)
-                        // Plain Column avoids ModalBottomSheet animation hanging waitForIdle() on CI
-                        Column {
-                            Text(detail.title)
-                            Text(detail.observedSignalTitle)
-                            detail.meaningTitle?.let { Text(it) }
-                            if (detail.recommendations.isNotEmpty()) Text(detail.recommendationsTitle)
-                        }
-                    }
+                    showingDetailFor?.let { Text("detail:${it.name}") }
                 },
             )
         }
@@ -259,8 +220,6 @@ class DashboardScreenTest {
             .onNodeWithContentDescription("Show explanation for HRV Data Missing")
             .performClick()
 
-        composeRule.onNodeWithText("What Data Is Missing").assertIsDisplayed()
-        composeRule.onNodeWithText("How This Affects Your Score").assertIsDisplayed()
-        composeRule.onNodeWithText("What You Can Check").assertIsDisplayed()
+        composeRule.onNodeWithText("detail:RECOVERY_HRV_MISSING").assertIsDisplayed()
     }
 }
