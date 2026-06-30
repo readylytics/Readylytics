@@ -1,6 +1,11 @@
 package app.readylytics.health.feature.dashboard
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -11,6 +16,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.domain.dashboard.CardConfiguration
 import app.readylytics.health.domain.dashboard.CardId
 import app.readylytics.health.domain.model.InsightType
+import app.readylytics.health.feature.insights.InsightDetailRepository
+import app.readylytics.health.feature.insights.InsightDetailSheet
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -132,6 +139,11 @@ class DashboardScreenTest {
                 currentInsight = InsightType.STRONG_RECOVERY_SIGNAL,
             )
         composeRule.setContent {
+            val context = LocalContext.current
+            val detailRepository = remember { InsightDetailRepository(context) }
+            val detailContext = remember { uiState.toDailyInsightContext() }
+            var showingDetailFor by remember { mutableStateOf<InsightType?>(null) }
+
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
@@ -146,6 +158,29 @@ class DashboardScreenTest {
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
+                insightsCard = { state, _, onDismissInsight, _, _ ->
+                    state.currentInsight?.let { insight ->
+                        val detail =
+                            detailRepository.getDetail(insight, detailContext, state.currentInsightParams)
+                        InsightCard(
+                            title = detail.title,
+                            body = detail.cardDescription,
+                            icon = getInsightIcon(insight),
+                            onDismiss = { onDismissInsight(insight) },
+                            onShowDetails = { showingDetailFor = insight },
+                        )
+                    }
+                },
+                insightDetail = {
+                    showingDetailFor?.let { insight ->
+                        val detail =
+                            detailRepository.getDetail(insight, detailContext, uiState.currentInsightParams)
+                        InsightDetailSheet(
+                            content = detail,
+                            onDismiss = { showingDetailFor = null },
+                        )
+                    }
+                },
             )
         }
 
@@ -167,6 +202,11 @@ class DashboardScreenTest {
                 currentInsight = InsightType.RECOVERY_HRV_MISSING,
             )
         composeRule.setContent {
+            val context = LocalContext.current
+            val detailRepository = remember { InsightDetailRepository(context) }
+            val detailContext = remember { uiState.toDailyInsightContext() }
+            var showingDetailFor by remember { mutableStateOf<InsightType?>(null) }
+
             DashboardScreen(
                 uiState = uiState,
                 snackbarHostState = SnackbarHostState(),
@@ -181,6 +221,29 @@ class DashboardScreenTest {
                 onCardVisibilityChanged = { _, _ -> },
                 onReorderCards = {},
                 onResetToDefaults = {},
+                insightsCard = { state, _, onDismissInsight, _, _ ->
+                    state.currentInsight?.let { insight ->
+                        val detail =
+                            detailRepository.getDetail(insight, detailContext, state.currentInsightParams)
+                        InsightCard(
+                            title = detail.title,
+                            body = detail.cardDescription,
+                            icon = getInsightIcon(insight),
+                            onDismiss = { onDismissInsight(insight) },
+                            onShowDetails = { showingDetailFor = insight },
+                        )
+                    }
+                },
+                insightDetail = {
+                    showingDetailFor?.let { insight ->
+                        val detail =
+                            detailRepository.getDetail(insight, detailContext, uiState.currentInsightParams)
+                        InsightDetailSheet(
+                            content = detail,
+                            onDismiss = { showingDetailFor = null },
+                        )
+                    }
+                },
             )
         }
 

@@ -7,4 +7,5 @@ android {
 dependencies {
     implementation(project(":core:scoring"))
     implementation(libs.androidx.compose.material.icons.extended)
+    androidTestImplementation(project(":feature:insights"))
 }
