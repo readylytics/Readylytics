@@ -52,7 +52,7 @@ else
 fi
 
 # ---------- Boot emulator ----------
-EMULATOR_ARGS="-avd ${AVD_NAME} -no-snapshot-load -no-audio"
+EMULATOR_ARGS="-avd ${AVD_NAME} -no-snapshot-load -no-audio -no-metrics"
 if $CI_MODE; then
   # Headless flags: use KVM if available (Linux), fall back to software rendering
   if [[ -e /dev/kvm ]]; then
