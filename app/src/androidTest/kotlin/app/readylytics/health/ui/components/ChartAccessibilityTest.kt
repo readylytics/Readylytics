@@ -8,6 +8,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.readylytics.health.core.ui.model.HrSample
+import app.readylytics.health.domain.model.SleepStageType
 import app.readylytics.health.domain.repository.SleepSessionData
 import app.readylytics.health.domain.repository.SleepStageData
 import app.readylytics.health.feature.sleep.SleepStagesChart
@@ -108,8 +109,8 @@ class ChartAccessibilityTest {
             )
         val stages =
             listOf(
-                SleepStageData("deep", 1700000000000L, 1700000060000L, 1),
-                SleepStageData("light", 1700000060000L, 1700000120000L, 1),
+                SleepStageData(SleepStageType.DEEP.value, 1700000000000L, 1700000060000L, 1),
+                SleepStageData(SleepStageType.LIGHT.value, 1700000060000L, 1700000120000L, 1),
             )
         composeTestRule.setContent {
             Surface {
