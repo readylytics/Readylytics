@@ -57,6 +57,7 @@ if $CI_MODE; then
 fi
 
 echo "==> Starting emulator (CI_MODE=${CI_MODE})..."
+export PATH="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Android/Sdk}}/emulator:$PATH"
 emulator ${EMULATOR_ARGS} &
 EMULATOR_PID=$!
 
