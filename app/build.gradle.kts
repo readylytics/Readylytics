@@ -149,8 +149,6 @@ android {
             initWith(buildTypes.getByName("release"))
             signingConfig = signingConfigs.getByName("debug")
             isDebuggable = false
-            isMinifyEnabled = false
-            isShrinkResources = false
             matchingFallbacks += listOf("release")
         }
     }

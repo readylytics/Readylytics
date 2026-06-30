@@ -27,14 +27,14 @@ class StartupDataStoreTest {
                         produceFile = { testFile },
                     )
 
-                val start = System.currentTimeMillis()
+                val start = System.nanoTime()
                 val prefs = dataStore.data.first()
-                val elapsed = System.currentTimeMillis() - start
+                val elapsedMs = (System.nanoTime() - start) / 1_000_000
 
                 assertNotNull(prefs)
                 assertTrue(
-                    "DataStore read should be <50ms, was ${elapsed}ms",
-                    elapsed < 50,
+                    "DataStore read should be <50ms, was ${elapsedMs}ms",
+                    elapsedMs < 50,
                 )
             }
         } finally {
