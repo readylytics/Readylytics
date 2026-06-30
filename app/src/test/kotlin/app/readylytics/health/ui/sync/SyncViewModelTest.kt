@@ -3,6 +3,7 @@ package app.readylytics.health.ui.sync
 import app.readylytics.health.data.preferences.SettingsRepository
 import app.readylytics.health.data.preferences.UserPreferences
 import app.readylytics.health.data.repository.SelectedDateRepository
+import app.readylytics.health.domain.repository.HealthConnectPermissionRevokedException
 import app.readylytics.health.domain.repository.HealthConnectRepository
 import app.readylytics.health.domain.repository.PermissionStatus
 import app.readylytics.health.domain.sync.ForegroundSyncController
@@ -19,9 +20,10 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
-import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SyncViewModelTest {
@@ -65,34 +67,12 @@ class SyncViewModelTest {
     @Test
     fun validateSyncNecessary_succeeds() {
         val result = viewModel.validateSyncNecessary()
-        assert(result.isSuccess) { "Sync should be valid" }
-    }
-
-    @Test
-    fun validateSync_isIdempotent() {
-        val result1 = viewModel.validateSyncNecessary()
-        val result2 = viewModel.validateSyncNecessary()
-        assert(result1.isSuccess && result2.isSuccess) { "Multiple calls should succeed" }
+        assertTrue(result.isSuccess, "Sync should be valid")
     }
 
     @Test
     fun uiStateInitial_isCheckingPermissions() {
-        assert(viewModel.uiState.value is SyncUiState.CheckingPermissions)
-    }
-
-    @Test
-    fun syncEvents_flowExists() {
-        assertNotNull(viewModel.syncEvents)
-    }
-
-    @Test
-    fun requiredPermissions_flowExists() {
-        assertNotNull(viewModel.requiredPermissions)
-    }
-
-    @Test
-    fun isSyncing_flowExists() {
-        assertNotNull(viewModel.isSyncing)
+        assertIs<SyncUiState.CheckingPermissions>(viewModel.uiState.value)
     }
 
     @Test
@@ -107,6 +87,55 @@ class SyncViewModelTest {
         viewModel.onAppForeground()
         testDispatcher.scheduler.advanceUntilIdle()
         coVerify(exactly = 0) { selectedDateRepository.resetToToday() }
+    }
+
+    @Test
+    fun onPermissionsGranted_triggersImmediateSync_andTransitionsToPermissionsGranted() {
+        viewModel.onPermissionsGranted()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify { foregroundSyncController.triggerImmediateSync() }
+        assertIs<SyncUiState.PermissionsGranted>(viewModel.uiState.value)
+    }
+
+    @Test
+    fun onPermissionsDenied_keepsNeedsPermissionsState() {
+        viewModel.onPermissionsDenied()
+
+        assertIs<SyncUiState.NeedsPermissions>(viewModel.uiState.value)
+    }
+
+    @Test
+    fun onPermissionsGranted_whenImmediateSyncThrowsPermissionRevoked_returnsNeedsPermissions() {
+        coEvery {
+            foregroundSyncController.triggerImmediateSync()
+        } throws HealthConnectPermissionRevokedException(SecurityException("revoked"))
+
+        viewModel.onPermissionsGranted()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertIs<SyncUiState.NeedsPermissions>(viewModel.uiState.value)
+    }
+
+    @Test
+    fun onAppForeground_withMissingPermissions_routesToNeedsPermissions() {
+        coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Missing(setOf("sleep"))
+
+        viewModel.onAppForeground()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertIs<SyncUiState.NeedsPermissions>(viewModel.uiState.value)
+    }
+
+    @Test
+    fun onAppForeground_withGrantedPermissions_evaluatesSync() {
+        coEvery { hcRepo.checkPermissions() } returns PermissionStatus.Granted
+
+        viewModel.onAppForeground()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify { foregroundSyncController.evaluateAndSync() }
+        assertIs<SyncUiState.PermissionsGranted>(viewModel.uiState.value)
     }
 
     @Test
