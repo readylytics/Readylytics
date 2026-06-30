@@ -200,11 +200,7 @@ private fun DatePill(
             modifier
                 .fillMaxWidth()
                 .heightIn(min = 64.dp, max = 72.dp)
-                .testTag("date_pill")
-                .clearAndSetSemantics {
-                    contentDescription = pillDescription
-                    role = Role.Button
-                },
+                .testTag("date_pill"),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
