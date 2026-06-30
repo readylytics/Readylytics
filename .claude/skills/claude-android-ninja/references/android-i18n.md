@@ -48,11 +48,11 @@ import androidx.compose.ui.res.stringResource
 fun AuthLoginScreen() {
     Column {
         Text(stringResource(R.string.welcome_message, "John"))
-        
+
         Button(onClick = { /* ... */ }) {
             Text(stringResource(R.string.login_button))
         }
-        
+
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -95,7 +95,7 @@ fun SelectionStatus(selected: Int, total: Int) {
         <item quantity="one">1 notification</item>
         <item quantity="other">%d notifications</item>
     </plurals>
-    
+
     <plurals name="minutes_ago">
         <item quantity="one">1 minute ago</item>
         <item quantity="other">%d minutes ago</item>
@@ -178,7 +178,7 @@ import androidx.compose.ui.unit.LayoutDirection
 @Composable
 fun DirectionAwareContent() {
     val layoutDirection = LocalLayoutDirection.current
-    
+
     when (layoutDirection) {
         LayoutDirection.Ltr -> {
             // Left-to-Right specific layout
@@ -208,7 +208,7 @@ fun ProfileCard(user: User) {
                 .size(48.dp)
                 .padding(end = 16.dp) // Automatically flips in RTL
         )
-        
+
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -251,7 +251,7 @@ import androidx.compose.ui.draw.scale
 fun DirectionalIcon() {
     val layoutDirection = LocalLayoutDirection.current
     val mirrorMultiplier = if (layoutDirection == LayoutDirection.Rtl) -1f else 1f
-    
+
     Icon(
         painter = painterResource(R.drawable.ic_arrow_forward),
         contentDescription = null,
@@ -290,13 +290,13 @@ class DateTimeFormatter {
             localDateTime.monthNumber,
             localDateTime.dayOfMonth
         )
-        
+
         return DateTimeFormatter
             .ofLocalizedDate(FormatStyle.MEDIUM)
             .withLocale(locale)
             .format(javaLocalDate)
     }
-    
+
     fun formatTime(
         instant: Instant,
         locale: Locale = Locale.getDefault()
@@ -306,13 +306,13 @@ class DateTimeFormatter {
             localDateTime.hour,
             localDateTime.minute
         )
-        
+
         return DateTimeFormatter
             .ofLocalizedTime(FormatStyle.SHORT)
             .withLocale(locale)
             .format(javaLocalTime)
     }
-    
+
     fun formatDateTime(
         instant: Instant,
         locale: Locale = Locale.getDefault()
@@ -325,18 +325,18 @@ class DateTimeFormatter {
             localDateTime.hour,
             localDateTime.minute
         )
-        
+
         return DateTimeFormatter
             .ofLocalizedDateTime(FormatStyle.MEDIUM)
             .withLocale(locale)
             .format(javaLocalDateTime)
     }
-    
+
     // Relative time (e.g., "2 hours ago")
     fun formatRelativeTime(instant: Instant): String {
         val now = Clock.System.now()
         val duration = now - instant
-        
+
         return when {
             duration.inWholeMinutes < 1 -> "Just now"
             duration.inWholeMinutes < 60 -> "${duration.inWholeMinutes} minutes ago"
@@ -354,7 +354,7 @@ class DateTimeFormatter {
 @Composable
 fun PostTimestamp(timestamp: Instant) {
     val formatter = remember { DateTimeFormatter() }
-    
+
     Text(
         text = remember(timestamp) {
             formatter.formatRelativeTime(timestamp)
@@ -383,7 +383,7 @@ fun PostTimestamp(timestamp: Instant) {
 fun LocalizedRelativeTime(instant: Instant) {
     val now = Clock.System.now()
     val duration = now - instant
-    
+
     val text = when {
         duration.inWholeMinutes < 1 -> stringResource(R.string.just_now)
         duration.inWholeMinutes < 60 -> {
@@ -399,7 +399,7 @@ fun LocalizedRelativeTime(instant: Instant) {
             formatter.formatDate(instant)
         }
     }
-    
+
     Text(text)
 }
 ```
@@ -421,7 +421,7 @@ class CurrencyFormatter {
         formatter.currency = Currency.getInstance(currencyCode)
         return formatter.format(amount)
     }
-    
+
     fun formatCurrencyCompact(
         amount: Double,
         currencyCode: String,
@@ -446,7 +446,7 @@ class CurrencyFormatter {
 @Composable
 fun PriceDisplay(amount: Double, currencyCode: String) {
     val formatter = remember { CurrencyFormatter() }
-    
+
     Text(
         text = remember(amount, currencyCode) {
             formatter.formatCurrency(amount, currencyCode)
@@ -523,7 +523,7 @@ res/
 @Composable
 fun DayPicker() {
     val days = LocalContext.current.resources.getStringArray(R.array.days_of_week)
-    
+
     LazyColumn {
         items(days) { day ->
             Text(day)
@@ -637,14 +637,14 @@ class ContentViewModel @Inject constructor(
     private val contentRepository: ContentRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
-    
+
     private val _uiState = MutableStateFlow<ContentUiState>(ContentUiState.Loading)
     val uiState: StateFlow<ContentUiState> = _uiState.asStateFlow()
-    
+
     init {
         loadContent()
     }
-    
+
     private fun loadContent() {
         viewModelScope.launch {
             val locale = Locale.getDefault()
@@ -666,7 +666,7 @@ class ContentViewModel @Inject constructor(
 @Composable
 fun ContentScreen(viewModel: ContentViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    
+
     when (val state = uiState) {
         is ContentUiState.Loading -> LoadingIndicator()
         is ContentUiState.Success -> ContentList(state.content)
@@ -683,52 +683,52 @@ fun ContentScreen(viewModel: ContentViewModel = hiltViewModel()) {
 @RunWith(AndroidJUnit4::class)
 class LocalizationTest {
     @get:Rule
-    val composeTestRule = createComposeRule()
-    
+    val composeTestRule = androidx.compose.ui.test.junit4.v2.createComposeRule()
+
     @Test
     fun testEnglishStrings() {
         setLocale(Locale.ENGLISH)
-        
+
         composeTestRule.setContent {
             AuthLoginScreen()
         }
-        
+
         composeTestRule
             .onNodeWithText("Log In")
             .assertIsDisplayed()
     }
-    
+
     @Test
     fun testSpanishStrings() {
         setLocale(Locale("es"))
-        
+
         composeTestRule.setContent {
             AuthLoginScreen()
         }
-        
+
         composeTestRule
             .onNodeWithText("Iniciar sesión")
             .assertIsDisplayed()
     }
-    
+
     @Test
     fun testArabicRTL() {
         setLocale(Locale("ar"))
-        
+
         composeTestRule.setContent {
             ProfileCard(previewUser)
         }
-        
+
         composeTestRule.onRoot().assertLayoutDirectionEquals(LayoutDirection.Rtl)
     }
-    
+
     private fun setLocale(locale: Locale) {
         val config = Configuration(
             InstrumentationRegistry.getInstrumentation()
                 .targetContext.resources.configuration
         )
         config.setLocale(locale)
-        
+
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         context.createConfigurationContext(config)
         Locale.setDefault(locale)
@@ -748,15 +748,15 @@ fun testPlurals() {
             NotificationBadge(count = 5)
         }
     }
-    
+
     composeTestRule
         .onNodeWithText("No notifications")
         .assertIsDisplayed()
-    
+
     composeTestRule
         .onNodeWithText("1 notification")
         .assertIsDisplayed()
-    
+
     composeTestRule
         .onNodeWithText("5 notifications")
         .assertIsDisplayed()
@@ -781,25 +781,25 @@ class LocalizationParameterizedTest(
             arrayOf(Locale("de"), "Anmelden")
         )
     }
-    
+
     @get:Rule
-    val composeTestRule = createComposeRule()
-    
+    val composeTestRule = androidx.compose.ui.test.junit4.v2.createComposeRule()
+
     @Test
     fun testLoginButton() {
         setLocale(locale)
-        
+
         composeTestRule.setContent {
             Button(onClick = {}) {
                 Text(stringResource(R.string.login_button))
             }
         }
-        
+
         composeTestRule
             .onNodeWithText(expectedText)
             .assertIsDisplayed()
     }
-    
+
     private fun setLocale(locale: Locale) {
         val config = Configuration()
         config.setLocale(locale)
@@ -820,14 +820,14 @@ fun testRTLScreenshots() {
         Locale("ar"), // RTL
         Locale("he")  // RTL
     )
-    
+
     locales.forEach { locale ->
         setLocale(locale)
-        
+
         composeTestRule.setContent {
             ProfileScreen()
         }
-        
+
         // Take screenshot (using Screenshot Testing library)
         composeTestRule
             .onRoot()
@@ -940,7 +940,7 @@ Button(
 <resources>
     <!-- Button text for logging into the application -->
     <string name="login_button">Log In</string>
-    
+
     <!-- Greeting shown on the home screen. %1$s is the user's first name -->
     <string name="welcome_message">Welcome, %1$s!</string>
 </resources>
@@ -988,7 +988,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Check for hardcoded strings
         run: |
           # Find hardcoded strings in Kotlin files
@@ -996,7 +996,7 @@ jobs:
             echo "Found hardcoded strings. Use stringResource() instead."
             exit 1
           fi
-      
+
       - name: Validate all translations exist
         run: |
           # Check that all string keys exist in all locales

@@ -16,7 +16,7 @@ Key constraints:
 
 **Accepted pattern:** 2 co-existing test styles:
 - `runTest {}` — for all HC-query tests (suspend calls)
-- `createAndroidComposeRule<ComponentActivity>()` — for Compose-isolated UI tests (no Activity routing needed)
+- `v2.createAndroidComposeRule<ComponentActivity>()` — for Compose-isolated UI tests (no Activity routing needed)
 
 ---
 
@@ -334,7 +334,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest

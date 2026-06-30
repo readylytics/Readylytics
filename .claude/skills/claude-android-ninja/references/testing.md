@@ -79,7 +79,7 @@ class FakeAuthRepository : AuthRepository {
     fun setAuthToken(email: String, token: AuthToken) {
         authTokens[email] = token
     }
-    
+
     fun sendAuthEvent(event: AuthEvent) {
         authEventsFlow.tryEmit(event)
     }
@@ -89,11 +89,11 @@ class FakeAuthRepository : AuthRepository {
         if (loginDelay > 0.seconds) {
             delay(loginDelay)
         }
-        
+
         if (shouldFailLogin) {
             return Result.failure(networkError ?: Exception("Login failed"))
         }
-        
+
         return authTokens[email]?.let { Result.success(it) }
             ?: Result.failure(Exception("Invalid credentials"))
     }
@@ -102,23 +102,23 @@ class FakeAuthRepository : AuthRepository {
         if (shouldFailRegister) {
             return Result.failure(networkError ?: Exception("Registration failed"))
         }
-        
+
         users[user.id] = user
         return Result.success(Unit)
     }
 
     override fun observeAuthState(): Flow<AuthState> = authStateFlow
-    
+
     override fun observeAuthEvents(): Flow<AuthEvent> = authEventsFlow
 
     override suspend fun resetPassword(email: String): Result<Unit> {
         return Result.success(Unit)
     }
-    
+
     override suspend fun refreshSession(): Result<Unit> {
         return Result.success(Unit)
     }
-    
+
     // Test helpers
     fun reset() {
         shouldFailLogin = false
@@ -137,7 +137,7 @@ class FakeAuthRepository : AuthRepository {
 ```kotlin
 // core/testing/src/main/kotlin/com/example/testing/navigation/
 class FakeAuthNavigator : AuthNavigator {
-    
+
     private val _navigationEvents = mutableListOf<String>()
     val navigationEvents: List<String> get() = _navigationEvents
 
@@ -174,7 +174,7 @@ class FakeAuthNavigator : AuthNavigator {
     fun clearEvents() {
         _navigationEvents.clear()
     }
-    
+
     fun getLastEvent(): String? = _navigationEvents.lastOrNull()
 }
 ```
@@ -217,7 +217,7 @@ class AuthViewModelTest {
         loginUseCase = LoginUseCase(fakeAuthRepository)
         registerUseCase = RegisterUseCase(fakeAuthRepository)
         resetPasswordUseCase = ResetPasswordUseCase(fakeAuthRepository)
-        
+
         viewModel = AuthViewModel(
             loginUseCase = loginUseCase,
             registerUseCase = registerUseCase,
@@ -254,7 +254,7 @@ class AuthViewModelTest {
             testEmail,
             AuthToken("test-token", User("1", testEmail, "Test User"))
         )
-        
+
         viewModel.onAction(AuthAction.EmailChanged(testEmail))
         viewModel.onAction(AuthAction.PasswordChanged(testPassword))
 
@@ -277,7 +277,7 @@ class AuthViewModelTest {
     fun `when login fails, state becomes Error`() = runTest {
         // Arrange
         fakeAuthRepository.shouldFailLogin = true
-        
+
         viewModel.onAction(AuthAction.EmailChanged("test@example.com"))
         viewModel.onAction(AuthAction.PasswordChanged("wrong"))
 
@@ -399,7 +399,7 @@ fun `uiState emits correct states during login flow`() = runTest {
         "test@example.com",
         AuthToken("test-token", User("1", "test@example.com", "Test User"))
     )
-    
+
     viewModel.uiState.test {
         // Initial state
         assertThat(awaitItem()).isInstanceOf(AuthUiState.LoginForm::class.java)
@@ -427,11 +427,11 @@ fun `uiState emits correct states during login flow`() = runTest {
 fun `uiState emits Loading, Error when login fails`() = runTest {
     // Arrange
     fakeAuthRepository.shouldFailLogin = true
-    
+
     viewModel.uiState.test {
         // Skip initial state
         skipItems(1)
-        
+
         viewModel.onAction(AuthAction.EmailChanged("test@example.com"))
         viewModel.onAction(AuthAction.PasswordChanged("wrong"))
         viewModel.onAction(AuthAction.LoginClicked)
@@ -471,7 +471,7 @@ class AuthRepositoryImplTest {
         fakeLocalDataSource = FakeAuthLocalDataSource()
         fakeRemoteDataSource = FakeAuthRemoteDataSource()
         authMapper = AuthMapper()
-        
+
         repository = AuthRepositoryImpl(
             localDataSource = fakeLocalDataSource,
             remoteDataSource = fakeRemoteDataSource,
@@ -493,11 +493,11 @@ class AuthRepositoryImplTest {
         // Assert
         assertThat(result.isSuccess).isTrue()
         assertThat(result.getOrNull()?.value).isEqualTo(expectedToken.token)
-        
+
         // Verify local storage was updated
         val savedToken = fakeLocalDataSource.getAuthToken()
         assertThat(savedToken).isEqualTo(expectedToken.token)
-        
+
         val savedUser = fakeLocalDataSource.getUser()
         assertThat(savedUser?.email).isEqualTo(expectedToken.user.email)
     }
@@ -529,7 +529,7 @@ class AuthRepositoryImplTest {
             assertThat(authState).isInstanceOf(AuthState.Authenticated::class.java)
             assertThat((authState as AuthState.Authenticated).user.id).isEqualTo("1")
             assertThat(authState.user.email).isEqualTo("test@example.com")
-            
+
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -540,7 +540,7 @@ class AuthRepositoryImplTest {
         repository.observeAuthState().test {
             val authState = awaitItem()
             assertThat(authState).isInstanceOf(AuthState.Unauthenticated::class.java)
-            
+
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -555,7 +555,7 @@ class AuthRepositoryImplTest {
             val authState = awaitItem()
             assertThat(authState).isInstanceOf(AuthState.Error::class.java)
             assertThat((authState as AuthState.Error).message).isNotEmpty()
-            
+
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -649,17 +649,17 @@ Use `advanceUntilIdle()` to wait for all pending coroutines to complete in tests
 fun `login triggers loading then success state`() = runTest {
     // Arrange
     val viewModel = AuthViewModel(loginUseCase, savedStateHandle)
-    
+
     // Act
     viewModel.onAction(AuthAction.LoginClicked)
-    
+
     // Assert loading state
     val loadingState = viewModel.uiState.value
     assertThat((loadingState as AuthUiState.LoginForm).isLoading).isTrue()
-    
+
     // Wait for async work to complete
     advanceUntilIdle()
-    
+
     // Assert final state
     val finalState = viewModel.uiState.value
     assertThat(finalState).isInstanceOf(AuthUiState.Success::class.java)
@@ -680,19 +680,19 @@ fun `session refresh happens after 30 minutes`() = runTest {
         externalScope = this,
         ioDispatcher = UnconfinedTestDispatcher(testScheduler)
     )
-    
+
     // Act
     sessionRefresher.startPeriodicRefresh()
-    
+
     // Fast-forward 30 minutes
     advanceTimeBy(30.minutes)
-    
+
     // Assert
     assertThat(fakeAuthStore.refreshCallCount).isEqualTo(1)
-    
+
     // Fast-forward another 30 minutes
     advanceTimeBy(30.minutes)
-    
+
     // Assert second refresh
     assertThat(fakeAuthStore.refreshCallCount).isEqualTo(2)
 }
@@ -711,13 +711,13 @@ fun `biometric authentication times out after 30 seconds`() = runTest {
         biometricSdk = slowBiometricSdk,
         ioDispatcher = UnconfinedTestDispatcher(testScheduler)
     )
-    
+
     // Act
     val result = repository.authenticate()
-    
+
     // Fast-forward past the timeout
     advanceTimeBy(35.seconds)
-    
+
     // Assert - should return null due to timeout
     assertThat(result).isNull()
 }
@@ -730,14 +730,14 @@ fun `printer returns timeout result when operation hangs`() = runTest {
         printerSdk = hangingPrinterSdk,
         ioDispatcher = UnconfinedTestDispatcher(testScheduler)
     )
-    
+
     // Act
     val resultDeferred = async { repository.print(testDocument) }
-    
+
     // Fast-forward past the 60s timeout
     advanceTimeBy(65.seconds)
     val result = resultDeferred.await()
-    
+
     // Assert
     assertThat(result).isEqualTo(PrintResult.Timeout)
 }
@@ -753,14 +753,14 @@ fun `exponential backoff delays increase correctly`() = runTest {
     // Arrange
     val retryManager = AuthRetryManager()
     val startTime = currentTime
-    
+
     // Act & Assert
     retryManager.retryWithBackoff(attempt = 1)
     assertThat(currentTime - startTime).isEqualTo(1000L) // 1 second
-    
+
     retryManager.retryWithBackoff(attempt = 2)
     assertThat(currentTime - startTime).isEqualTo(3000L) // +2 seconds
-    
+
     retryManager.retryWithBackoff(attempt = 3)
     assertThat(currentTime - startTime).isEqualTo(7000L) // +4 seconds
 }
@@ -779,21 +779,21 @@ fun `auth state flow emits correct states`() = runTest {
     // Arrange
     val fakeDataSource = FakeAuthDataSource()
     val repository = AuthRepository(fakeDataSource, UnconfinedTestDispatcher(testScheduler))
-    
+
     // Act & Assert
     repository.observeAuthState().test {
         // Initial state
         assertThat(awaitItem()).isInstanceOf(AuthState.Unauthenticated::class.java)
-        
+
         // Trigger login
         repository.login("user@example.com", "password")
         advanceUntilIdle()
-        
+
         // Should emit Authenticated
         val authState = awaitItem()
         assertThat(authState).isInstanceOf(AuthState.Authenticated::class.java)
         assertThat((authState as AuthState.Authenticated).user.email).isEqualTo("user@example.com")
-        
+
         cancelAndIgnoreRemainingEvents()
     }
 }
@@ -803,22 +803,22 @@ fun `session refresh flow emits at correct intervals`() = runTest {
     // Arrange
     val fakeStore = FakeAuthStore()
     val refresher = AuthSessionRefresher(fakeStore, this, UnconfinedTestDispatcher(testScheduler))
-    
+
     // Act & Assert
     fakeStore.sessionUpdates.test {
         refresher.startPeriodicRefresh()
-        
+
         // First refresh happens immediately
         assertThat(awaitItem()).isNotNull()
-        
+
         // Advance 30 minutes
         advanceTimeBy(30.minutes)
         assertThat(awaitItem()).isNotNull()
-        
+
         // Advance another 30 minutes
         advanceTimeBy(30.minutes)
         assertThat(awaitItem()).isNotNull()
-        
+
         cancelAndIgnoreRemainingEvents()
     }
 }
@@ -827,14 +827,14 @@ fun `session refresh flow emits at correct intervals`() = runTest {
 fun `channel events are received correctly`() = runTest {
     // Arrange
     val viewModel = AuthViewModel(loginUseCase, savedStateHandle)
-    
+
     // Act & Assert
     viewModel.navigationEvents.test {
         viewModel.login()
         advanceUntilIdle()
-        
+
         assertThat(awaitItem()).isEqualTo(AuthNavigationEvent.LoginSuccess)
-        
+
         cancelAndIgnoreRemainingEvents()
     }
 }
@@ -853,12 +853,12 @@ fun `auth log upload stops on cancellation`() = runTest {
     val job = launch {
         uploader.upload(listOf(file1, file2, file3, file4, file5))
     }
-    
+
     // Act - cancel after some uploads
     advanceTimeBy(100L)
     job.cancel()
     advanceUntilIdle()
-    
+
     // Assert - not all files were uploaded
     assertThat(fakeUploader.uploadedFiles.size).isLessThan(5)
 }
@@ -868,7 +868,7 @@ fun `camera cleanup happens even when cancelled`() = runTest {
     // Arrange
     val fakeCamera = FakeCamera()
     val repository = CameraRepository(fakeCamera, UnconfinedTestDispatcher(testScheduler))
-    
+
     // Act - start capture then cancel
     val job = launch {
         try {
@@ -877,11 +877,11 @@ fun `camera cleanup happens even when cancelled`() = runTest {
             // Expected
         }
     }
-    
+
     advanceTimeBy(50L)
     job.cancel()
     advanceUntilIdle()
-    
+
     // Assert - camera was closed despite cancellation (NonCancellable cleanup)
     assertThat(fakeCamera.isClosed).isTrue()
 }
@@ -929,7 +929,7 @@ class AuthViewModelHiltTest {
 
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
-    
+
     @get:Rule(order = 1)
     val dispatcherRule = TestDispatcherRule()
 
@@ -951,7 +951,7 @@ class AuthViewModelHiltTest {
         // The ViewModel is injected with FakeAuthRepository via @BindValue
         viewModel.onAction(AuthAction.LoginClicked)
         advanceUntilIdle()
-        
+
         // Verify fake was used
         assertThat((authRepository as FakeAuthRepository).shouldFailLogin).isFalse()
     }
@@ -972,7 +972,7 @@ object TestAuthModule {
     @Provides
     @Singleton
     fun provideAuthRepository(): AuthRepository = FakeAuthRepository()
-    
+
     @Provides
     @Singleton
     fun provideAuthApi(): AuthApi = FakeAuthApi()
@@ -993,11 +993,11 @@ fun `ViewModel without Hilt injection`() = runTest {
         registerUseCase = RegisterUseCase(fakeRepo),
         resetPasswordUseCase = ResetPasswordUseCase(fakeRepo)
     )
-    
+
     // Test normally
     viewModel.onAction(AuthAction.LoginClicked)
     advanceUntilIdle()
-    
+
     assertThat(viewModel.uiState.value).isInstanceOf(AuthUiState.Error::class.java)
 }
 ```
@@ -1191,12 +1191,12 @@ class ProfileViewModelTest {
         // Arrange
         val userId = "user-123"
         savedStateHandle = SavedStateHandle(mapOf("userId" to userId))
-        
+
         val expectedUser = User(userId, "test@example.com", "Test User")
         fakeUserRepository = FakeUserRepository().apply {
             addUser(expectedUser)
         }
-        
+
         viewModel = ProfileViewModel(
             userRepository = fakeUserRepository,
             savedStateHandle = savedStateHandle
@@ -1216,7 +1216,7 @@ class ProfileViewModelTest {
         // Arrange - no userId in SavedStateHandle
         savedStateHandle = SavedStateHandle()
         fakeUserRepository = FakeUserRepository()
-        
+
         // Act & Assert
         val exception = assertThrows<IllegalStateException> {
             ProfileViewModel(
@@ -1224,7 +1224,7 @@ class ProfileViewModelTest {
                 savedStateHandle = savedStateHandle
             )
         }
-        
+
         assertThat(exception.message).contains("userId")
     }
 
@@ -1234,16 +1234,16 @@ class ProfileViewModelTest {
         val userId = "user-123"
         savedStateHandle = SavedStateHandle(mapOf("userId" to userId))
         fakeUserRepository = FakeUserRepository()
-        
+
         val viewModel = ProfileViewModel(fakeUserRepository, savedStateHandle)
-        
+
         // Simulate state saving
         val savedState = savedStateHandle.keys().associateWith { savedStateHandle.get<Any?>(it) }
-        
+
         // Simulate process death and restoration
         val restoredHandle = SavedStateHandle(savedState)
         val restoredViewModel = ProfileViewModel(fakeUserRepository, restoredHandle)
-        
+
         // Assert - restored ViewModel has same userId
         assertThat(restoredHandle.get<String>("userId")).isEqualTo(userId)
     }
@@ -1261,14 +1261,14 @@ fun `form state is saved to SavedStateHandle`() = runTest {
         loginUseCase = loginUseCase,
         savedStateHandle = savedStateHandle
     )
-    
+
     val testEmail = "test@example.com"
     val testPassword = "password123"
-    
+
     // Act
     viewModel.onAction(AuthAction.EmailChanged(testEmail))
     viewModel.onAction(AuthAction.PasswordChanged(testPassword))
-    
+
     // Assert - state is saved
     assertThat(savedStateHandle.get<String>("email")).isEqualTo(testEmail)
     assertThat(savedStateHandle.get<String>("password")).isEqualTo(testPassword)
@@ -1289,7 +1289,7 @@ import com.google.common.truth.Truth.assertThat
 class AppNavigatorsTest {
 
     private lateinit var fakeAuthNavigator: FakeAuthNavigator
-    
+
     @Before
     fun setup() {
         fakeAuthNavigator = FakeAuthNavigator()
@@ -1316,7 +1316,7 @@ class AppNavigatorsTest {
         // Arrange
         fakeAuthNavigator.navigateToMainApp()
         fakeAuthNavigator.navigateToRegister()
-        
+
         // Pre-condition
         assertThat(fakeAuthNavigator.navigationEvents).isNotEmpty()
 
@@ -1326,13 +1326,13 @@ class AppNavigatorsTest {
         // Assert
         assertThat(fakeAuthNavigator.navigationEvents).isEmpty()
     }
-    
+
     @Test
     fun `FakeAuthNavigator getLastEvent returns most recent navigation`() {
         // Act
         fakeAuthNavigator.navigateToRegister()
         fakeAuthNavigator.navigateToProfile("user123")
-        
+
         // Assert
         assertThat(fakeAuthNavigator.getLastEvent()).isEqualTo("navigateToProfile:user123")
     }
@@ -1420,13 +1420,13 @@ class NavigationStateTest {
 // Fake NavBackStack for testing
 class FakeNavBackStack<T : NavKey>(startRoute: T) {
     val entries = mutableListOf<T>(startRoute)
-    
+
     fun add(route: T) {
         entries.add(route)
     }
-    
+
     fun removeLastOrNull(): T? = entries.removeLastOrNull()
-    
+
     fun last(): T = entries.last()
 }
 ```
@@ -1462,18 +1462,18 @@ class StabilityTest {
     fun `User model has only val properties`() {
         // Get all properties
         val properties = User::class.members.filterIsInstance<KProperty<*>>()
-        
+
         // Assert all are val (immutable)
         properties.forEach { property ->
             assertThat(property is KMutableProperty<*>).isFalse()
         }
     }
-    
+
     @Test
     fun `UiState sealed interface types are @Immutable`() {
         // Check all sealed subclasses
         val subclasses = AuthUiState::class.sealedSubclasses
-        
+
         subclasses.forEach { subclass ->
             val annotation = subclass.findAnnotation<Immutable>()
             assertThat(annotation).isNotNull()
@@ -1566,6 +1566,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+
 class AuthScreenTest {
 
     @get:Rule
@@ -1613,7 +1615,7 @@ class AuthScreenTest {
     @Test
     fun `error state shows error message and retry button`() {
         val errorMessage = "Invalid credentials"
-        
+
         composeTestRule.setContent {
             AppTheme {
                 LoginScreen(
@@ -1668,7 +1670,7 @@ class AuthScreenTest {
     @Test
     fun `clicking create account triggers callback`() {
         var registerClicked = false
-        
+
         composeTestRule.setContent {
             AppTheme {
                 LoginScreen(
@@ -1692,7 +1694,7 @@ class AuthScreenTest {
     @Test
     fun `clicking forgot password triggers callback`() {
         var forgotPasswordClicked = false
-        
+
         composeTestRule.setContent {
             AppTheme {
                 LoginScreen(
@@ -1901,7 +1903,7 @@ Setup and commands live in `references/android-performance.md`.
 import com.google.common.truth.Truth.assertThat
 
 object TestData {
-    
+
     // Auth test data
     val testUser = User(
         id = "user-123",
@@ -1909,9 +1911,9 @@ object TestData {
         name = "Test User",
         profileImage = null
     )
-    
+
     val testAuthToken = AuthToken("token-123", testUser)
-    
+
     fun createLoginForm(
         email: String = "test@example.com",
         password: String = "password123",
@@ -1925,7 +1927,7 @@ object TestData {
         emailError = emailError,
         passwordError = passwordError
     )
-    
+
     fun createRegisterForm(
         email: String = "test@example.com",
         password: String = "password123",
@@ -1941,31 +1943,31 @@ object TestData {
         isLoading = isLoading,
         errors = errors
     )
-    
+
     fun createErrorState(
         message: String = "Something went wrong",
         canRetry: Boolean = true
     ) = AuthUiState.Error(message, canRetry)
-    
+
     // Network test data
     val testNetworkUser = NetworkUser(
         id = "user-123",
         email = "test@example.com",
         name = "Test User"
     )
-    
+
     val testAuthTokenResponse = AuthTokenResponse(
         token = "token-123",
         user = testNetworkUser
     )
-    
+
     // Entity test data
     val testUserEntity = UserEntity(
         id = "user-123",
         email = "test@example.com",
         name = "Test User"
     )
-    
+
     // Test assertions
     fun assertUserEquals(expected: User, actual: User) {
         assertThat(actual.id).isEqualTo(expected.id)
@@ -1973,7 +1975,7 @@ object TestData {
         assertThat(actual.name).isEqualTo(expected.name)
         assertThat(actual.profileImage).isEqualTo(expected.profileImage)
     }
-    
+
     fun assertAuthTokenEquals(expected: AuthToken, actual: AuthToken) {
         assertThat(actual.value).isEqualTo(expected.value)
         assertUserEquals(expected.user, actual.user)
@@ -2031,17 +2033,17 @@ When testing ViewModels that expose `PagingData<T>`, use `PagingData.from()` to 
 // core/testing/FakePagingRepository.kt
 class FakeProductRepository : ProductRepository {
     private val pagingFlow = MutableSharedFlow<PagingData<Product>>(replay = 1)
-    
+
     fun emitProducts(products: List<Product>) {
         pagingFlow.tryEmit(PagingData.from(products))
     }
-    
+
     fun emitError() {
         // Note: PagingData doesn't directly support error states
         // Use a separate error flow or Result wrapper
         pagingFlow.tryEmit(PagingData.empty())
     }
-    
+
     override fun getProducts(query: String): Flow<PagingData<Product>> = pagingFlow
 }
 
@@ -2053,11 +2055,11 @@ fun `when products loaded then state is success`() = runTest {
         Product(id = "1", name = "Product 1", price = 10.0),
         Product(id = "2", name = "Product 2", price = 20.0)
     )
-    
+
     // When
     fakeRepository.emitProducts(testProducts)
     advanceUntilIdle()
-    
+
     // Then
     val state = viewModel.uiState.value
     assertThat(state).isInstanceOf(ProductsUiState.Success::class.java)
@@ -2088,13 +2090,13 @@ class ProductsViewModel @Inject constructor(
        .getProductsAsList()
        .catch { emit(Result.failure(it)) }
        .stateIn(viewModelScope, SharingStarted.Lazily, Result.success(emptyList()))
-   
+
    // Test error handling here instead
    @Test
    fun `when fetch fails then error state is shown`() = runTest {
        fakeRepository.emitError(NetworkException())
        advanceUntilIdle()
-       
+
        val result = viewModel.productsResult.value
        assertThat(result.isFailure).isTrue()
    }
@@ -2107,7 +2109,7 @@ class ProductsViewModel @Inject constructor(
    ) : ViewModel() {
        private val _errorState = MutableStateFlow<String?>(null)
        val errorState: StateFlow<String?> = _errorState.asStateFlow()
-       
+
        val products: Flow<PagingData<Product>> = repository
            .getProducts()
            .catch { error ->
@@ -2116,12 +2118,12 @@ class ProductsViewModel @Inject constructor(
            }
            .cachedIn(viewModelScope)
    }
-   
+
    @Test
    fun `when fetch fails then error message is set`() = runTest {
        fakeRepository.emitError()
        advanceUntilIdle()
-       
+
        assertThat(viewModel.errorState.value).isNotNull()
    }
    ```
@@ -2135,7 +2137,7 @@ For more advanced testing (checking actual loaded items), use `AsyncPagingDataDi
 @Test
 fun `paging data contains expected items`() = runTest {
     val testDispatcher = UnconfinedTestDispatcher(testScheduler)
-    
+
     val differ = AsyncPagingDataDiffer(
         diffCallback = object : DiffUtil.ItemCallback<Product>() {
             override fun areItemsTheSame(oldItem: Product, newItem: Product) =
@@ -2151,20 +2153,20 @@ fun `paging data contains expected items`() = runTest {
         },
         workerDispatcher = testDispatcher
     )
-    
+
     val testProducts = listOf(
         Product(id = "1", name = "Product 1", price = 10.0),
         Product(id = "2", name = "Product 2", price = 20.0)
     )
-    
+
     fakeRepository.emitProducts(testProducts)
-    
+
     viewModel.products.collect { pagingData ->
         differ.submitData(pagingData)
     }
-    
+
     advanceUntilIdle()
-    
+
     assertThat(differ.snapshot().items).hasSize(2)
     assertThat(differ.snapshot().items[0].id).isEqualTo("1")
     assertThat(differ.snapshot().items[1].id).isEqualTo("2")

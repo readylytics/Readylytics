@@ -49,7 +49,7 @@ jobs:
           BOOT_TIMEOUT: "300"
 
       - name: Run instrumented tests
-        run: ./gradlew connectedDebugAndroidTest
+        run: ./gradlew connectedDebugAndroidTest --stacktrace
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
 
