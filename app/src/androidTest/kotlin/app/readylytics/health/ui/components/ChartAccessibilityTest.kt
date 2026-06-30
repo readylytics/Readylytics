@@ -94,6 +94,11 @@ class ChartAccessibilityTest {
 
     @Test
     fun sleepStagesChart_accessibilitySemantics() {
+        // SleepStagesChart runs an infiniteRepeatable halo animation while a segment is selected.
+        // Disabling clock auto-advance prevents awaitIdle() from spinning forever on that animation;
+        // pending recompositions from state changes still settle before each assertion.
+        composeTestRule.mainClock.autoAdvance = false
+
         val session =
             SleepSessionData(
                 id = "session1",
