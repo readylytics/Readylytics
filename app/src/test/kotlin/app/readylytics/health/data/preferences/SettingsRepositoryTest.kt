@@ -125,6 +125,17 @@ class SettingsRepositoryTest {
             assertEquals(60, prefs.hrrToleranceSeconds)
         }
 
+    @Test
+    fun `HRR tolerance persists through serializer round trip`() =
+        runTest {
+            dataStore.updateData {
+                UserPreferences(hrrToleranceSeconds = 45).toProto()
+            }
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(45, prefs.hrrToleranceSeconds)
+        }
+
     /**
      * US-03 acceptance criterion: switching a load-source preference must never write to
      * daily_summaries. SettingsRepository (the sole owner of preference setters) has no
