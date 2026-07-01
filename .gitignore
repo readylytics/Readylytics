@@ -56,3 +56,4 @@ ktlint
 .codex/
 .agents/
 .codex-remote-attachments/
+build-logic/bin/
