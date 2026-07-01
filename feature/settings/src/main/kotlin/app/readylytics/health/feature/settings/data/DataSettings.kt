@@ -210,8 +210,8 @@ fun DataManagementSection(
                     onValueChangeFinished = {
                         onEvent(SettingsEvent.RetentionDaysChanged(retentionDays.toInt()))
                     },
-                    valueRange = 180f..1095f,
-                    steps = 30,
+                    valueRange = 180f..730f,
+                    steps = 36,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
@@ -263,9 +263,11 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val availableDevices = uiState.availableDevices
     val deviceByDataType = uiState.deviceByDataType
+    val isLoadingDevices = uiState.isLoadingDevices
     val hasDevices = availableDevices.isNotEmpty()
     val allDevicesLabel = stringResource(R.string.data_sources_all_devices)
-    val calibratingLabel = stringResource(R.string.data_sources_calibrating)
+    val loadingLabel = stringResource(R.string.data_sources_loading)
+    val noDevicesLabel = stringResource(R.string.data_sources_no_devices)
     val phoneLabel = stringResource(R.string.device_this_phone)
     val googleFitLabel = stringResource(R.string.provider_google_fit)
     val samsungHealthWatchLabel = stringResource(R.string.provider_samsung_health_watch)
@@ -333,7 +335,8 @@ fun DataSourceSettingsSection(viewModel: DataSourceSettingsViewModel = hiltViewM
                         label = stringResource(type.labelRes()),
                         selectedDisplayValue =
                             when {
-                                !hasDevices && selected == null -> calibratingLabel
+                                isLoadingDevices && selected == null -> loadingLabel
+                                !hasDevices && selected == null -> noDevicesLabel
                                 selected != null -> {
                                     optionsDisplay[selected] ?: selected
                                 }

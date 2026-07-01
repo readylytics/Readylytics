@@ -36,6 +36,7 @@ class DataSourceSettingsViewModel
         private val historicalResyncController: HistoricalResyncController,
     ) : ViewModel() {
         private val availableDevicesFlow = MutableStateFlow<List<String>>(emptyList())
+        private val isLoadingDevicesFlow = MutableStateFlow(true)
 
         /** Per-type target value, only present when it differs from the persisted selection. */
         private val pendingOverrides = MutableStateFlow<Map<HealthDataType, String?>>(emptyMap())
@@ -68,7 +69,8 @@ class DataSourceSettingsViewModel
                 pendingOverrides,
                 historicalResyncController.state,
                 showDeviceChangeNoticeFlow,
-            ) { persisted, availableDevices, pending, resyncState, showNotice ->
+                isLoadingDevicesFlow,
+            ) { persisted, availableDevices, pending, resyncState, showNotice, isLoadingDevices ->
                 val effective = persisted.toMutableMap()
                 pending.forEach { (type, label) ->
                     if (label == null) effective.remove(type.name) else effective[type.name] = label
@@ -79,6 +81,7 @@ class DataSourceSettingsViewModel
                     hasPendingChanges = pending.isNotEmpty(),
                     isResyncing = resyncState.running,
                     showDeviceChangeNotice = showNotice,
+                    isLoadingDevices = isLoadingDevices,
                 )
             }.stateIn(
                 scope = viewModelScope,
@@ -95,8 +98,13 @@ class DataSourceSettingsViewModel
 
         fun refreshAvailableDevices() {
             viewModelScope.launch {
-                deviceSettings.clearDeviceCache()
-                availableDevicesFlow.value = deviceSettings.getAvailableDevices()
+                isLoadingDevicesFlow.value = true
+                try {
+                    deviceSettings.clearDeviceCache()
+                    availableDevicesFlow.value = deviceSettings.getAvailableDevices()
+                } finally {
+                    isLoadingDevicesFlow.value = false
+                }
             }
         }
 
