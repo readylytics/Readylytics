@@ -13,6 +13,7 @@ import app.readylytics.health.domain.repository.WorkoutData
 import app.readylytics.health.domain.repository.WorkoutRepository
 import app.readylytics.health.domain.scoring.GetWorkoutDisplayMetricsUseCase
 import app.readylytics.health.domain.scoring.WorkoutDisplayMetrics
+import io.mockk.coVerify
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -27,8 +28,10 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -211,5 +214,126 @@ class WorkoutDetailViewModelTest {
             assertEquals(workout, recreatedViewModel.uiState.value.workout)
             assertEquals(116, recreatedViewModel.uiState.value.computedTrimp)
             assertEquals(false, recreatedViewModel.uiState.value.isLoading)
+        }
+
+    @Test
+    fun `loadWorkout requests heart rate through end plus three minutes plus tolerance`() =
+        runTest {
+            val toleranceSeconds = 30
+            every { settingsRepository.userPreferences } returns
+                MutableStateFlow(UserPreferences(hrrToleranceSeconds = toleranceSeconds))
+            val date = LocalDate.of(2026, 6, 9)
+            val startMs =
+                date
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .plusHours(19)
+                    .toInstant()
+                    .toEpochMilli()
+            val workout =
+                WorkoutData(
+                    id = "run-1",
+                    startTime = startMs,
+                    endTime = startMs + 62 * 60 * 1000L,
+                    exerciseType = "running",
+                    durationMinutes = 62,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 10f,
+                    zone3Minutes = 20f,
+                    zone4Minutes = 32f,
+                    zone5Minutes = 0f,
+                    trimp = 115.6f,
+                    avgHr = 134f,
+                )
+            coEvery { workoutRepository.getById("run-1") } returns workout
+            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns emptyList()
+            coEvery { dailySummaryRepository.getByDate(any()) } returns null
+            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = workout,
+                    samples = any(),
+                )
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 115.6f,
+                    computedTrimp = 116,
+                    trimpDisplay = "116",
+                    gainedStrain = 0.37f,
+                    gainedStrainDisplay = "0.37",
+                )
+
+            viewModel.loadWorkout("run-1")
+            advanceUntilIdle()
+
+            coVerify {
+                heartRateRepository.getByTimeRange(
+                    workout.startTime,
+                    workout.endTime + 210_000L,
+                )
+            }
+        }
+
+    @Test
+    fun `loadWorkout maps hrr1Min from sparse sample within tolerance after one minute`() =
+        runTest {
+            every { settingsRepository.userPreferences } returns
+                MutableStateFlow(UserPreferences(hrrToleranceSeconds = 30))
+            val workoutEnd = Instant.parse("2026-06-09T18:00:00Z")
+            val workoutStart = workoutEnd.minusSeconds(30 * 60)
+            val workout =
+                WorkoutData(
+                    id = "run-1",
+                    startTime = workoutStart.toEpochMilli(),
+                    endTime = workoutEnd.toEpochMilli(),
+                    exerciseType = "running",
+                    durationMinutes = 30,
+                    zone1Minutes = 0f,
+                    zone2Minutes = 10f,
+                    zone3Minutes = 10f,
+                    zone4Minutes = 10f,
+                    zone5Minutes = 0f,
+                    trimp = 90f,
+                    avgHr = 150f,
+                )
+            val dbSamples =
+                listOf(
+                    HeartRateRecordData(
+                        id = "hr-end",
+                        timestampMs = workout.endTime,
+                        beatsPerMinute = 170,
+                        recordType = "EXERCISE",
+                    ),
+                    HeartRateRecordData(
+                        id = "hr-80",
+                        timestampMs = workout.endTime + 80_000L,
+                        beatsPerMinute = 149,
+                        recordType = "RECOVERY",
+                    ),
+                )
+            coEvery { workoutRepository.getById("run-1") } returns workout
+            coEvery { healthConnectRepository.readHeartRateSamples(any(), any()) } returns emptyList()
+            coEvery { heartRateRepository.getByTimeRange(any(), any()) } returns dbSamples
+            coEvery { dailySummaryRepository.getByDate(any()) } returns null
+            coEvery { dailySummaryRepository.getSince(any()) } returns emptyList()
+            coEvery {
+                getWorkoutDisplayMetricsUseCase.execute(
+                    workout = workout,
+                    samples = any(),
+                )
+            } returns
+                WorkoutDisplayMetrics(
+                    preciseTrimp = 90f,
+                    computedTrimp = 90,
+                    trimpDisplay = "90",
+                    gainedStrain = 0.25f,
+                    gainedStrainDisplay = "0.25",
+                )
+
+            viewModel.loadWorkout("run-1")
+            advanceUntilIdle()
+
+            assertNotNull(viewModel.uiState.value.hrr1Min)
+            assertEquals(21, viewModel.uiState.value.hrr1Min)
         }
 }
