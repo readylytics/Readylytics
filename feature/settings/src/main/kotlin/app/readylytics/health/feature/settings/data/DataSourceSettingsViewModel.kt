@@ -6,6 +6,7 @@ import app.readylytics.health.domain.model.HealthDataType
 import app.readylytics.health.domain.preferences.DeviceSettings
 import app.readylytics.health.domain.preferences.UserPreferencesReader
 import app.readylytics.health.domain.sync.HistoricalResyncController
+import app.readylytics.health.domain.sync.HistoricalResyncState
 import app.readylytics.health.feature.settings.DataSourceSettingsState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -70,7 +71,14 @@ class DataSourceSettingsViewModel
                 historicalResyncController.state,
                 showDeviceChangeNoticeFlow,
                 isLoadingDevicesFlow,
-            ) { persisted, availableDevices, pending, resyncState, showNotice, isLoadingDevices ->
+            ) { args: Array<Any?> ->
+                val persisted = args[0] as Map<String, String>
+                val availableDevices = args[1] as List<String>
+                val pending = args[2] as Map<HealthDataType, String?>
+                val resyncState = args[3] as HistoricalResyncState
+                val showNotice = args[4] as Boolean
+                val isLoadingDevices = args[5] as Boolean
+
                 val effective = persisted.toMutableMap()
                 pending.forEach { (type, label) ->
                     if (label == null) effective.remove(type.name) else effective[type.name] = label
