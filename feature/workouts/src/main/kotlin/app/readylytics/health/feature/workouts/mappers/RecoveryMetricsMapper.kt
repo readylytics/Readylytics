@@ -48,8 +48,8 @@ object RecoveryMetricsMapper {
                     java.time.Duration
                         .between(sample.timestamp, targetTime)
                         .abs()
-                        .seconds
-                diff <= toleranceSeconds
+                        .toMillis()
+                diff <= toleranceSeconds * 1_000L
             }.minByOrNull { sample ->
                 java.time.Duration
                     .between(sample.timestamp, targetTime)

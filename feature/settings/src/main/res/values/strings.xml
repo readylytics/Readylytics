@@ -22,6 +22,7 @@
 <string name="advanced_cheng_beta_label">Cheng Beta</string>
 <string name="advanced_hrv_baseline_label">HRV Baseline (ms)</string>
 <string name="advanced_hrr_tolerance_label">Recovery match window</string>
+<string name="advanced_hrr_tolerance_seconds">%1$d s</string>
 <string name="advanced_hrr_tolerance_tooltip">Maximum time before or after each 1, 2, and 3 minute recovery mark used to match a heart-rate sample. Increase this if your watch records heart rate infrequently after workouts. Default: 30 s.</string>
 <string name="advanced_itrimp_b_factor_desc">Sedentary=1.5, Active=2.1, Athlete=2.9.</string>
 <string name="advanced_itrimp_b_factor_label">iTRIMP B Factor</string>

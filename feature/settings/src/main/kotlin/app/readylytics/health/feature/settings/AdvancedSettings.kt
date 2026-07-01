@@ -203,7 +203,7 @@ fun AdvancedSettingsSection(
             },
             valueRange = hrrToleranceRange,
             steps = 8,
-            displayValue = "${hrrTolerance.toInt()} s",
+            displayValue = stringResource(R.string.advanced_hrr_tolerance_seconds, hrrTolerance.toInt()),
             description = stringResource(R.string.advanced_hrr_tolerance_tooltip),
         )
 

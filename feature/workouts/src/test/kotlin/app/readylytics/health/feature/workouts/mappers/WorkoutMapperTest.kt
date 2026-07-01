@@ -156,6 +156,17 @@ class WorkoutMapperTest {
     }
 
     @Test
+    fun recoveryMetricsMapper_oneMillisecondOutsideBoundary_isRejected() {
+        val workoutEnd = Instant.ofEpochMilli(1_000_000L)
+        val endHr = 162
+        val samples = listOf(HeartRatePoint(workoutEnd.plusMillis(90_001L), 140))
+
+        val result = RecoveryMetricsMapper.mapRecoveryMetrics(samples, workoutEnd.toEpochMilli(), endHr, 30L)
+
+        assertNull(result.hrr1Min)
+    }
+
+    @Test
     fun dailyPaiBreakdownMapper_sevenDayLookback_correctLabels() {
         val today = LocalDate.of(2026, 5, 16)
         val summaries = emptyList<DailySummary>()
