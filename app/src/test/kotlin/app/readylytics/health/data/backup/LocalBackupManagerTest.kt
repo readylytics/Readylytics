@@ -72,6 +72,7 @@ class LocalBackupManagerTest {
                             coEvery { syncPreference } returns SyncPreference.ALWAYS
                             coEvery { backgroundSyncEnabled } returns true
                             coEvery { backgroundSyncIntervalMinutes } returns 180
+                            coEvery { hrrToleranceSeconds } returns 45
                             coEvery { appTheme } returns AppTheme.DARK
                             coEvery { backupSchedule } returns BackupSchedule.DAILY
                             coEvery { birthDate } returns "2000-01-01"
@@ -247,6 +248,26 @@ class LocalBackupManagerTest {
             assertTrue(preferences.getBoolean("backgroundSyncEnabled"))
             assertEquals(180, preferences.getInt("backgroundSyncIntervalMinutes"))
             assertEquals("DAILY", preferences.getString("backupSchedule"))
+        }
+
+    @Test
+    fun createBackup_writesHrrToleranceSecondsToPreferences() =
+        runTest {
+            val result = manager.createBackup()
+
+            assertTrue(result.isSuccess)
+            val file = result.getOrNull()
+            assertNotNull(file)
+
+            val zipFile = ZipFile(file, "test_password".toCharArray())
+            val header = zipFile.fileHeaders.single()
+            val backupJson =
+                zipFile.getInputStream(header).use { input ->
+                    input.readBytes().toString(StandardCharsets.UTF_8)
+                }
+            val preferences = JSONObject(backupJson).getJSONObject("preferences")
+
+            assertEquals(45, preferences.getInt("hrrToleranceSeconds"))
         }
 
     @Test

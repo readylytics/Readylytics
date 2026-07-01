@@ -126,6 +126,10 @@ sealed interface SettingsEvent {
         val steps: Int,
     ) : SettingsEvent
 
+    data class HrrToleranceSecondsChanged(
+        val value: Int,
+    ) : SettingsEvent
+
     data class AppThemeChanged(
         val theme: AppTheme,
     ) : SettingsEvent

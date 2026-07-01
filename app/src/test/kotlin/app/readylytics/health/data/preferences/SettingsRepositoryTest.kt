@@ -102,6 +102,58 @@ class SettingsRepositoryTest {
             assertEquals(true, prefs.retentionDaysEnabled)
         }
 
+    @Test
+    fun `default HRR tolerance is 30 seconds`() =
+        runTest {
+            val prefs = repository.userPreferences.first()
+            assertEquals(30, prefs.hrrToleranceSeconds)
+        }
+
+    @Test
+    fun `persisted HRR tolerance values normalize to supported bounds`() =
+        runTest {
+            repository.batchUpdate {
+                hrrToleranceSeconds = 1
+            }
+            var prefs = repository.userPreferences.first()
+            assertEquals(15, prefs.hrrToleranceSeconds)
+
+            repository.batchUpdate {
+                hrrToleranceSeconds = 90
+            }
+            prefs = repository.userPreferences.first()
+            assertEquals(60, prefs.hrrToleranceSeconds)
+        }
+
+    @Test
+    fun `HRR tolerance persists through serializer round trip`() =
+        runTest {
+            dataStore.updateData {
+                UserPreferences(hrrToleranceSeconds = 45).toProto()
+            }
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(45, prefs.hrrToleranceSeconds)
+        }
+
+    @Test
+    fun `updateHrrToleranceSeconds persists minimum supported value when too low`() =
+        runTest {
+            repository.updateHrrToleranceSeconds(10)
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(15, prefs.hrrToleranceSeconds)
+        }
+
+    @Test
+    fun `updateHrrToleranceSeconds persists maximum supported value when too high`() =
+        runTest {
+            repository.updateHrrToleranceSeconds(70)
+
+            val prefs = repository.userPreferences.first()
+            assertEquals(60, prefs.hrrToleranceSeconds)
+        }
+
     /**
      * US-03 acceptance criterion: switching a load-source preference must never write to
      * daily_summaries. SettingsRepository (the sole owner of preference setters) has no

@@ -245,6 +245,8 @@ class SettingsRepository
 
         override suspend fun updateUnitSystem(unitSystem: UnitSystem) = ui.updateUnitSystem(unitSystem)
 
+        override suspend fun updateHrrToleranceSeconds(value: Int) = sleep.updateHrrToleranceSeconds(value)
+
         suspend fun batchUpdate(block: UserPreferencesProto.Builder.() -> Unit) {
             dataStore.updateData { proto ->
                 proto.toBuilder().apply(block).build()
